@@ -10,3 +10,7 @@ indent_size = 2
 # Tab indentation (no size specified)
 [Makefile]
 indent_style = tab
+
+# Track the line length of commit messages
+[.git/**]
+max_line_length = 75
