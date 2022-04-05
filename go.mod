@@ -9,6 +9,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
+	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.11.0
 	github.com/stretchr/testify v1.7.1
 	golang.org/x/sys v0.0.0-20220405052023-b1e9470b6e64
