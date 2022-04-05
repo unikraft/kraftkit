@@ -97,9 +97,9 @@ ifeq ($(DEBUG),y)
 $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
 endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "main.version=$(APP_VERSION)"
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "main.commit=$(GIT_SHA)"
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "main.buildTime=$(shell date)"
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(APP_VERSION)"
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
 $(addprefix $(.PROXY), $(BIN)): deps
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \

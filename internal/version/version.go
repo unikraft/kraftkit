@@ -1,4 +1,5 @@
 package version
+
 // SPDX-License-Identifier: BSD-3-Clause
 //
 // Authors: Alexander Jung <alex@unikraft.io>
@@ -31,25 +32,35 @@ package version
 // POSSIBILITY OF SUCH DAMAGE.
 
 import (
-  "fmt"
+	"fmt"
 )
 
-type Version struct {
-  Version   string
-  Commit    string
-  BuildTime string
+var (
+	version   = "No version provided"
+	commit    = "No commit provided"
+	buildTime = "No build timestamp provided"
+)
+
+// Version ...
+func Version() string {
+	return version
 }
 
-var version *Version
-
-func SetVersion(v *Version) {
-  version = v
+// Commit ...
+func Commit() string {
+	return commit
 }
 
+// BuildTime ...
+func BuildTime() string {
+	return buildTime
+}
+
+// String ...
 func String() string {
-  return fmt.Sprintf("%s (%s) built %s\n",
-    version.Version,
-    version.Commit,
-    version.BuildTime,
-  )
+	return fmt.Sprintf("%s (%s) built %s\n",
+		version,
+		commit,
+		buildTime,
+	)
 }
