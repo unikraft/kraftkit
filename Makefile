@@ -41,6 +41,7 @@ REGISTRY    ?= ghcr.io
 ORG         ?= unikraft
 REPO        ?= kraftkit
 BIN         ?= 
+GOMOD       ?= go.unikraft.io/kit
 IMAGE_TAG   ?= latest
 
 
@@ -64,8 +65,8 @@ GIT_SHA     ?= $(shell git update-index -q --refresh && \
 # Tools
 DOCKER      ?= docker
 DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
-               -w /go/src/github.com/$(ORG)/$(REPO) \
-               -v $(WORKDIR):/go/src/github.com/$(ORG)/$(REPO) \
+               -w /go/src/$(GOMOD) \
+               -v $(WORKDIR):/go/src/$(GOMOD) \
                $(REGISTRY)/$(ORG)/$(REPO)/$(2):$(IMAGE_TAG) \
                  $(3)
 GO          ?= go
@@ -112,7 +113,7 @@ $(addprefix $(.PROXY), $(BIN)):
 .PHONY: container
 container: GO_VERSION         ?= 1.17
 container: DOCKER_BUILD_EXTRA ?=
-container: ENVIRONMENT        ?= devenv
+container: ENVIRONMENT        ?= myself
 container: IMAGE              ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TAG)
 container: TARGET             ?= base
 container:
@@ -122,14 +123,14 @@ container:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--tag $(IMAGE) \
 		--target $(TARGET) \
-		--file $(WORKDIR)/envs/$(ENVIRONMENT).Dockerfile \
+		--file $(WORKDIR)/buildenvs/$(ENVIRONMENT).Dockerfile \
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
 
 # Run an environment where we can build
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv:
-	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),devenv,bash)
+	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
 
 .PHONY: deps
 deps: api

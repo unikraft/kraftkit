@@ -1,3 +1,3 @@
-module github.com/unikraft/kraftkit
+module go.unikraft.io/kit
 
 go 1.17

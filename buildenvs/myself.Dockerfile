@@ -41,8 +41,12 @@ RUN set -xe; \
     apt-get install -y --no-install-recommends \
       build-essential \
       make \
-      git;
+      git; \
+    go install mvdan.cc/gofumpt@latest;
 
-COPY . /go/src/github.com/${ORG}/${BIN}
-WORKDIR /go/src/github.com/${ORG}/${BIN}
+COPY . /go/src/go.unikraft.io/kit
+
+WORKDIR /go/src/go.unikraft.io/kit
+
 ENV GOROOT=/usr/local/go
+ENV PATH=$PATH:/go/src/go.unikraft.io/kit/dist
