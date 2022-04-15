@@ -1,0 +1,34 @@
+name: Pre-Release via staging
+
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    container: goreleaser/goreleaser:v1.7.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --force --tags
+
+      - name: Run GoReleaser
+        run: |
+          git tag -d "$(git describe)" || true
+          git config user.name "Unikraft Bot"
+          git config user.email "monkey@unikraft.io"
+          git tag -a "$(git describe)" -m "Pre-release: $(git describe)"
+          echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
+          goreleaser -f .goreleaser-staging.yaml --rm-dist --skip-validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
