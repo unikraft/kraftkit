@@ -134,7 +134,6 @@ devenv:
 	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
 
 .PHONY: deps
-deps: api
 deps:
 	$(GO) mod tidy
 
