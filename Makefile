@@ -70,6 +70,7 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
                $(REGISTRY)/$(ORG)/$(REPO)/$(2):$(IMAGE_TAG) \
                  $(3)
 GO          ?= go
+GOFUMPT     ?= gofumpt
 
 # Misc
 Q           ?= @
@@ -136,3 +137,7 @@ devenv:
 deps: api
 deps:
 	$(GO) mod tidy
+
+.PHONY: fmt
+fmt:
+	$(GOFUMPT) -e -l -w $(WORKDIR)
