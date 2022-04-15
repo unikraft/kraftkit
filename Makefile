@@ -40,7 +40,7 @@ INSTALLDIR  ?= /usr/local/bin/
 REGISTRY    ?= ghcr.io
 ORG         ?= unikraft
 REPO        ?= kraftkit
-BIN         ?= 
+BIN         ?= kraftkit
 GOMOD       ?= go.unikraft.io/kit
 IMAGE_TAG   ?= latest
 
