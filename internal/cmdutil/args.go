@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: MIT
+//
+// Copyright (c) 2019 GitHub Inc.
+//               2022 Unikraft UG.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+package cmdutil
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+)
+
+func MinimumArgs(n int, msg string) cobra.PositionalArgs {
+	if msg == "" {
+		return cobra.MinimumNArgs(1)
+	}
+
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) < n {
+			return FlagErrorf("%s", msg)
+		}
+		return nil
+	}
+}
+
+func ExactArgs(n int, msg string) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) > n {
+			return FlagErrorf("too many arguments")
+		}
+
+		if len(args) < n {
+			return FlagErrorf("%s", msg)
+		}
+
+		return nil
+	}
+}
+
+func NoArgsQuoteReminder(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return nil
+	}
+
+	errMsg := fmt.Sprintf("unknown argument %q", args[0])
+	if len(args) > 1 {
+		errMsg = fmt.Sprintf("unknown arguments %q", args)
+	}
+
+	hasValueFlag := false
+	cmd.Flags().Visit(func(f *pflag.Flag) {
+		if f.Value.Type() != "bool" {
+			hasValueFlag = true
+		}
+	})
+
+	if hasValueFlag {
+		errMsg += "; please quote all values that have spaces"
+	}
+
+	return FlagErrorf("%s", errMsg)
+}
