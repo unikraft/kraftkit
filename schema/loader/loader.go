@@ -24,7 +24,7 @@ import (
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/compose-spec/compose-go/template"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 
 	"go.unikraft.io/kit/schema"
 	"go.unikraft.io/kit/schema/types"
