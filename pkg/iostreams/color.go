@@ -232,6 +232,19 @@ func (c *ColorScheme) ColorFromString(s string) func(string) string {
 	return fn
 }
 
+// SprintFunc returns a new function that returns colorized strings for the
+// given arguments with fmt.Sprint(). Useful to put into or mix into other
+// string. Windows users should use this in conjunction with color.Output,
+// example:
+//
+//  put := New(FgYellow).SprintFunc()
+//  fmt.Fprintf(color.Output, "This is a %s", put("warning"))
+func (c *ColorScheme) SprintFunc(s string) func(a ...interface{}) string {
+	return func(a ...interface{}) string {
+		return c.ColorFromString(s)(fmt.Sprint(a...))
+	}
+}
+
 func (c *ColorScheme) HexToRGB(hex string, x string) string {
 	if !c.enabled || !c.hasTrueColor {
 		return x
