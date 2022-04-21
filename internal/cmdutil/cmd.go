@@ -59,7 +59,7 @@ type CmdOption func(*cobra.Command)
 
 // NewCmd generates a template `*cobra.Command` with sensible defaults and
 // ensures consistency between all binaries within KraftKit.
-func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string) (*cobra.Command, error) {
+func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string, opts ...CmdOption) (*cobra.Command, error) {
 	cmd := &cobra.Command{}
 
 	// Attach this command if not set
@@ -113,6 +113,12 @@ func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string) (*cobra.Command, err
 		}
 
 		return results, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Iterate through each option
+	for _, opt := range opts {
+		// Call the option giving the instantiated *cobra.Command as the argument
+		opt(cmd)
 	}
 
 	// TODO: Authentication
