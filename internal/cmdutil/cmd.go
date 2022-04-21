@@ -43,6 +43,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/cli/safeexec"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"go.unikraft.io/kit/pkg/iostreams"
 
@@ -56,6 +57,8 @@ import (
 )
 
 type CmdOption func(*cobra.Command)
+
+var flagOverrides = make(map[string][]*pflag.Flag)
 
 // NewCmd generates a template `*cobra.Command` with sensible defaults and
 // ensures consistency between all binaries within KraftKit.
@@ -157,6 +160,17 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 		expandedArgs = os.Args[1:]
 	}
 
+	// Add flag overrides which can be provided by plugins
+	for arg, flags := range flagOverrides {
+		args := strings.Fields(arg)
+		subCmd, _, err := cmd.Traverse(args[1:])
+		if args[0] == cmd.Name() && err == nil {
+			for _, flag := range flags {
+				subCmd.Flags().AddFlag(flag)
+			}
+		}
+	}
+
 	// translate `{binname} help <command>` to `{binname} <command> --help` for
 	// extensions
 	if len(expandedArgs) == 2 && expandedArgs[0] == "help" && !HasCommand(cmd, expandedArgs[1:]) {
@@ -254,4 +268,8 @@ func printError(out io.Writer, err error, cmd *cobra.Command, debug bool) {
 		}
 		fmt.Fprintln(out, cmd.UsageString())
 	}
+}
+
+func RegisterFlag(cmdline string, flag *pflag.Flag) {
+	flagOverrides[cmdline] = append(flagOverrides[cmdline], flag)
 }
