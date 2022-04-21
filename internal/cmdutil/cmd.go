@@ -126,6 +126,16 @@ func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string, opts ...CmdOption) (
 	return cmd, nil
 }
 
+// WithSubcmds iterates over a list of instantiated *cobra.Command and adds
+// to the parent.
+func WithSubcmds(subCmds ...*cobra.Command) CmdOption {
+	return func(cmd *cobra.Command) {
+		for _, subCmd := range subCmds {
+			cmd.AddCommand(subCmd)
+		}
+	}
+}
+
 // HasCommand returns true if args resolve to a built-in command
 func HasCommand(cmd *cobra.Command, args []string) bool {
 	c, _, err := cmd.Traverse(args)
