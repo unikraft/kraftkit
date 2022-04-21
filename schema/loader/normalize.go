@@ -32,9 +32,42 @@
 package loader
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
+
+	"go.unikraft.io/kit/schema/types"
 )
+
+// normalize a kraft project by moving deprecated attributes to their canonical
+// position and injecting implicit defaults
+func normalize(project *types.Project, resolvePaths bool) error {
+	absWorkingDir, err := filepath.Abs(project.WorkingDir)
+	if err != nil {
+		return err
+	}
+	project.WorkingDir = absWorkingDir
+
+	absKraftFiles, err := absKraftFiles(project.KraftFiles)
+	if err != nil {
+		return err
+	}
+	project.KraftFiles = absKraftFiles
+
+	return nil
+}
+
+func absKraftFiles(kraftFiles []string) ([]string, error) {
+	absKraftFiles := make([]string, len(kraftFiles))
+	for i, kraftFile := range kraftFiles {
+		absKraftfile, err := filepath.Abs(kraftFile)
+		if err != nil {
+			return nil, err
+		}
+		absKraftFiles[i] = absKraftfile
+	}
+	return absKraftFiles, nil
+}
 
 func normalizeProjectName(s string) string {
 	r := regexp.MustCompile("[a-z0-9_-]")
