@@ -40,6 +40,7 @@ import (
 	"go.unikraft.io/kit/internal/config"
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/pkg/log"
 )
 
 type FactoryOption func(*Factory)
@@ -48,6 +49,7 @@ type Factory struct {
 	RootCmd   *cobra.Command
 	IOStreams *iostreams.IOStreams
 
+	Logger     func() (*log.Logger, error)
 	HttpClient func() (*http.Client, error)
 	Config     func() (config.Config, error)
 }
@@ -58,8 +60,14 @@ func New(opts ...FactoryOption) *Factory {
 		Config: configFunc(),
 	}
 
-	f.IOStreams = ioStreams(f)       // Depends on Config
-	f.HttpClient = httpClientFunc(f) // Depends on Config, IOStreams
+	// Depends on Config
+	f.IOStreams = ioStreams(f)
+
+	// Depends on Config, IOStreams
+	f.HttpClient = httpClientFunc(f)
+
+	// Depends on Config, IOStreams
+	f.Logger = loggerFunc(f)
 
 	// Loop through each option
 	for _, opt := range opts {
@@ -135,5 +143,25 @@ func httpClientFunc(f *Factory) func() (*http.Client, error) {
 		}
 
 		return httpclient.NewHTTPClient(io, cfg, true)
+	}
+}
+
+func loggerFunc(f *Factory) func() (*log.Logger, error) {
+	return func() (*log.Logger, error) {
+		cfg, err := f.Config()
+		if err != nil {
+			return nil, err
+		}
+
+		logLevel, err := cfg.GetOrDefault("log_level")
+		if err != nil {
+			logLevel = "info"
+		}
+
+		io := f.IOStreams
+		l := log.NewLogger(io)
+		l.SetLevel(log.LogLevelFromString(logLevel))
+
+		return l, nil
 	}
 }
