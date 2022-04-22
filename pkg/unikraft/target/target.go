@@ -37,6 +37,6 @@ import (
 )
 
 type TargetConfig struct {
-	Architecture arch.Architecture
+	Architecture arch.ArchitectureConfig
 	Platform     plat.Platform
 }

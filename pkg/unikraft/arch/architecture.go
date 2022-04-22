@@ -33,11 +33,11 @@ package arch
 
 import "go.unikraft.io/kit/pkg/unikraft/component"
 
-type Architecture struct {
+type ArchitectureConfig struct {
 	component.ComponentConfig
 }
 
-func (a *Architecture) Preflight(opts ...component.Option) error {
+func (a *ArchitectureConfig) Preflight(opts ...component.Option) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the
@@ -48,6 +48,6 @@ func (a *Architecture) Preflight(opts ...component.Option) error {
 	return nil
 }
 
-func (a *Architecture) String() string {
+func (a *ArchitectureConfig) String() string {
 	return "arch"
 }
