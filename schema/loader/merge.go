@@ -20,13 +20,13 @@ package loader
 import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
+	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
-	"go.unikraft.io/kit/schema/types"
 )
 
-func merge(configs []*types.Config) (*types.Config, error) {
+func merge(configs []*config.Config) (*config.Config, error) {
 	base := configs[0]
 	for _, override := range configs[1:] {
 		var err error

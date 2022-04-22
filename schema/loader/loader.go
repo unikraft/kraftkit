@@ -27,11 +27,11 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"go.unikraft.io/kit/pkg/unikraft/app"
+	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 	"go.unikraft.io/kit/schema"
-	"go.unikraft.io/kit/schema/types"
 )
 
 const (
@@ -39,15 +39,15 @@ const (
 )
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*app.ApplicationConfig, error) {
-	if len(configDetails.ConfigFiles) < 1 {
+func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.ApplicationConfig, error) {
+	if len(details.ConfigFiles) < 1 {
 		return nil, errors.Errorf("No files specified")
 	}
 
 	opts := &LoaderOptions{
 		Interpolate: &interp.Options{
 			Substitute:      template.Substitute,
-			LookupValue:     configDetails.LookupEnv,
+			LookupValue:     details.LookupEnv,
 			TypeCastMapping: interpolateTypeCastMapping,
 		},
 	}
@@ -56,8 +56,8 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 		op(opts)
 	}
 
-	var configs []*types.Config
-	for i, file := range configDetails.ConfigFiles {
+	var configs []*config.Config
+	for i, file := range details.ConfigFiles {
 		configDict := file.Config
 		if configDict == nil {
 			dict, err := parseConfig(file.Content, opts)
@@ -66,7 +66,7 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 			}
 			configDict = dict
 			file.Config = dict
-			configDetails.ConfigFiles[i] = file
+			details.ConfigFiles[i] = file
 		}
 
 		if !opts.SkipValidation {
@@ -77,7 +77,7 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 
 		configDict = groupXFieldsIntoExtensions(configDict)
 
-		cfg, err := loadSections(file.Filename, configDict, configDetails, opts)
+		cfg, err := loadSections(file.Filename, configDict, details, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -97,14 +97,14 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 	}
 
 	if projectName != "" {
-		configDetails.Environment[KraftProjectName] = projectName
+		details.Environment[KraftProjectName] = projectName
 	}
 	project := &app.ApplicationConfig{
 		Name:        projectName,
-		WorkingDir:  configDetails.WorkingDir,
+		WorkingDir:  details.WorkingDir,
 		Libraries:   model.Libraries,
 		Targets:     model.Targets,
-		Environment: configDetails.Environment,
+		Environment: details.Environment,
 		Extensions:  model.Extensions,
 	}
 
@@ -118,14 +118,14 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 	return project, nil
 }
 
-func loadSections(filename string, config map[string]interface{}, configDetails types.ConfigDetails, opts *LoaderOptions) (*types.Config, error) {
+func loadSections(filename string, cfgIface map[string]interface{}, configDetails config.ConfigDetails, opts *LoaderOptions) (*config.Config, error) {
 	var err error
-	cfg := types.Config{
+	cfg := config.Config{
 		Filename: filename,
 	}
 
 	name := ""
-	if n, ok := config["name"]; ok {
+	if n, ok := cfgIface["name"]; ok {
 		name, ok = n.(string)
 		if !ok {
 			return nil, errors.New("project name must be a string")
@@ -133,22 +133,22 @@ func loadSections(filename string, config map[string]interface{}, configDetails 
 	}
 	cfg.Name = name
 
-	cfg.Unikraft, err = LoadUnikraft(getSection(config, "unikraft"))
+	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"))
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Libraries, err = LoadLibraries(getSectionMap(config, "libraries"))
+	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"))
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Targets, err = LoadTargets(getSectionList(config, "targets"))
+	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"))
 	if err != nil {
 		return nil, err
 	}
 
-	extensions := getSectionMap(config, "extensions")
+	extensions := getSectionMap(cfgIface, "extensions")
 	if len(extensions) > 0 {
 		cfg.Extensions = extensions
 	}

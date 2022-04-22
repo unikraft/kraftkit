@@ -25,6 +25,7 @@ import (
 
 	"github.com/compose-spec/compose-go/dotenv"
 	"github.com/pkg/errors"
+	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/internal/errs"
 	"go.unikraft.io/kit/schema/types"
 )
@@ -229,7 +230,7 @@ func ProjectFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error)
 		return nil, err
 	}
 
-	var configs []types.ConfigFile
+	var configs []config.ConfigFile
 	for _, f := range configPaths {
 		var b []byte
 		if f == "-" {
@@ -247,7 +248,7 @@ func ProjectFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error)
 				return nil, err
 			}
 		}
-		configs = append(configs, types.ConfigFile{
+		configs = append(configs, config.ConfigFile{
 			Filename: f,
 			Content:  b,
 		})
@@ -266,7 +267,7 @@ func ProjectFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error)
 		withNamePrecedenceLoad(absWorkingDir, options),
 	)
 
-	project, err := Load(types.ConfigDetails{
+	project, err := Load(config.ConfigDetails{
 		ConfigFiles: configs,
 		WorkingDir:  workingDir,
 		Environment: options.Environment,

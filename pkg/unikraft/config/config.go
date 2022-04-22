@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package types
+package config
 
 import (
 	"strings"
@@ -67,7 +67,7 @@ type ConfigFile struct {
 	Config map[string]interface{}
 }
 
-// Config is a full compose file configuration and model
+// Config is a full kraft file configuration and model
 type Config struct {
 	Filename  string              `yaml:"-" json:"-"`
 	Name      string              `yaml:",omitempty" json:"name,omitempty"`
