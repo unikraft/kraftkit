@@ -35,9 +35,9 @@ import (
 	"context"
 )
 
-type Option func(c *ComponentConfig)
+type ComponentOption func(c *ComponentConfig)
 
-func WithWorkdir(path string) Option {
+func WithWorkdir(path string) ComponentOption {
 	return func(cc *ComponentConfig) {
 		cc.workdir = path
 	}

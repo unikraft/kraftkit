@@ -37,7 +37,7 @@ type ArchitectureConfig struct {
 	component.ComponentConfig
 }
 
-func (a *ArchitectureConfig) Preflight(opts ...component.Option) error {
+func (a *ArchitectureConfig) Preflight(opts ...component.ComponentOption) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the

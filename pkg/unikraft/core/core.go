@@ -42,7 +42,7 @@ type UnikraftConfig struct {
 	Source  string `yaml:"source"`
 }
 
-func (uc *UnikraftConfig) Preflight(opts ...component.Option) error {
+func (uc *UnikraftConfig) Preflight(opts ...component.ComponentOption) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the

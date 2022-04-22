@@ -37,7 +37,7 @@ type PlatformConfig struct {
 	component.ComponentConfig
 }
 
-func (p *PlatformConfig) Preflight(opts ...component.Option) error {
+func (p *PlatformConfig) Preflight(opts ...component.ComponentOption) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the
