@@ -35,11 +35,11 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
-type UnikraftCore struct {
+type UnikraftConfig struct {
 	component.ComponentConfig
 }
 
-func (uc *UnikraftCore) Preflight(opts ...component.Option) error {
+func (uc *UnikraftConfig) Preflight(opts ...component.Option) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the
@@ -50,6 +50,6 @@ func (uc *UnikraftCore) Preflight(opts ...component.Option) error {
 	return nil
 }
 
-func (uc *UnikraftCore) String() string {
+func (uc *UnikraftConfig) String() string {
 	return "unikraft"
 }
