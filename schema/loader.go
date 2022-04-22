@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loader
+package schema
 
 import (
 	"fmt"
@@ -31,7 +31,6 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
-	"go.unikraft.io/kit/schema"
 )
 
 const (
@@ -70,7 +69,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		}
 
 		if !opts.SkipValidation {
-			if err := schema.Validate(configDict); err != nil {
+			if err := Validate(configDict); err != nil {
 				return nil, err
 			}
 		}

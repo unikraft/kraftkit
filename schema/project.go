@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loader
+package schema
 
 import (
 	"io/ioutil"
@@ -25,9 +25,9 @@ import (
 
 	"github.com/compose-spec/compose-go/dotenv"
 	"github.com/pkg/errors"
-	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/internal/errs"
 	"go.unikraft.io/kit/pkg/unikraft/app"
+	"go.unikraft.io/kit/pkg/unikraft/config"
 )
 
 // ProjectOptions groups the command line options recommended for a Compose implementation

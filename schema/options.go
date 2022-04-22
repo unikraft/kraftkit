@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loader
+package schema
 
 import (
 	interp "github.com/compose-spec/compose-go/interpolation"
