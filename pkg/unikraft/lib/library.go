@@ -38,11 +38,11 @@ const (
 	MAKEFILEUK = "Makefile.uk"
 )
 
-type Library struct {
+type LibraryConfig struct {
 	component.ComponentConfig
 }
 
-func (l *Library) Preflight(opts ...component.Option) error {
+func (l *LibraryConfig) Preflight(opts ...component.Option) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the
@@ -53,6 +53,6 @@ func (l *Library) Preflight(opts ...component.Option) error {
 	return nil
 }
 
-func (l *Library) String() string {
+func (l *LibraryConfig) String() string {
 	return "lib"
 }
