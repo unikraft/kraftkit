@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package types
+package component
 
 type KConfig struct {
 	Name  string `yaml:",omitempty" json:"name,omitempty"`

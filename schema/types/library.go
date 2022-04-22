@@ -31,11 +31,13 @@
 
 package types
 
+import "go.unikraft.io/kit/pkg/unikraft/component"
+
 type LibraryConfig struct {
-	Name    string    `yaml:",omitempty" json:"name,omitempty"`
-	Source  string    `yaml:",omitempty" json:"source,omitempty"`
-	Version string    `yaml:",omitempty" json:"version,omitempty"`
-	KConfig []KConfig `yaml:",omitempty" json:"kconfig,omitempty"`
+	Name    string              `yaml:",omitempty" json:"name,omitempty"`
+	Source  string              `yaml:",omitempty" json:"source,omitempty"`
+	Version string              `yaml:",omitempty" json:"version,omitempty"`
+	KConfig []component.KConfig `yaml:",omitempty" json:"kconfig,omitempty"`
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
