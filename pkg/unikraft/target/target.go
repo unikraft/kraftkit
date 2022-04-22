@@ -48,3 +48,11 @@ type TargetConfig struct {
 }
 
 type Targets []TargetConfig
+
+func (t *TargetConfig) ArchitectureConfig() arch.ArchitectureConfig {
+	return t.architecture
+}
+
+func (t *TargetConfig) PlatformConfig() plat.PlatformConfig {
+	return t.platform
+}
