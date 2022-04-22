@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
@@ -70,7 +71,7 @@ type Config struct {
 	Filename  string         `yaml:"-" json:"-"`
 	Name      string         `yaml:",omitempty" json:"name,omitempty"`
 	Unikraft  UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries Libraries      `yaml:",omitempty" json:"libraries,omitempty"`
+	Libraries lib.Libraries  `yaml:",omitempty" json:"libraries,omitempty"`
 	Targets   target.Targets `yaml:",omitempty" json:"targets,omitempty"`
 
 	Extensions component.Extensions `yaml:",inline" json:"-"`

@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 	"go.unikraft.io/kit/schema"
 	"go.unikraft.io/kit/schema/types"
@@ -167,8 +168,8 @@ func LoadUnikraft(source interface{}) (types.UnikraftConfig, error) {
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadLibraries(source map[string]interface{}) (map[string]types.LibraryConfig, error) {
-	libraries := make(map[string]types.LibraryConfig)
+func LoadLibraries(source map[string]interface{}) (map[string]lib.LibraryConfig, error) {
+	libraries := make(map[string]lib.LibraryConfig)
 	if err := Transform(source, &libraries); err != nil {
 		return libraries, err
 	}

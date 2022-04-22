@@ -37,6 +37,7 @@ import (
 	"sort"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
@@ -44,7 +45,7 @@ type Project struct {
 	Name        string               `yaml:"name,omitempty" json:"name,omitempty"`
 	WorkingDir  string               `yaml:"-" json:"-"`
 	Unikraft    UnikraftConfig       `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries   Libraries            `yaml:",omitempty" json:"libraries,omitempty"`
+	Libraries   lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
 	Targets     target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
 	Extensions  component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
 	KraftFiles  []string             `yaml:"-" json:"-"`
