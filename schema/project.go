@@ -217,6 +217,55 @@ var DefaultFileNames = []string{
 	"Kraftfile",
 }
 
+// WithDefaultConfigPath searches for default config files from working
+// directory
+func WithDefaultConfigPath() ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		if len(o.ConfigPaths) > 0 {
+			return nil
+		}
+
+		pwd, err := o.GetWorkingDir()
+		if err != nil {
+			return err
+		}
+
+		for {
+			candidates := findFiles(DefaultFileNames, pwd)
+			if len(candidates) > 0 {
+				winner := candidates[0]
+				if len(candidates) > 1 {
+					o.log.Warn("Found multiple config files with supported names: %s", strings.Join(candidates, ", "))
+					o.log.Warn("Using %s", winner)
+				}
+
+				o.ConfigPaths = append(o.ConfigPaths, winner)
+
+				return nil
+			}
+
+			parent := filepath.Dir(pwd)
+			if parent == pwd {
+				// no config file found, but that's not a blocker if caller only needs project name
+				return nil
+			}
+
+			pwd = parent
+		}
+	}
+}
+
+func findFiles(names []string, pwd string) []string {
+	candidates := []string{}
+	for _, n := range names {
+		f := filepath.Join(pwd, n)
+		if _, err := os.Stat(f); err == nil {
+			candidates = append(candidates, f)
+		}
+	}
+	return candidates
+}
+
 func (o ProjectOptions) GetWorkingDir() (string, error) {
 	if o.WorkingDir != "" {
 		return o.WorkingDir, nil
