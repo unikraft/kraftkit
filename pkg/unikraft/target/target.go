@@ -38,5 +38,5 @@ import (
 
 type TargetConfig struct {
 	Architecture arch.ArchitectureConfig
-	Platform     plat.Platform
+	Platform     plat.PlatformConfig
 }

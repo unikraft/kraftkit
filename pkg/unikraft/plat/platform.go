@@ -33,11 +33,11 @@ package plat
 
 import "go.unikraft.io/kit/pkg/unikraft/component"
 
-type Platform struct {
+type PlatformConfig struct {
 	component.ComponentConfig
 }
 
-func (p *Platform) Preflight(opts ...component.Option) error {
+func (p *PlatformConfig) Preflight(opts ...component.Option) error {
 	// Loop through each option
 	for _, opt := range opts {
 		// Call the option giving the instantiated *component.ComponentConfig as the
@@ -48,6 +48,6 @@ func (p *Platform) Preflight(opts ...component.Option) error {
 	return nil
 }
 
-func (p *Platform) String() string {
+func (p *PlatformConfig) String() string {
 	return "plat"
 }
