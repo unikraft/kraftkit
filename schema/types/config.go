@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 )
@@ -68,11 +69,11 @@ type ConfigFile struct {
 
 // Config is a full compose file configuration and model
 type Config struct {
-	Filename  string         `yaml:"-" json:"-"`
-	Name      string         `yaml:",omitempty" json:"name,omitempty"`
-	Unikraft  UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries lib.Libraries  `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets   target.Targets `yaml:",omitempty" json:"targets,omitempty"`
+	Filename  string              `yaml:"-" json:"-"`
+	Name      string              `yaml:",omitempty" json:"name,omitempty"`
+	Unikraft  core.UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
+	Libraries lib.Libraries       `yaml:",omitempty" json:"libraries,omitempty"`
+	Targets   target.Targets      `yaml:",omitempty" json:"targets,omitempty"`
 
 	Extensions component.Extensions `yaml:",inline" json:"-"`
 }

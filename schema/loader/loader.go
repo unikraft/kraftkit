@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
 	"go.unikraft.io/kit/schema"
@@ -156,8 +157,8 @@ func loadSections(filename string, config map[string]interface{}, configDetails 
 
 // LoadUnikraft produces a UnikraftConfig from a kraft file Dict the source Dict
 // is not validated if directly used. Use Load() to enable validation
-func LoadUnikraft(source interface{}) (types.UnikraftConfig, error) {
-	unikraft := types.UnikraftConfig{}
+func LoadUnikraft(source interface{}) (core.UnikraftConfig, error) {
+	unikraft := core.UnikraftConfig{}
 	err := Transform(source, &unikraft)
 	if err != nil {
 		return unikraft, err

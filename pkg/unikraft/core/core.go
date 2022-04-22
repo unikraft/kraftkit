@@ -37,6 +37,9 @@ import (
 
 type UnikraftConfig struct {
 	component.ComponentConfig
+
+	Version string `yaml:"Version"`
+	Source  string `yaml:"source"`
 }
 
 func (uc *UnikraftConfig) Preflight(opts ...component.Option) error {
