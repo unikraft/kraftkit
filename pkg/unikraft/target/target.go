@@ -36,7 +36,7 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/plat"
 )
 
-type Target struct {
+type TargetConfig struct {
 	Architecture arch.Architecture
 	Platform     plat.Platform
 }
