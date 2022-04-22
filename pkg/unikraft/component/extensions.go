@@ -29,57 +29,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package types
+package component
 
-import (
-	"os"
-	"path/filepath"
-	"sort"
-
-	"go.unikraft.io/kit/pkg/unikraft/component"
-)
-
-type Project struct {
-	Name        string               `yaml:"name,omitempty" json:"name,omitempty"`
-	WorkingDir  string               `yaml:"-" json:"-"`
-	Unikraft    UnikraftConfig       `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries   Libraries            `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets     Targets              `yaml:",omitempty" json:"targets,omitempty"`
-	Extensions  component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	KraftFiles  []string             `yaml:"-" json:"-"`
-	Environment map[string]string    `yaml:"-" json:"-"`
-}
-
-// LibraryNames return names for all libraries in this Compose config
-func (p Project) LibraryNames() []string {
-	var names []string
-	for k := range p.Libraries {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	return names
-}
-
-// TargetNames return names for all targets in this Compose config
-func (p Project) TargetNames() []string {
-	var names []string
-	for _, k := range p.Targets {
-		names = append(names, k.Name)
-	}
-	sort.Strings(names)
-	return names
-}
-
-// RelativePath resolve a relative path based project's working directory
-func (p *Project) RelativePath(path string) string {
-	if path[0] == '~' {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, path[1:])
-	}
-
-	if filepath.IsAbs(path) {
-		return path
-	}
-
-	return filepath.Join(p.WorkingDir, path)
-}
+type Extensions map[string]interface{}

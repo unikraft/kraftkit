@@ -31,7 +31,11 @@
 
 package types
 
-import "strings"
+import (
+	"strings"
+
+	"go.unikraft.io/kit/pkg/unikraft/component"
+)
 
 // ConfigDetails are the details about a group of ConfigFiles
 type ConfigDetails struct {
@@ -68,10 +72,8 @@ type Config struct {
 	Libraries Libraries      `yaml:",omitempty" json:"libraries,omitempty"`
 	Targets   Targets        `yaml:",omitempty" json:"targets,omitempty"`
 
-	Extensions Extensions `yaml:",inline" json:"-"`
+	Extensions component.Extensions `yaml:",inline" json:"-"`
 }
-
-type Extensions map[string]interface{}
 
 // ShellCommand is a string or list of string args
 type ShellCommand []string
