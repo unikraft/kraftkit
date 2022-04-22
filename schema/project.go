@@ -282,8 +282,8 @@ func (o ProjectOptions) GetWorkingDir() (string, error) {
 	return os.Getwd()
 }
 
-// ProjectFromOptions load a kraft project based on command line options
-func ProjectFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error) {
+// ApplicationFromOptions load a kraft project based on command line options
+func ApplicationFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error) {
 	configPaths, err := getConfigPathsFromOptions(options)
 	if err != nil {
 		return nil, err
