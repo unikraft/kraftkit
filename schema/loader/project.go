@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/internal/errs"
-	"go.unikraft.io/kit/schema/types"
+	"go.unikraft.io/kit/pkg/unikraft/app"
 )
 
 // ProjectOptions groups the command line options recommended for a Compose implementation
