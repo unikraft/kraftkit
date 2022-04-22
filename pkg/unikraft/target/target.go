@@ -37,6 +37,6 @@ import (
 )
 
 type Target struct {
-	Architecture arch.Architecture `yaml:"architecture"`
-	Platform     plat.Platform     `yaml:"platform"`
+	Architecture arch.Architecture
+	Platform     plat.Platform
 }
