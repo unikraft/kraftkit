@@ -32,11 +32,27 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
+	"sort"
+
 	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/unikraft/core"
+	"go.unikraft.io/kit/pkg/unikraft/lib"
+	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
 type ApplicationConfig struct {
 	component.ComponentConfig
+
+	Name        string               `yaml:"name,omitempty" json:"name,omitempty"`
+	WorkingDir  string               `yaml:"-" json:"-"`
+	Unikraft    core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
+	Libraries   lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
+	Targets     target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
+	Extensions  component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
+	KraftFiles  []string             `yaml:"-" json:"-"`
+	Environment map[string]string    `yaml:"-" json:"-"`
 }
 
 func (a *ApplicationConfig) Preflight(opts ...component.Option) error {
@@ -52,4 +68,42 @@ func (a *ApplicationConfig) Preflight(opts ...component.Option) error {
 
 func (a *ApplicationConfig) String() string {
 	return "app"
+}
+
+// LibraryNames return names for all libraries in this Compose config
+func (a *ApplicationConfig) LibraryNames() []string {
+	var names []string
+	for k := range a.Libraries {
+		names = append(names, k)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+// TargetNames return names for all targets in this Compose config
+func (a *ApplicationConfig) TargetNames() []string {
+	var names []string
+	for _, k := range a.Targets {
+		names = append(names, k.Name)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+// RelativePath resolve a relative path based project's working directory
+func (a *ApplicationConfig) RelativePath(path string) string {
+	if path[0] == '~' {
+		home, _ := os.UserHomeDir()
+		path = filepath.Join(home, path[1:])
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	return filepath.Join(a.WorkingDir, path)
 }

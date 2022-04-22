@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"go.unikraft.io/kit/pkg/unikraft/app"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
@@ -38,7 +39,7 @@ const (
 )
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*types.Project, error) {
+func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*app.ApplicationConfig, error) {
 	if len(configDetails.ConfigFiles) < 1 {
 		return nil, errors.Errorf("No files specified")
 	}
@@ -98,7 +99,7 @@ func Load(configDetails types.ConfigDetails, options ...func(*LoaderOptions)) (*
 	if projectName != "" {
 		configDetails.Environment[KraftProjectName] = projectName
 	}
-	project := &types.Project{
+	project := &app.ApplicationConfig{
 		Name:        projectName,
 		WorkingDir:  configDetails.WorkingDir,
 		Libraries:   model.Libraries,
