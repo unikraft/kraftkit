@@ -20,6 +20,7 @@ package loader
 import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
+	"go.unikraft.io/kit/pkg/unikraft/target"
 	"go.unikraft.io/kit/schema/types"
 )
 
@@ -69,7 +70,7 @@ func mergeLibraries(base, override map[string]types.LibraryConfig) (map[string]t
 	return base, err
 }
 
-func mergeTargets(base, override []types.TargetConfig) ([]types.TargetConfig, error) {
+func mergeTargets(base, override []target.TargetConfig) ([]target.TargetConfig, error) {
 	err := mergo.Merge(&base, &override, mergo.WithOverride)
 	return base, err
 }

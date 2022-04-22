@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
 // ConfigDetails are the details about a group of ConfigFiles
@@ -70,7 +71,7 @@ type Config struct {
 	Name      string         `yaml:",omitempty" json:"name,omitempty"`
 	Unikraft  UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
 	Libraries Libraries      `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets   Targets        `yaml:",omitempty" json:"targets,omitempty"`
+	Targets   target.Targets `yaml:",omitempty" json:"targets,omitempty"`
 
 	Extensions component.Extensions `yaml:",inline" json:"-"`
 }

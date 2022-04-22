@@ -37,6 +37,14 @@ import (
 )
 
 type TargetConfig struct {
+	Name         string `yaml:",omitempty" json:"name,omitempty"`
+	Architecture string `yaml:",omitempty" json:"architecture,omitempty"`
+	Platform     string `yaml:",omitempty" json:"platform,omitempty"`
+
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+
 	architecture arch.ArchitectureConfig
 	platform     plat.PlatformConfig
 }
+
+type Targets []TargetConfig
