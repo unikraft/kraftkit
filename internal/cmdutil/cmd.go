@@ -160,6 +160,16 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 		expandedArgs = os.Args[1:]
 	}
 
+	// Dynamically introduce functionality provided by all installed plugins into
+	// the runtime of the root command, allowing any plugin to extend any
+	// functionality made available through generic providers delivered by any
+	// KraftKit package.  `Dispatch`ing the plugins will invoke the `init` program
+	// within the plugin.
+	if err := cmdFactory.PluginManager.Dispatch(); err != nil {
+		fmt.Fprintf(stderr, "failed to connect to plugin manager: %s", err)
+		return errs.ExitError
+	}
+
 	// Add flag overrides which can be provided by plugins
 	for arg, flags := range flagOverrides {
 		args := strings.Fields(arg)
