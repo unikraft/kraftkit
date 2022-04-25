@@ -35,19 +35,22 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.unikraft.io/kit/internal/config"
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/pkg/iostreams"
 	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/pkg/plugins"
 )
 
 type FactoryOption func(*Factory)
 
 type Factory struct {
-	RootCmd   *cobra.Command
-	IOStreams *iostreams.IOStreams
+	RootCmd       *cobra.Command
+	IOStreams     *iostreams.IOStreams
+	PluginManager *plugins.PluginManager
 
 	Logger     func() (*log.Logger, error)
 	HttpClient func() (*http.Client, error)
@@ -68,6 +71,9 @@ func New(opts ...FactoryOption) *Factory {
 
 	// Depends on Config, IOStreams
 	f.Logger = loggerFunc(f)
+
+	// Depends on Config, HttpClient, and IOStreams
+	f.PluginManager = pluginManager(f)
 
 	// Loop through each option
 	for _, opt := range opts {
@@ -164,4 +170,34 @@ func loggerFunc(f *Factory) func() (*log.Logger, error) {
 
 		return l, nil
 	}
+}
+
+func pluginManager(f *Factory) *plugins.PluginManager {
+	pm := plugins.NewPluginManager(f.IOStreams)
+
+	// Set config
+	cfg, err := f.Config()
+	if err != nil {
+		return pm
+	}
+
+	pm.SetConfig(cfg)
+
+	// Set HTTP client
+	client, err := f.HttpClient()
+	if err != nil {
+		return pm
+	}
+
+	pm.SetClient(httpclient.NewCachedClient(client, time.Second*30))
+
+	// Set logger
+	l, err := f.Logger()
+	if err != nil {
+		return pm
+	}
+
+	pm.SetLogger(l)
+
+	return pm
 }
