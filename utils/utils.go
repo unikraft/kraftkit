@@ -106,3 +106,13 @@ func DisplayURL(urlStr string) string {
 func ValidURL(urlStr string) bool {
 	return len(urlStr) < 8192
 }
+
+func Contains(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if v == needle {
+			return true
+		}
+	}
+
+	return false
+}
