@@ -35,19 +35,13 @@ type Package interface {
 	// Init initialises the package.  It must perform any required setup on the
 	// backing package implementation and check that it is ready for use,
 	// returning any errors.
-	Init(...PackageOption) error
+	Init() error
 
 	// Options allows you to view the current options.
 	Options() PackageOptions
 
 	// Determine if the provided path is a compatible media type
-	Compatible(path string) bool
-
-	// Push the resulting package to the supported registry of the implementation.
-	Push() error
-
-	// Pull a package from the support registry of the implementation.
-	Pull() error
+	Compatible(string) bool
 
 	// String returns the name of the implementation.
 	String() string

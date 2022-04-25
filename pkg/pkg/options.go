@@ -34,45 +34,38 @@ package pkg
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"go.unikraft.io/kit/pkg/log"
 )
 
 // PackageOptions contains configuration for the Package
 type PackageOptions struct {
-	Architecture string
-	Platform     string
-
-	Log     *log.Logger
-	RootCmd *cobra.Command
+	Log *log.Logger
 
 	// ctx should contain all implementation-specific options, using
 	// `context.WithValue`
 	ctx context.Context
 }
 
-func (po *PackageOptions) Context() context.Context {
-	return po.ctx
-}
+type PackageOption func(opts *PackageOptions) error
 
-// PackageOption sets values in Options
-type PackageOption func(opts *PackageOptions)
-
-func WithLogger(log *log.Logger) PackageOption {
-	return func(opts *PackageOptions) {
-		opts.Log = log
+// WithLogger defines the log.Logger
+func WithLogger(l *log.Logger) PackageOption {
+	return func(o *PackageOptions) error {
+		o.Log = l
+		return nil
 	}
 }
 
-func WithRootCmd(rootCmd *cobra.Command) PackageOption {
-	return func(opts *PackageOptions) {
-		opts.RootCmd = rootCmd
-	}
-}
+// NewPackageOptions creates PackageOptions
+func NewPackageOptions(opts ...PackageOption) (*PackageOptions, error) {
+	options := &PackageOptions{}
 
-func WithContext(ctx context.Context) PackageOption {
-	return func(opts *PackageOptions) {
-		opts.ctx = ctx
+	for _, o := range opts {
+		err := o(options)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	return options, nil
 }
