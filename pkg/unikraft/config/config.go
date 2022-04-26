@@ -32,6 +32,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
@@ -52,6 +54,20 @@ type ConfigDetails struct {
 func (cd ConfigDetails) LookupEnv(key string) (string, bool) {
 	v, ok := cd.Environment[key]
 	return v, ok
+}
+
+// RelativePath resolve a relative path based project's working directory
+func (cd ConfigDetails) RelativePath(path string) string {
+	if path[0] == '~' {
+		home, _ := os.UserHomeDir()
+		path = filepath.Join(home, path[1:])
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	return filepath.Join(cd.WorkingDir, path)
 }
 
 // ConfigFile is a filename and the contents of the file as a Dict

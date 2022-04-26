@@ -93,17 +93,3 @@ func (a *ApplicationConfig) TargetNames() []string {
 
 	return names
 }
-
-// RelativePath resolve a relative path based project's working directory
-func (a *ApplicationConfig) RelativePath(path string) string {
-	if path[0] == '~' {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, path[1:])
-	}
-
-	if filepath.IsAbs(path) {
-		return path
-	}
-
-	return filepath.Join(a.WorkingDir, path)
-}
