@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft/app"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/pkg/unikraft/core"
@@ -49,6 +50,9 @@ type LoaderOptions struct {
 	ResolvePaths bool
 	// Interpolation options
 	Interpolate *interp.Options
+	// PackageManager can be injected to each component to allow easy retrieval of
+	// the component itself with regard to its source files as well as Unikraft's
+	PackageManager *pkgmanager.PackageManager
 	// Set project projectName
 	projectName string
 	// Indicates when the projectName was imperatively set or guessed from path

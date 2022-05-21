@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"go.unikraft.io/kit/internal/errs"
 	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft/app"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 )
@@ -252,6 +253,17 @@ func WithDefaultConfigPath() ProjectOptionsFn {
 
 			pwd = parent
 		}
+	}
+}
+
+// WithPackageManager provides access to the package manager of choice to be
+// able to retrieve component sources
+func WithPackageManager(pm *pkgmanager.PackageManager) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		o.loadOptions = append(o.loadOptions, func(options *LoaderOptions) {
+			options.PackageManager = pm
+		})
+		return nil
 	}
 }
 
