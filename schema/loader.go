@@ -37,6 +37,39 @@ const (
 	KraftProjectName = "KRAFT_PROJECT_NAME"
 )
 
+// LoaderOptions supported by Load
+type LoaderOptions struct {
+	// Skip schema validation
+	SkipValidation bool
+	// Skip interpolation
+	SkipInterpolation bool
+	// Skip normalization
+	SkipNormalization bool
+	// Resolve paths
+	ResolvePaths bool
+	// Interpolation options
+	Interpolate *interp.Options
+	// Set project projectName
+	projectName string
+	// Indicates when the projectName was imperatively set or guessed from path
+	projectNameImperativelySet bool
+}
+
+func (o *LoaderOptions) SetProjectName(name string, imperativelySet bool) {
+	o.projectName = normalizeProjectName(name)
+	o.projectNameImperativelySet = imperativelySet
+}
+
+func (o LoaderOptions) GetProjectName() (string, bool) {
+	return o.projectName, o.projectNameImperativelySet
+}
+
+// WithSkipValidation sets the LoaderOptions to skip validation when loading
+// sections
+func WithSkipValidation(opts *LoaderOptions) {
+	opts.SkipValidation = true
+}
+
 // Load reads a ConfigDetails and returns a fully loaded configuration
 func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.ApplicationConfig, error) {
 	if len(details.ConfigFiles) < 1 {
