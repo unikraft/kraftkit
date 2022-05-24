@@ -62,7 +62,8 @@
         "name": { "type": "string" },
         "architecture": { "type": "string" },
         "platform": { "type": "string" },
-        "initrd": { "$ref": "#/definitions/initrd" }
+        "initrd": { "$ref": "#/definitions/initrd" },
+        "command": { "$ref": "#/definitions/command" }
       }
     },
 
