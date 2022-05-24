@@ -139,6 +139,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	project := &app.ApplicationConfig{
 		Name:        projectName,
 		WorkingDir:  details.WorkingDir,
+		OutDir:      model.OutDir,
 		Libraries:   model.Libraries,
 		Targets:     model.Targets,
 		Environment: details.Environment,
@@ -169,6 +170,18 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		}
 	}
 	cfg.Name = name
+
+	outdir := DefaultOutputDir
+	if n, ok := cfgIface["outdir"]; ok {
+		outdir, ok = n.(string)
+		if !ok {
+			return nil, errors.New("output directory must be a string")
+		}
+	}
+
+	if opts.ResolvePaths {
+		cfg.OutDir = configDetails.RelativePath(outdir)
+	}
 
 	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"))
 	if err != nil {

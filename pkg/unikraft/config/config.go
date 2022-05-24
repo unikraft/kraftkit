@@ -87,6 +87,7 @@ type ConfigFile struct {
 type Config struct {
 	Filename  string              `yaml:"-" json:"-"`
 	Name      string              `yaml:",omitempty" json:"name,omitempty"`
+	OutDir    string              `yaml:",omitempty" json:"outdir,omitempty"`
 	Unikraft  core.UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
 	Libraries lib.Libraries       `yaml:",omitempty" json:"libraries,omitempty"`
 	Targets   target.Targets      `yaml:",omitempty" json:"targets,omitempty"`
