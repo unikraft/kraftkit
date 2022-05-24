@@ -140,6 +140,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		Name:        projectName,
 		WorkingDir:  details.WorkingDir,
 		OutDir:      model.OutDir,
+		Unikraft:    model.Unikraft,
 		Libraries:   model.Libraries,
 		Targets:     model.Targets,
 		Environment: details.Environment,
