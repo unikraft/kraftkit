@@ -12,6 +12,8 @@
 
     "name": { "type": "string" },
 
+    "outdir": { "type": "string" },
+
     "unikraft": {
       "id": "#/properties/unikraft",
       "$ref": "#/definitions/unikraft",
