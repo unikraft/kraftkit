@@ -61,7 +61,8 @@
       "properties": {
         "name": { "type": "string" },
         "architecture": { "type": "string" },
-        "platform": { "type": "string" }
+        "platform": { "type": "string" },
+        "initrd": { "$ref": "#/definitions/initrd" }
       }
     },
 
@@ -166,6 +167,17 @@
           "items": { "type": "string" }
         }
       ]
+    },
+
+    "initrd": {
+      "id": "#/definitions/initrd",
+      "type": "object",
+      "properties": {
+        "output": { "type": "string" },
+        "compress": { "type": "boolean" },
+        "format": { "type": "string" },
+        "input":{ "$ref": "#/definitions/list_or_dict" }
+      }
     }
   }
 }
