@@ -28,6 +28,7 @@ import (
 
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft/app"
+	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
@@ -195,9 +196,20 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 // LoadUnikraft produces a UnikraftConfig from a kraft file Dict the source Dict
 // is not validated if directly used. Use Load() to enable validation
 func LoadUnikraft(source interface{}) (core.UnikraftConfig, error) {
-	unikraft := core.UnikraftConfig{}
-	err := Transform(source, &unikraft)
+	// Populate the unikraft component with shared `ComponentConfig` attributes
+	base := component.ComponentConfig{}
+	err := Transform(source, &base)
 	if err != nil {
+		return core.UnikraftConfig{}, err
+	}
+
+	// Seed the unikraft component with the shared attributes and transform
+	base.Name = "unikraft"
+	unikraft := core.UnikraftConfig{
+		ComponentConfig: base,
+	}
+
+	if err := Transform(source, &unikraft); err != nil {
 		return unikraft, err
 	}
 
