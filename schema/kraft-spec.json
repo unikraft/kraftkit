@@ -23,10 +23,8 @@
     "targets": {
       "id": "#/properties/targets",
       "type": "array",
-      "patternProperties": {
-        "^[a-zA-Z0-9._-]+$": {
-          "$ref": "#/definitions/target"
-        }
+      "items": {
+        "$ref": "#/definitions/target"
       },
       "additionalProperties": true
     },
