@@ -27,16 +27,13 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/app"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
 	"go.unikraft.io/kit/pkg/unikraft/target"
-)
-
-const (
-	KraftProjectName = "KRAFT_PROJECT_NAME"
 )
 
 // LoaderOptions supported by Load
@@ -134,7 +131,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	}
 
 	if projectName != "" {
-		details.Environment[KraftProjectName] = projectName
+		details.Environment[unikraft.UK_NAME] = projectName
 	}
 	project := &app.ApplicationConfig{
 		Name:        projectName,
