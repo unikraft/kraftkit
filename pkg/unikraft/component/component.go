@@ -51,11 +51,6 @@ type ComponentConfig struct {
 
 // Component is the abstract interface for managing the individual microlibrary
 type Component interface {
-	// Preflight method instantiates the component.  It must perform any required
-	// setup to prepare the component to be used programmatically.  This does not
-	// include any provider-based implementation.
-	Preflight(...Option) error
-
 	// String returns the name of the component type
 	String() string
 }

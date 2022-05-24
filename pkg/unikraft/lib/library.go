@@ -53,17 +53,6 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
-func (l *LibraryConfig) Preflight(opts ...component.ComponentOption) error {
-	// Loop through each option
-	for _, opt := range opts {
-		// Call the option giving the instantiated *component.ComponentConfig as the
-		// argument
-		opt(&l.ComponentConfig)
-	}
-
-	return nil
-}
-
 func (l *LibraryConfig) String() string {
 	return "lib"
 }
