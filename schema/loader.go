@@ -219,12 +219,28 @@ func LoadUnikraft(source interface{}) (core.UnikraftConfig, error) {
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
 func LoadLibraries(source map[string]interface{}) (map[string]lib.LibraryConfig, error) {
+	// Populate all library components with shared `ComponentConfig` attributes
+	bases := make(map[string]component.ComponentConfig)
+	if err := Transform(source, &bases); err != nil {
+		return make(map[string]lib.LibraryConfig), err
+	}
+
+	// Seed the all library components with the shared attributes
 	libraries := make(map[string]lib.LibraryConfig)
-	if err := Transform(source, &libraries); err != nil {
-		return libraries, err
+	for name, library := range bases {
+		library.Name = name
+		libraries[name] = lib.LibraryConfig{
+			ComponentConfig: library,
+		}
 	}
 
 	for name, library := range libraries {
+		// Transform the seeded libraries.  We do this in the loop because for some
+		// reason the the `Transform` method zeros the seed.
+		if err := Transform(source[name], &library); err != nil {
+			return libraries, err
+		}
+
 		switch {
 		case library.Name == "":
 			library.Name = name
