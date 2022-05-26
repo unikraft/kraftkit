@@ -34,13 +34,13 @@ import (
 
 // ProjectOptions groups the command line options recommended for a Compose implementation
 type ProjectOptions struct {
-	Name        string
-	WorkingDir  string
-	ConfigPaths []string
-	Environment map[string]string
-	EnvFile     string
-	log         *log.Logger
-	loadOptions []func(*LoaderOptions)
+	Name          string
+	WorkingDir    string
+	ConfigPaths   []string
+	Configuration map[string]string
+	DotConfigFile string
+	log           *log.Logger
+	loadOptions   []func(*LoaderOptions)
 }
 
 type ProjectOptionsFn func(*ProjectOptions) error
@@ -48,8 +48,8 @@ type ProjectOptionsFn func(*ProjectOptions) error
 // NewProjectOptions creates ProjectOptions
 func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOptions, error) {
 	options := &ProjectOptions{
-		ConfigPaths: configs,
-		Environment: map[string]string{},
+		ConfigPaths:   configs,
+		Configuration: map[string]string{},
 	}
 	for _, o := range opts {
 		err := o(options)
@@ -91,91 +91,99 @@ func WithWorkingDirectory(wd string) ProjectOptionsFn {
 	}
 }
 
-// WithEnv defines a key=value set of variables used for compose file interpolation
-func WithEnv(env []string) ProjectOptionsFn {
+// WithConfig defines a key=value set of variables used for kraft file
+// interpolation as well as with Unikraft's build system
+func WithConfig(config []string) ProjectOptionsFn {
 	return func(o *ProjectOptions) error {
-		for k, v := range getAsEqualsMap(env) {
-			o.Environment[k] = v
+		for k, v := range getAsEqualsMap(config) {
+			o.Configuration[k] = v
 		}
 		return nil
 	}
 }
 
-// WithEnvFile set an alternate env file
-func WithEnvFile(file string) ProjectOptionsFn {
+// WithConfigFile set an alternate config file
+func WithConfigFile(file string) ProjectOptionsFn {
 	return func(options *ProjectOptions) error {
-		options.EnvFile = file
+		options.DotConfigFile = file
 		return nil
 	}
 }
 
-// WithDotEnv imports environment variables from .env file
-func WithDotEnv(o *ProjectOptions) error {
-	dotEnvFile := o.EnvFile
-	if dotEnvFile == "" {
-		wd, err := o.GetWorkingDir()
+// WithDotConfig imports configuration variables from .config file
+func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		if !withDotConfig {
+			return nil
+		}
+
+		if o.DotConfigFile == "" {
+			wd, err := o.GetWorkingDir()
+			if err != nil {
+				return err
+			}
+
+			o.DotConfigFile = filepath.Join(wd, ".config")
+		}
+
+		dotConfigFile := o.DotConfigFile
+
+		abs, err := filepath.Abs(dotConfigFile)
 		if err != nil {
 			return err
 		}
 
-		dotEnvFile = filepath.Join(wd, ".env")
-	}
+		dotConfigFile = abs
 
-	abs, err := filepath.Abs(dotEnvFile)
-	if err != nil {
-		return err
-	}
-
-	dotEnvFile = abs
-
-	s, err := os.Stat(dotEnvFile)
-	if os.IsNotExist(err) {
-		if o.EnvFile != "" {
-			return errors.Errorf("Couldn't find env file: %s", o.EnvFile)
-		}
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if s.IsDir() {
-		if o.EnvFile == "" {
+		s, err := os.Stat(dotConfigFile)
+		if os.IsNotExist(err) {
+			if o.DotConfigFile != "" {
+				return errors.Errorf("Couldn't find env file: %s", o.DotConfigFile)
+			}
 			return nil
 		}
-		return errors.Errorf("%s is a directory", dotEnvFile)
-	}
 
-	file, err := os.Open(dotEnvFile)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	notInEnvSet := make(map[string]interface{})
-	env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
-		v, ok := os.LookupEnv(k)
-		if !ok {
-			notInEnvSet[k] = nil
-			return "", true
+		if err != nil {
+			return err
 		}
 
-		return v, true
-	})
-	if err != nil {
-		return err
-	}
-
-	for k, v := range env {
-		if _, ok := notInEnvSet[k]; ok {
-			continue
+		if s.IsDir() {
+			if o.DotConfigFile == "" {
+				return nil
+			}
+			return errors.Errorf("%s is a directory", dotConfigFile)
 		}
-		o.Environment[k] = v
-	}
 
-	return nil
+		file, err := os.Open(dotConfigFile)
+		if err != nil {
+			return err
+		}
+
+		defer file.Close()
+
+		notInConfigSet := make(map[string]interface{})
+		env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
+			v, ok := os.LookupEnv(k)
+			if !ok {
+				notInConfigSet[k] = nil
+				return "", true
+			}
+
+			return v, true
+		})
+		if err != nil {
+			return err
+		}
+
+		for k, v := range env {
+			if _, ok := notInConfigSet[k]; ok {
+				continue
+			}
+			o.Configuration[k] = v
+		}
+
+		return nil
+	}
 }
 
 // WithInterpolation set ProjectOptions to enable/skip interpolation
@@ -339,9 +347,9 @@ func ApplicationFromOptions(options *ProjectOptions) (*app.ApplicationConfig, er
 	)
 
 	project, err := Load(config.ConfigDetails{
-		ConfigFiles: configs,
-		WorkingDir:  workingDir,
-		Environment: options.Environment,
+		ConfigFiles:   configs,
+		WorkingDir:    workingDir,
+		Configuration: options.Configuration,
 	}, options.loadOptions...)
 	if err != nil {
 		return nil, err

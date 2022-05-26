@@ -81,7 +81,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	opts := &LoaderOptions{
 		Interpolate: &interp.Options{
 			Substitute:      template.Substitute,
-			LookupValue:     details.LookupEnv,
+			LookupValue:     details.LookupConfig,
 			TypeCastMapping: interpolateTypeCastMapping,
 		},
 	}
@@ -131,17 +131,17 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	}
 
 	if projectName != "" {
-		details.Environment[unikraft.UK_NAME] = projectName
+		details.Configuration[unikraft.UK_NAME] = projectName
 	}
 	project := &app.ApplicationConfig{
-		Name:        projectName,
-		WorkingDir:  details.WorkingDir,
-		OutDir:      model.OutDir,
-		Unikraft:    model.Unikraft,
-		Libraries:   model.Libraries,
-		Targets:     model.Targets,
-		Environment: details.Environment,
-		Extensions:  model.Extensions,
+		Name:          projectName,
+		WorkingDir:    details.WorkingDir,
+		OutDir:        model.OutDir,
+		Unikraft:      model.Unikraft,
+		Libraries:     model.Libraries,
+		Targets:       model.Targets,
+		Configuration: details.Configuration,
+		Extensions:    model.Extensions,
 	}
 
 	if !opts.SkipNormalization {

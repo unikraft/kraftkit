@@ -44,15 +44,15 @@ import (
 
 // ConfigDetails are the details about a group of ConfigFiles
 type ConfigDetails struct {
-	Version     string
-	WorkingDir  string
-	ConfigFiles []ConfigFile
-	Environment map[string]string
+	Version       string
+	WorkingDir    string
+	ConfigFiles   []ConfigFile
+	Configuration map[string]string
 }
 
-// LookupEnv provides a lookup function for environment variables
-func (cd ConfigDetails) LookupEnv(key string) (string, bool) {
-	v, ok := cd.Environment[key]
+// LookupConfig provides a lookup function for config variables
+func (cd ConfigDetails) LookupConfig(key string) (string, bool) {
+	v, ok := cd.Configuration[key]
 	return v, ok
 }
 

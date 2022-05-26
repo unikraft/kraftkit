@@ -45,15 +45,15 @@ import (
 type ApplicationConfig struct {
 	component.ComponentConfig
 
-	Name        string               `yaml:"name,omitempty" json:"name,omitempty"`
-	WorkingDir  string               `yaml:"-" json:"-"`
-	OutDir      string               `yaml:",omitempty" json:"outdir,omitempty"`
-	Unikraft    core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries   lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets     target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
-	Extensions  component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	KraftFiles  []string             `yaml:"-" json:"-"`
-	Environment map[string]string    `yaml:"-" json:"-"`
+	Name          string               `yaml:"name,omitempty" json:"name,omitempty"`
+	WorkingDir    string               `yaml:"-" json:"-"`
+	OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`
+	Unikraft      core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
+	Libraries     lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
+	Targets       target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
+	Extensions    component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
+	KraftFiles    []string             `yaml:"-" json:"-"`
+	Configuration map[string]string    `yaml:"-" json:"-"`
 }
 
 func (a *ApplicationConfig) String() string {
