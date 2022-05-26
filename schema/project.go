@@ -29,6 +29,7 @@ import (
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft/app"
+	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/config"
 )
 
@@ -302,9 +303,9 @@ func (o ProjectOptions) GetWorkingDir() (string, error) {
 	return os.Getwd()
 }
 
-// ApplicationFromOptions load a kraft project based on command line options
-func ApplicationFromOptions(options *ProjectOptions) (*app.ApplicationConfig, error) {
-	configPaths, err := getConfigPathsFromOptions(options)
+// NewApplicationFromOptions load a kraft project based on command line options
+func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*app.ApplicationConfig, error) {
+	configPaths, err := getConfigPathsFromOptions(popts)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +334,7 @@ func ApplicationFromOptions(options *ProjectOptions) (*app.ApplicationConfig, er
 		})
 	}
 
-	workingDir, err := options.GetWorkingDir()
+	workingDir, err := popts.GetWorkingDir()
 	if err != nil {
 		return nil, err
 	}
@@ -342,15 +343,19 @@ func ApplicationFromOptions(options *ProjectOptions) (*app.ApplicationConfig, er
 		return nil, err
 	}
 
-	options.loadOptions = append(options.loadOptions,
-		withNamePrecedenceLoad(absWorkingDir, options),
+	popts.loadOptions = append(popts.loadOptions,
+		withNamePrecedenceLoad(absWorkingDir, popts),
+	)
+
+	popts.loadOptions = append(popts.loadOptions,
+		withComponentOptions(copts...),
 	)
 
 	project, err := Load(config.ConfigDetails{
 		ConfigFiles:   configs,
 		WorkingDir:    workingDir,
-		Configuration: options.Configuration,
-	}, options.loadOptions...)
+		Configuration: popts.Configuration,
+	}, popts.loadOptions...)
 	if err != nil {
 		return nil, err
 	}

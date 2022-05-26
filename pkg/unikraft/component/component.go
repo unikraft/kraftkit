@@ -33,6 +33,8 @@ package component
 
 import (
 	"context"
+
+	"go.unikraft.io/kit/pkg/pkgmanager"
 )
 
 // ComponentConfig is the shared attribute structure provided to all
@@ -46,7 +48,8 @@ type ComponentConfig struct {
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
-	workdir string
+	coreSource     string // The value of Unikraft's `source:` directive
+	packageManager *pkgmanager.PackageManager
 
 	// Context should contain all implementation-specific options, using
 	// `context.WithValue`
@@ -57,4 +60,14 @@ type ComponentConfig struct {
 type Component interface {
 	// String returns the name of the component type
 	String() string
+}
+
+func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {
+	for _, opt := range opts {
+		if err := opt(cc); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

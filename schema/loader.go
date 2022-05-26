@@ -61,6 +61,8 @@ type LoaderOptions struct {
 	projectName string
 	// Indicates when the projectName was imperatively set or guessed from path
 	projectNameImperativelySet bool
+	// Slice of component options to apply to each loaded component
+	componentOptions []component.ComponentOption
 }
 
 func (o *LoaderOptions) SetProjectName(name string, imperativelySet bool) {
@@ -76,6 +78,12 @@ func (o LoaderOptions) GetProjectName() (string, bool) {
 // sections
 func WithSkipValidation(opts *LoaderOptions) {
 	opts.SkipValidation = true
+}
+
+func withComponentOptions(copts ...component.ComponentOption) func(*LoaderOptions) {
+	return func(lopts *LoaderOptions) {
+		lopts.componentOptions = copts
+	}
 }
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
@@ -94,6 +102,14 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 
 	for _, op := range options {
 		op(opts)
+	}
+
+	// If we have a set package manager, we can directly inject this to each
+	// component.
+	if opts.PackageManager != nil {
+		opts.componentOptions = append(opts.componentOptions,
+			component.WithPackageManager(opts.PackageManager),
+		)
 	}
 
 	var configs []*config.Config
@@ -194,12 +210,12 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		cfg.OutDir = configDetails.RelativePath(outdir)
 	}
 
-	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"))
+	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"), opts)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"))
+	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"), cfg.Unikraft, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +235,7 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 
 // LoadUnikraft produces a UnikraftConfig from a kraft file Dict the source Dict
 // is not validated if directly used. Use Load() to enable validation
-func LoadUnikraft(source interface{}) (core.UnikraftConfig, error) {
+func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig, error) {
 	// Populate the unikraft component with shared `ComponentConfig` attributes
 	base := component.ComponentConfig{}
 	err := Transform(source, &base)
@@ -237,12 +253,18 @@ func LoadUnikraft(source interface{}) (core.UnikraftConfig, error) {
 		return unikraft, err
 	}
 
+	if err := unikraft.ApplyOptions(
+		opts.componentOptions...
+	); err != nil {
+		return unikraft, err
+	}
+
 	return unikraft, nil
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadLibraries(source map[string]interface{}) (map[string]lib.LibraryConfig, error) {
+func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, opts *LoaderOptions) (map[string]lib.LibraryConfig, error) {
 	// Populate all library components with shared `ComponentConfig` attributes
 	bases := make(map[string]component.ComponentConfig)
 	if err := Transform(source, &bases); err != nil {
@@ -262,6 +284,13 @@ func LoadLibraries(source map[string]interface{}) (map[string]lib.LibraryConfig,
 		// Transform the seeded libraries.  We do this in the loop because for some
 		// reason the the `Transform` method zeros the seed.
 		if err := Transform(source[name], &library); err != nil {
+			return libraries, err
+		}
+
+		copts := opts.componentOptions
+		copts = append(copts, component.WithCoreSource(unikraft.Source))
+
+		if err := library.ApplyOptions(copts...); err != nil {
 			return libraries, err
 		}
 
@@ -285,7 +314,19 @@ func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir stri
 	}
 
 	projectName, _ := opts.GetProjectName()
+	copts := opts.componentOptions
+	copts = append(copts, component.WithCoreSource(unikraft.Source))
+	copts = append(copts, component.WithCoreSource(unikraft.Source))
+
 	for i, target := range targets {
+		if err := target.Architecture.ApplyOptions(copts...); err != nil {
+			return targets, err
+		}
+
+		if err := target.Platform.ApplyOptions(copts...); err != nil {
+			return targets, err
+		}
+
 		switch {
 		case target.Name == "":
 			target.Name = fmt.Sprintf(

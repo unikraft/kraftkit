@@ -32,21 +32,21 @@
 package component
 
 import (
-	"context"
+	"go.unikraft.io/kit/pkg/pkgmanager"
 )
 
-type ComponentOption func(c *ComponentConfig)
+type ComponentOption func(cc *ComponentConfig) error
 
-func WithWorkdir(path string) ComponentOption {
-	return func(cc *ComponentConfig) {
-		cc.workdir = path
+func WithCoreSource(path string) ComponentOption {
+	return func(cc *ComponentConfig) error {
+		cc.coreSource = path
+		return nil
 	}
 }
 
-func (cc *ComponentConfig) Workdir() string {
-	return cc.workdir
-}
-
-func (cc *ComponentConfig) Context() context.Context {
-	return cc.ctx
+func WithPackageManager(pm *pkgmanager.PackageManager) ComponentOption {
+	return func(cc *ComponentConfig) error {
+		cc.packageManager = pm
+		return nil
+	}
 }
