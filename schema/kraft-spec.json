@@ -52,7 +52,8 @@
         "source": { "type": "string" },
         "version": { "type": [ "string", "number" ] },
         "kconfig": { "$ref": "#/definitions/list_or_dict" }
-      }
+      },
+      "additionalProperties": true
     },
 
     "target": {
@@ -64,7 +65,8 @@
         "platform": { "type": "string" },
         "initrd": { "$ref": "#/definitions/initrd" },
         "command": { "$ref": "#/definitions/command" }
-      }
+      },
+      "additionalProperties": true
     },
 
     "architecture": {
