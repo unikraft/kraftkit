@@ -30,6 +30,7 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/arch"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/plat"
+	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
 // TransformerFunc defines a function to perform the actual transformation
@@ -80,6 +81,7 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
 		reflect.TypeOf(component.KConfig{}):       transformMappingOrListFunc("=", true),
 		reflect.TypeOf(target.Command{}):          transformCommand,
+		reflect.TypeOf([]target.TargetConfig{}):   transformTarget,
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
@@ -211,4 +213,25 @@ var transformCommand TransformerFunc = func(value interface{}) (interface{}, err
 		return shellwords.Parse(str)
 	}
 	return value, nil
+}
+
+var transformTarget TransformerFunc = func(data interface{}) (interface{}, error) {
+	switch entries := data.(type) {
+	case []interface{}:
+		// We process the list instead of individual items here.
+		// The reason is that one entry might be mapped to multiple TargetConfig.
+		// Therefore we take an input of a list and return an output of a list.
+		var targets []interface{}
+		for _, entry := range entries {
+			switch value := entry.(type) {
+			case map[string]interface{}:
+				targets = append(targets, groupXFieldsIntoExtensions(value))
+			default:
+				return data, errors.Errorf("invalid type %T for target", value)
+			}
+		}
+		return targets, nil
+	default:
+		return data, errors.Errorf("invalid type %T for target", entries)
+	}
 }
