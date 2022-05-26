@@ -31,22 +31,4 @@
 
 package target
 
-import (
-	"go.unikraft.io/kit/pkg/initrd"
-	"go.unikraft.io/kit/pkg/unikraft/arch"
-	"go.unikraft.io/kit/pkg/unikraft/plat"
-)
-
-type TargetConfig struct {
-	Name         string                  `yaml:",omitempty" json:"name,omitempty"`
-	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
-	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
-	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
-	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempy"`
-	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
-	Command      []string                `yaml:",omitempty" json:"commands"`
-
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
-}
-
-type Targets []TargetConfig
+type Command []string
