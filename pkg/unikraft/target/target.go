@@ -32,27 +32,17 @@
 package target
 
 import (
+	"go.unikraft.io/kit/pkg/initrd"
 	"go.unikraft.io/kit/pkg/unikraft/arch"
 	"go.unikraft.io/kit/pkg/unikraft/plat"
 )
 
 type TargetConfig struct {
-	Name         string `yaml:",omitempty" json:"name,omitempty"`
-	Architecture string `yaml:",omitempty" json:"architecture,omitempty"`
-	Platform     string `yaml:",omitempty" json:"platform,omitempty"`
+	Name         string                  `yaml:",omitempty" json:"name,omitempty"`
+	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
+	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
-
-	architecture arch.ArchitectureConfig
-	platform     plat.PlatformConfig
 }
 
 type Targets []TargetConfig
-
-func (t *TargetConfig) ArchitectureConfig() arch.ArchitectureConfig {
-	return t.architecture
-}
-
-func (t *TargetConfig) PlatformConfig() plat.PlatformConfig {
-	return t.platform
-}
