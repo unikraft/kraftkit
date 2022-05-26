@@ -42,13 +42,6 @@ const (
 
 type LibraryConfig struct {
 	component.ComponentConfig
-
-	Name    string              `yaml:",omitempty" json:"name,omitempty"`
-	Source  string              `yaml:",omitempty" json:"source,omitempty"`
-	Version string              `yaml:",omitempty" json:"version,omitempty"`
-	KConfig []component.KConfig `yaml:",omitempty" json:"kconfig,omitempty"`
-
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type Libraries map[string]LibraryConfig
