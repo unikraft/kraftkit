@@ -24,6 +24,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
+	"go.unikraft.io/kit/pkg/initrd"
 	"go.unikraft.io/kit/pkg/unikraft/arch"
 	"go.unikraft.io/kit/pkg/unikraft/plat"
 )
@@ -62,6 +63,7 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
+		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -130,5 +132,22 @@ var transformPlatform TransformerFunc = func(data interface{}) (interface{}, err
 		return plat.ParsePlatformConfig(value)
 	default:
 		return data, errors.Errorf("invalid type %T for platform", value)
+	}
+}
+
+var transformInitrd TransformerFunc = func(data interface{}) (interface{}, error) {
+	switch value := data.(type) {
+	case map[string]interface{}:
+		if format, ok := value["format"]; ok {
+			if typ, ok := initrd.NameToType[format.(string)]; ok {
+				value["format"] = typ
+			} else {
+				return value, errors.Errorf("invalid option for initrd type: %s", format)
+			}
+		}
+
+		return value, nil
+	default:
+		return data, errors.Errorf("invalid type %T for platform: %s", value)
 	}
 }
