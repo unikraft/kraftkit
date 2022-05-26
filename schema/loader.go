@@ -36,6 +36,11 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
+const (
+	DefaultOutputDir  = "build"
+	DefaultConfigFile = ".config"
+)
+
 // LoaderOptions supported by Load
 type LoaderOptions struct {
 	// Skip schema validation
