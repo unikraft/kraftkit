@@ -23,6 +23,8 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+
+	"go.unikraft.io/kit/pkg/unikraft/arch"
 )
 
 // TransformerFunc defines a function to perform the actual transformation
@@ -56,7 +58,8 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 
 func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
-		reflect.TypeOf(map[string]string{}): transformMapStringString,
+		reflect.TypeOf(map[string]string{}):       transformMapStringString,
+		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -99,5 +102,18 @@ var transformMapStringString TransformerFunc = func(data interface{}) (interface
 		return value, nil
 	default:
 		return data, errors.Errorf("invalid type %T for map[string]string", value)
+	}
+}
+
+var transformArchitecture TransformerFunc = func(data interface{}) (interface{}, error) {
+	switch value := data.(type) {
+	case map[string]interface{}:
+		return toMapStringString(value, false), nil
+	case map[string]string:
+		return value, nil
+	case string:
+		return arch.ParseArchitectureConfig(value)
+	default:
+		return data, errors.Errorf("invalid type %T for architecture", value)
 	}
 }
