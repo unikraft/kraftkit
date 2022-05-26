@@ -19,6 +19,7 @@ package schema
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
@@ -138,6 +139,13 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	if projectName != "" {
 		details.Configuration[unikraft.UK_NAME] = projectName
 	}
+
+	if len(model.Unikraft.ComponentConfig.Source) > 0 {
+		if p, err := os.Stat(model.Unikraft.ComponentConfig.Source); err != nil && p.IsDir() {
+			details.Configuration[unikraft.UK_BASE] = model.Unikraft.ComponentConfig.Source
+		}
+	}
+
 	project := &app.ApplicationConfig{
 		Name:          projectName,
 		WorkingDir:    details.WorkingDir,
