@@ -20,12 +20,14 @@ package schema
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
 	"go.unikraft.io/kit/pkg/initrd"
 	"go.unikraft.io/kit/pkg/unikraft/arch"
+	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/plat"
 )
 
@@ -45,9 +47,23 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 	config := &mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			createTransformHook(additionalTransformers...),
-			mapstructure.StringToTimeDurationHookFunc()),
-		Result:   target,
-		Metadata: &data,
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+		Result:     target,
+		Metadata:   &data,
+		MatchName:  func(mapKey, fieldName string) bool {
+			maps := map[string]string{
+				"kconfig": "Configuration",
+			}
+
+			if f, ok := maps[mapKey]; ok && f == fieldName {
+				return true
+			} else if mapKey == strings.ToLower(fieldName) {
+				return true
+			}
+
+			return false
+		},
 	}
 
 	decoder, err := mapstructure.NewDecoder(config)
@@ -61,6 +77,7 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
+		reflect.TypeOf(component.KConfig{}):       transformMappingOrListFunc("=", true),
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
@@ -149,5 +166,40 @@ var transformInitrd TransformerFunc = func(data interface{}) (interface{}, error
 		return value, nil
 	default:
 		return data, errors.Errorf("invalid type %T for platform: %s", value)
+	}
+}
+
+func transformMappingOrListFunc(sep string, allowNil bool) TransformerFunc {
+	return func(data interface{}) (interface{}, error) {
+		x, err := transformMappingOrList(data, sep, allowNil)
+		return x, err
+	}
+}
+
+func transformMappingOrList(mappingOrList interface{}, sep string, allowNil bool) (interface{}, error) {
+	switch value := mappingOrList.(type) {
+	case map[string]interface{}:
+		return toMapStringString(value, allowNil), nil
+	case []interface{}:
+		result := make(map[string]interface{})
+		for _, value := range value {
+			key, val := transformValueToMapEntry(value.(string), sep, allowNil)
+			result[key] = val
+		}
+		return result, nil
+	}
+	return nil, errors.Errorf("expected a map or a list, got %T: %#v", mappingOrList, mappingOrList)
+}
+
+func transformValueToMapEntry(value string, separator string, allowNil bool) (string, interface{}) {
+	parts := strings.SplitN(value, separator, 2)
+	key := parts[0]
+	switch {
+	case len(parts) == 1 && allowNil:
+		return key, nil
+	case len(parts) == 1 && !allowNil:
+		return key, ""
+	default:
+		return key, parts[1]
 	}
 }
