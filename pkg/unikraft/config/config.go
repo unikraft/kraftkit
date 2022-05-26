@@ -34,7 +34,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/core"
@@ -110,72 +109,3 @@ type StringOrNumberList []string
 // value is set to a pointer to `""`. For the key without value (`key`), the
 // mapped value is set to nil.
 type MappingWithEquals map[string]*string
-
-// NewMappingWithEquals build a new Mapping from a set of KEY=VALUE strings
-func NewMappingWithEquals(values []string) MappingWithEquals {
-	mapping := MappingWithEquals{}
-	for _, env := range values {
-		tokens := strings.SplitN(env, "=", 2)
-		if len(tokens) > 1 {
-			mapping[tokens[0]] = &tokens[1]
-		} else {
-			mapping[env] = nil
-		}
-	}
-	return mapping
-}
-
-// OverrideBy update MappingWithEquals with values from another
-// MappingWithEquals
-func (e MappingWithEquals) OverrideBy(other MappingWithEquals) MappingWithEquals {
-	for k, v := range other {
-		e[k] = v
-	}
-	return e
-}
-
-// Resolve update a MappingWithEquals for keys without value (`key`, but not
-// `key=`)
-func (e MappingWithEquals) Resolve(lookupFn func(string) (string, bool)) MappingWithEquals {
-	for k, v := range e {
-		if v == nil {
-			if value, ok := lookupFn(k); ok {
-				e[k] = &value
-			}
-		}
-	}
-	return e
-}
-
-// RemoveEmpty excludes keys that are not associated with a value
-func (e MappingWithEquals) RemoveEmpty() MappingWithEquals {
-	for k, v := range e {
-		if v == nil {
-			delete(e, k)
-		}
-	}
-	return e
-}
-
-// Mapping is a mapping type that can be converted from a list of
-// key[=value] strings.
-// For the key with an empty value (`key=`), or key without value (`key`), the
-// mapped value is set to an empty string `""`.
-type Mapping map[string]string
-
-// NewMapping build a new Mapping from a set of KEY=VALUE strings
-func NewMapping(values []string) Mapping {
-	mapping := Mapping{}
-	for _, value := range values {
-		parts := strings.SplitN(value, "=", 2)
-		key := parts[0]
-		switch {
-		case len(parts) == 1:
-			mapping[key] = ""
-		default:
-			mapping[key] = parts[1]
-		}
-	}
-
-	return mapping
-}

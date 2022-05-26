@@ -1,37 +1,72 @@
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: Apache-2.0
 //
-// Authors: Alexander Jung <alex@unikraft.io>
+// Copyright 2020 The Compose Specification Authors.
+// Copyright 2022 Unikraft GmbH. All rights reserved.
 //
-// Copyright (c) 2022, Unikraft UG.  All rights reserved.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
+// 		http://www.apache.org/licenses/LICENSE-2.0
 //
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package component
 
-type KConfig struct {
-	Name  string `yaml:",omitempty" json:"name,omitempty"`
-	Value string `yaml:",omitempty" json:"value,omitempty"`
+import "strings"
+
+// KConfig is a mapping type that can be converted from a list of
+// key[=value] strings. For the key with an empty value (`key=`), the mapped
+// value is set to a pointer to `""`. For the key without value (`key`), the
+// mapped value is set to nil.
+type KConfig map[string]*string
+
+// NewKConfig build a new Mapping from a set of KEY=VALUE strings
+func NewKConfig(values []string) KConfig {
+	mapping := KConfig{}
+	for _, env := range values {
+		tokens := strings.SplitN(env, "=", 2)
+		if len(tokens) > 1 {
+			mapping[tokens[0]] = &tokens[1]
+		} else {
+			mapping[env] = nil
+		}
+	}
+	return mapping
+}
+
+// OverrideBy update KConfig with values from another
+// KConfig
+func (e KConfig) OverrideBy(other KConfig) KConfig {
+	for k, v := range other {
+		e[k] = v
+	}
+	return e
+}
+
+// Resolve update a KConfig for keys without value (`key`, but not
+// `key=`)
+func (e KConfig) Resolve(lookupFn func(string) (string, bool)) KConfig {
+	for k, v := range e {
+		if v == nil {
+			if value, ok := lookupFn(k); ok {
+				e[k] = &value
+			}
+		}
+	}
+	return e
+}
+
+// RemoveEmpty excludes keys that are not associated with a value
+func (e KConfig) RemoveEmpty() KConfig {
+	for k, v := range e {
+		if v == nil {
+			delete(e, k)
+		}
+	}
+	return e
 }
