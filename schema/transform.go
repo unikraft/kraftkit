@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/mattn/go-shellwords"
 	"github.com/pkg/errors"
 
 	"go.unikraft.io/kit/pkg/initrd"
@@ -78,6 +79,7 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
 		reflect.TypeOf(component.KConfig{}):       transformMappingOrListFunc("=", true),
+		reflect.TypeOf(target.Command{}):          transformCommand,
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
@@ -202,4 +204,11 @@ func transformValueToMapEntry(value string, separator string, allowNil bool) (st
 	default:
 		return key, parts[1]
 	}
+}
+
+var transformCommand TransformerFunc = func(value interface{}) (interface{}, error) {
+	if str, ok := value.(string); ok {
+		return shellwords.Parse(str)
+	}
+	return value, nil
 }

@@ -15,6 +15,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/mattn/go-colorable v0.1.12
 	github.com/mattn/go-isatty v0.0.14
+	github.com/mattn/go-shellwords v1.0.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/muesli/reflow v0.3.0
