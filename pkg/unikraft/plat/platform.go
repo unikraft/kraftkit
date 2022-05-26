@@ -31,10 +31,27 @@
 
 package plat
 
-import "go.unikraft.io/kit/pkg/unikraft/component"
+import (
+	"fmt"
+
+	"go.unikraft.io/kit/pkg/unikraft/component"
+)
 
 type PlatformConfig struct {
 	component.ComponentConfig
+}
+
+// ParsePlatformConfig parse short syntax for platform configuration
+func ParsePlatformConfig(value string) (PlatformConfig, error) {
+	platform := PlatformConfig{}
+
+	if len(value) == 0 {
+		return platform, fmt.Errorf("cannot ommit platform name")
+	}
+
+	platform.Name = value
+
+	return platform, nil
 }
 
 func (p *PlatformConfig) String() string {
