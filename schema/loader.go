@@ -204,7 +204,7 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		return nil, err
 	}
 
-	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"))
+	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"), cfg.Unikraft, cfg.OutDir, configDetails, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -278,10 +278,41 @@ func LoadLibraries(source map[string]interface{}) (map[string]lib.LibraryConfig,
 
 // LoadTargets produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadTargets(source []interface{}) ([]target.TargetConfig, error) {
+func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir string, configDetails config.ConfigDetails, opts *LoaderOptions) ([]target.TargetConfig, error) {
 	targets := []target.TargetConfig{}
 	if err := Transform(source, &targets); err != nil {
 		return targets, err
+	}
+
+	projectName, _ := opts.GetProjectName()
+	for i, target := range targets {
+		switch {
+		case target.Name == "":
+			target.Name = fmt.Sprintf(
+				// The filename pattern below is a baked in assumption within Unikraft's
+				// build system, see for example `KVM_IMAGE`.  TODO: This format should
+				// likely be upstreamed into the core as a generic for all platforms.
+				"%s_%s-%s",
+				projectName,
+				target.Platform.ComponentConfig.Name,
+				target.Architecture.ComponentConfig.Name,
+			)
+
+		case target.Kernel == "":
+			target.Kernel = filepath.Join(outdir, target.Name)
+
+		case target.KernelDbg == "":
+			// Another baked-in assumption from the Unikraft build system.  See for
+			// example `KVM_DEBUG_IMAGE` which simply makes the same suffix appendage.
+			// TODO: As above, this should likely be upstreamed as a generic.
+			target.KernelDbg = fmt.Sprintf("%s.dbg", target.Kernel)
+		}
+
+		if opts.ResolvePaths {
+			target.Kernel = configDetails.RelativePath(target.Kernel)
+		}
+
+		targets[i] = target
 	}
 
 	return targets, nil
