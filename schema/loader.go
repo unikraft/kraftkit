@@ -20,6 +20,7 @@ package schema
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
@@ -78,6 +79,16 @@ func (o LoaderOptions) GetProjectName() (string, bool) {
 // sections
 func WithSkipValidation(opts *LoaderOptions) {
 	opts.SkipValidation = true
+}
+
+func withNamePrecedence(absWorkingDir string, popts *ProjectOptions) func(*LoaderOptions) {
+	return func(lopts *LoaderOptions) {
+		if popts.Name != "" {
+			lopts.SetProjectName(popts.Name, true)
+		} else {
+			lopts.SetProjectName(filepath.Base(absWorkingDir), false)
+		}
+	}
 }
 
 func withComponentOptions(copts ...component.ComponentOption) func(*LoaderOptions) {

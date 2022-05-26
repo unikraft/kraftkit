@@ -344,7 +344,7 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 	}
 
 	popts.loadOptions = append(popts.loadOptions,
-		withNamePrecedenceLoad(absWorkingDir, popts),
+		withNamePrecedence(absWorkingDir, popts),
 	)
 
 	popts.loadOptions = append(popts.loadOptions,
@@ -371,16 +371,6 @@ func getConfigPathsFromOptions(options *ProjectOptions) ([]string, error) {
 	}
 
 	return nil, errors.Wrap(errs.ErrNotFound, "no configuration file provided")
-}
-
-func withNamePrecedenceLoad(absWorkingDir string, options *ProjectOptions) func(*LoaderOptions) {
-	return func(opts *LoaderOptions) {
-		if options.Name != "" {
-			opts.SetProjectName(options.Name, true)
-		} else {
-			opts.SetProjectName(filepath.Base(absWorkingDir), false)
-		}
-	}
 }
 
 func absolutePaths(p []string) ([]string, error) {
