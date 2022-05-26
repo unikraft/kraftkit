@@ -37,6 +37,10 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
+type Platform interface {
+	component.Component
+}
+
 type PlatformConfig struct {
 	component.ComponentConfig
 }

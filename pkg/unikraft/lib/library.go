@@ -40,6 +40,10 @@ const (
 	MAKEFILEUK = "Makefile.uk"
 )
 
+type Library interface {
+	component.Component
+}
+
 type LibraryConfig struct {
 	component.ComponentConfig
 }

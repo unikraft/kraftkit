@@ -37,6 +37,10 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
+type Architecture interface {
+	component.Component
+}
+
 type ArchitectureConfig struct {
 	component.ComponentConfig
 }

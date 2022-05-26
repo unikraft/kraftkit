@@ -35,6 +35,10 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
+type Unikraft interface {
+	component.Component
+}
+
 type UnikraftConfig struct {
 	component.ComponentConfig
 }
