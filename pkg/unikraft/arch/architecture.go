@@ -31,10 +31,27 @@
 
 package arch
 
-import "go.unikraft.io/kit/pkg/unikraft/component"
+import (
+	"fmt"
+
+	"go.unikraft.io/kit/pkg/unikraft/component"
+)
 
 type ArchitectureConfig struct {
 	component.ComponentConfig
+}
+
+// ParseArchitectureConfig parse short syntax for architecture configuration
+func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
+	architecture := ArchitectureConfig{}
+
+	if len(value) == 0 {
+		return architecture, fmt.Errorf("cannot ommit architecture name")
+	}
+
+	architecture.Name = value
+
+	return architecture, nil
 }
 
 func (a *ArchitectureConfig) String() string {
