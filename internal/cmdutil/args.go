@@ -25,6 +25,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -79,4 +80,30 @@ func NoArgsQuoteReminder(cmd *cobra.Command, args []string) error {
 	}
 
 	return FlagErrorf("%s", errMsg)
+}
+
+func MaxDirArgs(n int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) > n {
+			return FlagErrorf("expected no more than %d paths received %d", n, len(args))
+
+			// Treat no path as current working directory
+		} else if len(args) == 0 {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			args = []string{cwd}
+		}
+
+		for _, path := range args {
+			f, err := os.Stat(path)
+			if err != nil || !f.IsDir() {
+				return FlagErrorf("path is not a valid directory: %s", path)
+			}
+		}
+
+		return nil
+	}
 }
