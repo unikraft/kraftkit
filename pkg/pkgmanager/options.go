@@ -36,6 +36,7 @@ import (
 
 	"go.unikraft.io/kit/internal/config"
 	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/utils"
 )
 
 // PackageManagerOptions contains configuration for the Package
@@ -98,6 +99,56 @@ type PullPackageOptions struct {
 }
 
 type PullPackageOption func(opts *PullPackageOptions) error
+
+// NewPullPackageOptions creates PullPackageOptions
+func NewPullPackageOptions(opts ...PullPackageOption) (*PullPackageOptions, error) {
+	options := &PullPackageOptions{}
+
+	for _, o := range opts {
+		err := o(options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return options, nil
+}
+
+func WithPullArchitecture(archs ...string) PullPackageOption {
+	return func(opts *PullPackageOptions) error {
+		for _, arch := range archs {
+			if arch == "" {
+				continue
+			}
+
+			if utils.Contains(opts.architectures, arch) {
+				continue
+			}
+
+			opts.architectures = append(opts.architectures, archs...)
+		}
+
+		return nil
+	}
+}
+
+func WithPullPlatform(plats ...string) PullPackageOption {
+	return func(opts *PullPackageOptions) error {
+		for _, plat := range plats {
+			if plat == "" {
+				continue
+			}
+
+			if utils.Contains(opts.platforms, plat) {
+				continue
+			}
+
+			opts.platforms = append(opts.platforms, plats...)
+		}
+
+		return nil
+	}
+}
 
 type SearchPackageOptions struct {
 	architectures  []string
