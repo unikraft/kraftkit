@@ -81,12 +81,8 @@ var timezoneNames = map[int]string{
 	50400:  "Pacific/Kiritimati",
 }
 
-type configGetter interface {
-	Get(string) (string, error)
-}
-
 // generic authenticated HTTP client for commands
-func NewHTTPClient(io *iostreams.IOStreams, cfg configGetter, setAccept bool) (*http.Client, error) {
+func NewHTTPClient(io *iostreams.IOStreams, unixSocket string, setAccept bool) (*http.Client, error) {
 	var opts []ClientOption
 
 	// We need to check and potentially add the unix socket roundtripper option
@@ -101,11 +97,6 @@ func NewHTTPClient(io *iostreams.IOStreams, cfg configGetter, setAccept bool) (*
 	// which would use that non-default behavior is right here, and it doesn't
 	// seem worth the cognitive overhead everywhere else just to serve this one
 	// use case.
-	unixSocket, err := cfg.Get("http_unix_socket")
-	if err != nil {
-		return nil, err
-	}
-
 	if unixSocket != "" {
 		opts = append(opts, ClientOption(func(http.RoundTripper) http.RoundTripper {
 			return httpunix.NewRoundTripper(unixSocket)

@@ -51,16 +51,16 @@ type Factory struct {
 	RootCmd       *cobra.Command
 	IOStreams     *iostreams.IOStreams
 	PluginManager *plugins.PluginManager
+	ConfigManager *config.ConfigManager
 
 	Logger     func() (*log.Logger, error)
 	HttpClient func() (*http.Client, error)
-	Config     func() (config.Config, error)
 }
 
 // New creates a new Factory object
 func New(opts ...FactoryOption) *Factory {
 	f := &Factory{
-		Config: configFunc(),
+		ConfigManager: configManager(),
 	}
 
 	// Depends on Config
@@ -96,34 +96,17 @@ func New(opts ...FactoryOption) *Factory {
 	return f
 }
 
-func configFunc() func() (config.Config, error) {
-	var cachedConfig config.Config
-	var configError error
+func configManager() *config.ConfigManager {
+	cm, _ := config.NewConfigManager(
+		config.WithDefaultConfigFile(),
+	)
 
-	return func() (config.Config, error) {
-		if cachedConfig != nil || configError != nil {
-			return cachedConfig, configError
-		}
-
-		cachedConfig, configError = config.ParseDefaultConfig()
-		if errors.Is(configError, os.ErrNotExist) {
-			cachedConfig = config.NewBlankConfig()
-			configError = nil
-		}
-
-		cachedConfig = config.InheritEnv(cachedConfig)
-		return cachedConfig, configError
-	}
+	return cm
 }
 
 func ioStreams(f *Factory) *iostreams.IOStreams {
 	io := iostreams.System()
-	cfg, err := f.Config()
-	if err != nil {
-		return io
-	}
-
-	if prompt, _ := cfg.GetOrDefault("prompt"); prompt == "disabled" {
+	if f.ConfigManager.Config.NoPrompt {
 		io.SetNeverPrompt(true)
 	}
 
@@ -133,7 +116,7 @@ func ioStreams(f *Factory) *iostreams.IOStreams {
 	// 3. PAGER
 	if kkPager, kkPagerExists := os.LookupEnv("KRAFTKIT_PAGER"); kkPagerExists {
 		io.SetPager(kkPager)
-	} else if pager, _ := cfg.Get("pager"); pager != "" {
+	} else if pager := f.ConfigManager.Config.Pager; pager != "" {
 		io.SetPager(pager)
 	}
 
@@ -142,31 +125,18 @@ func ioStreams(f *Factory) *iostreams.IOStreams {
 
 func httpClientFunc(f *Factory) func() (*http.Client, error) {
 	return func() (*http.Client, error) {
-		io := f.IOStreams
-		cfg, err := f.Config()
-		if err != nil {
-			return nil, err
-		}
-
-		return httpclient.NewHTTPClient(io, cfg, true)
+		return httpclient.NewHTTPClient(
+			f.IOStreams,
+			f.ConfigManager.Config.HTTPUnixSocket,
+			true,
+		)
 	}
 }
 
 func loggerFunc(f *Factory) func() (*log.Logger, error) {
 	return func() (*log.Logger, error) {
-		cfg, err := f.Config()
-		if err != nil {
-			return nil, err
-		}
-
-		logLevel, err := cfg.GetOrDefault("log_level")
-		if err != nil {
-			logLevel = "info"
-		}
-
-		io := f.IOStreams
-		l := log.NewLogger(io)
-		l.SetLevel(log.LogLevelFromString(logLevel))
+		l := log.NewLogger(f.IOStreams)
+		l.SetLevel(log.LogLevelFromString(f.ConfigManager.Config.Log.Level))
 
 		return l, nil
 	}
@@ -175,13 +145,7 @@ func loggerFunc(f *Factory) func() (*log.Logger, error) {
 func pluginManager(f *Factory) *plugins.PluginManager {
 	pm := plugins.NewPluginManager(f.IOStreams)
 
-	// Set config
-	cfg, err := f.Config()
-	if err != nil {
-		return pm
-	}
-
-	pm.SetConfig(cfg)
+	pm.SetConfig(f.ConfigManager.Config)
 
 	// Set HTTP client
 	client, err := f.HttpClient()

@@ -179,11 +179,7 @@ func fileExists(path string) bool {
 }
 
 func ConfigFile() string {
-	return filepath.Join(ConfigDir(), "config.yml")
-}
-
-func ParseDefaultConfig() (Config, error) {
-	return parseConfig(ConfigFile())
+	return filepath.Join(ConfigDir(), "config.yaml")
 }
 
 func HomeDirPath(subdir string) (string, error) {

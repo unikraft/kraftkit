@@ -41,7 +41,7 @@ import (
 // PackageManagerOptions contains configuration for the Package
 type PackageManagerOptions struct {
 	Log    *log.Logger
-	Config config.Config
+	Config *config.Config
 
 	dataDir func() string
 
@@ -82,7 +82,7 @@ func WithLogger(l *log.Logger) PackageManagerOption {
 }
 
 // WithConfig provides access to global config
-func WithConfig(c config.Config) PackageManagerOption {
+func WithConfig(c *config.Config) PackageManagerOption {
 	return func(o *PackageManagerOptions) error {
 		o.Config = c
 		return nil

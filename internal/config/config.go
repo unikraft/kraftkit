@@ -1,237 +1,231 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 //
-// Copyright (c) 2019 GitHub Inc.
-//               2022 Unikraft UG.
+// Authors: Alexander Jung <alex@unikraft.io>
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Copyright (c) 2022, Unikraft UG.  All rights reserved.5
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 package config
 
 import (
 	"fmt"
-
-	"gopkg.in/yaml.v3"
+	"reflect"
+	"strconv"
 )
 
-// This interface describes interacting with some persistent configuration for
-// kraftkit.
-type Config interface {
-	Get(key string) (string, error)
-	GetOrDefault(key string) (string, error)
-	GetWithSource(key string) (string, string, error)
-	GetOrDefaultWithSource(key string) (string, string, error)
-	Default(string) string
-	Set(key string, value string) error
-	Aliases() (*AliasConfig, error)
-	CheckWriteable(string) error
-	Write() error
+type Config struct {
+	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"        env:"KRAFTKIT_NO_PROMPT"    default:"false"`
+	Editor         string `json:"editor"           yaml:"editor"           env:"KRAFTKIT_EDITOR"`
+	Browser        string `json:"browser"          yaml:"browser"          env:"KRAFTKIT_BROWSER"`
+	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"     env:"KRAFTKIT_GIT_PROTOCOL" default:"https"`
+	Pager          string `json:"pager"            yaml:"pager"            env:"KRAFTKIT_PAGER"`
+	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
+
+	Paths struct {
+		Plugin string `json:"plugins" yaml:"plugins" env:"KRAFTKIT_PATHS_PLUGINS"`
+		Config string `json:"config" yaml:"config" env:"KRAFTKIT_PATHS_CONFIG"`
+	} `json:"paths" yaml:"paths"`
+
+	Log struct {
+		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"warn"`
+		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" default:"false"`
+		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"       default:"fancy"`
+	} `json:"log" yaml:"log"`
 }
 
-type ConfigOption struct {
+type ConfigDetail struct {
 	Key           string
 	Description   string
-	DefaultValue  string
 	AllowedValues []string
 }
 
-var configOptions = []ConfigOption{
+// Descriptions of each configuration parameter as well as valid values
+var configDetails = []ConfigDetail{
 	{
-		Key:           "git_protocol",
-		Description:   "the protocol to use for git clone and push operations",
-		DefaultValue:  "https",
-		AllowedValues: []string{"https", "ssh"},
+		Key:         "no_prompt",
+		Description: "toggle interactive prompting in the terminal",
 	},
 	{
-		Key:          "editor",
-		Description:  "the text editor program to use for authoring text",
-		DefaultValue: "",
+		Key:         "editor",
+		Description: "the text editor program to use for authoring text",
 	},
 	{
-		Key:           "prompt",
-		Description:   "toggle interactive prompting in the terminal",
-		DefaultValue:  "enabled",
-		AllowedValues: []string{"enabled", "disabled"},
+		Key:         "browser",
+		Description: "the web browser to use for opening URLs",
 	},
 	{
-		Key:          "pager",
-		Description:  "the terminal pager program to send standard output to",
-		DefaultValue: "",
+		Key:         "git_protocol",
+		Description: "the protocol to use for git clone and push operations",
+		AllowedValues: []string{
+			"https",
+			"ssh",
+		},
 	},
 	{
-		Key:          "http_unix_socket",
-		Description:  "the path to a Unix socket through which to make an HTTP connection",
-		DefaultValue: "",
+		Key:         "pager",
+		Description: "the terminal pager program to send standard output to",
 	},
 	{
-		Key:          "browser",
-		Description:  "the web browser to use for opening URLs",
-		DefaultValue: "",
+		Key:         "log.level",
+		Description: "Set the logging verbosity",
+		AllowedValues: []string{
+			"fatal",
+			"error",
+			"warn",
+			"info",
+			"debug",
+			"trace",
+		},
+	},
+	{
+		Key:         "log.type",
+		Description: "Set the logging verbosity",
+		AllowedValues: []string{
+			"quiet",
+			"basic",
+			"fancy",
+			"json",
+		},
+	},
+	{
+		Key:         "log.timestamps",
+		Description: "Show timestamps with log output",
 	},
 }
 
-func ConfigOptions() []ConfigOption {
-	return configOptions
+func ConfigDetails() []ConfigDetail {
+	return configDetails
 }
 
-func ValidateKey(key string) error {
-	for _, configKey := range configOptions {
-		if key == configKey.Key {
-			return nil
-		}
+func NewDefaultConfig() (*Config, error) {
+	c := &Config{}
+
+	if err := setDefaults(c); err != nil {
+		return nil, fmt.Errorf("could not set defaults for config: %s", err)
 	}
 
-	return fmt.Errorf("invalid key")
+	return c, nil
 }
 
-type InvalidValueError struct {
-	ValidValues []string
+func setDefaults(s interface{}) error {
+	return setDefaultValue(reflect.ValueOf(s), "")
 }
 
-func (e InvalidValueError) Error() string {
-	return "invalid value"
-}
-
-func ValidateValue(key, value string) error {
-	var validValues []string
-
-	for _, v := range configOptions {
-		if v.Key == key {
-			validValues = v.AllowedValues
-			break
-		}
+func setDefaultValue(v reflect.Value, def string) error {
+	if v.Kind() != reflect.Ptr {
+		return fmt.Errorf("not a pointer value")
 	}
 
-	if validValues == nil {
+	v = reflect.Indirect(v)
+
+	switch v.Kind() {
+	case reflect.Int:
+		if len(def) > 0 {
+			i, err := strconv.ParseInt(def, 10, 64)
+			if err != nil {
+				return fmt.Errorf("could not parse default integer value: %s", err)
+			}
+			v.SetInt(i)
+		}
+
+	case reflect.String:
+		if len(def) > 0 {
+			v.SetString(def)
+		}
+
+	case reflect.Bool:
+		if len(def) > 0 {
+			b, err := strconv.ParseBool(def)
+			if err != nil {
+				return fmt.Errorf("could not parse default boolean value: %s", err)
+			}
+			v.SetBool(b)
+		} else {
+			// Assume false by default
+			v.SetBool(false)
+		}
+
+	case reflect.Struct:
+		// Iterate over the struct fields
+		for i := 0; i < v.NumField(); i++ {
+			// Use the `default:""` tag as a hint for the value to set
+			if err := setDefaultValue(
+				v.Field(i).Addr(),
+				v.Type().Field(i).Tag.Get("default"),
+			); err != nil {
+				return err
+			}
+		}
+
+	// TODO: Arrays? Maps?
+
+	default:
+		// Ignore this value and property entirely
 		return nil
 	}
 
-	for _, v := range validValues {
-		if v == value {
-			return nil
+	return nil
+}
+
+func findConfigDefault(needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
+	if v.Kind() != reflect.Ptr {
+		return needle, offset, def, v, fmt.Errorf("not a pointer value")
+	}
+
+	if needle == offset {
+		return needle, offset, def, v, nil
+	}
+
+	v = reflect.Indirect(v)
+	switch v.Kind() {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			name := v.Type().Field(i).Tag.Get("json")
+			if len(name) == 0 {
+				continue
+			}
+
+			check := name
+			if len(offset) > 0 {
+				check = offset + "." + name
+			}
+
+			dNeedle, dOffset, dDef, dv, dErr := findConfigDefault(
+				needle,
+				check,
+				v.Type().Field(i).Tag.Get("default"),
+				v.Field(i).Addr(),
+			)
+
+			if dOffset == needle {
+				return dNeedle, dOffset, dDef, dv, dErr
+			}
 		}
 	}
 
-	return &InvalidValueError{ValidValues: validValues}
-}
-
-func NewConfig(root *yaml.Node) Config {
-	return &fileConfig{
-		ConfigMap:    ConfigMap{Root: root.Content[0]},
-		documentRoot: root,
-	}
-}
-
-// NewFromString initializes a Config from a yaml string
-func NewFromString(str string) Config {
-	root, err := parseConfigData([]byte(str))
-	if err != nil {
-		panic(err)
-	}
-	return NewConfig(root)
-}
-
-// NewBlankConfig initializes a config file pre-populated with comments and default values
-func NewBlankConfig() Config {
-	return NewConfig(NewBlankRoot())
-}
-
-func NewBlankRoot() *yaml.Node {
-	return &yaml.Node{
-		Kind: yaml.DocumentNode,
-		Content: []*yaml.Node{
-			{
-				Kind: yaml.MappingNode,
-				Content: []*yaml.Node{
-					{
-						HeadComment: "What protocol to use when performing git operations. Supported values: ssh, https",
-						Kind:        yaml.ScalarNode,
-						Value:       "git_protocol",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "https",
-					},
-					{
-						HeadComment: "What editor gh should run when creating issues, pull requests, etc. If blank, will refer to environment.",
-						Kind:        yaml.ScalarNode,
-						Value:       "editor",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "",
-					},
-					{
-						HeadComment: "When to interactively prompt. This is a global config that cannot be overridden by hostname. Supported values: enabled, disabled",
-						Kind:        yaml.ScalarNode,
-						Value:       "prompt",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "enabled",
-					},
-					{
-						HeadComment: "A pager program to send command output to, e.g. \"less\". Set the value to \"cat\" to disable the pager.",
-						Kind:        yaml.ScalarNode,
-						Value:       "pager",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "",
-					},
-					{
-						HeadComment: "Aliases allow you to create nicknames for gh commands",
-						Kind:        yaml.ScalarNode,
-						Value:       "aliases",
-					},
-					{
-						Kind: yaml.MappingNode,
-						Content: []*yaml.Node{
-							{
-								Kind:  yaml.ScalarNode,
-								Value: "co",
-							},
-							{
-								Kind:  yaml.ScalarNode,
-								Value: "pr checkout",
-							},
-						},
-					},
-					{
-						HeadComment: "The path to a unix socket through which send HTTP connections. If blank, HTTP traffic will be handled by net/http.DefaultTransport.",
-						Kind:        yaml.ScalarNode,
-						Value:       "http_unix_socket",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "",
-					},
-					{
-						HeadComment: "What web browser gh should use when opening URLs. If blank, will refer to environment.",
-						Kind:        yaml.ScalarNode,
-						Value:       "browser",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Value: "",
-					},
-				},
-			},
-		},
-	}
+	return needle, offset, def, v, fmt.Errorf("could not find default for: %s", needle)
 }
