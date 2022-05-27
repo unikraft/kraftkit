@@ -51,7 +51,7 @@ func rootUsageFunc(command *cobra.Command) error {
 		return nil
 	}
 
-	flagUsages := command.LocalFlags().FlagUsages()
+	flagUsages := command.LocalFlags().FlagUsagesWrapped(80)
 	if flagUsages != "" {
 		command.Println("\n\nFlags:")
 		command.Print(text.Indent(dedent(flagUsages), "  "))
@@ -169,11 +169,11 @@ func rootHelpFunc(f *cmdfactory.Factory, command *cobra.Command, args []string) 
 		helpEntries = append(helpEntries, helpEntry{"ADDITIONAL COMMANDS", strings.Join(additionalCommands, "\n")})
 	}
 
-	flagUsages := command.LocalFlags().FlagUsages()
+	flagUsages := command.LocalFlags().FlagUsagesWrapped(80)
 	if flagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"FLAGS", dedent(flagUsages)})
 	}
-	inheritedFlagUsages := command.InheritedFlags().FlagUsages()
+	inheritedFlagUsages := command.InheritedFlags().FlagUsagesWrapped(80)
 	if inheritedFlagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"INHERITED FLAGS", dedent(inheritedFlagUsages)})
 	}
