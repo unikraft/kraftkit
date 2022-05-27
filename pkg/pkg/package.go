@@ -32,11 +32,6 @@
 package pkg
 
 type Package interface {
-	// Init initialises the package.  It must perform any required setup on the
-	// backing package implementation and check that it is ready for use,
-	// returning any errors.
-	Init() error
-
 	// Options allows you to view the current options.
 	Options() PackageOptions
 
