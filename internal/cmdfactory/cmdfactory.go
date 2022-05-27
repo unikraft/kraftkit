@@ -32,7 +32,7 @@
 package cmdfactory
 
 import (
-	"errors"
+	"context"
 	"net/http"
 	"os"
 	"time"
@@ -42,19 +42,20 @@ import (
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/pkg/iostreams"
 	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/plugins"
 )
 
 type FactoryOption func(*Factory)
 
 type Factory struct {
-	RootCmd       *cobra.Command
-	IOStreams     *iostreams.IOStreams
-	PluginManager *plugins.PluginManager
-	ConfigManager *config.ConfigManager
-
-	Logger     func() (*log.Logger, error)
-	HttpClient func() (*http.Client, error)
+	RootCmd        *cobra.Command
+	IOStreams      *iostreams.IOStreams
+	PluginManager  *plugins.PluginManager
+	ConfigManager  *config.ConfigManager
+	PackageManager func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error)
+	Logger         func() (*log.Logger, error)
+	HttpClient     func() (*http.Client, error)
 }
 
 // New creates a new Factory object
@@ -94,6 +95,13 @@ func New(opts ...FactoryOption) *Factory {
 	}
 
 	return f
+}
+
+func WithPackageManager() FactoryOption {
+	return func(f *Factory) {
+		// Depends on Config, HttpClient, and IOStreams
+		f.PackageManager = packageManagerFunc(f)
+	}
 }
 
 func configManager() *config.ConfigManager {
@@ -139,6 +147,36 @@ func loggerFunc(f *Factory) func() (*log.Logger, error) {
 		l.SetLevel(log.LogLevelFromString(f.ConfigManager.Config.Log.Level))
 
 		return l, nil
+	}
+}
+
+func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
+	return func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
+		logger, err := f.Logger()
+		if err != nil {
+			return nil, err
+		}
+
+		// Add access to global config and the instantiated logger to the options
+		opts = append(opts, []pkgmanager.PackageManagerOption{
+			pkgmanager.WithConfig(f.ConfigManager.Config),
+			pkgmanager.WithLogger(logger),
+		}...)
+
+		options, err := pkgmanager.NewPackageManagerOptions(
+			context.TODO(),
+			opts...,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		umbrella, err := pkgmanager.NewUmbrellaManagerFromOptions(options)
+		if err != nil {
+			return nil, err
+		}
+
+		return umbrella, nil
 	}
 }
 
