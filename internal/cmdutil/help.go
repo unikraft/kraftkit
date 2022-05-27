@@ -51,11 +51,14 @@ func rootUsageFunc(command *cobra.Command) error {
 		return nil
 	}
 
+	// TODO: Introduce flag groupings (e.g. "Global Flags" and "Subcommand Flags")
+
 	flagUsages := command.LocalFlags().FlagUsagesWrapped(80)
 	if flagUsages != "" {
 		command.Println("\n\nFlags:")
 		command.Print(text.Indent(dedent(flagUsages), "  "))
 	}
+
 	return nil
 }
 
