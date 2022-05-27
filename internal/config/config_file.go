@@ -56,7 +56,7 @@ func ConfigDir() string {
 	} else if b := os.Getenv(XDG_CONFIG_HOME); b != "" {
 		path = filepath.Join(b, "kraftkit")
 	} else if c := os.Getenv(APP_DATA); runtime.GOOS == "windows" && c != "" {
-		path = filepath.Join(c, "KraftKit CLI")
+		path = filepath.Join(c, "KraftKit")
 	} else {
 		d, _ := os.UserHomeDir()
 		path = filepath.Join(d, ".config", "kraftkit")
@@ -80,7 +80,7 @@ func StateDir() string {
 	if a := os.Getenv(XDG_STATE_HOME); a != "" {
 		path = filepath.Join(a, "kraftkit")
 	} else if b := os.Getenv(LOCAL_APP_DATA); runtime.GOOS == "windows" && b != "" {
-		path = filepath.Join(b, "KraftKit CLI")
+		path = filepath.Join(b, "KraftKit")
 	} else {
 		c, _ := os.UserHomeDir()
 		path = filepath.Join(c, ".local", "state", "kraftkit")
@@ -103,7 +103,7 @@ func DataDir() string {
 	if a := os.Getenv(XDG_DATA_HOME); a != "" {
 		path = filepath.Join(a, "kraftkit")
 	} else if b := os.Getenv(LOCAL_APP_DATA); runtime.GOOS == "windows" && b != "" {
-		path = filepath.Join(b, "KraftKit CLI")
+		path = filepath.Join(b, "KraftKit")
 	} else {
 		c, _ := os.UserHomeDir()
 		path = filepath.Join(c, ".local", "share", "kraftkit")
