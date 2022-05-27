@@ -33,7 +33,7 @@ package pkg
 
 type Package interface {
 	// Options allows you to view the current options.
-	Options() PackageOptions
+	Options() *PackageOptions
 
 	// Determine if the provided path is a compatible media type
 	Compatible(string) bool
