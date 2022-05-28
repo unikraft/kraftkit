@@ -47,12 +47,24 @@ type YamlFeeder struct {
 func (f YamlFeeder) Feed(structure interface{}) error {
 	file, err := os.Open(filepath.Clean(f.File))
 	if err != nil {
-		return fmt.Errorf("config: cannot open yaml file; err: %v", err)
+		return fmt.Errorf("cannot open yaml file: %v", err)
+	}
+
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	// File is empty, ignore
+	if stat.Size() == 0 {
+		return nil
 	}
 
 	if err = yaml.NewDecoder(file).Decode(structure); err != nil {
-		return fmt.Errorf("config: cannot feed struct; err: %v", err)
+		return fmt.Errorf("cannot feed config file: %v", err)
 	}
 
-	return file.Close()
+	return nil
 }
