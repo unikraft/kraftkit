@@ -116,7 +116,7 @@ func (cm *ConfigManager) AddFeeder(f Feeder) *ConfigManager {
 // Feed binds configuration data from added feeders to the added structs.
 func (cm *ConfigManager) Feed() error {
 	for _, f := range cm.Feeders {
-		if err := cm.feedStruct(f, cm.Config); err != nil {
+		if err := cm.feedStruct(f, &cm.Config); err != nil {
 			return err
 		}
 	}
