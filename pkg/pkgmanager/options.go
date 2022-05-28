@@ -35,13 +35,13 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/internal/config"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/internal/logger"
 	"go.unikraft.io/kit/utils"
 )
 
 // PackageManagerOptions contains configuration for the Package
 type PackageManagerOptions struct {
-	Log    *log.Logger
+	Log    *logger.Logger
 	Config *config.Config
 
 	dataDir func() string
@@ -75,7 +75,7 @@ func NewPackageManagerOptions(ctx context.Context, opts ...PackageManagerOption)
 }
 
 // WithLogger defines the log.Logger
-func WithLogger(l *log.Logger) PackageManagerOption {
+func WithLogger(l *logger.Logger) PackageManagerOption {
 	return func(o *PackageManagerOptions) error {
 		o.Log = l
 		return nil

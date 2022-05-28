@@ -40,8 +40,8 @@ import (
 	"github.com/spf13/cobra"
 	"go.unikraft.io/kit/internal/config"
 	"go.unikraft.io/kit/internal/httpclient"
+	"go.unikraft.io/kit/internal/logger"
 	"go.unikraft.io/kit/pkg/iostreams"
-	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/plugins"
 )
@@ -54,7 +54,7 @@ type Factory struct {
 	PluginManager  *plugins.PluginManager
 	ConfigManager  *config.ConfigManager
 	PackageManager func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error)
-	Logger         func() (*log.Logger, error)
+	Logger         func() (*logger.Logger, error)
 	HttpClient     func() (*http.Client, error)
 }
 
@@ -141,10 +141,10 @@ func httpClientFunc(f *Factory) func() (*http.Client, error) {
 	}
 }
 
-func loggerFunc(f *Factory) func() (*log.Logger, error) {
-	return func() (*log.Logger, error) {
-		l := log.NewLogger(f.IOStreams)
-		l.SetLevel(log.LogLevelFromString(f.ConfigManager.Config.Log.Level))
+func loggerFunc(f *Factory) func() (*logger.Logger, error) {
+	return func() (*logger.Logger, error) {
+		l := logger.NewLogger(f.IOStreams)
+		l.SetLevel(logger.LogLevelFromString(f.ConfigManager.Config.Log.Level))
 
 		return l, nil
 	}

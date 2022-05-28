@@ -26,7 +26,7 @@ import (
 	"github.com/compose-spec/compose-go/dotenv"
 	"github.com/pkg/errors"
 	"go.unikraft.io/kit/internal/errs"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/internal/logger"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft/app"
 	"go.unikraft.io/kit/pkg/unikraft/component"
@@ -40,7 +40,7 @@ type ProjectOptions struct {
 	ConfigPaths   []string
 	Configuration map[string]string
 	DotConfigFile string
-	log           *log.Logger
+	log           *logger.Logger
 	loadOptions   []func(*LoaderOptions)
 }
 
@@ -62,7 +62,7 @@ func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOpti
 }
 
 // WithLogger defines the log.Logger
-func WithLogger(l *log.Logger) ProjectOptionsFn {
+func WithLogger(l *logger.Logger) ProjectOptionsFn {
 	return func(o *ProjectOptions) error {
 		o.log = l
 		return nil

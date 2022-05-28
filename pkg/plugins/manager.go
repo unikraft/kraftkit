@@ -49,9 +49,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"go.unikraft.io/kit/internal/config"
+	"go.unikraft.io/kit/internal/logger"
 	"go.unikraft.io/kit/pkg/findsh"
 	"go.unikraft.io/kit/pkg/iostreams"
-	"go.unikraft.io/kit/pkg/log"
 )
 
 type PluginManager struct {
@@ -63,7 +63,7 @@ type PluginManager struct {
 	client     *http.Client  // used to make requests to find new plugins
 	config     config.Config // used for paths of plugins
 	io         *iostreams.IOStreams
-	log        *log.Logger
+	log        *logger.Logger
 }
 
 func NewPluginManager(io *iostreams.IOStreams) *PluginManager {
@@ -93,7 +93,7 @@ func (m *PluginManager) SetClient(client *http.Client) {
 	m.client = client
 }
 
-func (m *PluginManager) SetLogger(log *log.Logger) {
+func (m *PluginManager) SetLogger(log *logger.Logger) {
 	m.log = log
 }
 
