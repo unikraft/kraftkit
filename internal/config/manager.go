@@ -58,18 +58,27 @@ func WithFeeder(feeder Feeder) ConfigManagerOption {
 	}
 }
 
-func WithFile(file string) ConfigManagerOption {
+func WithFile(file string, forceCreate bool) ConfigManagerOption {
 	return func(cm *ConfigManager) error {
 		ext := strings.Split(file, ".")
 		if len(ext) == 1 {
 			return fmt.Errorf("unknown file extension for config file: %s", file)
 		}
 
+		_, err := os.Stat(file)
+
 		switch ext[len(ext)-1] {
 		case "yaml", "yml":
-			return WithFeeder(YamlFeeder{
+			yml := YamlFeeder{
 				File: file,
-			})(cm)
+			}
+			if os.IsNotExist(err) {
+				err := yml.Write(cm.Config)
+				if err != nil {
+					return fmt.Errorf("could not write initial config: %v", err)
+				}
+			}
+			return WithFeeder(yml)(cm)
 		default:
 			return fmt.Errorf("unsupported file extension: %s", file)
 		}
@@ -78,7 +87,7 @@ func WithFile(file string) ConfigManagerOption {
 
 func WithDefaultConfigFile() ConfigManagerOption {
 	return func(cm *ConfigManager) error {
-		return WithFile(ConfigFile())(cm)
+		return WithFile(ConfigFile(), true)(cm)
 	}
 }
 
