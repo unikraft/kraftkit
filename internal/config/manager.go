@@ -124,6 +124,16 @@ func (cm *ConfigManager) Feed() error {
 	return nil
 }
 
+func (cm *ConfigManager) Write() error {
+	for _, f := range cm.Feeders {
+		if err := f.Write(cm.Config); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // SetupListener adds an OS signal listener to the Config instance. The listener
 // listens to the `SIGHUP` signal and refreshes the Config instance. It would
 // call the provided fallback if the refresh process failed.

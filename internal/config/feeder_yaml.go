@@ -33,6 +33,7 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -67,4 +68,110 @@ func (f YamlFeeder) Feed(structure interface{}) error {
 	}
 
 	return nil
+}
+
+func (yf YamlFeeder) Write(structure interface{}) error {
+	if len(yf.File) == 0 {
+		return fmt.Errorf("filename for YAML cannot be empty")
+	}
+
+	// Create parent directories if not present
+	err := os.MkdirAll(filepath.Dir(yf.File), 0o771)
+	if err != nil {
+		return pathError(err)
+	}
+
+	// Open the file (create if not present)
+	f, err := os.OpenFile(yf.File, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer f.Close()
+
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("could not read file: %v", err)
+	}
+
+	from := yaml.Node{}
+	if err := yaml.Unmarshal(data, &from); err != nil {
+		return fmt.Errorf("could not unmarshal YAML: %s", err)
+	}
+
+	yml, err := yaml.Marshal(structure)
+	if err != nil {
+		return err
+	}
+
+	into := yaml.Node{}
+	if err := yaml.Unmarshal(yml, &into); err != nil {
+		return err
+	}
+
+	// When kind is 0, it is an uninitialized YAML structure (aka empty file)
+	if from.Kind != 0 {
+		if err := recursiveMerge(&from, &into); err != nil {
+			return fmt.Errorf("could not update config: %v", err)
+		}
+	}
+
+	if err := f.Truncate(0); err != nil {
+		return err
+	}
+
+	if _, err := f.Seek(0, 0); err != nil {
+		return err
+	}
+
+	if err := yaml.NewEncoder(f).Encode(&into); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// https://stackoverflow.com/a/65784135
+func recursiveMerge(from, into *yaml.Node) error {
+	if from.Kind != into.Kind {
+		return fmt.Errorf("cannot merge nodes of different kinds")
+	}
+
+	switch from.Kind {
+	case yaml.MappingNode:
+		for i := 0; i < len(from.Content); i += 2 {
+			found := false
+			for j := 0; j < len(into.Content); j += 2 {
+				if nodesEqual(from.Content[i], into.Content[j]) {
+					found = true
+					if err := recursiveMerge(from.Content[i+1], into.Content[j+1]); err != nil {
+						return fmt.Errorf("at key " + from.Content[i].Value + ": " + err.Error())
+					}
+					break
+				}
+			}
+			if !found {
+				into.Content = append(into.Content, from.Content[i:i+2]...)
+			}
+		}
+	case yaml.ScalarNode:
+		into = from
+	case yaml.SequenceNode:
+		into.Content = append(into.Content, from.Content...)
+	case yaml.DocumentNode:
+		recursiveMerge(from.Content[0], into.Content[0])
+	default:
+		return fmt.Errorf("can only merge mapping, sequence and scalar nodes")
+	}
+
+	return nil
+}
+
+func nodesEqual(l, r *yaml.Node) bool {
+	if l.Kind == yaml.ScalarNode && r.Kind == yaml.ScalarNode {
+		return l.Value == r.Value
+	}
+
+	// panic("equals on non-scalars not implemented!")
+	return false
 }
