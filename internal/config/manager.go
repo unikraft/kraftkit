@@ -94,14 +94,14 @@ func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
 
 	for _, o := range opts {
 		if err := o(cm); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not apply config manager option: %v", err)
 		}
 	}
 
 	// Feed the config, pass the manager anyway if this fails, we still have
 	// defaults
 	if err := cm.Feed(); err != nil {
-		return cm, err
+		return cm, fmt.Errorf("could not feed config: %v", err)
 	}
 
 	return cm, nil
@@ -157,7 +157,7 @@ func (cm *ConfigManager) SetupListener(fallback func(err error)) *ConfigManager 
 // feedStruct feeds a struct using given feeder.
 func (cm *ConfigManager) feedStruct(f Feeder, s interface{}) error {
 	if err := f.Feed(s); err != nil {
-		return fmt.Errorf("config: failed to feed struct; err %v", err)
+		return fmt.Errorf("failed to feed config: %v", err)
 	}
 
 	return nil
