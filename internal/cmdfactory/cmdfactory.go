@@ -51,8 +51,8 @@ type FactoryOption func(*Factory)
 type Factory struct {
 	RootCmd        *cobra.Command
 	IOStreams      *iostreams.IOStreams
-	PluginManager  *plugins.PluginManager
-	ConfigManager  *config.ConfigManager
+	PluginManager  func() (*plugins.PluginManager, error)
+	ConfigManager  func() (*config.ConfigManager, error)
 	PackageManager func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error)
 	Logger         func() (*logger.Logger, error)
 	HttpClient     func() (*http.Client, error)
@@ -61,7 +61,7 @@ type Factory struct {
 // New creates a new Factory object
 func New(opts ...FactoryOption) *Factory {
 	f := &Factory{
-		ConfigManager: configManager(),
+		ConfigManager: configManagerFunc(),
 	}
 
 	// Depends on Config
@@ -74,7 +74,7 @@ func New(opts ...FactoryOption) *Factory {
 	f.Logger = loggerFunc(f)
 
 	// Depends on Config, HttpClient, and IOStreams
-	f.PluginManager = pluginManager(f)
+	f.PluginManager = pluginManagerFunc(f)
 
 	// Loop through each option
 	for _, opt := range opts {
@@ -104,18 +104,34 @@ func WithPackageManager() FactoryOption {
 	}
 }
 
-func configManager() *config.ConfigManager {
-	cm, _ := config.NewConfigManager(
-		config.WithDefaultConfigFile(),
-	)
+func configManagerFunc() func() (*config.ConfigManager, error) {
+	var cfgm *config.ConfigManager
+	var cfge error
 
-	return cm
+	return func() (*config.ConfigManager, error) {
+		if cfgm != nil || cfge != nil {
+			return cfgm, cfge
+		}
+
+		cfgm, cfge = config.NewConfigManager(
+			config.WithDefaultConfigFile(),
+		)
+
+		return cfgm, cfge
+	}
 }
 
 func ioStreams(f *Factory) *iostreams.IOStreams {
 	io := iostreams.System()
-	if f.ConfigManager.Config.NoPrompt {
+	cfgm, err := f.ConfigManager()
+	if err != nil {
+		return io
+	}
+
+	if cfgm.Config.NoPrompt {
 		io.SetNeverPrompt(true)
+	} else if (io.ColorEnabled() || io.IsStdoutTTY()) && cfgm.Config.Log.Type == "" {
+		cfgm.Config.Log.Type = logger.LoggerTypeToString(logger.FANCY)
 	}
 
 	// Pager precedence
@@ -124,7 +140,7 @@ func ioStreams(f *Factory) *iostreams.IOStreams {
 	// 3. PAGER
 	if kkPager, kkPagerExists := os.LookupEnv("KRAFTKIT_PAGER"); kkPagerExists {
 		io.SetPager(kkPager)
-	} else if pager := f.ConfigManager.Config.Pager; pager != "" {
+	} else if pager := cfgm.Config.Pager; pager != "" {
 		io.SetPager(pager)
 	}
 
@@ -133,9 +149,14 @@ func ioStreams(f *Factory) *iostreams.IOStreams {
 
 func httpClientFunc(f *Factory) func() (*http.Client, error) {
 	return func() (*http.Client, error) {
+		cfgm, err := f.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
 		return httpclient.NewHTTPClient(
 			f.IOStreams,
-			f.ConfigManager.Config.HTTPUnixSocket,
+			cfgm.Config.HTTPUnixSocket,
 			true,
 		)
 	}
@@ -143,8 +164,13 @@ func httpClientFunc(f *Factory) func() (*http.Client, error) {
 
 func loggerFunc(f *Factory) func() (*logger.Logger, error) {
 	return func() (*logger.Logger, error) {
+		cfgm, err := f.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
 		l := logger.NewLogger(f.IOStreams)
-		l.SetLevel(logger.LogLevelFromString(f.ConfigManager.Config.Log.Level))
+		l.SetLevel(logger.LogLevelFromString(cfgm.Config.Log.Level))
 
 		return l, nil
 	}
@@ -152,15 +178,20 @@ func loggerFunc(f *Factory) func() (*logger.Logger, error) {
 
 func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
 	return func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
-		logger, err := f.Logger()
+		cfgm, err := f.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
+		log, err := f.Logger()
 		if err != nil {
 			return nil, err
 		}
 
 		// Add access to global config and the instantiated logger to the options
 		opts = append(opts, []pkgmanager.PackageManagerOption{
-			pkgmanager.WithConfig(f.ConfigManager.Config),
-			pkgmanager.WithLogger(logger),
+			pkgmanager.WithConfig(cfgm.Config),
+			pkgmanager.WithLogger(log),
 		}...)
 
 		options, err := pkgmanager.NewPackageManagerOptions(
@@ -180,26 +211,31 @@ func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption
 	}
 }
 
-func pluginManager(f *Factory) *plugins.PluginManager {
-	pm := plugins.NewPluginManager(f.IOStreams)
+func pluginManagerFunc(f *Factory) func() (*plugins.PluginManager, error) {
+	return func() (*plugins.PluginManager, error) {
+		cfgm, err := f.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
 
-	pm.SetConfig(f.ConfigManager.Config)
+		pm.SetConfig(cfgm.Config)
 
-	// Set HTTP client
-	client, err := f.HttpClient()
-	if err != nil {
-		return pm
+		// Set HTTP client
+		client, err := f.HttpClient()
+		if err != nil {
+			return err, err
+		}
+
+		pm.SetClient(httpclient.NewCachedClient(client, time.Second*30))
+
+		// Set logger
+		l, err := f.Logger()
+		if err != nil {
+			return nil, err
+		}
+
+		pm.SetLogger(l)
+
+		return pm, nil
 	}
-
-	pm.SetClient(httpclient.NewCachedClient(client, time.Second*30))
-
-	// Set logger
-	l, err := f.Logger()
-	if err != nil {
-		return pm
-	}
-
-	pm.SetLogger(l)
-
-	return pm
 }
