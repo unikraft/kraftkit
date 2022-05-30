@@ -59,3 +59,18 @@ func LoggerTypeFromString(name string) LoggerType {
 		return BASIC
 	}
 }
+
+func LoggerTypeToString(t LoggerType) string {
+	switch t {
+	case QUIET:
+		return "quiet"
+	case BASIC:
+		return "basic"
+	case FANCY:
+		return "fancy"
+	case JSON:
+		return "json"
+	default:
+		return "basic"
+	}
+}
