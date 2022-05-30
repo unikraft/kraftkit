@@ -99,16 +99,16 @@ func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string, opts ...CmdOption) (
 		"Show %s version", cmdFactory.RootCmd.Name(),
 	))
 
-	cfg, err := cmdFactory.Config()
+	cfgm, err := cmdFactory.ConfigManager()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration: %s", err)
+		return nil, fmt.Errorf("failed to access config manager: %s", err)
 	}
 
 	// provide completions for aliases and extensions
 	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var results []string
-		if aliases, err := cfg.Aliases(); err == nil {
-			for aliasName := range aliases.All() {
+		if aliases, ok := cfgm.Config.Aliases[args[0]]; ok {
+			for aliasName := range aliases {
 				if strings.HasPrefix(aliasName, toComplete) {
 					results = append(results, aliasName)
 				}
@@ -149,9 +149,15 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 	hasDebug := os.Getenv("DEBUG") != ""
 	stderr := cmdFactory.IOStreams.ErrOut
 
-	cfg, err := cmdFactory.Config()
+	cfgm, err := cmdFactory.ConfigManager()
 	if err != nil {
-		fmt.Fprintf(stderr, "failed to read configuration: %s\n", err)
+		fmt.Fprintf(stderr, "failed to acess config manager: %s\n", err)
+		return errs.ExitError
+	}
+
+	pm, err := cmdFactory.PluginManager()
+	if err != nil {
+		fmt.Fprintf(stderr, "failed to acess plugin manager: %s\n", err)
 		return errs.ExitError
 	}
 
@@ -165,7 +171,7 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 	// functionality made available through generic providers delivered by any
 	// KraftKit package.  `Dispatch`ing the plugins will invoke the `init` program
 	// within the plugin.
-	if err := cmdFactory.PluginManager.Dispatch(); err != nil {
+	if err := pm.Dispatch(); err != nil {
 		fmt.Fprintf(stderr, "failed to connect to plugin manager: %s", err)
 		return errs.ExitError
 	}
@@ -192,7 +198,7 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 		isShell := false
 
 		argsForExpansion := append([]string{cmd.Name()}, expandedArgs...)
-		expandedArgs, isShell, err := expand.ExpandAlias(cfg, argsForExpansion, nil)
+		expandedArgs, isShell, err := expand.ExpandAlias(cfgm.Config, argsForExpansion, nil)
 		if err != nil {
 			fmt.Fprintf(stderr, "failed to process aliases:  %s\n", err)
 			return errs.ExitError
