@@ -38,12 +38,12 @@ type LogLevel uint
 
 // Log levels
 const (
-	TRACE LogLevel = iota
-	DEBUG
-	INFO
-	WARN
+	FATAL LogLevel = iota
 	ERROR
-	FATAL
+	WARN
+	INFO
+	DEBUG
+	TRACE
 )
 
 func LogLevelFromString(name string) LogLevel {
