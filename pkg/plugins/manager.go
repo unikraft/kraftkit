@@ -60,13 +60,13 @@ type PluginManager struct {
 	log        log.Logger
 }
 
-// func NewPluginManager(io *iostreams.IOStreams) *PluginManager {
 func NewPluginManager(dataDir string, l log.Logger) *PluginManager {
 	return &PluginManager{
 		dataDir:    dataDir,
 		lookPath:   safeexec.LookPath,
 		findSh:     findsh.Find,
 		newCommand: exec.Command,
+		log:        l,
 		platform: func() (string, string) {
 			ext := ".so"
 
@@ -79,13 +79,8 @@ func NewPluginManager(dataDir string, l log.Logger) *PluginManager {
 	}
 }
 
-func (m *PluginManager) installDir() string {
-	return filepath.Join(m.dataDir, "plugins")
-}
-
 func (pm *PluginManager) parsePluginFile(fi fs.FileInfo) (Plugin, error) {
-	id := pm.installDir()
-	exePath := filepath.Join(id, fi.Name())
+	exePath := filepath.Join(pm.dataDir, fi.Name())
 	ext := Plugin{
 		isLocal: true,
 	}
@@ -93,7 +88,7 @@ func (pm *PluginManager) parsePluginFile(fi fs.FileInfo) (Plugin, error) {
 	if !isSymlink(fi.Mode()) {
 		// if this is a regular file, its contents is the local directory of the
 		// plugin
-		p, err := readPathFromFile(filepath.Join(id, fi.Name()))
+		p, err := readPathFromFile(filepath.Join(pm.dataDir, fi.Name()))
 		if err != nil {
 			return ext, err
 		}
@@ -106,14 +101,13 @@ func (pm *PluginManager) parsePluginFile(fi fs.FileInfo) (Plugin, error) {
 }
 
 func (pm *PluginManager) parseBinaryPluginDir(fi fs.FileInfo) (Plugin, error) {
-	id := pm.installDir()
-	exePath := filepath.Join(id, fi.Name(), fi.Name())
+	exePath := filepath.Join(pm.dataDir, fi.Name(), fi.Name())
 	ext := Plugin{
 		path: exePath,
 		kind: BinaryKind,
 	}
 
-	manifestPath := filepath.Join(id, fi.Name(), PluginManifestFile)
+	manifestPath := filepath.Join(pm.dataDir, fi.Name(), PluginManifestFile)
 	manifest, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		return ext, fmt.Errorf("could not open %s for reading: %w", manifestPath, err)
@@ -141,8 +135,7 @@ func (pm *PluginManager) getRemoteUrl(plugin string) string {
 
 	// TODO: add #filter= for sparse checkout of sub-directory
 
-	dir := pm.installDir()
-	gitDir := "--git-dir=" + filepath.Join(dir, plugin, ".git")
+	gitDir := "--git-dir=" + filepath.Join(pm.dataDir, plugin, ".git")
 	cmd := pm.newCommand(gitExe, gitDir, "config", "remote.origin.url")
 	url, err := cmd.Output()
 	if err != nil {
@@ -159,8 +152,7 @@ func (m *PluginManager) getCurrentVersion(plugin string) string {
 		return ""
 	}
 
-	dir := m.installDir()
-	gitDir := "--git-dir=" + filepath.Join(dir, plugin, ".git")
+	gitDir := "--git-dir=" + filepath.Join(m.dataDir, plugin, ".git")
 	cmd := m.newCommand(gitExe, gitDir, "rev-parse", "HEAD")
 	localSha, err := cmd.Output()
 	if err != nil {
@@ -171,8 +163,7 @@ func (m *PluginManager) getCurrentVersion(plugin string) string {
 }
 
 func (pm *PluginManager) parseGitPluginDir(fi fs.FileInfo) (Plugin, error) {
-	id := pm.installDir()
-	exePath := filepath.Join(id, fi.Name(), fi.Name())
+	exePath := filepath.Join(pm.dataDir, fi.Name(), fi.Name())
 	remoteUrl := pm.getRemoteUrl(fi.Name())
 	currentVersion := pm.getCurrentVersion(fi.Name())
 	return Plugin{
@@ -185,8 +176,7 @@ func (pm *PluginManager) parseGitPluginDir(fi fs.FileInfo) (Plugin, error) {
 }
 
 func (m *PluginManager) parsePluginDir(fi fs.FileInfo) (Plugin, error) {
-	id := m.installDir()
-	if _, err := os.Stat(filepath.Join(id, fi.Name(), PluginManifestFile)); err == nil {
+	if _, err := os.Stat(filepath.Join(m.dataDir, fi.Name(), PluginManifestFile)); err == nil {
 		return m.parseBinaryPluginDir(fi)
 	}
 
@@ -194,13 +184,18 @@ func (m *PluginManager) parsePluginDir(fi fs.FileInfo) (Plugin, error) {
 }
 
 func (pm *PluginManager) List() ([]Plugin, error) {
-	dir := pm.installDir()
-	entries, err := ioutil.ReadDir(dir)
+	var results []Plugin
+
+	if f, _ := os.Stat(pm.dataDir); !f.IsDir() {
+		if err := os.MkdirAll(filepath.Dir(pm.dataDir), 0o755); err != nil {
+			return results, err
+		}
+	}
+
+	entries, err := ioutil.ReadDir(pm.dataDir)
 	if err != nil {
 		return nil, err
 	}
-
-	var results []Plugin
 
 	for _, f := range entries {
 		if !strings.HasPrefix(f.Name(), PluginNamePrefix) {
@@ -244,7 +239,7 @@ func (pm *PluginManager) Dispatch() error {
 	}
 
 	for _, plugin := range plugins {
-		pm.log.Trace("Dispatching plugin: %s", plugin.Path())
+		pm.log.Tracef("dispatching plugin: %s", plugin.Path())
 
 		_, err := goplugin.Open(plugin.Path())
 		if err != nil {

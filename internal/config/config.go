@@ -46,9 +46,9 @@ type Config struct {
 	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
 
 	Paths struct {
-		Plugin string `json:"plugins" yaml:"plugins" env:"KRAFTKIT_PATHS_PLUGINS"`
-		Config string `json:"config" yaml:"config" env:"KRAFTKIT_PATHS_CONFIG"`
-	} `json:"paths" yaml:"paths"`
+		Plugins string `json:"plugins" yaml:"plugins,omitempty" env:"KRAFTKIT_PATHS_PLUGINS"`
+		Config string  `json:"config"  yaml:"config,omitempty"  env:"KRAFTKIT_PATHS_CONFIG"`
+	} `json:"paths" yaml:"paths,omitempty"`
 
 	Log struct {
 		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"warn"`

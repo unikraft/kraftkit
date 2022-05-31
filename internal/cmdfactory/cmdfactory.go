@@ -35,7 +35,7 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"time"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"go.unikraft.io/kit/internal/config"
@@ -164,8 +164,8 @@ func httpClientFunc(f *Factory) func() (*http.Client, error) {
 	}
 }
 
-func loggerFunc(f *Factory) func() (*logger.Logger, error) {
-	return func() (*logger.Logger, error) {
+func loggerFunc(f *Factory) func() (log.Logger, error) {
+	return func() (log.Logger, error) {
 		cfgm, err := f.ConfigManager()
 		if err != nil {
 			return nil, err
@@ -214,30 +214,33 @@ func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption
 }
 
 func pluginManagerFunc(f *Factory) func() (*plugins.PluginManager, error) {
+	var pm *plugins.PluginManager
+	var perr error
+
 	return func() (*plugins.PluginManager, error) {
-		cfgm, err := f.ConfigManager()
-		if err != nil {
-			return nil, err
+		if pm != nil || perr != nil {
+			return pm, perr
 		}
 
-		pm.SetConfig(cfgm.Config)
-
-		// Set HTTP client
-		client, err := f.HttpClient()
-		if err != nil {
-			return err, err
+		var cfgm *config.ConfigManager
+		cfgm, perr = f.ConfigManager()
+		if perr != nil {
+			return nil, perr
 		}
 
-		pm.SetClient(httpclient.NewCachedClient(client, time.Second*30))
-
-		// Set logger
-		l, err := f.Logger()
-		if err != nil {
-			return nil, err
+		var l log.Logger
+		l, perr = f.Logger()
+		if perr != nil {
+			return nil, perr
 		}
 
-		pm.SetLogger(l)
+		dataDir := cfgm.Config.Paths.Plugins
+		if len(dataDir) == 0 {
+			dataDir = filepath.Join(config.DataDir(), "plugins")
+		}
 
-		return pm, nil
+		pm = plugins.NewPluginManager(dataDir, l)
+
+		return pm, perr
 	}
 }
