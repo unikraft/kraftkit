@@ -38,12 +38,14 @@ import (
 )
 
 type Config struct {
-	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"        env:"KRAFTKIT_NO_PROMPT"    default:"false"`
-	Editor         string `json:"editor"           yaml:"editor"           env:"KRAFTKIT_EDITOR"`
-	Browser        string `json:"browser"          yaml:"browser"          env:"KRAFTKIT_BROWSER"`
-	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"     env:"KRAFTKIT_GIT_PROTOCOL" default:"https"`
-	Pager          string `json:"pager"            yaml:"pager"            env:"KRAFTKIT_PAGER"`
-	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
+	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"    default:"false"`
+	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"  default:"true"`
+	Editor         string `json:"editor"           yaml:"editor,omitempty"           env:"KRAFTKIT_EDITOR"`
+	Browser        string `json:"browser"          yaml:"browser,omitempty"          env:"KRAFTKIT_BROWSER"`
+	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL" default:"https"`
+	Pager          string `json:"pager"            yaml:"pager,omitempty"            env:"KRAFTKIT_PAGER"`
+	Emojis         bool   `json:"emojis"           yaml:"emojis"                     env:"KRAFTKIT_EMOJIS"       default:"true"`
+	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
 
 	Paths struct {
 		Plugins string `json:"plugins" yaml:"plugins,omitempty" env:"KRAFTKIT_PATHS_PLUGINS"`
