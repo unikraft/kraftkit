@@ -186,8 +186,8 @@ func (m *PluginManager) parsePluginDir(fi fs.FileInfo) (Plugin, error) {
 func (pm *PluginManager) List() ([]Plugin, error) {
 	var results []Plugin
 
-	if f, _ := os.Stat(pm.dataDir); !f.IsDir() {
-		if err := os.MkdirAll(filepath.Dir(pm.dataDir), 0o755); err != nil {
+	if f, err := os.Stat(pm.dataDir); err != nil || !f.IsDir() {
+		if err := os.MkdirAll(pm.dataDir, 0o755); err != nil {
 			return results, err
 		}
 	}
