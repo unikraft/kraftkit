@@ -32,6 +32,8 @@
 
 package log
 
+import "io"
+
 type Logger interface {
 	Trace(a ...interface{})
 	Tracef(format string, a ...interface{})
@@ -45,4 +47,5 @@ type Logger interface {
 	Errorf(format string, a ...interface{})
 	Fatal(a ...interface{})
 	Fatalf(format string, a ...interface{})
+	SetOutput(w io.Writer)
 }
