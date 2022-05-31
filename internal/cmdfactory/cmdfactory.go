@@ -171,7 +171,7 @@ func loggerFunc(f *Factory) func() (log.Logger, error) {
 			return nil, err
 		}
 
-		l := logger.NewLogger(f.IOStreams)
+		l := logger.NewLogger(f.IOStreams.Out, f.IOStreams.ColorScheme())
 		l.SetLevel(logger.LogLevelFromString(cfgm.Config.Log.Level))
 
 		return l, nil

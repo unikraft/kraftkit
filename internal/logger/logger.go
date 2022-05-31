@@ -33,6 +33,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -47,7 +48,8 @@ type logFunc func(a ...interface{}) string
 // Logger maintains a set of logging functions
 // and has a log level that can be modified dynamically
 type Logger struct {
-	io          *iostreams.IOStreams
+	out         io.Writer
+	timestamp   logFunc
 	level       LogLevel
 	trace       logFunc
 	debug       logFunc
@@ -63,23 +65,19 @@ func (l Logger) now() string {
 }
 
 func (l Logger) log(level string, a ...interface{}) {
-	magenta := l.io.ColorScheme().SprintFunc("magenta")
-
-	fmt.Fprintf(l.io.Out, "%s %s %s %s\n",
-		magenta(l.now()),
+	fmt.Fprintf(l.out, "%s %s %s %s\n",
+		l.timestamp(l.now()),
 		level,
-		magenta(":"),
+		l.timestamp(":"),
 		fmt.Sprint(a...),
 	)
 }
 
 func (l Logger) logf(level string, format string, a ...interface{}) {
-	magenta := l.io.ColorScheme().SprintFunc("magenta")
-
-	fmt.Fprintf(l.io.Out, "%s %s %s %s\n",
-		magenta(l.now()),
+	fmt.Fprintf(l.out, "%s %s %s %s\n",
+		l.timestamp(l.now()),
 		level,
-		magenta(":"),
+		l.timestamp(":"),
 		fmt.Sprintf(format, a...),
 	)
 }
@@ -167,12 +165,11 @@ func (l Logger) Fatalf(format string, a ...interface{}) {
 
 // NewLogger creates a new logger
 // Default level is INFO
-func NewLogger(io *iostreams.IOStreams) Logger {
-	cs := io.ColorScheme()
-
+func NewLogger(out io.Writer, cs *iostreams.ColorScheme) Logger {
 	return Logger{
-		io:          io,
+		out:         out,
 		level:       INFO,
+		timestamp:   cs.SprintFunc("magenta"),
 		trace:       cs.SprintFunc("blue"),
 		debug:       cs.SprintFunc("green"),
 		info:        cs.SprintFunc("cyan"),
