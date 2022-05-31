@@ -51,7 +51,7 @@ type Config struct {
 	} `json:"paths" yaml:"paths,omitempty"`
 
 	Log struct {
-		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"warn"`
+		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"info"`
 		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" default:"false"`
 		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"       default:"fancy"`
 	} `json:"log" yaml:"log"`
