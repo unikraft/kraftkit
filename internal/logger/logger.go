@@ -163,6 +163,10 @@ func (l Logger) Fatalf(format string, a ...interface{}) {
 	}
 }
 
+func (l Logger) SetOutput(w io.Writer) {
+	l.out = w
+}
+
 // NewLogger creates a new logger
 // Default level is INFO
 func NewLogger(out io.Writer, cs *iostreams.ColorScheme) Logger {
