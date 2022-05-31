@@ -41,7 +41,9 @@ import (
 	"go.unikraft.io/kit/internal/config"
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/internal/logger"
+
 	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/plugins"
 )
@@ -54,7 +56,7 @@ type Factory struct {
 	PluginManager  func() (*plugins.PluginManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
 	PackageManager func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error)
-	Logger         func() (*logger.Logger, error)
+	Logger         func() (log.Logger, error)
 	HttpClient     func() (*http.Client, error)
 }
 

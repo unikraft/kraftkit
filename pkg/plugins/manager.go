@@ -37,7 +37,6 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,27 +47,23 @@ import (
 	"github.com/cli/safeexec"
 	"gopkg.in/yaml.v3"
 
-	"go.unikraft.io/kit/internal/config"
-	"go.unikraft.io/kit/internal/logger"
 	"go.unikraft.io/kit/pkg/findsh"
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/pkg/log"
 )
 
 type PluginManager struct {
-	dataDir    func() string
+	dataDir    string
 	lookPath   func(string) (string, error)
 	findSh     func() (string, error)
 	newCommand func(string, ...string) *exec.Cmd
 	platform   func() (string, string)
-	client     *http.Client  // used to make requests to find new plugins
-	config     config.Config // used for paths of plugins
-	io         *iostreams.IOStreams
-	log        *logger.Logger
+	log        log.Logger
 }
 
-func NewPluginManager(io *iostreams.IOStreams) *PluginManager {
+// func NewPluginManager(io *iostreams.IOStreams) *PluginManager {
+func NewPluginManager(dataDir string, l log.Logger) *PluginManager {
 	return &PluginManager{
-		dataDir:    config.DataDir,
+		dataDir:    dataDir,
 		lookPath:   safeexec.LookPath,
 		findSh:     findsh.Find,
 		newCommand: exec.Command,
@@ -81,24 +76,11 @@ func NewPluginManager(io *iostreams.IOStreams) *PluginManager {
 
 			return fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH), ext
 		},
-		io: io,
 	}
 }
 
-func (m *PluginManager) SetConfig(cfg config.Config) {
-	m.config = cfg
-}
-
-func (m *PluginManager) SetClient(client *http.Client) {
-	m.client = client
-}
-
-func (m *PluginManager) SetLogger(log *logger.Logger) {
-	m.log = log
-}
-
 func (m *PluginManager) installDir() string {
-	return filepath.Join(m.dataDir(), "plugins")
+	return filepath.Join(m.dataDir, "plugins")
 }
 
 func (pm *PluginManager) parsePluginFile(fi fs.FileInfo) (Plugin, error) {
