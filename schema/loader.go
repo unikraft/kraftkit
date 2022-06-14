@@ -265,7 +265,7 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 	}
 
 	if err := unikraft.ApplyOptions(
-		opts.componentOptions...
+		opts.componentOptions...,
 	); err != nil {
 		return unikraft, err
 	}
