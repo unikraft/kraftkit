@@ -60,8 +60,8 @@ type ComponentConfig struct {
 
 // Component is the abstract interface for managing the individual microlibrary
 type Component interface {
-	// String returns the name of the component type
-	String() string
+	// Type returns the component's static constant type
+	Type() unikraft.ComponentType
 }
 
 func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {

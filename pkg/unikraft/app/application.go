@@ -36,6 +36,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 	"go.unikraft.io/kit/pkg/unikraft/core"
 	"go.unikraft.io/kit/pkg/unikraft/lib"
@@ -54,10 +55,6 @@ type ApplicationConfig struct {
 	Extensions    component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
 	KraftFiles    []string             `yaml:"-" json:"-"`
 	Configuration map[string]string    `yaml:"-" json:"-"`
-}
-
-func (a *ApplicationConfig) String() string {
-	return "app"
 }
 
 // LibraryNames return names for all libraries in this Compose config
@@ -82,4 +79,8 @@ func (a *ApplicationConfig) TargetNames() []string {
 	sort.Strings(names)
 
 	return names
+}
+
+func (ac *ApplicationConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeApp
 }

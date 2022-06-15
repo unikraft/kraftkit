@@ -34,6 +34,7 @@ package plat
 import (
 	"fmt"
 
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
@@ -58,6 +59,6 @@ func ParsePlatformConfig(value string) (PlatformConfig, error) {
 	return platform, nil
 }
 
-func (p *PlatformConfig) String() string {
-	return "plat"
+func (p *PlatformConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypePlat
 }

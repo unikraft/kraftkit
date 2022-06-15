@@ -34,6 +34,7 @@ package arch
 import (
 	"fmt"
 
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
@@ -58,6 +59,6 @@ func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
 	return architecture, nil
 }
 
-func (a *ArchitectureConfig) String() string {
-	return "arch"
+func (a *ArchitectureConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeArch
 }

@@ -32,6 +32,7 @@
 package core
 
 import (
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
@@ -43,6 +44,6 @@ type UnikraftConfig struct {
 	component.ComponentConfig
 }
 
-func (uc *UnikraftConfig) String() string {
-	return "unikraft"
+func (uc *UnikraftConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeCore
 }

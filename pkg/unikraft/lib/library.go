@@ -32,6 +32,7 @@
 package lib
 
 import (
+	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )
 
@@ -50,6 +51,6 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
-func (l *LibraryConfig) String() string {
-	return "lib"
+func (l *LibraryConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeLib
 }
