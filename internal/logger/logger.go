@@ -168,6 +168,21 @@ func (l *Logger) SetOutput(w io.Writer) {
 	l.Out = w
 }
 
+func (l *Logger) Clone() log.Logger {
+	return &Logger{
+		Out:         l.Out,
+		level:       l.level,
+		timestamp:   l.timestamp,
+		trace:       l.trace,
+		debug:       l.debug,
+		info:        l.info,
+		warn:        l.warn,
+		err:         l.err,
+		fatal:       l.fatal,
+		ExitOnFatal: l.ExitOnFatal,
+	}
+}
+
 // NewLogger creates a new logger
 // Default level is INFO
 func NewLogger(out io.Writer, cs *iostreams.ColorScheme) *Logger {
