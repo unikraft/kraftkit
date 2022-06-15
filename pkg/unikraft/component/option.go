@@ -32,6 +32,7 @@
 package component
 
 import (
+	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 )
 
@@ -40,6 +41,13 @@ type ComponentOption func(cc *ComponentConfig) error
 func WithCoreSource(path string) ComponentOption {
 	return func(cc *ComponentConfig) error {
 		cc.coreSource = path
+		return nil
+	}
+}
+
+func WithLogger(log log.Logger) ComponentOption {
+	return func(cc *ComponentConfig) error {
+		cc.log = log
 		return nil
 	}
 }

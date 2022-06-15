@@ -34,6 +34,7 @@ package component
 import (
 	"context"
 
+	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 )
 
@@ -50,6 +51,7 @@ type ComponentConfig struct {
 
 	coreSource     string // The value of Unikraft's `source:` directive
 	packageManager *pkgmanager.PackageManager
+	log            log.Logger
 
 	// Context should contain all implementation-specific options, using
 	// `context.WithValue`
@@ -70,4 +72,8 @@ func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {
 	}
 
 	return nil
+}
+
+func (cc *ComponentConfig) Log() log.Logger {
+	return cc.log
 }
