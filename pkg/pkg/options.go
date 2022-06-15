@@ -39,7 +39,8 @@ import (
 
 // PackageOptions contains configuration for the Package
 type PackageOptions struct {
-	Log *log.Logger
+	// Access to a logger
+	log log.Logger
 
 	// ctx should contain all implementation-specific options, using
 	// `context.WithValue`
@@ -68,4 +69,11 @@ func NewPackageOptions(opts ...PackageOption) (*PackageOptions, error) {
 	}
 
 	return options, nil
+}
+
+func WithLogger(l log.Logger) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.log = l
+		return nil
+	}
 }

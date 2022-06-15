@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/pkg/log"
 )
 
 var exit = os.Exit
@@ -48,7 +49,7 @@ type logFunc func(a ...interface{}) string
 // Logger maintains a set of logging functions
 // and has a log level that can be modified dynamically
 type Logger struct {
-	out         io.Writer
+	Out         io.Writer
 	timestamp   logFunc
 	level       LogLevel
 	trace       logFunc
@@ -60,12 +61,12 @@ type Logger struct {
 	ExitOnFatal bool
 }
 
-func (l Logger) now() string {
+func (l *Logger) now() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
-func (l Logger) log(level string, a ...interface{}) {
-	fmt.Fprintf(l.out, "%s %s %s %s\n",
+func (l *Logger) log(level string, a ...interface{}) {
+	fmt.Fprintf(l.Out, "%s %s %s %s\n",
 		l.timestamp(l.now()),
 		level,
 		l.timestamp(":"),
@@ -73,8 +74,8 @@ func (l Logger) log(level string, a ...interface{}) {
 	)
 }
 
-func (l Logger) logf(level string, format string, a ...interface{}) {
-	fmt.Fprintf(l.out, "%s %s %s %s\n",
+func (l *Logger) logf(level string, format string, a ...interface{}) {
+	fmt.Fprintf(l.Out, "%s %s %s %s\n",
 		l.timestamp(l.now()),
 		level,
 		l.timestamp(":"),
@@ -83,71 +84,71 @@ func (l Logger) logf(level string, format string, a ...interface{}) {
 }
 
 // SetLevel updates the logging level for future logs
-func (l Logger) SetLevel(level LogLevel) {
+func (l *Logger) SetLevel(level LogLevel) {
 	l.level = level
 }
 
-func (l Logger) Trace(a ...interface{}) {
+func (l *Logger) Trace(a ...interface{}) {
 	if l.level == TRACE {
 		l.log(l.trace("TRACE"), a...)
 	}
 }
 
-func (l Logger) Tracef(format string, a ...interface{}) {
+func (l *Logger) Tracef(format string, a ...interface{}) {
 	if l.level == TRACE {
 		l.logf(l.trace("TRACE"), format, a...)
 	}
 }
 
-func (l Logger) Debug(a ...interface{}) {
+func (l *Logger) Debug(a ...interface{}) {
 	if l.level >= DEBUG {
 		l.log(l.debug("DEBUG"), a...)
 	}
 }
 
-func (l Logger) Debugf(format string, a ...interface{}) {
+func (l *Logger) Debugf(format string, a ...interface{}) {
 	if l.level >= DEBUG {
 		l.logf(l.debug("DEBUG"), format, a...)
 	}
 }
 
-func (l Logger) Info(a ...interface{}) {
+func (l *Logger) Info(a ...interface{}) {
 	if l.level >= INFO {
 		l.log(l.info(" INFO"), a...)
 	}
 }
 
-func (l Logger) Infof(format string, a ...interface{}) {
+func (l *Logger) Infof(format string, a ...interface{}) {
 	if l.level >= INFO {
 		l.logf(l.info(" INFO"), format, a...)
 	}
 }
 
-func (l Logger) Warn(a ...interface{}) {
+func (l *Logger) Warn(a ...interface{}) {
 	if l.level >= WARN {
 		l.log(l.warn(" WARN"), a...)
 	}
 }
 
-func (l Logger) Warnf(format string, a ...interface{}) {
+func (l *Logger) Warnf(format string, a ...interface{}) {
 	if l.level >= WARN {
 		l.logf(l.warn(" WARN"), format, a...)
 	}
 }
 
-func (l Logger) Error(a ...interface{}) {
+func (l *Logger) Error(a ...interface{}) {
 	if l.level >= ERROR {
 		l.log(l.err("ERROR"), a...)
 	}
 }
 
-func (l Logger) Errorf(format string, a ...interface{}) {
+func (l *Logger) Errorf(format string, a ...interface{}) {
 	if l.level >= ERROR {
 		l.logf(l.err("ERROR"), format, a...)
 	}
 }
 
-func (l Logger) Fatal(a ...interface{}) {
+func (l *Logger) Fatal(a ...interface{}) {
 	l.log(l.fatal("FATAL"), a...)
 
 	if l.ExitOnFatal {
@@ -155,7 +156,7 @@ func (l Logger) Fatal(a ...interface{}) {
 	}
 }
 
-func (l Logger) Fatalf(format string, a ...interface{}) {
+func (l *Logger) Fatalf(format string, a ...interface{}) {
 	l.logf(l.fatal("FATAL"), format, a...)
 
 	if l.ExitOnFatal {
@@ -163,15 +164,15 @@ func (l Logger) Fatalf(format string, a ...interface{}) {
 	}
 }
 
-func (l Logger) SetOutput(w io.Writer) {
-	l.out = w
+func (l *Logger) SetOutput(w io.Writer) {
+	l.Out = w
 }
 
 // NewLogger creates a new logger
 // Default level is INFO
-func NewLogger(out io.Writer, cs *iostreams.ColorScheme) Logger {
-	return Logger{
-		out:         out,
+func NewLogger(out io.Writer, cs *iostreams.ColorScheme) *Logger {
+	return &Logger{
+		Out:         out,
 		level:       INFO,
 		timestamp:   cs.SprintFunc("magenta"),
 		trace:       cs.SprintFunc("blue"),
