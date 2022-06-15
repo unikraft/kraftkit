@@ -221,6 +221,12 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		cfg.OutDir = configDetails.RelativePath(outdir)
 	}
 
+	if opts.PackageManager != nil {
+		opts.componentOptions = append(opts.componentOptions,
+			component.WithPackageManager(opts.PackageManager),
+		)
+	}
+
 	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"), opts)
 	if err != nil {
 		return nil, err
