@@ -33,6 +33,7 @@ package manifest
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -58,4 +59,30 @@ func NewManifestIndexFromBytes(raw []byte) (*ManifestIndex, error) {
 	}
 
 	return index, nil
+}
+
+func (mi *ManifestIndex) WriteToFile(path string) error {
+	// Open the file (create if not present)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer f.Close()
+
+	contents, err := yaml.Marshal(mi)
+	if err != nil {
+		return err
+	}
+
+	if err := f.Truncate(0); err != nil {
+		return err
+	}
+
+	_, err = f.Write(contents)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
