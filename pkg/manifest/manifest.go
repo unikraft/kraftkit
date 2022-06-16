@@ -33,6 +33,7 @@ package manifest
 
 import (
 	"fmt"
+	"os"
 
 	"go.unikraft.io/kit/pkg/unikraft"
 	"gopkg.in/yaml.v2"
@@ -78,4 +79,31 @@ func NewManifestFromBytes(raw []byte) (*Manifest, error) {
 	}
 
 	return manifest, nil
+}
+
+// WriteToFile saves the manifest as a YAML format file at the given path
+func (m Manifest) WriteToFile(path string) error {
+	// Open the file (create if not present)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer f.Close()
+
+	contents, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	if err := f.Truncate(0); err != nil {
+		return err
+	}
+
+	_, err = f.Write(contents)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
