@@ -33,6 +33,7 @@ package manifest
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"go.unikraft.io/kit/pkg/unikraft"
@@ -77,6 +78,30 @@ func NewManifestFromBytes(raw []byte) (*Manifest, error) {
 	} else if len(manifest.Type) == 0 {
 		return nil, fmt.Errorf("unset type in manifest")
 	}
+
+	return manifest, nil
+}
+
+// NewManifestFromFile reads in a manifest file from a given path
+func NewManifestFromFile(path string) (*Manifest, error) {
+	f, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	} else if f.Size() == 0 {
+		return nil, fmt.Errorf("manifest path is empty: %s", path)
+	}
+
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := NewManifestFromBytes(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest.SourceOrigin = path
 
 	return manifest, nil
 }
