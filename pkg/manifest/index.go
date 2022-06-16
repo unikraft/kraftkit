@@ -32,11 +32,30 @@
 package manifest
 
 import (
+	"fmt"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 type ManifestIndex struct {
 	Name        string      `yaml:"name,omitempty"`
 	LastUpdated time.Time   `yaml:"last_updated"`
 	Manifests   []*Manifest `yaml:"manifests"`
+}
+
+// NewManifestIndexFromBytes parses a byte array of a YAML representing a
+// manifest index
+func NewManifestIndexFromBytes(raw []byte) (*ManifestIndex, error) {
+	index := &ManifestIndex{}
+
+	if err := yaml.Unmarshal(raw, index); err != nil {
+		return nil, err
+	}
+
+	if index.Manifests == nil {
+		return nil, fmt.Errorf("nothing found in manifest index")
+	}
+
+	return index, nil
 }
