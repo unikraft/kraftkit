@@ -33,6 +33,7 @@ package manifest
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -59,6 +60,22 @@ func NewManifestIndexFromBytes(raw []byte) (*ManifestIndex, error) {
 	}
 
 	return index, nil
+}
+
+func NewManifestIndexFromFile(path string) (*ManifestIndex, error) {
+	f, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	} else if f.Size() == 0 {
+		return nil, fmt.Errorf("manifest index is empty: %s", path)
+	}
+
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewManifestIndexFromBytes(contents)
 }
 
 func (mi *ManifestIndex) WriteToFile(path string) error {
