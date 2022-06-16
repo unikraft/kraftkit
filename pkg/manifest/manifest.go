@@ -32,7 +32,10 @@
 package manifest
 
 import (
+	"fmt"
+
 	"go.unikraft.io/kit/pkg/unikraft"
+	"gopkg.in/yaml.v2"
 )
 
 type Manifest struct {
@@ -59,4 +62,20 @@ type Manifest struct {
 
 	// SourceOrigin is original location of where this manifest was found
 	SourceOrigin string `yaml:"-"`
+}
+
+// NewManifestFromBytes parses a byte array of a YAML representing a manifest
+func NewManifestFromBytes(raw []byte) (*Manifest, error) {
+	manifest := &Manifest{}
+	if err := yaml.Unmarshal(raw, manifest); err != nil {
+		return nil, err
+	}
+
+	if len(manifest.Name) == 0 {
+		return nil, fmt.Errorf("unset name in manifest")
+	} else if len(manifest.Type) == 0 {
+		return nil, fmt.Errorf("unset type in manifest")
+	}
+
+	return manifest, nil
 }
