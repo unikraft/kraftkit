@@ -57,6 +57,11 @@ type Config struct {
 		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" default:"false"`
 		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"       default:"fancy"`
 	} `json:"log" yaml:"log"`
+
+	Unikraft struct {
+		Mirrors   []string `json:"mirrors"   yaml:"mirrors"   env:"KRAFTKIT_UNIKRAFT_MIRRORS"`
+		Manifests []string `json:"manifests" yaml:"manifests" env:"KRAFTKIT_UNIKRAFT_MANIFESTS"`
+	} `json:"unikraft" yaml:"unikraft"`
 }
 
 type ConfigDetail struct {
