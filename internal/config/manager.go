@@ -36,15 +36,16 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-
 	"strings"
 	"syscall"
+
+	"go.unikraft.io/kit/config"
 )
 
 // ConfigManager uses the package facilities, there should be at least one
 // instance of it. It holds the configuration feeders and structs.
 type ConfigManager struct {
-	Config     *Config
+	Config     *config.Config
 	ConfigFile string
 	Feeders    []Feeder
 }
@@ -73,7 +74,7 @@ func WithFile(file string, forceCreate bool) ConfigManagerOption {
 				File: file,
 			}
 			if os.IsNotExist(err) {
-				err := yml.Write(cm.Config)
+				err := yml.Write(cm.Config, forceCreate)
 				if err != nil {
 					return fmt.Errorf("could not write initial config: %v", err)
 				}
@@ -94,7 +95,7 @@ func WithDefaultConfigFile() ConfigManagerOption {
 func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
 	cm := &ConfigManager{}
 
-	c, err := NewDefaultConfig()
+	c, err := config.NewDefaultConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not seed default values for config: %s", err)
 	}
@@ -133,9 +134,9 @@ func (cm *ConfigManager) Feed() error {
 	return nil
 }
 
-func (cm *ConfigManager) Write() error {
+func (cm *ConfigManager) Write(merge bool) error {
 	for _, f := range cm.Feeders {
-		if err := f.Write(cm.Config); err != nil {
+		if err := f.Write(cm.Config, merge); err != nil {
 			return err
 		}
 	}
@@ -173,7 +174,7 @@ func (cm *ConfigManager) feedStruct(f Feeder, s interface{}) error {
 }
 
 func AllowedValues(key string) []string {
-	for _, details := range ConfigDetails() {
+	for _, details := range config.ConfigDetails() {
 		if details.Key == key {
 			return details.AllowedValues
 		}
@@ -183,10 +184,49 @@ func AllowedValues(key string) []string {
 }
 
 func Default(key string) string {
-	found, _, def, _, err := findConfigDefault(key, "", "", reflect.ValueOf(&Config{}))
+	found, _, def, _, err := findConfigDefault(key, "", "", reflect.ValueOf(&config.Config{}))
 	if err != nil || found != key {
 		return def
 	}
 
 	return ""
+}
+
+func findConfigDefault(needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
+	if v.Kind() != reflect.Ptr {
+		return needle, offset, def, v, fmt.Errorf("not a pointer value")
+	}
+
+	if needle == offset {
+		return needle, offset, def, v, nil
+	}
+
+	v = reflect.Indirect(v)
+	switch v.Kind() {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			name := v.Type().Field(i).Tag.Get("json")
+			if len(name) == 0 {
+				continue
+			}
+
+			check := name
+			if len(offset) > 0 {
+				check = offset + "." + name
+			}
+
+			dNeedle, dOffset, dDef, dv, dErr := findConfigDefault(
+				needle,
+				check,
+				v.Type().Field(i).Tag.Get("default"),
+				v.Field(i).Addr(),
+			)
+
+			if dOffset == needle {
+				return dNeedle, dOffset, dDef, dv, dErr
+			}
+		}
+	}
+
+	return needle, offset, def, v, fmt.Errorf("could not find default for: %s", needle)
 }
