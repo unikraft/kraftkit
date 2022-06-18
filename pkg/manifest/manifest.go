@@ -109,6 +109,12 @@ func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error
 		return nil, fmt.Errorf("manifest path is empty: %s", path)
 	}
 
+	// Check if we're directly pointing to a compatible manifest file
+	ext := filepath.Ext(path)
+	if ext != ".yml" && ext != ".yaml" {
+		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+	}
+
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
