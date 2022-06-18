@@ -55,6 +55,11 @@ func NewProvider(path string, mopts ...ManifestOption) (Provider, error) {
 		return provider, nil
 	}
 
+	provider, err = NewGitHubProvider(path, mopts...)
+	if err == nil {
+		return provider, nil
+	}
+
 	provider, err = NewGitProvider(path, mopts...)
 	if err == nil {
 		return provider, nil

@@ -11,6 +11,8 @@ require (
 	github.com/cli/safeexec v1.0.0
 	github.com/compose-spec/compose-go v1.2.4
 	github.com/go-git/go-git/v5 v5.4.2
+	github.com/gobwas/glob v0.2.3
+	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.0.6
 	github.com/imdario/mergo v0.3.12
