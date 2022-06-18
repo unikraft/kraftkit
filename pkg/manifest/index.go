@@ -50,6 +50,53 @@ type ManifestIndex struct {
 	Manifests   []*Manifest `yaml:"manifests"`
 }
 
+type ManifestIndexProvider struct {
+	path  string
+	index *ManifestIndex
+	mopts []ManifestOption
+}
+
+// NewManifestIndexProvider accepts an input path which is checked against first
+// a local file on disk and then a remote URL.  If either of these checks pass,
+// the Provider is instantiated since the path does indeed represent a
+// ManifestIndex.
+func NewManifestIndexProvider(path string, mopts ...ManifestOption) (Provider, error) {
+	index, err := NewManifestIndexFromFile(path, mopts...)
+	if err == nil {
+		return ManifestIndexProvider{
+			path:  path,
+			index: index,
+			mopts: mopts,
+		}, nil
+	}
+
+	index, err = NewManifestIndexFromURL(path, mopts...)
+	if err == nil {
+		return ManifestIndexProvider{
+			path:  path,
+			index: index,
+			mopts: mopts,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("provided path is not a manifest index: %s", path)
+}
+
+func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
+	var manifests []*Manifest
+
+	for _, manifest := range mip.index.Manifests {
+		next, err := findManifestsFromSource(mip.path, manifest.Manifest, mip.mopts)
+		if err != nil {
+			return nil, err
+		}
+
+		manifests = append(manifests, next...)
+	}
+
+	return manifests, nil
+}
+
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
 func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {

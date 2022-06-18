@@ -45,5 +45,10 @@ type Provider interface {
 // thus the return of NewProvider a compatible interface Provider able to gather
 // information about the manifest.
 func NewProvider(path string, mopts ...ManifestOption) (Provider, error) {
+	provider, err := NewManifestIndexProvider(path, mopts...)
+	if err == nil {
+		return provider, nil
+	}
+
 	return nil, fmt.Errorf("could not determine provider for: %s", path)
 }
