@@ -173,6 +173,60 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 	return manifest, nil
 }
 
+// FindManifestsFromSource is a recursive method which follows a given source
+// and attempts to instantiate a Provider which matches the given source.  If
+// the source is recognised by a provider, it is traversed to return all the
+// known Manifests.
+func FindManifestsFromSource(source string, mopts ...ManifestOption) ([]*Manifest, error) {
+	return findManifestsFromSource("", source, mopts)
+}
+
+// findManifestsFromSource is an internal method which recursively traverses a
+// path to a manifest and if symbolic link is presented within the read
+// manifest, it is retrieved via this method.  This is only recursive if the
+// option to be followed is set.
+func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) ([]*Manifest, error) {
+	var manifests []*Manifest
+
+	// Follow relative paths by using the lastSource
+	if len(lastSource) > 0 {
+		if f, err := os.Stat(lastSource); err == nil && f.IsDir() {
+			source = filepath.Join(lastSource, source)
+		} else {
+			dir, _ := filepath.Split(lastSource)
+			source = filepath.Join(dir, source)
+		}
+	}
+
+	provider, err := NewProvider(source, mopts...)
+	if err != nil {
+		return nil, err
+	}
+
+	newManifests, err := provider.Manifests()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, manifest := range newManifests {
+		if len(manifest.Manifest) > 0 {
+			var next []*Manifest
+			next, err = findManifestsFromSource(source, manifest.Manifest, mopts)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(next) > 0 {
+				manifests = append(manifests, next...)
+			}
+		} else {
+			manifests = append(manifests, manifest)
+		}
+	}
+
+	return manifests, nil
+}
+
 // WriteToFile saves the manifest as a YAML format file at the given path
 func (m Manifest) WriteToFile(path string) error {
 	// Open the file (create if not present)
