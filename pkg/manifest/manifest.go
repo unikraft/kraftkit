@@ -37,6 +37,9 @@ import (
 	"os"
 
 	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/config"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -64,6 +67,15 @@ type Manifest struct {
 
 	// SourceOrigin is original location of where this manifest was found
 	SourceOrigin string `yaml:"-"`
+
+	// auth is an internal property set by a ManifestOption which is used by the
+	// Manifest to access information a bout itself aswell as downloading a given
+	// resource
+	auths map[string]config.AuthConfig
+
+	// log is an internal property used to perform logging within the context of
+	// the manfiest
+	log log.Logger
 }
 
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
@@ -131,4 +143,10 @@ func (m Manifest) WriteToFile(path string) error {
 	}
 
 	return nil
+}
+
+// Auths returns the map of provided authentication configuration passed as an
+// option to the Manifest
+func (m Manifest) Auths() map[string]config.AuthConfig {
+	return m.auths
 }
