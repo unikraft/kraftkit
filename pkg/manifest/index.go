@@ -33,8 +33,12 @@ package manifest
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -86,6 +90,43 @@ func NewManifestIndexFromFile(path string, mopts ...ManifestOption) (*ManifestIn
 	}
 
 	return NewManifestIndexFromBytes(contents, mopts...)
+}
+
+// NewManifestFromURL retrieves a provided path as a ManifestIndex from a remote
+// location over HTTP
+func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestIndex, error) {
+	_, err := url.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
+	}
+
+	// Check if we're directly pointing to a compatible manifest file
+	ext := filepath.Ext(path)
+	if ext != ".yml" && ext != ".yaml" {
+		return nil, fmt.Errorf("unsupported manifest index extension for path: %s", path)
+	}
+
+	contents, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := NewManifestIndexFromBytes(contents, mopts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return index, nil
 }
 
 func (mi *ManifestIndex) WriteToFile(path string) error {
