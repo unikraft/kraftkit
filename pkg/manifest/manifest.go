@@ -82,6 +82,39 @@ type Manifest struct {
 	log log.Logger
 }
 
+type ManifestProvider struct {
+	path     string
+	manifest *Manifest
+}
+
+// NewManifestProvider accepts an input path which is checked against a local
+// file on disk and a remote URL.  If populating a Manifest struct is possible
+// given the path, then this provider is able to return list of exactly 1
+// manifest.
+func NewManifestProvider(path string, mopts ...ManifestOption) (Provider, error) {
+	manifest, err := NewManifestFromFile(path, mopts...)
+	if err == nil {
+		return ManifestProvider{
+			path:     path,
+			manifest: manifest,
+		}, nil
+	}
+
+	manifest, err = NewManifestFromURL(path, mopts...)
+	if err == nil {
+		return ManifestProvider{
+			path:     path,
+			manifest: manifest,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("provided path is not a manifest: %s", path)
+}
+
+func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
+	return []*Manifest{mp.manifest}, nil
+}
+
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
 func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error) {
 	manifest := &Manifest{}
