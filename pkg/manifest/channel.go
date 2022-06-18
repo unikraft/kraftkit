@@ -34,7 +34,7 @@ package manifest
 type ManifestChannel struct {
 	Name     string `yaml:"name"`
 	Default  bool   `yaml:"default,omitempty"`
-	Latest   string `yaml:"latest"`
+	Latest   string `yaml:"latest,omitempty"`
 	Manifest string `yaml:"manifest,omitempty"`
 	Resource string `yaml:"resource"`
 }
