@@ -10,6 +10,7 @@ require (
 	github.com/cli/cli/v2 v2.7.0
 	github.com/cli/safeexec v1.0.0
 	github.com/compose-spec/compose-go v1.2.4
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.0.6
 	github.com/imdario/mergo v0.3.12
