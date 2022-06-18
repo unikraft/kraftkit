@@ -37,6 +37,16 @@ import (
 	"strconv"
 )
 
+// AuthConfig represents a very abstract representation of authentication used
+// by some service.  Most APIs and services which can be authenticated have the
+// defined four parameters found within AuthConfig.
+type AuthConfig struct {
+	User      string `json:"user"       yaml:"user"       env:"KRAFTKIT_AUTH_%s_USER"`
+	Token     string `json:"token"      yaml:"token"      env:"KRAFTKIT_AUTH_%s_TOKEN"`
+	Endpoint  string `json:"endpoint"   yaml:"endpoint"   env:"KRAFTKIT_AUTH_%s_ENDPOINT"`
+	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" default:"true"`
+}
+
 type Config struct {
 	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"    default:"false"`
 	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"  default:"true"`
@@ -63,6 +73,8 @@ type Config struct {
 		Mirrors   []string `json:"mirrors"   yaml:"mirrors"   env:"KRAFTKIT_UNIKRAFT_MIRRORS"`
 		Manifests []string `json:"manifests" yaml:"manifests" env:"KRAFTKIT_UNIKRAFT_MANIFESTS"`
 	} `json:"unikraft" yaml:"unikraft"`
+
+	Auth map[string]AuthConfig `json:"auth" yaml:"auth,omitempty"`
 }
 
 type ConfigDetail struct {
