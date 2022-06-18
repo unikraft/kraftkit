@@ -48,7 +48,7 @@ type ManifestIndex struct {
 
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
-func NewManifestIndexFromBytes(raw []byte) (*ManifestIndex, error) {
+func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {
 	index := &ManifestIndex{}
 
 	if err := yaml.Unmarshal(raw, index); err != nil {
@@ -59,10 +59,20 @@ func NewManifestIndexFromBytes(raw []byte) (*ManifestIndex, error) {
 		return nil, fmt.Errorf("nothing found in manifest index")
 	}
 
+	for i, manifest := range index.Manifests {
+		for _, o := range mopts {
+			if err := o(manifest); err != nil {
+				return nil, err
+			}
+		}
+
+		index.Manifests[i] = manifest
+	}
+
 	return index, nil
 }
 
-func NewManifestIndexFromFile(path string) (*ManifestIndex, error) {
+func NewManifestIndexFromFile(path string, mopts ...ManifestOption) (*ManifestIndex, error) {
 	f, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -75,7 +85,7 @@ func NewManifestIndexFromFile(path string) (*ManifestIndex, error) {
 		return nil, err
 	}
 
-	return NewManifestIndexFromBytes(contents)
+	return NewManifestIndexFromBytes(contents, mopts...)
 }
 
 func (mi *ManifestIndex) WriteToFile(path string) error {

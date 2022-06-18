@@ -79,7 +79,7 @@ type Manifest struct {
 }
 
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
-func NewManifestFromBytes(raw []byte) (*Manifest, error) {
+func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error) {
 	manifest := &Manifest{}
 	if err := yaml.Unmarshal(raw, manifest); err != nil {
 		return nil, err
@@ -91,11 +91,17 @@ func NewManifestFromBytes(raw []byte) (*Manifest, error) {
 		return nil, fmt.Errorf("unset type in manifest")
 	}
 
+	for _, o := range mopts {
+		if err := o(manifest); err != nil {
+			return nil, err
+		}
+	}
+
 	return manifest, nil
 }
 
 // NewManifestFromFile reads in a manifest file from a given path
-func NewManifestFromFile(path string) (*Manifest, error) {
+func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error) {
 	f, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -108,7 +114,7 @@ func NewManifestFromFile(path string) (*Manifest, error) {
 		return nil, err
 	}
 
-	manifest, err := NewManifestFromBytes(contents)
+	manifest, err := NewManifestFromBytes(contents, mopts...)
 	if err != nil {
 		return nil, err
 	}
