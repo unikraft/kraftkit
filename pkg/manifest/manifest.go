@@ -33,12 +33,16 @@ package manifest
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/config"
+	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/pkg/unikraft"
 
 	"gopkg.in/yaml.v2"
 )
@@ -116,6 +120,45 @@ func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error
 	}
 
 	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := NewManifestFromBytes(contents, mopts...)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest.SourceOrigin = path
+
+	return manifest, nil
+}
+
+// NewManifestFromURL retrieves a provided path as a Manifest from a remote
+// location over HTTP
+func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error) {
+	_, err := url.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
+	}
+
+	// Check if we're directly pointing to a compatible manifest file
+	ext := filepath.Ext(path)
+	if ext != ".yml" && ext != ".yaml" {
+		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+	}
+
+	contents, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
