@@ -34,7 +34,7 @@ package pkgmanager
 import (
 	"context"
 
-	"go.unikraft.io/kit/internal/config"
+	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/utils"
 
 	"go.unikraft.io/kit/pkg/log"

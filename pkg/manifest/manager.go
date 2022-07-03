@@ -36,7 +36,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.unikraft.io/kit/internal/config"
+	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/pkg/iostreams"
 	"go.unikraft.io/kit/pkg/pkg"
 	"go.unikraft.io/kit/pkg/pkgmanager"

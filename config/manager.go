@@ -38,14 +38,12 @@ import (
 	"reflect"
 	"strings"
 	"syscall"
-
-	"go.unikraft.io/kit/config"
 )
 
 // ConfigManager uses the package facilities, there should be at least one
 // instance of it. It holds the configuration feeders and structs.
 type ConfigManager struct {
-	Config     *config.Config
+	Config     *Config
 	ConfigFile string
 	Feeders    []Feeder
 }
@@ -95,7 +93,7 @@ func WithDefaultConfigFile() ConfigManagerOption {
 func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
 	cm := &ConfigManager{}
 
-	c, err := config.NewDefaultConfig()
+	c, err := NewDefaultConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not seed default values for config: %s", err)
 	}
@@ -174,7 +172,7 @@ func (cm *ConfigManager) feedStruct(f Feeder, s interface{}) error {
 }
 
 func AllowedValues(key string) []string {
-	for _, details := range config.ConfigDetails() {
+	for _, details := range ConfigDetails() {
 		if details.Key == key {
 			return details.AllowedValues
 		}
@@ -184,7 +182,7 @@ func AllowedValues(key string) []string {
 }
 
 func Default(key string) string {
-	found, _, def, _, err := findConfigDefault(key, "", "", reflect.ValueOf(&config.Config{}))
+	found, _, def, _, err := findConfigDefault(key, "", "", reflect.ValueOf(&Config{}))
 	if err != nil || found != key {
 		return def
 	}

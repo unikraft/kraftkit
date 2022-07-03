@@ -38,7 +38,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"go.unikraft.io/kit/internal/config"
+
+	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/internal/logger"
 
