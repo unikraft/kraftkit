@@ -70,7 +70,7 @@ func (f YamlFeeder) Feed(structure interface{}) error {
 	return nil
 }
 
-func (yf YamlFeeder) Write(structure interface{}) error {
+func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 	if len(yf.File) == 0 {
 		return fmt.Errorf("filename for YAML cannot be empty")
 	}
@@ -110,7 +110,7 @@ func (yf YamlFeeder) Write(structure interface{}) error {
 	}
 
 	// When kind is 0, it is an uninitialized YAML structure (aka empty file)
-	if from.Kind != 0 {
+	if from.Kind != 0 && merge {
 		if err := recursiveMerge(&from, &into); err != nil {
 			return fmt.Errorf("could not update config: %v", err)
 		}

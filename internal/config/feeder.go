@@ -37,5 +37,5 @@ type Feeder interface {
 	// Feed gets a struct and feeds it using configuration data.
 	Feed(structure interface{}) error
 	// Write the structure to the feeder
-	Write(structure interface{}) error
+	Write(structure interface{}, merge bool) error
 }
