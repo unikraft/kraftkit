@@ -259,19 +259,6 @@ func parseConfigData(data []byte) (*yaml.Node, error) {
 	return &root, nil
 }
 
-func parseConfig(filename string) (Config, error) {
-	_, root, err := parseConfigFile(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			root = NewBlankRoot()
-		} else {
-			return nil, err
-		}
-	}
-
-	return NewConfig(root), nil
-}
-
 func pathError(err error) error {
 	var pathError *os.PathError
 	if errors.As(err, &pathError) && errors.Is(pathError.Err, syscall.ENOTDIR) {
