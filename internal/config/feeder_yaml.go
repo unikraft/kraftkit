@@ -157,7 +157,17 @@ func recursiveMerge(from, into *yaml.Node) error {
 	case yaml.ScalarNode:
 		into = from
 	case yaml.SequenceNode:
-		into.Content = append(into.Content, from.Content...)
+		for _, fromItem := range from.Content {
+			foundFrom := false
+			for _, intoItem := range into.Content {
+				if fromItem.Value == intoItem.Value {
+					foundFrom = true
+				}
+			}
+			if !foundFrom {
+				into.Content = append(into.Content, fromItem)
+			}
+		}
 	case yaml.DocumentNode:
 		recursiveMerge(from.Content[0], into.Content[0])
 	default:
