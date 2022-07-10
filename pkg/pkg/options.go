@@ -40,6 +40,30 @@ import (
 
 // PackageOptions contains configuration for the Package
 type PackageOptions struct {
+	// Name of the package
+	Name string
+
+	// Type of package
+	Type unikraft.ComponentType
+
+	// Version of the package
+	Version string
+
+	// Architecture of the package if applicable
+	Architecture *string
+
+	// Platform of the package if applicable
+	Platform *string
+
+	// Metadata represents other items that did not have appropriate annotations
+	Metadata map[string]interface{}
+
+	// RemoteLocation contains the remote location of the package.
+	RemoteLocation string
+
+	// Sha256
+	Sha256 string
+
 	// Access to a logger
 	log log.Logger
 
@@ -70,6 +94,55 @@ func NewPackageOptions(opts ...PackageOption) (*PackageOptions, error) {
 	}
 
 	return options, nil
+}
+
+func WithName(name string) PackageOption {
+	return func(opts *PackageOptions) error {
+		if len(name) == 0 {
+			return fmt.Errorf("cannot set empty name")
+		}
+
+		opts.Name = name
+
+		return nil
+	}
+}
+
+func WithArchitecture(arch string) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.Architecture = &arch
+
+		return nil
+	}
+}
+
+func WithPlatform(plat string) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.Platform = &plat
+
+		return nil
+	}
+}
+
+func WithType(t unikraft.ComponentType) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.Type = t
+		return nil
+	}
+}
+
+func WithVersion(version string) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.Version = version
+		return nil
+	}
+}
+
+func WithMetadata(metadata map[string]interface{}) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.Metadata = metadata
+		return nil
+	}
 }
 
 func WithLogger(l log.Logger) PackageOption {
