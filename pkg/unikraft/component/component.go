@@ -36,6 +36,7 @@ import (
 
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/pkg/unikraft"
 )
 
 // ComponentConfig is the shared attribute structure provided to all
