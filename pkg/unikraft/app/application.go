@@ -73,6 +73,19 @@ func (ac *ApplicationConfig) KConfigFile() (string, error) {
 	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil
 }
 
+// IsConfigured returns a boolean to indicate whether the application has been
+// previously configured.  This is deteremined by finding a non-empty `.config`
+// file within the application's source directory
+func (a *ApplicationConfig) IsConfigured() bool {
+	k, err := a.KConfigFile()
+	if err != nil {
+		return false
+	}
+
+	f, err := os.Stat(k)
+	return err == nil && !f.IsDir() && f.Size() > 0
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
