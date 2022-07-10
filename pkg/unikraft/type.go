@@ -44,10 +44,22 @@ const (
 
 func ComponentTypes() map[string]ComponentType {
 	return map[string]ComponentType{
-		string(ComponentTypeCore): ComponentTypeCore,
-		string(ComponentTypeArch): ComponentTypeArch,
-		string(ComponentTypePlat): ComponentTypePlat,
-		string(ComponentTypeLib):  ComponentTypeLib,
-		string(ComponentTypeApp):  ComponentTypeApp,
+		"core":  ComponentTypeCore,
+		"arch":  ComponentTypeArch,
+		"archs": ComponentTypeArch,
+		"plat":  ComponentTypePlat,
+		"plats": ComponentTypePlat,
+		"lib":   ComponentTypeLib,
+		"libs":  ComponentTypeLib,
+		"app":   ComponentTypeApp,
+		"apps":  ComponentTypeApp,
 	}
+}
+
+func (ct ComponentType) Plural() string {
+	if ct == ComponentTypeUnknown || ct == ComponentTypeCore {
+		return string(ct)
+	}
+
+	return string(ct) + "s"
 }
