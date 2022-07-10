@@ -31,6 +31,10 @@
 
 package unikraft
 
+import (
+	"regexp"
+)
+
 type ComponentType string
 
 const (
@@ -62,4 +66,30 @@ func (ct ComponentType) Plural() string {
 	}
 
 	return string(ct) + "s"
+}
+
+// GuessNameAndType attempts to parse the input string, which could be formatted
+// such that its type, name and version are present
+func GuessTypeNameVersion(input string) (ComponentType, string, string) {
+	re := regexp.MustCompile(
+		`(?i)^` +
+			`(?:(?P<type>(?:lib|app|plat|arch)s?)[\-/])?` +
+			`(?P<name>[\w\-\_\*]*)` +
+			`(?:\:(?P<version>[\w\.\-\_]*))?` +
+			`$`,
+	)
+
+	match := re.FindStringSubmatch(input)
+	t, n, v := match[1], match[2], match[3]
+
+	if n == "unikraft" {
+		t = string(ComponentTypeCore)
+	}
+
+	// Is the type recognised?
+	if found, ok := ComponentTypes()[t]; ok {
+		return found, n, v
+	}
+
+	return ComponentTypeUnknown, n, v
 }
