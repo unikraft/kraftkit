@@ -51,6 +51,7 @@ type ApplicationConfig struct {
 	component.ComponentConfig
 
 	WorkingDir    string               `yaml:"-" json:"-"`
+	Filename      string               `yaml:"-" json:"-"`
 	OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`
 	Unikraft      core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
 	Libraries     lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`

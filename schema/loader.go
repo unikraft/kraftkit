@@ -176,6 +176,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	project := &app.ApplicationConfig{
 		Name:          projectName,
 		WorkingDir:    details.WorkingDir,
+		Filename:      model.Filename,
 		OutDir:        model.OutDir,
 		Unikraft:      model.Unikraft,
 		Libraries:     model.Libraries,
