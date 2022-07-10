@@ -288,21 +288,16 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 		return make(map[string]lib.LibraryConfig), err
 	}
 
-	// Seed the all library components with the shared attributes
 	libraries := make(map[string]lib.LibraryConfig)
-	for name, library := range bases {
-		library.Name = name
-		libraries[name] = lib.LibraryConfig{
-			ComponentConfig: library,
-		}
-	}
-
-	for name, library := range libraries {
-		// Transform the seeded libraries.  We do this in the loop because for some
-		// reason the the `Transform` method zeros the seed.
+	for name, comp := range bases {
+		library := lib.LibraryConfig{}
+	
 		if err := Transform(source[name], &library); err != nil {
 			return libraries, err
 		}
+		
+		// Seed the the library components with the shared component attributes
+		library.ComponentConfig = comp
 
 		copts := opts.componentOptions
 		copts = append(copts, component.WithCoreSource(unikraft.Source))
@@ -312,8 +307,8 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 		}
 
 		switch {
-		case library.Name == "":
-			library.Name = name
+		case library.ComponentConfig.Name == "":
+			library.ComponentConfig.Name = name
 		}
 
 		libraries[name] = library
