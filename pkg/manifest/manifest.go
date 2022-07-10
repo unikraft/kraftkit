@@ -62,6 +62,9 @@ type Manifest struct {
 	// Description of what this manifest represents
 	Description string `yaml:"description,omitempty"`
 
+	// GitRepo represents the code repository by which this manifests is populated
+	GitRepo string `yaml:"git,omitempty"`
+
 	// Channels provides multiple ways to retrieve versions.  Classically this is
 	// a separation between "staging" and "stable"
 	Channels []ManifestChannel `yaml:"channels,omitempty"`
