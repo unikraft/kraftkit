@@ -32,6 +32,8 @@
 package unikraft
 
 import (
+	"fmt"
+	"path/filepath"
 	"regexp"
 )
 
@@ -92,4 +94,21 @@ func GuessTypeNameVersion(input string) (ComponentType, string, string) {
 	}
 
 	return ComponentTypeUnknown, n, v
+}
+
+// PlaceComponent is a universal source of truth for identifying the path to
+// place a component
+func PlaceComponent(workdir string, t ComponentType, name string) (string, error) {
+	// TODO: Should the hidden-file (`.`) be optional?
+	switch t {
+	case ComponentTypeCore:
+		return filepath.Join(workdir, ".unikraft", "unikraft"), nil
+	case ComponentTypeApp,
+		ComponentTypeLib,
+		ComponentTypeArch,
+		ComponentTypePlat:
+		return filepath.Join(workdir, ".unikraft", t.Plural(), name), nil
+	}
+
+	return "", fmt.Errorf("cannot place component of unknown type")
 }
