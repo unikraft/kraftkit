@@ -289,6 +289,13 @@ func findFiles(names []string, pwd string) []string {
 	return candidates
 }
 
+// IsWorkdirInitialized provides a quick check to determine if whether one of
+// the supported project files (Kraftfiles) is present within a provided working
+// directory.
+func IsWorkdirInitialized(dir string) bool {
+	return len(findFiles(DefaultFileNames, dir)) > 0
+}
+
 func (o ProjectOptions) GetWorkingDir() (string, error) {
 	if o.WorkingDir != "" {
 		return o.WorkingDir, nil
