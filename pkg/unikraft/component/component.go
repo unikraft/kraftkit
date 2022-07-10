@@ -60,6 +60,12 @@ type ComponentConfig struct {
 
 // Component is the abstract interface for managing the individual microlibrary
 type Component interface {
+	// Name returns the component name
+	Name() string
+
+	// Version returns the component version
+	Version() string
+
 	// Type returns the component's static constant type
 	Type() unikraft.ComponentType
 }

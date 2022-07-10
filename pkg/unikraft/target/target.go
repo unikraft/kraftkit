@@ -38,7 +38,8 @@ import (
 )
 
 type TargetConfig struct {
-	Name         string                  `yaml:",omitempty" json:"name,omitempty"`
+	component.ComponentConfig
+
 	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
 	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
 	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
@@ -50,3 +51,15 @@ type TargetConfig struct {
 }
 
 type Targets []TargetConfig
+
+func (tc TargetConfig) Name() string {
+	return tc.ComponentConfig.Name
+}
+
+func (tc TargetConfig) Version() string {
+	return tc.ComponentConfig.Version
+}
+
+func (tc TargetConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeUnknown
+}

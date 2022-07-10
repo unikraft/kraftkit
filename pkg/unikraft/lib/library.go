@@ -51,6 +51,14 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
-func (l *LibraryConfig) Type() unikraft.ComponentType {
+func (lc LibraryConfig) Name() string {
+	return lc.ComponentConfig.Name
+}
+
+func (lc LibraryConfig) Version() string {
+	return lc.ComponentConfig.Version
+}
+
+func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
 }

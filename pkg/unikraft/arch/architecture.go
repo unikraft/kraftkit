@@ -59,6 +59,14 @@ func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
 	return architecture, nil
 }
 
-func (a *ArchitectureConfig) Type() unikraft.ComponentType {
+func (ac ArchitectureConfig) Name() string {
+	return ac.ComponentConfig.Name
+}
+
+func (ac ArchitectureConfig) Version() string {
+	return ac.ComponentConfig.Version
+}
+
+func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
 }

@@ -44,6 +44,14 @@ type UnikraftConfig struct {
 	component.ComponentConfig
 }
 
-func (uc *UnikraftConfig) Type() unikraft.ComponentType {
+func (uc UnikraftConfig) Name() string {
+	return uc.ComponentConfig.Name
+}
+
+func (uc UnikraftConfig) Version() string {
+	return uc.ComponentConfig.Version
+}
+
+func (uc UnikraftConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeCore
 }

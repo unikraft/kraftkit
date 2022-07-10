@@ -46,7 +46,6 @@ import (
 type ApplicationConfig struct {
 	component.ComponentConfig
 
-	Name          string               `yaml:"name,omitempty" json:"name,omitempty"`
 	WorkingDir    string               `yaml:"-" json:"-"`
 	OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`
 	Unikraft      core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
@@ -55,6 +54,14 @@ type ApplicationConfig struct {
 	Extensions    component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
 	KraftFiles    []string             `yaml:"-" json:"-"`
 	Configuration map[string]string    `yaml:"-" json:"-"`
+}
+
+func (ac ApplicationConfig) Name() string {
+	return ac.ComponentConfig.Name
+}
+
+func (ac ApplicationConfig) Version() string {
+	return ac.ComponentConfig.Version
 }
 
 // LibraryNames return names for all libraries in this Compose config
@@ -73,7 +80,7 @@ func (a *ApplicationConfig) LibraryNames() []string {
 func (a *ApplicationConfig) TargetNames() []string {
 	var names []string
 	for _, k := range a.Targets {
-		names = append(names, k.Name)
+		names = append(names, k.Name())
 	}
 
 	sort.Strings(names)
