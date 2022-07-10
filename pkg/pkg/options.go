@@ -154,6 +154,10 @@ func WithLogger(l log.Logger) PackageOption {
 	}
 }
 
+func (opts *PackageOptions) Log() log.Logger {
+	return opts.log
+}
+
 type PullPackageOptions struct {
 	architectures     []string
 	platforms         []string
