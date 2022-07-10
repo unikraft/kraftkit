@@ -47,7 +47,7 @@ type PackageManager interface {
 	Push(string) error
 
 	// Pull package(s) from the supported registry of the implementation.
-	Pull(string, *PullPackageOptions) ([]pkg.Package, error)
+	Pull(string, *pkg.PullPackageOptions) ([]pkg.Package, error)
 
 	// Search for a package with a given name
 	Search(string, *SearchPackageOptions) ([]pkg.Package, error)

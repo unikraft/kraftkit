@@ -35,7 +35,6 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/utils"
 
 	"go.unikraft.io/kit/pkg/log"
 )
@@ -87,66 +86,6 @@ func WithLogger(l log.Logger) PackageManagerOption {
 func WithConfig(c *config.Config) PackageManagerOption {
 	return func(o *PackageManagerOptions) error {
 		o.Config = c
-		return nil
-	}
-}
-
-type PullPackageOptions struct {
-	withDependencies bool
-	architectures    []string
-	platforms        []string
-	version          string
-	allVersions      bool
-}
-
-type PullPackageOption func(opts *PullPackageOptions) error
-
-// NewPullPackageOptions creates PullPackageOptions
-func NewPullPackageOptions(opts ...PullPackageOption) (*PullPackageOptions, error) {
-	options := &PullPackageOptions{}
-
-	for _, o := range opts {
-		err := o(options)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return options, nil
-}
-
-func WithPullArchitecture(archs ...string) PullPackageOption {
-	return func(opts *PullPackageOptions) error {
-		for _, arch := range archs {
-			if arch == "" {
-				continue
-			}
-
-			if utils.Contains(opts.architectures, arch) {
-				continue
-			}
-
-			opts.architectures = append(opts.architectures, archs...)
-		}
-
-		return nil
-	}
-}
-
-func WithPullPlatform(plats ...string) PullPackageOption {
-	return func(opts *PullPackageOptions) error {
-		for _, plat := range plats {
-			if plat == "" {
-				continue
-			}
-
-			if utils.Contains(opts.platforms, plat) {
-				continue
-			}
-
-			opts.platforms = append(opts.platforms, plats...)
-		}
-
 		return nil
 	}
 }
