@@ -85,6 +85,8 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
+		// Use a map as we need to access the name (which is the key)
+		reflect.TypeOf(map[string]component.ComponentConfig{}): transformComponents,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -234,4 +236,31 @@ var transformTarget TransformerFunc = func(data interface{}) (interface{}, error
 	default:
 		return data, errors.Errorf("invalid type %T for target", entries)
 	}
+}
+
+var transformComponents TransformerFunc = func(data interface{}) (interface{}, error) {
+	switch entries := data.(type) {
+	case map[string]interface{}:
+		components := make(map[string]interface{}, len(entries))
+		for name, props := range entries {
+			switch props.(type) {
+			case string:
+				comp, err := component.ParseComponentConfig(name, props)
+				if err != nil {
+					return nil, err
+				}
+				components[name] = comp
+				
+			case map[string]interface{}:
+				components[name] = props
+			
+			default:
+				return data, errors.Errorf("invalid type %T for component", props)
+			}
+		}
+
+		return components, nil
+	}
+
+	return data, errors.Errorf("invalid type %T for component map", data)
 }
