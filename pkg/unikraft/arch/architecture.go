@@ -54,7 +54,7 @@ func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
 		return architecture, fmt.Errorf("cannot ommit architecture name")
 	}
 
-	architecture.Name = value
+	architecture.ComponentConfig.Name = value
 
 	return architecture, nil
 }

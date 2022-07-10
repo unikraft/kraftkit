@@ -54,7 +54,7 @@ func ParsePlatformConfig(value string) (PlatformConfig, error) {
 		return platform, fmt.Errorf("cannot ommit platform name")
 	}
 
-	platform.Name = value
+	platform.ComponentConfig.Name = value
 
 	return platform, nil
 }
