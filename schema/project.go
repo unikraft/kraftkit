@@ -141,7 +141,7 @@ func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
 		s, err := os.Stat(dotConfigFile)
 		if os.IsNotExist(err) {
 			if o.DotConfigFile != "" {
-				return errors.Errorf("Couldn't find env file: %s", o.DotConfigFile)
+				return errors.Errorf("couldn't find config file: %s", o.DotConfigFile)
 			}
 			return nil
 		}
