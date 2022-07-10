@@ -33,7 +33,11 @@ package pkg
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
+	"go.unikraft.io/kit/pkg/initrd"
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/utils"
 )
@@ -147,6 +151,58 @@ func WithMetadata(metadata map[string]interface{}) PackageOption {
 		opts.Metadata = metadata
 		return nil
 	}
+}
+
+// WithKerenl sets the metadata attribute path to the kernel image
+func WithKernel(kernel string) PackageOption {
+	return func(opts *PackageOptions) error {
+		if len(kernel) == 0 {
+			return fmt.Errorf("path to kernel cannot be empty")
+		}
+		if f, err := os.Stat(kernel); err != nil || errors.Is(err, os.ErrNotExist) || f.IsDir() {
+			return fmt.Errorf("path to kernel does not exist: %s", kernel)
+		}
+
+		// TODO: Validate if a real kernel/ELF?
+		opts.Metadata["kernel"] = kernel
+
+		return nil
+	}
+}
+
+// Kernel returns the metadata attribute path to the kernel image
+func (po *PackageOptions) Kernel() (string, error) {
+	kernel, ok := po.Metadata["kernel"].(string)
+	if !ok {
+		return "", fmt.Errorf("kernel not set")
+	}
+
+	return kernel, nil
+}
+
+// WithInitrdConfig sets the metadata attribute with the interface representing
+// initrd configuration
+func WithInitrdConfig(initrdConfig *initrd.InitrdConfig) PackageOption {
+	return func(opts *PackageOptions) error {
+		if initrdConfig != nil && len(initrdConfig.Input) == 0 && initrdConfig.Input == nil && len(initrdConfig.Output) == 0 {
+			return nil
+		}
+
+		opts.Metadata["initrd"] = initrdConfig
+
+		return nil
+	}
+}
+
+// InitrdConfig returns the metadata attribute with an interface representing
+// the initrd configuration
+func (po *PackageOptions) InitrdConfig() (*initrd.InitrdConfig, error) {
+	ird, ok := po.Metadata["initrd"].(*initrd.InitrdConfig)
+	if !ok {
+		return nil, fmt.Errorf("initrd not set")
+	}
+
+	return ird, nil
 }
 
 func WithLogger(l log.Logger) PackageOption {
