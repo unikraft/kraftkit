@@ -37,4 +37,5 @@ type ManifestChannel struct {
 	Latest   string `yaml:"latest,omitempty"`
 	Manifest string `yaml:"manifest,omitempty"`
 	Resource string `yaml:"resource"`
+	Local    string `yaml:"-"`
 }

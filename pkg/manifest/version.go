@@ -48,6 +48,7 @@ type ManifestVersion struct {
 	Sha256   string              `yaml:"sha256,omitempty"`
 	Type     ManifestVersionType `yaml:"type,omitempty"`
 	Unikraft string              `yaml:"unikraft,omitempty"`
+	Local    string              `yaml:"-"`
 }
 
 func (mv *ManifestVersion) ShortGitSha() (string, error) {
