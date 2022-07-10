@@ -68,6 +68,11 @@ func (ac ApplicationConfig) Version() string {
 	return ac.ComponentConfig.Version
 }
 
+// KConfigFile returns the path to the application's .config file
+func (ac *ApplicationConfig) KConfigFile() (string, error) {
+	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
