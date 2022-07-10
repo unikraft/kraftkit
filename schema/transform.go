@@ -54,6 +54,7 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 		),
 		Result:     target,
 		Metadata:   &data,
+		ZeroFields: false,
 		MatchName:  func(mapKey, fieldName string) bool {
 			maps := map[string]string{
 				"kconfig": "Configuration",
