@@ -325,17 +325,33 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 // LoadTargets produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
 func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir string, configDetails config.ConfigDetails, opts *LoaderOptions) ([]target.TargetConfig, error) {
-	targets := []target.TargetConfig{}
-	if err := Transform(source, &targets); err != nil {
-		return targets, err
+	// Populate all target components with shared `ComponentConfig` attributes
+	bases := []component.ComponentConfig{}
+	if err := Transform(source, &bases); err != nil {
+		return []target.TargetConfig{}, err
+	}
+
+	// Seed the all library components with the shared attributes
+	targets := make([]target.TargetConfig, len(bases))
+	for i, targ := range bases {
+		targets[i] = target.TargetConfig{
+			ComponentConfig: targ,
+		}
 	}
 
 	projectName, _ := opts.GetProjectName()
 	copts := opts.componentOptions
 	copts = append(copts, component.WithCoreSource(unikraft.Source))
-	copts = append(copts, component.WithCoreSource(unikraft.Source))
 
 	for i, target := range targets {
+		if err := Transform(source[i], &target); err != nil {
+			return targets, err
+		}
+
+		if err := target.ApplyOptions(copts...); err != nil {
+			return targets, err
+		}
+
 		if err := target.Architecture.ApplyOptions(copts...); err != nil {
 			return targets, err
 		}
@@ -344,22 +360,23 @@ func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir stri
 			return targets, err
 		}
 
-		switch {
-		case target.Name == "":
-			target.Name = fmt.Sprintf(
+		if target.ComponentConfig.Name == "" {
+			target.ComponentConfig.Name = projectName
+		}
+
+		if target.Kernel == "" {
+			target.Kernel = filepath.Join(outdir, fmt.Sprintf(
 				// The filename pattern below is a baked in assumption within Unikraft's
 				// build system, see for example `KVM_IMAGE`.  TODO: This format should
 				// likely be upstreamed into the core as a generic for all platforms.
 				"%s_%s-%s",
 				projectName,
-				target.Platform.ComponentConfig.Name,
-				target.Architecture.ComponentConfig.Name,
-			)
+				target.Platform.Name(),
+				target.Architecture.Name(),
+			))
+		}
 
-		case target.Kernel == "":
-			target.Kernel = filepath.Join(outdir, target.Name)
-
-		case target.KernelDbg == "":
+		if target.KernelDbg == "" {
 			// Another baked-in assumption from the Unikraft build system.  See for
 			// example `KVM_DEBUG_IMAGE` which simply makes the same suffix appendage.
 			// TODO: As above, this should likely be upstreamed as a generic.
