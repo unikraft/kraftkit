@@ -67,10 +67,12 @@ type PackageOptions struct {
 	// Access to a logger
 	log log.Logger
 
-	// ctx should contain all implementation-specific options, using
-	// `context.WithValue`
+	// Context should contain all implementation-specific options, using
+	// `context.WithValue` and are referenced via `ContextKey`
 	ctx context.Context
 }
+
+type ContextKey string
 
 type PackageOption func(opts *PackageOptions) error
 
@@ -152,6 +154,17 @@ func WithLogger(l log.Logger) PackageOption {
 		opts.log = l
 		return nil
 	}
+}
+
+func WithContext(ctx context.Context) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.ctx = ctx
+		return nil
+	}
+}
+
+func (opts *PackageOptions) Context(key ContextKey) interface{} {
+	return opts.ctx.Value(key)
 }
 
 func (opts *PackageOptions) Log() log.Logger {
