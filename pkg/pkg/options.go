@@ -84,7 +84,9 @@ func WithLogger(l *log.Logger) PackageOption {
 
 // NewPackageOptions creates PackageOptions
 func NewPackageOptions(opts ...PackageOption) (*PackageOptions, error) {
-	options := &PackageOptions{}
+	options := &PackageOptions{
+		Metadata: make(map[string]interface{}),
+	}
 
 	for _, o := range opts {
 		err := o(options)
