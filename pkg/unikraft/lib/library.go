@@ -51,6 +51,19 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
+// ParseLibraryConfig parse short syntax for LibraryConfig
+func ParseLibraryConfig(version string) (LibraryConfig, error) {
+	lib := LibraryConfig{}
+
+	if len(version) == 0 {
+		return lib, fmt.Errorf("cannot ommit architecture name")
+	}
+
+	lib.ComponentConfig.Version = version
+
+	return lib, nil
+}
+
 func (lc LibraryConfig) Name() string {
 	return lc.ComponentConfig.Name
 }
