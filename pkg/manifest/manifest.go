@@ -290,6 +290,24 @@ func (m Manifest) WriteToFile(path string) error {
 	return nil
 }
 
+// DefaultChannel returns the default channel of the Manifest
+func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
+	if len(m.Channels) == 0 {
+		return nil, fmt.Errorf("manifest does not have any channels")
+	}
+	
+	// Use the channel by default to determine the latest version.  In the
+	// scenario where the version is not a semver (and thus can be compared
+	// mechanicslly) this field will be populated correctly by upstream manifests.
+	for _, channel := range m.Channels {
+		if channel.Default {
+			return &channel, nil
+		}
+	}
+
+	return nil, fmt.Errorf("manifest does not have a default channel: %s", m.SourceOrigin)
+}
+
 // Auths returns the map of provided authentication configuration passed as an
 // option to the Manifest
 func (m Manifest) Auths() map[string]config.AuthConfig {
