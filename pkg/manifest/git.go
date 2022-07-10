@@ -76,9 +76,9 @@ func NewGitProvider(path string, mopts ...ManifestOption) (Provider, error) {
 func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
 	var channels []ManifestChannel
 
-	// This is unikraft-centric ettiquette where there exists two branches: "stable"
-	// and "staging".  If these two channels exist, then later on we'll update
-	// the "stable" channel to be the default.
+	// This is unikraft-centric ettiquette where there exists two branches:
+	// "stable" and "staging".  If these two channels exist, then later on we'll
+	// update the "stable" channel to be the default.
 	haveStaging := false
 	haveStable := false
 
