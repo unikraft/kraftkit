@@ -43,6 +43,10 @@ import (
 	"go.unikraft.io/kit/pkg/unikraft/target"
 )
 
+type Application interface {
+	component.Component
+}
+
 type ApplicationConfig struct {
 	component.ComponentConfig
 
