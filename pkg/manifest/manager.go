@@ -44,6 +44,7 @@ import (
 	"go.unikraft.io/kit/pkg/iostreams"
 	"go.unikraft.io/kit/pkg/pkg"
 	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/pkg/unikraft"
 )
 
 type ManifestManager struct {
@@ -101,7 +102,75 @@ func (mm ManifestManager) ApplyOptions(pmopts ...pkgmanager.PackageManagerOption
 
 // Update retrieves and stores locally a cache of the upstream manifest registry.
 func (mm ManifestManager) Update() error {
-	return fmt.Errorf("not implemented pkg.ManifestManager.Update")
+	cfm := mm.opts.ConfigManager
+	if len(cfm.Config.Unikraft.Manifests) == 0 {
+		return fmt.Errorf("no manifests specified in config")
+	}
+
+	var localIndex *ManifestIndex
+
+	// Create parent directories if not present
+	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex()), 0o771); err != nil {
+		return err
+	}
+
+	localIndex = &ManifestIndex{
+		LastUpdated: time.Now(),
+	}
+
+	mopts := []ManifestOption{
+		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
+		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
+		WithLogger(mm.Options().Log),
+	}
+
+	for _, manipath := range cfm.Config.Unikraft.Manifests {
+		// If the path of the manipath is the same as the current manifest or it
+		// resides in the same directory as KraftKit's configured path for manifests
+		// then we can skip this since we don't want to update ourselves.
+		// if manipath == mm.LocalManifestIndex() || filepath.Dir(manipath) == mm.LocalManifestsDir() {
+		// 	mm.opts.Log.Debugf("skipping: %s", manipath)
+		// 	continue
+		// }
+
+		manifests, err := FindManifestsFromSource(manipath, mopts...)
+		if err != nil {
+			mm.opts.Log.Warnf("%s", err)
+		}
+
+		localIndex.Manifests = append(localIndex.Manifests, manifests...)
+	}
+
+	// TODO: Partition directories when there is a large number of manifests
+	// TODO: Merge manifests of same name and type?
+
+	// Create a file for each manifest
+	for i, manifest := range localIndex.Manifests {
+		filename := manifest.Name + ".yaml"
+
+		if manifest.Type != unikraft.ComponentTypeCore {
+			filename = manifest.Type.Plural() + "/" + filename
+		}
+
+		fileloc := filepath.Join(mm.LocalManifestsDir(), filename)
+		if err := os.MkdirAll(filepath.Dir(fileloc), 0o771); err != nil {
+			return err
+		}
+
+		mm.opts.Log.Infof("saving %s", fileloc)
+		if err := manifest.WriteToFile(fileloc); err != nil {
+			mm.opts.Log.Errorf("could not save manifest: %s", err)
+		}
+
+		// Replace manifest with relative path
+		localIndex.Manifests[i] = &Manifest{
+			Name:     manifest.Name,
+			Type:     manifest.Type,
+			Manifest: "./" + filename,
+		}
+	}
+
+	return localIndex.WriteToFile(mm.LocalManifestIndex())
 }
 
 // Push the resulting package to the supported registry of the implementation.
