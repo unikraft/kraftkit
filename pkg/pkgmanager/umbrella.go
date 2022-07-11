@@ -144,7 +144,7 @@ func (um UmbrellaManager) Push(path string) error {
 }
 
 // Pull a package from the support registry of the implementation.
-func (um UmbrellaManager) Pull(path string, opts *PullPackageOptions) ([]pkg.Package, error) {
+func (um UmbrellaManager) Pull(path string, opts *pkg.PullPackageOptions) ([]pkg.Package, error) {
 	var packages []pkg.Package
 	for _, manager := range packageManagers {
 		um.opts.Log.Trace("Pulling %s via %s...", path, manager.String())

@@ -211,7 +211,11 @@ func (mm ManifestManager) Push(path string) error {
 }
 
 // Pull a package from the support registry of the implementation.
-func (mm ManifestManager) Pull(path string, opts *pkgmanager.PullPackageOptions) ([]pkg.Package, error) {
+func (mm ManifestManager) Pull(path string, opts *pkg.PullPackageOptions) ([]pkg.Package, error) {
+	if _, err := mm.IsCompatible(path); err != nil {
+		return nil, err
+	}
+
 	return nil, fmt.Errorf("not implemented pkg.ManifestManager.Pull")
 }
 
