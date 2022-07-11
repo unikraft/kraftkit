@@ -35,8 +35,10 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/config"
+	"go.unikraft.io/kit/utils"
 
 	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/pkg/unikraft"
 )
 
 // PackageManagerOptions contains configuration for the Package
