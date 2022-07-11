@@ -48,11 +48,7 @@ import (
 )
 
 type ManifestManager struct {
-	dataDir func() string
-	client  *http.Client
-	config  *config.Config
-	io      *iostreams.IOStreams
-	opts    *pkgmanager.PackageManagerOptions
+	opts *pkgmanager.PackageManagerOptions
 }
 
 func init() {
