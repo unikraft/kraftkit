@@ -189,6 +189,22 @@ func (mm ManifestManager) AddSource(source string) error {
 	return cfm.Write(true)
 }
 
+func (mm ManifestManager) RemoveSource(source string) error {
+	cfm := mm.opts.ConfigManager
+	cfg := cfm.Config
+	manifests := []string{}
+
+	for _, manifest := range cfg.Unikraft.Manifests {
+		if source != manifest {
+			manifests = append(manifests, manifest)
+		}
+	}
+
+	mm.opts.Log.Infof("removing from list of manifests: %s", source)
+	cfg.Unikraft.Manifests = manifests
+	return cfm.Write(false)
+}
+
 // Push the resulting package to the supported registry of the implementation.
 func (mm ManifestManager) Push(path string) error {
 	return fmt.Errorf("not implemented pkg.ManifestManager.Pushh")

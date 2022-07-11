@@ -58,6 +58,9 @@ type PackageManager interface {
 	// Add a source to the package manager
 	AddSource(string) error
 
+	// Remove a source from the package manager
+	RemoveSource(string) error
+
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
 	IsCompatible(string) (PackageManager, error)
