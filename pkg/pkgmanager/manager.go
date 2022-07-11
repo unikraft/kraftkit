@@ -40,6 +40,9 @@ type PackageManager interface {
 	// Options allows you to view the current options.
 	Options() *PackageManagerOptions
 
+	// ApplyOptions allows one to update the options of a package manager
+	ApplyOptions(...PackageManagerOption) error
+
 	// Update retrieves and stores locally a cache of the upstream registry.
 	Update() error
 

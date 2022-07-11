@@ -83,6 +83,16 @@ func (mm ManifestManager) Options() *pkgmanager.PackageManagerOptions {
 	return mm.opts
 }
 
+func (mm ManifestManager) ApplyOptions(pmopts ...pkgmanager.PackageManagerOption) error {
+	for _, opt := range pmopts {
+		if err := opt(mm.opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Update retrieves and stores locally a cache of the upstream manifest registry.
 func (mm ManifestManager) Update() error {
 	return fmt.Errorf("not implemented pkg.ManifestManager.Update")

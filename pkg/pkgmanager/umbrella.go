@@ -87,6 +87,16 @@ func (um UmbrellaManager) From(sub string) (PackageManager, error) {
 	return nil, fmt.Errorf("unknown package manager: %s", sub)
 }
 
+func (um UmbrellaManager) ApplyOptions(pmopts ...PackageManagerOption) error {
+	for _, manager := range packageManagers {
+		if err := manager.ApplyOptions(pmopts...); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Options allows you to view the current options.
 func (um UmbrellaManager) Options() *PackageManagerOptions {
 	return um.opts
