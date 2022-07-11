@@ -227,6 +227,14 @@ func (po *PackageOptions) InitrdConfig() (*initrd.InitrdConfig, error) {
 	return ird, nil
 }
 
+// WithRemoteLocation sets the location of the package at its remote registry
+func WithRemoteLocation(location string) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.RemoteLocation = location
+		return nil
+	}
+}
+
 func WithLogger(l log.Logger) PackageOption {
 	return func(opts *PackageOptions) error {
 		opts.log = l
