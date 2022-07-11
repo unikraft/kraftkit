@@ -114,6 +114,18 @@ func (um UmbrellaManager) Update() error {
 	return nil
 }
 
+func (um UmbrellaManager) AddSource(source string) error {
+	for _, manager := range packageManagers {
+		um.opts.Log.Trace("Adding source %s via %s...", source, manager.String())
+		err := manager.AddSource(source)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Push the resulting package to the supported registry of the implementation.
 func (um UmbrellaManager) Push(path string) error {
 	return fmt.Errorf("not implemented: pkg.UmbrellaManager.Push")

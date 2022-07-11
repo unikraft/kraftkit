@@ -55,6 +55,9 @@ type PackageManager interface {
 	// Catalog returns all packages known to the manager via given query
 	Catalog(CatalogQuery) ([]pkg.Package, error)
 
+	// Add a source to the package manager
+	AddSource(string) error
+
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
 	IsCompatible(string) (PackageManager, error)

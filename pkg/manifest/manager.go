@@ -173,6 +173,22 @@ func (mm ManifestManager) Update() error {
 	return localIndex.WriteToFile(mm.LocalManifestIndex())
 }
 
+func (mm ManifestManager) AddSource(source string) error {
+	cfm := mm.opts.ConfigManager
+	cfg := cfm.Config
+
+	for _, manifest := range cfg.Unikraft.Manifests {
+		if source == manifest {
+			mm.opts.Log.Warnf("manifest already saved: %s", source)
+			return nil
+		}
+	}
+
+	mm.opts.Log.Infof("adding to list of manifests: %s", source)
+	cfg.Unikraft.Manifests = append(cfg.Unikraft.Manifests, source)
+	return cfm.Write(true)
+}
+
 // Push the resulting package to the supported registry of the implementation.
 func (mm ManifestManager) Push(path string) error {
 	return fmt.Errorf("not implemented pkg.ManifestManager.Pushh")
