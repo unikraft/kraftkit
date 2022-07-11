@@ -149,11 +149,19 @@ func (mm UmbrellaManager) Catalog(query CatalogQuery) ([]pkg.Package, error) {
 	return packages, nil
 }
 
-// IsCompatible returns true always for the umbrella manager.
-// TODO: Likely we should have some more sophiscated logic here to return the
-// compatible package manager.
-func (um UmbrellaManager) IsCompatible(resource string) bool {
-	return true
+// IsCompatible iterates through all package managers and returns the first
+// package manager which is compatible with the provided source
+func (mm UmbrellaManager) IsCompatible(source string) (PackageManager, error) {
+	var err error
+	var pm PackageManager
+	for _, manager := range packageManagers {
+		pm, err = manager.IsCompatible(source)
+		if err == nil {
+			return pm, nil
+		}
+	}
+
+	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
 // String returns the name of the implementation.

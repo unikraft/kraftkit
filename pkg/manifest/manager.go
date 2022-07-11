@@ -224,6 +224,14 @@ func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package,
 	return packages, nil
 }
 
+func (mm ManifestManager) IsCompatible(source string) (pkgmanager.PackageManager, error) {
+	if _, err := NewProvider(source); err != nil {
+		return nil, fmt.Errorf("incompatible source")
+	}
+
+	return mm, nil
+}
+
 // String returns the name of the implementation.
 func (mm ManifestManager) String() string {
 	return "manifest"

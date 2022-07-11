@@ -55,6 +55,10 @@ type PackageManager interface {
 	// Catalog returns all packages known to the manager via given query
 	Catalog(CatalogQuery) ([]pkg.Package, error)
 
+	// IsCompatible checks whether the provided source is compatible with the
+	// package manager
+	IsCompatible(string) (PackageManager, error)
+
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.
 	From(string) (PackageManager, error)
