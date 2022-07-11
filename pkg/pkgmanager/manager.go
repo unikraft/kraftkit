@@ -35,7 +35,7 @@ import "go.unikraft.io/kit/pkg/pkg"
 
 type PackageManager interface {
 	// NewPackage initializes a new package
-	NewPackageFromOptions(*pkg.PackageOptions) (pkg.Package, error)
+	NewPackageFromOptions(*pkg.PackageOptions) ([]pkg.Package, error)
 
 	// Options allows you to view the current options.
 	Options() *PackageManagerOptions

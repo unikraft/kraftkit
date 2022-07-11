@@ -78,8 +78,10 @@ func NewManifestPackageManagerFromOptions(opts *pkgmanager.PackageManagerOptions
 }
 
 // NewPackage initializes a new package
-func (mm ManifestManager) NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
-	return NewPackageFromOptions(opts)
+func (mm ManifestManager) NewPackageFromOptions(opts *pkg.PackageOptions) ([]pkg.Package, error) {
+	mm.opts.Log.Infof("initializing new manifest package...")
+	pack, err := NewPackageFromOptions(opts)
+	return []pkg.Package{pack}, err
 }
 
 // Options allows you to view the current options.
