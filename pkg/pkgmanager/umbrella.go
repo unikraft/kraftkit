@@ -77,8 +77,18 @@ func NewUmbrellaManagerFromOptions(opts *PackageManagerOptions) (PackageManager,
 	return umbrella, nil
 }
 
-func (um UmbrellaManager) NewPackageFromOptions(*pkg.PackageOptions) (pkg.Package, error) {
-	return nil, fmt.Errorf("cannot generate package from umbrella manager")
+func (um UmbrellaManager) NewPackageFromOptions(opts *pkg.PackageOptions) ([]pkg.Package, error) {
+	var packages []pkg.Package
+	for _, manager := range packageManagers {
+		packed, err := manager.NewPackageFromOptions(opts)
+		if err != nil {
+			return packages, err
+		}
+
+		packages = append(packages, packed...)
+	}
+
+	return packages, nil
 }
 
 func (um UmbrellaManager) From(sub string) (PackageManager, error) {
