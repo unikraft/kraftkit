@@ -37,14 +37,18 @@ import (
 	"go.unikraft.io/kit/pkg/pkg"
 )
 
-var packageManagers = make(map[string]PackageManager)
+var packageManagers = make(map[pkg.ContextKey]PackageManager)
 
-func RegisterPackageManager(manager PackageManager) error {
-	if _, ok := packageManagers[manager.String()]; ok {
+func PackageManagers() map[pkg.ContextKey]PackageManager {
+	return packageManagers
+}
+
+func RegisterPackageManager(ctxk pkg.ContextKey, manager PackageManager) error {
+	if _, ok := packageManagers[ctxk]; ok {
 		return fmt.Errorf("package manager already registered: %s", manager.String())
 	}
 
-	packageManagers[manager.String()] = manager
+	packageManagers[ctxk] = manager
 
 	return nil
 }

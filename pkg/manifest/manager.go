@@ -71,7 +71,7 @@ func init() {
 	}
 
 	// Register a new pkg.Package type
-	pkgmanager.RegisterPackageManager(manager)
+	pkgmanager.RegisterPackageManager(ManifestContext, manager)
 
 	// Register additional command-line flags
 	cmdutil.RegisterFlag(
