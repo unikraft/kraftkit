@@ -81,12 +81,33 @@ type ContextKey string
 
 type PackageOption func(opts *PackageOptions) error
 
-// WithLogger defines the log.Logger
-func WithLogger(l *log.Logger) PackageOption {
-	return func(o *PackageOptions) error {
-		o.Log = l
-		return nil
+// ArchPlatString returns the string representation of the architecture and
+// platform combination for this package
+func (opts *PackageOptions) ArchPlatString() string {
+	plat := "*"
+	arch := "*"
+
+	if opts.Platform != nil {
+		plat = *opts.Platform
 	}
+
+	if opts.Architecture != nil {
+		arch = *opts.Architecture
+	}
+
+	return plat + "/" + arch
+}
+
+// NameVersion returns the string representation of name and version of this
+// package
+func (opts *PackageOptions) NameVersion() string {
+	return opts.Name + ":" + opts.Version
+}
+
+// TypeNameVersion returns the string representation of the type, name and
+// version of this package
+func (opts *PackageOptions) TypeNameVersion() string {
+	return opts.Type.Plural() + "/" + opts.Name + ":" + opts.Version
 }
 
 // NewPackageOptions creates PackageOptions
