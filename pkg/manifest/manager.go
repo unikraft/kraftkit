@@ -41,7 +41,7 @@ import (
 	"github.com/gobwas/glob"
 
 	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/internal/cmdutil"
 	"go.unikraft.io/kit/pkg/pkg"
 	"go.unikraft.io/kit/pkg/pkgmanager"
 	"go.unikraft.io/kit/pkg/unikraft"
@@ -50,6 +50,12 @@ import (
 type ManifestManager struct {
 	opts *pkgmanager.PackageManagerOptions
 }
+
+var (
+	// useGit is a local variable used within the context of the manifest package
+	// and is dynamically injected as a CLI option.
+	useGit = false
+)
 
 func init() {
 	options, err := pkgmanager.NewPackageManagerOptions(
@@ -66,6 +72,17 @@ func init() {
 
 	// Register a new pkg.Package type
 	pkgmanager.RegisterPackageManager(manager)
+
+	// Register additional command-line flags
+	cmdutil.RegisterFlag(
+		"ukpkg pull",
+		cmdutil.BoolVarP(
+			&useGit,
+			"git", "g",
+			false,
+			"Use Git when pulling sources",
+		),
+	)
 }
 
 func NewManifestPackageManagerFromOptions(opts *pkgmanager.PackageManagerOptions) (pkgmanager.PackageManager, error) {
