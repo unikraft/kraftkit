@@ -90,11 +90,39 @@ func WithConfig(c *config.Config) PackageManagerOption {
 	}
 }
 
-type SearchPackageOptions struct {
-	architectures  []string
-	platforms      []string
-	version        string
-	componenteType string
+type CatalogQuery struct {
+	Types   []unikraft.ComponentType
+	Name    string
+	Version string
 }
 
-type SearchPackageOption func(opts *SearchPackageOptions) error
+func NewCatalogQuery(s string) CatalogQuery {
+	query := CatalogQuery{}
+	return query
+}
+
+func (cq CatalogQuery) String() string {
+	s := ""
+	if len(cq.Types) == 1 {
+		s += string(cq.Types[0]) + "-"
+	} else if len(cq.Types) > 1 {
+		var types []string
+		for _, t := range cq.Types {
+			types = append(types, string(t))
+		}
+
+		s += "{" + utils.ListJoinStr(types, ", ") + "}-"
+	}
+
+	if len(cq.Name) > 0 {
+		s += cq.Name
+	} else {
+		s += "*"
+	}
+
+	if len(cq.Version) > 0 {
+		s += ":" + cq.Version
+	}
+
+	return s
+}

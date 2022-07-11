@@ -52,8 +52,8 @@ type PackageManager interface {
 	// Pull package(s) from the supported registry of the implementation.
 	Pull(string, *pkg.PullPackageOptions) ([]pkg.Package, error)
 
-	// Search for a package with a given name
-	Search(string, *SearchPackageOptions) ([]pkg.Package, error)
+	// Catalog returns all packages known to the manager via given query
+	Catalog(CatalogQuery) ([]pkg.Package, error)
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.

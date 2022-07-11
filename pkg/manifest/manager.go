@@ -34,7 +34,11 @@ package manifest
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/gobwas/glob"
 
 	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/pkg/iostreams"
@@ -112,9 +116,112 @@ func (um ManifestManager) From(sub string) (pkgmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-// Search for a package with a given name
-func (mm ManifestManager) Search(needle string, opts *pkgmanager.SearchPackageOptions) ([]pkg.Package, error) {
-	return nil, fmt.Errorf("not implemented pkg.ManifestManager.Search")
+func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package, error) {
+	index, err := NewManifestIndexFromFile(mm.LocalManifestIndex())
+	if err != nil {
+		return nil, err
+	}
+
+	mopts := []ManifestOption{
+		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
+		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
+		WithLogger(mm.Options().Log),
+	}
+
+	var allManifests []*Manifest
+
+	for _, manifest := range index.Manifests {
+		if len(manifest.Manifest) > 0 {
+			manifests, err := findManifestsFromSource(mm.LocalManifestsDir(), manifest.Manifest, mopts)
+			if err != nil {
+				return nil, err
+			}
+
+			allManifests = append(allManifests, manifests...)
+		} else {
+			allManifests = append(allManifests, manifest)
+		}
+	}
+
+	var packages []pkg.Package
+	var g glob.Glob
+
+	if len(query.Name) > 0 {
+		g = glob.MustCompile(query.Name)
+	}
+
+	for _, manifest := range allManifests {
+		if len(query.Types) > 0 {
+			found := false
+			for _, t := range query.Types {
+				if manifest.Type == t {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		if len(query.Name) > 0 && !g.Match(manifest.Name) {
+			continue
+		}
+
+		var versions []string
+		if len(query.Version) > 0 {
+			for _, version := range manifest.Versions {
+				if version.Version == query.Version {
+					versions = append(versions, version.Version)
+					break
+				}
+			}
+			if len(versions) == 0 {
+				for _, channel := range manifest.Channels {
+					if channel.Name == query.Version {
+						versions = append(versions, channel.Name)
+						break
+					}
+				}
+			}
+
+			if len(versions) == 0 {
+				break
+			}
+		}
+
+		if len(versions) > 0 {
+			for _, version := range versions {
+				pack, err := NewPackageWithVersion(manifest, version)
+				if err != nil {
+					mm.opts.Log.Warnf("%v", err)
+					continue
+					// TODO: Config option for fast-fail?
+					// return nil, err
+				}
+
+				packages = append(packages, pack)
+			}
+		} else {
+			packs, err := NewPackageFromManifest(manifest)
+			if err != nil {
+				mm.opts.Log.Warnf("%v", err)
+				continue
+				// TODO: Config option for fast-fail?
+				// return nil, err
+			}
+
+			packages = append(packages, packs)
+		}
+	}
+
+	for i := range packages {
+		packages[i].ApplyOptions(
+			pkg.WithLogger(mm.Options().Log),
+		)
+	}
+
+	return packages, nil
 }
 
 // String returns the name of the implementation.

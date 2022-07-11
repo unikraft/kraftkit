@@ -135,17 +135,15 @@ func (um UmbrellaManager) Pull(path string, opts *PullPackageOptions) ([]pkg.Pac
 	return packages, nil
 }
 
-// Search for a package with a given name
-func (um UmbrellaManager) Search(needle string, opts *SearchPackageOptions) ([]pkg.Package, error) {
+func (mm UmbrellaManager) Catalog(query CatalogQuery) ([]pkg.Package, error) {
 	var packages []pkg.Package
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Searching \"%s\" via %s...", needle, manager.String())
-		parcel, err := manager.Search(needle, opts)
+		pack, err := manager.Catalog(query)
 		if err != nil {
 			return nil, err
 		}
 
-		packages = append(packages, parcel...)
+		packages = append(packages, pack...)
 	}
 
 	return packages, nil
