@@ -335,6 +335,20 @@ func (mm ManifestManager) IsCompatible(source string) (pkgmanager.PackageManager
 	return mm, nil
 }
 
+// LocalManifestDir returns the user configured path to all the manifests
+func (mm ManifestManager) LocalManifestsDir() string {
+	if len(mm.opts.ConfigManager.Config.Paths.Manifests) > 0 {
+		return mm.opts.ConfigManager.Config.Paths.Manifests
+	}
+
+	return filepath.Join(config.DataDir(), "manifests")
+}
+
+// LocalManifestIndex returns the user configured path to the manifest index
+func (mm ManifestManager) LocalManifestIndex() string {
+	return filepath.Join(mm.LocalManifestsDir(), "index.yaml")
+}
+
 // String returns the name of the implementation.
 func (mm ManifestManager) String() string {
 	return "manifest"
