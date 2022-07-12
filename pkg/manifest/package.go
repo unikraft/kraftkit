@@ -45,6 +45,16 @@ func NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
 	return ManifestPackage{opts}, nil
 }
 
+func (mp ManifestPackage) ApplyOptions(opts ...pkg.PackageOption) error {
+	for _, o := range opts {
+		if err := o(mp.PackageOptions); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (mp ManifestPackage) Options() *pkg.PackageOptions {
 	return mp.PackageOptions
 }

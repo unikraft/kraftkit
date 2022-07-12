@@ -35,6 +35,9 @@ type Package interface {
 	// Options allows you to view the current options.
 	Options() *PackageOptions
 
+	// ApplyOptions allows one to update the options of a package
+	ApplyOptions(opts ...PackageOption) error
+
 	// Determine if the provided path is a compatible media type
 	Compatible(string) bool
 
