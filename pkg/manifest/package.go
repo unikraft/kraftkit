@@ -36,18 +36,17 @@ import (
 )
 
 type ManifestPackage struct {
-	opts *pkg.PackageOptions
+	*pkg.PackageOptions
 }
 
-// NewPackage returns a manifest packager
+// NewPackageFromOptions generates a manifest implementation of the pkg.Package
+// construct based on the input options
 func NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
-	return ManifestPackage{
-		opts: opts,
-	}, nil
+	return ManifestPackage{opts}, nil
 }
 
 func (mp ManifestPackage) Options() *pkg.PackageOptions {
-	return mp.opts
+	return mp.PackageOptions
 }
 
 func (mp ManifestPackage) Compatible(ref string) bool {
