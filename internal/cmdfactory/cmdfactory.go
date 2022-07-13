@@ -235,12 +235,7 @@ func pluginManagerFunc(f *Factory) func() (*plugins.PluginManager, error) {
 			return nil, perr
 		}
 
-		dataDir := cfgm.Config.Paths.Plugins
-		if len(dataDir) == 0 {
-			dataDir = filepath.Join(config.DataDir(), "plugins")
-		}
-
-		pm = plugins.NewPluginManager(dataDir, l)
+		pm = plugins.NewPluginManager(cfgm.Config.Paths.Plugins, l)
 
 		return pm, perr
 	}
