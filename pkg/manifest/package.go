@@ -130,6 +130,10 @@ func (mp ManifestPackage) Name() string {
 	return mp.PackageOptions.Name
 }
 
+func (mp ManifestPackage) CanonicalName() string {
+	return "manifest://" + string(mp.PackageOptions.Type) + "-" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
+}
+
 func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }

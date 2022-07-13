@@ -44,6 +44,10 @@ type Package interface {
 	// Name is the simple package name
 	Name() string
 
+	// CanonicalName represents the full name which can be understood by the
+	// respective package manager.
+	CanonicalName() string
+
 	// String returns the name of the implementation.
 	String() string
 }
