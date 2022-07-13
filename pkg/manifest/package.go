@@ -126,6 +126,10 @@ func (mp ManifestPackage) Options() *pkg.PackageOptions {
 	return mp.PackageOptions
 }
 
+func (mp ManifestPackage) Name() string {
+	return mp.PackageOptions.Name
+}
+
 func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }

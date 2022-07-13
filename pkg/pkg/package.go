@@ -41,6 +41,9 @@ type Package interface {
 	// Determine if the provided path is a compatible media type
 	Compatible(string) bool
 
+	// Name is the simple package name
+	Name() string
+
 	// String returns the name of the implementation.
 	String() string
 }
