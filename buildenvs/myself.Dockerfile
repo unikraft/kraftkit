@@ -35,6 +35,7 @@ FROM golang:${GO_VERSION}-bullseye AS base
 
 ARG ORG=unikraft
 ARG BIN=kraft
+ARG GO_VERSION=${GO_VERSION}
 
 RUN set -xe; \
     apt-get update; \
