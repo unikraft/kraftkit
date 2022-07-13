@@ -33,6 +33,7 @@ package manifest
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -145,20 +146,32 @@ func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
 }
 
 func (gp GitProvider) Manifests() ([]*Manifest, error) {
-	typ, name, err := unikraft.GuessNameAndType(gp.repo)
-	if err != nil {
-		return nil, err
+	base := filepath.Base(gp.repo)
+	ext := filepath.Ext(gp.repo)
+	if len(ext) > 0 {
+		base = strings.TrimSuffix(base, ext)
 	}
 
+	t, n, _ := unikraft.GuessTypeNameVersion(base)
+
 	manifest := &Manifest{
-		Name: name,
-		Type: typ,
+		Type:    t,
+		Name:    n,
+		GitRepo: gp.repo,
+	}
+
+	for _, opt := range gp.mopts {
+		if err := opt(manifest); err != nil {
+			return nil, fmt.Errorf("could not apply option: %v", err)
+		}
 	}
 
 	channels, err := gp.probeChannels()
 	if err != nil {
 		return nil, err
 	}
+
+	manifest.log.Infof("probing %s", gp.repo)
 
 	manifest.Channels = append(manifest.Channels, channels...)
 
