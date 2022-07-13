@@ -32,6 +32,9 @@
 package manifest
 
 import (
+	"context"
+	"fmt"
+
 	"go.unikraft.io/kit/pkg/pkg"
 )
 
@@ -47,6 +50,55 @@ const (
 // construct based on the input options
 func NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
 	return ManifestPackage{opts}, nil
+}
+
+// NewPackageWithVersion generates a manifest implementation of the pkg.Package
+// construct based on the input Manifest for a particular version
+func NewPackageWithVersion(manifest *Manifest, version string) (pkg.Package, error) {
+	resource := ""
+
+	var channels []ManifestChannel
+	var versions []ManifestVersion
+
+	// Tear down the manifest such that it only represents specific version
+	for _, channel := range manifest.Channels {
+		if channel.Name == version {
+			channels = append(channels, channel)
+			resource = channel.Resource
+		}
+	}
+
+	for _, ver := range manifest.Versions {
+		if ver.Version == version {
+			resource = ver.Resource
+			versions = append(versions, ver)
+		}
+	}
+
+	manifest.Channels = channels
+	manifest.Versions = versions
+
+	// Save the full manifest within the context via the `ContextKey`
+	ctx := context.WithValue(
+		context.TODO(),
+		ManifestContext,
+		manifest,
+	)
+
+	pkgOpts, err := pkg.NewPackageOptions(
+		[]pkg.PackageOption{
+			pkg.WithContext(ctx),
+			pkg.WithName(manifest.Name),
+			pkg.WithRemoteLocation(resource),
+			pkg.WithType(manifest.Type),
+			pkg.WithVersion(version),
+		}...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare package for target: %s", err)
+	}
+
+	return NewPackageFromOptions(pkgOpts)
 }
 
 func (mp ManifestPackage) ApplyOptions(opts ...pkg.PackageOption) error {
