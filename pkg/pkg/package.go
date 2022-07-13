@@ -48,6 +48,11 @@ type Package interface {
 	// respective package manager.
 	CanonicalName() string
 
+	// Pull retreives the package artifacts given the context of the
+	// PackageOptions and allows for customization of the pull via the input
+	// optional PullPackageOptions
+	Pull(opts ...PullPackageOption) error
+
 	// String returns the name of the implementation.
 	String() string
 }

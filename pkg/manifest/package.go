@@ -138,6 +138,37 @@ func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }
 
+func (mp ManifestPackage) Pull(opts ...pkg.PullPackageOption) error {
+	mp.Log().Infof("pulling manifest package %s", mp.CanonicalName())
+
+	return mp.pullArchive(opts...)
+}
+
+// resourceCacheChecksum returns the resource path, checksum and the cache
+// location for a given Manifestt which only has one channel or one version.  If
+// the Manifest has more than one, then it is not possible to determine which
+// resource should be looked up.
+func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
+	var err error
+	var resource string
+	var checksum string
+	var cache string
+
+	if len(manifest.Channels) == 1 {
+		resource = manifest.Channels[0].Resource
+		checksum = manifest.Channels[0].Sha256
+		cache = manifest.Channels[0].Local
+	} else if len(manifest.Versions) == 1 {
+		resource = manifest.Versions[0].Resource
+		checksum = manifest.Versions[0].Sha256
+		cache = manifest.Versions[0].Local
+	} else {
+		err = fmt.Errorf("too many options")
+	}
+
+	return resource, cache, checksum, err
+}
+
 func (mp ManifestPackage) String() string {
 	return "manifest"
 }
