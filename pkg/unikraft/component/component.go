@@ -35,7 +35,7 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/pkg/unikraft"
 )
 
@@ -51,7 +51,7 @@ type ComponentConfig struct {
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
 	coreSource     string // The value of Unikraft's `source:` directive
-	packageManager *pkgmanager.PackageManager
+	packageManager *packmanager.PackageManager
 	log            log.Logger
 
 	// Context should contain all implementation-specific options, using

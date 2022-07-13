@@ -40,7 +40,7 @@ import (
 	"path/filepath"
 
 	"go.unikraft.io/kit/archive"
-	"go.unikraft.io/kit/pkg/pkg"
+	"go.unikraft.io/kit/pack"
 	"go.unikraft.io/kit/pkg/unikraft"
 )
 
@@ -62,8 +62,8 @@ func (pp *pullProgressArchive) Write(p []byte) (n int, err error) {
 
 // pullArchive is used internally to pull a specific Manifest resource using the
 // conventional archive.
-func (mp ManifestPackage) pullArchive(opts ...pkg.PullPackageOption) error {
-	popts, err := pkg.NewPullPackageOptions(opts...)
+func (mp ManifestPackage) pullArchive(opts ...pack.PullPackageOption) error {
+	popts, err := pack.NewPullPackageOptions(opts...)
 	if err != nil {
 		return err
 	}

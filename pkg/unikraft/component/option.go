@@ -35,7 +35,7 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/packmanager"
 )
 
 type ComponentOption func(cc *ComponentConfig) error
@@ -54,7 +54,7 @@ func WithLogger(log log.Logger) ComponentOption {
 	}
 }
 
-func WithPackageManager(pm *pkgmanager.PackageManager) ComponentOption {
+func WithPackageManager(pm *packmanager.PackageManager) ComponentOption {
 	return func(cc *ComponentConfig) error {
 		cc.packageManager = pm
 		return nil

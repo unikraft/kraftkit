@@ -36,14 +36,14 @@ import (
 
 	"github.com/libgit2/git2go/v31"
 
-	"go.unikraft.io/kit/pkg/pkg"
+	"go.unikraft.io/kit/pack"
 	"go.unikraft.io/kit/pkg/unikraft"
 )
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
-func (mp ManifestPackage) pullGit(opts ...pkg.PullPackageOption) error {
-	popts, err := pkg.NewPullPackageOptions(opts...)
+func (mp ManifestPackage) pullGit(opts ...pack.PullPackageOption) error {
+	popts, err := pack.NewPullPackageOptions(opts...)
 	if err != nil {
 		return err
 	}

@@ -35,26 +35,26 @@ import (
 	"context"
 	"fmt"
 
-	"go.unikraft.io/kit/pkg/pkg"
+	"go.unikraft.io/kit/pack"
 )
 
 type ManifestPackage struct {
-	*pkg.PackageOptions
+	*pack.PackageOptions
 }
 
 const (
-	ManifestContext pkg.ContextKey = "manifest"
+	ManifestContext pack.ContextKey = "manifest"
 )
 
-// NewPackageFromOptions generates a manifest implementation of the pkg.Package
+// NewPackageFromOptions generates a manifest implementation of the pack.Package
 // construct based on the input options
-func NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
+func NewPackageFromOptions(opts *pack.PackageOptions) (pack.Package, error) {
 	return ManifestPackage{opts}, nil
 }
 
-// NewPackageWithVersion generates a manifest implementation of the pkg.Package
+// NewPackageWithVersion generates a manifest implementation of the pack.Package
 // construct based on the input Manifest for a particular version
-func NewPackageWithVersion(manifest *Manifest, version string) (pkg.Package, error) {
+func NewPackageWithVersion(manifest *Manifest, version string) (pack.Package, error) {
 	resource := ""
 
 	var channels []ManifestChannel
@@ -85,13 +85,13 @@ func NewPackageWithVersion(manifest *Manifest, version string) (pkg.Package, err
 		manifest,
 	)
 
-	pkgOpts, err := pkg.NewPackageOptions(
-		[]pkg.PackageOption{
-			pkg.WithContext(ctx),
-			pkg.WithName(manifest.Name),
-			pkg.WithRemoteLocation(resource),
-			pkg.WithType(manifest.Type),
-			pkg.WithVersion(version),
+	pkgOpts, err := pack.NewPackageOptions(
+		[]pack.PackageOption{
+			pack.WithContext(ctx),
+			pack.WithName(manifest.Name),
+			pack.WithRemoteLocation(resource),
+			pack.WithType(manifest.Type),
+			pack.WithVersion(version),
 		}...,
 	)
 	if err != nil {
@@ -101,9 +101,9 @@ func NewPackageWithVersion(manifest *Manifest, version string) (pkg.Package, err
 	return NewPackageFromOptions(pkgOpts)
 }
 
-// NewPackageFromManifest generates a manifest implementation of the pkg.Package
-// construct based on the input Manifest
-func NewPackageFromManifest(manifest *Manifest) (pkg.Package, error) {
+// NewPackageFromManifest generates a manifest implementation of the
+// pack.Package construct based on the input Manifest
+func NewPackageFromManifest(manifest *Manifest) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func NewPackageFromManifest(manifest *Manifest) (pkg.Package, error) {
 	return NewPackageWithVersion(manifest, channel.Name)
 }
 
-func (mp ManifestPackage) ApplyOptions(opts ...pkg.PackageOption) error {
+func (mp ManifestPackage) ApplyOptions(opts ...pack.PackageOption) error {
 	for _, o := range opts {
 		if err := o(mp.PackageOptions); err != nil {
 			return err
@@ -122,7 +122,7 @@ func (mp ManifestPackage) ApplyOptions(opts ...pkg.PackageOption) error {
 	return nil
 }
 
-func (mp ManifestPackage) Options() *pkg.PackageOptions {
+func (mp ManifestPackage) Options() *pack.PackageOptions {
 	return mp.PackageOptions
 }
 
@@ -138,7 +138,7 @@ func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }
 
-func (mp ManifestPackage) Pull(opts ...pkg.PullPackageOption) error {
+func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 	mp.Log().Infof("pulling manifest package %s", mp.CanonicalName())
 
 	if useGit {

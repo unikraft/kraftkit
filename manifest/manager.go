@@ -42,13 +42,13 @@ import (
 
 	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/internal/cmdutil"
-	"go.unikraft.io/kit/pkg/pkg"
-	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/pack"
+	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/pkg/unikraft"
 )
 
 type ManifestManager struct {
-	opts *pkgmanager.PackageManagerOptions
+	opts *packmanager.PackageManagerOptions
 }
 
 var (
@@ -58,7 +58,7 @@ var (
 )
 
 func init() {
-	options, err := pkgmanager.NewPackageManagerOptions(
+	options, err := packmanager.NewPackageManagerOptions(
 		context.TODO(),
 	)
 	if err != nil {
@@ -70,8 +70,8 @@ func init() {
 		panic(fmt.Sprintf("could not register package manager: %s", err))
 	}
 
-	// Register a new pkg.Package type
-	pkgmanager.RegisterPackageManager(ManifestContext, manager)
+	// Register a new pack.Package type
+	packmanager.RegisterPackageManager(ManifestContext, manager)
 
 	// Register additional command-line flags
 	cmdutil.RegisterFlag(
@@ -85,25 +85,25 @@ func init() {
 	)
 }
 
-func NewManifestPackageManagerFromOptions(opts *pkgmanager.PackageManagerOptions) (pkgmanager.PackageManager, error) {
+func NewManifestPackageManagerFromOptions(opts *packmanager.PackageManagerOptions) (packmanager.PackageManager, error) {
 	return ManifestManager{
 		opts: opts,
 	}, nil
 }
 
 // NewPackage initializes a new package
-func (mm ManifestManager) NewPackageFromOptions(opts *pkg.PackageOptions) ([]pkg.Package, error) {
+func (mm ManifestManager) NewPackageFromOptions(opts *pack.PackageOptions) ([]pack.Package, error) {
 	mm.opts.Log.Infof("initializing new manifest package...")
-	pack, err := NewPackageFromOptions(opts)
-	return []pkg.Package{pack}, err
+	p, err := NewPackageFromOptions(opts)
+	return []pack.Package{p}, err
 }
 
 // Options allows you to view the current options.
-func (mm ManifestManager) Options() *pkgmanager.PackageManagerOptions {
+func (mm ManifestManager) Options() *packmanager.PackageManagerOptions {
 	return mm.opts
 }
 
-func (mm ManifestManager) ApplyOptions(pmopts ...pkgmanager.PackageManagerOption) error {
+func (mm ManifestManager) ApplyOptions(pmopts ...packmanager.PackageManagerOption) error {
 	for _, opt := range pmopts {
 		if err := opt(mm.opts); err != nil {
 			return err
@@ -220,23 +220,23 @@ func (mm ManifestManager) RemoveSource(source string) error {
 
 // Push the resulting package to the supported registry of the implementation.
 func (mm ManifestManager) Push(path string) error {
-	return fmt.Errorf("not implemented pkg.ManifestManager.Pushh")
+	return fmt.Errorf("not implemented pack.ManifestManager.Pushh")
 }
 
 // Pull a package from the support registry of the implementation.
-func (mm ManifestManager) Pull(path string, opts *pkg.PullPackageOptions) ([]pkg.Package, error) {
+func (mm ManifestManager) Pull(path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
 	if _, err := mm.IsCompatible(path); err != nil {
 		return nil, err
 	}
 
-	return nil, fmt.Errorf("not implemented pkg.ManifestManager.Pull")
+	return nil, fmt.Errorf("not implemented pack.ManifestManager.Pull")
 }
 
-func (um ManifestManager) From(sub string) (pkgmanager.PackageManager, error) {
+func (um ManifestManager) From(sub string) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package, error) {
+func (mm ManifestManager) Catalog(query packmanager.CatalogQuery) ([]pack.Package, error) {
 	index, err := NewManifestIndexFromFile(mm.LocalManifestIndex())
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package,
 		}
 	}
 
-	var packages []pkg.Package
+	var packages []pack.Package
 	var g glob.Glob
 
 	if len(query.Name) > 0 {
@@ -312,7 +312,7 @@ func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package,
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				pack, err := NewPackageWithVersion(manifest, version)
+				p, err := NewPackageWithVersion(manifest, version)
 				if err != nil {
 					mm.opts.Log.Warnf("%v", err)
 					continue
@@ -320,7 +320,7 @@ func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package,
 					// return nil, err
 				}
 
-				packages = append(packages, pack)
+				packages = append(packages, p)
 			}
 		} else {
 			packs, err := NewPackageFromManifest(manifest)
@@ -337,14 +337,14 @@ func (mm ManifestManager) Catalog(query pkgmanager.CatalogQuery) ([]pkg.Package,
 
 	for i := range packages {
 		packages[i].ApplyOptions(
-			pkg.WithLogger(mm.Options().Log),
+			pack.WithLogger(mm.Options().Log),
 		)
 	}
 
 	return packages, nil
 }
 
-func (mm ManifestManager) IsCompatible(source string) (pkgmanager.PackageManager, error) {
+func (mm ManifestManager) IsCompatible(source string) (packmanager.PackageManager, error) {
 	if _, err := NewProvider(source); err != nil {
 		return nil, fmt.Errorf("incompatible source")
 	}

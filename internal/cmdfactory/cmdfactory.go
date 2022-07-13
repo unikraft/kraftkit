@@ -45,7 +45,7 @@ import (
 
 	"go.unikraft.io/kit/pkg/iostreams"
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/pkgmanager"
+	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/pkg/plugins"
 )
 
@@ -56,7 +56,7 @@ type Factory struct {
 	IOStreams      *iostreams.IOStreams
 	PluginManager  func() (*plugins.PluginManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	PackageManager func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error)
+	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	HttpClient     func() (*http.Client, error)
 }
@@ -179,8 +179,8 @@ func loggerFunc(f *Factory) func() (log.Logger, error) {
 	}
 }
 
-func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
-	return func(opts ...pkgmanager.PackageManagerOption) (pkgmanager.PackageManager, error) {
+func packageManagerFunc(f *Factory) func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
+	return func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
 		cfgm, err := f.ConfigManager()
 		if err != nil {
 			return nil, err
@@ -192,12 +192,12 @@ func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption
 		}
 
 		// Add access to global config and the instantiated logger to the options
-		opts = append(opts, []pkgmanager.PackageManagerOption{
-			pkgmanager.WithConfig(cfgm.Config),
-			pkgmanager.WithLogger(log),
+		opts = append(opts, []packmanager.PackageManagerOption{
+			packmanager.WithConfigManager(cfgm),
+			packmanager.WithLogger(log),
 		}...)
 
-		options, err := pkgmanager.NewPackageManagerOptions(
+		options, err := packmanager.NewPackageManagerOptions(
 			context.TODO(),
 			opts...,
 		)
@@ -205,7 +205,7 @@ func packageManagerFunc(f *Factory) func(opts ...pkgmanager.PackageManagerOption
 			return nil, err
 		}
 
-		umbrella, err := pkgmanager.NewUmbrellaManagerFromOptions(options)
+		umbrella, err := packmanager.NewUmbrellaManagerFromOptions(options)
 		if err != nil {
 			return nil, err
 		}

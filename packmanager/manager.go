@@ -29,13 +29,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package pkgmanager
+package packmanager
 
-import "go.unikraft.io/kit/pkg/pkg"
+import "go.unikraft.io/kit/pack"
 
 type PackageManager interface {
 	// NewPackage initializes a new package
-	NewPackageFromOptions(*pkg.PackageOptions) ([]pkg.Package, error)
+	NewPackageFromOptions(*pack.PackageOptions) ([]pack.Package, error)
 
 	// Options allows you to view the current options.
 	Options() *PackageManagerOptions
@@ -50,10 +50,10 @@ type PackageManager interface {
 	Push(string) error
 
 	// Pull package(s) from the supported registry of the implementation.
-	Pull(string, *pkg.PullPackageOptions) ([]pkg.Package, error)
+	Pull(string, *pack.PullPackageOptions) ([]pack.Package, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(CatalogQuery) ([]pkg.Package, error)
+	Catalog(CatalogQuery) ([]pack.Package, error)
 
 	// Add a source to the package manager
 	AddSource(string) error

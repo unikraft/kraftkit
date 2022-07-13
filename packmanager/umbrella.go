@@ -29,21 +29,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package pkgmanager
+package packmanager
 
 import (
 	"fmt"
 
-	"go.unikraft.io/kit/pkg/pkg"
+	"go.unikraft.io/kit/pack"
 )
 
-var packageManagers = make(map[pkg.ContextKey]PackageManager)
+var packageManagers = make(map[pack.ContextKey]PackageManager)
 
-func PackageManagers() map[pkg.ContextKey]PackageManager {
+func PackageManagers() map[pack.ContextKey]PackageManager {
 	return packageManagers
 }
 
-func RegisterPackageManager(ctxk pkg.ContextKey, manager PackageManager) error {
+func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error {
 	if _, ok := packageManagers[ctxk]; ok {
 		return fmt.Errorf("package manager already registered: %s", manager.String())
 	}
@@ -77,8 +77,8 @@ func NewUmbrellaManagerFromOptions(opts *PackageManagerOptions) (PackageManager,
 	return umbrella, nil
 }
 
-func (um UmbrellaManager) NewPackageFromOptions(opts *pkg.PackageOptions) ([]pkg.Package, error) {
-	var packages []pkg.Package
+func (um UmbrellaManager) NewPackageFromOptions(opts *pack.PackageOptions) ([]pack.Package, error) {
+	var packages []pack.Package
 	for _, manager := range packageManagers {
 		packed, err := manager.NewPackageFromOptions(opts)
 		if err != nil {
@@ -154,12 +154,12 @@ func (um UmbrellaManager) RemoveSource(source string) error {
 
 // Push the resulting package to the supported registry of the implementation.
 func (um UmbrellaManager) Push(path string) error {
-	return fmt.Errorf("not implemented: pkg.UmbrellaManager.Push")
+	return fmt.Errorf("not implemented: pack.UmbrellaManager.Push")
 }
 
 // Pull a package from the support registry of the implementation.
-func (um UmbrellaManager) Pull(path string, opts *pkg.PullPackageOptions) ([]pkg.Package, error) {
-	var packages []pkg.Package
+func (um UmbrellaManager) Pull(path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
+	var packages []pack.Package
 	for _, manager := range packageManagers {
 		um.opts.Log.Trace("Pulling %s via %s...", path, manager.String())
 		parcel, err := manager.Pull(path, opts)
@@ -173,8 +173,8 @@ func (um UmbrellaManager) Pull(path string, opts *pkg.PullPackageOptions) ([]pkg
 	return packages, nil
 }
 
-func (mm UmbrellaManager) Catalog(query CatalogQuery) ([]pkg.Package, error) {
-	var packages []pkg.Package
+func (mm UmbrellaManager) Catalog(query CatalogQuery) ([]pack.Package, error) {
+	var packages []pack.Package
 	for _, manager := range packageManagers {
 		pack, err := manager.Catalog(query)
 		if err != nil {
