@@ -39,6 +39,10 @@ type ManifestPackage struct {
 	*pkg.PackageOptions
 }
 
+const (
+	ManifestContext pkg.ContextKey = "manifest"
+)
+
 // NewPackageFromOptions generates a manifest implementation of the pkg.Package
 // construct based on the input options
 func NewPackageFromOptions(opts *pkg.PackageOptions) (pkg.Package, error) {
