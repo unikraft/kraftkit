@@ -101,6 +101,17 @@ func NewPackageWithVersion(manifest *Manifest, version string) (pkg.Package, err
 	return NewPackageFromOptions(pkgOpts)
 }
 
+// NewPackageFromManifest generates a manifest implementation of the pkg.Package
+// construct based on the input Manifest
+func NewPackageFromManifest(manifest *Manifest) (pkg.Package, error) {
+	channel, err := manifest.DefaultChannel()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPackageWithVersion(manifest, channel.Name)
+}
+
 func (mp ManifestPackage) ApplyOptions(opts ...pkg.PackageOption) error {
 	for _, o := range opts {
 		if err := o(mp.PackageOptions); err != nil {
