@@ -31,7 +31,7 @@
 
 ARG GO_VERSION=1.17
 
-FROM golang:${GO_VERSION}-stretch AS base
+FROM golang:${GO_VERSION}-bullseye AS base
 
 ARG ORG=unikraft
 ARG BIN=kraft
@@ -40,6 +40,7 @@ RUN set -xe; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       build-essential \
+      libgit2-dev \
       make \
       git; \
     go install mvdan.cc/gofumpt@latest;

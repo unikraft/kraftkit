@@ -141,6 +141,10 @@ func (mp ManifestPackage) Compatible(ref string) bool {
 func (mp ManifestPackage) Pull(opts ...pkg.PullPackageOption) error {
 	mp.Log().Infof("pulling manifest package %s", mp.CanonicalName())
 
+	if useGit {
+		return mp.pullGit(opts...)
+	}
+
 	return mp.pullArchive(opts...)
 }
 
