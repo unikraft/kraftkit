@@ -7,6 +7,9 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/briandowns/spinner v1.18.1
 	github.com/cavaliergopher/cpio v1.0.1
+	github.com/charmbracelet/bubbles v0.10.3
+	github.com/charmbracelet/bubbletea v0.22.0
+	github.com/charmbracelet/lipgloss v0.5.0
 	github.com/cli/cli/v2 v2.7.0
 	github.com/cli/safeexec v1.0.0
 	github.com/compose-spec/compose-go v1.2.4
@@ -36,6 +39,7 @@ require (
 )
 
 require (
+	github.com/charmbracelet/harmonica v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
