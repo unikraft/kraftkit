@@ -151,13 +151,13 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 
 	cfgm, err := cmdFactory.ConfigManager()
 	if err != nil {
-		fmt.Fprintf(stderr, "failed to acess config manager: %s\n", err)
+		fmt.Fprintf(stderr, "could not access config manager: %v\n", err)
 		return errs.ExitError
 	}
 
 	pm, err := cmdFactory.PluginManager()
 	if err != nil {
-		fmt.Fprintf(stderr, "failed to acess plugin manager: %s\n", err)
+		fmt.Fprintf(stderr, "could not access package manager: %v\n", err)
 		return errs.ExitError
 	}
 
