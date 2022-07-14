@@ -236,7 +236,21 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 		}
 	}
 
+	// Pre-emptively parse flags so we can update the configuration.  The caveat
+	// of setting this up here is that additional logging may occur prior to this
+	// moment.  It won't be much since it is just internal system and not the
+	// functionality provided by the command itself.
+	// Additional note: even though we run `cfg.Set`, we do not write these
+	// values, so they are ephemeral incarnations of a CLI-first priority.
+	if _, _, err := cmd.Traverse(expandedArgs); err != nil {
+		fmt.Fprintf(stderr, "failed to parse command-line arguments: %s\n", err)
+		return errs.ExitError
+	}
+
 	authError := errors.New("authError")
+
+	// Because new CLI options can be dynamically injected, inject all (expanded)
+	// arguments once more before executing the command.
 	cmd.SetArgs(expandedArgs)
 
 	if cmd, err := cmd.ExecuteC(); err != nil {
