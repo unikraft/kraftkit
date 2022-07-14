@@ -96,8 +96,8 @@ func (s *IOStreams) HasTrueColor() bool {
 	return s.hasTrueColor
 }
 
-// DetectTerminalTheme is a utility to call before starting the output pager so that the terminal background
-// can be reliably detected.
+// DetectTerminalTheme is a utility to call before starting the output pager so
+// that the terminal background can be reliably detected.
 func (s *IOStreams) DetectTerminalTheme() {
 	if !s.ColorEnabled() {
 		s.terminalTheme = "none"
@@ -123,7 +123,8 @@ func (s *IOStreams) DetectTerminalTheme() {
 	s.terminalTheme = "light"
 }
 
-// TerminalTheme returns "light", "dark", or "none" depending on the background color of the terminal.
+// TerminalTheme returns "light", "dark", or "none" depending on the background
+// color of the terminal.
 func (s *IOStreams) TerminalTheme() string {
 	if s.terminalTheme == "" {
 		s.DetectTerminalTheme()
