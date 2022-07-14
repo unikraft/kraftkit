@@ -29,8 +29,8 @@ import (
 	"sort"
 	"strings"
 
+	"go.unikraft.io/kit/internal/text"
 	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/pkg/text"
 )
 
 type TablePrinter interface {

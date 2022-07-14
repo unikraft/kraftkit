@@ -32,8 +32,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"go.unikraft.io/kit/internal/cmdfactory"
-
-	"go.unikraft.io/kit/pkg/text"
+	"go.unikraft.io/kit/internal/text"
 )
 
 func rootUsageFunc(command *cobra.Command) error {
