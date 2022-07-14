@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.unikraft.io/kit/pkg/initrd"
+	"go.unikraft.io/kit/initrd"
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/utils"

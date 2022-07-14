@@ -26,7 +26,7 @@ import (
 	"github.com/mattn/go-shellwords"
 	"github.com/pkg/errors"
 
-	"go.unikraft.io/kit/pkg/initrd"
+	"go.unikraft.io/kit/initrd"
 	"go.unikraft.io/kit/unikraft/arch"
 	"go.unikraft.io/kit/unikraft/component"
 	"go.unikraft.io/kit/unikraft/lib"
