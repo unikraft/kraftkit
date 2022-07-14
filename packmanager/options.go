@@ -46,8 +46,6 @@ type PackageManagerOptions struct {
 	ConfigManager *config.ConfigManager
 	Log           log.Logger
 
-	dataDir func() string
-
 	// ctx should contain all implementation-specific options, using
 	// `context.WithValue`
 	ctx context.Context
