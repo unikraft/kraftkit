@@ -42,7 +42,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
 
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 )
 
 type (

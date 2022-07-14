@@ -28,7 +28,7 @@ import (
 
 	"go.unikraft.io/kit/internal/errs"
 
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/unikraft/app"
 	"go.unikraft.io/kit/unikraft/component"

@@ -32,7 +32,7 @@
 package paraprogress
 
 import (
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 )
 
 type ParaProgressOption func(md *ParaProgress) error

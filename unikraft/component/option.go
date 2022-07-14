@@ -34,7 +34,7 @@ package component
 import (
 	"context"
 
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/packmanager"
 )
 

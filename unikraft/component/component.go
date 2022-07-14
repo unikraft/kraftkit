@@ -35,7 +35,7 @@ import (
 	"context"
 
 	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/unikraft"
 )

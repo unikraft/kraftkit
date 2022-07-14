@@ -41,7 +41,7 @@ import (
 	"path/filepath"
 
 	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/unikraft"
 
 	"gopkg.in/yaml.v2"

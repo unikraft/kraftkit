@@ -42,7 +42,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
 
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 )
 
 var (

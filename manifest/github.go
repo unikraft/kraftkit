@@ -44,7 +44,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"go.unikraft.io/kit/internal/ghrepo"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/unikraft"
 )
 

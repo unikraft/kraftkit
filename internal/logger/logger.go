@@ -38,7 +38,7 @@ import (
 	"time"
 
 	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 )
 
 var exit = os.Exit

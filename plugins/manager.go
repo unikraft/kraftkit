@@ -48,7 +48,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"go.unikraft.io/kit/internal/findsh"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 )
 
 type PluginManager struct {

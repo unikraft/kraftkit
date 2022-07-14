@@ -37,7 +37,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"go.unikraft.io/kit/pkg/log"
+	"go.unikraft.io/kit/log"
 	"golang.org/x/term"
 )
 
