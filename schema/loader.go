@@ -29,13 +29,13 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/unikraft/app"
-	"go.unikraft.io/kit/pkg/unikraft/component"
-	"go.unikraft.io/kit/pkg/unikraft/config"
-	"go.unikraft.io/kit/pkg/unikraft/core"
-	"go.unikraft.io/kit/pkg/unikraft/lib"
-	"go.unikraft.io/kit/pkg/unikraft/target"
+	"go.unikraft.io/kit/unikraft"
+	"go.unikraft.io/kit/unikraft/app"
+	"go.unikraft.io/kit/unikraft/component"
+	"go.unikraft.io/kit/unikraft/config"
+	"go.unikraft.io/kit/unikraft/core"
+	"go.unikraft.io/kit/unikraft/lib"
+	"go.unikraft.io/kit/unikraft/target"
 )
 
 const (

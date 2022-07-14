@@ -37,7 +37,7 @@ import (
 	"github.com/libgit2/git2go/v31"
 
 	"go.unikraft.io/kit/pack"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 )
 
 // pullGit is used internally to pull a specific Manifest resource using if the

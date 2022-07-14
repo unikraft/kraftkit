@@ -29,37 +29,29 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package target
+package core
 
 import (
-	"go.unikraft.io/kit/pkg/initrd"
-	"go.unikraft.io/kit/pkg/unikraft/arch"
-	"go.unikraft.io/kit/pkg/unikraft/plat"
+	"go.unikraft.io/kit/unikraft"
+	"go.unikraft.io/kit/unikraft/component"
 )
 
-type TargetConfig struct {
+type Unikraft interface {
+	component.Component
+}
+
+type UnikraftConfig struct {
 	component.ComponentConfig
-
-	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
-	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
-	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
-	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempy"`
-	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
-	Command      []string                `yaml:",omitempty" json:"commands"`
-
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
-type Targets []TargetConfig
-
-func (tc TargetConfig) Name() string {
-	return tc.ComponentConfig.Name
+func (uc UnikraftConfig) Name() string {
+	return uc.ComponentConfig.Name
 }
 
-func (tc TargetConfig) Version() string {
-	return tc.ComponentConfig.Version
+func (uc UnikraftConfig) Version() string {
+	return uc.ComponentConfig.Version
 }
 
-func (tc TargetConfig) Type() unikraft.ComponentType {
-	return unikraft.ComponentTypeUnknown
+func (uc UnikraftConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeCore
 }

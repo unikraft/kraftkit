@@ -35,10 +35,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.unikraft.io/kit/pkg/unikraft/component"
-	"go.unikraft.io/kit/pkg/unikraft/core"
-	"go.unikraft.io/kit/pkg/unikraft/lib"
-	"go.unikraft.io/kit/pkg/unikraft/target"
+	"go.unikraft.io/kit/unikraft/component"
+	"go.unikraft.io/kit/unikraft/core"
+	"go.unikraft.io/kit/unikraft/lib"
+	"go.unikraft.io/kit/unikraft/target"
 )
 
 // ConfigDetails are the details about a group of ConfigFiles

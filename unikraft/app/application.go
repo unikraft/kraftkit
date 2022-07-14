@@ -36,11 +36,11 @@ import (
 	"path/filepath"
 	"sort"
 
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/unikraft/component"
-	"go.unikraft.io/kit/pkg/unikraft/core"
-	"go.unikraft.io/kit/pkg/unikraft/lib"
-	"go.unikraft.io/kit/pkg/unikraft/target"
+	"go.unikraft.io/kit/unikraft"
+	"go.unikraft.io/kit/unikraft/component"
+	"go.unikraft.io/kit/unikraft/core"
+	"go.unikraft.io/kit/unikraft/lib"
+	"go.unikraft.io/kit/unikraft/target"
 )
 
 type Application interface {

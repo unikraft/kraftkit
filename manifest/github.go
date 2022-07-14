@@ -45,7 +45,7 @@ import (
 
 	"go.unikraft.io/kit/internal/ghrepo"
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 )
 
 type GitHubProvider struct {

@@ -41,7 +41,7 @@ import (
 
 	"go.unikraft.io/kit/archive"
 	"go.unikraft.io/kit/pack"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 )
 
 type pullProgressArchive struct {

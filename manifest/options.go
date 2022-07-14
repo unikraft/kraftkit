@@ -36,7 +36,7 @@ import (
 
 	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 )
 
 type ManifestOption func(m *Manifest) error

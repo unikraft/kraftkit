@@ -30,9 +30,9 @@ import (
 
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/pkg/unikraft/app"
-	"go.unikraft.io/kit/pkg/unikraft/component"
-	"go.unikraft.io/kit/pkg/unikraft/config"
+	"go.unikraft.io/kit/unikraft/app"
+	"go.unikraft.io/kit/unikraft/component"
+	"go.unikraft.io/kit/unikraft/config"
 )
 
 // ProjectOptions groups the command line options recommended for a Compose implementation

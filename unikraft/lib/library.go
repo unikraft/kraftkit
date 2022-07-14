@@ -29,44 +29,49 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package plat
+package lib
 
 import (
-	"fmt"
-
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/unikraft"
+	"go.unikraft.io/kit/unikraft/component"
 )
 
-type Platform interface {
+const (
+	CONFIGUK   = "Config.uk"
+	MAKEFILEUK = "Makefile.uk"
+)
+
+type Library interface {
 	component.Component
 }
 
-type PlatformConfig struct {
+type LibraryConfig struct {
 	component.ComponentConfig
 }
 
-// ParsePlatformConfig parse short syntax for platform configuration
-func ParsePlatformConfig(value string) (PlatformConfig, error) {
-	platform := PlatformConfig{}
+type Libraries map[string]LibraryConfig
 
-	if len(value) == 0 {
-		return platform, fmt.Errorf("cannot ommit platform name")
+// ParseLibraryConfig parse short syntax for LibraryConfig
+func ParseLibraryConfig(version string) (LibraryConfig, error) {
+	lib := LibraryConfig{}
+
+	if len(version) == 0 {
+		return lib, fmt.Errorf("cannot ommit architecture name")
 	}
 
-	platform.ComponentConfig.Name = value
+	lib.ComponentConfig.Version = version
 
-	return platform, nil
+	return lib, nil
 }
 
-func (pc PlatformConfig) Name() string {
-	return pc.ComponentConfig.Name
+func (lc LibraryConfig) Name() string {
+	return lc.ComponentConfig.Name
 }
 
-func (pc PlatformConfig) Version() string {
-	return pc.ComponentConfig.Version
+func (lc LibraryConfig) Version() string {
+	return lc.ComponentConfig.Version
 }
 
-func (pc PlatformConfig) Type() unikraft.ComponentType {
-	return unikraft.ComponentTypePlat
+func (lc LibraryConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeLib
 }

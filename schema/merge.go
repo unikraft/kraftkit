@@ -20,10 +20,10 @@ package schema
 import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
-	"go.unikraft.io/kit/pkg/unikraft/config"
-	"go.unikraft.io/kit/pkg/unikraft/core"
-	"go.unikraft.io/kit/pkg/unikraft/lib"
-	"go.unikraft.io/kit/pkg/unikraft/target"
+	"go.unikraft.io/kit/unikraft/config"
+	"go.unikraft.io/kit/unikraft/core"
+	"go.unikraft.io/kit/unikraft/lib"
+	"go.unikraft.io/kit/unikraft/target"
 )
 
 func merge(configs []*config.Config) (*config.Config, error) {

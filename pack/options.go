@@ -39,7 +39,7 @@ import (
 
 	"go.unikraft.io/kit/pkg/initrd"
 	"go.unikraft.io/kit/pkg/log"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/utils"
 )
 

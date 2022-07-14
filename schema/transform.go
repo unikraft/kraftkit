@@ -27,11 +27,11 @@ import (
 	"github.com/pkg/errors"
 
 	"go.unikraft.io/kit/pkg/initrd"
-	"go.unikraft.io/kit/pkg/unikraft/arch"
-	"go.unikraft.io/kit/pkg/unikraft/component"
-	"go.unikraft.io/kit/pkg/unikraft/lib"
-	"go.unikraft.io/kit/pkg/unikraft/plat"
-	"go.unikraft.io/kit/pkg/unikraft/target"
+	"go.unikraft.io/kit/unikraft/arch"
+	"go.unikraft.io/kit/unikraft/component"
+	"go.unikraft.io/kit/unikraft/lib"
+	"go.unikraft.io/kit/unikraft/plat"
+	"go.unikraft.io/kit/unikraft/target"
 )
 
 // TransformerFunc defines a function to perform the actual transformation

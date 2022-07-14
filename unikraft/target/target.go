@@ -29,45 +29,37 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package arch
+package target
 
 import (
-	"fmt"
-
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/unikraft/component"
+	"go.unikraft.io/kit/pkg/initrd"
+	"go.unikraft.io/kit/unikraft/arch"
+	"go.unikraft.io/kit/unikraft/plat"
 )
 
-type Architecture interface {
-	component.Component
-}
-
-type ArchitectureConfig struct {
+type TargetConfig struct {
 	component.ComponentConfig
+
+	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
+	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
+	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
+	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempy"`
+	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
+	Command      []string                `yaml:",omitempty" json:"commands"`
+
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
-// ParseArchitectureConfig parse short syntax for architecture configuration
-func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
-	architecture := ArchitectureConfig{}
+type Targets []TargetConfig
 
-	if len(value) == 0 {
-		return architecture, fmt.Errorf("cannot ommit architecture name")
-	}
-
-	architecture.ComponentConfig.Name = value
-
-	return architecture, nil
+func (tc TargetConfig) Name() string {
+	return tc.ComponentConfig.Name
 }
 
-func (ac ArchitectureConfig) Name() string {
-	return ac.ComponentConfig.Name
+func (tc TargetConfig) Version() string {
+	return tc.ComponentConfig.Version
 }
 
-func (ac ArchitectureConfig) Version() string {
-	return ac.ComponentConfig.Version
-}
-
-func (ac ArchitectureConfig) Type() unikraft.ComponentType {
-	return unikraft.ComponentTypeArch
+func (tc TargetConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeUnknown
 }

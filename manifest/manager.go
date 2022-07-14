@@ -44,7 +44,7 @@ import (
 	"go.unikraft.io/kit/internal/cmdutil"
 	"go.unikraft.io/kit/pack"
 	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/pkg/unikraft"
+	"go.unikraft.io/kit/unikraft"
 )
 
 type ManifestManager struct {

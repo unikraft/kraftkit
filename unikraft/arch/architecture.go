@@ -29,29 +29,45 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package core
+package arch
 
 import (
-	"go.unikraft.io/kit/pkg/unikraft"
-	"go.unikraft.io/kit/pkg/unikraft/component"
+	"fmt"
+
+	"go.unikraft.io/kit/iostreams"
+	"go.unikraft.io/kit/unikraft"
+	"go.unikraft.io/kit/unikraft/component"
 )
 
-type Unikraft interface {
+type Architecture interface {
 	component.Component
 }
 
-type UnikraftConfig struct {
+type ArchitectureConfig struct {
 	component.ComponentConfig
 }
 
-func (uc UnikraftConfig) Name() string {
-	return uc.ComponentConfig.Name
+// ParseArchitectureConfig parse short syntax for architecture configuration
+func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
+	architecture := ArchitectureConfig{}
+
+	if len(value) == 0 {
+		return architecture, fmt.Errorf("cannot ommit architecture name")
+	}
+
+	architecture.ComponentConfig.Name = value
+
+	return architecture, nil
 }
 
-func (uc UnikraftConfig) Version() string {
-	return uc.ComponentConfig.Version
+func (ac ArchitectureConfig) Name() string {
+	return ac.ComponentConfig.Name
 }
 
-func (uc UnikraftConfig) Type() unikraft.ComponentType {
-	return unikraft.ComponentTypeCore
+func (ac ArchitectureConfig) Version() string {
+	return ac.ComponentConfig.Version
+}
+
+func (ac ArchitectureConfig) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeArch
 }
