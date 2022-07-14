@@ -42,7 +42,7 @@ import (
 	"go.unikraft.io/kit/internal/httpclient"
 	"go.unikraft.io/kit/internal/logger"
 
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/pkg/log"
 	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/plugins"

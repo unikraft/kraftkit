@@ -35,7 +35,7 @@ import (
 	"github.com/henvic/httpretty"
 	"go.unikraft.io/kit/internal/httpunix"
 	"go.unikraft.io/kit/internal/version"
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/iostreams"
 )
 
 // ClientOption represents an argument to NewClient

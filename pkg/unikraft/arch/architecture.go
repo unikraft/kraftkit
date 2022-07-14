@@ -34,6 +34,7 @@ package arch
 import (
 	"fmt"
 
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/pkg/unikraft"
 	"go.unikraft.io/kit/pkg/unikraft/component"
 )

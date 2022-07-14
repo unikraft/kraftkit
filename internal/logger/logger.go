@@ -37,7 +37,7 @@ import (
 	"os"
 	"time"
 
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/pkg/log"
 )
 

@@ -29,7 +29,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/pkg/text"
 )
 

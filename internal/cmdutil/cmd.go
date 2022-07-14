@@ -45,7 +45,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"go.unikraft.io/kit/pkg/iostreams"
+	"go.unikraft.io/kit/iostreams"
 
 	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/internal/cmdfactory"
