@@ -216,12 +216,13 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 		originalArgs := expandedArgs
 		isShell := false
 
-		argsForExpansion := append([]string{cmd.Name()}, expandedArgs...)
-		expandedArgs, isShell, err := expand.ExpandAlias(cfgm.Config, argsForExpansion, nil)
-		if err != nil {
-			fmt.Fprintf(stderr, "failed to process aliases:  %s\n", err)
-			return errs.ExitError
-		}
+		// TODO: Expand arguments
+		// argsForExpansion := append([]string{cmd.Name()}, expandedArgs...)
+		// expandedArgs, isShell, err := expand.ExpandAlias(cfg, argsForExpansion, nil)
+		// if err != nil {
+		// 	fmt.Fprintf(stderr, "failed to process aliases:  %s\n", err)
+		// 	return errs.ExitError
+		// }
 
 		if hasDebug {
 			fmt.Fprintf(stderr, "%v -> %v\n", originalArgs, expandedArgs)
