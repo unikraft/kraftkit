@@ -291,11 +291,11 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 	libraries := make(map[string]lib.LibraryConfig)
 	for name, comp := range bases {
 		library := lib.LibraryConfig{}
-	
+
 		if err := Transform(source[name], &library); err != nil {
 			return libraries, err
 		}
-		
+
 		// Seed the the library components with the shared component attributes
 		library.ComponentConfig = comp
 

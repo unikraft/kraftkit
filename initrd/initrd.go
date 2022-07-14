@@ -35,8 +35,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"github.com/cavaliergopher/cpio"
 )

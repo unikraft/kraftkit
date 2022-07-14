@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/mattn/go-shellwords"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
 	"go.unikraft.io/kit/initrd"
@@ -55,7 +55,7 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 		Result:     target,
 		Metadata:   &data,
 		ZeroFields: false,
-		MatchName:  func(mapKey, fieldName string) bool {
+		MatchName: func(mapKey, fieldName string) bool {
 			maps := map[string]string{
 				"kconfig": "Configuration",
 			}
@@ -253,10 +253,10 @@ var transformComponents TransformerFunc = func(data interface{}) (interface{}, e
 					return nil, err
 				}
 				components[name] = comp
-				
+
 			case map[string]interface{}:
 				components[name] = props
-			
+
 			default:
 				return data, errors.Errorf("invalid type %T for component", props)
 			}

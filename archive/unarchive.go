@@ -84,7 +84,7 @@ func UntarGz(src, dst string, opts ...UnarchiveOption) error {
 		if err != nil {
 			return err
 		}
-		
+
 		var path string
 		if uc.StripComponents > 0 {
 			// We don't use the context-(host-)specific filepath.SplitList because
@@ -116,10 +116,10 @@ func UntarGz(src, dst string, opts ...UnarchiveOption) error {
 			}
 
 			newFile.Close()
-		
-		// TODO: Are there any other files we should consider?
-		// default:
-		// 	return fmt.Errorf("unknown type: %s in %s", string(header.Typeflag), path)
+
+			// TODO: Are there any other files we should consider?
+			// default:
+			// 	return fmt.Errorf("unknown type: %s in %s", string(header.Typeflag), path)
 		}
 	}
 

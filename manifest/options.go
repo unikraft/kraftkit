@@ -75,7 +75,7 @@ func WithSourcesRootDir(dir string) ManifestOption {
 			}
 
 			m.Channels[i].Local = filepath.Join(
-				dir, m.Name + "-" + channel.Name + ext,
+				dir, m.Name+"-"+channel.Name+ext,
 			)
 		}
 
@@ -86,7 +86,7 @@ func WithSourcesRootDir(dir string) ManifestOption {
 			}
 
 			m.Versions[i].Local = filepath.Join(
-				dir, m.Name + "-" + version.Version + ext,
+				dir, m.Name+"-"+version.Version+ext,
 			)
 		}
 

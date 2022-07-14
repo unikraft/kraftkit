@@ -32,11 +32,11 @@
 package manifest
 
 import (
-	"io"
-	"os"
-	"fmt"
-	"net/http"
 	"crypto/sha256"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"path/filepath"
 
 	"go.unikraft.io/kit/archive"
@@ -176,8 +176,8 @@ func (mp ManifestPackage) pullArchive(opts ...pack.PullPackageOption) error {
 	// Unarchive the package to the given workdir
 	if len(local) > 0 {
 		if err := archive.Unarchive(cache, local,
-				archive.StripComponents(1),
-			); err != nil {
+			archive.StripComponents(1),
+		); err != nil {
 			return fmt.Errorf("could not unarchive: %v", err)
 		}
 	}

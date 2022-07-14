@@ -83,7 +83,7 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 	switch entry := props.(type) {
 	case string:
 		component.Version = entry
-	
+
 	// TODO: This is handled by the transformer, do we really need to do this
 	// here?
 	case map[string]interface{}:
@@ -93,10 +93,10 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 				component.Version = prop.(string)
 			case "source":
 				component.Source = prop.(string)
-			// Also handled by the transformer, and the abstraction exists within
-			// schema so any new code in this package would be duplicate.
-			// case "kconfig":
-			// 	component.Configuration = NewKConfig(prop)
+				// Also handled by the transformer, and the abstraction exists within
+				// schema so any new code in this package would be duplicate.
+				// case "kconfig":
+				// 	component.Configuration = NewKConfig(prop)
 			}
 		}
 	}

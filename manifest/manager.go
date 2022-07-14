@@ -51,11 +51,9 @@ type ManifestManager struct {
 	opts *packmanager.PackageManagerOptions
 }
 
-var (
-	// useGit is a local variable used within the context of the manifest package
-	// and is dynamically injected as a CLI option.
-	useGit = false
-)
+// useGit is a local variable used within the context of the manifest package
+// and is dynamically injected as a CLI option.
+var useGit = false
 
 func init() {
 	options, err := packmanager.NewPackageManagerOptions(

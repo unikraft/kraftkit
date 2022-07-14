@@ -76,9 +76,9 @@ func (mp ManifestPackage) pullGit(opts ...pack.PullPackageOption) error {
 			Strategy: git.CheckoutSafe,
 		},
 		CheckoutBranch: mp.Options().Version,
-		Bare: false,
+		Bare:           false,
 	}
-	
+
 	// TODO: Authetication.  This needs to be handled via the authentication
 	// callback provided by CloneOptions.
 	// Attribute any supplied authentication, supplied with hostname as key
