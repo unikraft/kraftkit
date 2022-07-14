@@ -47,6 +47,7 @@ import (
 
 	"go.unikraft.io/kit/pkg/iostreams"
 
+	"go.unikraft.io/kit/config"
 	"go.unikraft.io/kit/internal/cmdfactory"
 	"go.unikraft.io/kit/internal/errs"
 	"go.unikraft.io/kit/internal/run"
@@ -97,6 +98,22 @@ func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string, opts ...CmdOption) (
 	cmd.Flags().Bool("version", false, fmt.Sprintf(
 		"Show %s version", cmdFactory.RootCmd.Name(),
 	))
+
+	// TODO: Group these flags together.
+	// See: https://github.com/spf13/cobra/issues/1327 for implementation example.
+	cmd.PersistentFlags().Bool("no-prompt", false, "Do not prompt for interaction (assumes no)")
+	cmd.PersistentFlags().Bool("yes", false, "Automatically approve any yes/no prompts during execution")
+	cmd.PersistentFlags().Bool("show-timestamps", false, "Automatically approve any yes/no prompts during execution")
+	cmd.PersistentFlags().Var(
+		NewEnumFlag(config.AllowedValues("log.level"), config.Default("log.level")),
+		"log-level",
+		"Set the log verbosity level",
+	)
+	cmd.PersistentFlags().Var(
+		NewEnumFlag(config.AllowedValues("log.type"), config.Default("log.type")),
+		"log-type",
+		"Set the logger type",
+	)
 
 	pm, err := cmdFactory.PluginManager()
 	if err != nil {
@@ -247,6 +264,30 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 	if _, _, err := cmd.Traverse(expandedArgs); err != nil {
 		fmt.Fprintf(stderr, "failed to parse command-line arguments: %s\n", err)
 		return errs.ExitError
+	}
+
+	// TODO: Iterate overr all all `config.Config` and create flags for each into
+	// a "global" flags set available across all commands and sub-commands.
+
+	logLevel := cmd.PersistentFlags().Lookup("log-level").Value.String()
+	if logLevel != "" {
+		cfgm.Config.Log.Level = logLevel
+	}
+
+	logType := cmd.PersistentFlags().Lookup("log-type").Value.String()
+	if logType != "" {
+		cfgm.Config.Log.Type = logType
+	}
+
+	if cmd.PersistentFlags().Lookup("show-timestamps").Value.String() == "true" {
+		cfgm.Config.Log.Timestamps = true
+
+		// Use basic logger type if requesting --show-timestamps
+		cfgm.Config.Log.Level = "basic"
+	}
+
+	if cmd.PersistentFlags().Lookup("no-prompt").Value.String() == "true" {
+		cfgm.Config.NoPrompt = true
 	}
 
 	authError := errors.New("authError")
