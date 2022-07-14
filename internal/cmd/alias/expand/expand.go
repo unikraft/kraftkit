@@ -34,7 +34,7 @@ import (
 	"github.com/google/shlex"
 
 	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/pkg/findsh"
+	"go.unikraft.io/kit/internal/findsh"
 )
 
 // ExpandAlias processes argv to see if it should be rewritten according to a user's aliases. The

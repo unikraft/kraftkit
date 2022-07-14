@@ -47,7 +47,7 @@ import (
 	"github.com/cli/safeexec"
 	"gopkg.in/yaml.v3"
 
-	"go.unikraft.io/kit/pkg/findsh"
+	"go.unikraft.io/kit/internal/findsh"
 	"go.unikraft.io/kit/pkg/log"
 )
 
