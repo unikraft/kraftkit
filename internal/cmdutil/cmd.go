@@ -47,7 +47,6 @@ import (
 
 	"go.unikraft.io/kit/pkg/iostreams"
 
-	"go.unikraft.io/kit/internal/cmd/alias/expand"
 	"go.unikraft.io/kit/internal/cmdfactory"
 	"go.unikraft.io/kit/internal/errs"
 	"go.unikraft.io/kit/internal/run"
@@ -99,18 +98,21 @@ func NewCmd(cmdFactory *cmdfactory.Factory, cmdName string, opts ...CmdOption) (
 		"Show %s version", cmdFactory.RootCmd.Name(),
 	))
 
-	cfgm, err := cmdFactory.ConfigManager()
+	pm, err := cmdFactory.PluginManager()
 	if err != nil {
-		return nil, fmt.Errorf("failed to access config manager: %s", err)
+		return nil, fmt.Errorf("could not access package manager: %v", err)
 	}
 
 	// provide completions for aliases and extensions
 	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var results []string
-		if aliases, ok := cfgm.Config.Aliases[args[0]]; ok {
-			for aliasName := range aliases {
-				if strings.HasPrefix(aliasName, toComplete) {
-					results = append(results, aliasName)
+		plugins, err := pm.List()
+		if err == nil {
+			for _, plugin := range plugins {
+				for _, aliasName := range plugin.Aliases() {
+					if strings.HasPrefix(aliasName, toComplete) {
+						results = append(results, aliasName)
+					}
 				}
 			}
 		}
