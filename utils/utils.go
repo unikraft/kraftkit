@@ -107,6 +107,13 @@ func ValidURL(urlStr string) bool {
 	return len(urlStr) < 8192
 }
 
+// ListJoinStr joins a slice of strings with a specified delimeter
+func ListJoinStr(items []string, delim string) string {
+	return strings.Trim(
+		strings.Join(strings.Fields(fmt.Sprint(items)), delim), "[]",
+	)
+}
+
 func Contains(haystack []string, needle string) bool {
 	for _, v := range haystack {
 		if v == needle {
