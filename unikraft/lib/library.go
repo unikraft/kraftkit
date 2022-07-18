@@ -32,6 +32,8 @@
 package lib
 
 import (
+	"fmt"
+
 	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/unikraft/component"
 )
