@@ -75,6 +75,8 @@ type Config struct {
 	} `json:"unikraft" yaml:"unikraft"`
 
 	Auth map[string]AuthConfig `json:"auth" yaml:"auth,omitempty"`
+
+	Aliases map[string]map[string]string `json:"aliases" yaml:"aliases"`
 }
 
 type ConfigDetail struct {
