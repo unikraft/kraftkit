@@ -32,6 +32,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
 	github.com/xeipuuv/gojsonschema v1.2.0
+	github.com/xlab/treeprint v1.1.0
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	golang.org/x/sys v0.0.0-20220405052023-b1e9470b6e64
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211

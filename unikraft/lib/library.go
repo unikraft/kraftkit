@@ -34,6 +34,7 @@ package lib
 import (
 	"fmt"
 
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/unikraft/component"
 )
@@ -76,4 +77,9 @@ func (lc LibraryConfig) Version() string {
 
 func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
+}
+
+func (lc LibraryConfig) PrintInfo(io *iostreams.IOStreams) error {
+	fmt.Fprint(io.Out, "not implemented: unikraft.lib.LibraryConfig.PrintInfo")
+	return nil
 }

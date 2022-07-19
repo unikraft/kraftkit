@@ -32,10 +32,14 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 
+	"github.com/xlab/treeprint"
+
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/unikraft/component"
 	"go.unikraft.io/kit/unikraft/core"
@@ -113,4 +117,30 @@ func (a *ApplicationConfig) TargetNames() []string {
 
 func (ac *ApplicationConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
+}
+
+func (ac ApplicationConfig) PrintInfo(io *iostreams.IOStreams) error {
+	tree := treeprint.NewWithRoot(component.NameAndVersion(ac))
+
+	tree.AddBranch(component.NameAndVersion(ac.Unikraft))
+
+	if len(ac.Libraries) > 0 {
+		libraries := tree.AddBranch(fmt.Sprintf("libraries (%d)", len(ac.Libraries)))
+		for _, library := range ac.Libraries {
+			libraries.AddNode(component.NameAndVersion(library))
+		}
+	}
+
+	if len(ac.Targets) > 0 {
+		targets := tree.AddBranch(fmt.Sprintf("targets (%d)", len(ac.Targets)))
+		for _, target := range ac.Targets {
+			targ := targets.AddBranch(component.NameAndVersion(target))
+			targ.AddNode(fmt.Sprintf("architecture: %s", component.NameAndVersion(target.Architecture)))
+			targ.AddNode(fmt.Sprintf("platform:     %s", component.NameAndVersion(target.Platform)))
+		}
+	}
+
+	fmt.Fprintln(io.Out, tree.String())
+
+	return nil
 }

@@ -32,6 +32,9 @@
 package core
 
 import (
+	"fmt"
+
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/unikraft/component"
 )
@@ -54,4 +57,9 @@ func (uc UnikraftConfig) Version() string {
 
 func (uc UnikraftConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeCore
+}
+
+func (uc UnikraftConfig) PrintInfo(io *iostreams.IOStreams) error {
+	fmt.Fprint(io.Out, "not implemented: unikraft.core.UnikraftConfig.PrintInfo")
+	return nil
 }

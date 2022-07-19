@@ -34,6 +34,7 @@ package component
 import (
 	"context"
 
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/log"
 	"go.unikraft.io/kit/packmanager"
 	"go.unikraft.io/kit/unikraft"
@@ -69,6 +70,10 @@ type Component interface {
 
 	// Type returns the component's static constant type
 	Type() unikraft.ComponentType
+
+	// PrintInfo displays the information about the component via the provided
+	// iostream
+	PrintInfo(*iostreams.IOStreams) error
 }
 
 // ParseComponentConfig parse short syntax for Component configuration

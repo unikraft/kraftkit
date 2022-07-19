@@ -32,7 +32,10 @@
 package target
 
 import (
+	"fmt"
+
 	"go.unikraft.io/kit/initrd"
+	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/unikraft/arch"
 	"go.unikraft.io/kit/unikraft/plat"
 )
@@ -62,4 +65,9 @@ func (tc TargetConfig) Version() string {
 
 func (tc TargetConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeUnknown
+}
+
+func (tc TargetConfig) PrintInfo(io *iostreams.IOStreams) error {
+	fmt.Fprint(io.Out, "not implemented: unikraft.plat.TargetConfig.PrintInfo")
+	return nil
 }
