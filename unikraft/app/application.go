@@ -47,6 +47,8 @@ import (
 	"go.unikraft.io/kit/unikraft/target"
 )
 
+const DefaultKConfigFile = ".config"
+
 type Application interface {
 	component.Component
 }
