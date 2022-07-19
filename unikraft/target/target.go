@@ -36,7 +36,9 @@ import (
 
 	"go.unikraft.io/kit/initrd"
 	"go.unikraft.io/kit/iostreams"
+	"go.unikraft.io/kit/unikraft"
 	"go.unikraft.io/kit/unikraft/arch"
+	"go.unikraft.io/kit/unikraft/component"
 	"go.unikraft.io/kit/unikraft/plat"
 )
 
