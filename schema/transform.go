@@ -174,7 +174,7 @@ var transformInitrd TransformerFunc = func(data interface{}) (interface{}, error
 
 		return value, nil
 	default:
-		return data, errors.Errorf("invalid type %T for platform: %s", value)
+		return data, errors.Errorf("invalid type %T for platform", value)
 	}
 }
 
