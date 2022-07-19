@@ -115,7 +115,7 @@ func (a *ApplicationConfig) TargetNames() []string {
 	return names
 }
 
-func (ac *ApplicationConfig) Type() unikraft.ComponentType {
+func (ac ApplicationConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
