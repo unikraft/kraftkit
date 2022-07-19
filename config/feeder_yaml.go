@@ -124,11 +124,7 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 		return err
 	}
 
-	if err := yaml.NewEncoder(f).Encode(&into); err != nil {
-		return err
-	}
-
-	return nil
+	return yaml.NewEncoder(f).Encode(&into)
 }
 
 // https://stackoverflow.com/a/65784135
