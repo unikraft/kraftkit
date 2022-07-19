@@ -31,8 +31,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -225,38 +223,6 @@ var WriteConfigFile = func(filename string, data []byte) error {
 
 var BackupConfigFile = func(filename string) error {
 	return os.Rename(filename, filename+".bak")
-}
-
-func parseConfigFile(filename string) ([]byte, *yaml.Node, error) {
-	data, err := ReadConfigFile(filename)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	root, err := parseConfigData(data)
-	if err != nil {
-		return nil, nil, err
-	}
-	return data, root, err
-}
-
-func parseConfigData(data []byte) (*yaml.Node, error) {
-	var root yaml.Node
-	err := yaml.Unmarshal(data, &root)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(root.Content) == 0 {
-		return &yaml.Node{
-			Kind:    yaml.DocumentNode,
-			Content: []*yaml.Node{{Kind: yaml.MappingNode}},
-		}, nil
-	}
-	if root.Content[0].Kind != yaml.MappingNode {
-		return &root, fmt.Errorf("expected a top level map")
-	}
-	return &root, nil
 }
 
 func pathError(err error) error {
