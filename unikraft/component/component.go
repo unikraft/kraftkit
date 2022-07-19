@@ -33,6 +33,7 @@ package component
 
 import (
 	"context"
+	"fmt"
 
 	"go.unikraft.io/kit/iostreams"
 	"go.unikraft.io/kit/log"
@@ -74,6 +75,12 @@ type Component interface {
 	// PrintInfo displays the information about the component via the provided
 	// iostream
 	PrintInfo(*iostreams.IOStreams) error
+}
+
+// NameAndVersion accepts a component and provids the canonical string
+// representation of the component with its name and version
+func NameAndVersion(component Component) string {
+	return fmt.Sprintf("%s:%s", component.Name(), component.Version())
 }
 
 // ParseComponentConfig parse short syntax for Component configuration
