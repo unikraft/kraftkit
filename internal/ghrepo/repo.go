@@ -48,6 +48,20 @@ func New(owner, repo string) Interface {
 	return NewWithHost(owner, repo, "github.com")
 }
 
+// NewFromURL parses a given GitHub url and returns the populated Interface
+func NewFromURL(path string) (Interface, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse url: %s", err)
+	}
+
+	parts := strings.Split(u.Path, "/")
+	owner := parts[1]
+	repo := strings.TrimSuffix(parts[2], ".git")
+
+	return NewWithHost(owner, repo, u.Host), nil
+}
+
 // NewWithHost is like New with an explicit host name
 func NewWithHost(owner, repo, hostname string) Interface {
 	return &ghRepo{
