@@ -34,18 +34,46 @@ package main
 import (
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
+
 	"go.unikraft.io/kit/internal/cmdfactory"
 	"go.unikraft.io/kit/internal/cmdutil"
 )
 
 func main() {
-	cmdFactory := cmdfactory.New()
-	cmdRoot, err := cmdutil.NewCmd(cmdFactory, "kraftkit")
+	f := cmdfactory.New()
+	cmd, err := cmdutil.NewCmd(f, "kraftkit")
 	if err != nil {
 		panic("could not initialize root commmand")
 	}
 
-	cmdRoot.Short = "Manage the KraftKit toolsuite"
+	cmd.Short = "Manage the KraftKit toolsuite"
+	cmd.Long = heredoc.Docf(`
+    KraftKit is a suite of tools to manage, configure, build and deploy Unikraft
+    unikernels.  It helps you use unikernels at all stages of their lifecycle.
 
-	os.Exit(int(cmdutil.Execute(cmdFactory, cmdRoot)))
+    Tools available in the toolsuite include:
+
+      ukpkg ...... Find, retrieve and package Unikraft unikernels.
+      ukbuild .... Configure and build a Unikraft unikernel.
+      ukrun ...... Run a Unikraft unikernel (OCI-compatible).
+      ukcompose .. Run docker-compose.yml services as Unikraft unikernels.
+      ukdeploy ... Deploy a Unikraft unikernel.
+      kraftkit ... Manage the KraftKit toolsuite. 
+    
+    The %[1]skraftkit%[1]s CLI program itself allows you to manage updates,
+    plugins and authentication to external services used across the toolsuite.`,
+		"`")
+	cmd.Example = heredoc.Doc(`
+    # Check and install updates to the KraftKit toolsuite:
+    $ kraftkit update
+
+		# Manage configuration settings for KubeKraft
+		$ kraftkit config set ...
+
+    # Install an extension to the KraftKit toolsuite from GitHub:
+    $ kraftkit plugin install github-owner/github-repo
+  `)
+
+	os.Exit(int(cmdutil.Execute(f, cmd)))
 }
