@@ -20,7 +20,9 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch all tags
-        run: git fetch --force --tags
+        run: |
+          git config --global --add safe.directory /__w/kraftkit/kraftkit
+          git fetch --force --tags
 
       - name: Install YTT
         run: |
