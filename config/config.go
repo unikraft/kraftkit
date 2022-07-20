@@ -61,6 +61,7 @@ type Config struct {
 		Plugins   string `json:"plugins"   yaml:"plugins,omitempty"   env:"KRAFTKIT_PATHS_PLUGINS"`
 		Config    string `json:"config"    yaml:"config,omitempty"    env:"KRAFTKIT_PATHS_CONFIG"`
 		Manifests string `json:"manifests" yaml:"manifests,omitempty" env:"KRAFTKIT_PATHS_MANIFESTS"`
+		Sources   string `json:"sources"   yaml:"sources,omitempty"   env:"KRAFTKIT_PATHS_SOURCES"`
 	} `json:"paths" yaml:"paths,omitempty"`
 
 	Log struct {
