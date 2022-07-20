@@ -57,3 +57,19 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
+  - id: ukpkg
+    binary: ukpkg
+    main: ./cmd/ukpkg
+    env:
+      - CGO_ENABLED=0
+      - GOMOD=go.unikraft.io/kit
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w 
+      - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
+      - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
+      - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
