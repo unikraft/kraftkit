@@ -89,9 +89,9 @@ func (mp ManifestPackage) pullArchive(opts ...pack.PullPackageOption) error {
 		// archives as Content-Length is, for some reason, always set to 0.
 		res, err := http.Head(resource)
 		if err != nil {
-			return fmt.Errorf("could not ...")
+			return fmt.Errorf("could not perform HEAD request on resource: %v", err)
 		} else if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("could not ...")
+			return fmt.Errorf("recieved HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
 			popts.Log().Warnf("could not determine package size before pulling")
 			pp.total = 0
