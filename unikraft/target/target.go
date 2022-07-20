@@ -70,6 +70,12 @@ func (tc TargetConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeUnknown
 }
 
+// ArchPlatString returns the canonical name for platform architecture string
+// combination
+func (tc *TargetConfig) ArchPlatString() string {
+	return tc.Platform.Name() + "-" + tc.Architecture.Name()
+}
+
 func (tc TargetConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.plat.TargetConfig.PrintInfo")
 	return nil
