@@ -12,7 +12,7 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
-    container: goreleaser/goreleaser:v1.7.0
+    container: goreleaser/goreleaser-cross:v1.18.3
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -41,6 +41,12 @@ jobs:
           git config user.email "monkey@unikraft.io"
           git tag -a "$(git describe)" -m "Pre-release: $(git describe)"
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
-          goreleaser -f .goreleaser-staging.yaml --rm-dist --skip-validate
+          goreleaser build \
+            --config .goreleaser-staging.yaml \
+            --rm-dist \
+            --skip-validate
+          goreleaser release \
+            --config .goreleaser-staging.yaml \
+            --skip-validate
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
