@@ -134,6 +134,10 @@ func (mp ManifestPackage) CanonicalName() string {
 	return "manifest://" + string(mp.PackageOptions.Type) + "-" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
 }
 
+func (mp ManifestPackage) Pack() error {
+	return fmt.Errorf("not implemented: pack.manifest.Pack")
+}
+
 func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }
