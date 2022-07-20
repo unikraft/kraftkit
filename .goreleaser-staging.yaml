@@ -1,54 +1,54 @@
-# .goreleaser.yaml
+#! .goreleaser.yaml
 changelog:
-  # Changelog generation implementation to use.
+  #! Changelog generation implementation to use.
   use: git
 
 release:
-  # Repo in which the release will be created.
-  # Default is extracted from the origin remote URL or empty if its private hosted.
+  #! Repo in which the release will be created.
+  #! Default is extracted from the origin remote URL or empty if its private hosted.
   github:
     owner: unikraft
     name: kraftkit
 
-  # If set to true, will not auto-publish the release.
-  # Default is false.
+  #! If set to true, will not auto-publish the release.
+  #! Default is false.
   draft: false
 
-  # If set to auto, will mark the release as not ready for production
-  # in case there is an indicator for this in the tag e.g. v1.0.0-rc1
-  # If set to true, will mark the release as not ready for production.
-  # Default is false.
+  #! If set to auto, will mark the release as not ready for production
+  #! in case there is an indicator for this in the tag e.g. v1.0.0-rc1
+  #! If set to true, will mark the release as not ready for production.
+  #! Default is false.
   prerelease: true
 
-  # What to do with the release notes in case there the release already exists.
-  #
-  # Valid options are:
-  # - `keep-existing`: keep the existing notes
-  # - `append`: append the current release notes to the existing notes
-  # - `prepend`: prepend the current release notes to the existing notes
-  # - `replace`: replace existing notes
-  #
-  # Default is `keep-existing`.
+  #! What to do with the release notes in case there the release already exists.
+  #!
+  #! Valid options are:
+  #! - `keep-existing`: keep the existing notes
+  #! - `append`: append the current release notes to the existing notes
+  #! - `prepend`: prepend the current release notes to the existing notes
+  #! - `replace`: replace existing notes
+  #!
+  #! Default is `keep-existing`.
   mode: replace
 
-  # Header template for the release body.
+  #! Header template for the release body.
   header: |
     ## KraftKit {{ .Tag }} ({{ .Date }})
 
     This is the pre-release version of KraftKit.
 
-  # Change the name of the release.
+  #! Change the name of the release.
   name_template: 'v{{ .Version }}'
 
 builds:
-  - id: kraftkit
-    binary: kraftkit
-    main: ./cmd/kraftkit
+#@ for binary in ["kraftkit", "ukpkg"]:
+  - id: #@ "{}-linuxu".format(binary)
+    binary: #@ binary
+    main: #@ "./cmd/{}".format(binary)
     env:
       - CGO_ENABLED=1
       - GOMOD=go.unikraft.io/kit
     goos:
-      - darwin
       - linux
     goarch:
       - amd64
@@ -57,15 +57,17 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
-  - id: ukpkg
-    binary: ukpkg
-    main: ./cmd/ukpkg
+
+  - id: #@ "{}-darwin".format(binary)
+    binary: #@ binary
+    main: #@ "./cmd/{}".format(binary)
     env:
       - CGO_ENABLED=1
       - GOMOD=go.unikraft.io/kit
+      - CC=o64-clang
+      - CXX=o64-clang++
     goos:
       - darwin
-      - linux
     goarch:
       - amd64
     ldflags:
@@ -73,3 +75,4 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
+#@ end

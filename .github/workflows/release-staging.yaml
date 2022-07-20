@@ -22,6 +22,18 @@ jobs:
       - name: Fetch all tags
         run: git fetch --force --tags
 
+      - name: Install YTT
+        run: |
+          set -xe
+          curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.41.1/ytt-linux-amd64 > /tmp/ytt
+          echo "65dbc4f3a4a2ed84296dd1b323e8e7bd77e488fa7540d12dd36cf7fb2fc77c03  /tmp/ytt" | sha256sum -c -
+          mv /tmp/ytt /usr/local/bin/ytt
+          chmod +x /usr/local/bin/ytt
+      
+      - name: Generate GoReleaser configuration
+        run: |
+          ytt -f .goreleaser-staging.yaml > .goreleaser-staging.yaml
+
       - name: Run GoReleaser
         run: |
           git tag -d "$(git describe)" || true
