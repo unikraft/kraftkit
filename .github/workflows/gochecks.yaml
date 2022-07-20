@@ -5,6 +5,7 @@ name: Go Checks
 jobs:
   unit:
     runs-on: ubuntu-latest
+    container: golang:1.17-bullseye
     name: All
     env:
       RUNGOGENERATE: false
@@ -22,6 +23,10 @@ jobs:
 
       - name: Install gofumpt
         run: go install mvdan.cc/gofumpt@v0.3.1
+
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install libgit2-dev
+        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
 
       - name: Check that go.mod is tidy
         uses: protocol/multiple-go-modules@v1.2
