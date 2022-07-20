@@ -47,6 +47,7 @@ type TargetConfig struct {
 
 	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
 	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
+	Format       string                  `yaml:",omitempty" json:"format,omitempty"`
 	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
 	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempty"`
 	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
