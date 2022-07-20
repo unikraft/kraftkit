@@ -174,6 +174,41 @@ func FormatRemoteURL(repo Interface, protocol string) string {
 	return fmt.Sprintf("https://%s%s/%s.git", repo.RepoHost(), repo.RepoOwner(), repo.RepoName())
 }
 
+// BranchArchive returns the archive URL of a branch given an interface and a
+// branch
+func BranchArchive(repo Interface, branch string) string {
+	return fmt.Sprintf(
+		"https://%s/%s/%s/archive/refs/heads/%s.tar.gz",
+		repo.RepoHost(),
+		repo.RepoOwner(),
+		repo.RepoName(),
+		branch,
+	)
+}
+
+// TagArchive returns the archive URL of a tag given an Interface and a tag
+func TagArchive(repo Interface, tag string) string {
+	return fmt.Sprintf(
+		"https://%s/%s/%s/archive/refs/tags/%s.tar.gz",
+		repo.RepoHost(),
+		repo.RepoOwner(),
+		repo.RepoName(),
+		tag,
+	)
+}
+
+// SHAArchive returns the archive URL of a given Git SHA given an Interface and
+// a SHA
+func SHAArchive(repo Interface, sha string) string {
+	return fmt.Sprintf(
+		"https://%s/%s/%s/archive/%s.tar.gz",
+		repo.RepoHost(),
+		repo.RepoOwner(),
+		repo.RepoName(),
+		sha,
+	)
+}
+
 type ReleaseAsset struct {
 	Name   string
 	APIURL string `json:"url"`
