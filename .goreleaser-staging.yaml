@@ -45,7 +45,7 @@ builds:
     binary: kraftkit
     main: ./cmd/kraftkit
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
       - GOMOD=go.unikraft.io/kit
     goos:
       - darwin
@@ -61,7 +61,7 @@ builds:
     binary: ukpkg
     main: ./cmd/ukpkg
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
       - GOMOD=go.unikraft.io/kit
     goos:
       - darwin
