@@ -32,6 +32,10 @@ jobs:
           mv /tmp/ytt /usr/local/bin/ytt
           chmod +x /usr/local/bin/ytt
       
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install libgit2-dev
+        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
+      
       - name: Generate GoReleaser configuration
         run: |
           ytt -f .goreleaser-staging.yaml > goreleaser-staging.yaml
