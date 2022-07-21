@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 // Copyright (c) 2019 GitHub Inc.
-//               2022 Unikraft UG.
+//               2022 Unikraft GmbH.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
