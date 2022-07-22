@@ -55,6 +55,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/ukpkg/source"
+	"kraftkit.sh/cmd/ukpkg/update"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -88,6 +89,7 @@ func main() {
 	cmd, err := cmdutil.NewCmd(f, "ukpkg",
 		cmdutil.WithSubcmds(
 			source.SourceCmd(f),
+			update.UpdateCmd(f),
 		),
 	)
 	if err != nil {
