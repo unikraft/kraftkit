@@ -54,6 +54,8 @@ import (
 	"kraftkit.sh/ui/processtree"
 	"kraftkit.sh/unikraft/target"
 
+	"kraftkit.sh/cmd/ukpkg/source"
+
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
 )
@@ -83,7 +85,11 @@ func main() {
 		cmdfactory.WithPackageManager(),
 	)
 
-	cmd, err := cmdutil.NewCmd(f, "ukpkg")
+	cmd, err := cmdutil.NewCmd(f, "ukpkg",
+		cmdutil.WithSubcmds(
+			source.SourceCmd(f),
+		),
+	)
 	if err != nil {
 		panic("could not initialize 'ukpkg' commmand")
 	}
