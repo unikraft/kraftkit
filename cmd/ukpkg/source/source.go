@@ -63,10 +63,10 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 	`, "`")
 	cmd.Example = heredoc.Docf(`
 		# Add a single component as a Git repository
-		$ pkgu source https://github.com/unikraft/unikraft.git
+		$ ukpkg source https://github.com/unikraft/unikraft.git
 
 		# Add a manifest of components
-		$ pkgu source https://raw.github.com/unikraft/index/stable/index.yaml
+		$ ukpkg source https://raw.github.com/unikraft/index/stable/index.yaml
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		source := ""
