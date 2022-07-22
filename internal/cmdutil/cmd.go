@@ -45,15 +45,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"go.unikraft.io/kit/iostreams"
+	"kraftkit.sh/iostreams"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/internal/cmdfactory"
-	"go.unikraft.io/kit/internal/errs"
-	"go.unikraft.io/kit/internal/run"
-	"go.unikraft.io/kit/internal/version"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cmdfactory"
+	"kraftkit.sh/internal/errs"
+	"kraftkit.sh/internal/run"
+	"kraftkit.sh/internal/version"
 
-	versionCmd "go.unikraft.io/kit/internal/cmd/version"
+	versionCmd "kraftkit.sh/internal/cmd/version"
 )
 
 type CmdOption func(*cobra.Command)

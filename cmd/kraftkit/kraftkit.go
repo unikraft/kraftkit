@@ -36,8 +36,8 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 
-	"go.unikraft.io/kit/internal/cmdfactory"
-	"go.unikraft.io/kit/internal/cmdutil"
+	"kraftkit.sh/internal/cmdfactory"
+	"kraftkit.sh/internal/cmdutil"
 )
 
 func main() {

@@ -46,9 +46,7 @@ RUN set -xe; \
       git; \
     go install mvdan.cc/gofumpt@latest;
 
-COPY . /go/src/go.unikraft.io/kit
-
-WORKDIR /go/src/go.unikraft.io/kit
+WORKDIR /go/src/kraftkit.sh
 
 ENV GOROOT=/usr/local/go
-ENV PATH=$PATH:/go/src/go.unikraft.io/kit/dist
+ENV PATH=$PATH:/go/src/kraftkit.sh/dist

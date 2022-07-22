@@ -34,8 +34,8 @@ package component
 import (
 	"context"
 
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/packmanager"
+	"kraftkit.sh/log"
+	"kraftkit.sh/packmanager"
 )
 
 type ComponentOption func(cc *ComponentConfig) error

@@ -34,7 +34,7 @@ package packmanager
 import (
 	"fmt"
 
-	"go.unikraft.io/kit/pack"
+	"kraftkit.sh/pack"
 )
 
 var packageManagers = make(map[pack.ContextKey]PackageManager)

@@ -34,9 +34,9 @@ package manifest
 import (
 	"path/filepath"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/config"
+	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
 )
 
 type ManifestOption func(m *Manifest) error

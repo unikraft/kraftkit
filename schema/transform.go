@@ -26,12 +26,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"go.unikraft.io/kit/initrd"
-	"go.unikraft.io/kit/unikraft/arch"
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/lib"
-	"go.unikraft.io/kit/unikraft/plat"
-	"go.unikraft.io/kit/unikraft/target"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/lib"
+	"kraftkit.sh/unikraft/plat"
+	"kraftkit.sh/unikraft/target"
 )
 
 // TransformerFunc defines a function to perform the actual transformation

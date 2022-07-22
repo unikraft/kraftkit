@@ -32,7 +32,7 @@
 package processtree
 
 import (
-	"go.unikraft.io/kit/log"
+	"kraftkit.sh/log"
 )
 
 type ProcessTreeOption func(pt *ProcessTree) error

@@ -39,9 +39,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.unikraft.io/kit/archive"
-	"go.unikraft.io/kit/pack"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/archive"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 )
 
 type pullProgressArchive struct {

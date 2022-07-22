@@ -31,7 +31,7 @@
 
 package packmanager
 
-import "go.unikraft.io/kit/pack"
+import "kraftkit.sh/pack"
 
 type PackageManager interface {
 	// NewPackage initializes a new package

@@ -35,10 +35,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/core"
-	"go.unikraft.io/kit/unikraft/lib"
-	"go.unikraft.io/kit/unikraft/target"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/lib"
+	"kraftkit.sh/unikraft/target"
 )
 
 // ConfigDetails are the details about a group of ConfigFiles

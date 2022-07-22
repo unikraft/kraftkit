@@ -28,14 +28,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/unikraft"
-	"go.unikraft.io/kit/unikraft/app"
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/config"
-	"go.unikraft.io/kit/unikraft/core"
-	"go.unikraft.io/kit/unikraft/lib"
-	"go.unikraft.io/kit/unikraft/target"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/config"
+	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/lib"
+	"kraftkit.sh/unikraft/target"
 )
 
 const (

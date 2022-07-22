@@ -38,14 +38,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/internal/httpclient"
-	"go.unikraft.io/kit/internal/logger"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/httpclient"
+	"kraftkit.sh/internal/logger"
 
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/plugins"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/plugins"
 )
 
 type FactoryOption func(*Factory)

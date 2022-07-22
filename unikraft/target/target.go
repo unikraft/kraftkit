@@ -34,12 +34,12 @@ package target
 import (
 	"fmt"
 
-	"go.unikraft.io/kit/initrd"
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/unikraft"
-	"go.unikraft.io/kit/unikraft/arch"
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/plat"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/plat"
 )
 
 type TargetConfig struct {

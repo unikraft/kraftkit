@@ -47,7 +47,7 @@ builds:
     main: #@ "./cmd/{}".format(binary)
     env:
       - CGO_ENABLED=1
-      - GOMOD=go.unikraft.io/kit
+      - GOMOD=kraftkit.sh
     goos:
       - linux
     goarch:

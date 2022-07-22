@@ -33,8 +33,8 @@ import (
 
 	"github.com/google/shlex"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/internal/findsh"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/findsh"
 )
 
 // ExpandAlias processes argv to see if it should be rewritten according to a

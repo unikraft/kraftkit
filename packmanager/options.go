@@ -34,11 +34,11 @@ package packmanager
 import (
 	"context"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/utils"
+	"kraftkit.sh/config"
+	"kraftkit.sh/utils"
 
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
 )
 
 // PackageManagerOptions contains configuration for the Package

@@ -31,8 +31,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"go.unikraft.io/kit/internal/cmdfactory"
-	"go.unikraft.io/kit/internal/text"
+	"kraftkit.sh/internal/cmdfactory"
+	"kraftkit.sh/internal/text"
 )
 
 func rootUsageFunc(command *cobra.Command) error {

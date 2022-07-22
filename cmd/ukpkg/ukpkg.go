@@ -39,23 +39,23 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/schema"
+	"kraftkit.sh/config"
+	"kraftkit.sh/schema"
 
-	"go.unikraft.io/kit/internal/cmdfactory"
-	"go.unikraft.io/kit/internal/cmdutil"
-	"go.unikraft.io/kit/internal/logger"
+	"kraftkit.sh/internal/cmdfactory"
+	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/internal/logger"
 
-	"go.unikraft.io/kit/initrd"
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/pack"
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/ui/processtree"
-	"go.unikraft.io/kit/unikraft/target"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/ui/processtree"
+	"kraftkit.sh/unikraft/target"
 
 	// Additional initializers
-	_ "go.unikraft.io/kit/manifest"
+	_ "kraftkit.sh/manifest"
 )
 
 type ukpkgOptions struct {

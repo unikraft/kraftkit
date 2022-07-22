@@ -39,7 +39,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/unikraft"
 )
 
 type GitProvider struct {

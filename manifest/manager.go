@@ -40,11 +40,11 @@ import (
 
 	"github.com/gobwas/glob"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/internal/cmdutil"
-	"go.unikraft.io/kit/pack"
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 )
 
 type ManifestManager struct {

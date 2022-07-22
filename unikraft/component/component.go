@@ -35,10 +35,10 @@ import (
 	"context"
 	"fmt"
 
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 )
 
 // ComponentConfig is the shared attribute structure provided to all

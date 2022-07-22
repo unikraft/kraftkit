@@ -39,12 +39,12 @@ import (
 
 	"github.com/xlab/treeprint"
 
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/unikraft"
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/core"
-	"go.unikraft.io/kit/unikraft/lib"
-	"go.unikraft.io/kit/unikraft/target"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/lib"
+	"kraftkit.sh/unikraft/target"
 )
 
 const DefaultKConfigFile = ".config"

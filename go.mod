@@ -1,4 +1,4 @@
-module go.unikraft.io/kit
+module kraftkit.sh
 
 go 1.17
 

@@ -29,7 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"go.unikraft.io/kit/internal/cmdfactory"
+	"kraftkit.sh/internal/cmdfactory"
 )
 
 func NewCmdVersion(f *cmdfactory.Factory, version, buildDate string) *cobra.Command {

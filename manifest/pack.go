@@ -35,7 +35,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.unikraft.io/kit/pack"
+	"kraftkit.sh/pack"
 )
 
 type ManifestPackage struct {

@@ -26,13 +26,13 @@ import (
 	"github.com/compose-spec/compose-go/dotenv"
 	"github.com/pkg/errors"
 
-	"go.unikraft.io/kit/internal/errs"
+	"kraftkit.sh/internal/errs"
 
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/packmanager"
-	"go.unikraft.io/kit/unikraft/app"
-	"go.unikraft.io/kit/unikraft/component"
-	"go.unikraft.io/kit/unikraft/config"
+	"kraftkit.sh/log"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/config"
 )
 
 // ProjectOptions groups the command line options recommended for a Compose implementation

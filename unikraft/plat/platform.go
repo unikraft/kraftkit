@@ -34,9 +34,9 @@ package plat
 import (
 	"fmt"
 
-	"go.unikraft.io/kit/iostreams"
-	"go.unikraft.io/kit/unikraft"
-	"go.unikraft.io/kit/unikraft/component"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/component"
 )
 
 type Platform interface {

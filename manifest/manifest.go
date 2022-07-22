@@ -40,9 +40,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.unikraft.io/kit/config"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/config"
+	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
 
 	"gopkg.in/yaml.v2"
 )

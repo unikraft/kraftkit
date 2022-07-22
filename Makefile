@@ -41,7 +41,7 @@ ORG         ?= unikraft
 REPO        ?= kraftkit
 BIN         ?= kraftkit \
                ukpkg
-GOMOD       ?= go.unikraft.io/kit
+GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
 
 

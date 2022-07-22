@@ -43,9 +43,9 @@ import (
 	"github.com/google/go-github/v32/github"
 	"golang.org/x/oauth2"
 
-	"go.unikraft.io/kit/internal/ghrepo"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/unikraft"
+	"kraftkit.sh/internal/ghrepo"
+	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
 )
 
 type GitHubProvider struct {

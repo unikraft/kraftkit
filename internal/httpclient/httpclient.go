@@ -33,9 +33,9 @@ import (
 	"time"
 
 	"github.com/henvic/httpretty"
-	"go.unikraft.io/kit/internal/httpunix"
-	"go.unikraft.io/kit/internal/version"
-	"go.unikraft.io/kit/iostreams"
+	"kraftkit.sh/internal/httpunix"
+	"kraftkit.sh/internal/version"
+	"kraftkit.sh/iostreams"
 )
 
 // ClientOption represents an argument to NewClient

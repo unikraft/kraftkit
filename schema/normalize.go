@@ -36,7 +36,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go.unikraft.io/kit/unikraft/app"
+	"kraftkit.sh/unikraft/app"
 )
 
 // normalize a kraft project by moving deprecated attributes to their canonical

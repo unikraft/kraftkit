@@ -37,10 +37,10 @@ import (
 	"fmt"
 	"os"
 
-	"go.unikraft.io/kit/initrd"
-	"go.unikraft.io/kit/log"
-	"go.unikraft.io/kit/unikraft"
-	"go.unikraft.io/kit/utils"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/utils"
 )
 
 // PackageOptions contains configuration for the Package
