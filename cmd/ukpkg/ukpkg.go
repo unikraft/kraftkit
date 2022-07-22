@@ -54,6 +54,7 @@ import (
 	"kraftkit.sh/ui/processtree"
 	"kraftkit.sh/unikraft/target"
 
+	"kraftkit.sh/cmd/ukpkg/list"
 	"kraftkit.sh/cmd/ukpkg/source"
 	"kraftkit.sh/cmd/ukpkg/update"
 
@@ -88,6 +89,7 @@ func main() {
 
 	cmd, err := cmdutil.NewCmd(f, "ukpkg",
 		cmdutil.WithSubcmds(
+			list.ListCmd(f),
 			source.SourceCmd(f),
 			update.UpdateCmd(f),
 		),
