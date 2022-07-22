@@ -49,10 +49,10 @@ jobs:
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
           goreleaser build \
             --config goreleaser-staging.yaml \
-            --rm-dist \
             --skip-validate
           goreleaser release \
             --config goreleaser-staging.yaml \
+            --rm-dist \
             --skip-validate
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
