@@ -55,6 +55,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/ukpkg/list"
+	"kraftkit.sh/cmd/ukpkg/pull"
 	"kraftkit.sh/cmd/ukpkg/source"
 	"kraftkit.sh/cmd/ukpkg/update"
 
@@ -90,6 +91,7 @@ func main() {
 	cmd, err := cmdutil.NewCmd(f, "ukpkg",
 		cmdutil.WithSubcmds(
 			list.ListCmd(f),
+			pull.PullCmd(f),
 			source.SourceCmd(f),
 			update.UpdateCmd(f),
 		),
