@@ -117,6 +117,28 @@ func (a *ApplicationConfig) TargetNames() []string {
 	return names
 }
 
+// Components returns a unique list of Unikraft components which this
+// applicatiton consists of
+func (ac *ApplicationConfig) Components() []component.Component {
+	components := []component.Component{
+		ac.Unikraft,
+	}
+
+	for _, library := range ac.Libraries {
+		components = append(components, library)
+	}
+
+	// TODO: Get unique components from each target.  A target will contain at
+	// least two components: the architecture and the platform.  Both of these
+	// components can stem from the Unikraft core (in the case of built-in
+	// architectures and components).
+	// for _, targ := range ac.Targets {
+	// 	components = append(components, targ)
+	// }
+
+	return components
+}
+
 func (ac ApplicationConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
