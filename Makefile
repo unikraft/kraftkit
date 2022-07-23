@@ -65,6 +65,7 @@ GIT_SHA     ?= $(shell git update-index -q --refresh && \
 # Tools
 DOCKER      ?= docker
 DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
+               -e DOCKER= \
                -w /go/src/$(GOMOD) \
                -v $(WORKDIR):/go/src/$(GOMOD) \
                $(REGISTRY)/$(ORG)/$(REPO)/$(2):$(IMAGE_TAG) \
