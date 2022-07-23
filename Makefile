@@ -106,7 +106,7 @@ $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buil
 $(addprefix $(.PROXY), $(BIN)): deps
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
-		-ldflags='$(GO_GCFLAGS)' \
+		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
 		$(WORKDIR)/cmd/$@
