@@ -43,7 +43,7 @@ BIN         ?= kraftkit \
                ukpkg
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
-
+GO_VERSION  ?= 1.17
 
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
@@ -137,7 +137,7 @@ devenv:
 
 .PHONY: deps
 deps:
-	$(GO) mod tidy
+	$(GO) mod tidy -compat=$(GO_VERSION)
 
 .PHONY: fmt
 fmt:
