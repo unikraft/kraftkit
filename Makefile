@@ -57,7 +57,7 @@ DIRTY       ?= $(shell git update-index -q --refresh && \
                        git diff-index --quiet HEAD -- $(WORKDIR) || \
                        echo "-dirty")
 endif
-APP_VERSION ?= $(HASH)$(DIRTY)
+VERSION     ?= $(HASH)$(DIRTY)
 GIT_SHA     ?= $(shell git update-index -q --refresh && \
                        git rev-parse --short HEAD)
 
@@ -100,7 +100,7 @@ $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
 else
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w
 endif
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(APP_VERSION)"
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
 $(addprefix $(.PROXY), $(BIN)): deps
