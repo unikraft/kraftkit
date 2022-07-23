@@ -202,7 +202,11 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 			manifest.Description = *repo.Description
 		}
 
-		t, _, _ := unikraft.GuessTypeNameVersion(*repo.Name)
+		t, _, _, err := unikraft.GuessTypeNameVersion(*repo.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		manifest.Type = t
 
 		manifests = append(manifests, manifest)

@@ -152,7 +152,10 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 		base = strings.TrimSuffix(base, ext)
 	}
 
-	t, n, _ := unikraft.GuessTypeNameVersion(base)
+	t, n, _, err := unikraft.GuessTypeNameVersion(base)
+	if err != nil {
+		return nil, err
+	}
 
 	manifest := &Manifest{
 		Type:    t,

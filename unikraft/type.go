@@ -72,7 +72,7 @@ func (ct ComponentType) Plural() string {
 
 // GuessNameAndType attempts to parse the input string, which could be formatted
 // such that its type, name and version are present
-func GuessTypeNameVersion(input string) (ComponentType, string, string) {
+func GuessTypeNameVersion(input string) (ComponentType, string, string, error) {
 	re := regexp.MustCompile(
 		`(?i)^` +
 			`(?:(?P<type>(?:lib|app|plat|arch)s?)[\-/])?` +
@@ -82,6 +82,10 @@ func GuessTypeNameVersion(input string) (ComponentType, string, string) {
 	)
 
 	match := re.FindStringSubmatch(input)
+	if len(match) == 0 {
+		return ComponentTypeUnknown, "", "", fmt.Errorf("cannot determine name and type from \"%s\"", input)
+	}
+
 	t, n, v := match[1], match[2], match[3]
 
 	if n == "unikraft" {
@@ -90,10 +94,10 @@ func GuessTypeNameVersion(input string) (ComponentType, string, string) {
 
 	// Is the type recognised?
 	if found, ok := ComponentTypes()[t]; ok {
-		return found, n, v
+		return found, n, v, nil
 	}
 
-	return ComponentTypeUnknown, n, v
+	return ComponentTypeUnknown, n, v, nil
 }
 
 // PlaceComponent is a universal source of truth for identifying the path to

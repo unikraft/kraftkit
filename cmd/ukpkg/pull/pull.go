@@ -258,7 +258,10 @@ func pullRun(opts *PullOptions, query string) error {
 	} else {
 		for _, c := range strings.Split(query, " ") {
 			query := packmanager.CatalogQuery{}
-			t, n, v := unikraft.GuessTypeNameVersion(c)
+			t, n, v, err := unikraft.GuessTypeNameVersion(c)
+			if err != nil {
+				continue
+			}
 
 			if t != unikraft.ComponentTypeUnknown {
 				query.Types = append(query.Types, t)
