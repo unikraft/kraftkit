@@ -191,7 +191,7 @@ func Execute(cmdFactory *cmdfactory.Factory, cmd *cobra.Command) errs.ExitCode {
 	// KraftKit package.  `Dispatch`ing the plugins will invoke the `init` program
 	// within the plugin.
 	if err := pm.Dispatch(); err != nil {
-		fmt.Fprintf(stderr, "failed to connect to plugin manager: %s", err)
+		fmt.Fprintf(stderr, "failed to dispatch plugins: %s", err)
 		return errs.ExitError
 	}
 
