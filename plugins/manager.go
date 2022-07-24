@@ -188,7 +188,7 @@ func (pm *PluginManager) List() ([]Plugin, error) {
 
 	if f, err := os.Stat(pm.dataDir); err != nil || !f.IsDir() {
 		if err := os.MkdirAll(pm.dataDir, 0o755); err != nil {
-			return results, err
+			return results, fmt.Errorf("%v: %s", err, pm.dataDir)
 		}
 	}
 
