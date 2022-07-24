@@ -33,6 +33,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strconv"
 )
@@ -149,6 +150,26 @@ func NewDefaultConfig() (*Config, error) {
 
 	if err := setDefaults(c); err != nil {
 		return nil, fmt.Errorf("could not set defaults for config: %s", err)
+	}
+
+	// Add default path for plugins..
+	if len(c.Paths.Plugins) == 0 {
+		c.Paths.Plugins = filepath.Join(DataDir(), "plugins")
+	}
+
+	// ..for configuration files..
+	if len(c.Paths.Config) == 0 {
+		c.Paths.Config = filepath.Join(ConfigDir())
+	}
+
+	// ..for manifest files..
+	if len(c.Paths.Manifests) == 0 {
+		c.Paths.Manifests = filepath.Join(DataDir(), "manifests")
+	}
+
+	// ..and for cached source files
+	if len(c.Paths.Sources) == 0 {
+		c.Paths.Sources = filepath.Join(DataDir(), "sources")
 	}
 
 	return c, nil
