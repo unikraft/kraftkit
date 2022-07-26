@@ -56,6 +56,10 @@ func NewFromURL(path string) (Interface, error) {
 	}
 
 	parts := strings.Split(u.Path, "/")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
+	}
+
 	owner := parts[1]
 	repo := strings.TrimSuffix(parts[2], ".git")
 
