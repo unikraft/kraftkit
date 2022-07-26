@@ -60,7 +60,8 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Args = cmdutil.MinimumArgs(1, "must specify component or manifest")
 	cmd.Aliases = []string{"a"}
 	cmd.Long = heredoc.Docf(`
-	`, "`")
+		Add Unikraft component manifests
+	`)
 	cmd.Example = heredoc.Docf(`
 		# Add a single component as a Git repository
 		$ ukpkg source https://github.com/unikraft/unikraft.git
