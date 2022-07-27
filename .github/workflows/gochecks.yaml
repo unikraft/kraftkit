@@ -1,6 +1,10 @@
-on: [push, pull_request]
-
 name: Go Checks
+
+on:
+  push:
+  pull_request:
+    branches:
+      - staging
 
 jobs:
   unit:
@@ -42,7 +46,7 @@ jobs:
       - name: gofumpt
         if: ${{ success() || failure() }} # run this step even if the previous one failed
         run: |
-          test -z $(gofumpt -d -l -e . | tee /dev/stderr) 
+          test -z $(gofumpt -d -l -e . | tee /dev/stderr)
 
       - name: go vet
         if: ${{ success() || failure() }} # run this step even if the previous one failed
