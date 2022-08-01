@@ -56,7 +56,7 @@ func WithLogger(log log.Logger) ComponentOption {
 
 func WithPackageManager(pm *packmanager.PackageManager) ComponentOption {
 	return func(cc *ComponentConfig) error {
-		cc.packageManager = pm
+		cc.pm = pm
 		return nil
 	}
 }

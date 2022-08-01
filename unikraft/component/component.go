@@ -52,9 +52,9 @@ type ComponentConfig struct {
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
-	coreSource     string // The value of Unikraft's `source:` directive
-	packageManager *packmanager.PackageManager
-	log            log.Logger
+	coreSource string // The value of Unikraft's `source:` directive
+	pm         *packmanager.PackageManager
+	log        log.Logger
 
 	// Context should contain all implementation-specific options, using
 	// `context.WithValue`
