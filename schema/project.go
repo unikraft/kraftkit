@@ -360,6 +360,12 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 		withComponentOptions(copts...),
 	)
 
+	if popts.log != nil {
+		popts.loadOptions = append(popts.loadOptions,
+			withLoaderLogger(popts.log),
+		)
+	}
+
 	project, err := Load(config.ConfigDetails{
 		ConfigFiles:   configs,
 		WorkingDir:    workingDir,
