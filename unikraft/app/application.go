@@ -181,6 +181,16 @@ func (a *ApplicationConfig) Prepare(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Fetch component sources for the applications
+func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("fetch"),
+	)...)
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
