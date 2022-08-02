@@ -134,3 +134,13 @@ func (cc *ComponentConfig) Log() log.Logger {
 func (cc *ComponentConfig) Workdir() string {
 	return cc.workdir
 }
+
+// SourceDir returns the well-known location of the component given its working
+// directory, type and name.
+func (cc *ComponentConfig) SourceDir() (string, error) {
+	return unikraft.PlaceComponent(
+		cc.workdir,
+		cc.ctype,
+		cc.Name,
+	)
+}
