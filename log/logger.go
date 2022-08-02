@@ -50,8 +50,12 @@ type Logger interface {
 	Fatal(a ...interface{})
 	Fatalf(format string, a ...interface{})
 	SetOutput(w io.Writer)
+
 	// Clone provides a semantic copy of the current instance of the Logger such
 	// that it can be used independently but with the same configuration.  This
 	// may useful for sub-processes.
 	Clone() Logger
+
+	// Output returns the io.Writer used in the Logger's underlying implementation
+	Output() io.Writer
 }

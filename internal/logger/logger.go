@@ -49,7 +49,7 @@ type logFunc func(a ...interface{}) string
 // Logger maintains a set of logging functions
 // and has a log level that can be modified dynamically
 type Logger struct {
-	Out         io.Writer
+	out         io.Writer
 	timestamp   logFunc
 	level       LogLevel
 	trace       logFunc
@@ -66,7 +66,7 @@ func (l *Logger) now() string {
 }
 
 func (l *Logger) log(level string, a ...interface{}) {
-	fmt.Fprintf(l.Out, "%s %s %s %s\n",
+	fmt.Fprintf(l.Output(), "%s %s %s %s\n",
 		l.timestamp(l.now()),
 		level,
 		l.timestamp(":"),
@@ -75,7 +75,7 @@ func (l *Logger) log(level string, a ...interface{}) {
 }
 
 func (l *Logger) logf(level string, format string, a ...interface{}) {
-	fmt.Fprintf(l.Out, "%s %s %s %s\n",
+	fmt.Fprintf(l.Output(), "%s %s %s %s\n",
 		l.timestamp(l.now()),
 		level,
 		l.timestamp(":"),
@@ -165,12 +165,12 @@ func (l *Logger) Fatalf(format string, a ...interface{}) {
 }
 
 func (l *Logger) SetOutput(w io.Writer) {
-	l.Out = w
+	l.out = w
 }
 
 func (l *Logger) Clone() log.Logger {
 	return &Logger{
-		Out:         l.Out,
+		out:         l.out,
 		level:       l.level,
 		timestamp:   l.timestamp,
 		trace:       l.trace,
@@ -183,11 +183,15 @@ func (l *Logger) Clone() log.Logger {
 	}
 }
 
+func (l *Logger) Output() io.Writer {
+	return l.out
+}
+
 // NewLogger creates a new logger
 // Default level is INFO
 func NewLogger(out io.Writer, cs *iostreams.ColorScheme) *Logger {
 	return &Logger{
-		Out:         out,
+		out:         out,
 		level:       INFO,
 		timestamp:   cs.SprintFunc("magenta"),
 		trace:       cs.SprintFunc("blue"),
