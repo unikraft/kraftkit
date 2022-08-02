@@ -59,6 +59,7 @@ import (
 	"kraftkit.sh/cmd/ukbuild/configure"
 	"kraftkit.sh/cmd/ukbuild/fetch"
 	"kraftkit.sh/cmd/ukbuild/menuconfig"
+	"kraftkit.sh/cmd/ukbuild/prepare"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -93,6 +94,7 @@ func main() {
 			configure.ConfigureCmd(f),
 			fetch.FetchCmd(f),
 			menuconfig.MenuConfigCmd(f),
+			prepare.PrepareCmd(f),
 		),
 	)
 	if err != nil {
