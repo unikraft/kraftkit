@@ -55,6 +55,9 @@ import (
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/target"
 
+	// Subcommands
+	"kraftkit.sh/cmd/ukbuild/configure"
+
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
 )
@@ -83,7 +86,11 @@ func main() {
 		cmdfactory.WithPackageManager(),
 	)
 
-	cmd, err := cmdutil.NewCmd(f, "ukbuild")
+	cmd, err := cmdutil.NewCmd(f, "ukbuild",
+		cmdutil.WithSubcmds(
+			configure.ConfigureCmd(f),
+		),
+	)
 	if err != nil {
 		panic("could not initialize 'ukbuild' commmand")
 	}
