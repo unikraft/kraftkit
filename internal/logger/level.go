@@ -46,6 +46,18 @@ const (
 	TRACE
 )
 
+// String returns the canonical name of the level
+func (ll LogLevel) String() string {
+	return [...]string{
+		"trace",
+		"debug",
+		"info",
+		"warn",
+		"error",
+		"fatal",
+	}[ll]
+}
+
 func LogLevelFromString(name string) LogLevel {
 	name = strings.ToLower(name)
 	switch name {
