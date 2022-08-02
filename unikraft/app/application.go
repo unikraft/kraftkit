@@ -171,6 +171,16 @@ func (a *ApplicationConfig) Configure(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Prepare the application
+func (a *ApplicationConfig) Prepare(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("prepare"),
+	)...)
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
