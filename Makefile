@@ -40,6 +40,7 @@ REGISTRY    ?= ghcr.io
 ORG         ?= unikraft
 REPO        ?= kraftkit
 BIN         ?= kraftkit \
+               ukbuild \
                ukpkg
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
