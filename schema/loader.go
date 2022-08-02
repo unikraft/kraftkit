@@ -198,7 +198,9 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		Extensions:    model.Extensions,
 	}
 
-	project.ApplyOptions(opts.componentOptions...)
+	project.ApplyOptions(append(opts.componentOptions,
+		component.WithType(unikraft.ComponentTypeApp),
+	)...)
 
 	if !opts.SkipNormalization {
 		err = normalize(project, opts.ResolvePaths)
@@ -272,21 +274,22 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 
 	// Seed the unikraft component with the shared attributes and transform
 	base.Name = "unikraft"
-	unikraft := core.UnikraftConfig{
+	uk := core.UnikraftConfig{
 		ComponentConfig: base,
 	}
 
-	if err := Transform(source, &unikraft); err != nil {
-		return unikraft, err
+	if err := Transform(source, &uk); err != nil {
+		return uk, err
 	}
 
-	if err := unikraft.ApplyOptions(
-		opts.componentOptions...,
-	); err != nil {
-		return unikraft, err
+	if err := uk.ApplyOptions(append(
+		opts.componentOptions,
+		component.WithType(unikraft.ComponentTypeCore),
+	)...); err != nil {
+		return uk, err
 	}
 
-	return unikraft, nil
+	return uk, nil
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
@@ -309,7 +312,10 @@ func LoadLibraries(source map[string]interface{}, opts *LoaderOptions) (map[stri
 		// Seed the the library components with the shared component attributes
 		library.ComponentConfig = comp
 
-		if err := library.ApplyOptions(opts.componentOptions...); err != nil {
+		if err := library.ApplyOptions(append(
+			opts.componentOptions,
+			component.WithType(unikraft.ComponentTypeLib),
+		)...); err != nil {
 			return libraries, err
 		}
 
@@ -352,11 +358,17 @@ func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdi
 			return targets, err
 		}
 
-		if err := target.Architecture.ApplyOptions(opts.componentOptions...); err != nil {
+		if err := target.Architecture.ApplyOptions(append(
+			opts.componentOptions,
+			component.WithType(unikraft.ComponentTypeArch),
+		)...); err != nil {
 			return targets, err
 		}
 
-		if err := target.Platform.ApplyOptions(opts.componentOptions...); err != nil {
+		if err := target.Platform.ApplyOptions(append(
+			opts.componentOptions,
+			component.WithType(unikraft.ComponentTypePlat),
+		)...); err != nil {
 			return targets, err
 		}
 
