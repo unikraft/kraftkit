@@ -94,6 +94,34 @@ func (a *ApplicationConfig) IsConfigured() bool {
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
+// MakeArgs returns the populated `core.MakeArgs` based on the contents of the
+// instantiated `ApplicationConfig`.  This information can be passed directly to
+// Unikraft's build system.
+func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
+	var libraries []string
+
+	for _, library := range a.Libraries {
+		if !library.IsUnpackedInProject(a.WorkingDir) {
+			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
+		}
+
+		src, err := library.SourceDir()
+		if err != nil {
+			return nil, err
+		}
+
+		libraries = append(libraries, src)
+	}
+
+	// TODO: Platforms & architectures
+
+	return &core.MakeArgs{
+		OutputDir:      a.OutDir,
+		ApplicationDir: a.WorkingDir,
+		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
+	}, nil
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
