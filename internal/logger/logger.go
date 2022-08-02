@@ -62,7 +62,7 @@ type Logger struct {
 }
 
 func (l *Logger) now() string {
-	return time.Now().Format("2006-01-02 15:04:05")
+	return time.Now().Format(log.Format)
 }
 
 func (l *Logger) log(level string, a ...interface{}) {
