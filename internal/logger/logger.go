@@ -187,6 +187,10 @@ func (l *Logger) Output() io.Writer {
 	return l.out
 }
 
+func (l *Logger) Level() string {
+	return l.level.String()
+}
+
 // NewLogger creates a new logger
 // Default level is INFO
 func NewLogger(out io.Writer, cs *iostreams.ColorScheme) *Logger {

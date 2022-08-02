@@ -58,4 +58,7 @@ type Logger interface {
 
 	// Output returns the io.Writer used in the Logger's underlying implementation
 	Output() io.Writer
+
+	// Level returns the current log level
+	Level() string
 }
