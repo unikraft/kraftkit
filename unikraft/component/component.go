@@ -129,3 +129,8 @@ func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {
 func (cc *ComponentConfig) Log() log.Logger {
 	return cc.log
 }
+
+// Workdir exposes the instantiated component's working directory
+func (cc *ComponentConfig) Workdir() string {
+	return cc.workdir
+}
