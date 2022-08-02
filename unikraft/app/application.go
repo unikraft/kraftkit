@@ -40,6 +40,7 @@ import (
 
 	"github.com/xlab/treeprint"
 
+	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft"
@@ -148,6 +149,16 @@ func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
 	}
 
 	return m.Execute()
+}
+
+// SyncConfig updates the configuration
+func (a *ApplicationConfig) SyncConfig(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("syncconfig"),
+	)...)
 }
 
 // LibraryNames return names for all libraries in this Compose config
