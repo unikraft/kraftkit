@@ -191,6 +191,45 @@ func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Build offers an invocation of the Unikraft build system with the contextual
+// information of the ApplicationConfigs
+func (a *ApplicationConfig) Build(opts ...BuildOption) error {
+	bopts := &BuildOptions{}
+	for _, o := range opts {
+		err := o(bopts)
+		if err != nil {
+			return fmt.Errorf("could not apply build option: %v", err)
+		}
+	}
+
+	if !a.Unikraft.IsUnpackedInProject(a.WorkingDir) {
+		// TODO: Produce better error messages (see #34).  In this case, we should
+		// indicate that `ukpkg pull` needs to occur
+		return fmt.Errorf("cannot build without Unikraft core component source")
+	}
+
+	eopts := []exec.ExecOption{}
+	if bopts.log != nil {
+		eopts = append(eopts, exec.WithStdout(bopts.log.Output()))
+	}
+
+	bopts.mopts = append(bopts.mopts, []make.MakeOption{
+		make.WithProgressFunc(bopts.onProgress),
+		make.WithExecOptions(eopts...),
+	}...)
+
+	if !bopts.noSyncConfig {
+		if err := a.SyncConfig(append(
+			bopts.mopts,
+			make.WithProgressFunc(nil),
+		)...); err != nil {
+			return err
+		}
+	}
+
+	return a.Make(bopts.mopts...)
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
