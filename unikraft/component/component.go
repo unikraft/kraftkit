@@ -34,6 +34,7 @@ package component
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -143,4 +144,24 @@ func (cc *ComponentConfig) SourceDir() (string, error) {
 		cc.ctype,
 		cc.Name,
 	)
+}
+
+// IsUnpackedInProject indicates whether the package has been unpacked into a
+// project specified by the working directory option
+func (cc *ComponentConfig) IsUnpackedInProject(projectDir string) bool {
+	local, err := unikraft.PlaceComponent(
+		projectDir,
+		cc.ctype,
+		cc.Name,
+	)
+	if err != nil {
+		cc.log.Errorf("could not place component: %v", err)
+		return false
+	}
+
+	if f, err := os.Stat(local); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
 }
