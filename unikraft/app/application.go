@@ -161,6 +161,16 @@ func (a *ApplicationConfig) SyncConfig(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Configure the application
+func (a *ApplicationConfig) Configure(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("configure"),
+	)...)
+}
+
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
