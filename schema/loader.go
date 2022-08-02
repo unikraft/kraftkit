@@ -115,6 +115,10 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		op(opts)
 	}
 
+	opts.componentOptions = append(opts.componentOptions,
+		component.WithWorkdir(details.WorkingDir),
+	)
+
 	// If we have a set package manager, we can directly inject this to each
 	// component.
 	if opts.PackageManager != nil {
@@ -226,12 +230,12 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		return nil, err
 	}
 
-	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"), cfg.Unikraft, opts)
+	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"), opts)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"), cfg.Unikraft, cfg.OutDir, configDetails, opts)
+	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"), configDetails, cfg.OutDir, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +279,7 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, opts *LoaderOptions) (map[string]lib.LibraryConfig, error) {
+func LoadLibraries(source map[string]interface{}, opts *LoaderOptions) (map[string]lib.LibraryConfig, error) {
 	// Populate all library components with shared `ComponentConfig` attributes
 	bases := make(map[string]component.ComponentConfig)
 	if err := Transform(source, &bases); err != nil {
@@ -293,10 +297,7 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 		// Seed the the library components with the shared component attributes
 		library.ComponentConfig = comp
 
-		copts := opts.componentOptions
-		copts = append(copts, component.WithCoreSource(unikraft.Source))
-
-		if err := library.ApplyOptions(copts...); err != nil {
+		if err := library.ApplyOptions(opts.componentOptions...); err != nil {
 			return libraries, err
 		}
 
@@ -313,7 +314,7 @@ func LoadLibraries(source map[string]interface{}, unikraft core.UnikraftConfig, 
 
 // LoadTargets produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir string, configDetails config.ConfigDetails, opts *LoaderOptions) ([]target.TargetConfig, error) {
+func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdir string, opts *LoaderOptions) ([]target.TargetConfig, error) {
 	// Populate all target components with shared `ComponentConfig` attributes
 	bases := []component.ComponentConfig{}
 	if err := Transform(source, &bases); err != nil {
@@ -329,23 +330,21 @@ func LoadTargets(source []interface{}, unikraft core.UnikraftConfig, outdir stri
 	}
 
 	projectName, _ := opts.GetProjectName()
-	copts := opts.componentOptions
-	copts = append(copts, component.WithCoreSource(unikraft.Source))
 
 	for i, target := range targets {
 		if err := Transform(source[i], &target); err != nil {
 			return targets, err
 		}
 
-		if err := target.ApplyOptions(copts...); err != nil {
+		if err := target.ApplyOptions(opts.componentOptions...); err != nil {
 			return targets, err
 		}
 
-		if err := target.Architecture.ApplyOptions(copts...); err != nil {
+		if err := target.Architecture.ApplyOptions(opts.componentOptions...); err != nil {
 			return targets, err
 		}
 
-		if err := target.Platform.ApplyOptions(copts...); err != nil {
+		if err := target.Platform.ApplyOptions(opts.componentOptions...); err != nil {
 			return targets, err
 		}
 

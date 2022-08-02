@@ -40,9 +40,9 @@ import (
 
 type ComponentOption func(cc *ComponentConfig) error
 
-func WithCoreSource(path string) ComponentOption {
+func WithWorkdir(path string) ComponentOption {
 	return func(cc *ComponentConfig) error {
-		cc.coreSource = path
+		cc.workdir = path
 		return nil
 	}
 }
