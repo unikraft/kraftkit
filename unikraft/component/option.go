@@ -36,6 +36,7 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 )
 
 type ComponentOption func(cc *ComponentConfig) error
@@ -64,6 +65,13 @@ func WithPackageManager(pm *packmanager.PackageManager) ComponentOption {
 func WithContext(ctx context.Context) ComponentOption {
 	return func(cc *ComponentConfig) error {
 		cc.ctx = ctx
+		return nil
+	}
+}
+
+func WithType(t unikraft.ComponentType) ComponentOption {
+	return func(cc *ComponentConfig) error {
+		cc.ctype = t
 		return nil
 	}
 }

@@ -55,6 +55,7 @@ type ComponentConfig struct {
 	workdir string
 	pm      *packmanager.PackageManager
 	log     log.Logger
+	ctype   unikraft.ComponentType // embed the component type within the config
 
 	// Context should contain all implementation-specific options, using
 	// `context.WithValue`
