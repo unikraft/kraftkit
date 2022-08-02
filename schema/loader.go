@@ -198,6 +198,8 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		Extensions:    model.Extensions,
 	}
 
+	project.ApplyOptions(opts.componentOptions...)
+
 	if !opts.SkipNormalization {
 		err = normalize(project, opts.ResolvePaths)
 		if err != nil {
