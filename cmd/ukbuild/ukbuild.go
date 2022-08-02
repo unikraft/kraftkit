@@ -57,6 +57,7 @@ import (
 
 	// Subcommands
 	"kraftkit.sh/cmd/ukbuild/configure"
+	"kraftkit.sh/cmd/ukbuild/fetch"
 	"kraftkit.sh/cmd/ukbuild/menuconfig"
 
 	// Additional initializers
@@ -90,6 +91,7 @@ func main() {
 	cmd, err := cmdutil.NewCmd(f, "ukbuild",
 		cmdutil.WithSubcmds(
 			configure.ConfigureCmd(f),
+			fetch.FetchCmd(f),
 			menuconfig.MenuConfigCmd(f),
 		),
 	)
