@@ -41,6 +41,7 @@ import (
 	"github.com/xlab/treeprint"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
@@ -120,6 +121,33 @@ func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 		ApplicationDir: a.WorkingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
 	}, nil
+}
+
+// Make is a method which invokes Unikraft's build system.  You can pass in make
+// options based on the `make` package.  Ultimately, this is an abstract method
+// which will be used by a number of well-known make command goals by Unikraft's
+// build system.
+func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
+	coreSrc, err := a.Unikraft.SourceDir()
+	if err != nil {
+		return err
+	}
+
+	mopts = append(mopts,
+		make.WithDirectory(coreSrc),
+	)
+
+	args, err := a.MakeArgs()
+	if err != nil {
+		return err
+	}
+
+	m, err := make.NewFromInterface(*args, mopts...)
+	if err != nil {
+		return err
+	}
+
+	return m.Execute()
 }
 
 // LibraryNames return names for all libraries in this Compose config
