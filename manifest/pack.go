@@ -145,11 +145,16 @@ func (mp ManifestPackage) Compatible(ref string) bool {
 func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 	mp.Log().Infof("pulling manifest package %s", mp.CanonicalName())
 
-	if useGit {
-		return mp.pullGit(opts...)
+	popts, err := pack.NewPullPackageOptions(opts...)
+	if err != nil {
+		return err
 	}
 
-	return mp.pullArchive(opts...)
+	if useGit {
+		return mp.pullGit(popts)
+	}
+
+	return mp.pullArchive(popts)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

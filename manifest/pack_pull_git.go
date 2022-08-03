@@ -42,12 +42,7 @@ import (
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
-func (mp ManifestPackage) pullGit(opts ...pack.PullPackageOption) error {
-	popts, err := pack.NewPullPackageOptions(opts...)
-	if err != nil {
-		return err
-	}
-
+func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
 	if len(popts.Workdir()) == 0 {
 		return fmt.Errorf("cannot Git clone manifest package without working directory")
 	}

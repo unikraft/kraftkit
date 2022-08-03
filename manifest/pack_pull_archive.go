@@ -62,12 +62,7 @@ func (pp *pullProgressArchive) Write(p []byte) (n int, err error) {
 
 // pullArchive is used internally to pull a specific Manifest resource using the
 // conventional archive.
-func (mp ManifestPackage) pullArchive(opts ...pack.PullPackageOption) error {
-	popts, err := pack.NewPullPackageOptions(opts...)
-	if err != nil {
-		return err
-	}
-
+func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 	manifest := mp.Context(ManifestContext).(*Manifest)
 	if manifest == nil {
 		return fmt.Errorf("package does not contain manifest context")
