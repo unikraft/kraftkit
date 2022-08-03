@@ -173,10 +173,10 @@ func (um UmbrellaManager) Pull(path string, opts *pack.PullPackageOptions) ([]pa
 	return packages, nil
 }
 
-func (mm UmbrellaManager) Catalog(query CatalogQuery) ([]pack.Package, error) {
+func (mm UmbrellaManager) Catalog(query CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		pack, err := manager.Catalog(query)
+		pack, err := manager.Catalog(query, popts...)
 		if err != nil {
 			return nil, err
 		}

@@ -234,7 +234,7 @@ func (um ManifestManager) From(sub string) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (mm ManifestManager) Catalog(query packmanager.CatalogQuery) ([]pack.Package, error) {
+func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
 	index, err := NewManifestIndexFromFile(mm.LocalManifestIndex())
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery) ([]pack.Packag
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageWithVersion(manifest, version)
+				p, err := NewPackageWithVersion(manifest, version, popts...)
 				if err != nil {
 					mm.opts.Log.Warnf("%v", err)
 					continue
@@ -321,7 +321,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery) ([]pack.Packag
 				packages = append(packages, p)
 			}
 		} else {
-			packs, err := NewPackageFromManifest(manifest)
+			packs, err := NewPackageFromManifest(manifest, popts...)
 			if err != nil {
 				mm.opts.Log.Warnf("%v", err)
 				continue
