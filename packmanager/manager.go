@@ -53,7 +53,7 @@ type PackageManager interface {
 	Pull(string, *pack.PullPackageOptions) ([]pack.Package, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(CatalogQuery) ([]pack.Package, error)
+	Catalog(CatalogQuery, ...pack.PackageOption) ([]pack.Package, error)
 
 	// Add a source to the package manager
 	AddSource(string) error

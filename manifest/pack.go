@@ -54,7 +54,7 @@ func NewPackageFromOptions(opts *pack.PackageOptions) (pack.Package, error) {
 
 // NewPackageWithVersion generates a manifest implementation of the pack.Package
 // construct based on the input Manifest for a particular version
-func NewPackageWithVersion(manifest *Manifest, version string) (pack.Package, error) {
+func NewPackageWithVersion(manifest *Manifest, version string, popts ...pack.PackageOption) (pack.Package, error) {
 	resource := ""
 
 	var channels []ManifestChannel
@@ -85,15 +85,15 @@ func NewPackageWithVersion(manifest *Manifest, version string) (pack.Package, er
 		manifest,
 	)
 
-	pkgOpts, err := pack.NewPackageOptions(
-		[]pack.PackageOption{
-			pack.WithContext(ctx),
-			pack.WithName(manifest.Name),
-			pack.WithRemoteLocation(resource),
-			pack.WithType(manifest.Type),
-			pack.WithVersion(version),
-		}...,
+	popts = append(popts,
+		pack.WithContext(ctx),
+		pack.WithName(manifest.Name),
+		pack.WithRemoteLocation(resource),
+		pack.WithType(manifest.Type),
+		pack.WithVersion(version),
 	)
+
+	pkgOpts, err := pack.NewPackageOptions(popts...)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare package for target: %s", err)
 	}
@@ -103,13 +103,13 @@ func NewPackageWithVersion(manifest *Manifest, version string) (pack.Package, er
 
 // NewPackageFromManifest generates a manifest implementation of the
 // pack.Package construct based on the input Manifest
-func NewPackageFromManifest(manifest *Manifest) (pack.Package, error) {
+func NewPackageFromManifest(manifest *Manifest, popts ...pack.PackageOption) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPackageWithVersion(manifest, channel.Name)
+	return NewPackageWithVersion(manifest, channel.Name, popts...)
 }
 
 func (mp ManifestPackage) ApplyOptions(opts ...pack.PackageOption) error {
