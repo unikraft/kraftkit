@@ -148,3 +148,9 @@ fmt:
 clean:
 	$(GO) clean -cache -i -r
 
+.PHONY: properclean
+properclean: ENVIRONMENT ?= myself
+properclean: IMAGE       ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TAG)
+properclean:
+	rm -rf $(DISTDIR) $(TESTDIR)
+	$(DOCKER) rmi $(IMAGE)
