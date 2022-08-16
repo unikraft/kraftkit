@@ -143,3 +143,8 @@ deps:
 .PHONY: fmt
 fmt:
 	$(GOFUMPT) -e -l -w $(WORKDIR)
+
+.PHONY: clean
+clean:
+	$(GO) clean -cache -i -r
+
