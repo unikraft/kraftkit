@@ -48,7 +48,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/schema"
-	"kraftkit.sh/ui/paraprogress"
+	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
