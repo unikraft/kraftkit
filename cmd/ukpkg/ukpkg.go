@@ -51,7 +51,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/ui/processtree"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/ukpkg/list"

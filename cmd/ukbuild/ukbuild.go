@@ -50,7 +50,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/ui/paraprogress"
+	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/target"

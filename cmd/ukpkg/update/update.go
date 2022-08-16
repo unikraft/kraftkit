@@ -41,7 +41,7 @@ import (
 	"kraftkit.sh/internal/logger"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/ui/processtree"
+	"kraftkit.sh/tui/processtree"
 )
 
 type UpdateOptions struct {
