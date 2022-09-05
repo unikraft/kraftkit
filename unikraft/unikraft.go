@@ -41,4 +41,5 @@ const (
 	UK_ARCH        = "CONFIG_UK_ARCH"
 	UK_BASE        = "CONFIG_UK_BASE"
 	UK_APP         = "CONFIG_UK_APP"
+	UK_DEFCONFIG   = "UK_DEFCONFIG"
 )
