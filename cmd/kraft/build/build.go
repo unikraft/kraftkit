@@ -56,6 +56,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
+	"kraftkit.sh/cmd/kraft/build/clean"
 	"kraftkit.sh/cmd/kraft/build/configure"
 	"kraftkit.sh/cmd/kraft/build/fetch"
 	"kraftkit.sh/cmd/kraft/build/menuconfig"
@@ -95,6 +96,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 			prepare.PrepareCmd(f),
 			set.SetCmd(f),
 			unset.UnsetCmd(f),
+			clean.CleanCmd(f),
 		),
 	)
 	if err != nil {
