@@ -203,6 +203,17 @@ func (a *ApplicationConfig) Clean(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Delete the build folder of the application
+func (a *ApplicationConfig) Properclean(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("properclean"),
+	)...)
+
+}
+
 // Fetch component sources for the applications
 func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
