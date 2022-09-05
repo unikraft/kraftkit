@@ -189,16 +189,16 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 
 	project := &app.ApplicationConfig{
 		ComponentConfig: component.ComponentConfig{
-			Name:          projectName,
+			Name: projectName,
 		},
-		WorkingDir:      details.WorkingDir,
-		Filename:        model.Filename,
-		OutDir:          model.OutDir,
-		Unikraft:        model.Unikraft,
-		Libraries:       model.Libraries,
-		Targets:         model.Targets,
-		Configuration:   details.Configuration,
-		Extensions:      model.Extensions,
+		WorkingDir:    details.WorkingDir,
+		Filename:      model.Filename,
+		OutDir:        model.OutDir,
+		Unikraft:      model.Unikraft,
+		Libraries:     model.Libraries,
+		Targets:       model.Targets,
+		Configuration: details.Configuration,
+		Extensions:    model.Extensions,
 	}
 
 	project.ApplyOptions(append(opts.componentOptions,
