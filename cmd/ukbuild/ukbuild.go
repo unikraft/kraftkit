@@ -61,6 +61,7 @@ import (
 	"kraftkit.sh/cmd/ukbuild/menuconfig"
 	"kraftkit.sh/cmd/ukbuild/prepare"
 	"kraftkit.sh/cmd/ukbuild/set"
+	"kraftkit.sh/cmd/ukbuild/unset"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -97,6 +98,7 @@ func main() {
 			menuconfig.MenuConfigCmd(f),
 			prepare.PrepareCmd(f),
 			set.SetCmd(f),
+			unset.UnsetCmd(f),
 		),
 	)
 	if err != nil {
