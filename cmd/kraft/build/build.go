@@ -61,6 +61,7 @@ import (
 	"kraftkit.sh/cmd/kraft/build/fetch"
 	"kraftkit.sh/cmd/kraft/build/menuconfig"
 	"kraftkit.sh/cmd/kraft/build/prepare"
+	"kraftkit.sh/cmd/kraft/build/properclean"
 	"kraftkit.sh/cmd/kraft/build/set"
 	"kraftkit.sh/cmd/kraft/build/unset"
 
@@ -97,6 +98,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 			set.SetCmd(f),
 			unset.UnsetCmd(f),
 			clean.CleanCmd(f),
+			properclean.PropercleanCmd(f),
 		),
 	)
 	if err != nil {
