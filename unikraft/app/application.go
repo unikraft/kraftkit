@@ -163,7 +163,7 @@ func (a *ApplicationConfig) SyncConfig(mopts ...make.MakeOption) error {
 	)...)
 }
 
-// SyncConfig updates the configuration
+// Defconfig updates the configuration
 func (a *ApplicationConfig) DefConfig(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
 		make.WithExecOptions(
@@ -204,6 +204,44 @@ func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 }
 
 func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
+	// Write the configuration to a temporary file
+	tmpfile, err := ioutil.TempFile("", a.Name()+"-config*")
+	if err != nil {
+		return err
+	}
+	defer tmpfile.Close()
+	defer os.Remove(tmpfile.Name())
+
+	for k, v := range a.Configuration {
+		var line string
+
+		if _, err := strconv.ParseFloat(v, 64); err == nil || v == "y" {
+			line = fmt.Sprintf("%s=%s\n", k, v)
+		} else if v == "n" {
+			line = fmt.Sprintf("# %s is not set\n", k)
+		} else {
+			line = fmt.Sprintf("%s=\"%s\"\n", k, v)
+		}
+
+		if _, err := tmpfile.WriteString(line); err != nil {
+			return err
+		}
+	}
+
+	// Sync the file to the storage
+	tmpfile.Sync()
+
+	// Give the file to the make command to import
+	mopts = append(mopts,
+		make.WithExecOptions(
+			exec.WithEnvKey(unikraft.UK_DEFCONFIG, tmpfile.Name()),
+		),
+	)
+
+	return a.DefConfig(mopts...)
+}
+
+func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 	// Write the configuration to a temporary file
 	tmpfile, err := ioutil.TempFile("", a.Name()+"-config*")
 	if err != nil {
