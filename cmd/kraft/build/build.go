@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package build
 
 import (
 	"fmt"
@@ -56,18 +56,18 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
-	"kraftkit.sh/cmd/ukbuild/configure"
-	"kraftkit.sh/cmd/ukbuild/fetch"
-	"kraftkit.sh/cmd/ukbuild/menuconfig"
-	"kraftkit.sh/cmd/ukbuild/prepare"
-	"kraftkit.sh/cmd/ukbuild/set"
-	"kraftkit.sh/cmd/ukbuild/unset"
+	"kraftkit.sh/cmd/kraft/build/configure"
+	"kraftkit.sh/cmd/kraft/build/fetch"
+	"kraftkit.sh/cmd/kraft/build/menuconfig"
+	"kraftkit.sh/cmd/kraft/build/prepare"
+	"kraftkit.sh/cmd/kraft/build/set"
+	"kraftkit.sh/cmd/kraft/build/unset"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
 )
 
-type ukbuildOptions struct {
+type buildOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
@@ -86,12 +86,8 @@ type ukbuildOptions struct {
 	SaveBuildLog string
 }
 
-func main() {
-	f := cmdfactory.New(
-		cmdfactory.WithPackageManager(),
-	)
-
-	cmd, err := cmdutil.NewCmd(f, "ukbuild",
+func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
+	cmd, err := cmdutil.NewCmd(f, "build",
 		cmdutil.WithSubcmds(
 			configure.ConfigureCmd(f),
 			fetch.FetchCmd(f),
@@ -102,10 +98,10 @@ func main() {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'ukbuild' commmand")
+		panic("could not initialize 'build' commmand")
 	}
 
-	opts := &ukbuildOptions{
+	opts := &buildOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,
@@ -113,20 +109,20 @@ func main() {
 	}
 
 	cmd.Short = "Configure and build Unikraft unikernels "
-	cmd.Use = "ukbuild [FLAGS] [SUBCOMMAND|DIR]"
+	cmd.Use = "build [FLAGS] [SUBCOMMAND|DIR]"
 	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Docf(`
 		Configure and build Unikraft unikernels.
 
-		The default behaviour of %[1]sukbuild%[1]s is to build a project.  Given no
+		The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
 		arguments, you will be guided through interactive mode.
 	`, "`")
 	cmd.Example = heredoc.Doc(`
 		# Build the current project (cwd)
-		$ ukbuild
+		$ kraft build
 
 		# Build path to a Unikraft project
-		$ ukbuild path/to/app
+		$ kraft build path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
@@ -217,10 +213,10 @@ func main() {
 		"Do not synchronize Unikraft's configuration before building",
 	)
 
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+	return cmd
 }
 
-func buildRun(opts *ukbuildOptions, workdir string) error {
+func buildRun(opts *buildOptions, workdir string) error {
 	var err error
 
 	cfgm, err := opts.ConfigManager()
@@ -253,7 +249,7 @@ func buildRun(opts *ukbuildOptions, workdir string) error {
 	}
 
 	if !schema.IsWorkdirInitialized(workdir) {
-		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
+		return fmt.Errorf("cannot build uninitialized project! start with: kraft build init")
 	}
 
 	// Interpret the application

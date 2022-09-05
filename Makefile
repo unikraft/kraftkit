@@ -39,9 +39,7 @@ INSTALLDIR  ?= /usr/local/bin/
 REGISTRY    ?= ghcr.io
 ORG         ?= unikraft
 REPO        ?= kraftkit
-BIN         ?= kraftkit \
-               ukbuild \
-               ukpkg
+BIN         ?= kraft
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
 GO_VERSION  ?= 1.17

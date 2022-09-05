@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// Authors: Cezar Craciunoiu <cezar.craciunoiu@gmail.com>
+// Authors: Alexander Jung <alex@unikraft.io>
 //
 // Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
 //
@@ -29,12 +29,10 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package set
+package fetch
 
 import (
-	"fmt"
 	"os"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -49,81 +47,60 @@ import (
 	"kraftkit.sh/schema"
 )
 
-type SetOptions struct {
+type FetchOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
-	Workdir string
+	Platform     string
+	Architecture string
 }
 
-func SetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SetOptions{
+func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &FetchOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "set")
+	cmd, err := cmdutil.NewCmd(f, "fetch")
 	if err != nil {
-		panic("could not initialize 'ukbuild set' commmand")
+		panic("could not initialize 'kraft build fetch' commmand")
 	}
 
-	cmd.Short = "Set a variable for a Unikraft project"
-	cmd.Use = "set [OPTIONS] [param=value ...]"
-	cmd.Aliases = []string{"s"}
+	cmd.Short = "Fetch a Unikraft unikernel's dependencies"
+	cmd.Use = "fetch [DIR]"
+	cmd.Aliases = []string{"f"}
+	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Doc(`
-		set a variable for a Unikraft project`)
+		Fetch a Unikraft unikernel's dependencies`)
 	cmd.Example = heredoc.Doc(`
-		# Set variables in the cwd project
-		$ ukbuild set LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+		# Fetch the cwd project
+		$ kraft build fetch
 
-		# Set variables in a project at a path
-		$ ukbuild set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+		# Fetch a project at a path
+		$ kraft build fetch path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
-		confOpts := []string{}
 
-		// Skip if nothing can be set
 		if len(args) == 0 {
-			return fmt.Errorf("no options to set")
-		}
-
-		// Set the working directory (remove the argument if it exists)
-		if opts.Workdir != "" {
-			workdir = opts.Workdir
-		} else {
 			workdir, err = os.Getwd()
 			if err != nil {
 				return err
 			}
+		} else {
+			workdir = args[0]
 		}
 
-		// Set the configuration options, skip the first one if needed
-		for _, arg := range args {
-			if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
-				return fmt.Errorf("invalid or malformed argument: %s", arg)
-			}
-
-			confOpts = append(confOpts, arg)
-		}
-
-		return setRun(opts, workdir, confOpts)
+		return fetchRun(opts, workdir)
 	}
-
-	cmd.Flags().StringVarP(
-		&opts.Workdir,
-		"workdir", "w",
-		"",
-		"Work on a unikernel at a path",
-	)
 
 	return cmd
 }
 
-func setRun(copts *SetOptions, workdir string, confOpts []string) error {
+func fetchRun(copts *FetchOptions, workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -134,15 +111,6 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		return err
 	}
 
-	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", workdir)
-
-	// Check if the file exists
-	// TODO: offer option to start in interactive mode
-	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
-	}
-
 	// Initialize at least the configuration options for a project
 	projectOpts, err := schema.NewProjectOptions(
 		nil,
@@ -151,8 +119,7 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		schema.WithDefaultConfigPath(),
 		schema.WithPackageManager(&pm),
 		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(true),
-		schema.WithConfig(confOpts),
+		schema.WithDotConfig(false),
 	)
 	if err != nil {
 		return err
@@ -164,7 +131,7 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		return err
 	}
 
-	return project.Set(
+	return project.Fetch(
 		make.WithExecOptions(
 			exec.WithStdin(copts.IO.In),
 		),

@@ -73,7 +73,7 @@ func init() {
 
 	// Register additional command-line flags
 	cmdutil.RegisterFlag(
-		"ukpkg pull",
+		"kraft pkg pull",
 		cmdutil.BoolVarP(
 			&useGit,
 			"git", "g",

@@ -29,51 +29,72 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package source
 
 import (
-	"os"
-
 	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
+
+	"kraftkit.sh/packmanager"
 )
 
-func main() {
-	f := cmdfactory.New()
-	cmd, err := cmdutil.NewCmd(f, "kraftkit")
-	if err != nil {
-		panic("could not initialize root commmand")
+type SourceOptions struct {
+	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
+}
+
+func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &SourceOptions{
+		PackageManager: f.PackageManager,
 	}
 
-	cmd.Short = "Manage the KraftKit toolsuite"
+	cmd, err := cmdutil.NewCmd(f, "source")
+	if err != nil {
+		panic("could not initialize 'kraft pkg source' commmand")
+	}
+
+	cmd.Short = "Add Unikraft component manifests"
+	cmd.Use = "source [FLAGS] [SOURCE]"
+	cmd.Args = cmdutil.MinimumArgs(1, "must specify component or manifest")
+	cmd.Aliases = []string{"a"}
 	cmd.Long = heredoc.Docf(`
-    KraftKit is a suite of tools to manage, configure, build and deploy Unikraft
-    unikernels.  It helps you use unikernels at all stages of their lifecycle.
+	`, "`")
+	cmd.Example = heredoc.Docf(`
+		# Add a single component as a Git repository
+		$ kraft pkg source https://github.com/unikraft/unikraft.git
 
-    Tools available in the toolsuite include:
+		# Add a manifest of components
+		$ kraft pkg source https://raw.github.com/unikraft/index/stable/index.yaml
+	`)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		source := ""
+		if len(args) > 0 {
+			source = args[0]
+		}
+		return sourceRun(opts, source)
+	}
 
-      ukpkg ...... Find, retrieve and package Unikraft unikernels.
-      ukbuild .... Configure and build a Unikraft unikernel.
-      ukrun ...... Run a Unikraft unikernel (OCI-compatible).
-      ukcompose .. Run docker-compose.yml services as Unikraft unikernels.
-      ukdeploy ... Deploy a Unikraft unikernel.
-      kraftkit ... Manage the KraftKit toolsuite. 
-    
-    The %[1]skraftkit%[1]s CLI program itself allows you to manage updates,
-    plugins and authentication to external services used across the toolsuite.`,
-		"`")
-	cmd.Example = heredoc.Doc(`
-    # Check and install updates to the KraftKit toolsuite:
-    $ kraftkit update
+	return cmd
+}
 
-		# Manage configuration settings for KubeKraft
-		$ kraftkit config set ...
+func sourceRun(opts *SourceOptions, source string) error {
+	var err error
 
-    # Install an extension to the KraftKit toolsuite from GitHub:
-    $ kraftkit plugin install github-owner/github-repo
-  `)
+	pm, err := opts.PackageManager()
+	if err != nil {
+		return err
+	}
 
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+	pm, err = pm.IsCompatible(source)
+	if err != nil {
+		return err
+	}
+
+	if err = pm.AddSource(source); err != nil {
+		return err
+	}
+
+	return nil
 }

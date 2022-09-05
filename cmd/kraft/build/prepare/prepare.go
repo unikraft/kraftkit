@@ -29,134 +29,107 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package update
+package prepare
 
 import (
+	"os"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/config"
+	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/internal/logger"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/schema"
 )
 
-type UpdateOptions struct {
+type PrepareOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
-
-	// Command-line arguments
-	Manager string
+	IO             *iostreams.IOStreams
 }
 
-func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UpdateOptions{
+func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &PrepareOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,
+		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "update")
+	cmd, err := cmdutil.NewCmd(f, "prepare")
 	if err != nil {
-		panic("could not initialize subcommmand")
+		panic("could not initialize 'kraft build prepare' commmand")
 	}
 
-	cmd.Short = "Retrieve new lists of Unikraft components, libraries and packages"
-	cmd.Use = "update [FLAGS]"
+	cmd.Short = "Prepare a Unikraft unikernel"
+	cmd.Use = "prepare [DIR]"
+	cmd.Aliases = []string{"p"}
+	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Doc(`
-		Retrieve new lists of Unikraft components, libraries and packages
-	`)
-	cmd.Aliases = []string{"u"}
+		prepare a Unikraft unikernel`)
 	cmd.Example = heredoc.Doc(`
-		$ ukpkg update
+		# Prepare the cwd project
+		$ kraft build prepare
+
+		# Prepare a project at a path
+		$ kraft build prepare path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return updateRun(opts)
-	}
+		workdir := ""
 
-	// TODO: Enable flag if multiple managers are detected?
-	cmd.Flags().StringVarP(
-		&opts.Manager,
-		"manager", "M",
-		"auto",
-		"Force the handler type (Omittion will attempt auto-detect)",
-	)
+		if len(args) == 0 {
+			workdir, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		} else {
+			workdir = args[0]
+		}
+
+		return prepareRun(opts, workdir)
+	}
 
 	return cmd
 }
 
-func updateRun(opts *UpdateOptions) error {
-	plog, err := opts.Logger()
+func prepareRun(copts *PrepareOptions, workdir string) error {
+	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := opts.ConfigManager()
+	plog, err := copts.Logger()
 	if err != nil {
 		return err
 	}
 
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	// Force a particular package manager
-	if len(opts.Manager) > 0 && opts.Manager != "auto" {
-		pm, err = pm.From(opts.Manager)
-		if err != nil {
-			return err
-		}
-	}
-
-	parallel := !cfgm.Config.NoParallel
-	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
-	if norender {
-		parallel = false
-	}
-
-	model, err := processtree.NewProcessTree(
-		[]processtree.ProcessTreeOption{
-			// processtree.WithVerb("Updating"),
-			processtree.IsParallel(parallel),
-			processtree.WithRenderer(norender),
-			processtree.WithLogger(plog),
-		},
-		[]*processtree.ProcessTreeItem{
-			processtree.NewProcessTreeItem(
-				"Updating",
-				"",
-				func(l log.Logger) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					pm.ApplyOptions(
-						packmanager.WithLogger(l),
-					)
-
-					return pm.Update()
-				},
-			),
-		}...,
+	// Initialize at least the configuration options for a project
+	projectOpts, err := schema.NewProjectOptions(
+		nil,
+		schema.WithLogger(plog),
+		schema.WithWorkingDirectory(workdir),
+		schema.WithDefaultConfigPath(),
+		schema.WithPackageManager(&pm),
+		schema.WithResolvedPaths(true),
+		schema.WithDotConfig(false),
 	)
 	if err != nil {
 		return err
 	}
 
-	if err := model.Start(); err != nil {
-		return err
-	}
-
-	plog.Debugf("calculating total packages")
-	catalog, err := pm.Catalog(packmanager.CatalogQuery{})
+	// Interpret the application
+	project, err := schema.NewApplicationFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}
 
-	plog.Infof("found %d packages", len(catalog))
-
-	return nil
+	return project.Prepare(
+		make.WithExecOptions(
+			exec.WithStdin(copts.IO.In),
+		),
+	)
 }

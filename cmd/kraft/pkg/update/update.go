@@ -29,107 +29,134 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package prepare
+package update
 
 import (
-	"os"
-
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
+	"kraftkit.sh/internal/logger"
 	"kraftkit.sh/log"
-	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/schema"
+	"kraftkit.sh/tui/processtree"
 )
 
-type PrepareOptions struct {
+type UpdateOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
+	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
-	IO             *iostreams.IOStreams
+
+	// Command-line arguments
+	Manager string
 }
 
-func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PrepareOptions{
+func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &UpdateOptions{
 		PackageManager: f.PackageManager,
+		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,
-		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "prepare")
+	cmd, err := cmdutil.NewCmd(f, "update")
 	if err != nil {
-		panic("could not initialize 'ukbuild prepare' commmand")
+		panic("could not initialize subcommmand")
 	}
 
-	cmd.Short = "Prepare a Unikraft unikernel"
-	cmd.Use = "prepare [DIR]"
-	cmd.Aliases = []string{"p"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
+	cmd.Short = "Retrieve new lists of Unikraft components, libraries and packages"
+	cmd.Use = "update [FLAGS]"
 	cmd.Long = heredoc.Doc(`
-		prepare a Unikraft unikernel`)
+		Retrieve new lists of Unikraft components, libraries and packages
+	`)
+	cmd.Aliases = []string{"u"}
 	cmd.Example = heredoc.Doc(`
-		# Prepare the cwd project
-		$ ukbuild prepare
-
-		# Prepare a project at a path
-		$ ukbuild prepare path/to/app
+		$ kraft pkg update
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return prepareRun(opts, workdir)
+		return updateRun(opts)
 	}
+
+	// TODO: Enable flag if multiple managers are detected?
+	cmd.Flags().StringVarP(
+		&opts.Manager,
+		"manager", "M",
+		"auto",
+		"Force the handler type (Omittion will attempt auto-detect)",
+	)
 
 	return cmd
 }
 
-func prepareRun(copts *PrepareOptions, workdir string) error {
-	pm, err := copts.PackageManager()
+func updateRun(opts *UpdateOptions) error {
+	plog, err := opts.Logger()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
 	}
 
-	// Initialize at least the configuration options for a project
-	projectOpts, err := schema.NewProjectOptions(
-		nil,
-		schema.WithLogger(plog),
-		schema.WithWorkingDirectory(workdir),
-		schema.WithDefaultConfigPath(),
-		schema.WithPackageManager(&pm),
-		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(false),
+	pm, err := opts.PackageManager()
+	if err != nil {
+		return err
+	}
+
+	// Force a particular package manager
+	if len(opts.Manager) > 0 && opts.Manager != "auto" {
+		pm, err = pm.From(opts.Manager)
+		if err != nil {
+			return err
+		}
+	}
+
+	parallel := !cfgm.Config.NoParallel
+	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
+	if norender {
+		parallel = false
+	}
+
+	model, err := processtree.NewProcessTree(
+		[]processtree.ProcessTreeOption{
+			// processtree.WithVerb("Updating"),
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithLogger(plog),
+		},
+		[]*processtree.ProcessTreeItem{
+			processtree.NewProcessTreeItem(
+				"Updating",
+				"",
+				func(l log.Logger) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					pm.ApplyOptions(
+						packmanager.WithLogger(l),
+					)
+
+					return pm.Update()
+				},
+			),
+		}...,
 	)
 	if err != nil {
 		return err
 	}
 
-	// Interpret the application
-	project, err := schema.NewApplicationFromOptions(projectOpts)
+	if err := model.Start(); err != nil {
+		return err
+	}
+
+	plog.Debugf("calculating total packages")
+	catalog, err := pm.Catalog(packmanager.CatalogQuery{})
 	if err != nil {
 		return err
 	}
 
-	return project.Prepare(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
-	)
+	plog.Infof("found %d packages", len(catalog))
+
+	return nil
 }

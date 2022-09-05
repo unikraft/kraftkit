@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// Authors: Alexander Jung <alex@unikraft.io>
+// Authors: Cezar Craciunoiu <cezar.craciunoiu@gmail.com>
 //
 // Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
 //
@@ -29,10 +29,12 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package menuconfig
+package set
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -47,64 +49,98 @@ import (
 	"kraftkit.sh/schema"
 )
 
-type MenuConfigOptions struct {
+type SetOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
+
+	// Command-line arguments
+	Workdir string
 }
 
-func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &MenuConfigOptions{
+func SetCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &SetOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "menuconfig")
+	cmd, err := cmdutil.NewCmd(f, "set")
 	if err != nil {
-		panic("could not initialize 'ukbuild menuconfig' commmand")
+		panic("could not initialize 'kraft build set' commmand")
 	}
 
-	cmd.Short = "menuconfig open's Unikraft configuration editor TUI"
-	cmd.Use = "menuconfig [DIR]"
-	cmd.Aliases = []string{"m", "menu"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
+	cmd.Short = "Set a variable for a Unikraft project"
+	cmd.Use = "set [OPTIONS] [param=value ...]"
+	cmd.Aliases = []string{"s"}
 	cmd.Long = heredoc.Doc(`
-		Open Unikraft's configuration editor TUI`)
+		set a variable for a Unikraft project`)
 	cmd.Example = heredoc.Doc(`
-		# Open the menuconfig in the cwd project
-		$ ukbuild menuconfig
-		
-		# Open the menuconfig for a project at a path
-		$ ukbuild menu path/to/app
+		# Set variables in the cwd project
+		$ kraft build set LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+
+		# Set variables in a project at a path
+		$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
+		confOpts := []string{}
 
+		// Skip if nothing can be set
 		if len(args) == 0 {
+			return fmt.Errorf("no options to set")
+		}
+
+		// Set the working directory (remove the argument if it exists)
+		if opts.Workdir != "" {
+			workdir = opts.Workdir
+		} else {
 			workdir, err = os.Getwd()
 			if err != nil {
 				return err
 			}
-		} else {
-			workdir = args[0]
 		}
 
-		return menuConfigRun(opts, workdir)
+		// Set the configuration options, skip the first one if needed
+		for _, arg := range args {
+			if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
+				return fmt.Errorf("invalid or malformed argument: %s", arg)
+			}
+
+			confOpts = append(confOpts, arg)
+		}
+
+		return setRun(opts, workdir, confOpts)
 	}
+
+	cmd.Flags().StringVarP(
+		&opts.Workdir,
+		"workdir", "w",
+		"",
+		"Work on a unikernel at a path",
+	)
 
 	return cmd
 }
 
-func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
-	pm, err := mcopts.PackageManager()
+func setRun(copts *SetOptions, workdir string, confOpts []string) error {
+	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := mcopts.Logger()
+	plog, err := copts.Logger()
 	if err != nil {
 		return err
+	}
+
+	// Check if dotconfig exists in workdir
+	dotconfig := fmt.Sprintf("%s/.config", workdir)
+
+	// Check if the file exists
+	// TODO: offer option to start in interactive mode
+	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
+		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
 	}
 
 	// Initialize at least the configuration options for a project
@@ -115,7 +151,8 @@ func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
 		schema.WithDefaultConfigPath(),
 		schema.WithPackageManager(&pm),
 		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(false),
+		schema.WithDotConfig(true),
+		schema.WithConfig(confOpts),
 	)
 	if err != nil {
 		return err
@@ -127,11 +164,9 @@ func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
 		return err
 	}
 
-	return project.Make(
+	return project.Set(
 		make.WithExecOptions(
-			exec.WithStdin(mcopts.IO.In),
-			exec.WithStdout(mcopts.IO.Out),
+			exec.WithStdin(copts.IO.In),
 		),
-		make.WithTarget("menuconfig"),
 	)
 }

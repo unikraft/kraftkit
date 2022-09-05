@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package configure
+package menuconfig
 
 import (
 	"os"
@@ -47,35 +47,36 @@ import (
 	"kraftkit.sh/schema"
 )
 
-type ConfigureOptions struct {
+type MenuConfigOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 }
 
-func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &ConfigureOptions{
+func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &MenuConfigOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "configure")
+	cmd, err := cmdutil.NewCmd(f, "menuconfig")
 	if err != nil {
-		panic("could not initialize 'ukbuild configure' commmand")
+		panic("could not initialize 'kraft build menuconfig' commmand")
 	}
 
-	cmd.Short = "Configure a Unikraft unikernel its dependencies"
-	cmd.Use = "configure [DIR]"
+	cmd.Short = "menuconfig open's Unikraft configuration editor TUI"
+	cmd.Use = "menuconfig [DIR]"
+	cmd.Aliases = []string{"m", "menu"}
 	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Doc(`
-		Configure a Unikraft unikernel its dependencies`)
+		Open Unikraft's configuration editor TUI`)
 	cmd.Example = heredoc.Doc(`
-		# Configure the cwd project
-		$ ukbuild configure
-
-		# Configure a project at a path
-		$ ukbuild configure path/to/app
+		# Open the menuconfig in the cwd project
+		$ kraft build menuconfig
+		
+		# Open the menuconfig for a project at a path
+		$ kraft build menu path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
@@ -89,19 +90,19 @@ func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return configureRun(opts, workdir)
+		return menuConfigRun(opts, workdir)
 	}
 
 	return cmd
 }
 
-func configureRun(copts *ConfigureOptions, workdir string) error {
-	pm, err := copts.PackageManager()
+func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
+	pm, err := mcopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := mcopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -126,9 +127,11 @@ func configureRun(copts *ConfigureOptions, workdir string) error {
 		return err
 	}
 
-	return project.Configure(
+	return project.Make(
 		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(mcopts.IO.In),
+			exec.WithStdout(mcopts.IO.Out),
 		),
+		make.WithTarget("menuconfig"),
 	)
 }

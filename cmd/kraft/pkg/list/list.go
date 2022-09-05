@@ -74,7 +74,7 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "list")
 	if err != nil {
-		panic("could not initialize 'ukpkg list' commmand")
+		panic("could not initialize 'kraft pkg list' commmand")
 	}
 
 	cmd.Short = "List installed Unikraft component packages"
@@ -85,7 +85,7 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 		List installed Unikraft component packages.
 	`)
 	cmd.Example = heredoc.Doc(`
-		$ ukpkg list
+		$ kraft pkg list
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""

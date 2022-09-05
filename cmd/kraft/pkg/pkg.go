@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package pkg
 
 import (
 	"fmt"
@@ -54,16 +54,16 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/target"
 
-	"kraftkit.sh/cmd/ukpkg/list"
-	"kraftkit.sh/cmd/ukpkg/pull"
-	"kraftkit.sh/cmd/ukpkg/source"
-	"kraftkit.sh/cmd/ukpkg/update"
+	"kraftkit.sh/cmd/kraft/pkg/list"
+	"kraftkit.sh/cmd/kraft/pkg/pull"
+	"kraftkit.sh/cmd/kraft/pkg/source"
+	"kraftkit.sh/cmd/kraft/pkg/update"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
 )
 
-type ukpkgOptions struct {
+type pkgOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
@@ -83,12 +83,8 @@ type ukpkgOptions struct {
 	WithDbg      bool
 }
 
-func main() {
-	f := cmdfactory.New(
-		cmdfactory.WithPackageManager(),
-	)
-
-	cmd, err := cmdutil.NewCmd(f, "ukpkg",
+func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
+	cmd, err := cmdutil.NewCmd(f, "pkg",
 		cmdutil.WithSubcmds(
 			list.ListCmd(f),
 			pull.PullCmd(f),
@@ -97,10 +93,10 @@ func main() {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'ukpkg' commmand")
+		panic("could not initialize 'pkg' commmand")
 	}
 
-	opts := &ukpkgOptions{
+	opts := &pkgOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,
@@ -108,17 +104,17 @@ func main() {
 	}
 
 	cmd.Short = "Package and distribute Unikraft unikernels and their dependencies"
-	cmd.Use = "ukpkg [FLAGS] [SUBCOMMAND|DIR]"
+	cmd.Use = "pkg [FLAGS] [SUBCOMMAND|DIR]"
 	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Docf(`
 		Package and distribute Unikraft unikernels and their dependencies.
 
-		With %[1]sukpkg%[1]s you are able to turn output artifacts from %[1]sukbuild%[1]s
+		With %[1]skraft pkg%[1]s you are able to turn output artifacts from %[1]skraft build%[1]s
 		into a distributable archive ready for deployment.  At the same time,
-		%[1]sukpkg%[1]s allows you to manage these archives: pulling, pushing, or
+		%[1]skraft pkg%[1]s allows you to manage these archives: pulling, pushing, or
 		adding them to a project.
 
-		The default behaviour of %[1]sukpkg%[1]s is to package a project.  Given no
+		The default behaviour of %[1]skraft pkg%[1]s is to package a project.  Given no
 		arguments, you will be guided through interactive mode.
 
 		For initram and disk images, passing in a directory as the argument will
@@ -128,16 +124,16 @@ func main() {
 	`, "`")
 	cmd.Example = heredoc.Doc(`
 		# Package the current Unikraft project (cwd)
-		$ ukpkg
+		$ kraft pkg
 
 		# Package path to a Unikraft project
-		$ ukpkg path/to/application
+		$ kraft pkg path/to/application
 
 		# Package with an additional initramfs
-		$ ukpkg --initrd ./root-fs .
+		$ kraft pkg --initrd ./root-fs .
 
 		# Same as above but also save the resulting CPIO artifact locally
-		$ ukpkg --initrd ./root-fs:./root-fs.cpio .
+		$ kraft pkg --initrd ./root-fs:./root-fs.cpio .
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
@@ -237,10 +233,10 @@ func main() {
 		"Additional volumes to bundle within the package",
 	)
 
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+	return cmd
 }
 
-func pkgRun(opts *ukpkgOptions, workdir string) error {
+func pkgRun(opts *pkgOptions, workdir string) error {
 	var err error
 
 	pm, err := opts.PackageManager()
@@ -385,7 +381,7 @@ func initPackage(name string,
 	targ target.TargetConfig,
 	projectOpts *schema.ProjectOptions,
 	pm packmanager.PackageManager,
-	opts *ukpkgOptions,
+	opts *pkgOptions,
 ) ([]pack.Package, error) {
 	var err error
 

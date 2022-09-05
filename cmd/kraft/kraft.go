@@ -29,72 +29,45 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package source
+package main
 
 import (
+	"os"
+
 	"github.com/MakeNowJust/heredoc"
-	"github.com/spf13/cobra"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 
-	"kraftkit.sh/packmanager"
+	"kraftkit.sh/cmd/kraft/build"
+	"kraftkit.sh/cmd/kraft/pkg"
 )
 
-type SourceOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
-
-func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SourceOptions{
-		PackageManager: f.PackageManager,
-	}
-
-	cmd, err := cmdutil.NewCmd(f, "source")
+func main() {
+	f := cmdfactory.New(
+		cmdfactory.WithPackageManager(),
+	)
+	cmd, err := cmdutil.NewCmd(f, "kraft",
+		cmdutil.WithSubcmds(
+			pkg.PkgCmd(f),
+			build.BuildCmd(f),
+		),
+	)
 	if err != nil {
-		panic("could not initialize 'ukpkg source' commmand")
+		panic("could not initialize root commmand")
 	}
 
-	cmd.Short = "Add Unikraft component manifests"
-	cmd.Use = "source [FLAGS] [SOURCE]"
-	cmd.Args = cmdutil.MinimumArgs(1, "must specify component or manifest")
-	cmd.Aliases = []string{"a"}
+	cmd.Short = "Build and use highly customized and ultra-lightweight unikernels"
 	cmd.Long = heredoc.Docf(`
-	`, "`")
-	cmd.Example = heredoc.Docf(`
-		# Add a single component as a Git repository
-		$ ukpkg source https://github.com/unikraft/unikraft.git
 
-		# Add a manifest of components
-		$ ukpkg source https://raw.github.com/unikraft/index/stable/index.yaml
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		source := ""
-		if len(args) > 0 {
-			source = args[0]
-		}
-		return sourceRun(opts, source)
-	}
+       .
+      /^\     Build and use highly customized and ultra-lightweight unikernels.
+     : = :    
+     | = |
+    /|/=\|\   Documentation:    https://kraftkit.sh/
+   (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
+      v v 
+      ' '`)
 
-	return cmd
-}
-
-func sourceRun(opts *SourceOptions, source string) error {
-	var err error
-
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	pm, err = pm.IsCompatible(source)
-	if err != nil {
-		return err
-	}
-
-	if err = pm.AddSource(source); err != nil {
-		return err
-	}
-
-	return nil
+	os.Exit(int(cmdutil.Execute(f, cmd)))
 }

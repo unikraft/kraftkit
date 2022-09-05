@@ -292,7 +292,7 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 
 	if !a.Unikraft.IsUnpackedInProject(a.WorkingDir) {
 		// TODO: Produce better error messages (see #34).  In this case, we should
-		// indicate that `ukpkg pull` needs to occur
+		// indicate that `kraft pkg pull` needs to occur
 		return fmt.Errorf("cannot build without Unikraft core component source")
 	}
 

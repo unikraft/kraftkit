@@ -93,19 +93,19 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 		Pull a Unikraft unikernel, component microlibrary from a remote location`)
 	cmd.Example = heredoc.Doc(`
 		# Pull the dependencies for a project in the current working directory
-		$ ukpkg pull
+		$ kraft pkg pull
 		
 		# Pull dependencies for a project at a path
-		$ ukpkg pull path/to/app
+		$ kraft pkg pull path/to/app
 
 		# Pull a source repository
-		$ ukpkg pull github.com/unikraft/app-nginx.git
+		$ kraft pkg pull github.com/unikraft/app-nginx.git
 
 		# Pull an OCI-packaged Unikraft unikernel
-		$ ukpkg pull unikraft.io/nginx:1.21.6
+		$ kraft pkg pull unikraft.io/nginx:1.21.6
 
 		# Pull from a manifest
-		$ ukpkg pull nginx@1.21.6
+		$ kraft pkg pull nginx@1.21.6
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		query := ""

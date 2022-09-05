@@ -41,7 +41,7 @@ release:
   name_template: 'v{{ .Version }}'
 
 builds:
-#@ for binary in ["kraftkit", "ukpkg"]:
+#@ for binary in ["kraft"]:
   - id: #@ "{}-linuxu".format(binary)
     binary: #@ binary
     main: #@ "./cmd/{}".format(binary)

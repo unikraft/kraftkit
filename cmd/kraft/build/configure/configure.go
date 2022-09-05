@@ -29,7 +29,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package fetch
+package configure
 
 import (
 	"os"
@@ -47,40 +47,35 @@ import (
 	"kraftkit.sh/schema"
 )
 
-type FetchOptions struct {
+type ConfigureOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
-
-	// Command-line arguments
-	Platform     string
-	Architecture string
 }
 
-func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &FetchOptions{
+func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &ConfigureOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
-	cmd, err := cmdutil.NewCmd(f, "fetch")
+	cmd, err := cmdutil.NewCmd(f, "configure")
 	if err != nil {
-		panic("could not initialize 'ukbuild fetch' commmand")
+		panic("could not initialize 'kraft build configure' commmand")
 	}
 
-	cmd.Short = "Fetch a Unikraft unikernel's dependencies"
-	cmd.Use = "fetch [DIR]"
-	cmd.Aliases = []string{"f"}
+	cmd.Short = "Configure a Unikraft unikernel its dependencies"
+	cmd.Use = "configure [DIR]"
 	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Doc(`
-		Fetch a Unikraft unikernel's dependencies`)
+		Configure a Unikraft unikernel its dependencies`)
 	cmd.Example = heredoc.Doc(`
-		# Fetch the cwd project
-		$ ukbuild fetch
+		# Configure the cwd project
+		$ kraft build configure
 
-		# Fetch a project at a path
-		$ ukbuild fetch path/to/app
+		# Configure a project at a path
+		$ kraft build configure path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
@@ -94,13 +89,13 @@ func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return fetchRun(opts, workdir)
+		return configureRun(opts, workdir)
 	}
 
 	return cmd
 }
 
-func fetchRun(copts *FetchOptions, workdir string) error {
+func configureRun(copts *ConfigureOptions, workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -131,7 +126,7 @@ func fetchRun(copts *FetchOptions, workdir string) error {
 		return err
 	}
 
-	return project.Fetch(
+	return project.Configure(
 		make.WithExecOptions(
 			exec.WithStdin(copts.IO.In),
 		),

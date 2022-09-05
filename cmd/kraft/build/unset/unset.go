@@ -66,7 +66,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "unset")
 	if err != nil {
-		panic("could not initialize 'ukbuild unset' commmand")
+		panic("could not initialize 'kraft build unset' commmand")
 	}
 
 	cmd.Short = "Unset a variable for a Unikraft project"
@@ -76,10 +76,10 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 		unset a variable for a Unikraft project`)
 	cmd.Example = heredoc.Doc(`
 		# Unset variables in the cwd project
-		$ ukbuild unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+		$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
 		# Unset variables in a project at a path
-		$ ukbuild unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+		$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
