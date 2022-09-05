@@ -193,6 +193,16 @@ func (a *ApplicationConfig) Prepare(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Clean the application
+func (a *ApplicationConfig) Clean(mopts ...make.MakeOption) error {
+	return a.Make(append(mopts,
+		make.WithExecOptions(
+			exec.WithStdout(a.Log().Output()),
+		),
+		make.WithTarget("clean"),
+	)...)
+}
+
 // Fetch component sources for the applications
 func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
