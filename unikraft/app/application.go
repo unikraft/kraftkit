@@ -211,7 +211,6 @@ func (a *ApplicationConfig) Properclean(mopts ...make.MakeOption) error {
 		),
 		make.WithTarget("properclean"),
 	)...)
-
 }
 
 // Fetch component sources for the applications
