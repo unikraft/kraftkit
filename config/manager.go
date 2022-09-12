@@ -57,6 +57,15 @@ func WithFeeder(feeder Feeder) ConfigManagerOption {
 	}
 }
 
+// WithEnv adds the environment variables feeder.
+func WithEnv() ConfigManagerOption {
+	return func(cm *ConfigManager) error {
+		envf := EnvFeeder{}
+		err := WithFeeder(envf)(cm)
+		return err
+	}
+}
+
 func WithFile(file string, forceCreate bool) ConfigManagerOption {
 	return func(cm *ConfigManager) error {
 		ext := strings.Split(file, ".")

@@ -140,6 +140,7 @@ func WithDefaultConfigManager() CliOption {
 
 			cfgm, cfge := config.NewConfigManager(
 				config.WithDefaultConfigFile(),
+				config.WithEnv(),
 			)
 
 			return cfgm, cfge
