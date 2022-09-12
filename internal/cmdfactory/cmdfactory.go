@@ -117,6 +117,7 @@ func configManagerFunc() func() (*config.ConfigManager, error) {
 
 		cfgm, cfge = config.NewConfigManager(
 			config.WithDefaultConfigFile(),
+			config.WithEnv(),
 		)
 
 		return cfgm, cfge
