@@ -38,17 +38,17 @@ type AuthConfig struct {
 	User      string `json:"user"       yaml:"user"       env:"KRAFTKIT_AUTH_%s_USER"`
 	Token     string `json:"token"      yaml:"token"      env:"KRAFTKIT_AUTH_%s_TOKEN"`
 	Endpoint  string `json:"endpoint"   yaml:"endpoint"   env:"KRAFTKIT_AUTH_%s_ENDPOINT"`
-	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" default:"true"`
+	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL"`
 }
 
 type Config struct {
-	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"    default:"false"`
-	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"  default:"true"`
+	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"`
+	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"`
+	Emojis         bool   `json:"no_emojis"        yaml:"no_emojis"                  env:"KRAFTKIT_NO_EMOJIS"`
 	Editor         string `json:"editor"           yaml:"editor,omitempty"           env:"KRAFTKIT_EDITOR"`
 	Browser        string `json:"browser"          yaml:"browser,omitempty"          env:"KRAFTKIT_BROWSER"`
-	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL" default:"https"`
+	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL"`
 	Pager          string `json:"pager"            yaml:"pager,omitempty"            env:"KRAFTKIT_PAGER"`
-	Emojis         bool   `json:"emojis"           yaml:"emojis"                     env:"KRAFTKIT_EMOJIS"       default:"true"`
 	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
 
 	Paths struct {
@@ -59,9 +59,9 @@ type Config struct {
 	} `json:"paths" yaml:"paths,omitempty"`
 
 	Log struct {
-		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"info"`
-		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" default:"false"`
-		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"       default:"fancy"`
+		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"`
+		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS"`
+		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"`
 	} `json:"log" yaml:"log"`
 
 	Unikraft struct {
