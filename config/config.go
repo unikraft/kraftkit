@@ -31,13 +31,6 @@
 
 package config
 
-import (
-	"fmt"
-	"path/filepath"
-	"reflect"
-	"strconv"
-)
-
 // AuthConfig represents a very abstract representation of authentication used
 // by some service.  Most APIs and services which can be authenticated have the
 // defined four parameters found within AuthConfig.
@@ -143,94 +136,4 @@ var configDetails = []ConfigDetail{
 
 func ConfigDetails() []ConfigDetail {
 	return configDetails
-}
-
-func NewDefaultConfig() (*Config, error) {
-	c := &Config{}
-
-	if err := setDefaults(c); err != nil {
-		return nil, fmt.Errorf("could not set defaults for config: %s", err)
-	}
-
-	// Add default path for plugins..
-	if len(c.Paths.Plugins) == 0 {
-		c.Paths.Plugins = filepath.Join(DataDir(), "plugins")
-	}
-
-	// ..for configuration files..
-	if len(c.Paths.Config) == 0 {
-		c.Paths.Config = filepath.Join(ConfigDir())
-	}
-
-	// ..for manifest files..
-	if len(c.Paths.Manifests) == 0 {
-		c.Paths.Manifests = filepath.Join(DataDir(), "manifests")
-	}
-
-	// ..and for cached source files
-	if len(c.Paths.Sources) == 0 {
-		c.Paths.Sources = filepath.Join(DataDir(), "sources")
-	}
-
-	return c, nil
-}
-
-func setDefaults(s interface{}) error {
-	return setDefaultValue(reflect.ValueOf(s), "")
-}
-
-func setDefaultValue(v reflect.Value, def string) error {
-	if v.Kind() != reflect.Ptr {
-		return fmt.Errorf("not a pointer value")
-	}
-
-	v = reflect.Indirect(v)
-
-	switch v.Kind() {
-	case reflect.Int:
-		if len(def) > 0 {
-			i, err := strconv.ParseInt(def, 10, 64)
-			if err != nil {
-				return fmt.Errorf("could not parse default integer value: %s", err)
-			}
-			v.SetInt(i)
-		}
-
-	case reflect.String:
-		if len(def) > 0 {
-			v.SetString(def)
-		}
-
-	case reflect.Bool:
-		if len(def) > 0 {
-			b, err := strconv.ParseBool(def)
-			if err != nil {
-				return fmt.Errorf("could not parse default boolean value: %s", err)
-			}
-			v.SetBool(b)
-		} else {
-			// Assume false by default
-			v.SetBool(false)
-		}
-
-	case reflect.Struct:
-		// Iterate over the struct fields
-		for i := 0; i < v.NumField(); i++ {
-			// Use the `default:""` tag as a hint for the value to set
-			if err := setDefaultValue(
-				v.Field(i).Addr(),
-				v.Type().Field(i).Tag.Get("default"),
-			); err != nil {
-				return err
-			}
-		}
-
-	// TODO: Arrays? Maps?
-
-	default:
-		// Ignore this value and property entirely
-		return nil
-	}
-
-	return nil
 }
