@@ -38,6 +38,28 @@ import (
 	"strconv"
 )
 
+const (
+	DefaultNoPrompt      = "false"
+	DefaultNoParallel    = "true"
+	DefaultNoEmojis      = "false"
+	DefaultGitProtocol   = "https"
+	DefaultLogLevel      = "info"
+	DefaultLogTimestamps = "false"
+	DefaultLogType       = "fancy"
+)
+
+func Defaults() map[string]string {
+	return map[string]string{
+		"KRAFTKIT_NO_PROMPT":      DefaultNoPrompt,
+		"KRAFTKIT_NO_PARALLEL":    DefaultNoParallel,
+		"KRAFTKIT_NO_EMOJIS":      DefaultNoEmojis,
+		"KRAFTKIT_GIT_PROTOCOL":   DefaultGitProtocol,
+		"KRAFTKIT_LOG_LEVEL":      DefaultLogLevel,
+		"KRAFTKIT_LOG_TIMESTAMPS": DefaultLogTimestamps,
+		"KRAFTKIT_LOG_TYPE":       DefaultLogType,
+	}
+}
+
 func NewDefaultConfig() (*Config, error) {
 	c := &Config{}
 
@@ -109,10 +131,11 @@ func setDefaultValue(v reflect.Value, def string) error {
 	case reflect.Struct:
 		// Iterate over the struct fields
 		for i := 0; i < v.NumField(); i++ {
-			// Use the `default:""` tag as a hint for the value to set
+			// Use the `env` tag to look up the default value
+			def = Defaults()[v.Type().Field(i).Tag.Get("env")]
 			if err := setDefaultValue(
 				v.Field(i).Addr(),
-				v.Type().Field(i).Tag.Get("default"),
+				def,
 			); err != nil {
 				return err
 			}
