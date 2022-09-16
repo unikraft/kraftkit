@@ -42,7 +42,7 @@ REPO        ?= kraftkit
 BIN         ?= kraft
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
-GO_VERSION  ?= 1.17
+GO_VERSION  ?= 1.18
 
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
@@ -113,7 +113,7 @@ $(addprefix $(.PROXY), $(BIN)):
 
 # Create an environment where we can build
 .PHONY: container
-container: GO_VERSION         ?= 1.17
+container: GO_VERSION         ?= 1.18
 container: DOCKER_BUILD_EXTRA ?=
 container: ENVIRONMENT        ?= myself
 container: IMAGE              ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TAG)
