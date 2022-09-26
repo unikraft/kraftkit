@@ -29,14 +29,14 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-ARG DEBIAN_VERSION=stretch-20200224
+ARG DEBIAN_VERSION=bullseye-20220912
 
 FROM debian:${DEBIAN_VERSION} AS gcc-build
 
-ARG BINUTILS_VERSION=2.31.1
-ARG GCC_VERSION=9.2.0
+ARG BINUTILS_VERSION=2.39
+ARG GCC_VERSION=12.2.0
 ARG UK_ARCH=x86_64
-ARG GLIB_VERSION=2.11
+ARG GLIB_VERSION=2.31
 ENV PREFIX=/out
 
 RUN set -ex; \
@@ -48,7 +48,7 @@ RUN set -ex; \
         libgmp3-dev \
         libmpfr-dev \
         libisl-dev \
-        libcloog-isl-dev \
+        libgnutls28-dev \
         libmpc-dev \
         texinfo \
         bison \
@@ -105,14 +105,10 @@ RUN set -ex; \
         --disable-shared \
         --disable-multilib \
         --disable-decimal-float \
-        --disable-threads \
-        --disable-libatomic \
         --disable-libgomp \
-        --disable-libmpx \
         --disable-libquadmath \
         --disable-libssp \
         --disable-libvtv \
-        --disable-libstdcxx \
         --disable-host-shared \
         --with-boot-ldflags=-static \
         --with-stage1-ldflags=-static \
@@ -130,10 +126,11 @@ RUN set -ex; \
     esac; \
     GCC_CONFIGURE_ARGS="$GCC_CONFIGURE_ARGS --target=${GCC_PREFIX}"; \
     ../gcc-${GCC_VERSION}/configure ${GCC_CONFIGURE_ARGS}; \
-    make all-gcc; \
+    make -j$(($(nproc) - 1)) all-gcc; \
     make install-gcc; \
     make all-target-libgcc; \
-    make install-target-libgcc;
+    make install-target-libgcc; \
+    rm -rf ${PREFIX}/src;
 
 FROM scratch AS gcc
 
