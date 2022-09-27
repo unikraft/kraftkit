@@ -167,25 +167,26 @@ package {{.GoPackageName}}
 	serviceTemplate = template.Must(template.New("service").Parse(ServiceTemplate))
 	ServiceTemplate = `
 import (
-	"io"
-	"fmt"
-	"sync"
-	"reflect"
+	"bufio"
 	"encoding/json"
+	"fmt"
+	"io"
+	"reflect"
+	"sync"
 )
 
 type {{ .GoName }}Client struct {
 	conn io.ReadWriteCloser
 	lock sync.RWMutex
-	send *json.Encoder
-	recv *json.Decoder
+	recv *bufio.Reader
+	send *bufio.Writer
 }
 
 func New{{ .GoName }}Client(conn io.ReadWriteCloser) *{{ .GoName }}Client {
 	return &{{ .GoName }}Client{
 		conn: conn,
-		send: json.NewEncoder(conn),
-		recv: json.NewDecoder(conn),
+		recv: bufio.NewReader(conn),
+		send: bufio.NewWriter(conn),
 	}
 }
 
@@ -282,6 +283,9 @@ func (c *{{ .ServiceGoName }}Client) {{ .GoName }}(
 	req {{ .Input.GoIdent.GoName -}}
 	{{ end -}}
 ) ({{ if and $hasRes $resAsAny }}*any, {{ else if $hasRes }}*{{ .Output.GoIdent.GoName }}, {{ end }}error) {
+	var b []byte
+	var err error
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -292,15 +296,26 @@ func (c *{{ .ServiceGoName }}Client) {{ .GoName }}(
 	{{ end }}
 
 	{{ if $hasReq }}
-	if err := c.send.Encode(req); err != nil {
-		return {{ if $hasRes }}nil, {{ end }}fmt.Errorf("failed to send {{ .Input.GoIdent.GoName }}: %v", err)
+	b, err = json.Marshal(req)
+	if err != nil {
+		return {{ if $hasRes }}nil, {{ end }}err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return {{ if $hasRes }}nil, {{ end }}err
+	}
+	if err := c.send.Flush(); err != nil {
+		return {{ if $hasRes }}nil, {{ end }}err
 	}
 	{{ end }}
 
 	{{ if $hasRes }}
 	var res {{ if $resAsAny }}any{{ else }}{{ .Output.GoIdent.GoName }}{{ end }}
-	if err := c.recv.Decode(&res); err != nil {
-		return nil, fmt.Errorf("failed to receive {{ .Output.GoIdent.GoName }}: %v", err)
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
 	}
 
 	return &res, nil
