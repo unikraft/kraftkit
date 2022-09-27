@@ -45,9 +45,11 @@ import (
 var (
 	extTypes = new(protoregistry.Types)
 
-	emitEmpty          = flag.Bool("emit_empty", false, "render google.protobuf.Empty")
-	emitAnyAsGeneric   = flag.Bool("emit_any_as_generic", false, "render google.protobuf.Any as generic")
-	emitMessageOptions = flag.Bool("emit_message_options", false, "render MessageOptions and their set values")
+	emitEmpty            = flag.Bool("emit_empty", false, "render google.protobuf.Empty")
+	emitAnyAsGeneric     = flag.Bool("emit_any_as_generic", false, "render google.protobuf.Any as generic")
+	emitMessageOptions   = flag.Bool("emit_message_options", false, "render MessageOptions and their set values")
+	emitEnumPrefix       = flag.Bool("emit_enum_prefix", false, "render enums with name prefix")
+	remapEnumViaJsonName = flag.Bool("remap_enum_via_json_name", false, "recognize 'json_name' enum value option and use as string value for enums")
 )
 
 // Recursively register all extensions into the provided protoregistry.Types,
@@ -94,15 +96,17 @@ func main() {
 		}
 
 		opts := Options{
-			EmitEmpty:          *emitEmpty,
-			EmitMessageOptions: *emitMessageOptions,
-			EmitAnyAsGeneric:   *emitAnyAsGeneric,
+			EmitEmpty:            *emitEmpty,
+			EmitMessageOptions:   *emitMessageOptions,
+			EmitAnyAsGeneric:     *emitAnyAsGeneric,
+			EmitEnumPrefix:       *emitEnumPrefix,
+			RemapEnumViaJsonName: *remapEnumViaJsonName,
 		}
 
 		for _, name := range gen.Request.FileToGenerate {
 			f := gen.FilesByPath[name]
 
-			if len(f.Messages) == 0 && len(f.Services) == 0 {
+			if len(f.Messages) == 0 && len(f.Services) == 0 && len(f.Enums) == 0 {
 				glog.V(1).Infof("Skipping %s, no messages and services", name)
 				continue
 			}

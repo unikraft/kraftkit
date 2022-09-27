@@ -33,8 +33,10 @@ package main
 
 import (
 	"io"
+	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/golang/glog"
 	"github.com/iancoleman/strcase"
 	"google.golang.org/protobuf/compiler/protogen"
@@ -46,9 +48,11 @@ import (
 
 // Options are the options to set for rendering the template.
 type Options struct {
-	EmitEmpty          bool
-	EmitMessageOptions bool
-	EmitAnyAsGeneric   bool
+	EmitEmpty            bool
+	EmitMessageOptions   bool
+	EmitAnyAsGeneric     bool
+	EmitEnumPrefix       bool
+	RemapEnumViaJsonName bool
 }
 
 type header struct {
@@ -63,10 +67,15 @@ type service struct {
 
 type enum struct {
 	*protogen.Enum
+	JSONNames map[string]string
 	Options
 }
 
 func (e enum) ToCamel(name protoreflect.Name) string {
+	if strings.ToUpper(string(name)) == string(name) {
+		return "_" + string(name)
+	}
+
 	return strcase.ToCamel(string(name))
 }
 
@@ -120,7 +129,7 @@ func (m message) KindToGoType(kind protoreflect.Kind) (typ string) {
 	case protoreflect.BytesKind:
 		typ = "[]byte"
 	default:
-		typ = ""
+		typ = "any"
 	}
 
 	return
@@ -248,7 +257,10 @@ type {{ .ToCamel .Message.GoIdent.GoName }} struct {
 {{ if $field.Comments.Leading -}}
 	{{ $field.Comments.Leading -}}
 {{ end -}}
-{{ $type := $this.FieldToGoType $field -}}
+{{ $type := "any" -}}
+{{ if not (and ($field.Message) (eq $field.Message.Desc.FullName "google.protobuf.Any")) -}}
+{{ $type = $this.FieldToGoType $field -}}
+{{ end -}}
 {{ if ne $type "" -}}
 {{ $this.ToCamel $field.GoName }} {{ $type }} {{ $tick }}json:"{{ $field.Desc.JSONName }}"{{ $tick }}
 {{ end -}}
@@ -256,7 +268,7 @@ type {{ .ToCamel .Message.GoIdent.GoName }} struct {
 }
 `
 
-	enumTemplate = template.Must(template.New("enum").Parse(EnumTemplate))
+	enumTemplate = template.Must(template.New("enum").Funcs(sprig.TxtFuncMap()).Parse(EnumTemplate))
 	EnumTemplate = `
 {{ $this := . }}
 {{ if .Enum.Comments.Leading -}}
@@ -268,9 +280,21 @@ const (
 		{{ if $field.Comments.Leading -}}
 			{{ $field.Comments.Leading -}}
 		{{ end -}}
-		{{ $this.Enum.GoIdent.GoName }}{{ $this.ToCamel $field.Desc.Name }} = string("{{ $field.Desc.Name }}")
+		{{ $field.GoIdent.GoName }} = {{ $this.Enum.GoIdent.GoName }}("{{ with (index $this.JSONNames ( $field.Desc.Name | toString )) }}{{ . }}{{ else }}{{ $field.Desc.Name }}{{ end }}")
 	{{ end -}}
 )
+
+func (e {{ .Enum.GoIdent.GoName }}) String() string {
+	return string(e)
+}
+
+func {{ .Enum.GoIdent.GoName }}s() []{{ .Enum.GoIdent.GoName }} {
+	return []{{ .Enum.GoIdent.GoName }}{
+		{{ range $field := .Enum.Values -}}
+		{{ $field.GoIdent.GoName }},
+		{{ end }}
+	}
+}
 `
 
 	methodTemplate = template.Must(template.New("method").Parse(MethodTemplate))
@@ -325,6 +349,64 @@ func (c *{{ .ServiceGoName }}Client) {{ .GoName }}(
 }
 `
 )
+
+func applyEnums(w io.Writer, enums []*protogen.Enum, opts Options) error {
+	for _, e := range enums {
+		if e.Desc.IsPlaceholder() {
+			glog.V(2).Infof("Skipping placeholder enum %s", e.GoIdent.GoName)
+		}
+
+		jsonNames := make(map[string]string)
+
+		glog.V(2).Infof("Processing enum %s", e.GoIdent.GoName)
+
+		for i, ev := range e.Values {
+			// Temporarily remove the parent prefix name from the GoIdent so we can
+			// later re-apply it in case its value has changed
+			e.Values[i].GoIdent.GoName = strings.TrimPrefix(e.Values[i].GoIdent.GoName, e.Values[i].Parent.GoIdent.GoName+"_")
+
+			desc := protodesc.ToEnumValueDescriptorProto(ev.Desc)
+			if desc.Options != nil && opts.RemapEnumViaJsonName {
+				options := ev.Desc.Options().(*descriptorpb.EnumValueOptions)
+				b, err := proto.Marshal(options)
+				if err != nil {
+					return err
+				}
+
+				options.Reset()
+				err = proto.UnmarshalOptions{Resolver: extTypes}.Unmarshal(b, options)
+				if err != nil {
+					return err
+				}
+
+				options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+					if !fd.IsExtension() {
+						return true
+					}
+
+					if fd.Name() == "json_name" {
+						jsonNames[string(ev.Desc.Name())] = v.String()
+					}
+
+					return true
+				})
+			}
+
+			//
+			if opts.EmitEnumPrefix {
+				e.Values[i].GoIdent.GoName = e.Values[i].Parent.GoIdent.GoName + "_" + e.Values[i].GoIdent.GoName
+			}
+		}
+
+		if err := enumTemplate.Execute(w, enum{
+			e, jsonNames, opts,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func applyMessages(w io.Writer, messages []*protogen.Message, opts Options) error {
 	for _, m := range messages {
@@ -424,18 +506,8 @@ func ApplyTemplate(w io.Writer, f *protogen.File, opts Options) error {
 		}
 	}
 
-	for _, e := range f.Enums {
-		if e.Desc.IsPlaceholder() {
-			glog.V(2).Infof("Skipping placeholder enum %s", e.GoIdent.GoName)
-		}
-
-		glog.V(2).Infof("Processing enum %s", e.GoIdent.GoName)
-
-		if err := enumTemplate.Execute(w, enum{
-			e, opts,
-		}); err != nil {
-			return err
-		}
+	if err := applyEnums(w, f.Enums, opts); err != nil {
+		return err
 	}
 
 	if err := applyMessages(w, f.Messages, opts); err != nil {
