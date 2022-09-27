@@ -50,6 +50,7 @@ var (
 	emitMessageOptions   = flag.Bool("emit_message_options", false, "render MessageOptions and their set values")
 	emitEnumPrefix       = flag.Bool("emit_enum_prefix", false, "render enums with name prefix")
 	remapEnumViaJsonName = flag.Bool("remap_enum_via_json_name", false, "recognize 'json_name' enum value option and use as string value for enums")
+	mapEnumToMessage     = flag.Bool("map_enum_to_message", false, "create a map between an enum and a known message")
 )
 
 // Recursively register all extensions into the provided protoregistry.Types,
@@ -101,6 +102,7 @@ func main() {
 			EmitAnyAsGeneric:     *emitAnyAsGeneric,
 			EmitEnumPrefix:       *emitEnumPrefix,
 			RemapEnumViaJsonName: *remapEnumViaJsonName,
+			MapEnumToMessage:     *mapEnumToMessage,
 		}
 
 		for _, name := range gen.Request.FileToGenerate {

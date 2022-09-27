@@ -53,11 +53,14 @@ type Options struct {
 	EmitAnyAsGeneric     bool
 	EmitEnumPrefix       bool
 	RemapEnumViaJsonName bool
+	MapEnumToMessage     bool
 }
 
 type header struct {
 	*protogen.File
 	Options
+	HasService bool
+	HasEnumMap bool
 }
 
 type service struct {
@@ -69,6 +72,7 @@ type enum struct {
 	*protogen.Enum
 	JSONNames map[string]string
 	Options
+	MapValues map[string]string
 }
 
 func (e enum) ToCamel(name protoreflect.Name) string {
@@ -171,19 +175,24 @@ var (
 // source: {{ .Proto.Name }}
 
 package {{.GoPackageName}}
-`
-
-	serviceTemplate = template.Must(template.New("service").Parse(ServiceTemplate))
-	ServiceTemplate = `
+{{ if (or .HasService .HasEnumMap) }}
 import (
+{{ if .HasService }}
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+{{- end }}
 	"reflect"
+{{ if .HasService -}}
 	"sync"
+{{ end }}
 )
+{{ end }}
+`
 
+	serviceTemplate = template.Must(template.New("service").Parse(ServiceTemplate))
+	ServiceTemplate = `
 type {{ .GoName }}Client struct {
 	conn io.ReadWriteCloser
 	lock sync.RWMutex
@@ -295,6 +304,16 @@ func {{ .Enum.GoIdent.GoName }}s() []{{ .Enum.GoIdent.GoName }} {
 		{{ end }}
 	}
 }
+
+{{ if (and .Options.MapEnumToMessage (ne (len .MapValues) 0)) }}
+func {{ .Enum.GoIdent.GoName }}TypeMap() map[{{ .Enum.GoIdent.GoName }}]reflect.Type {
+	return map[{{ .Enum.GoIdent.GoName }}]reflect.Type{
+		{{ range $key, $val := .MapValues -}}
+		{{ $key }}: reflect.TypeOf({{ $val }}{}),
+		{{ end }}
+	}
+}
+{{ end }}
 `
 
 	methodTemplate = template.Must(template.New("method").Parse(MethodTemplate))
@@ -357,6 +376,7 @@ func applyEnums(w io.Writer, enums []*protogen.Enum, opts Options) error {
 		}
 
 		jsonNames := make(map[string]string)
+		mapVals := make(map[string]string)
 
 		glog.V(2).Infof("Processing enum %s", e.GoIdent.GoName)
 
@@ -366,7 +386,7 @@ func applyEnums(w io.Writer, enums []*protogen.Enum, opts Options) error {
 			e.Values[i].GoIdent.GoName = strings.TrimPrefix(e.Values[i].GoIdent.GoName, e.Values[i].Parent.GoIdent.GoName+"_")
 
 			desc := protodesc.ToEnumValueDescriptorProto(ev.Desc)
-			if desc.Options != nil && opts.RemapEnumViaJsonName {
+			if desc.Options != nil && (opts.RemapEnumViaJsonName || opts.MapEnumToMessage) {
 				options := ev.Desc.Options().(*descriptorpb.EnumValueOptions)
 				b, err := proto.Marshal(options)
 				if err != nil {
@@ -384,8 +404,11 @@ func applyEnums(w io.Writer, enums []*protogen.Enum, opts Options) error {
 						return true
 					}
 
-					if fd.Name() == "json_name" {
+					if fd.Name() == "json_name" && opts.RemapEnumViaJsonName {
 						jsonNames[string(ev.Desc.Name())] = v.String()
+					}
+					if fd.Name() == "map_message" && opts.MapEnumToMessage {
+						mapVals[string(ev.Desc.Name())] = v.String()
 					}
 
 					return true
@@ -399,7 +422,7 @@ func applyEnums(w io.Writer, enums []*protogen.Enum, opts Options) error {
 		}
 
 		if err := enumTemplate.Execute(w, enum{
-			e, jsonNames, opts,
+			e, jsonNames, opts, mapVals,
 		}); err != nil {
 			return err
 		}
@@ -475,8 +498,58 @@ func applyMessages(w io.Writer, messages []*protogen.Message, opts Options) erro
 // ApplyTemplate accepts an input proto file and emits each service method,
 // enums and messages.
 func ApplyTemplate(w io.Writer, f *protogen.File, opts Options) error {
+	hasService := false
+	hasEnumMap := false
+
+	for _, s := range f.Services {
+		if s.Desc.IsPlaceholder() {
+			continue
+		}
+
+		hasService = true
+		break
+	}
+
+	if opts.MapEnumToMessage {
+	loop:
+		for _, e := range f.Enums {
+			for _, ev := range e.Values {
+				desc := protodesc.ToEnumValueDescriptorProto(ev.Desc)
+				if desc.Options != nil {
+					options := ev.Desc.Options().(*descriptorpb.EnumValueOptions)
+					b, err := proto.Marshal(options)
+					if err != nil {
+						return err
+					}
+
+					options.Reset()
+					err = proto.UnmarshalOptions{Resolver: extTypes}.Unmarshal(b, options)
+					if err != nil {
+						return err
+					}
+
+					options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+						if !fd.IsExtension() {
+							return true
+						}
+
+						if fd.Name() == "map_message" {
+							hasEnumMap = true
+						}
+
+						return true
+					})
+
+					if hasEnumMap {
+						break loop
+					}
+				}
+			}
+		}
+	}
+
 	if err := headerTemplate.Execute(w, header{
-		f, opts,
+		f, opts, hasService, hasEnumMap,
 	}); err != nil {
 		return err
 	}
