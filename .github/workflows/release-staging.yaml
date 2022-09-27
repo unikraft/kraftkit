@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     container: goreleaser/goreleaser-cross:v1.18.3
     steps:
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install libgit2-dev
+        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -31,10 +35,6 @@ jobs:
           echo "65dbc4f3a4a2ed84296dd1b323e8e7bd77e488fa7540d12dd36cf7fb2fc77c03  /tmp/ytt" | sha256sum -c -
           mv /tmp/ytt /usr/local/bin/ytt
           chmod +x /usr/local/bin/ytt
-      
-      # Temporary workaround until this pipeline uses the 'myself' buildenv
-      - name: Install libgit2-dev
-        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
       
       - name: Generate GoReleaser configuration
         run: |
