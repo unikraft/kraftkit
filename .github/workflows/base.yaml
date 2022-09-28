@@ -1,0 +1,154 @@
+name: Build environment
+
+# Build only on changes to the build environment itself
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
+    paths:
+      - '.github/workflows/myself.yaml'
+      - '.github/workflows/base.yaml'
+      - 'buildenvs/myself.Dockefile'
+      - 'buildenvs/gcc.Dockefile'
+      - 'buildenvs/qemu.Dockefile'
+      - 'buildenvs/base.Dockefile'
+      - 'Makefile'
+
+jobs:
+  gcc-x86_64:
+    runs-on: ubuntu-latest
+    env:
+      GCC_VERSION: 11.2.0
+      GCC_ARCH: x86_64
+      GCC_SUFFIX:
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build
+        uses: docker/build-push-action@v3
+        with:
+          file: ./buildenvs/gcc.Dockerfile
+          tags: unikraft/kraftkit/gcc:${{ env.GCC_VERSION }}-${{ env.GCC_ARCH }}${{ env.GCC_SUFFIX }}
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+        env:
+          UK_ARCH: ${{ env.GCC_ARCH }}
+  
+  # gcc-arm:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GCC_VERSION: 11.2.0
+  #     GCC_ARCH: arm
+  #     GCC_SUFFIX:
+
+  #   steps:
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v2
+
+  #     - name: Build
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #         tags: unikraft/kraftkit/gcc:${{ env.GCC_VERSION }}-${{ env.GCC_ARCH }}${{ env.GCC_SUFFIX }}
+  #         platforms: linux/arm
+  #         secrets: |
+  #           GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+  #       env:
+  #         UK_ARCH: ${{ env.GCC_ARCH }}
+  
+  # gcc-arm64:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GCC_VERSION: 11.2.0
+  #     GCC_ARCH: arm64
+  #     GCC_SUFFIX:
+
+  #   steps:
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v2
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v2
+
+  #     - name: Build
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #         tags: unikraft/kraftkit/gcc:${{ env.GCC_VERSION }}-${{ env.GCC_ARCH }}${{ env.GCC_SUFFIX }}
+  #         platforms: linux/arm64
+  #         secrets: |
+  #           GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+  #       env:
+  #         UK_ARCH: ${{ env.GCC_ARCH }}
+
+  qemu:
+    runs-on: ubuntu-latest
+    env:
+      QEMU_VERSION: 7.1.0
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build
+        uses: docker/build-push-action@v3
+        with:
+          file: ./buildenvs/qemu.Dockerfile
+          tags: unikraft/kraftkit/qemu:${{ QEMU_VERSION }}
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  myself:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          file: ./buildenvs/myself.Dockerfile
+          tags: unikraft/kraftkit/myself:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+  
+  base:
+    runs-on: ubuntu-latest
+    needs: [gcc-x86_64, qemu, myself] #, gcc-arm, gcc-arm64
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: unikraft/kraftkit/kraftkit:latest
+
+  
