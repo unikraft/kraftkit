@@ -34,14 +34,14 @@ ARG GCC_VERSION=12.2.0
 ARG GCC_SUFFIX=
 ARG QEMU_VERSION=7.1.0
 
-FROM unikraft/gcc:${GCC_VERSION}-x86_64${GCC_SUFFIX} AS gcc-x86_64
-FROM unikraft/gcc:${GCC_VERSION}-arm${GCC_SUFFIX}    AS gcc-arm
-FROM unikraft/gcc:${GCC_VERSION}-arm64${GCC_SUFFIX}  AS gcc-arm64
-FROM unikraft/qemu:${QEMU_VERSION}                   AS qemu
+FROM unikraft/kraftkit/gcc:${GCC_VERSION}-x86_64${GCC_SUFFIX} AS gcc-x86_64
+# FROM unikraft/kraftkit/gcc:${GCC_VERSION}-arm${GCC_SUFFIX}    AS gcc-arm
+# FROM unikraft/kraftkit/gcc:${GCC_VERSION}-arm64${GCC_SUFFIX}  AS gcc-arm64
+FROM unikraft/kraftkit/qemu:${QEMU_VERSION}                   AS qemu
 
 LABEL MAINTAINER="Alexander Jung <alexander.jung@neclab.eu>"
 
-FROM unikraft/myself:latest                          AS kraft
+FROM unikraft/kraftkit/myself:latest                          AS kraft
 
 ARG GCC_PREFIX=x86_64-linux-gnu
 
@@ -53,15 +53,15 @@ COPY --from=gcc-x86_64 /libexec/gcc/      /libexec/gcc
 COPY --from=gcc-x86_64 /x86_64-linux-gnu  /x86_64-linux-gnu
 
 
-COPY --from=gcc-arm /bin/                 /bin
-COPY --from=gcc-arm /lib/gcc/             /lib/gcc
-COPY --from=gcc-arm /libexec/gcc/         /libexec/gcc
-COPY --from=gcc-arm /arm-linux-gnueabihf  /arm-linux-gnueabihf
+# COPY --from=gcc-arm /bin/                 /bin
+# COPY --from=gcc-arm /lib/gcc/             /lib/gcc
+# COPY --from=gcc-arm /libexec/gcc/         /libexec/gcc
+# COPY --from=gcc-arm /arm-linux-gnueabihf  /arm-linux-gnueabihf
 
-COPY --from=gcc-arm64 /bin/               /bin
-COPY --from=gcc-arm64 /lib/gcc/           /lib/gcc
-COPY --from=gcc-arm64 /libexec/gcc/       /libexec/gcc
-COPY --from=gcc-arm64 /aarch64-linux-gnu/ /aarch64-linux-gnu
+# COPY --from=gcc-arm64 /bin/               /bin
+# COPY --from=gcc-arm64 /lib/gcc/           /lib/gcc
+# COPY --from=gcc-arm64 /libexec/gcc/       /libexec/gcc
+# COPY --from=gcc-arm64 /aarch64-linux-gnu/ /aarch64-linux-gnu
 
 # Link the GCC toolchain
 RUN set -xe; \
