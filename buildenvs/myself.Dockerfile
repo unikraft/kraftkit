@@ -48,5 +48,10 @@ RUN set -xe; \
 
 WORKDIR /go/src/kraftkit.sh
 
+COPY . .
+
 ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:/go/src/kraftkit.sh/dist
+
+RUN set -xe; \
+    make kraft
