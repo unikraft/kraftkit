@@ -34,6 +34,7 @@ package uiformatter
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"kraftkit.sh/iostreams"
@@ -90,7 +91,7 @@ func (oew *OnErrorWriter) Flush() {
 
 			// TODO - Possibly wrong to write with fmt
 			// The builds are finished at this step so it should be fine
-			fmt.Printf("%s\n", line.line)
+			fmt.Fprintln(os.Stderr, line.line)
 		}
 	}
 

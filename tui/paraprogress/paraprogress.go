@@ -38,6 +38,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
+	"kraftkit.sh/internal/uiformatter"
 	"kraftkit.sh/log"
 )
 
@@ -45,6 +46,7 @@ var tprog *tea.Program
 
 type ParaProgress struct {
 	processes     []*Process
+	Formatters    *uiformatter.FormatterWriters
 	quitting      bool
 	width         int
 	parallel      bool
@@ -59,7 +61,8 @@ func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaPro
 	}
 
 	md := &ParaProgress{
-		processes: processes,
+		processes:  processes,
+		Formatters: &uiformatter.FormatterWriters{},
 	}
 
 	for _, opt := range opts {
@@ -170,9 +173,17 @@ func (md ParaProgress) View() string {
 
 	if md.quitting {
 		content = append(content, "")
-	} else {
-		content = append(content, "ctrl+c to cancel")
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, content...)
+	progress := lipgloss.JoinVertical(lipgloss.Left, content...)
+
+	// Do not count the new progress bar
+	uiformatter.RemoveLines("[", 1)
+	md.Formatters.Out.Write([]byte(progress))
+
+	if md.quitting {
+		md.Formatters.Err.Flush()
+	}
+
+	return progress
 }
