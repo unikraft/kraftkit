@@ -40,11 +40,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/exec"
 	"kraftkit.sh/schema"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/internal/logger"
+	"kraftkit.sh/internal/uiformatter"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -74,6 +76,7 @@ type buildOptions struct {
 	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
+	Formatters     *uiformatter.FormatterWriters
 
 	// Command-line arguments
 	NoCache      bool
@@ -305,13 +308,22 @@ func buildRun(opts *buildOptions, workdir string) error {
 		return nil
 	}
 
+	eops := []exec.ExecOption{}
+	opts.Formatters = &uiformatter.FormatterWriters{
+		Err: uiformatter.OnErrorWriter{ErrWriter: opts.IO.Out},
+		Out: uiformatter.OnOutputWriter{OutWriter: opts.IO.Out},
+	}
 	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
 	if !norender {
 		plog.SetOutput(ioutil.Discard)
+		eops = append(eops, exec.WithStderr(&opts.Formatters.Err))
+		// eops = append(eops, exec.WithStdoutCallback(&opts.Formatters.Out)) // TODO: Output too verbose
 	}
 
 	var processes []*paraprogress.Process
-	var mopts []make.MakeOption
+	mopts := []make.MakeOption{
+		make.WithExecOptions(eops...),
+	}
 
 	if opts.Jobs > 0 {
 		mopts = append(mopts, make.WithJobs(opts.Jobs))
