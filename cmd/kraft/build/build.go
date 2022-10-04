@@ -227,6 +227,13 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		"Do not run Unikraft's configure step before building",
 	)
 
+	cmd.Flags().BoolVar(
+		&opts.NoFetch,
+		"no-fetch",
+		false,
+		"Do not pre-emptively run the fetch step before building",
+	)
+
 	return cmd
 }
 
@@ -460,6 +467,23 @@ func buildRun(opts *buildOptions, workdir string) error {
 			))
 		}
 
+		if !opts.NoFetch {
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("fetching %s (%s)", targ.Name(), targ.ArchPlatString()),
+				func(l log.Logger, w func(progress float64)) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					targ.ApplyOptions(
+						component.WithLogger(l),
+					)
+
+					return project.Fetch(append(mopts,
+						make.WithLogger(l),
+					)...)
+				},
+			))
+		}
+
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
 			func(l log.Logger, w func(progress float64)) error {
@@ -480,6 +504,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 						),
 					)...),
 					app.WithBuildNoSyncConfig(opts.NoSyncConfig),
+					app.WithBuildNoFetch(opts.NoFetch),
 					app.WithBuildLogFile(opts.SaveBuildLog),
 				)
 			},

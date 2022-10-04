@@ -47,6 +47,7 @@ type BuildOptions struct {
 	mopts        []make.MakeOption
 	onProgress   func(progress float64)
 	noSyncConfig bool
+	noFetch      bool
 }
 
 type BuildOption func(opts *BuildOptions) error
@@ -125,6 +126,15 @@ func WithBuildLogFile(path string) BuildOption {
 func WithBuildNoSyncConfig(noSyncConfig bool) BuildOption {
 	return func(bo *BuildOptions) error {
 		bo.noSyncConfig = noSyncConfig
+		return nil
+	}
+}
+
+// WithBuildNoFetch disables calling `make fetch` befere invoking the
+// main Unikraft's build invocation.
+func WithBuildNoFetch(noFetch bool) BuildOption {
+	return func(bo *BuildOptions) error {
+		bo.noFetch = noFetch
 		return nil
 	}
 }

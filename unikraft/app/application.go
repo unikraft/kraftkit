@@ -392,6 +392,15 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 		}
 	}
 
+	if !bopts.noFetch {
+		if err := a.Fetch(append(
+			bopts.mopts,
+			make.WithProgressFunc(nil),
+		)...); err != nil {
+			return err
+		}
+	}
+
 	return a.Make(bopts.mopts...)
 }
 
