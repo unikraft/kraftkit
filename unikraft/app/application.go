@@ -327,6 +327,15 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 	}...)
 
 	if !bopts.noSyncConfig {
+		// Ensure that the configuration is up-to-date
+		if err := a.Set(append(
+			bopts.mopts,
+			make.WithProgressFunc(nil),
+		)...); err != nil {
+			return err
+		}
+
+		// Calculate progress for the build
 		if err := a.SyncConfig(append(
 			bopts.mopts,
 			make.WithProgressFunc(nil),
