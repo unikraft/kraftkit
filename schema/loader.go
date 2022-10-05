@@ -191,6 +191,12 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		details.Configuration[k] = *v
 	}
 
+	for _, library := range model.Libraries {
+		for k, v := range library.Configuration {
+			details.Configuration[k] = *v
+		}
+	}
+
 	project := &app.ApplicationConfig{
 		ComponentConfig: component.ComponentConfig{
 			Name: projectName,
