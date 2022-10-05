@@ -187,6 +187,10 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		}
 	}
 
+	for k, v := range model.Unikraft.Configuration {
+		details.Configuration[k] = *v
+	}
+
 	project := &app.ApplicationConfig{
 		ComponentConfig: component.ComponentConfig{
 			Name: projectName,
