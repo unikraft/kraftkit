@@ -42,6 +42,7 @@ type ProjectOptions struct {
 	ConfigPaths   []string
 	Configuration map[string]string
 	DotConfigFile string
+	SaveSymbols   bool
 	log           log.Logger
 	loadOptions   []func(*LoaderOptions)
 }
@@ -67,6 +68,14 @@ func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOpti
 func WithLogger(l log.Logger) ProjectOptionsFn {
 	return func(o *ProjectOptions) error {
 		o.log = l
+		return nil
+	}
+}
+
+// WithSaveSymbols defines whether to save symbols in the configuration file
+func WithSaveSymbols(saveSymbols bool) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		o.SaveSymbols = saveSymbols
 		return nil
 	}
 }
@@ -375,6 +384,7 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 		return nil, err
 	}
 
+	project.SaveSymbols = popts.SaveSymbols
 	project.KraftFiles = configPaths
 	return project, nil
 }

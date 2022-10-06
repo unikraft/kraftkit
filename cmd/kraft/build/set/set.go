@@ -55,7 +55,8 @@ type SetOptions struct {
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
-	Workdir string
+	Workdir     string
+	SaveSymbols bool
 }
 
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
@@ -81,6 +82,9 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 		# Set variables in a project at a path
 		$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+
+		# Set variables in a project at a path and save symbols
+		$ kraft build set -w path/to/app -s unikraft.LIBDEVFS_DEV_STDOUT=/dev/null lwip.LWIP_TCP_SND_BUF=4096
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
@@ -101,10 +105,14 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 			}
 		}
 
-		// Set the configuration options, skip the first one if needed
+		// Set the configuration options
 		for _, arg := range args {
 			if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
 				return fmt.Errorf("invalid or malformed argument: %s", arg)
+			}
+			if opts.SaveSymbols && (!strings.ContainsRune(arg, '.') ||
+				strings.HasSuffix(arg, ".") || strings.HasPrefix(arg, ".")) {
+				return fmt.Errorf("symbols need to be preceded by a component name (use 'unikraft.SYMBOL=value' if unknown): %s", arg)
 			}
 
 			confOpts = append(confOpts, arg)
@@ -118,6 +126,13 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 		"workdir", "w",
 		"",
 		"Work on a unikernel at a path",
+	)
+
+	cmd.Flags().BoolVarP(
+		&opts.SaveSymbols,
+		"save", "s",
+		false,
+		"Save the symbols to the configuration file",
 	)
 
 	return cmd
@@ -153,6 +168,7 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		schema.WithResolvedPaths(true),
 		schema.WithDotConfig(true),
 		schema.WithConfig(confOpts),
+		schema.WithSaveSymbols(copts.SaveSymbols),
 	)
 	if err != nil {
 		return err

@@ -33,6 +33,7 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -41,6 +42,7 @@ import (
 	"strings"
 
 	"github.com/xlab/treeprint"
+	"gopkg.in/yaml.v2"
 
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
@@ -71,6 +73,7 @@ type ApplicationConfig struct {
 	Extensions    component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
 	KraftFiles    []string             `yaml:"-" json:"-"`
 	Configuration map[string]string    `yaml:"-" json:"-"`
+	SaveSymbols   bool                 `yaml:"-" json:"-"`
 }
 
 func (ac ApplicationConfig) Name() string {
@@ -224,6 +227,61 @@ func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	)...)
 }
 
+// Write the symbol to the kraft config file
+func (a *ApplicationConfig) writeToConfig(library, symbol, value string) error {
+	if library == "unikraft" {
+		if a.Unikraft.Configuration == nil {
+			a.Unikraft.Configuration = component.KConfig{}
+		}
+
+		a.Unikraft.Configuration[symbol] = &value
+
+	} else if libContent, ok := a.Libraries[library]; ok {
+		if libContent.Configuration == nil {
+			libContent.Configuration = component.KConfig{}
+		}
+
+		libContent.Configuration[symbol] = &value
+		a.Libraries[library] = libContent
+
+	} else {
+		return fmt.Errorf("library %s not found in kraft.yaml", library)
+	}
+
+	// Marshal the application config
+	b, err := yaml.Marshal(a)
+	if err != nil {
+		return err
+	}
+
+	// Write the application config to the first kraft config file
+	kraftFile := a.KraftFiles[0]
+
+	// Copy the old file to a backup with .old appended
+	// TODO check if option to save is false
+	source, err := os.Open(kraftFile)
+	if err != nil {
+		return err
+	}
+
+	destination, err := os.Create(kraftFile + ".old")
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return err
+	}
+	source.Close()
+	destination.Close()
+
+	if err := ioutil.WriteFile(kraftFile, b, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 	// Write the configuration to a temporary file
 	tmpfile, err := ioutil.TempFile("", a.Name()+"-config*")
@@ -235,6 +293,18 @@ func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 
 	for k, v := range a.Configuration {
 		var line string
+
+		if a.SaveSymbols && strings.ContainsRune(k, '.') {
+			// Split on '.' - should have two parts
+			parts := strings.Split(k, ".")
+
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid configuration key \"%s\"", k)
+			}
+
+			k = parts[1]
+			a.writeToConfig(parts[0], k, v)
+		}
 
 		if _, err := strconv.ParseFloat(v, 64); err == nil || v == "y" {
 			line = fmt.Sprintf("%s=%s\n", k, v)
