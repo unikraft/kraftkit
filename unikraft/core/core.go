@@ -44,7 +44,7 @@ type Unikraft interface {
 }
 
 type UnikraftConfig struct {
-	component.ComponentConfig
+	component.ComponentConfig `yaml:",inline" json:",inline"`
 }
 
 func (uc UnikraftConfig) Name() string {

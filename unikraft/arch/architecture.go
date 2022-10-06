@@ -44,7 +44,7 @@ type Architecture interface {
 }
 
 type ArchitectureConfig struct {
-	component.ComponentConfig
+	component.ComponentConfig `yaml:"-" json:"-"`
 }
 
 // ParseArchitectureConfig parse short syntax for architecture configuration
@@ -75,4 +75,9 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 func (ac ArchitectureConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo")
 	return nil
+}
+
+func (ac ArchitectureConfig) MarshalYAML() (interface{}, error) {
+
+	return ac.ComponentConfig.Name, nil
 }

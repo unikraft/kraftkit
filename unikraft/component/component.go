@@ -46,7 +46,7 @@ import (
 // microlibraries, whether they are a library, platform, architecture, an
 // application itself or the Unikraft core.
 type ComponentConfig struct {
-	Name          string  `yaml:",omitempty" json:"-"`
+	Name          string  `yaml:"-" json:"-"`
 	Version       string  `yaml:",omitempty" json:"version,omitempty"`
 	Source        string  `yaml:",omitempty" json:"source,omitempty"`
 	Configuration KConfig `yaml:",omitempty" json:"kconfig,omitempty"`

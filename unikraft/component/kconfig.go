@@ -70,3 +70,15 @@ func (e KConfig) RemoveEmpty() KConfig {
 	}
 	return e
 }
+
+func (e KConfig) MarshalYAML() (interface{}, error) {
+	var values []string
+	for k, v := range e {
+		if v == nil {
+			values = append(values, k)
+		} else {
+			values = append(values, k+"="+*v)
+		}
+	}
+	return values, nil
+}

@@ -44,7 +44,7 @@ type Platform interface {
 }
 
 type PlatformConfig struct {
-	component.ComponentConfig
+	component.ComponentConfig `yaml:"-" json:"-"`
 }
 
 // ParsePlatformConfig parse short syntax for platform configuration
@@ -75,4 +75,9 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 func (pc PlatformConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.plat.PlatformConfig.PrintInfo")
 	return nil
+}
+
+func (pc PlatformConfig) MarshalYAML() (interface{}, error) {
+
+	return pc.ComponentConfig.Name, nil
 }

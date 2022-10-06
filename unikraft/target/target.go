@@ -43,14 +43,14 @@ import (
 )
 
 type TargetConfig struct {
-	component.ComponentConfig
+	component.ComponentConfig `yaml:"-" json:"-"`
 
 	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
 	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
 	Format       string                  `yaml:",omitempty" json:"format,omitempty"`
-	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
-	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempty"`
-	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
+	Kernel       string                  `yaml:"-" json:"-"`
+	KernelDbg    string                  `yaml:"-" json:"-"`
+	Initrd       *initrd.InitrdConfig    `yaml:"-" json:"-"`
 	Command      []string                `yaml:",omitempty" json:"commands"`
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
@@ -79,4 +79,34 @@ func (tc *TargetConfig) ArchPlatString() string {
 func (tc TargetConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.plat.TargetConfig.PrintInfo")
 	return nil
+}
+
+func (tc TargetConfig) MarshalYAML() (interface{}, error) {
+	type targetConfigYAML struct {
+		component.ComponentConfig `yaml:"-" json:"-"`
+
+		NameYAML     string                  `yaml:"name,omitempty" json:"name,omitempty"`
+		Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
+		Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
+		Format       string                  `yaml:",omitempty" json:"format,omitempty"`
+		Kernel       string                  `yaml:"-" json:"-"`
+		KernelDbg    string                  `yaml:"-" json:"-"`
+		Initrd       *initrd.InitrdConfig    `yaml:"-" json:"-"`
+		Command      []string                `yaml:",omitempty" json:"commands"`
+
+		Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	}
+
+	return targetConfigYAML{
+		ComponentConfig: tc.ComponentConfig,
+		NameYAML:        tc.ComponentConfig.Name,
+		Architecture:    tc.Architecture,
+		Platform:        tc.Platform,
+		Format:          tc.Format,
+		Kernel:          tc.Kernel,
+		KernelDbg:       tc.KernelDbg,
+		Initrd:          tc.Initrd,
+		Command:         tc.Command,
+		Extensions:      tc.Extensions,
+	}, nil
 }
