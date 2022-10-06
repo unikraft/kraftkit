@@ -61,7 +61,7 @@ type Application interface {
 }
 
 type ApplicationConfig struct {
-	component.ComponentConfig
+	component.ComponentConfig `yaml:"-" json:"-"`
 
 	Specification string               `yaml:"specification" json:"specification"`
 	WorkingDir    string               `yaml:"-" json:"-"`
@@ -492,4 +492,39 @@ func (ac ApplicationConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprintln(io.Out, tree.String())
 
 	return nil
+}
+
+func (ac ApplicationConfig) MarshalYAML() (interface{}, error) {
+	type applicationConfigYAML struct {
+		component.ComponentConfig `yaml:"-" json:"-"`
+
+		Specification string               `yaml:"specification" json:""`
+		NameYAML      string               `yaml:"name" json:"name"`
+		WorkingDir    string               `yaml:"-" json:"-"`
+		Filename      string               `yaml:"-" json:"-"`
+		OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`
+		Unikraft      core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
+		Libraries     lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
+		Targets       target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
+		Extensions    component.Extensions `yaml:",inline" json:"-"`
+		KraftFiles    []string             `yaml:"-" json:"-"`
+		Configuration map[string]string    `yaml:"-" json:"-"`
+		SaveSymbols   bool                 `yaml:"-" json:"-"`
+	}
+
+	return applicationConfigYAML{
+		ComponentConfig: ac.ComponentConfig,
+		Specification:   ac.Specification,
+		NameYAML:        ac.ComponentConfig.Name,
+		WorkingDir:      ac.WorkingDir,
+		Filename:        ac.Filename,
+		OutDir:          ac.OutDir,
+		Unikraft:        ac.Unikraft,
+		Libraries:       ac.Libraries,
+		Targets:         ac.Targets,
+		Extensions:      ac.Extensions,
+		KraftFiles:      ac.KraftFiles,
+		Configuration:   ac.Configuration,
+		SaveSymbols:     ac.SaveSymbols,
+	}, nil
 }
