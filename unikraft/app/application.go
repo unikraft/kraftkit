@@ -61,6 +61,7 @@ type Application interface {
 type ApplicationConfig struct {
 	component.ComponentConfig
 
+	Specification string               `yaml:"specification" json:"specification"`
 	WorkingDir    string               `yaml:"-" json:"-"`
 	Filename      string               `yaml:"-" json:"-"`
 	OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`

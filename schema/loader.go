@@ -201,6 +201,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		ComponentConfig: component.ComponentConfig{
 			Name: projectName,
 		},
+		Specification: model.Specification,
 		WorkingDir:    details.WorkingDir,
 		Filename:      model.Filename,
 		OutDir:        model.OutDir,
@@ -247,6 +248,16 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 			return nil, errors.New("output directory must be a string")
 		}
 	}
+
+	specification := "0.0"
+	if n, ok := cfgIface["specification"]; ok {
+		specification, ok = n.(string)
+		if !ok {
+			// Interpreted as a number
+			specification = fmt.Sprintf("%v", n)
+		}
+	}
+	cfg.Specification = specification
 
 	if opts.ResolvePaths {
 		cfg.OutDir = configDetails.RelativePath(outdir)
