@@ -34,6 +34,7 @@ package unset
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -54,7 +55,8 @@ type UnsetOptions struct {
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
-	Workdir string
+	Workdir     string
+	SaveSymbols bool
 }
 
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
@@ -80,6 +82,9 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 		# Unset variables in a project at a path
 		$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+
+		# Set variables in a project at a path and save symbols
+		$ kraft build unset -w path/to/app -s unikraft.LIBDEVFS_DEV_STDOUT lwip.LWIP_TCP_SND_BUF
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		workdir := ""
@@ -101,6 +106,10 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 		}
 
 		for _, arg := range args {
+			if opts.SaveSymbols && (!strings.ContainsRune(arg, '.') ||
+				strings.HasSuffix(arg, ".") || strings.HasPrefix(arg, ".")) {
+				return fmt.Errorf("symbols need to be preceded by a component name (use 'unikraft.SYMBOL=value' if unknown): %s", arg)
+			}
 			confOpts = append(confOpts, arg+"=n")
 		}
 
@@ -112,6 +121,13 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 		"workdir", "w",
 		"",
 		"Work on a unikernel at a path",
+	)
+
+	cmd.Flags().BoolVarP(
+		&opts.SaveSymbols,
+		"save", "s",
+		false,
+		"Save the symbols to the configuration file",
 	)
 
 	return cmd
@@ -147,6 +163,7 @@ func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
 		schema.WithResolvedPaths(true),
 		schema.WithDotConfig(true),
 		schema.WithConfig(confOpts),
+		schema.WithSaveSymbols(copts.SaveSymbols),
 	)
 	if err != nil {
 		return err
