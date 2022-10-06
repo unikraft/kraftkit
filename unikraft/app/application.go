@@ -344,6 +344,18 @@ func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 	for k, v := range a.Configuration {
 		var line string
 
+		if a.SaveSymbols && strings.ContainsRune(k, '.') {
+			// Split on '.' - should have two parts
+			parts := strings.Split(k, ".")
+
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid configuration key \"%s\"", k)
+			}
+
+			k = parts[1]
+			a.writeToConfig(parts[0], k, v)
+		}
+
 		if _, err := strconv.ParseFloat(v, 64); err == nil || v == "y" {
 			line = fmt.Sprintf("%s=%s\n", k, v)
 		} else if v == "n" {
