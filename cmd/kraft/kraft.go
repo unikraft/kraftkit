@@ -41,6 +41,7 @@ import (
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/pkg"
+	"kraftkit.sh/cmd/kraft/tidy"
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 		cmdutil.WithSubcmds(
 			pkg.PkgCmd(f),
 			build.BuildCmd(f),
+			tidy.TidyCmd(f),
 		),
 	)
 	if err != nil {
