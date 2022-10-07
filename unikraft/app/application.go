@@ -228,24 +228,28 @@ func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 }
 
 // Write the symbol to the kraft config file
-func (a *ApplicationConfig) writeToConfig(library, symbol, value string) error {
-	if library == "unikraft" {
-		if a.Unikraft.Configuration == nil {
-			a.Unikraft.Configuration = component.KConfig{}
+func (a *ApplicationConfig) writeToConfig(libraries, symbols, values []string) error {
+	numSymbols := len(symbols)
+
+	for i := 0; i < numSymbols; i++ {
+		if libraries[i] == "unikraft" {
+			if a.Unikraft.Configuration == nil {
+				a.Unikraft.Configuration = component.KConfig{}
+			}
+
+			a.Unikraft.Configuration[symbols[i]] = &values[i]
+
+		} else if libContent, ok := a.Libraries[libraries[i]]; ok {
+			if libContent.Configuration == nil {
+				libContent.Configuration = component.KConfig{}
+			}
+
+			libContent.Configuration[symbols[i]] = &values[i]
+			a.Libraries[libraries[i]] = libContent
+
+		} else {
+			return fmt.Errorf("library %s not found in kraft.yaml", libraries[i])
 		}
-
-		a.Unikraft.Configuration[symbol] = &value
-
-	} else if libContent, ok := a.Libraries[library]; ok {
-		if libContent.Configuration == nil {
-			libContent.Configuration = component.KConfig{}
-		}
-
-		libContent.Configuration[symbol] = &value
-		a.Libraries[library] = libContent
-
-	} else {
-		return fmt.Errorf("library %s not found in kraft.yaml", library)
 	}
 
 	// Marshal the application config
@@ -291,6 +295,7 @@ func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
+	var libraries, symbols, values []string
 	for k, v := range a.Configuration {
 		var line string
 
@@ -303,7 +308,9 @@ func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 			}
 
 			k = parts[1]
-			a.writeToConfig(parts[0], k, v)
+			libraries = append(libraries, parts[0])
+			symbols = append(symbols, k)
+			values = append(values, v)
 		}
 
 		if _, err := strconv.ParseFloat(v, 64); err == nil || v == "y" {
@@ -318,6 +325,7 @@ func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 			return err
 		}
 	}
+	a.writeToConfig(libraries, symbols, values)
 
 	// Sync the file to the storage
 	tmpfile.Sync()
@@ -341,6 +349,7 @@ func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
+	var libraries, symbols, values []string
 	for k, v := range a.Configuration {
 		var line string
 
@@ -353,7 +362,9 @@ func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 			}
 
 			k = parts[1]
-			a.writeToConfig(parts[0], k, v)
+			libraries = append(libraries, parts[0])
+			symbols = append(symbols, k)
+			values = append(values, v)
 		}
 
 		if _, err := strconv.ParseFloat(v, 64); err == nil || v == "y" {
@@ -368,6 +379,7 @@ func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 			return err
 		}
 	}
+	a.writeToConfig(libraries, symbols, values)
 
 	// Sync the file to the storage
 	tmpfile.Sync()
