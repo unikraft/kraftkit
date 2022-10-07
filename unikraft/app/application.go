@@ -33,7 +33,6 @@ package app
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -42,7 +41,6 @@ import (
 	"strings"
 
 	"github.com/xlab/treeprint"
-	"gopkg.in/yaml.v2"
 
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
@@ -227,7 +225,7 @@ func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	)...)
 }
 
-// Write the symbol to the kraft config file
+// Update symbols inside the configuration
 func (a *ApplicationConfig) writeToConfig(libraries, symbols, values []string) error {
 	numSymbols := len(symbols)
 
@@ -250,38 +248,6 @@ func (a *ApplicationConfig) writeToConfig(libraries, symbols, values []string) e
 		} else {
 			return fmt.Errorf("library %s not found in kraft.yaml", libraries[i])
 		}
-	}
-
-	// Marshal the application config
-	b, err := yaml.Marshal(a)
-	if err != nil {
-		return err
-	}
-
-	// Write the application config to the first kraft config file
-	kraftFile := a.KraftFiles[0]
-
-	// Copy the old file to a backup with .old appended
-	// TODO check if option to save is false
-	source, err := os.Open(kraftFile)
-	if err != nil {
-		return err
-	}
-
-	destination, err := os.Create(kraftFile + ".old")
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(destination, source)
-	if err != nil {
-		return err
-	}
-	source.Close()
-	destination.Close()
-
-	if err := ioutil.WriteFile(kraftFile, b, 0644); err != nil {
-		return err
 	}
 	return nil
 }
