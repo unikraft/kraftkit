@@ -39,6 +39,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
@@ -50,6 +51,7 @@ import (
 )
 
 type UnsetOptions struct {
+	ConfigManager  func() (*config.ConfigManager, error)
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
@@ -61,6 +63,7 @@ type UnsetOptions struct {
 
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &UnsetOptions{
+		ConfigManager:  f.ConfigManager,
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
@@ -134,6 +137,11 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
+	cfgm, err := copts.ConfigManager()
+	if err != nil {
+		return err
+	}
+
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -175,9 +183,22 @@ func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
 		return err
 	}
 
-	return project.Unset(
+	err = project.Unset(
 		make.WithExecOptions(
 			exec.WithStdin(copts.IO.In),
 		),
 	)
+	if err != nil {
+		return err
+	}
+
+	if copts.SaveSymbols {
+		if err := schema.SaveApplicationConfig(project,
+			schema.WithSaveOldConfig(cfgm.Config.SaveOldKraftfile),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
