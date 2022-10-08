@@ -199,3 +199,12 @@ func (e *Process) Signal(signal syscall.Signal) error {
 func (e *Process) Kill() error {
 	return e.Signal(syscall.SIGKILL)
 }
+
+// Pid returns the process ID
+func (e *Process) Pid() (int, error) {
+	if e.cmd == nil || e.cmd.Process == nil || e.cmd.Process.Pid == -1 {
+		return -1, fmt.Errorf("could not locate pid")
+	}
+
+	return e.cmd.Process.Pid, nil
+}
