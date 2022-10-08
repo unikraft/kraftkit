@@ -43,6 +43,7 @@ import (
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/pkg"
 	"kraftkit.sh/cmd/kraft/ps"
+	"kraftkit.sh/cmd/kraft/rm"
 	"kraftkit.sh/cmd/kraft/run"
 )
 
@@ -55,6 +56,7 @@ func main() {
 			pkg.PkgCmd(f),
 			build.BuildCmd(f),
 			ps.PsCmd(f),
+			rm.RemoveCmd(f),
 			run.RunCmd(f),
 			events.EventsCmd(f),
 		),
