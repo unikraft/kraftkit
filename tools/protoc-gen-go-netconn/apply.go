@@ -289,7 +289,7 @@ const (
 		{{ if $field.Comments.Leading -}}
 			{{ $field.Comments.Leading -}}
 		{{ end -}}
-		{{ $field.GoIdent.GoName }} = {{ $this.Enum.GoIdent.GoName }}("{{ with (index $this.JSONNames ( $field.Desc.Name | toString )) }}{{ . }}{{ else }}{{ $field.Desc.Name }}{{ end }}")
+		{{ $field.GoIdent.GoName }} = {{ $this.Enum.GoIdent.GoName }}("{{ with (index $this.JSONNames ( toString $field.Desc.Name )) }}{{ . }}{{ else }}{{ $field.Desc.Name }}{{ end }}")
 	{{ end -}}
 )
 
