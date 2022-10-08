@@ -48,11 +48,13 @@ type Process struct {
 
 // NewProcess prepares a process to be executed from a given binary name and
 // optional execution options
-func NewProcess(bin string, eopts ...ExecOption) (*Process, error) {
+func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error) {
 	executable, err := NewExecutable(bin, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	executable.args = append(executable.args, args...)
 
 	return NewProcessFromExecutable(executable, eopts...)
 }
