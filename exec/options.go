@@ -49,6 +49,7 @@ type ExecOptions struct {
 	env       []string
 	log       log.Logger
 	callbacks []func(int)
+	detach    bool
 }
 
 type ExecOption func(eo *ExecOptions) error
@@ -154,6 +155,13 @@ func WithStderrCallback(stderrcb io.Writer) ExecOption {
 func WithLogger(l log.Logger) ExecOption {
 	return func(eo *ExecOptions) error {
 		eo.log = l
+		return nil
+	}
+}
+
+func WithDetach(detach bool) ExecOption {
+	return func(eo *ExecOptions) error {
+		eo.detach = detach
 		return nil
 	}
 }

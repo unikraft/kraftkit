@@ -142,7 +142,25 @@ func (e *Process) Start() error {
 		e.opts.log.Debug(e.Cmdline())
 	}
 
-	return e.cmd.Start()
+	if e.opts.detach {
+		// the Setpgid flag is used to prevent the child process from exiting when
+		// the parent is killed
+		e.cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+	}
+
+	if err := e.cmd.Start(); err != nil {
+		return fmt.Errorf("could not start process: %v", err)
+	}
+
+	if e.opts.detach {
+		if err := e.cmd.Process.Release(); err != nil {
+			return fmt.Errorf("could not release process: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // Wait for the process to complete
