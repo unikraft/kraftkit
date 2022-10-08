@@ -172,6 +172,27 @@ func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 				args = append(args, f.flag)
 				args = append(args, value)
 
+			case "slice": // array of structs or custom slice type
+				n := v.Field(i).Len()
+				if n == 0 {
+					continue
+				}
+
+				for j := 0; j < n; j++ {
+					value, ok := v.Field(i).Index(j).Interface().(fmt.Stringer)
+					if !ok {
+						continue
+					}
+
+					str := value.String()
+					if len(str) == 0 {
+						continue
+					}
+
+					args = append(args, f.flag)
+					args = append(args, str)
+				}
+
 			default:
 				value, ok := v.Field(i).Interface().(fmt.Stringer)
 				if !ok {
