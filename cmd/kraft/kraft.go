@@ -45,6 +45,7 @@ import (
 	"kraftkit.sh/cmd/kraft/ps"
 	"kraftkit.sh/cmd/kraft/rm"
 	"kraftkit.sh/cmd/kraft/run"
+	"kraftkit.sh/cmd/kraft/stop"
 )
 
 func main() {
@@ -58,6 +59,7 @@ func main() {
 			ps.PsCmd(f),
 			rm.RemoveCmd(f),
 			run.RunCmd(f),
+			stop.StopCmd(f),
 			events.EventsCmd(f),
 		),
 	)
