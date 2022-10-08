@@ -7,13 +7,14 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/briandowns/spinner v1.18.1
 	github.com/cavaliergopher/cpio v1.0.1
-	github.com/charmbracelet/bubbles v0.10.3
+	github.com/charmbracelet/bubbles v0.11.0
 	github.com/charmbracelet/bubbletea v0.22.0
 	github.com/charmbracelet/lipgloss v0.5.0
 	github.com/cli/cli/v2 v2.7.0
 	github.com/cli/safeexec v1.0.0
 	github.com/compose-spec/compose-go v1.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.2
+	github.com/erikgeiser/promptkit v0.7.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-github/v32 v32.1.0
@@ -26,8 +27,9 @@ require (
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/mitchellh/mapstructure v1.4.3
+	github.com/moby/moby v20.10.18+incompatible
 	github.com/muesli/reflow v0.3.0
-	github.com/muesli/termenv v0.11.1-0.20220212125758-44cd13922739
+	github.com/muesli/termenv v0.12.0
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil/v3 v3.22.9
 	github.com/spf13/cobra v1.4.0
@@ -36,8 +38,8 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c
+	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -46,9 +48,10 @@ require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/charmbracelet/harmonica v0.1.0 // indirect
+	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -73,7 +76,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
+	github.com/muesli/ansi v0.0.0-20211031195517-c9f0611b6c70 // indirect
 	github.com/muesli/cancelreader v0.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
