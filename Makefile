@@ -131,8 +131,13 @@ container:
 # Run an environment where we can build
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
+devenv: WITH_KVM         ?= n
 devenv:
+ifeq ($(WITH_KVM),y)
+	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself,bash)
+else
 	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
+endif
 
 .PHONY: deps
 deps:
