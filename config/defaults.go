@@ -47,6 +47,7 @@ const (
 	DefaultLogTimestamps = "false"
 	DefaultLogType       = "fancy"
 	DefaultRuntimeDir    = "/var/kraftkit"
+	DefaultEventsPidFile = "/var/kraftkit/events.pid"
 )
 
 func Defaults() map[string]string {
@@ -59,6 +60,7 @@ func Defaults() map[string]string {
 		"KRAFTKIT_LOG_TIMESTAMPS": DefaultLogTimestamps,
 		"KRAFTKIT_LOG_TYPE":       DefaultLogType,
 		"KRAFTKIT_RUNTIME_DIR":    DefaultRuntimeDir,
+		"KRAFTKIT_EVENTS_PIDFILE": DefaultEventsPidFile,
 	}
 }
 

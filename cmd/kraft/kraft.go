@@ -40,6 +40,7 @@ import (
 	"kraftkit.sh/internal/cmdutil"
 
 	"kraftkit.sh/cmd/kraft/build"
+	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/pkg"
 )
 
@@ -51,6 +52,7 @@ func main() {
 		cmdutil.WithSubcmds(
 			pkg.PkgCmd(f),
 			build.BuildCmd(f),
+			events.EventsCmd(f),
 		),
 	)
 	if err != nil {
