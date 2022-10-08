@@ -33,10 +33,43 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"kraftkit.sh/machine"
+	"kraftkit.sh/machine/driveropts"
+	"kraftkit.sh/machine/qemu"
+	"kraftkit.sh/utils"
 )
+
+type DriverType string
+
+const (
+	// UnknownDriver driver is used to indicate an unknown or misspecified driver
+	UnknownDriver = DriverType("unknown")
+
+	// QemuDriver is the QEMU hypervisor
+	QemuDriver = DriverType("qemu")
+)
+
+func (dt DriverType) String() string {
+	return string(dt)
+}
+
+// DriverNameToType
+func DriverNames() []string {
+	return []string{
+		string(QemuDriver),
+	}
+}
+
+func DriverTypeFromName(name string) DriverType {
+	if utils.Contains(DriverNames(), name) {
+		return DriverType(name)
+	}
+
+	return UnknownDriver
+}
 
 // Driver represents the interface necessary to be implemented to manage the
 // lifcycle of a machine.
@@ -77,4 +110,17 @@ type Driver interface {
 	// by its MachineID.  The method returns the last error if the channels cannot
 	// be initialized.
 	ListenStatusUpdate(context.Context, machine.MachineID) (chan machine.MachineState, chan error, error)
+}
+
+// New creates an instantiated driver which can create and manage the lifecycle
+// of a machine.  The returning interface is implemented by the driver.
+func New(driverType DriverType, opts ...driveropts.DriverOption) (driver Driver, err error) {
+	switch driverType {
+	case QemuDriver:
+		driver, err = qemu.NewQemuDriver(opts...)
+	default:
+		return nil, fmt.Errorf("unknown machine driver: %s", driverType.String())
+	}
+
+	return
 }
