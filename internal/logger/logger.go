@@ -136,6 +136,14 @@ func (l *Logger) Warnf(format string, a ...interface{}) {
 	}
 }
 
+func (l *Logger) Warning(a ...interface{}) {
+	l.Warn(a...)
+}
+
+func (l *Logger) Warningf(format string, a ...interface{}) {
+	l.Warnf(format, a...)
+}
+
 func (l *Logger) Error(a ...interface{}) {
 	if l.level >= ERROR {
 		l.log(l.err("ERROR"), a...)
