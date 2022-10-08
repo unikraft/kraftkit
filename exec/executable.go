@@ -171,6 +171,20 @@ func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 
 				args = append(args, f.flag)
 				args = append(args, value)
+
+			default:
+				value, ok := v.Field(i).Interface().(fmt.Stringer)
+				if !ok {
+					continue
+				}
+
+				str := value.String()
+				if len(str) == 0 {
+					continue
+				}
+
+				args = append(args, f.flag)
+				args = append(args, str)
 			}
 
 			// Recurisvely iterate through embedded structures
