@@ -46,6 +46,7 @@ const (
 	DefaultLogLevel      = "info"
 	DefaultLogTimestamps = "false"
 	DefaultLogType       = "fancy"
+	DefaultRuntimeDir    = "/var/kraftkit"
 )
 
 func Defaults() map[string]string {
@@ -57,6 +58,7 @@ func Defaults() map[string]string {
 		"KRAFTKIT_LOG_LEVEL":      DefaultLogLevel,
 		"KRAFTKIT_LOG_TIMESTAMPS": DefaultLogTimestamps,
 		"KRAFTKIT_LOG_TYPE":       DefaultLogType,
+		"KRAFTKIT_RUNTIME_DIR":    DefaultRuntimeDir,
 	}
 }
 
