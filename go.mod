@@ -14,6 +14,7 @@ require (
 	github.com/cli/safeexec v1.0.0
 	github.com/compose-spec/compose-go v1.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.2
+	github.com/dustin/go-humanize v1.0.0
 	github.com/erikgeiser/promptkit v0.7.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/gobwas/glob v0.2.3
@@ -55,7 +56,6 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
