@@ -51,6 +51,8 @@ type Config struct {
 	Pager          string `json:"pager"            yaml:"pager,omitempty"            env:"KRAFTKIT_PAGER"`
 	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
 	RuntimeDir     string `json:"runtime_dir"      yaml:"runtime_dir"                env:"KRAFTKIT_RUNTIME_DIR"`
+	DefaultPlat    string `json:"default_plat"     yaml:"default_plat"               env:"KRAFTKIT_DEFAULT_PLAT"`
+	DefaultArch    string `json:"default_arch"     yaml:"default_arch"               env:"KRAFTKIT_DEFAULT_ARCH"`
 	EventsPidFile  string `json:"events_pidfile"   yaml:"events_pidfile"             env:"KRAFTKIT_EVENTS_PIDFILE"`
 
 	Paths struct {
