@@ -114,15 +114,13 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 
 // ParseInterfaceArgs returns the array of arguments detected from an interface
 // with tag annotations `flag`
-func ParseInterfaceArgs(face interface{}) ([]string, error) {
+func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 	if face != nil && reflect.ValueOf(face).Kind() == reflect.Ptr {
 		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
 	}
 
 	t := reflect.TypeOf(face)
 	v := reflect.ValueOf(face)
-
-	args := []string{}
 
 	for i := 0; i < t.NumField(); i++ {
 		f, err := parseFlag(t.Field(i).Tag)
@@ -173,6 +171,17 @@ func ParseInterfaceArgs(face interface{}) ([]string, error) {
 
 				args = append(args, f.flag)
 				args = append(args, value)
+			}
+
+			// Recurisvely iterate through embedded structures
+		} else if v.Field(i).Kind() == reflect.Struct {
+			structArgs, err := ParseInterfaceArgs(v.Field(i).Interface())
+			if err != nil {
+				return []string{}, err
+			}
+
+			if len(structArgs) > 0 {
+				args = append(args, structArgs...)
 			}
 		}
 	}
