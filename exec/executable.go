@@ -129,7 +129,7 @@ func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 		}
 
 		if len(f.flag) > 0 {
-			switch v.Field(i).Type().String() {
+			switch v.Field(i).Kind().String() {
 			case "*int":
 				if v.Field(i).IsZero() { // if nil
 					continue
