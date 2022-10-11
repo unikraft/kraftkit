@@ -31,13 +31,6 @@
 
 package config
 
-import (
-	"fmt"
-	"path/filepath"
-	"reflect"
-	"strconv"
-)
-
 // AuthConfig represents a very abstract representation of authentication used
 // by some service.  Most APIs and services which can be authenticated have the
 // defined four parameters found within AuthConfig.
@@ -45,18 +38,22 @@ type AuthConfig struct {
 	User      string `json:"user"       yaml:"user"       env:"KRAFTKIT_AUTH_%s_USER"`
 	Token     string `json:"token"      yaml:"token"      env:"KRAFTKIT_AUTH_%s_TOKEN"`
 	Endpoint  string `json:"endpoint"   yaml:"endpoint"   env:"KRAFTKIT_AUTH_%s_ENDPOINT"`
-	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" default:"true"`
+	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL"`
 }
 
 type Config struct {
-	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"    default:"false"`
-	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"  default:"true"`
+	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"`
+	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"`
+	Emojis         bool   `json:"no_emojis"        yaml:"no_emojis"                  env:"KRAFTKIT_NO_EMOJIS"`
 	Editor         string `json:"editor"           yaml:"editor,omitempty"           env:"KRAFTKIT_EDITOR"`
 	Browser        string `json:"browser"          yaml:"browser,omitempty"          env:"KRAFTKIT_BROWSER"`
-	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL" default:"https"`
+	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL"`
 	Pager          string `json:"pager"            yaml:"pager,omitempty"            env:"KRAFTKIT_PAGER"`
-	Emojis         bool   `json:"emojis"           yaml:"emojis"                     env:"KRAFTKIT_EMOJIS"       default:"true"`
 	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
+	RuntimeDir     string `json:"runtime_dir"      yaml:"runtime_dir"                env:"KRAFTKIT_RUNTIME_DIR"`
+	DefaultPlat    string `json:"default_plat"     yaml:"default_plat"               env:"KRAFTKIT_DEFAULT_PLAT"`
+	DefaultArch    string `json:"default_arch"     yaml:"default_arch"               env:"KRAFTKIT_DEFAULT_ARCH"`
+	EventsPidFile  string `json:"events_pidfile"   yaml:"events_pidfile"             env:"KRAFTKIT_EVENTS_PIDFILE"`
 
 	Paths struct {
 		Plugins   string `json:"plugins"   yaml:"plugins,omitempty"   env:"KRAFTKIT_PATHS_PLUGINS"`
@@ -66,9 +63,9 @@ type Config struct {
 	} `json:"paths" yaml:"paths,omitempty"`
 
 	Log struct {
-		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"      default:"info"`
-		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" default:"false"`
-		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"       default:"fancy"`
+		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"`
+		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS"`
+		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"`
 	} `json:"log" yaml:"log"`
 
 	Unikraft struct {
@@ -143,94 +140,4 @@ var configDetails = []ConfigDetail{
 
 func ConfigDetails() []ConfigDetail {
 	return configDetails
-}
-
-func NewDefaultConfig() (*Config, error) {
-	c := &Config{}
-
-	if err := setDefaults(c); err != nil {
-		return nil, fmt.Errorf("could not set defaults for config: %s", err)
-	}
-
-	// Add default path for plugins..
-	if len(c.Paths.Plugins) == 0 {
-		c.Paths.Plugins = filepath.Join(DataDir(), "plugins")
-	}
-
-	// ..for configuration files..
-	if len(c.Paths.Config) == 0 {
-		c.Paths.Config = filepath.Join(ConfigDir())
-	}
-
-	// ..for manifest files..
-	if len(c.Paths.Manifests) == 0 {
-		c.Paths.Manifests = filepath.Join(DataDir(), "manifests")
-	}
-
-	// ..and for cached source files
-	if len(c.Paths.Sources) == 0 {
-		c.Paths.Sources = filepath.Join(DataDir(), "sources")
-	}
-
-	return c, nil
-}
-
-func setDefaults(s interface{}) error {
-	return setDefaultValue(reflect.ValueOf(s), "")
-}
-
-func setDefaultValue(v reflect.Value, def string) error {
-	if v.Kind() != reflect.Ptr {
-		return fmt.Errorf("not a pointer value")
-	}
-
-	v = reflect.Indirect(v)
-
-	switch v.Kind() {
-	case reflect.Int:
-		if len(def) > 0 {
-			i, err := strconv.ParseInt(def, 10, 64)
-			if err != nil {
-				return fmt.Errorf("could not parse default integer value: %s", err)
-			}
-			v.SetInt(i)
-		}
-
-	case reflect.String:
-		if len(def) > 0 {
-			v.SetString(def)
-		}
-
-	case reflect.Bool:
-		if len(def) > 0 {
-			b, err := strconv.ParseBool(def)
-			if err != nil {
-				return fmt.Errorf("could not parse default boolean value: %s", err)
-			}
-			v.SetBool(b)
-		} else {
-			// Assume false by default
-			v.SetBool(false)
-		}
-
-	case reflect.Struct:
-		// Iterate over the struct fields
-		for i := 0; i < v.NumField(); i++ {
-			// Use the `default:""` tag as a hint for the value to set
-			if err := setDefaultValue(
-				v.Field(i).Addr(),
-				v.Type().Field(i).Tag.Get("default"),
-			); err != nil {
-				return err
-			}
-		}
-
-	// TODO: Arrays? Maps?
-
-	default:
-		// Ignore this value and property entirely
-		return nil
-	}
-
-	return nil
 }

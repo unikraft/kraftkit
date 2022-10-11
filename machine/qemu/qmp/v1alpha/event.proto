@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// Authors: Alexander Jung <alex@unikraft.io>
+//
+// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+syntax = "proto3";
+
+package qmp.v1alpha;
+
+import "google/protobuf/any.proto";
+
+import "machine/qemu/qmp/v1alpha/descriptor.proto";
+
+option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+
+enum EventType {
+	EVENT_ACPI_DEVICE_OST           = 0  [ (json_name) = "ACPI_DEVICE_OST" ];
+	EVENT_BALLOON_CHANGE            = 1  [ (json_name) = "BALLOON_CHANGE" ];
+	EVENT_BLOCK_IMAGE_CORRUPTED     = 2  [ (json_name) = "BLOCK_IMAGE_CORRUPTED" ];
+	EVENT_BLOCK_IO_ERROR            = 3  [ (json_name) = "BLOCK_IO_ERROR" ];
+	EVENT_BLOCK_JOB_CANCELLED       = 4  [ (json_name) = "BLOCK_JOB_CANCELLED" ];
+	EVENT_BLOCK_JOB_COMPLETED       = 5  [ (json_name) = "BLOCK_JOB_COMPLETED" ];
+	EVENT_BLOCK_JOB_ERROR           = 6  [ (json_name) = "BLOCK_JOB_ERROR" ];
+	EVENT_BLOCK_JOB_PENDING         = 7  [ (json_name) = "BLOCK_JOB_PENDING" ];
+	EVENT_BLOCK_JOB_READY           = 8  [ (json_name) = "BLOCK_JOB_READY" ];
+	EVENT_DEVICE_DELETED            = 9  [ (json_name) = "DEVICE_DELETED" ];
+	EVENT_DEVICE_TRAY_MOVED         = 10 [ (json_name) = "DEVICE_TRAY_MOVED" ];
+	EVENT_DEVICE_UNPLUG_GUEST_ERROR = 11 [ (json_name) = "DEVICE_UNPLUG_GUEST_ERROR" ];
+	EVENT_DUMP_COMPLETED            = 12 [ (json_name) = "DUMP_COMPLETED" ];
+	EVENT_FAILOVER_NEGOTIATED       = 13 [ (json_name) = "FAILOVER_NEGOTIATED" ];
+	EVENT_GUEST_CRASHLOADED         = 14 [ (json_name) = "GUEST_CRASHLOADED" ];
+	EVENT_GUEST_PANICKED            = 15 [ (json_name) = "GUEST_PANICKED" ];
+	EVENT_MEM_UNPLUG_ERRO           = 16 [ (json_name) = "MEM_UNPLUG_ERRO" ];
+	EVENT_MEMORY_DEVICE_SIZE_CHANGE = 17 [ (json_name) = "MEMORY_DEVICE_SIZE_CHANGE" ];
+	EVENT_MEMORY_FAILURE            = 18 [ (json_name) = "MEMORY_FAILURE" ];
+	EVENT_NIC_RX_FILTER_CHANGED     = 19 [ (json_name) = "NIC_RX_FILTER_CHANGED" ];
+	EVENT_POWERDOWN                 = 20 [ (json_name) = "POWERDOWN" ];
+	EVENT_PR_MANAGER_STATUS_CHANGED = 21 [ (json_name) = "PR_MANAGER_STATUS_CHANGED" ];
+	EVENT_QUORUM_FAILURE            = 22 [ (json_name) = "QUORUM_FAILURE" ];
+	EVENT_RESET                     = 23 [ (json_name) = "RESET" ];
+	EVENT_RESUME                    = 24 [ (json_name) = "RESUME" ];
+	EVENT_SHUTDOWN                  = 25 [ (json_name) = "SHUTDOWN" ];
+	EVENT_STOP                      = 26 [ (json_name) = "STOP" ];
+	EVENT_SUSPEND                   = 27 [ (json_name) = "SUSPEND" ];
+	EVENT_UNPLUG_PRIMARY            = 28 [ (json_name) = "UNPLUG_PRIMARY" ];
+	EVENT_VFU_CLIENT_HANGUP         = 29 [ (json_name) = "VFU_CLIENT_HANGUP" ];
+	EVENT_VNC_CONNECTED             = 30 [ (json_name) = "VNC_CONNECTED" ];
+	EVENT_VNC_DISCONNECTED          = 31 [ (json_name) = "VNC_DISCONNECTED" ];
+	EVENT_VSERPORT_CHANGE           = 32 [ (json_name) = "VSERPORT_CHANGE" ];
+	EVENT_WAKEUP                    = 33 [ (json_name) = "WAKEUP" ];
+	EVENT_WATCHDOG                  = 34 [ (json_name) = "WATCHDOG" ];
+}

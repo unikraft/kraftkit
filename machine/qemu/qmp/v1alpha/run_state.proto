@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// Authors: Alexander Jung <alex@unikraft.io>
+//
+// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+syntax = "proto3";
+
+package qmp.v1alpha;
+
+import "machine/qemu/qmp/v1alpha/descriptor.proto";
+
+option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+
+enum ShutdownCause {
+	SHUTDOWN_NONE                  = 0 [ (json_name) = "none" ];
+	SHUTDOWN_HOST_ERROR            = 1 [ (json_name) = "host-error" ];
+	SHUTDOWN_HOST_QMP_QUIT         = 2 [ (json_name) = "host-qmp-quit" ];
+	SHUTDOWN_HOST_QMP_SYSTEM_RESET = 3 [ (json_name) = "host-qmp-system-reset" ];
+	SHUTDOWN_HOST_SIGNAL           = 4 [ (json_name) = "host-signal" ];
+	SHUTDOWN_HOST_UI               = 5 [ (json_name) = "host-ui" ];
+	SHUTDOWN_GUEST_SHUTDOWN        = 6 [ (json_name) = "guest-shutdown" ];
+	SHUTDOWN_GUEST_RESET           = 7 [ (json_name) = "guest-reset" ];
+	SHUTDOWN_GUEST_PANIC           = 8 [ (json_name) = "guest-panic" ];
+	SHUTDOWN_SUBSYSTEM_RESET       = 9 [ (json_name) = "subsystem-reset" ];
+}
+
+enum RunState {
+	RUN_STATE_COLO           = 0  [ (json_name) = "colo" ];
+	RUN_STATE_DEBUG          = 1  [ (json_name) = "debug" ];
+	RUN_STATE_FINISH_MIGRATE = 2  [ (json_name) = "finish-migrate" ];
+	RUN_STATE_GUEST_PANICKED = 3  [ (json_name) = "guest-panicked" ];
+	RUN_STATE_INMIGRATE      = 4  [ (json_name) = "inmigrate" ];
+	RUN_STATE_INTERNAL_ERROR = 5  [ (json_name) = "internal-error" ];
+	RUN_STATE_IO_ERROR       = 6  [ (json_name) = "io-error" ];
+	RUN_STATE_PAUSED         = 7  [ (json_name) = "paused" ];
+	RUN_STATE_POSTMIGRATE    = 8  [ (json_name) = "postmigrate" ];
+	RUN_STATE_PRELAUNCH      = 9  [ (json_name) = "prelaunch" ];
+	RUN_STATE_RESTORE_VM     = 10 [ (json_name) = "restore-vm" ];
+	RUN_STATE_RUNNING        = 11 [ (json_name) = "running" ];
+	RUN_STATE_SAVE_VM        = 12 [ (json_name) = "save-vm" ];
+	RUN_STATE_SHUTDOWN       = 13 [ (json_name) = "shutdown" ];
+	RUN_STATE_SUSPENDED      = 14 [ (json_name) = "suspended" ];
+	RUN_STATE_WATCHDOG       = 15 [ (json_name) = "watchdog" ];
+}
+
+message QueryStatusRequest {
+	option (execute) = "query-status";
+}
+
+message StatusInfo {
+	bool running    = 1 [ json_name = "running" ];
+	bool singleStep = 2 [ json_name = "singlestep" ];
+	RunState status = 3 [ json_name = "status" ];
+}
+
+message QueryStatusResponse {
+	StatusInfo return = 1 [ json_name = "return" ];
+}

@@ -114,15 +114,13 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 
 // ParseInterfaceArgs returns the array of arguments detected from an interface
 // with tag annotations `flag`
-func ParseInterfaceArgs(face interface{}) ([]string, error) {
+func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 	if face != nil && reflect.ValueOf(face).Kind() == reflect.Ptr {
 		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
 	}
 
 	t := reflect.TypeOf(face)
 	v := reflect.ValueOf(face)
-
-	args := []string{}
 
 	for i := 0; i < t.NumField(); i++ {
 		f, err := parseFlag(t.Field(i).Tag)
@@ -131,7 +129,7 @@ func ParseInterfaceArgs(face interface{}) ([]string, error) {
 		}
 
 		if len(f.flag) > 0 {
-			switch v.Field(i).Type().String() {
+			switch v.Field(i).Kind().String() {
 			case "*int":
 				if v.Field(i).IsZero() { // if nil
 					continue
@@ -173,6 +171,52 @@ func ParseInterfaceArgs(face interface{}) ([]string, error) {
 
 				args = append(args, f.flag)
 				args = append(args, value)
+
+			case "slice": // array of structs or custom slice type
+				n := v.Field(i).Len()
+				if n == 0 {
+					continue
+				}
+
+				for j := 0; j < n; j++ {
+					value, ok := v.Field(i).Index(j).Interface().(fmt.Stringer)
+					if !ok {
+						continue
+					}
+
+					str := value.String()
+					if len(str) == 0 {
+						continue
+					}
+
+					args = append(args, f.flag)
+					args = append(args, str)
+				}
+
+			default:
+				value, ok := v.Field(i).Interface().(fmt.Stringer)
+				if !ok {
+					continue
+				}
+
+				str := value.String()
+				if len(str) == 0 {
+					continue
+				}
+
+				args = append(args, f.flag)
+				args = append(args, str)
+			}
+
+			// Recurisvely iterate through embedded structures
+		} else if v.Field(i).Kind() == reflect.Struct {
+			structArgs, err := ParseInterfaceArgs(v.Field(i).Interface())
+			if err != nil {
+				return []string{}, err
+			}
+
+			if len(structArgs) > 0 {
+				args = append(args, structArgs...)
 			}
 		}
 	}

@@ -48,11 +48,13 @@ type Process struct {
 
 // NewProcess prepares a process to be executed from a given binary name and
 // optional execution options
-func NewProcess(bin string, eopts ...ExecOption) (*Process, error) {
+func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error) {
 	executable, err := NewExecutable(bin, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	executable.args = append(executable.args, args...)
 
 	return NewProcessFromExecutable(executable, eopts...)
 }
@@ -140,7 +142,25 @@ func (e *Process) Start() error {
 		e.opts.log.Debug(e.Cmdline())
 	}
 
-	return e.cmd.Start()
+	if e.opts.detach {
+		// the Setpgid flag is used to prevent the child process from exiting when
+		// the parent is killed
+		e.cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+	}
+
+	if err := e.cmd.Start(); err != nil {
+		return fmt.Errorf("could not start process: %v", err)
+	}
+
+	if e.opts.detach {
+		if err := e.cmd.Process.Release(); err != nil {
+			return fmt.Errorf("could not release process: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // Wait for the process to complete
@@ -178,4 +198,13 @@ func (e *Process) Signal(signal syscall.Signal) error {
 // the process is not running, this will return an error.
 func (e *Process) Kill() error {
 	return e.Signal(syscall.SIGKILL)
+}
+
+// Pid returns the process ID
+func (e *Process) Pid() (int, error) {
+	if e.cmd == nil || e.cmd.Process == nil || e.cmd.Process.Pid == -1 {
+		return -1, fmt.Errorf("could not locate pid")
+	}
+
+	return e.cmd.Process.Pid, nil
 }

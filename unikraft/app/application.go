@@ -362,6 +362,21 @@ func (a *ApplicationConfig) TargetNames() []string {
 	return names
 }
 
+// TargetByName returns the `*target.TargetConfig` based on an input name
+func (a *ApplicationConfig) TargetByName(name string) (*target.TargetConfig, error) {
+	if len(name) == 0 {
+		return nil, fmt.Errorf("no target name specified in lookup")
+	}
+
+	for _, k := range a.Targets {
+		if k.Name() == name {
+			return &k, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unknown target: %s", name)
+}
+
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
 func (ac *ApplicationConfig) Components() []component.Component {
