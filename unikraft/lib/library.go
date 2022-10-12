@@ -33,6 +33,7 @@ package lib
 
 import (
 	"fmt"
+	"strings"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/unikraft"
@@ -58,8 +59,16 @@ type Libraries map[string]LibraryConfig
 func ParseLibraryConfig(version string) (LibraryConfig, error) {
 	lib := LibraryConfig{}
 
+	if strings.Contains(version, "@") {
+		split := strings.Split(version, "@")
+		if len(split) == 2 {
+			lib.ComponentConfig.Source = split[0]
+			version = split[1]
+		}
+	}
+
 	if len(version) == 0 {
-		return lib, fmt.Errorf("cannot ommit architecture name")
+		return lib, fmt.Errorf("cannot use empty string for version or source")
 	}
 
 	lib.ComponentConfig.Version = version
