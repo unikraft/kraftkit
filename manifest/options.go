@@ -55,7 +55,7 @@ func WithLogger(l log.Logger) ManifestOption {
 	}
 }
 
-// WithSourcesRootDir is an option wich helps find cached Manifest Channel or
+// WithSourcesRootDir is an option which helps find cached Manifest Channel or
 // Version resources.  When set to a directory, the fixed structure of this
 // directory should allow us to look up (and also store) resources here for
 // later use.
