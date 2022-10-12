@@ -249,15 +249,12 @@ var transformComponents TransformerFunc = func(data interface{}) (interface{}, e
 		components := make(map[string]interface{}, len(entries))
 		for name, props := range entries {
 			switch props.(type) {
-			case string:
+			case string, map[string]interface{}:
 				comp, err := component.ParseComponentConfig(name, props)
 				if err != nil {
 					return nil, err
 				}
 				components[name] = comp
-
-			case map[string]interface{}:
-				components[name] = props
 
 			default:
 				return data, errors.Errorf("invalid type %T for component", props)
