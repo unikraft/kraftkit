@@ -269,6 +269,8 @@ func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) 
 	}
 
 	for _, manifest := range newManifests {
+		manifest.SourceOrigin = source // Save the origin of the manifest
+
 		if len(manifest.Manifest) > 0 {
 			var next []*Manifest
 			next, err = findManifestsFromSource(source, manifest.Manifest, mopts)
