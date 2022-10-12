@@ -129,6 +129,7 @@ func NewProcessTreeItem(textLeft, textRight string, process SpinnerProcess, chil
 		children:  children,
 		timer:     stopwatch.NewWithInterval(time.Millisecond * 100),
 		logChan:   make(chan *ProcessTreeItem),
+		spinner:   spinner.New(),
 	}
 }
 
