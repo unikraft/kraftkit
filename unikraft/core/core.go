@@ -33,6 +33,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/unikraft"
@@ -45,6 +46,27 @@ type Unikraft interface {
 
 type UnikraftConfig struct {
 	component.ComponentConfig
+}
+
+// ParseUnikraftConfig parse short syntax for UnikraftConfig
+func ParseUnikraftConfig(version string) (UnikraftConfig, error) {
+	core := UnikraftConfig{}
+
+	if strings.Contains(version, "@") {
+		split := strings.Split(version, "@")
+		if len(split) == 2 {
+			core.ComponentConfig.Source = split[0]
+			version = split[1]
+		}
+	}
+
+	if len(version) == 0 {
+		return core, fmt.Errorf("cannot use empty string for version or source")
+	}
+
+	core.ComponentConfig.Version = version
+
+	return core, nil
 }
 
 func (uc UnikraftConfig) Name() string {

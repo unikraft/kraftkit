@@ -29,6 +29,7 @@ import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
@@ -88,6 +89,7 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
 		reflect.TypeOf(lib.LibraryConfig{}):       transformLibrary,
+		reflect.TypeOf(core.UnikraftConfig{}):     transformUnikraft,
 		// Use a map as we need to access the name (which is the key)
 		reflect.TypeOf(map[string]component.ComponentConfig{}): transformComponents,
 	}
@@ -279,4 +281,17 @@ var transformLibrary TransformerFunc = func(data interface{}) (interface{}, erro
 	}
 
 	return data, errors.Errorf("invalid type %T for library", data)
+}
+
+var transformUnikraft TransformerFunc = func(data interface{}) (interface{}, error) {
+	switch value := data.(type) {
+	case map[string]interface{}:
+		return toMapStringString(value, false), nil
+	case map[string]string:
+		return value, nil
+	case string:
+		return core.ParseUnikraftConfig(value)
+	}
+
+	return data, errors.Errorf("invalid type %T for unikraft", data)
 }
