@@ -269,16 +269,18 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 // is not validated if directly used. Use Load() to enable validation
 func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig, error) {
 	// Populate the unikraft component with shared `ComponentConfig` attributes
-	base := component.ComponentConfig{}
-	err := Transform(source, &base)
+	base := map[string]component.ComponentConfig{}
+	remap := map[string]interface{}{
+		"unikraft": source,
+	}
+	err := Transform(remap, &base)
 	if err != nil {
 		return core.UnikraftConfig{}, err
 	}
 
 	// Seed the unikraft component with the shared attributes and transform
-	base.Name = "unikraft"
 	uk := core.UnikraftConfig{
-		ComponentConfig: base,
+		ComponentConfig: base["unikraft"],
 	}
 
 	if err := Transform(source, &uk); err != nil {
