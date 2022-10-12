@@ -53,6 +53,7 @@ type GitHubProvider struct {
 	mopts  []ManifestOption
 	client *github.Client
 	log    log.Logger
+	branch string
 }
 
 // NewGitHubProvider attempts to parse the input path as a location provided on
@@ -62,6 +63,17 @@ type GitHubProvider struct {
 // repository to retrieve information and deliver information as a Manifest
 // format.
 func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
+	var branch string
+	if strings.Contains(path, "@") {
+		split := strings.Split(path, "@")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("malformed github repository URI: %s", path)
+		}
+
+		path = split[0]
+		branch = split[1]
+	}
+
 	repo, err := ghrepo.NewFromURL(path)
 	if err != nil {
 		return nil, err
@@ -126,6 +138,7 @@ func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
 		mopts:  mopts,
 		client: client,
 		log:    manifest.log,
+		branch: branch,
 	}, nil
 }
 
@@ -137,7 +150,11 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	manifest, err := gitProviderFromGitHub(ghp.repo, ghp.mopts...)
+	repo := ghrepo.GenerateRepoURL(ghp.repo, "")
+	if len(ghp.branch) > 0 {
+		repo += "@" + ghp.branch
+	}
+	manifest, err := gitProviderFromGitHub(repo, ghp.mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -187,12 +204,7 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	var manifests []*Manifest
 
 	for _, repo := range repos {
-		ghr, err := ghrepo.NewFromURL(*repo.HTMLURL)
-		if err != nil {
-			return nil, err
-		}
-
-		manifest, err := gitProviderFromGitHub(ghr, ghp.mopts...)
+		manifest, err := gitProviderFromGitHub(*repo.HTMLURL, ghp.mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -220,10 +232,10 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 // with the Provider interface.  We can exploit this knowledge by accepting an
 // input GitHub repository and making the necessary known adjustments to the
 // channel and version Resource attribute.
-func gitProviderFromGitHub(repo ghrepo.Interface, mopts ...ManifestOption) (*Manifest, error) {
+func gitProviderFromGitHub(repo string, mopts ...ManifestOption) (*Manifest, error) {
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	provider, err := NewGitProvider(ghrepo.GenerateRepoURL(repo, ""), mopts...)
+	provider, err := NewGitProvider(repo, mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -236,16 +248,31 @@ func gitProviderFromGitHub(repo ghrepo.Interface, mopts ...ManifestOption) (*Man
 	// Here's the "hack"
 	manifest := manifests[0]
 
+	// If the repo string originally contains @-notation, remove it
+	if strings.Contains(repo, "@") {
+		split := strings.Split(repo, "@")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("malformed github repository URI: %s", repo)
+		}
+
+		repo = split[0]
+	}
+
+	ghr, err := ghrepo.NewFromURL(repo)
+	if err != nil {
+		return nil, err
+	}
+
 	for j, channel := range manifest.Channels {
-		channel.Resource = ghrepo.BranchArchive(repo, channel.Name)
+		channel.Resource = ghrepo.BranchArchive(ghr, channel.Name)
 		manifest.Channels[j] = channel
 	}
 
 	for j, version := range manifest.Versions {
 		if version.Type == ManifestVersionGitSha {
-			version.Resource = ghrepo.SHAArchive(repo, version.Version)
+			version.Resource = ghrepo.SHAArchive(ghr, version.Version)
 		} else {
-			version.Resource = ghrepo.TagArchive(repo, version.Version)
+			version.Resource = ghrepo.TagArchive(ghr, version.Version)
 		}
 
 		manifest.Versions[j] = version

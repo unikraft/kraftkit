@@ -47,10 +47,22 @@ type GitProvider struct {
 	remote *git.Remote
 	refs   []*gitplumbing.Reference
 	mopts  []ManifestOption
+	branch string
 }
 
 // NewGitProvider attempts to parse a provided path as a Git repository
 func NewGitProvider(path string, mopts ...ManifestOption) (Provider, error) {
+	var branch string
+	if strings.Contains(path, "@") {
+		split := strings.Split(path, "@")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("malformed git repository URI: %s", path)
+		}
+
+		path = split[0]
+		branch = split[1]
+	}
+
 	// Check if the remote URL is a Git repository
 	remote := git.NewRemote(nil, &gitconfig.RemoteConfig{
 		Name: "origin",
@@ -69,6 +81,7 @@ func NewGitProvider(path string, mopts ...ManifestOption) (Provider, error) {
 		remote: remote,
 		refs:   refs,
 		mopts:  mopts,
+		branch: branch,
 	}, nil
 }
 
@@ -86,11 +99,16 @@ func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
 	for _, ref := range gp.refs {
 		// Branches are channels
 		if ref.Name().IsBranch() {
+			if len(gp.branch) > 0 && ref.Name().Short() != gp.branch {
+				continue
+			}
+
 			channel := ManifestChannel{
 				Name:     ref.Name().Short(),
 				Resource: gp.repo,
 			}
 
+			// Unikraft-centric naming conventions
 			if ref.Name().Short() == "staging" {
 				haveStaging = true
 			} else if ref.Name().Short() == "stable" {
@@ -122,6 +140,10 @@ func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
 	for _, ref := range gp.refs {
 		// Tags are versions
 		if ref.Name().IsTag() {
+			if len(gp.branch) > 0 && ref.Name().Short() != gp.branch {
+				continue
+			}
+
 			ver := ref.Name().Short()
 			version := ManifestVersion{
 				Version:  ver,
