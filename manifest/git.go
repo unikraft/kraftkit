@@ -207,5 +207,19 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 
 	manifest.Versions = append(manifest.Versions, versions...)
 
+	// TODO: This is the correct place to apply the options.  We do it earlier to
+	// access the logger.  The same issue appears in github.go.  The logger
+	// interface needs to be replaced with a contextualised version, see:
+	// https://github.com/unikraft/kraftkit/issues/74
+	for _, opt := range gp.mopts {
+		if err := opt(manifest); err != nil {
+			return nil, fmt.Errorf("could not apply option: %v", err)
+		}
+	}
+
+	// TODO: Set the latest version
+	// if len(manifest.Versions) > 0 {
+	// }
+
 	return []*Manifest{manifest}, nil
 }

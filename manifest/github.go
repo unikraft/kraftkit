@@ -278,5 +278,15 @@ func gitProviderFromGitHub(repo string, mopts ...ManifestOption) (*Manifest, err
 		manifest.Versions[j] = version
 	}
 
+	// TODO: This is the correct place to apply the options.  We do it earlier to
+	// access the logger.  The same issue appears in git.go.  The logger interface needs to be replaced with a
+	// contextualised version, see:
+	// https://github.com/unikraft/kraftkit/issues/74
+	for _, opt := range mopts {
+		if err := opt(manifest); err != nil {
+			return nil, fmt.Errorf("could not apply option: %v", err)
+		}
+	}
+
 	return manifest, nil
 }
