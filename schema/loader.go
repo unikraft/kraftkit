@@ -182,7 +182,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	}
 
 	if len(model.Unikraft.ComponentConfig.Source) > 0 {
-		if p, err := os.Stat(model.Unikraft.ComponentConfig.Source); err != nil && p.IsDir() {
+		if p, err := os.Stat(model.Unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
 			details.Configuration[unikraft.UK_BASE] = model.Unikraft.ComponentConfig.Source
 		}
 	}
