@@ -35,6 +35,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -95,6 +96,14 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 
 	switch entry := props.(type) {
 	case string:
+		if strings.Contains(entry, "@") {
+			split := strings.Split(entry, "@")
+			if len(split) == 2 {
+				component.Source = split[0]
+				entry = split[1]
+			}
+		}
+
 		component.Version = entry
 
 	// TODO: This is handled by the transformer, do we really need to do this
