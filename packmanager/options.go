@@ -90,9 +90,16 @@ func WithConfigManager(cm *config.ConfigManager) PackageManagerOption {
 	}
 }
 
+// CatalogQuery is the request structure with associated attributes which are
+// used to search the package manager's catalog
 type CatalogQuery struct {
-	Types   []unikraft.ComponentType
-	Name    string
+	// Types specifies the associated list of possible types for the package
+	Types []unikraft.ComponentType
+
+	// Name specifies the name of the package
+	Name string
+
+	// Version specifies the version of the package
 	Version string
 }
 
