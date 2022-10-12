@@ -111,21 +111,14 @@ func (mm ManifestManager) ApplyOptions(pmopts ...packmanager.PackageManagerOptio
 	return nil
 }
 
-// Update retrieves and stores locally a cache of the upstream manifest registry.
-func (mm ManifestManager) Update() error {
+// update retrieves and returns a cache of the upstream manifest registry
+func (mm ManifestManager) update() (*ManifestIndex, error) {
 	cfm := mm.opts.ConfigManager
 	if len(cfm.Config.Unikraft.Manifests) == 0 {
-		return fmt.Errorf("no manifests specified in config")
+		return nil, fmt.Errorf("no manifests specified in config")
 	}
 
-	var localIndex *ManifestIndex
-
-	// Create parent directories if not present
-	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex()), 0o771); err != nil {
-		return err
-	}
-
-	localIndex = &ManifestIndex{
+	localIndex := &ManifestIndex{
 		LastUpdated: time.Now(),
 	}
 
@@ -152,6 +145,20 @@ func (mm ManifestManager) Update() error {
 		localIndex.Manifests = append(localIndex.Manifests, manifests...)
 	}
 
+	return localIndex, nil
+}
+
+func (mm ManifestManager) Update() error {
+	// Create parent directories if not present
+	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex()), 0o771); err != nil {
+		return err
+	}
+
+	localIndex, err := mm.update()
+	if err != nil {
+		return err
+	}
+
 	// TODO: Partition directories when there is a large number of manifests
 	// TODO: Merge manifests of same name and type?
 
@@ -174,11 +181,7 @@ func (mm ManifestManager) Update() error {
 		}
 
 		// Replace manifest with relative path
-		localIndex.Manifests[i] = &Manifest{
-			Name:     manifest.Name,
-			Type:     manifest.Type,
-			Manifest: "./" + filename,
-		}
+		localIndex.Manifests[i].Manifest = "./" + filename
 	}
 
 	return localIndex.WriteToFile(mm.LocalManifestIndex())
@@ -235,10 +238,9 @@ func (um ManifestManager) From(sub string) (packmanager.PackageManager, error) {
 }
 
 func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
-	index, err := NewManifestIndexFromFile(mm.LocalManifestIndex())
-	if err != nil {
-		return nil, err
-	}
+	var err error
+	var index *ManifestIndex
+	var allManifests []*Manifest
 
 	mopts := []ManifestOption{
 		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
@@ -246,18 +248,38 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 		WithLogger(mm.Options().Log),
 	}
 
-	var allManifests []*Manifest
+	if len(query.Source) > 0 && query.NoCache {
+		manifest, err := FindManifestsFromSource(query.Source, mopts...)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, manifest := range index.Manifests {
-		if len(manifest.Manifest) > 0 {
-			manifests, err := findManifestsFromSource(mm.LocalManifestsDir(), manifest.Manifest, mopts)
-			if err != nil {
-				return nil, err
+		allManifests = append(allManifests, manifest...)
+	} else if query.NoCache {
+		index, err = mm.update()
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		index, err = NewManifestIndexFromFile(mm.LocalManifestIndex())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if index != nil {
+		for _, manifest := range index.Manifests {
+			if len(manifest.Manifest) > 0 {
+				manifests, err := findManifestsFromSource(mm.LocalManifestsDir(), manifest.Manifest, mopts)
+				if err != nil {
+					return nil, err
+				}
+
+				allManifests = append(allManifests, manifests...)
+			} else {
+				allManifests = append(allManifests, manifest)
 			}
-
-			allManifests = append(allManifests, manifests...)
-		} else {
-			allManifests = append(allManifests, manifest)
 		}
 	}
 
@@ -280,6 +302,10 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 			if !found {
 				continue
 			}
+		}
+
+		if len(query.Source) > 0 && manifest.SourceOrigin != query.Source {
+			continue
 		}
 
 		if len(query.Name) > 0 && !g.Match(manifest.Name) {
