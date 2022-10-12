@@ -287,6 +287,17 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 	var g glob.Glob
 
 	if len(query.Name) > 0 {
+		t, n, v, err := unikraft.GuessTypeNameVersion(query.Name)
+
+		// Overwrite additional attributes if pattern-matchable
+		if err == nil {
+			query.Name = n
+			query.Version = v
+			if t != unikraft.ComponentTypeUnknown {
+				query.Types = append(query.Types, t)
+			}
+		}
+
 		g = glob.MustCompile(query.Name)
 	}
 
