@@ -194,6 +194,10 @@ func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 				}
 
 			default:
+				if !v.Field(i).CanInterface() {
+					continue
+				}
+				
 				value, ok := v.Field(i).Interface().(fmt.Stringer)
 				if !ok {
 					continue
