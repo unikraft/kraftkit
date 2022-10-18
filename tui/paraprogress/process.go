@@ -123,7 +123,7 @@ func (p Process) Init() tea.Cmd {
 	return nil
 }
 
-func (p Process) Start() tea.Cmd {
+func (p *Process) Start() tea.Cmd {
 	cmds := []tea.Cmd{
 		spinner.Tick,
 		func() tea.Msg {
@@ -140,6 +140,8 @@ func (p Process) Start() tea.Cmd {
 		if err != nil {
 			status = StatusFailed
 		}
+
+		p.Status = status
 
 		if tprog != nil {
 			tprog.Send(StatusMsg{
@@ -261,7 +263,7 @@ func (p Process) View() string {
 	}
 
 	// Print the logs for this item
-	if p.Status != StatusSuccess {
+	if p.Status != StatusSuccess && p.percent < 1 {
 		// Newline for the logs
 		if len(p.logs) > 0 {
 			s += "\n"

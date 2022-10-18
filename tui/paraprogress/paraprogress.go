@@ -51,6 +51,9 @@ type ParaProgress struct {
 	log           log.Logger
 	norender      bool
 	maxConcurrent int
+	curr          int
+	err           error
+	errChan       chan error
 }
 
 func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -60,6 +63,8 @@ func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaPro
 
 	md := &ParaProgress{
 		processes: processes,
+		errChan:   make(chan error),
+		curr:      0,
 	}
 
 	for _, opt := range opts {
@@ -79,21 +84,15 @@ func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaPro
 	for i := range processes {
 		processes[i].NameWidth = maxNameLen
 
-		if md.parallel {
-			md.processes[i].log = md.log.Clone()
-			md.processes[i].log.SetOutput(md.processes[i])
-		} else {
-			md.processes[i].log = md.log
-		}
+		md.processes[i].log = md.log.Clone()
+		md.processes[i].log.SetOutput(md.processes[i])
 	}
 
 	return md, nil
 }
 
 func (pd *ParaProgress) Start() error {
-	teaOpts := []tea.ProgramOption{
-		// tea.WithAltScreen(),
-	}
+	teaOpts := []tea.ProgramOption{}
 
 	if pd.norender {
 		teaOpts = append(teaOpts, tea.WithoutRenderer())
@@ -106,7 +105,17 @@ func (pd *ParaProgress) Start() error {
 
 	tprog = tea.NewProgram(pd, teaOpts...)
 
-	return tprog.Start()
+	go func() {
+		err := tprog.Start()
+		if err == nil {
+			pd.errChan <- pd.err
+		} else {
+			pd.errChan <- err
+		}
+	}()
+
+	err := <-pd.errChan
+	return err
 }
 
 func (md ParaProgress) Init() tea.Cmd {
@@ -128,7 +137,7 @@ func (md ParaProgress) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (md ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -139,6 +148,19 @@ func (md ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			md.quitting = true
 			return md, tea.Quit
 		}
+	case StatusMsg:
+		if msg.err != nil {
+			md.err = msg.err
+		}
+		if msg.err != nil {
+			md.quitting = true
+			cmds = append(cmds, tea.Quit)
+		} else if (msg.status == StatusSuccess) && !md.parallel {
+			md.curr += 1
+			if len(md.processes) > md.curr {
+				cmds = append(cmds, md.processes[md.curr].Start())
+			}
+		}
 	}
 
 	var cmd tea.Cmd
@@ -148,7 +170,8 @@ func (md ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 
 		if md.processes[i].Status == StatusFailed ||
-			md.processes[i].Status == StatusSuccess {
+			md.processes[i].Status == StatusSuccess ||
+			md.processes[i].percent == 1 {
 			complete += 1
 		}
 	}
