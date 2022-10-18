@@ -148,6 +148,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			md.quitting = true
+			md.err = fmt.Errorf("force quit")
 			return md, tea.Quit
 		}
 	case StatusMsg:
