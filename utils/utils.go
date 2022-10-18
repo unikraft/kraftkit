@@ -123,3 +123,36 @@ func Contains(haystack []string, needle string) bool {
 
 	return false
 }
+
+// HumanizeDuration returns a relative time string based on an input duration
+func HumanizeDuration(dur time.Duration) string {
+	ns := dur.Nanoseconds()
+	ms := ns / 1000000
+	sec := ms / 1000
+	min := sec / 60
+	hr := min / 60
+
+	// Get only the excess amt of each component
+	ns %= 1000000
+	ms %= 1000
+	sec %= 60
+	hr %= 60
+
+	// Express ns as ms to 3 significant digits
+	ns /= 1000
+
+	// Express ms to 1 significant digit
+	ms /= 100
+
+	if hr >= 1 {
+		return fmt.Sprintf("%dh %2dm %2ds", hr, min, sec)
+	} else if min >= 10 {
+		return fmt.Sprintf("%2dm %2ds", min, sec)
+	} else if min >= 1 && sec < 10 {
+		return fmt.Sprintf("%dm %ds", min, sec)
+	} else if min >= 1 {
+		return fmt.Sprintf("%dm %2ds", min, sec)
+	}
+
+	return fmt.Sprintf("%d.%ds", sec, ms)
+}

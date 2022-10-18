@@ -47,6 +47,7 @@ type ParaProgress struct {
 	processes     []*Process
 	quitting      bool
 	width         int
+	timerWidth    int
 	parallel      bool
 	log           log.Logger
 	norender      bool
@@ -170,11 +171,20 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		md.processes[i], cmd = md.processes[i].Update(msg)
 		cmds = append(cmds, cmd)
 
+		if md.processes[i].timerWidth > md.timerWidth {
+			md.timerWidth = md.processes[i].timerWidth
+		}
+
 		if md.processes[i].Status == StatusFailed ||
 			md.processes[i].Status == StatusSuccess ||
 			md.processes[i].percent == 1 {
 			complete += 1
 		}
+	}
+
+	// Update each process to have the same width
+	for i := range md.processes {
+		md.processes[i].timerMax = md.timerWidth
 	}
 
 	if complete == len(md.processes) {

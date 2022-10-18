@@ -36,6 +36,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
+	"kraftkit.sh/utils"
 )
 
 var (
@@ -69,7 +70,7 @@ func (pt ProcessTree) View() string {
 
 	if len(pt.verb) > 0 {
 		title := titleStyle(
-			pt.verb + " " + formatTimer(pt.timer.Elapsed()) +
+			pt.verb + " " + utils.HumanizeDuration(pt.timer.Elapsed()) +
 				" (" + strconv.Itoa(finished) + "/" + strconv.Itoa(pt.total) + ")",
 		)
 		s = title + "\n" + s
@@ -127,7 +128,7 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 
 	textLeft += " " + pti.textLeft
 
-	elapsed := formatTimer(pti.timer.Elapsed())
+	elapsed := utils.HumanizeDuration(pti.timer.Elapsed())
 	rightTimerWidth := width(elapsed)
 	if rightTimerWidth > stm.rightPad {
 		stm.rightPad = rightTimerWidth

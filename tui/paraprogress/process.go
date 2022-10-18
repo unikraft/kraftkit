@@ -35,19 +35,23 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
 
 	"kraftkit.sh/log"
+	"kraftkit.sh/utils"
 )
 
 var (
 	lastID int
 	idMtx  sync.Mutex
+	width  = lipgloss.Width
 )
 
 func nextID() int {
@@ -92,6 +96,10 @@ type Process struct {
 	log         log.Logger
 	progress    progress.Model
 	spinner     spinner.Model
+	timer       stopwatch.Model
+	timerWidth  int
+	timerMax    int
+	width       int
 	logs        []string
 	err         error
 
@@ -106,6 +114,7 @@ func NewProcess(name string, processFunc func(log.Logger, func(float64)) error) 
 		Name:        name,
 		spinner:     spinner.New(),
 		progress:    progress.New(),
+		timer:       stopwatch.NewWithInterval(time.Millisecond * 100),
 		Status:      StatusPending,
 		NameWidth:   len(name),
 		processFunc: processFunc,
@@ -119,8 +128,8 @@ func NewProcess(name string, processFunc func(log.Logger, func(float64)) error) 
 	return d
 }
 
-func (p Process) Init() tea.Cmd {
-	return nil
+func (p *Process) Init() tea.Cmd {
+	return p.timer.Init()
 }
 
 func (p *Process) Start() tea.Cmd {
@@ -185,27 +194,30 @@ func (p *Process) Write(b []byte) (int, error) {
 }
 
 func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	d.timer, cmd = d.timer.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 	// ProgressMsg is sent when the progress bar wishes
 	case ProgressMsg:
-		var cmd tea.Cmd
 		if msg.ID != d.id {
 			return d, nil
 		}
 
 		if msg.progress > 1.0 {
 			msg.progress = 1.0
+			cmds = append(cmds, d.timer.Stop())
 		}
 
 		d.percent = msg.progress
 
-		return d, cmd
-
 	// TickMsg is sent when the spinner wants to animate itself
 	case spinner.TickMsg:
-		spinnerModel, cmd := d.spinner.Update(msg)
-		d.spinner = spinnerModel
-		return d, cmd
+		d.spinner, cmd = d.spinner.Update(msg)
+		cmds = append(cmds, cmd)
 
 	// StatusMsg is sent when the status of the process changes
 	case StatusMsg:
@@ -216,51 +228,78 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 		d.Status = msg.status
 		if d.Status == StatusFailed {
 			d.err = msg.err
+			cmds = append(cmds, d.timer.Stop())
 		} else if d.Status == StatusSuccess {
 			d.percent = 1.0
+			cmds = append(cmds, d.timer.Stop())
 		}
-
-		return d, nil
 
 	// tea.WindowSizeMsg is sent when the terminal window is resized
 	case tea.WindowSizeMsg:
-		d.progress.Width = msg.Width - d.NameWidth - 5
-		return d, nil
-
-	default:
-		return d, nil
+		d.width = msg.Width
 	}
+
+	return d, tea.Batch(cmds...)
 }
 
 func (p Process) View() string {
-	s := "["
+	left := "["
 
 	switch p.Status {
-	case StatusFailed:
-		s += "-"
 	case StatusRunning:
-		s += p.spinner.View()
+		left += p.spinner.View()
 	case StatusSuccess:
-		s += "+"
+		left += "+"
 	default:
-		s += " "
+		if p.Status == StatusFailed || p.err != nil {
+			left += "-"
+		} else {
+			left += " "
+		}
 	}
 
-	s += "] "
+	left += "] "
+	leftWidth := width(left)
+
+	elapsed := utils.HumanizeDuration(p.timer.Elapsed())
+	p.timerWidth = width(elapsed)
+
+	if p.timerMax-p.timerWidth < 0 {
+		p.timerMax = p.timerWidth
+	}
+
+	right := " [" +
+		lipgloss.NewStyle().
+			Render(indent.String(elapsed, uint(p.timerMax-p.timerWidth))) +
+		"]"
+	rightWidth := width(right)
+
+	middle := ""
 
 	if p.err != nil {
-		s += fmt.Sprintf(
+		middle = fmt.Sprintf(
 			"error %s: %s",
 			p.Name,
 			p.err.Error(),
 		)
+		pad := p.width - width(middle) - leftWidth - rightWidth
+		if pad > 0 {
+			middle += strings.Repeat(" ", pad)
+		}
 	} else {
-		s += lipgloss.NewStyle().
+		middle = lipgloss.NewStyle().
 			Width(p.NameWidth + 1).
 			Render(p.Name)
 
-		s += p.progress.ViewAs(p.percent)
+		p.progress.Width = p.width - width(middle) - leftWidth - rightWidth
+		middle += p.progress.ViewAs(p.percent)
 	}
+
+	s := lipgloss.JoinHorizontal(lipgloss.Top,
+		left,
+		middle,
+		right,
+	)
 
 	// Print the logs for this item
 	if p.Status != StatusSuccess && p.percent < 1 {
