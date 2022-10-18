@@ -42,4 +42,9 @@ const (
 	UK_BASE        = "CONFIG_UK_BASE"
 	UK_APP         = "CONFIG_UK_APP"
 	UK_DEFCONFIG   = "UK_DEFCONFIG"
+
+	// Filenames which represent ecosystem files
+	Config_uk     = "Config.uk"
+	Makefile_uk   = "Makefile.uk"
+	Exportsyms_uk = "exportsyms.uk"
 )
