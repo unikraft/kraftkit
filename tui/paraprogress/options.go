@@ -57,3 +57,10 @@ func IsParallel(parallel bool) ParaProgressOption {
 		return nil
 	}
 }
+
+func WithFailFast(failFast bool) ParaProgressOption {
+	return func(pp *ParaProgress) error {
+		pp.failFast = failFast
+		return nil
+	}
+}

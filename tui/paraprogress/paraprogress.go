@@ -54,6 +54,7 @@ type ParaProgress struct {
 	curr          int
 	err           error
 	errChan       chan error
+	failFast      bool
 }
 
 func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -152,10 +153,10 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			md.err = msg.err
 		}
-		if msg.err != nil {
+		if msg.err != nil && md.failFast {
 			md.quitting = true
 			cmds = append(cmds, tea.Quit)
-		} else if (msg.status == StatusSuccess) && !md.parallel {
+		} else if (!md.failFast || msg.status == StatusSuccess) && !md.parallel {
 			md.curr += 1
 			if len(md.processes) > md.curr {
 				cmds = append(cmds, md.processes[md.curr].Start())
