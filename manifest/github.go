@@ -164,6 +164,10 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
+func (ghp GitHubProvider) String() string {
+	return "github"
+}
+
 // manifestsFromWildcard is an internal method which is called by Manifests to
 // parse a GitHub source with a wildcard repository name, e.g. lib-*
 func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {

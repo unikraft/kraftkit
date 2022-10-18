@@ -224,3 +224,7 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 
 	return []*Manifest{manifest}, nil
 }
+
+func (gp GitProvider) String() string {
+	return "git"
+}

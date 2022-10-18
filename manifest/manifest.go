@@ -122,6 +122,10 @@ func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
 }
 
+func (mp ManifestProvider) String() string {
+	return "manifest"
+}
+
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
 func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error) {
 	manifest := &Manifest{}

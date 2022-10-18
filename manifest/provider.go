@@ -37,6 +37,9 @@ type Provider interface {
 	// Manifests returns a slice of Manifests which can be returned by this
 	// Provider
 	Manifests() ([]*Manifest, error)
+
+	// String returns the name of the provider
+	fmt.Stringer
 }
 
 var providerRequestCache []byte

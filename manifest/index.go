@@ -97,6 +97,10 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	return manifests, nil
 }
 
+func (mip ManifestIndexProvider) String() string {
+	return "index"
+}
+
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
 func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {
