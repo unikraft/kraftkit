@@ -92,7 +92,7 @@ func NewManifestPackageManagerFromOptions(opts *packmanager.PackageManagerOption
 // NewPackage initializes a new package
 func (mm ManifestManager) NewPackageFromOptions(opts *pack.PackageOptions) ([]pack.Package, error) {
 	mm.opts.Log.Infof("initializing new manifest package...")
-	p, err := NewPackageFromOptions(opts)
+	p, err := NewPackageFromOptions(opts, nil)
 	return []pack.Package{p}, err
 }
 

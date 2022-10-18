@@ -40,6 +40,7 @@ import (
 
 type ManifestPackage struct {
 	*pack.PackageOptions
+	Provider
 }
 
 const (
@@ -48,8 +49,8 @@ const (
 
 // NewPackageFromOptions generates a manifest implementation of the pack.Package
 // construct based on the input options
-func NewPackageFromOptions(opts *pack.PackageOptions) (pack.Package, error) {
-	return ManifestPackage{opts}, nil
+func NewPackageFromOptions(opts *pack.PackageOptions, provider Provider) (pack.Package, error) {
+	return ManifestPackage{opts, provider}, nil
 }
 
 // NewPackageWithVersion generates a manifest implementation of the pack.Package
@@ -98,7 +99,7 @@ func NewPackageWithVersion(manifest *Manifest, version string, popts ...pack.Pac
 		return nil, fmt.Errorf("could not prepare package for target: %s", err)
 	}
 
-	return NewPackageFromOptions(pkgOpts)
+	return NewPackageFromOptions(pkgOpts, manifest.Provider)
 }
 
 // NewPackageFromManifest generates a manifest implementation of the
@@ -150,11 +151,12 @@ func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 		return err
 	}
 
-	if useGit {
-		return mp.pullGit(popts)
+	manifest := mp.Context(ManifestContext).(*Manifest)
+	if manifest == nil {
+		return fmt.Errorf("package does not contain manifest context")
 	}
 
-	return mp.pullArchive(popts)
+	return mp.PullPackage(manifest, mp.PackageOptions, popts)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

@@ -31,12 +31,19 @@
 
 package manifest
 
-import "fmt"
+import (
+	"fmt"
+
+	"kraftkit.sh/pack"
+)
 
 type Provider interface {
 	// Manifests returns a slice of Manifests which can be returned by this
 	// Provider
 	Manifests() ([]*Manifest, error)
+
+	// Pull from the provider
+	PullPackage(*Manifest, *pack.PackageOptions, *pack.PullPackageOptions) error
 
 	// String returns the name of the provider
 	fmt.Stringer

@@ -42,17 +42,12 @@ import (
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
-func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
-	if len(popts.Workdir()) == 0 {
+func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	if len(ppopts.Workdir()) == 0 {
 		return fmt.Errorf("cannot Git clone manifest package without working directory")
 	}
 
-	manifest := mp.Context(ManifestContext).(*Manifest)
-	if manifest == nil {
-		return fmt.Errorf("package does not contain manifest context")
-	}
-
-	mp.Log().Infof("using git to pull manifest package %s", mp.CanonicalName())
+	ppopts.Log().Infof("using git to pull manifest package %s", manifest.Name)
 
 	if len(manifest.GitRepo) == 0 {
 		return fmt.Errorf("requesting Git with empty repository in manifest")
@@ -62,7 +57,7 @@ func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
 		FetchOptions: &git.FetchOptions{
 			RemoteCallbacks: git.RemoteCallbacks{
 				TransferProgressCallback: func(stats git.TransferProgress) git.ErrorCode {
-					popts.OnProgress(float64(stats.IndexedObjects) / float64(stats.TotalObjects))
+					ppopts.OnProgress(float64(stats.IndexedObjects) / float64(stats.TotalObjects))
 					return 0
 				},
 			},
@@ -70,7 +65,7 @@ func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
 		CheckoutOpts: &git.CheckoutOptions{
 			Strategy: git.CheckoutSafe,
 		},
-		CheckoutBranch: mp.Options().Version,
+		CheckoutBranch: popts.Version,
 		Bare:           false,
 	}
 
@@ -87,7 +82,7 @@ func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
 	// }
 
 	local, err := unikraft.PlaceComponent(
-		popts.Workdir(),
+		ppopts.Workdir(),
 		manifest.Type,
 		manifest.Name,
 	)
@@ -95,14 +90,14 @@ func (mp ManifestPackage) pullGit(popts *pack.PullPackageOptions) error {
 		return fmt.Errorf("could not place component package: %s", err)
 	}
 
-	mp.Log().Infof("cloning %s into %s", manifest.GitRepo, local)
+	ppopts.Log().Infof("cloning %s into %s", manifest.GitRepo, local)
 
 	_, err = git.Clone(manifest.GitRepo, local, copts)
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)
 	}
 
-	mp.Log().Infof("successfulyl cloned %s into %s", manifest.GitRepo, local)
+	ppopts.Log().Infof("successfulyl cloned %s into %s", manifest.GitRepo, local)
 
 	return nil
 }

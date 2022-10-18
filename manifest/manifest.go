@@ -42,6 +42,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
 	"gopkg.in/yaml.v2"
@@ -120,6 +121,10 @@ func NewManifestProvider(path string, mopts ...ManifestOption) (Provider, error)
 
 func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
+}
+
+func (mp ManifestProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	return fmt.Errorf("not implemented: manifest.ManifestProvider.PullPackage")
 }
 
 func (mp ManifestProvider) String() string {

@@ -62,24 +62,19 @@ func (pp *pullProgressArchive) Write(p []byte) (n int, err error) {
 
 // pullArchive is used internally to pull a specific Manifest resource using the
 // conventional archive.
-func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
-	manifest := mp.Context(ManifestContext).(*Manifest)
-	if manifest == nil {
-		return fmt.Errorf("package does not contain manifest context")
-	}
-
+func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	resource, cache, checksum, err := resourceCacheChecksum(manifest)
 	if err != nil {
 		return err
 	}
 
 	pp := &pullProgressArchive{
-		onProgress: popts.OnProgress,
+		onProgress: ppopts.OnProgress,
 		total:      0,
 		downloaded: 0,
 	}
 
-	if f, err := os.Stat(cache); !popts.UseCache() || err != nil || f.Size() == 0 {
+	if f, err := os.Stat(cache); !ppopts.UseCache() || err != nil || f.Size() == 0 {
 		// Get the total size of the remote resource.  Note: this fails for GitHub
 		// archives as Content-Length is, for some reason, always set to 0.
 		res, err := http.Head(resource)
@@ -88,7 +83,7 @@ func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 		} else if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("recieved HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
-			popts.Log().Warnf("could not determine package size before pulling")
+			ppopts.Log().Warnf("could not determine package size before pulling")
 			pp.total = 0
 		} else {
 			pp.total = int(res.ContentLength)
@@ -124,11 +119,11 @@ func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 			return err
 		}
 
-		if popts.CalculateChecksum() {
-			popts.Log().Debugf("calculating checksum for manifest package...")
+		if ppopts.CalculateChecksum() {
+			ppopts.Log().Debugf("calculating checksum for manifest package...")
 
 			if len(checksum) == 0 {
-				popts.Log().Warnf("manifest does not specify checksum!")
+				ppopts.Log().Warnf("manifest does not specify checksum!")
 			} else {
 
 				f, err := os.Open(tmpCache)
@@ -146,7 +141,7 @@ func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 					return fmt.Errorf("checksum of package does not match")
 				}
 
-				popts.Log().Debugf("checksum OK")
+				ppopts.Log().Debugf("checksum OK")
 			}
 		}
 
@@ -157,9 +152,9 @@ func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 	}
 
 	local := cache
-	if len(popts.Workdir()) > 0 {
+	if len(ppopts.Workdir()) > 0 {
 		local, err = unikraft.PlaceComponent(
-			popts.Workdir(),
+			ppopts.Workdir(),
 			manifest.Type,
 			manifest.Name,
 		)
@@ -177,7 +172,7 @@ func (mp ManifestPackage) pullArchive(popts *pack.PullPackageOptions) error {
 		}
 	}
 
-	popts.Log().Tracef("pull complete")
+	ppopts.Log().Tracef("pull complete")
 
 	return nil
 }

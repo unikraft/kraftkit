@@ -45,6 +45,7 @@ import (
 
 	"kraftkit.sh/internal/ghrepo"
 	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
 
@@ -162,6 +163,14 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	manifest.Provider = ghp
 
 	return []*Manifest{manifest}, nil
+}
+
+func (ghp GitHubProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	if useGit {
+		return pullGit(manifest, popts, ppopts)
+	}
+
+	return pullArchive(manifest, popts, ppopts)
 }
 
 func (ghp GitHubProvider) String() string {

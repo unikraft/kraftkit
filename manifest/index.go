@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v2"
+	"kraftkit.sh/pack"
 )
 
 type ManifestIndex struct {
@@ -95,6 +96,10 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	}
 
 	return manifests, nil
+}
+
+func (mip ManifestIndexProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullPackage")
 }
 
 func (mip ManifestIndexProvider) String() string {

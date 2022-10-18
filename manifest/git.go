@@ -39,6 +39,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
+
+	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
 
@@ -223,6 +225,14 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	// }
 
 	return []*Manifest{manifest}, nil
+}
+
+func (gp GitProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	if useGit {
+		return pullGit(manifest, popts, ppopts)
+	}
+
+	return pullArchive(manifest, popts, ppopts)
 }
 
 func (gp GitProvider) String() string {
