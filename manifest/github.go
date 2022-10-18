@@ -159,6 +159,8 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 		return nil, err
 	}
 
+	manifest.Provider = ghp
+
 	return []*Manifest{manifest}, nil
 }
 

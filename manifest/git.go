@@ -180,9 +180,10 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	}
 
 	manifest := &Manifest{
-		Type:    t,
-		Name:    n,
-		GitRepo: gp.repo,
+		Type:     t,
+		Name:     n,
+		GitRepo:  gp.repo,
+		Provider: gp,
 	}
 
 	for _, opt := range gp.mopts {
