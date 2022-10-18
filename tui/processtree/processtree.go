@@ -67,6 +67,8 @@ const (
 	LOGLEN  = 5
 )
 
+var tprog *tea.Program
+
 type ProcessTreeItem struct {
 	textLeft  string
 	textRight string
@@ -93,6 +95,9 @@ type ProcessTree struct {
 	norender bool
 	finished int
 	total    int
+	err      error
+	errChan  chan error
+	failFast bool
 }
 
 func NewProcessTree(opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
@@ -107,6 +112,7 @@ func NewProcessTree(opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*Proces
 		tree:     tree,
 		timer:    stopwatch.NewWithInterval(time.Millisecond * 100),
 		channel:  make(chan *ProcessTreeItem),
+		errChan:  make(chan error),
 		total:    total,
 		finished: 0,
 	}
@@ -147,7 +153,7 @@ func (pti *ProcessTreeItem) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (pt ProcessTree) Start() error {
+func (pt *ProcessTree) Start() error {
 	var teaOpts []tea.ProgramOption
 
 	if pt.norender {
@@ -159,10 +165,22 @@ func (pt ProcessTree) Start() error {
 		pt.width, _, _ = term.GetSize(int(os.Stdout.Fd()))
 	}
 
-	return tea.NewProgram(pt, teaOpts...).Start()
+	tprog = tea.NewProgram(pt, teaOpts...)
+
+	go func() {
+		err := tprog.Start()
+		if err == nil {
+			pt.errChan <- pt.err
+		} else {
+			pt.errChan <- err
+		}
+	}()
+
+	err := <-pt.errChan
+	return err
 }
 
-func (pt ProcessTree) Init() tea.Cmd {
+func (pt *ProcessTree) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		waitForProcessExit(pt.channel),
 		spinner.Tick,
@@ -296,6 +314,10 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 		if err := item.process(item.log); err != nil {
 			item.log.Error(err)
 			item.status = StatusFailed
+			pt.err = err
+			if pt.failFast {
+				pt.quitting = true
+			}
 		} else {
 			item.status = StatusSuccess
 		}

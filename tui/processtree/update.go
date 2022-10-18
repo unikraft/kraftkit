@@ -36,7 +36,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func (pt ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 

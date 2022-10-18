@@ -64,3 +64,10 @@ func IsParallel(parallel bool) ProcessTreeOption {
 		return nil
 	}
 }
+
+func WithFailFast(failFast bool) ProcessTreeOption {
+	return func(pt *ProcessTree) error {
+		pt.failFast = failFast
+		return nil
+	}
+}
