@@ -68,7 +68,7 @@ type Manifest struct {
 
 	// Provider is the string name of the underlying implementation providing the
 	// contents of this manifest
-	Provider Provider `yaml:"-"`
+	Provider Provider `yaml:"provider,omitempty"`
 
 	// Channels provides multiple ways to retrieve versions.  Classically this is
 	// a separation between "staging" and "stable"
@@ -133,6 +133,34 @@ func (mp ManifestProvider) String() string {
 
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
 func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error) {
+	// TODO: This deserialization mechanism is used to encode the provider into the
+	// resulting manifest file and feels a bit of a hack since we are running
+	// `yaml.Marshal` twice.  The library exposes `yaml.Marshler` and
+	// `yaml.Unmarshaller` which is a nicer implementation.  The challenge though
+	// is that the marshalling should ideally occur on the Provider implementation
+	// -- which would ultimately require "trial-and-error" to discover, or
+	// however, map to the correct implementation.  Because this interface is not
+	// implemented, this code is duplicated also inside of index.go
+
+	contents := make(map[string]interface{})
+
+	if err := yaml.Unmarshal(raw, contents); err != nil {
+		return nil, err
+	}
+
+	providerName := ""
+
+	if v, ok := contents["provider"]; ok {
+		providerName = v.(string)
+
+		delete(contents, "provider")
+	}
+
+	raw, err := yaml.Marshal(contents)
+	if err != nil {
+		return nil, err
+	}
+
 	manifest := &Manifest{}
 	if err := yaml.Unmarshal(raw, manifest); err != nil {
 		return nil, err
@@ -142,6 +170,13 @@ func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error
 		return nil, fmt.Errorf("unset name in manifest")
 	} else if len(manifest.Type) == 0 {
 		return nil, fmt.Errorf("unset type in manifest")
+	}
+
+	if providerName != "" {
+		manifest.Provider, err = NewProvidersFromString(providerName, manifest.SourceOrigin, mopts...)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, o := range mopts {
@@ -283,6 +318,7 @@ func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) 
 
 	for _, manifest := range newManifests {
 		manifest.SourceOrigin = source // Save the origin of the manifest
+		manifest.Provider = provider
 
 		if len(manifest.Manifest) > 0 {
 			var next []*Manifest
@@ -313,6 +349,30 @@ func (m Manifest) WriteToFile(path string) error {
 	defer f.Close()
 
 	contents, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	// TODO: This serialization mechanism is used to encode the provider into the
+	// resulting manifest file and feels a bit of a hack since we are running
+	// `yaml.Marshal` twice.  The library exposes `yaml.Marshler` and
+	// `yaml.Unmarshaller` which is a nicer implementation.  The challenge though
+	// is that the marshalling should ideally occur on the Provider implementation
+	// -- which would ultimately require "trial-and-error" to discover, or
+	// however, map to the correct implementation.  Because this interface is not
+	// implemented, this code is duplicated also inside of index.go
+	var iface map[string]interface{}
+	if err := yaml.Unmarshal(contents, &iface); err != nil {
+		return err
+	}
+
+	if m.Provider != nil {
+		iface["provider"] = m.Provider.String()
+	} else {
+		delete(iface, "provider")
+	}
+
+	contents, err = yaml.Marshal(iface)
 	if err != nil {
 		return err
 	}

@@ -85,3 +85,22 @@ func NewProvider(path string, mopts ...ManifestOption) (Provider, error) {
 
 	return nil, fmt.Errorf("could not determine provider for: %s", path)
 }
+
+// NewProvidersFromString returns a provider based on a giving string which
+// identifies the provider
+func NewProvidersFromString(provider, path string, mopts ...ManifestOption) (Provider, error) {
+	switch provider {
+	case "index":
+		return NewManifestIndexProvider(path, mopts...)
+	case "manifest":
+		return NewManifestProvider(path, mopts...)
+	case "github":
+		return NewGitHubProvider(path, mopts...)
+	case "git":
+		return NewGitProvider(path, mopts...)
+	case "directory":
+		return NewDirectoryProvider(path, mopts...)
+	}
+
+	return nil, fmt.Errorf("could not determine provider for: %s", path)
+}
