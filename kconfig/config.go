@@ -12,19 +12,19 @@ import (
 	"regexp"
 )
 
-// ConfigFile represents a parsed .config file. It should not be modified
+// DotConfigFile represents a parsed .config file. It should not be modified
 // directly, only by means of calling methods. The only exception is
 // Config.Value which may be modified directly. Note: config names don't include
 // CONFIG_ prefix, here and in other public interfaces, users of this package
 // should never mention CONFIG_. Use Yes/Mod/No consts to check for/set config
 // to particular values.
-type ConfigFile struct {
-	Configs  []*Config
-	Map      map[string]*Config // duplicates Configs for convenience
+type DotConfigFile struct {
+	Configs  []*KConfigValue
+	Map      map[string]*KConfigValue // duplicates Configs for convenience
 	comments []string
 }
 
-type Config struct {
+type KConfigValue struct {
 	Name     string
 	Value    string
 	comments []string
@@ -38,7 +38,7 @@ const (
 )
 
 //  Value returns config value, or No if it's not present at all.
-func (cf *ConfigFile) Value(name string) string {
+func (cf *DotConfigFile) Value(name string) string {
 	cfg := cf.Map[name]
 	if cfg == nil {
 		return No
@@ -48,10 +48,10 @@ func (cf *ConfigFile) Value(name string) string {
 }
 
 // Set changes config value, or adds it if it's not yet present.
-func (cf *ConfigFile) Set(name, val string) {
+func (cf *DotConfigFile) Set(name, val string) {
 	cfg := cf.Map[name]
 	if cfg == nil {
-		cfg = &Config{
+		cfg = &KConfigValue{
 			Name:  name,
 			Value: val,
 		}
@@ -66,7 +66,7 @@ func (cf *ConfigFile) Set(name, val string) {
 }
 
 // Unset sets config value to No, if it's present in the config.
-func (cf *ConfigFile) Unset(name string) {
+func (cf *DotConfigFile) Unset(name string) {
 	cfg := cf.Map[name]
 	if cfg == nil {
 		return
@@ -75,7 +75,7 @@ func (cf *ConfigFile) Unset(name string) {
 	cfg.Value = No
 }
 
-func (cf *ConfigFile) ModToYes() {
+func (cf *DotConfigFile) ModToYes() {
 	for _, cfg := range cf.Configs {
 		if cfg.Value == Mod {
 			cfg.Value = Yes
@@ -83,7 +83,7 @@ func (cf *ConfigFile) ModToYes() {
 	}
 }
 
-func (cf *ConfigFile) ModToNo() {
+func (cf *DotConfigFile) ModToNo() {
 	for _, cfg := range cf.Configs {
 		if cfg.Value == Mod {
 			cfg.Value = No
@@ -91,7 +91,7 @@ func (cf *ConfigFile) ModToNo() {
 	}
 }
 
-func (cf *ConfigFile) Serialize() []byte {
+func (cf *DotConfigFile) Serialize() []byte {
 	buf := new(bytes.Buffer)
 	for _, cfg := range cf.Configs {
 		for _, comment := range cfg.comments {
@@ -112,7 +112,7 @@ func (cf *ConfigFile) Serialize() []byte {
 	return buf.Bytes()
 }
 
-func ParseConfig(file string) (*ConfigFile, error) {
+func ParseConfig(file string) (*DotConfigFile, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open .config file %v: %v", file, err)
@@ -121,9 +121,9 @@ func ParseConfig(file string) (*ConfigFile, error) {
 	return ParseConfigData(data, file)
 }
 
-func ParseConfigData(data []byte, file string) (*ConfigFile, error) {
-	cf := &ConfigFile{
-		Map: make(map[string]*Config),
+func ParseConfigData(data []byte, file string) (*DotConfigFile, error) {
+	cf := &DotConfigFile{
+		Map: make(map[string]*KConfigValue),
 	}
 
 	s := bufio.NewScanner(bytes.NewReader(data))
@@ -134,14 +134,14 @@ func ParseConfigData(data []byte, file string) (*ConfigFile, error) {
 	return cf, nil
 }
 
-func (cf *ConfigFile) clone() *ConfigFile {
-	cf1 := &ConfigFile{
-		Map:      make(map[string]*Config),
+func (cf *DotConfigFile) clone() *DotConfigFile {
+	cf1 := &DotConfigFile{
+		Map:      make(map[string]*KConfigValue),
 		comments: cf.comments,
 	}
 
 	for _, cfg := range cf.Configs {
-		cfg1 := new(Config)
+		cfg1 := new(KConfigValue)
 		*cfg1 = *cfg
 		cf1.Configs = append(cf1.Configs, cfg1)
 		cf1.Map[cfg1.Name] = cfg1
@@ -150,7 +150,7 @@ func (cf *ConfigFile) clone() *ConfigFile {
 	return cf1
 }
 
-func (cf *ConfigFile) parseLine(text string) {
+func (cf *DotConfigFile) parseLine(text string) {
 	if match := reConfigY.FindStringSubmatch(text); match != nil {
 		cf.Set(match[1], match[2])
 	} else if match := reConfigN.FindStringSubmatch(text); match != nil {
