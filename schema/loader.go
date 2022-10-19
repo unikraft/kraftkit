@@ -293,6 +293,10 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 		return uk, err
 	}
 
+	if uk.ComponentConfig.Name == "" {
+		uk.ComponentConfig.Name = "unikraft"
+	}
+
 	if err := uk.ApplyOptions(append(
 		opts.componentOptions,
 		component.WithType(unikraft.ComponentTypeCore),
