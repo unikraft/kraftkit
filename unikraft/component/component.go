@@ -127,6 +127,9 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 				}
 
 				component.Source = prop
+
+			case "kconfig":
+				component.Configuration = kconfig.NewKConfigValuesFromMap(prop.(map[string]interface{}))
 			}
 		}
 	}
