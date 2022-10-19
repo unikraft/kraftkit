@@ -101,11 +101,13 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 			split := strings.Split(entry, "@")
 			if len(split) == 2 {
 				component.Source = split[0]
-				entry = split[1]
+				component.Version = split[1]
 			}
+		} else if u, err := url.Parse(entry); err == nil {
+			component.Source = u.Path
+		} else {
+			component.Version = entry
 		}
-
-		component.Version = entry
 
 	// TODO: This is handled by the transformer, do we really need to do this
 	// here?
@@ -115,11 +117,16 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 			case "version":
 				component.Version = prop.(string)
 			case "source":
-				component.Source = prop.(string)
-				// Also handled by the transformer, and the abstraction exists within
-				// schema so any new code in this package would be duplicate.
-				// case "kconfig":
-				// 	component.Configuration = NewKConfig(prop)
+				prop := prop.(string)
+				if strings.Contains(prop, "@") {
+					split := strings.Split(prop, "@")
+					if len(split) == 2 {
+						component.Version = split[1]
+						prop = split[0]
+					}
+				}
+
+				component.Source = prop
 			}
 		}
 	}
