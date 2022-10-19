@@ -158,7 +158,7 @@ const (
 	Yes    = "y"
 	Mod    = "m"
 	No     = "---===[[[is not set]]]===---" // to make it more obvious when some code writes it directly
-	prefix = "CONFIG_"
+	Prefix = "CONFIG_"
 )
 
 //  Value returns config value, or No if it's not present at all.
@@ -223,9 +223,9 @@ func (cf *DotConfigFile) Serialize() []byte {
 		}
 
 		if cfg.Value == No {
-			fmt.Fprintf(buf, "# %v%v is not set\n", prefix, cfg.Name)
+			fmt.Fprintf(buf, "# %v%v is not set\n", Prefix, cfg.Name)
 		} else {
-			fmt.Fprintf(buf, "%v%v=%v\n", prefix, cfg.Name, cfg.Value)
+			fmt.Fprintf(buf, "%v%v=%v\n", Prefix, cfg.Name, cfg.Value)
 		}
 	}
 
@@ -285,6 +285,6 @@ func (cf *DotConfigFile) parseLine(text string) {
 }
 
 var (
-	reConfigY = regexp.MustCompile(`^` + prefix + `([A-Za-z0-9_]+)=(y|m|(?:-?[0-9]+)|(?:0x[0-9a-fA-F]+)|(?:".*?"))$`)
-	reConfigN = regexp.MustCompile(`^# ` + prefix + `([A-Za-z0-9_]+) is not set$`)
+	reConfigY = regexp.MustCompile(`^` + Prefix + `([A-Za-z0-9_]+)=(y|m|(?:-?[0-9]+)|(?:0x[0-9a-fA-F]+)|(?:".*?"))$`)
+	reConfigN = regexp.MustCompile(`^# ` + Prefix + `([A-Za-z0-9_]+) is not set$`)
 )
