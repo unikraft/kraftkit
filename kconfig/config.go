@@ -90,6 +90,26 @@ func (kco KConfigValues) RemoveEmpty() KConfigValues {
 	return kco
 }
 
+// String returns the serialized string representing a .config file
+func (kco KConfigValues) String() string {
+	var ret strings.Builder
+
+	for _, v := range kco {
+		if v.Value == "n" {
+			ret.WriteString("# ")
+			ret.WriteString(v.Name)
+			ret.WriteString(" is not set")
+		} else {
+			ret.WriteString(v.Name)
+			ret.WriteString("=")
+			ret.WriteString(v.Value)
+		}
+		ret.WriteString("\n")
+	}
+
+	return ret.String()
+}
+
 // DotConfigFile represents a parsed .config file. It should not be modified
 // directly, only by means of calling methods. The only exception is
 // Config.Value which may be modified directly. Note: config names don't include
