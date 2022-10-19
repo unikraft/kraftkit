@@ -16,27 +16,27 @@ import (
 	"sync"
 )
 
-// KConfig represents a parsed Kconfig file (including includes).
-type KConfig struct {
-	Root    *Menu            // mainmenu
-	Configs map[string]*Menu // only config/menuconfig entries
+// KConfigFile represents a parsed Kconfig file (including includes).
+type KConfigFile struct {
+	Root    *KConfigMenu            // mainmenu
+	Configs map[string]*KConfigMenu // only config/menuconfig entries
 }
 
 // Menu represents a single hierarchical menu or config.
-type Menu struct {
-	Kind   MenuKind   // config/menu/choice/etc
-	Type   ConfigType // tristate/bool/string/etc
-	Name   string     // name without CONFIG_
-	Elems  []*Menu    // sub-elements for menus
-	Parent *Menu      // parent menu, non-nil for everythign except for mainmenu
+type KConfigMenu struct {
+	Kind   MenuKind       // config/menu/choice/etc
+	Type   ConfigType     // tristate/bool/string/etc
+	Name   string         // name without CONFIG_
+	Elems  []*KConfigMenu // sub-elements for menus
+	Parent *KConfigMenu   // parent menu, non-nil for everythign except for mainmenu
 
-	kconf     *KConfig // back-link to the owning KConfig
-	prompts   []prompt
-	defaults  []defaultVal
-	dependsOn expr
-	visibleIf expr
-	deps      map[string]bool
-	depsOnce  sync.Once
+	kconfigFile *KConfigFile // back-link to the owning KConfig
+	prompts     []prompt
+	defaults    []defaultVal
+	dependsOn   expr
+	visibleIf   expr
+	deps        map[string]bool
+	depsOnce    sync.Once
 }
 
 type prompt struct {
@@ -72,7 +72,7 @@ const (
 )
 
 // DependsOn returns all transitive configs this config depends on.
-func (m *Menu) DependsOn() map[string]bool {
+func (m *KConfigMenu) DependsOn() map[string]bool {
 	m.depsOnce.Do(func() {
 		m.deps = make(map[string]bool)
 		if m.dependsOn != nil {
@@ -83,7 +83,7 @@ func (m *Menu) DependsOn() map[string]bool {
 		}
 		var indirect []string
 		for cfg := range m.deps {
-			dep := m.kconf.Configs[cfg]
+			dep := m.kconfigFile.Configs[cfg]
 			if dep == nil {
 				delete(m.deps, cfg)
 				continue
@@ -99,7 +99,7 @@ func (m *Menu) DependsOn() map[string]bool {
 	return m.deps
 }
 
-func (m *Menu) Prompt() string {
+func (m *KConfigMenu) Prompt() string {
 	// TODO: check prompt conditions, some prompts may be not visible. If all
 	// prompts are not visible, then then menu if effectively disabled (at least
 	// for user).
@@ -112,13 +112,13 @@ func (m *Menu) Prompt() string {
 type kconfigParser struct {
 	*parser
 	includes  []*parser
-	stack     []*Menu
-	cur       *Menu
+	stack     []*KConfigMenu
+	cur       *KConfigMenu
 	baseDir   string
 	helpIdent int
 }
 
-func Parse(file string) (*KConfig, error) {
+func Parse(file string) (*KConfigFile, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open Kconfig file %v: %v", file, err)
@@ -126,7 +126,7 @@ func Parse(file string) (*KConfig, error) {
 	return ParseData(data, file)
 }
 
-func ParseData(data []byte, file string) (*KConfig, error) {
+func ParseData(data []byte, file string) (*KConfigFile, error) {
 	kp := &kconfigParser{
 		parser:  newParser(data, file),
 		baseDir: filepath.Dir(file),
@@ -142,17 +142,17 @@ func ParseData(data []byte, file string) (*KConfig, error) {
 	}
 
 	root := kp.stack[0]
-	kconf := &KConfig{
+	kconf := &KConfigFile{
 		Root:    root,
-		Configs: make(map[string]*Menu),
+		Configs: make(map[string]*KConfigMenu),
 	}
 
 	kconf.walk(root, nil, nil)
 	return kconf, nil
 }
 
-func (kconf *KConfig) walk(m *Menu, dependsOn, visibleIf expr) {
-	m.kconf = kconf
+func (kconf *KConfigFile) walk(m *KConfigMenu, dependsOn, visibleIf expr) {
+	m.kconfigFile = kconf
 	m.dependsOn = exprAnd(dependsOn, m.dependsOn)
 	m.visibleIf = exprAnd(visibleIf, m.visibleIf)
 
@@ -222,31 +222,31 @@ func (kp *kconfigParser) parseMenu(cmd string) {
 		kp.includeSource(file)
 
 	case "mainmenu":
-		kp.pushCurrent(&Menu{
+		kp.pushCurrent(&KConfigMenu{
 			Kind:    MenuConfig,
 			prompts: []prompt{{text: kp.QuotedString()}},
 		})
 
 	case "comment":
-		kp.newCurrent(&Menu{
+		kp.newCurrent(&KConfigMenu{
 			Kind:    MenuComment,
 			prompts: []prompt{{text: kp.QuotedString()}},
 		})
 
 	case "menu":
-		kp.pushCurrent(&Menu{
+		kp.pushCurrent(&KConfigMenu{
 			Kind:    MenuGroup,
 			prompts: []prompt{{text: kp.QuotedString()}},
 		})
 
 	case "if":
-		kp.pushCurrent(&Menu{
+		kp.pushCurrent(&KConfigMenu{
 			Kind:      MenuGroup,
 			visibleIf: kp.parseExpr(),
 		})
 
 	case "choice":
-		kp.pushCurrent(&Menu{
+		kp.pushCurrent(&KConfigMenu{
 			Kind: MenuChoice,
 		})
 
@@ -254,7 +254,7 @@ func (kp *kconfigParser) parseMenu(cmd string) {
 		kp.popCurrent()
 
 	case "config", "menuconfig":
-		kp.newCurrent(&Menu{
+		kp.newCurrent(&KConfigMenu{
 			Kind: MenuConfig,
 			Name: kp.Ident(),
 		})
@@ -389,7 +389,7 @@ func (kp *kconfigParser) includeSource(file string) {
 	}
 }
 
-func (kp *kconfigParser) pushCurrent(m *Menu) {
+func (kp *kconfigParser) pushCurrent(m *KConfigMenu) {
 	kp.endCurrent()
 	kp.cur = m
 	kp.stack = append(kp.stack, m)
@@ -409,15 +409,15 @@ func (kp *kconfigParser) popCurrent() {
 	top.Elems = append(top.Elems, last)
 }
 
-func (kp *kconfigParser) newCurrent(m *Menu) {
+func (kp *kconfigParser) newCurrent(m *KConfigMenu) {
 	kp.endCurrent()
 	kp.cur = m
 }
 
-func (kp *kconfigParser) current() *Menu {
+func (kp *kconfigParser) current() *KConfigMenu {
 	if kp.cur == nil {
 		kp.failf("config property outside of config")
-		return &Menu{}
+		return &KConfigMenu{}
 	}
 
 	return kp.cur
