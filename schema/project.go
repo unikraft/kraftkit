@@ -114,82 +114,86 @@ func WithConfigFile(file string) ProjectOptionsFn {
 	}
 }
 
-// WithDotConfig imports configuration variables from .config file
-func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
-	return func(o *ProjectOptions) error {
-		if !withDotConfig {
-			return nil
+func withDotConfig(o *ProjectOptions) error {
+	if o.DotConfigFile == "" {
+		wd, err := o.GetWorkingDir()
+		if err != nil {
+			return err
 		}
 
+		o.DotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
+	}
+
+	dotConfigFile := o.DotConfigFile
+
+	abs, err := filepath.Abs(dotConfigFile)
+	if err != nil {
+		return err
+	}
+
+	dotConfigFile = abs
+
+	s, err := os.Stat(dotConfigFile)
+	if os.IsNotExist(err) {
+		if o.DotConfigFile != "" {
+			return errors.Errorf("couldn't find config file: %s", o.DotConfigFile)
+		}
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if s.IsDir() {
 		if o.DotConfigFile == "" {
-			wd, err := o.GetWorkingDir()
-			if err != nil {
-				return err
-			}
-
-			o.DotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
-		}
-
-		dotConfigFile := o.DotConfigFile
-
-		abs, err := filepath.Abs(dotConfigFile)
-		if err != nil {
-			return err
-		}
-
-		dotConfigFile = abs
-
-		s, err := os.Stat(dotConfigFile)
-		if os.IsNotExist(err) {
-			if o.DotConfigFile != "" {
-				return errors.Errorf("couldn't find config file: %s", o.DotConfigFile)
-			}
 			return nil
 		}
+		return errors.Errorf("%s is a directory", dotConfigFile)
+	}
 
-		if err != nil {
+	file, err := os.Open(dotConfigFile)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	config := kconfig.KConfigValues{}
+
+	notInConfigSet := make(map[string]interface{})
+	env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
+		v, ok := os.LookupEnv(k)
+		if !ok {
+			config.Unset(k)
+			return "", true
+		}
+
+		return v, true
+	})
+	if err != nil {
+		return err
+	}
+
+	for k, v := range env {
+		if _, ok := notInConfigSet[k]; ok {
+			continue
+		}
+
+		config.Set(k, v)
+	}
+
+	o.Configuration = config
+
+	return nil
+}
+
+// WithDotConfig imports configuration variables from .config file
+func WithDotConfig(enforce bool) ProjectOptionsFn {
+	return func(o *ProjectOptions) error {
+		if err := withDotConfig(o); err != nil && enforce {
 			return err
 		}
-
-		if s.IsDir() {
-			if o.DotConfigFile == "" {
-				return nil
-			}
-			return errors.Errorf("%s is a directory", dotConfigFile)
-		}
-
-		file, err := os.Open(dotConfigFile)
-		if err != nil {
-			return err
-		}
-
-		defer file.Close()
-
-		config := kconfig.KConfigValues{}
-
-		notInConfigSet := make(map[string]interface{})
-		env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
-			v, ok := os.LookupEnv(k)
-			if !ok {
-				config.Unset(k)
-				return "", true
-			}
-
-			return v, true
-		})
-		if err != nil {
-			return err
-		}
-
-		for k, v := range env {
-			if _, ok := notInConfigSet[k]; ok {
-				continue
-			}
-
-			config.Set(k, v)
-		}
-
-		o.Configuration = config
 
 		return nil
 	}
