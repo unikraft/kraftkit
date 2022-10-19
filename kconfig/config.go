@@ -212,7 +212,7 @@ func ParseConfigData(data []byte, file string) (*DotConfigFile, error) {
 	return cf, nil
 }
 
-func (cf *DotConfigFile) clone() *DotConfigFile {
+func (cf *DotConfigFile) Clone() *DotConfigFile {
 	cf1 := &DotConfigFile{
 		Map:      make(map[string]*KConfigValue),
 		comments: cf.comments,
