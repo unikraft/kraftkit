@@ -124,7 +124,7 @@ func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 }
 
 func (mp ManifestProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	return fmt.Errorf("not implemented: manifest.ManifestProvider.PullPackage")
+	return pullArchive(manifest, popts, ppopts)
 }
 
 func (mp ManifestProvider) String() string {
