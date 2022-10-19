@@ -19,19 +19,45 @@ const DotConfigFileName = ".config"
 // KConfigValues is a map of KConfigValue
 type KConfigValues map[string]*KConfigValue
 
-// NewKConfigValues build a new Mapping from a set of KEY=VALUE strings
-func NewKConfigValues(values ...string) KConfigValues {
+// NewKConfigValuesFromSlice build a new Mapping from a set of KEY=VALUE strings
+func NewKConfigValuesFromSlice(values ...string) KConfigValues {
 	mapping := KConfigValues{}
 
-	for _, env := range values {
-		tokens := strings.SplitN(env, "=", 2)
+	for _, value := range values {
+		tokens := strings.SplitN(value, "=", 2)
 		if len(tokens) > 1 {
 			mapping[tokens[0]] = &KConfigValue{
 				Name:  tokens[0],
 				Value: tokens[1],
 			}
 		} else {
-			mapping[env] = nil
+			mapping[value] = nil
+		}
+	}
+
+	return mapping
+}
+
+// NewKConfigValuesFromMap build a new Mapping from a set of KEY=VALUE strings
+func NewKConfigValuesFromMap(values map[string]interface{}) KConfigValues {
+	mapping := KConfigValues{}
+
+	for key, value := range values {
+		mapping[key] = &KConfigValue{
+			Name: key,
+		}
+
+		switch casting := value.(type) {
+		case string:
+			mapping[key].Value = casting
+		case bool:
+			v := "n"
+			if casting {
+				v = "y"
+			}
+			mapping[key].Value = v
+		default:
+			mapping[key].Value = fmt.Sprintf("%s", casting)
 		}
 	}
 
