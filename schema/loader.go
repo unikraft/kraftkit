@@ -178,23 +178,19 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	}
 
 	if projectName != "" {
-		details.Configuration[unikraft.UK_NAME] = projectName
+		details.Configuration.Set(unikraft.UK_NAME, projectName)
 	}
 
 	if len(model.Unikraft.ComponentConfig.Source) > 0 {
 		if p, err := os.Stat(model.Unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
-			details.Configuration[unikraft.UK_BASE] = model.Unikraft.ComponentConfig.Source
+			details.Configuration.Set(unikraft.UK_BASE, model.Unikraft.ComponentConfig.Source)
 		}
 	}
 
-	for k, v := range model.Unikraft.Configuration {
-		details.Configuration[k] = *v
-	}
+	details.Configuration.OverrideBy(model.Unikraft.Configuration)
 
 	for _, library := range model.Libraries {
-		for k, v := range library.Configuration {
-			details.Configuration[k] = *v
-		}
+		details.Configuration.OverrideBy(library.Configuration)
 	}
 
 	project := &app.ApplicationConfig{

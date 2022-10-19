@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/internal/errs"
+	"kraftkit.sh/kconfig"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -40,7 +41,7 @@ type ProjectOptions struct {
 	Name          string
 	WorkingDir    string
 	ConfigPaths   []string
-	Configuration map[string]string
+	Configuration kconfig.KConfigValues
 	DotConfigFile string
 	log           log.Logger
 	loadOptions   []func(*LoaderOptions)
@@ -52,7 +53,7 @@ type ProjectOptionsFn func(*ProjectOptions) error
 func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOptions, error) {
 	options := &ProjectOptions{
 		ConfigPaths:   configs,
-		Configuration: map[string]string{},
+		Configuration: kconfig.KConfigValues{},
 	}
 	for _, o := range opts {
 		err := o(options)
@@ -99,7 +100,7 @@ func WithWorkingDirectory(wd string) ProjectOptionsFn {
 func WithConfig(config []string) ProjectOptionsFn {
 	return func(o *ProjectOptions) error {
 		for k, v := range getAsEqualsMap(config) {
-			o.Configuration[k] = v
+			o.Configuration.Set(k, v)
 		}
 		return nil
 	}
@@ -126,7 +127,7 @@ func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
 				return err
 			}
 
-			o.DotConfigFile = filepath.Join(wd, ".config")
+			o.DotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
 		}
 
 		dotConfigFile := o.DotConfigFile
@@ -164,11 +165,13 @@ func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
 
 		defer file.Close()
 
+		config := kconfig.KConfigValues{}
+
 		notInConfigSet := make(map[string]interface{})
 		env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
 			v, ok := os.LookupEnv(k)
 			if !ok {
-				notInConfigSet[k] = nil
+				config.Unset(k)
 				return "", true
 			}
 
@@ -182,8 +185,11 @@ func WithDotConfig(withDotConfig bool) ProjectOptionsFn {
 			if _, ok := notInConfigSet[k]; ok {
 				continue
 			}
-			o.Configuration[k] = v
+
+			config.Set(k, v)
 		}
+
+		o.Configuration = config
 
 		return nil
 	}

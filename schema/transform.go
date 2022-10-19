@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
@@ -82,7 +83,7 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(component.KConfig{}):       transformMappingOrListFunc("=", true),
+		reflect.TypeOf(kconfig.KConfigValues{}):   transformKConfig,
 		reflect.TypeOf(target.Command{}):          transformCommand,
 		reflect.TypeOf([]target.TargetConfig{}):   transformTarget,
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
@@ -291,4 +292,19 @@ var transformUnikraft TransformerFunc = func(data interface{}) (interface{}, err
 	}
 
 	return data, errors.Errorf("invalid type %T for unikraft", data)
+}
+
+var transformKConfig TransformerFunc = func(data interface{}) (interface{}, error) {
+	config, err := transformMappingOrList(data, "=", true)
+	if err != nil {
+		return nil, err
+	}
+
+	kconf := kconfig.KConfigValues{}
+
+	for k, v := range config.(map[string]string) {
+		kconf.Set(k, v)
+	}
+
+	return kconf, nil
 }

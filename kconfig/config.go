@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2020 syzkaller project authors. All rights reserved.
+// Copyright 2020 The Compose Specification Authors.
 // Copyright 2022 Unikraft GmbH. All rights reserved.
 
 package kconfig
@@ -10,7 +11,84 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"strings"
 )
+
+const DotConfigFileName = ".config"
+
+// KConfigValues is a map of KConfigValue
+type KConfigValues map[string]*KConfigValue
+
+// NewKConfigValues build a new Mapping from a set of KEY=VALUE strings
+func NewKConfigValues(values ...string) KConfigValues {
+	mapping := KConfigValues{}
+
+	for _, env := range values {
+		tokens := strings.SplitN(env, "=", 2)
+		if len(tokens) > 1 {
+			mapping[tokens[0]] = &KConfigValue{
+				Name:  tokens[0],
+				Value: tokens[1],
+			}
+		} else {
+			mapping[env] = nil
+		}
+	}
+
+	return mapping
+}
+
+// OverrideBy update KConfigValues with values from another KConfigValues
+func (kco KConfigValues) OverrideBy(other KConfigValues) KConfigValues {
+	for k, v := range other {
+		kco[k] = v
+	}
+	return kco
+}
+
+// Set a new key with specified value
+func (kco KConfigValues) Set(key, value string) KConfigValues {
+	kco[key] = &KConfigValue{
+		Name:  key,
+		Value: value,
+	}
+
+	return kco
+}
+
+// Unset a specific key
+func (kco KConfigValues) Unset(key string) KConfigValues {
+	delete(kco, key)
+
+	return kco
+}
+
+// Resolve update a KConfig for keys without value (`key`, but not `key=`)
+func (kco KConfigValues) Resolve(lookupFn func(string) (string, bool)) KConfigValues {
+	for k, v := range kco {
+		if v == nil {
+			if value, ok := lookupFn(k); ok {
+				kco[k] = &KConfigValue{
+					Name:  k,
+					Value: value,
+				}
+			}
+		}
+	}
+
+	return kco
+}
+
+// RemoveEmpty excludes keys that are not associated with a value
+func (kco KConfigValues) RemoveEmpty() KConfigValues {
+	for k, v := range kco {
+		if v == nil || v.Value == "" {
+			delete(kco, k)
+		}
+	}
+
+	return kco
+}
 
 // DotConfigFile represents a parsed .config file. It should not be modified
 // directly, only by means of calling methods. The only exception is

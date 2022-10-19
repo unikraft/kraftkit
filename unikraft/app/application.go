@@ -44,6 +44,7 @@ import (
 
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -61,15 +62,15 @@ type Application interface {
 type ApplicationConfig struct {
 	component.ComponentConfig
 
-	WorkingDir    string               `yaml:"-" json:"-"`
-	Filename      string               `yaml:"-" json:"-"`
-	OutDir        string               `yaml:",omitempty" json:"outdir,omitempty"`
-	Unikraft      core.UnikraftConfig  `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries     lib.Libraries        `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets       target.Targets       `yaml:",omitempty" json:"targets,omitempty"`
-	Extensions    component.Extensions `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	KraftFiles    []string             `yaml:"-" json:"-"`
-	Configuration map[string]string    `yaml:"-" json:"-"`
+	WorkingDir    string                `yaml:"-" json:"-"`
+	Filename      string                `yaml:"-" json:"-"`
+	OutDir        string                `yaml:",omitempty" json:"outdir,omitempty"`
+	Unikraft      core.UnikraftConfig   `yaml:",omitempty" json:"unikraft,omitempty"`
+	Libraries     lib.Libraries         `yaml:",omitempty" json:"libraries,omitempty"`
+	Targets       target.Targets        `yaml:",omitempty" json:"targets,omitempty"`
+	Extensions    component.Extensions  `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
+	KraftFiles    []string              `yaml:"-" json:"-"`
+	Configuration kconfig.KConfigValues `yaml:"-" json:"-"`
 }
 
 func (ac ApplicationConfig) Name() string {

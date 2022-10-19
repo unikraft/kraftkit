@@ -35,6 +35,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
@@ -46,13 +47,13 @@ type ConfigDetails struct {
 	Version       string
 	WorkingDir    string
 	ConfigFiles   []ConfigFile
-	Configuration map[string]string
+	Configuration kconfig.KConfigValues
 }
 
 // LookupConfig provides a lookup function for config variables
 func (cd ConfigDetails) LookupConfig(key string) (string, bool) {
 	v, ok := cd.Configuration[key]
-	return v, ok
+	return v.Value, ok
 }
 
 // RelativePath resolve a relative path based project's working directory
