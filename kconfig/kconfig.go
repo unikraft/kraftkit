@@ -137,8 +137,12 @@ func ParseData(data []byte, file string) (*KConfigFile, error) {
 		return nil, kp.err
 	}
 
+	// If there is nothing in the stack, simply return nothing rather than an
+	// error since the error will usually end any high-level processing.  Instead,
+	// rely on any call to `ParseDat` to determine if the resulting information is
+	// nil which represents an empty file as opposed to an error-prone file.
 	if len(kp.stack) == 0 {
-		return nil, fmt.Errorf("no mainmenu in config")
+		return nil, nil
 	}
 
 	root := kp.stack[0]
@@ -398,7 +402,9 @@ func (kp *kconfigParser) pushCurrent(m *KConfigMenu) {
 func (kp *kconfigParser) popCurrent() {
 	kp.endCurrent()
 	if len(kp.stack) < 2 {
-		kp.failf("unbalanced endmenu")
+		// Unbalanced endmenu: Unikraft's Config.uk files do not necessarily add an
+		// `endmenu` for `menuconfig` options.  As a result, we cannot pop from the
+		// stack.
 		return
 	}
 
@@ -429,7 +435,12 @@ func (kp *kconfigParser) endCurrent() {
 	}
 
 	if len(kp.stack) == 0 {
-		kp.failf("unbalanced endmenu")
+		// Unbalanced endmenu: Unikraft's Config.uk files do not necessarily add an
+		// `endmenu` for `menuconfig` options.  As a result, we pretend it exists
+		// and continue parsing by simply moving the current menu into the stack and
+		// nil the current pointer so that we can move forward processing.
+		kp.stack = append(kp.stack, kp.cur)
+		kp.cur = nil
 		return
 	}
 
