@@ -32,6 +32,7 @@
 package packmanager
 
 import (
+	"context"
 	"fmt"
 
 	"kraftkit.sh/pack"
@@ -77,10 +78,10 @@ func NewUmbrellaManagerFromOptions(opts *PackageManagerOptions) (PackageManager,
 	return umbrella, nil
 }
 
-func (um UmbrellaManager) NewPackageFromOptions(opts *pack.PackageOptions) ([]pack.Package, error) {
+func (um UmbrellaManager) NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		packed, err := manager.NewPackageFromOptions(opts)
+		packed, err := manager.NewPackageFromOptions(ctx, opts)
 		if err != nil {
 			return packages, err
 		}

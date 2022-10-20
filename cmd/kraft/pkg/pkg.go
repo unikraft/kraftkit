@@ -32,6 +32,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -276,6 +277,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		return err
 	}
 
+	ctx := context.Background()
 	var packages []pack.Package
 
 	// Generate a package for every matching requested target
@@ -307,7 +309,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 				targ.Architecture.Name() == opts.Architecture &&
 				targ.Platform.Name() == opts.Platform:
 
-			packs, err := initPackage(app.Name(), targ, projectOpts, pm, opts)
+			packs, err := initAppPackage(ctx, project.Name(), targ, projectOpts, pm, opts)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -377,7 +379,8 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	return nil
 }
 
-func initPackage(name string,
+func initAppPackage(ctx context.Context,
+	name string,
 	targ target.TargetConfig,
 	projectOpts *schema.ProjectOptions,
 	pm packmanager.PackageManager,
@@ -445,7 +448,7 @@ func initPackage(name string,
 		}
 	}
 
-	pack, err := pm.NewPackageFromOptions(packOpts)
+	pack, err := pm.NewPackageFromOptions(ctx, packOpts)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize package: %s", err)
 	}

@@ -41,6 +41,8 @@ import (
 type ManifestPackage struct {
 	*pack.PackageOptions
 	Provider
+
+	ctx context.Context
 }
 
 const (
@@ -49,13 +51,21 @@ const (
 
 // NewPackageFromOptions generates a manifest implementation of the pack.Package
 // construct based on the input options
-func NewPackageFromOptions(opts *pack.PackageOptions, provider Provider) (pack.Package, error) {
-	return ManifestPackage{opts, provider}, nil
+func NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions, provider Provider) (pack.Package, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("cannot create NewPackageFromOptions without context")
+	}
+
+	return ManifestPackage{
+		PackageOptions: opts,
+		Provider:       provider,
+		ctx:            ctx,
+	}, nil
 }
 
 // NewPackageWithVersion generates a manifest implementation of the pack.Package
 // construct based on the input Manifest for a particular version
-func NewPackageWithVersion(manifest *Manifest, version string, popts ...pack.PackageOption) (pack.Package, error) {
+func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version string, popts ...pack.PackageOption) (pack.Package, error) {
 	resource := ""
 
 	var channels []ManifestChannel
@@ -80,14 +90,13 @@ func NewPackageWithVersion(manifest *Manifest, version string, popts ...pack.Pac
 	manifest.Versions = versions
 
 	// Save the full manifest within the context via the `ContextKey`
-	ctx := context.WithValue(
-		context.TODO(),
+	ctx = context.WithValue(
+		ctx,
 		ManifestContext,
 		manifest,
 	)
 
 	popts = append(popts,
-		pack.WithContext(ctx),
 		pack.WithName(manifest.Name),
 		pack.WithRemoteLocation(resource),
 		pack.WithType(manifest.Type),
@@ -99,18 +108,18 @@ func NewPackageWithVersion(manifest *Manifest, version string, popts ...pack.Pac
 		return nil, fmt.Errorf("could not prepare package for target: %s", err)
 	}
 
-	return NewPackageFromOptions(pkgOpts, manifest.Provider)
+	return NewPackageFromOptions(ctx, pkgOpts, manifest.Provider)
 }
 
 // NewPackageFromManifest generates a manifest implementation of the
 // pack.Package construct based on the input Manifest
-func NewPackageFromManifest(manifest *Manifest, popts ...pack.PackageOption) (pack.Package, error) {
+func NewPackageFromManifest(ctx context.Context, manifest *Manifest, popts ...pack.PackageOption) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPackageWithVersion(manifest, channel.Name, popts...)
+	return NewPackageWithVersion(ctx, manifest, channel.Name, popts...)
 }
 
 func (mp ManifestPackage) ApplyOptions(opts ...pack.PackageOption) error {
@@ -151,7 +160,7 @@ func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 		return err
 	}
 
-	manifest := mp.ContextValue(ManifestContext).(*Manifest)
+	manifest := mp.ctx.Value(ManifestContext).(*Manifest)
 	if manifest == nil {
 		return fmt.Errorf("package does not contain manifest context")
 	}

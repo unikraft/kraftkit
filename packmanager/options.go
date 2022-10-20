@@ -90,6 +90,10 @@ func WithConfigManager(cm *config.ConfigManager) PackageManagerOption {
 	}
 }
 
+func (pmopts *PackageManagerOptions) Context() context.Context {
+	return pmopts.ctx
+}
+
 // CatalogQuery is the request structure with associated attributes which are
 // used to search the package manager's catalog
 type CatalogQuery struct {

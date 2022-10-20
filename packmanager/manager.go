@@ -31,11 +31,15 @@
 
 package packmanager
 
-import "kraftkit.sh/pack"
+import (
+	"context"
+
+	"kraftkit.sh/pack"
+)
 
 type PackageManager interface {
 	// NewPackage initializes a new package
-	NewPackageFromOptions(*pack.PackageOptions) ([]pack.Package, error)
+	NewPackageFromOptions(context.Context, *pack.PackageOptions) ([]pack.Package, error)
 
 	// Options allows you to view the current options.
 	Options() *PackageManagerOptions

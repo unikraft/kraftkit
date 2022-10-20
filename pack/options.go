@@ -32,7 +32,6 @@
 package pack
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -71,10 +70,6 @@ type PackageOptions struct {
 
 	// Access to a logger
 	log log.Logger
-
-	// Context should contain all implementation-specific options, using
-	// `context.WithValue` and are referenced via `ContextKey`
-	ctx context.Context
 }
 
 type ContextKey string
@@ -240,21 +235,6 @@ func WithLogger(l log.Logger) PackageOption {
 		opts.log = l
 		return nil
 	}
-}
-
-func WithContext(ctx context.Context) PackageOption {
-	return func(opts *PackageOptions) error {
-		opts.ctx = ctx
-		return nil
-	}
-}
-
-func (opts *PackageOptions) Context() context.Context {
-	return opts.ctx
-}
-
-func (opts *PackageOptions) ContextValue(key ContextKey) interface{} {
-	return opts.ctx.Value(key)
 }
 
 func (opts *PackageOptions) Log() log.Logger {

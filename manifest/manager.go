@@ -90,8 +90,8 @@ func NewManifestPackageManagerFromOptions(opts *packmanager.PackageManagerOption
 }
 
 // NewPackage initializes a new package
-func (mm ManifestManager) NewPackageFromOptions(opts *pack.PackageOptions) ([]pack.Package, error) {
-	p, err := NewPackageFromOptions(opts, nil)
+func (mm ManifestManager) NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions) ([]pack.Package, error) {
+	p, err := NewPackageFromOptions(ctx, opts, nil)
 	return []pack.Package{p}, err
 }
 
@@ -346,7 +346,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageWithVersion(manifest, version, popts...)
+				p, err := NewPackageWithVersion(mm.opts.Context(), manifest, version, popts...)
 				if err != nil {
 					mm.opts.Log.Warnf("%v", err)
 					continue
@@ -357,7 +357,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 				packages = append(packages, p)
 			}
 		} else {
-			packs, err := NewPackageFromManifest(manifest, popts...)
+			packs, err := NewPackageFromManifest(mm.opts.Context(), manifest, popts...)
 			if err != nil {
 				mm.opts.Log.Warnf("%v", err)
 				continue
