@@ -103,7 +103,9 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 				component.Source = split[0]
 				component.Version = split[1]
 			}
-		} else if u, err := url.Parse(entry); err == nil {
+		} else if f, err := os.Stat(entry); err == nil && f.IsDir() {
+			component.Source = entry
+		} else if u, err := url.Parse(entry); err == nil && u.Scheme != "" && u.Host != "" {
 			component.Source = u.Path
 		} else {
 			component.Version = entry
