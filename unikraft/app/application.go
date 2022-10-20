@@ -37,7 +37,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/xlab/treeprint"
@@ -204,12 +203,47 @@ func (a *ApplicationConfig) SyncConfig(mopts ...make.MakeOption) error {
 }
 
 // Defconfig updates the configuration
-func (a *ApplicationConfig) DefConfig(mopts ...make.MakeOption) error {
-	return a.Make(append(mopts,
+func (ac *ApplicationConfig) DefConfig(tc *target.TargetConfig, extra *kconfig.KConfigValues, mopts ...make.MakeOption) error {
+	appk, err := ac.KConfigValues()
+	if err != nil {
+		return fmt.Errorf("could not read application KConfig values: %v", err)
+	}
+
+	values := kconfig.KConfigValues{}
+	values.OverrideBy(appk)
+
+	if tc != nil {
+		targk, err := tc.KConfigValues()
+		if err != nil {
+			return fmt.Errorf("could not read target KConfig values: %v", err)
+		}
+
+		values.OverrideBy(targk)
+	}
+
+	if extra != nil {
+		values.OverrideBy(*extra)
+	}
+
+	// Write the configuration to a temporary file
+	tmpfile, err := ioutil.TempFile("", ac.Name()+"-config*")
+	if err != nil {
+		return fmt.Errorf("could not create temporary defconfig file: %v", err)
+	}
+
+	defer tmpfile.Close()
+	defer os.Remove(tmpfile.Name())
+
+	// Save and sync the file to the temporary file
+	tmpfile.Write([]byte(values.String()))
+	tmpfile.Sync()
+
+	return ac.Make(append(mopts,
 		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
+			exec.WithStdout(ac.Log().Output()),
 		),
 		make.WithTarget("defconfig"),
+		make.WithVar("UK_DEFCONFIG", tmpfile.Name()),
 	)...)
 }
 
