@@ -373,9 +373,8 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		return err
 	}
 
-	if err := model.Start(); err != nil {
-		return err
-	}
+	return model.Start()
+}
 
 	return nil
 }
