@@ -33,6 +33,7 @@ package arch
 
 import (
 	"fmt"
+	"strings"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
@@ -84,6 +85,32 @@ func (ac ArchitectureConfig) Component() component.ComponentConfig {
 func (ac ArchitectureConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	// Architectures are built directly into the Unikraft core for now.
 	return nil, nil
+}
+
+func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
+	values := kconfig.KConfigValues{}
+	values.OverrideBy(ac.Configuration)
+
+	// The following are built-in assumptions given the naming conventions used
+	// within the Unikraft core.
+
+	var arch strings.Builder
+	arch.WriteString(kconfig.Prefix)
+
+	switch ac.Name() {
+	case "x86_64", "amd64":
+		arch.WriteString("MARCH_X86_64_GENERIC")
+	case "arm32":
+		arch.WriteString("MARCH_ARM32_CORTEXA7")
+	case "arm64":
+		arch.WriteString("MCPU_ARM64_NONE")
+	default:
+		return nil, fmt.Errorf("unknown architecture: %s", ac.Name())
+	}
+
+	values.Set(arch.String(), kconfig.Yes)
+
+	return values, nil
 }
 
 func (ac ArchitectureConfig) PrintInfo(io *iostreams.IOStreams) error {

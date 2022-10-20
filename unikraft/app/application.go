@@ -98,6 +98,28 @@ func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	return kconfig.Parse(config_uk)
 }
 
+func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
+	vAll := kconfig.KConfigValues{}
+
+	vCore, err := ac.Unikraft.KConfigValues()
+	if err != nil {
+		return nil, fmt.Errorf("could not read Unikraft core KConfig values: %v", err)
+	}
+
+	vAll.OverrideBy(vCore)
+
+	for _, library := range ac.Libraries {
+		vLib, err := library.KConfigValues()
+		if err != nil {
+			return nil, fmt.Errorf("could not %s's KConfig values: %v", library.Name(), err)
+		}
+
+		vAll.OverrideBy(vLib)
+	}
+
+	return vAll, nil
+}
+
 // KConfigFile returns the path to the application's .config file
 func (ac *ApplicationConfig) KConfigFile() (string, error) {
 	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil

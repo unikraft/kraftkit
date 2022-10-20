@@ -101,6 +101,10 @@ func (uc UnikraftConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	return kconfig.Parse(config_uk)
 }
 
+func (uc UnikraftConfig) KConfigValues() (kconfig.KConfigValues, error) {
+	return uc.Configuration, nil
+}
+
 func (uc UnikraftConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.core.UnikraftConfig.PrintInfo")
 	return nil

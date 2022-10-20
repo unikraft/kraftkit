@@ -86,6 +86,10 @@ type Component interface {
 	// returns all possible options for the component
 	KConfigMenu() (*kconfig.KConfigFile, error)
 
+	// KConfigValeus returns the component's set of file KConfig which is known
+	// when the relevant component packages have been retrieved
+	KConfigValues() (kconfig.KConfigValues, error)
+
 	// PrintInfo displays the information about the component via the provided
 	// iostream
 	PrintInfo(*iostreams.IOStreams) error

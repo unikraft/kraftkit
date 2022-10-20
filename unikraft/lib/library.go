@@ -33,6 +33,8 @@ package lib
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/iostreams"
@@ -109,6 +111,24 @@ func (lc LibraryConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	}
 
 	return kconfig.Parse(config_uk)
+}
+
+func (lc LibraryConfig) KConfigValues() (kconfig.KConfigValues, error) {
+	menu, err := lc.KConfigMenu()
+	if err != nil {
+		return nil, fmt.Errorf("could not list KConfig values: %v", err)
+	}
+
+	values := kconfig.KConfigValues{}
+	values.OverrideBy(lc.Configuration)
+
+	if menu == nil {
+		return values, nil
+	}
+
+	values.Set(kconfig.Prefix+menu.Root.Name, kconfig.Yes)
+
+	return values, nil
 }
 
 func (lc LibraryConfig) PrintInfo(io *iostreams.IOStreams) error {
