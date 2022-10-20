@@ -42,6 +42,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/schema"
+	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
@@ -419,6 +420,7 @@ func initAppPackage(ctx context.Context,
 	extraPackOpts := []pack.PackageOption{
 		pack.WithName(targ.Name()),
 		pack.WithVersion(version),
+		pack.WithType(unikraft.ComponentTypeApp),
 		pack.WithArchitecture(targ.Architecture.Name()),
 		pack.WithPlatform(targ.Platform.Name()),
 		pack.WithKernel(kernel),
