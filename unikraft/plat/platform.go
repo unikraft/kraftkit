@@ -64,6 +64,10 @@ func (pc PlatformConfig) Name() string {
 	return pc.ComponentConfig.Name
 }
 
+func (pc PlatformConfig) Source() string {
+	return pc.ComponentConfig.Source
+}
+
 func (pc PlatformConfig) Version() string {
 	return pc.ComponentConfig.Version
 }

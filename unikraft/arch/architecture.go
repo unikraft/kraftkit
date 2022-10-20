@@ -64,6 +64,10 @@ func (ac ArchitectureConfig) Name() string {
 	return ac.ComponentConfig.Name
 }
 
+func (ac ArchitectureConfig) Source() string {
+	return ac.ComponentConfig.Source
+}
+
 func (ac ArchitectureConfig) Version() string {
 	return ac.ComponentConfig.Version
 }

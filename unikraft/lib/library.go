@@ -80,6 +80,10 @@ func (lc LibraryConfig) Name() string {
 	return lc.ComponentConfig.Name
 }
 
+func (lc LibraryConfig) Source() string {
+	return lc.ComponentConfig.Source
+}
+
 func (lc LibraryConfig) Version() string {
 	return lc.ComponentConfig.Version
 }

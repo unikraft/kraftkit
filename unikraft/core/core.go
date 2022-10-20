@@ -73,6 +73,10 @@ func (uc UnikraftConfig) Name() string {
 	return uc.ComponentConfig.Name
 }
 
+func (uc UnikraftConfig) Source() string {
+	return uc.ComponentConfig.Source
+}
+
 func (uc UnikraftConfig) Version() string {
 	return uc.ComponentConfig.Version
 }

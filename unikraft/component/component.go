@@ -70,6 +70,9 @@ type Component interface {
 	// Name returns the component name
 	Name() string
 
+	// Source returns the component source
+	Source() string
+
 	// Version returns the component version
 	Version() string
 

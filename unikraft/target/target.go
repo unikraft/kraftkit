@@ -62,6 +62,10 @@ func (tc TargetConfig) Name() string {
 	return tc.ComponentConfig.Name
 }
 
+func (tc TargetConfig) Source() string {
+	return tc.ComponentConfig.Source
+}
+
 func (tc TargetConfig) Version() string {
 	return tc.ComponentConfig.Version
 }

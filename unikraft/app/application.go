@@ -77,6 +77,10 @@ func (ac ApplicationConfig) Name() string {
 	return ac.ComponentConfig.Name
 }
 
+func (ac ApplicationConfig) Source() string {
+	return ac.ComponentConfig.Source
+}
+
 func (ac ApplicationConfig) Version() string {
 	return ac.ComponentConfig.Version
 }
