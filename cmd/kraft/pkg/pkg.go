@@ -362,7 +362,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 
 	model, err := processtree.NewProcessTree(
 		[]processtree.ProcessTreeOption{
-			processtree.WithVerb("Packaging"),
+			processtree.WithVerb("Packaging..."),
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
 			processtree.WithLogger(plog),
