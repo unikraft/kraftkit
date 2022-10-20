@@ -181,12 +181,8 @@ func (cc *ComponentConfig) SourceDir() (string, error) {
 
 // IsUnpackedInProject indicates whether the package has been unpacked into a
 // project specified by the working directory option
-func (cc *ComponentConfig) IsUnpackedInProject(projectDir string) bool {
-	local, err := unikraft.PlaceComponent(
-		projectDir,
-		cc.ctype,
-		cc.Name,
-	)
+func (cc *ComponentConfig) IsUnpackedInProject() bool {
+	local, err := cc.SourceDir()
 	if err != nil {
 		cc.log.Errorf("could not place component: %v", err)
 		return false

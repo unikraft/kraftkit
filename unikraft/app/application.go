@@ -114,7 +114,7 @@ func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 	var libraries []string
 
 	for _, library := range a.Libraries {
-		if !library.IsUnpackedInProject(a.WorkingDir) {
+		if !library.IsUnpackedInProject() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
@@ -319,7 +319,7 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 		}
 	}
 
-	if !a.Unikraft.IsUnpackedInProject(a.WorkingDir) {
+	if !a.Unikraft.IsUnpackedInProject() {
 		// TODO: Produce better error messages (see #34).  In this case, we should
 		// indicate that `kraft pkg pull` needs to occur
 		return fmt.Errorf("cannot build without Unikraft core component source")
