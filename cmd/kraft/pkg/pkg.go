@@ -53,6 +53,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
@@ -272,7 +273,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	}
 
 	// Interpret the application
-	app, err := schema.NewApplicationFromOptions(projectOpts)
+	project, err := schema.NewApplicationFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}
@@ -281,7 +282,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	var packages []pack.Package
 
 	// Generate a package for every matching requested target
-	for _, targ := range app.Targets {
+	for _, targ := range project.Targets {
 		switch true {
 		case
 			// If no arguments are supplied
@@ -309,7 +310,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 				targ.Architecture.Name() == opts.Architecture &&
 				targ.Platform.Name() == opts.Platform:
 
-			packs, err := initAppPackage(ctx, project.Name(), targ, projectOpts, pm, opts)
+			packs, err := initAppPackage(ctx, project, targ, projectOpts, pm, opts)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -380,7 +381,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 }
 
 func initAppPackage(ctx context.Context,
-	name string,
+	project *app.ApplicationConfig,
 	targ target.TargetConfig,
 	projectOpts *schema.ProjectOptions,
 	pm packmanager.PackageManager,
@@ -406,8 +407,14 @@ func initAppPackage(ctx context.Context,
 		kernel = targ.KernelDbg
 	}
 
+	version := project.Version()
+	if len(version) == 0 {
+		version = "latest"
+	}
+
 	extraPackOpts := []pack.PackageOption{
 		pack.WithName(targ.Name()),
+		pack.WithVersion(version),
 		pack.WithArchitecture(targ.Architecture.Name()),
 		pack.WithPlatform(targ.Platform.Name()),
 		pack.WithKernel(kernel),
