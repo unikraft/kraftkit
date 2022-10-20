@@ -43,11 +43,6 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
-const (
-	CONFIGUK   = "Config.uk"
-	MAKEFILEUK = "Makefile.uk"
-)
-
 type Library interface {
 	component.Component
 }
