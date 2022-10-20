@@ -147,13 +147,22 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 		return nil, err
 	}
 
-	resp, err := http.Get(path)
+	resp, err := http.Head(path)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("manifest index not found: %s", path)
+	}
+
+	resp, err = http.Get(path)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
 	}
 
@@ -167,6 +176,7 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 	if err != nil {
 		return nil, err
 	}
+	providerRequestCache = contents
 
 	index, err := NewManifestIndexFromBytes(contents, mopts...)
 	if err != nil {

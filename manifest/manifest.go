@@ -178,25 +178,39 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 		return nil, err
 	}
 
-	resp, err := http.Get(path)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+	var contents []byte
+	if providerRequestCache == nil {
+		resp, err := http.Head(path)
+		if err != nil {
+			return nil, err
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("manifest index not found: %s", path)
+		}
 
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
-	}
+		resp, err = http.Get(path)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	// Check if we're directly pointing to a compatible manifest file
-	ext := filepath.Ext(path)
-	if ext != ".yml" && ext != ".yaml" {
-		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
-	}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
+		}
 
-	contents, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+		// Check if we're directly pointing to a compatible manifest file
+		ext := filepath.Ext(path)
+		if ext != ".yml" && ext != ".yaml" {
+			return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+		}
+
+		contents, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		contents = providerRequestCache
 	}
 
 	manifest, err := NewManifestFromBytes(contents, mopts...)
