@@ -70,6 +70,10 @@ func (tc TargetConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeUnknown
 }
 
+func (tc TargetConfig) Component() component.ComponentConfig {
+	return tc.ComponentConfig
+}
+
 // ArchPlatString returns the canonical name for platform architecture string
 // combination
 func (tc *TargetConfig) ArchPlatString() string {

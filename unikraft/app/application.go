@@ -81,6 +81,10 @@ func (ac ApplicationConfig) Version() string {
 	return ac.ComponentConfig.Version
 }
 
+func (ac ApplicationConfig) Component() component.ComponentConfig {
+	return ac.ComponentConfig
+}
+
 // KConfigFile returns the path to the application's .config file
 func (ac *ApplicationConfig) KConfigFile() (string, error) {
 	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil

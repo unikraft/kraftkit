@@ -88,6 +88,10 @@ func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
 }
 
+func (lc LibraryConfig) Component() component.ComponentConfig {
+	return lc.ComponentConfig
+}
+
 func (lc LibraryConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.lib.LibraryConfig.PrintInfo")
 	return nil

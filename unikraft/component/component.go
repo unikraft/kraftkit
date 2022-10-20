@@ -76,6 +76,9 @@ type Component interface {
 	// Type returns the component's static constant type
 	Type() unikraft.ComponentType
 
+	// Component returns the component's configuration
+	Component() ComponentConfig
+
 	// PrintInfo displays the information about the component via the provided
 	// iostream
 	PrintInfo(*iostreams.IOStreams) error

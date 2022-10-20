@@ -72,6 +72,10 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
 }
 
+func (ac ArchitectureConfig) Component() component.ComponentConfig {
+	return ac.ComponentConfig
+}
+
 func (ac ArchitectureConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo")
 	return nil

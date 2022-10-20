@@ -72,6 +72,10 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypePlat
 }
 
+func (pc PlatformConfig) Component() component.ComponentConfig {
+	return pc.ComponentConfig
+}
+
 func (pc PlatformConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.plat.PlatformConfig.PrintInfo")
 	return nil
