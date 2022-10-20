@@ -89,6 +89,15 @@ func (ac ApplicationConfig) Component() component.ComponentConfig {
 	return ac.ComponentConfig
 }
 
+func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	config_uk := filepath.Join(ac.WorkingDir, unikraft.Config_uk)
+	if _, err := os.Stat(config_uk); err != nil {
+		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+	}
+
+	return kconfig.Parse(config_uk)
+}
+
 // KConfigFile returns the path to the application's .config file
 func (ac *ApplicationConfig) KConfigFile() (string, error) {
 	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil

@@ -36,6 +36,7 @@ import (
 	"strings"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
@@ -94,6 +95,20 @@ func (lc LibraryConfig) Type() unikraft.ComponentType {
 
 func (lc LibraryConfig) Component() component.ComponentConfig {
 	return lc.ComponentConfig
+}
+
+func (lc LibraryConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	sourceDir, err := lc.ComponentConfig.SourceDir()
+	if err != nil {
+		return nil, fmt.Errorf("could not get library source directory: %v", err)
+	}
+
+	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
+	if _, err := os.Stat(config_uk); err != nil {
+		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+	}
+
+	return kconfig.Parse(config_uk)
 }
 
 func (lc LibraryConfig) PrintInfo(io *iostreams.IOStreams) error {

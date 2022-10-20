@@ -33,9 +33,12 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
@@ -87,6 +90,15 @@ func (uc UnikraftConfig) Type() unikraft.ComponentType {
 
 func (uc UnikraftConfig) Component() component.ComponentConfig {
 	return uc.ComponentConfig
+}
+
+func (uc UnikraftConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	config_uk := filepath.Join(uc.ComponentConfig.Workdir(), unikraft.Config_uk)
+	if _, err := os.Stat(config_uk); err != nil {
+		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+	}
+
+	return kconfig.Parse(config_uk)
 }
 
 func (uc UnikraftConfig) PrintInfo(io *iostreams.IOStreams) error {

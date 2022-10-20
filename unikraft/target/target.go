@@ -36,6 +36,7 @@ import (
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/component"
@@ -76,6 +77,10 @@ func (tc TargetConfig) Type() unikraft.ComponentType {
 
 func (tc TargetConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
+}
+
+func (tc TargetConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 
 // ArchPlatString returns the canonical name for platform architecture string

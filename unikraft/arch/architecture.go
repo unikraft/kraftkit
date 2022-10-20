@@ -35,6 +35,7 @@ import (
 	"fmt"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
@@ -78,6 +79,11 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 
 func (ac ArchitectureConfig) Component() component.ComponentConfig {
 	return ac.ComponentConfig
+}
+
+func (ac ArchitectureConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	// Architectures are built directly into the Unikraft core for now.
+	return nil, nil
 }
 
 func (ac ArchitectureConfig) PrintInfo(io *iostreams.IOStreams) error {

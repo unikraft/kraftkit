@@ -35,6 +35,7 @@ import (
 	"fmt"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
@@ -78,6 +79,12 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 
 func (pc PlatformConfig) Component() component.ComponentConfig {
 	return pc.ComponentConfig
+}
+
+func (pc PlatformConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+	// TODO: Try within the Unikraft codebase as well as via an external
+	// microlibrary.  For now, return nil as undetermined.
+	return nil, nil
 }
 
 func (pc PlatformConfig) PrintInfo(io *iostreams.IOStreams) error {
