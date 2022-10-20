@@ -189,6 +189,15 @@ func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
 		return err
 	}
 
+	// Unikraft currently requires each application to have a `Makefile.uk`
+	// located within the working directory.  Create it if it does not exist:
+	makefile_uk := filepath.Join(a.WorkingDir, unikraft.Makefile_uk)
+	if _, err := os.Stat(makefile_uk); err != nil && os.IsNotExist(err) {
+		if _, err := os.OpenFile(makefile_uk, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666); err != nil {
+			return fmt.Errorf("could not create application %s: %v", makefile_uk, err)
+		}
+	}
+
 	return m.Execute()
 }
 
