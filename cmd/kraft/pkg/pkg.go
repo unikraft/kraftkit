@@ -80,6 +80,7 @@ type pkgOptions struct {
 	Kernel       string
 	DotConfig    string
 	Target       string
+	Name         string
 	Initrd       string
 	Volumes      []string
 	KernelDbg    bool
@@ -184,6 +185,13 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		"plat", "p",
 		"",
 		"Filter the creation of the package by platform of known targets",
+	)
+
+	cmd.Flags().StringVar(
+		&opts.Name,
+		"name",
+		"",
+		"Specify the name of the package.",
 	)
 
 	cmd.Flags().StringVarP(
@@ -412,13 +420,18 @@ func initAppPackage(ctx context.Context,
 		return nil, err
 	}
 
+	name := opts.Name
+	if len(name) == 0 {
+		name = project.Name()+"-"+targ.Name()
+	}
+
 	version := project.Version()
 	if len(version) == 0 {
 		version = "latest"
 	}
 
 	extraPackOpts := []pack.PackageOption{
-		pack.WithName(targ.Name()),
+		pack.WithName(name),
 		pack.WithVersion(version),
 		pack.WithType(unikraft.ComponentTypeApp),
 		pack.WithArchitecture(targ.Architecture.Name()),
