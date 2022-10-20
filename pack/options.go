@@ -249,7 +249,7 @@ func WithContext(ctx context.Context) PackageOption {
 	}
 }
 
-func (opts *PackageOptions) Context(key ContextKey) interface{} {
+func (opts *PackageOptions) ContextValue(key ContextKey) interface{} {
 	return opts.ctx.Value(key)
 }
 

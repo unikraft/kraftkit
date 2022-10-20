@@ -151,7 +151,7 @@ func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 		return err
 	}
 
-	manifest := mp.Context(ManifestContext).(*Manifest)
+	manifest := mp.ContextValue(ManifestContext).(*Manifest)
 	if manifest == nil {
 		return fmt.Errorf("package does not contain manifest context")
 	}
