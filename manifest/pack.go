@@ -132,7 +132,7 @@ func (mp ManifestPackage) Name() string {
 }
 
 func (mp ManifestPackage) CanonicalName() string {
-	return "manifest://" + string(mp.PackageOptions.Type) + "-" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
+	return "manifest://" + string(mp.PackageOptions.Type) + "/" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
 }
 
 func (mp ManifestPackage) Pack() error {
