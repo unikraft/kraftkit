@@ -20,18 +20,19 @@ const DotConfigFileName = ".config"
 type KConfigValues map[string]*KConfigValue
 
 // NewKConfigValuesFromSlice build a new Mapping from a set of KEY=VALUE strings
-func NewKConfigValuesFromSlice(values ...string) KConfigValues {
+func NewKConfigValuesFromSlice(values ...interface{}) KConfigValues {
 	mapping := KConfigValues{}
 
 	for _, value := range values {
-		tokens := strings.SplitN(value, "=", 2)
+		str := fmt.Sprintf("%s", value)
+		tokens := strings.SplitN(str, "=", 2)
 		if len(tokens) > 1 {
 			mapping[tokens[0]] = &KConfigValue{
 				Name:  tokens[0],
 				Value: tokens[1],
 			}
 		} else {
-			mapping[value] = nil
+			mapping[str] = nil
 		}
 	}
 
