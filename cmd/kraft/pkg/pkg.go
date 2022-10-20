@@ -406,6 +406,11 @@ func initAppPackage(ctx context.Context,
 		kernel = targ.KernelDbg
 	}
 
+	workdir, err := projectOpts.GetWorkingDir()
+	if err != nil {
+		return nil, err
+	}
+
 	version := project.Version()
 	if len(version) == 0 {
 		version = "latest"
@@ -417,6 +422,7 @@ func initAppPackage(ctx context.Context,
 		pack.WithArchitecture(targ.Architecture.Name()),
 		pack.WithPlatform(targ.Platform.Name()),
 		pack.WithKernel(kernel),
+		pack.WithWorkdir(workdir),
 	}
 
 	// Options for the initramfs if set
