@@ -97,7 +97,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'pkg' commmand")
+		panic("could not initialize 'kraft pkg' commmand")
 	}
 
 	opts := &pkgOptions{
