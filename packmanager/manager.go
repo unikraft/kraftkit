@@ -73,6 +73,6 @@ type PackageManager interface {
 	// hack used for the umbrella.
 	From(string) (PackageManager, error)
 
-	// String returns the name of the implementation.
-	String() string
+	// Format returns the name of the implementation.
+	Format() string
 }

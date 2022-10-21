@@ -400,7 +400,6 @@ func (mm ManifestManager) LocalManifestIndex() string {
 	return filepath.Join(mm.LocalManifestsDir(), "index.yaml")
 }
 
-// String returns the name of the implementation.
-func (mm ManifestManager) String() string {
-	return "manifest"
+func (mm ManifestManager) Format() string {
+	return string(ManifestContext)
 }

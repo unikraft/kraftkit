@@ -475,14 +475,14 @@ func initAppPackage(ctx context.Context,
 
 	// Switch the package manager the desired format for this target
 	if len(targ.Format) > 0 && targ.Format != "auto" {
-		if pm.String() == "umbrella" {
+		if pm.Format() == "umbrella" {
 			pm, err = pm.From(targ.Format)
 			if err != nil {
 				return nil, err
 			}
 
 			// Skip this target as we cannot package it
-		} else if pm.String() != targ.Format && !opts.Force {
+		} else if pm.Format() != targ.Format && !opts.Force {
 			log.Warn("skipping %s target %s", targ.Format, targ.Name)
 			return nil, nil
 		}

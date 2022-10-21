@@ -40,13 +40,15 @@ import (
 
 var packageManagers = make(map[pack.ContextKey]PackageManager)
 
+const UmbrellaContext pack.ContextKey = "umbrella"
+
 func PackageManagers() map[pack.ContextKey]PackageManager {
 	return packageManagers
 }
 
 func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error {
 	if _, ok := packageManagers[ctxk]; ok {
-		return fmt.Errorf("package manager already registered: %s", manager.String())
+		return fmt.Errorf("package manager already registered: %s", manager.Format())
 	}
 
 	packageManagers[ctxk] = manager
@@ -94,7 +96,7 @@ func (um UmbrellaManager) NewPackageFromOptions(ctx context.Context, opts *pack.
 
 func (um UmbrellaManager) From(sub string) (PackageManager, error) {
 	for _, manager := range packageManagers {
-		if manager.String() == sub {
+		if manager.Format() == sub {
 			return manager, nil
 		}
 	}
@@ -131,7 +133,7 @@ func (um UmbrellaManager) Update() error {
 
 func (um UmbrellaManager) AddSource(source string) error {
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Adding source %s via %s...", source, manager.String())
+		um.opts.Log.Trace("Adding source %s via %s...", source, manager.Format())
 		err := manager.AddSource(source)
 		if err != nil {
 			return err
@@ -143,7 +145,7 @@ func (um UmbrellaManager) AddSource(source string) error {
 
 func (um UmbrellaManager) RemoveSource(source string) error {
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Removing source %s via %s...", source, manager.String())
+		um.opts.Log.Trace("Removing source %s via %s...", source, manager.Format())
 		err := manager.RemoveSource(source)
 		if err != nil {
 			return err
@@ -162,7 +164,7 @@ func (um UmbrellaManager) Push(path string) error {
 func (um UmbrellaManager) Pull(path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Pulling %s via %s...", path, manager.String())
+		um.opts.Log.Trace("Pulling %s via %s...", path, manager.Format())
 		parcel, err := manager.Pull(path, opts)
 		if err != nil {
 			return nil, err
@@ -203,7 +205,6 @@ func (mm UmbrellaManager) IsCompatible(source string) (PackageManager, error) {
 	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
-// String returns the name of the implementation.
-func (um UmbrellaManager) String() string {
-	return "umbrella"
+func (um UmbrellaManager) Format() string {
+	return string(UmbrellaContext)
 }
