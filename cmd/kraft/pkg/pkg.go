@@ -73,17 +73,17 @@ type pkgOptions struct {
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
-	Format       string
-	Force        bool
 	Architecture string
-	Platform     string
-	Kernel       string
 	DotConfig    string
-	Target       string
-	Name         string
+	Force        bool
+	Format       string
 	Initrd       string
-	Volumes      []string
+	Kernel       string
 	KernelDbg    bool
+	Name         string
+	Platform     string
+	Target       string
+	Volumes      []string
 	WithDbg      bool
 }
 
