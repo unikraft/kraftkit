@@ -59,6 +59,12 @@ type PackageOptions struct {
 	// Platform of the package if applicable
 	Platform *string
 
+	// Kernel is the path on disk to the kernel
+	Kernel string
+
+	// Initrd contains the configuration for the initramfs file
+	Initrd *initrd.InitrdConfig
+
 	// Metadata represents other items that did not have appropriate annotations
 	Metadata map[string]interface{}
 
@@ -184,45 +190,24 @@ func WithKernel(kernel string) PackageOption {
 		}
 
 		// TODO: Validate if a real kernel/ELF?
-		opts.Metadata["kernel"] = kernel
+		opts.Kernel = kernel
 
 		return nil
 	}
-}
-
-// Kernel returns the metadata attribute path to the kernel image
-func (po *PackageOptions) Kernel() (string, error) {
-	kernel, ok := po.Metadata["kernel"].(string)
-	if !ok {
-		return "", fmt.Errorf("kernel not set")
-	}
-
-	return kernel, nil
 }
 
 // WithInitrdConfig sets the metadata attribute with the interface representing
 // initrd configuration
-func WithInitrdConfig(initrdConfig *initrd.InitrdConfig) PackageOption {
+func WithInitrdConfig(initrd *initrd.InitrdConfig) PackageOption {
 	return func(opts *PackageOptions) error {
-		if initrdConfig != nil && len(initrdConfig.Input) == 0 && initrdConfig.Input == nil && len(initrdConfig.Output) == 0 {
+		if initrd == nil || len(initrd.Input) == 0 || initrd.Input == nil || len(initrd.Output) == 0 {
 			return nil
 		}
 
-		opts.Metadata["initrd"] = initrdConfig
+		opts.Initrd = initrd
 
 		return nil
 	}
-}
-
-// InitrdConfig returns the metadata attribute with an interface representing
-// the initrd configuration
-func (po *PackageOptions) InitrdConfig() (*initrd.InitrdConfig, error) {
-	ird, ok := po.Metadata["initrd"].(*initrd.InitrdConfig)
-	if !ok {
-		return nil, fmt.Errorf("initrd not set")
-	}
-
-	return ird, nil
 }
 
 // WithRemoteLocation sets the location of the package at its remote registry
