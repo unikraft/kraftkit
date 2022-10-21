@@ -385,9 +385,6 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	return model.Start()
 }
 
-	return nil
-}
-
 func initAppPackage(ctx context.Context,
 	project *app.ApplicationConfig,
 	targ target.TargetConfig,
