@@ -180,7 +180,11 @@ func (mm ManifestManager) Update() error {
 		}
 
 		// Replace manifest with relative path
-		localIndex.Manifests[i].Manifest = "./" + filename
+		localIndex.Manifests[i] = &Manifest{
+			Name:     manifest.Name,
+			Type:     manifest.Type,
+			Manifest: "./" + filename,
+		}
 	}
 
 	return localIndex.WriteToFile(mm.LocalManifestIndex())
