@@ -212,7 +212,9 @@ func listRun(opts *ListOptions, workdir string) error {
 		app.PrintInfo(opts.IO)
 
 	} else {
-		packages, err = pm.Catalog(query)
+		packages, err = pm.Catalog(query,
+			pack.WithWorkdir(workdir),
+		)
 		if err != nil {
 			return err
 		}
