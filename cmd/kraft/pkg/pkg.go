@@ -61,9 +61,6 @@ import (
 	"kraftkit.sh/cmd/kraft/pkg/pull"
 	"kraftkit.sh/cmd/kraft/pkg/source"
 	"kraftkit.sh/cmd/kraft/pkg/update"
-
-	// Additional initializers
-	_ "kraftkit.sh/manifest"
 )
 
 type pkgOptions struct {

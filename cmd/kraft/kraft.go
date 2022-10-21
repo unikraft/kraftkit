@@ -46,6 +46,9 @@ import (
 	"kraftkit.sh/cmd/kraft/rm"
 	"kraftkit.sh/cmd/kraft/run"
 	"kraftkit.sh/cmd/kraft/stop"
+
+	// Additional initializers
+	_ "kraftkit.sh/manifest"
 )
 
 func main() {
