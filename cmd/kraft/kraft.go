@@ -75,7 +75,7 @@ func main() {
 
        .
       /^\     Build and use highly customized and ultra-lightweight unikernels.
-     : = :    
+     :[ ]:    
      | = |
     /|/=\|\   Documentation:    https://kraftkit.sh/
    (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
