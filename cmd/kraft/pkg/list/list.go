@@ -243,10 +243,5 @@ func listRun(opts *ListOptions, workdir string) error {
 		table.EndRow()
 	}
 
-	err = table.Render()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return table.Render()
 }
