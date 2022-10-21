@@ -65,6 +65,9 @@ type PackageOptions struct {
 	// RemoteLocation contains the remote location of the package.
 	RemoteLocation string
 
+	// LocalLocation contains the path to save or store the package on the host.
+	LocalLocation string
+
 	// Sha256
 	Sha256 string
 
@@ -226,6 +229,20 @@ func (po *PackageOptions) InitrdConfig() (*initrd.InitrdConfig, error) {
 func WithRemoteLocation(location string) PackageOption {
 	return func(opts *PackageOptions) error {
 		opts.RemoteLocation = location
+		return nil
+	}
+}
+
+// WithLocalLocation sets the location of the package to be stored locally.
+func WithLocalLocation(location string, force bool) PackageOption {
+	return func(opts *PackageOptions) error {
+		if !force {
+			if _, err := os.Stat(location); err == nil {
+				return fmt.Errorf("local location already exists: %s", location)
+			}
+		}
+
+		opts.LocalLocation = location
 		return nil
 	}
 }

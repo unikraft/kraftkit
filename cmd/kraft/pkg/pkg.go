@@ -81,6 +81,7 @@ type pkgOptions struct {
 	Kernel       string
 	KernelDbg    bool
 	Name         string
+	Output       string
 	Platform     string
 	Target       string
 	Volumes      []string
@@ -242,6 +243,13 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		"volumes", "v",
 		[]string{},
 		"Additional volumes to bundle within the package",
+	)
+
+	cmd.Flags().StringVarP(
+		&opts.Output,
+		"output", "o",
+		"",
+		"Save the package at the following output.",
 	)
 
 	return cmd
@@ -442,6 +450,7 @@ func initAppPackage(ctx context.Context,
 		pack.WithPlatform(targ.Platform.Name()),
 		pack.WithKernel(kernel),
 		pack.WithWorkdir(workdir),
+		pack.WithLocalLocation(opts.Output, opts.Force),
 	}
 
 	// Options for the initramfs if set
