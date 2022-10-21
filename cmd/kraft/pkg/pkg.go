@@ -74,7 +74,7 @@ type pkgOptions struct {
 
 	// Command-line arguments
 	Format       string
-	ForceFormat  bool
+	Force        bool
 	Architecture string
 	Platform     string
 	Kernel       string
@@ -163,11 +163,11 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		&opts.Format,
 		"as", "M",
 		"auto",
-		"Force the packaging handler format (omittion will attempt auto-detect)",
+		"Force the packaging despite possible conflicts",
 	)
 
 	cmd.Flags().BoolVar(
-		&opts.ForceFormat,
+		&opts.Force,
 		"force-format",
 		false,
 		"Force the use of a packaging handler format",
@@ -473,7 +473,7 @@ func initAppPackage(ctx context.Context,
 			}
 
 			// Skip this target as we cannot package it
-		} else if pm.String() != targ.Format && !opts.ForceFormat {
+		} else if pm.String() != targ.Format && !opts.Force {
 			log.Warn("skipping %s target %s", targ.Format, targ.Name)
 			return nil, nil
 		}
