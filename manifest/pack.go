@@ -193,6 +193,6 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	return resource, cache, checksum, err
 }
 
-func (mp ManifestPackage) String() string {
-	return "manifest"
+func (mp ManifestPackage) Format() string {
+	return string(ManifestContext)
 }

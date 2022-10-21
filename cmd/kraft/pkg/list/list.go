@@ -232,12 +232,14 @@ func listRun(opts *ListOptions, workdir string) error {
 	table.AddField("TYPE", nil, cs.Bold)
 	table.AddField("PACKAGE", nil, cs.Bold)
 	table.AddField("LATEST", nil, cs.Bold)
+	table.AddField("FORMAT", nil, cs.Bold)
 	table.EndRow()
 
 	for _, pack := range packages {
 		table.AddField(string(pack.Options().Type), nil, nil)
 		table.AddField(pack.Name(), nil, nil)
 		table.AddField(pack.Options().Version, nil, nil)
+		table.AddField(pack.Format(), nil, nil)
 		table.EndRow()
 	}
 

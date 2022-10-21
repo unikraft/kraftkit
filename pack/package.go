@@ -56,6 +56,6 @@ type Package interface {
 	// optional PullPackageOptions
 	Pull(opts ...PullPackageOption) error
 
-	// String returns the name of the implementation.
-	String() string
+	// Format returns the name of the implementation.
+	Format() string
 }
