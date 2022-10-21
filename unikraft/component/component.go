@@ -34,6 +34,7 @@ package component
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
