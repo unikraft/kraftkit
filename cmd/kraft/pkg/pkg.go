@@ -421,8 +421,15 @@ func initAppPackage(ctx context.Context,
 	}
 
 	name := opts.Name
-	if len(name) == 0 {
-		name = project.Name()+"-"+targ.Name()
+
+	// This is a built in naming convention format, which for now allows us to
+	// differantiate between different targets.  This should be further discussed
+	// the community if this is the best approach.  This can ultimately be
+	// overwritten using the --tag flag.
+	if len(name) == 0 && len(project.Targets) == 1 {
+		name = project.Name()
+	} else if len(name) == 0 {
+		name = project.Name() + "-" + targ.Name()
 	}
 
 	version := project.Version()
