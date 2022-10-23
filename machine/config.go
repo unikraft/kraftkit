@@ -107,6 +107,12 @@ func NewMachineConfig(mopts ...MachineOption) (*MachineConfig, error) {
 		}
 	}
 
+	// None of these are available options to MachineConfig, so set sensible
+	// defaults
+	mcfg.CreatedAt = time.Time{}
+	mcfg.ExitedAt = time.Time{}
+	mcfg.ExitStatus = -1
+
 	return mcfg, nil
 }
 
