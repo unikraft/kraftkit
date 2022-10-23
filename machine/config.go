@@ -88,6 +88,12 @@ type MachineConfig struct {
 	// CreatedAt represents when the machine was created with its respected driver
 	// or VMM.
 	CreatedAt time.Time `json:"created_at"`
+
+	// ExitedAt represents when the machine fully shutdown
+	ExitedAt time.Time `json:"exited_at"`
+
+	// ExitStatus represents the error code returned after a machine exits
+	ExitStatus int `json:"exit_status"`
 }
 
 type MachineOption func(mo *MachineConfig) error
