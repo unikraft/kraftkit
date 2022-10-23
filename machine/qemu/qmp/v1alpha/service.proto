@@ -96,6 +96,49 @@ service QEMUMachineProtocol {
 	// <- { "return": {} }
 	rpc Cont(ContRequest) returns (google.protobuf.Any) {}
 
+	// # Perform a hard reset of a guest.
+	//
+	// Since: 0.14
+	//
+	// Example:
+	//
+	// -> { "execute": "system_reset" }
+	// <- { "return": {} }
+	rpc SystemReset(SystemResetRequest) returns (google.protobuf.Any) {}
+
+	// # Requests that a guest perform a powerdown operation
+	//
+	// Since: 0.14
+	//
+	// Notes: A guest may or may not respond to this command.  This command
+	//        returning does not indicate that a guest has accepted the request or
+	//        that it has shut down.  Many guests will respond to this command by
+	//        prompting the user in some way.
+	//
+	// Example:
+	//
+	// -> { "execute": "system_powerdown" }
+	// <- { "return": {} }
+	rpc SystemPowerdown(SystemPowerdownRequest) returns (google.protobuf.Any) {}
+
+	// # Wake up guest from suspend.
+	//
+	// If the guest has wake-up from suspend support enabled
+	// (wakeup-suspend-support flag from query-current-machine), wake-up guest
+	// from suspend if the guest is in SUSPENDED state. Return an error otherwise.
+	//
+	// Since: 1.1
+	//
+	// Returns: nothing.
+	//
+	// Note: prior to 4.0, this command does nothing in case the guest isn't
+	//       suspended.
+	//
+	// Example:
+	//
+	// -> { "execute": "system_wakeup" } <- { "return": {} }
+	rpc SystemWakeup(SystemWakeupRequest) returns (google.protobuf.Any) {}
+
 	// # Enable QMP capabilities.
 	//
 	// Arguments: None.

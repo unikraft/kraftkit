@@ -15,3 +15,15 @@ type KvmInfo struct {
 type QueryKvmResponse struct {
 	Return KvmInfo `json:"return"`
 }
+
+type SystemResetRequest struct {
+	Execute string `json:"execute" default:"system_reset"`
+}
+
+type SystemPowerdownRequest struct {
+	Execute string `json:"execute" default:"system_powerdown"`
+}
+
+type SystemWakeupRequest struct {
+	Execute string `json:"execute" default:"system_Wakeup"`
+}

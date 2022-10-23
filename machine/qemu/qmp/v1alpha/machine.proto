@@ -49,3 +49,15 @@ message KvmInfo {
 message QueryKvmResponse {
 	KvmInfo return = 1 [ json_name = "return" ];
 }
+
+message SystemResetRequest {
+	option (execute) = "system_reset";
+}
+
+message SystemPowerdownRequest {
+	option (execute) = "system_powerdown";
+}
+
+message SystemWakeupRequest {
+	option (execute) = "system_Wakeup";
+}

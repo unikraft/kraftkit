@@ -186,6 +186,108 @@ func (c *QEMUMachineProtocolClient) Cont(req ContRequest) (*any, error) {
 	return &res, nil
 }
 
+func (c *QEMUMachineProtocolClient) SystemReset(req SystemResetRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) SystemPowerdown(req SystemPowerdownRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) SystemWakeup(req SystemWakeupRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (c *QEMUMachineProtocolClient) Capabilities(req CapabilitiesRequest) (*CapabilitiesResponse, error) {
 	var b []byte
 	var err error
