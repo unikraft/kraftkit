@@ -1067,3 +1067,18 @@ func (qd *QemuDriver) Destroy(ctx context.Context, mid machine.MachineID) error 
 
 	return qd.dopts.Store.Purge(mid)
 }
+
+func (qd *QemuDriver) Shutdown(ctx context.Context, mid machine.MachineID) error {
+	qmpClient, err := qd.QMPClient(ctx, mid)
+	if err != nil {
+		return err
+	}
+
+	defer qmpClient.Close()
+	_, err = qmpClient.SystemPowerdown(qmpv1alpha.SystemPowerdownRequest{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

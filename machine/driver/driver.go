@@ -105,6 +105,9 @@ type Driver interface {
 	// State returns the machine state given a MachineID.
 	State(context.Context, machine.MachineID) (machine.MachineState, error)
 
+	// Shutdown sends a shutdown signal to the machine given a MachineID.
+	Shutdown(context.Context, machine.MachineID) error
+
 	// ListenStatusUpdate returns two channels, one for receiving the state of a
 	// machine and any live errors.  This can be used to monitor a given machine
 	// by its MachineID.  The method returns the last error if the channels cannot
