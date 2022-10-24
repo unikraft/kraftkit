@@ -57,6 +57,7 @@ import (
 	"kraftkit.sh/cmd/kraft/pkg/list"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
 	"kraftkit.sh/cmd/kraft/pkg/source"
+	"kraftkit.sh/cmd/kraft/pkg/unsource"
 	"kraftkit.sh/cmd/kraft/pkg/update"
 
 	// Additional initializers
@@ -89,6 +90,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 			list.ListCmd(f),
 			pull.PullCmd(f),
 			source.SourceCmd(f),
+			unsource.UnsourceCmd(f),
 			update.UpdateCmd(f),
 		),
 	)
