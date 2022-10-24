@@ -99,6 +99,7 @@ func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
 	}
 
 	cm.Config = c
+	cm.ConfigFile = ConfigFile()
 
 	for _, o := range opts {
 		if err := o(cm); err != nil {
