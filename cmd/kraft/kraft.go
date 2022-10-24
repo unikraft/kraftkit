@@ -40,6 +40,7 @@ import (
 	"kraftkit.sh/internal/cmdutil"
 
 	"kraftkit.sh/cmd/kraft/build"
+	conf "kraftkit.sh/cmd/kraft/config"
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/pkg"
 	"kraftkit.sh/cmd/kraft/ps"
@@ -58,6 +59,7 @@ func main() {
 			build.BuildCmd(f),
 			ps.PsCmd(f),
 			rm.RemoveCmd(f),
+			conf.ConfigCmd(f),
 			run.RunCmd(f),
 			stop.StopCmd(f),
 			events.EventsCmd(f),
