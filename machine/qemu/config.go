@@ -58,7 +58,7 @@ type QemuConfig struct {
 	PidFile    string            `flag:"-pidfile"     json:"pidfile,omitempty"`
 	QMP        []QemuHostCharDev `flag:"-qmp"         json:"qmp,omitempty"`
 	RTC        QemuRTC           `flag:"-rtc"         json:"rtc,omitempty"`
-	Serial     QemuHostCharDev   `flag:"-serial"      json:"serial,omitempty"`
+	Serial     []QemuHostCharDev `flag:"-serial"      json:"serial,omitempty"`
 	SMP        QemuSMP           `flag:"-smp"         json:"smp,omitempty"`
 	TBSize     int               `flag:"-tb-size"     json:"tb_size,omitempty"`
 	VGA        QemuVGA           `flag:"-vga"         json:"vga,omitempty"`
@@ -260,7 +260,11 @@ func WithRTC(rtc QemuRTC) QemuOption {
 
 func WithSerial(chardev QemuHostCharDev) QemuOption {
 	return func(qc *QemuConfig) error {
-		qc.Serial = chardev
+		if qc.Serial == nil {
+			qc.Serial = make([]QemuHostCharDev, 0)
+		}
+
+		qc.Serial = append(qc.Serial, chardev)
 		return nil
 	}
 }

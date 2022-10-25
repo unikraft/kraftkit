@@ -1002,7 +1002,7 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 		return fmt.Errorf("serial console not available for %s", mid)
 	}
 
-	conn, err := qcfg.Serial.Connection()
+	conn, err := qcfg.Serial[0].Connection()
 	if err != nil {
 		return fmt.Errorf("could not connect to serial for %s: %v", mid, err)
 	}
