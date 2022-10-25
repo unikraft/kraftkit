@@ -35,6 +35,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"kraftkit.sh/machine"
 	"kraftkit.sh/machine/driveropts"
@@ -84,11 +85,11 @@ type Driver interface {
 	Stop(context.Context, machine.MachineID) error
 
 	// Wait for the machine to complete its execution if running.
-	Wait(context.Context, machine.MachineID) error
+	Wait(context.Context, machine.MachineID) (int, time.Time, error)
 
 	// StartAndWait starts the machine and then waits for the machine to exit
 	// before returning.
-	StartAndWait(context.Context, machine.MachineID) error
+	StartAndWait(context.Context, machine.MachineID) (int, time.Time, error)
 
 	// Pause a machine given its MachineID.
 	Pause(context.Context, machine.MachineID) error

@@ -893,13 +893,64 @@ func (qd *QemuDriver) Start(ctx context.Context, mid machine.MachineID) error {
 	return err
 }
 
-func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) error {
-	return nil
+func (qd *QemuDriver) exitStatusAndAtFromConfig(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
+	exitStatus = -1 // return -1 if the process hasn't started
+	exitedAt = time.Time{}
+
+	var mcfg machine.MachineConfig
+	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
+		return exitStatus, exitedAt, fmt.Errorf("could not look up machine config: %v", err)
+	}
+
+	exitStatus = mcfg.ExitStatus
+	exitedAt = mcfg.ExitedAt
+
+	return
 }
 
-func (qd *QemuDriver) StartAndWait(ctx context.Context, mid machine.MachineID) error {
+func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
+	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+	if err != nil {
+		return
+	}
+
+	events, errs, err := qd.ListenStatusUpdate(ctx, mid)
+	if err != nil {
+		return
+	}
+
+	for {
+		select {
+		case state := <-events:
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+
+			switch state {
+			case machine.MachineStateExited, machine.MachineStateDead:
+				return
+			}
+
+		case err2 := <-errs:
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+
+			if errors.Is(err2, qmp.ErrAcceptedNonEvent) {
+				continue
+			}
+
+			return
+
+		case <-ctx.Done():
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+
+			// TODO: Should we return an error if the context is cancelled?
+			return
+		}
+	}
+}
+
+func (qd *QemuDriver) StartAndWait(ctx context.Context, mid machine.MachineID) (int, time.Time, error) {
 	if err := qd.Start(ctx, mid); err != nil {
-		return err
+		// return -1 if the process hasn't started.
+		return -1, time.Time{}, err
 	}
 
 	return qd.Wait(ctx, mid)
@@ -912,6 +963,7 @@ func (qd *QemuDriver) Pause(ctx context.Context, mid machine.MachineID) error {
 	}
 
 	defer qmpClient.Close()
+
 	_, err = qmpClient.Stop(qmpv1alpha.StopRequest{})
 	if err != nil {
 		return err
