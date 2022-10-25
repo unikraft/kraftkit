@@ -181,13 +181,6 @@ var transformInitrd TransformerFunc = func(data interface{}) (interface{}, error
 	}
 }
 
-func transformMappingOrListFunc(sep string, allowNil bool) TransformerFunc {
-	return func(data interface{}) (interface{}, error) {
-		x, err := transformMappingOrList(data, sep, allowNil)
-		return x, err
-	}
-}
-
 func transformMappingOrList(mappingOrList interface{}, sep string, allowNil bool) (interface{}, error) {
 	switch value := mappingOrList.(type) {
 	case map[string]interface{}:
