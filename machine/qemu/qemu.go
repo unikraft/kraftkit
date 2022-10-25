@@ -34,6 +34,7 @@ package qemu
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"net"
