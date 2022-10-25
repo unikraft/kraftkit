@@ -10,8 +10,12 @@ permissions:
   packages: write
 
 jobs:
+  gochecks:
+    uses: ./.github/workflows/gochecks.yaml
+
   goreleaser:
     runs-on: ubuntu-latest
+    needs: gochecks
     container: goreleaser/goreleaser-cross:v1.18.3
     steps:
       - name: Checkout
