@@ -79,6 +79,9 @@ type PackageOptions struct {
 
 	// Access to a logger
 	log log.Logger
+
+	// workdir
+	workdir string
 }
 
 type ContextKey string
@@ -239,8 +242,19 @@ func WithLogger(l log.Logger) PackageOption {
 	}
 }
 
+func WithWorkdir(dir string) PackageOption {
+	return func(opts *PackageOptions) error {
+		opts.workdir = dir
+		return nil
+	}
+}
+
 func (opts *PackageOptions) Log() log.Logger {
 	return opts.log
+}
+
+func (opts *PackageOptions) Workdir() string {
+	return opts.workdir
 }
 
 type PullPackageOptions struct {
