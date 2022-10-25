@@ -527,12 +527,12 @@ func NewQemuDriver(opts ...driveropts.DriverOption) (*QemuDriver, error) {
 func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (machine.MachineID, error) {
 	mcfg, err := machine.NewMachineConfig(opts...)
 	if err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could build machine config: %v", err)
 	}
 
 	mid, err := machine.NewRandomMachineID()
 	if err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could not generate new machine ID: %v", err)
 	}
 
 	mcfg.ID = mid
@@ -651,17 +651,17 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 
 	qcfg, err := NewQemuConfig(qopts...)
 	if err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could not generate QEMU config: %v", err)
 	}
 
 	e, err := exec.NewExecutable(bin, *qcfg)
 	if err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU executable: %v", err)
 	}
 
 	process, err := exec.NewProcessFromExecutable(e, qd.dopts.ExecOptions...)
 	if err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU process: %v", err)
 	}
 
 	mcfg.CreatedAt = time.Now()
@@ -670,22 +670,25 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 	// daemonization of the process.  When it exits, we'll have a PID we can use
 	// to manipulate the VMM.
 	if err := process.StartAndWait(); err != nil {
-		return machine.NullMachineID, err
+		return machine.NullMachineID, fmt.Errorf("could not start and wait for QEMU process: %v", err)
 	}
 
-	if err := qd.dopts.Store.SaveMachineConfig(mid, *mcfg); err != nil {
-		qd.Destroy(ctx, mid)
-		return machine.NullMachineID, err
+	defer func() {
+		if err != nil {
+			qd.Destroy(ctx, mid)
+		}
+	}()
+
+	if err = qd.dopts.Store.SaveMachineConfig(mid, *mcfg); err != nil {
+		return machine.NullMachineID, fmt.Errorf("could not save machine config: %v", err)
 	}
 
-	if err := qd.dopts.Store.SaveDriverConfig(mid, *qcfg); err != nil {
-		qd.Destroy(ctx, mid)
-		return machine.NullMachineID, err
+	if err = qd.dopts.Store.SaveDriverConfig(mid, *qcfg); err != nil {
+		return machine.NullMachineID, fmt.Errorf("could not save driver config: %v", err)
 	}
 
-	if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStateCreated); err != nil {
-		qd.Destroy(ctx, mid)
-		return machine.NullMachineID, err
+	if err = qd.dopts.Store.SaveMachineState(mid, machine.MachineStateCreated); err != nil {
+		return machine.NullMachineID, fmt.Errorf("could not save machine state: %v", err)
 	}
 
 	return mid, nil
