@@ -792,7 +792,8 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 		return nil, nil, err
 	}
 
-	qmpClient, err := qmpClientHandshake(&conn)
+	// Perform the handshake
+	_, err = qmpClientHandshake(&conn)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -805,13 +806,16 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 		return nil, nil, err
 	}
 
+	// firstCall is used to initialize the channel with the current state of the
+	// machine, so that it can be immediately acted upon.
+	firstCall := true
+
 	go func() {
 	accept:
 		for {
 			// First check if the context has been cancelled
 			select {
 			case <-ctx.Done():
-				qmpClient.Close()
 				break accept
 			default:
 			}
@@ -824,7 +828,10 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 			}
 
 			// Initialize with the current state
-			events <- state
+			if firstCall {
+				events <- state
+				firstCall = false
+			}
 
 			// Listen for changes in state
 			event, err := monitor.Accept()
@@ -833,30 +840,19 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 				continue
 			}
 
+			// Send the event through the channel
 			switch event.Event {
 			case qmpv1alpha.EVENT_STOP, qmpv1alpha.EVENT_SUSPEND, qmpv1alpha.EVENT_POWERDOWN:
 				events <- machine.MachineStatePaused
-				if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStatePaused); err != nil {
-					errs <- err
-				}
 
 			case qmpv1alpha.EVENT_RESUME:
 				events <- machine.MachineStateRunning
-				if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStateRunning); err != nil {
-					errs <- err
-				}
 
 			case qmpv1alpha.EVENT_RESET, qmpv1alpha.EVENT_WAKEUP:
 				events <- machine.MachineStateRestarting
-				if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStateRestarting); err != nil {
-					errs <- err
-				}
 
 			case qmpv1alpha.EVENT_SHUTDOWN:
 				events <- machine.MachineStateExited
-				if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStateExited); err != nil {
-					errs <- err
-				}
 
 				if !qcfg.NoShutdown {
 					break accept
