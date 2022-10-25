@@ -739,6 +739,25 @@ func (qd *QemuDriver) QMPClient(ctx context.Context, mid machine.MachineID) (*qm
 	return qmpClientHandshake(&conn)
 }
 
+func (qd *QemuDriver) Pid(ctx context.Context, mid machine.MachineID) (uint32, error) {
+	qcfg, err := qd.Config(ctx, mid)
+	if err != nil {
+		return 0, err
+	}
+
+	pidData, err := os.ReadFile(qcfg.PidFile)
+	if err != nil {
+		return 0, fmt.Errorf("could not read pid file: %v", err)
+	}
+
+	pid, err := strconv.ParseUint(strings.TrimSpace(string(pidData)), 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("could not convert pid string \"%s\" to uint64: %v", pidData, err)
+	}
+
+	return uint32(pid), nil
+}
+
 func processFromPidFile(pidFile string) (*goprocess.Process, error) {
 	pidData, err := os.ReadFile(pidFile)
 	if err != nil {

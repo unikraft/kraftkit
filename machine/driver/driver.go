@@ -91,6 +91,9 @@ type Driver interface {
 	// before returning.
 	StartAndWait(context.Context, machine.MachineID) (int, time.Time, error)
 
+	// Pid returns the process ID of the machine VMM
+	Pid(ctx context.Context, mid machine.MachineID) (uint32, error)
+
 	// Pause a machine given its MachineID.
 	Pause(context.Context, machine.MachineID) error
 
