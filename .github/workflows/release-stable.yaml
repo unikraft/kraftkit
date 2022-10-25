@@ -1,0 +1,54 @@
+name: Release via stable
+
+on:
+  push:
+    tags: v[1-9]+.[0-9]+.[0-9]+
+    branches: stable
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    container: goreleaser/goreleaser-cross:v1.18.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: |
+          git config --global --add safe.directory /__w/kraftkit/kraftkit
+          git fetch --force --tags
+
+      - name: Install YTT
+        run: |
+          set -xe
+          curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.41.1/ytt-linux-amd64 > /tmp/ytt
+          echo "65dbc4f3a4a2ed84296dd1b323e8e7bd77e488fa7540d12dd36cf7fb2fc77c03  /tmp/ytt" | sha256sum -c -
+          mv /tmp/ytt /usr/local/bin/ytt
+          chmod +x /usr/local/bin/ytt
+      
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install libgit2-dev
+        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
+      
+      - name: Generate GoReleaser configuration
+        run: |
+          ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
+
+      - name: Run GoReleaser
+        run: |
+          echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
+          goreleaser build \
+            --config goreleaser-stable.yaml \
+            --skip-validate
+          goreleaser release \
+            --config goreleaser-stable.yaml \
+            --rm-dist \
+            --skip-validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
