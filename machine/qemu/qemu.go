@@ -1037,41 +1037,120 @@ read:
 	return nil
 }
 
-func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (machine.MachineState, error) {
-	currState := machine.MachineStateUnknown
+func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state machine.MachineState, err error) {
+	state = machine.MachineStateUnknown
+
 	qcfg, err := qd.Config(ctx, mid)
 	if err != nil {
-		return currState, err
+		return
 	}
 
-	currState, err = qd.dopts.Store.LookupMachineState(mid)
+	state, err = qd.dopts.Store.LookupMachineState(mid)
 	if err != nil {
-		return currState, err
+		return
 	}
 
-	// Check if the process is alive
+	savedState := state
+
+	var mcfg machine.MachineConfig
+	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
+		return state, fmt.Errorf("could not look up machine config: %v", err)
+	}
+
+	// Check if the process is alive, which ultimately indicates to us whether we
+	// able to speak to the exposed QMP socket
 	process, err := processFromPidFile(qcfg.PidFile)
-	isRunning := false
+	activeProcess := false
 	if err == nil {
-		isRunning, err = process.IsRunning()
+		activeProcess, err = process.IsRunning()
 		if err != nil {
-			isRunning = false
+			state = machine.MachineStateDead
+			activeProcess = false
 		}
 	}
 
-	if !isRunning && currState == machine.MachineStateRunning {
-		currState = machine.MachineStateExited
-		if err := qd.dopts.Store.SaveMachineState(mid, currState); err != nil {
-			return currState, err
+	exitedAt := mcfg.ExitedAt
+	exitStatus := mcfg.ExitStatus
+
+	defer func() {
+		if exitStatus >= 0 && mcfg.ExitedAt.IsZero() {
+			exitedAt = time.Now()
 		}
-	} else if isRunning && currState == machine.MachineStateExited {
-		currState = machine.MachineStateRunning
-		if err := qd.dopts.Store.SaveMachineState(mid, currState); err != nil {
-			return currState, err
+
+		// Update the machine config with the latest values if they are different from
+		// what we have on record
+		if mcfg.ExitedAt != exitedAt || mcfg.ExitStatus != exitStatus {
+			mcfg.ExitedAt = exitedAt
+			mcfg.ExitStatus = exitStatus
+			if err = qd.dopts.Store.SaveMachineConfig(mid, mcfg); err != nil {
+				return
+			}
 		}
+
+		// Finally, save the state if it is different from the what we have on record
+		if state != savedState {
+			if err = qd.dopts.Store.SaveMachineState(mid, state); err != nil {
+				return
+			}
+		}
+	}()
+
+	if !activeProcess {
+		return
 	}
 
-	return currState, nil
+	qmpClient, err := qd.QMPClient(ctx, mid)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		state = machine.MachineStateDead
+		exitStatus = 1
+		return
+	} else if err != nil {
+		return state, fmt.Errorf("could not attach to QMP client: %v", err)
+	}
+
+	defer qmpClient.Close()
+
+	// Grab the actual state of the machine by querying QMP
+	status, err := qmpClient.QueryStatus(qmpv1alpha.QueryStatusRequest{})
+	if err != nil {
+		// We cannot ammend the status at this point, even if the process is
+		// alive, since it is not an indicator of the state of the VM, only of the
+		// VMM.  So we return what we already know via LookupMachineConfig.
+		return state, fmt.Errorf("could not query machine status via QMP: %v", err)
+	}
+
+	// Map the QMP status to supported machine states
+	switch status.Return.Status {
+	case qmpv1alpha.RUN_STATE_GUEST_PANICKED, qmpv1alpha.RUN_STATE_INTERNAL_ERROR, qmpv1alpha.RUN_STATE_IO_ERROR:
+		state = machine.MachineStateDead
+		exitStatus = 1
+
+	case qmpv1alpha.RUN_STATE_PAUSED:
+		state = machine.MachineStatePaused
+		exitStatus = -1
+
+	case qmpv1alpha.RUN_STATE_RUNNING:
+		state = machine.MachineStateRunning
+		exitStatus = -1
+
+	case qmpv1alpha.RUN_STATE_SHUTDOWN:
+		state = machine.MachineStateExited
+		exitStatus = 0
+
+	case qmpv1alpha.RUN_STATE_SUSPENDED:
+		state = machine.MachineStateSuspended
+		exitStatus = -1
+
+	default:
+		// qmpv1alpha.RUN_STATE_SAVE_VM,
+		// qmpv1alpha.RUN_STATE_PRELAUNCH,
+		// qmpv1alpha.RUN_STATE_RESTORE_VM,
+		// qmpv1alpha.RUN_STATE_WATCHDOG,
+		state = machine.MachineStateUnknown
+		exitStatus = -1
+	}
+
+	return
 }
 
 func (qd *QemuDriver) List(ctx context.Context) ([]machine.MachineID, error) {
