@@ -34,6 +34,7 @@ package machine
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -330,7 +331,7 @@ func (ms *MachineStore) Purge(mid MachineID) error {
 			msg += ": " + err.Error()
 		}
 
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	return nil

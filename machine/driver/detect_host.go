@@ -32,7 +32,7 @@
 package driver
 
 import (
-	"fmt"
+	"errors"
 	"os"
 )
 
@@ -51,7 +51,7 @@ func DetectHostHypervisor() (DriverType, error) {
 		}
 	}
 
-	return UnknownDriver, fmt.Errorf("could not detect hypervisor driver")
+	return UnknownDriver, errors.New("could not detect hypervisor driver")
 }
 
 func IsQemuKVM() (bool, error) {
