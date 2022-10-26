@@ -371,6 +371,7 @@ seek:
 						observations.Done(mid)
 
 					case <-ctx.Done():
+						observations.Done(mid)
 						return
 					}
 				}
