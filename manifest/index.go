@@ -209,6 +209,26 @@ func (mi *ManifestIndex) WriteToFile(path string) error {
 		return err
 	}
 
+	// TODO: This serialization mechanism is used to encode the provider into the
+	// resulting manifest file and feels a bit of a hack since we are running
+	// `yaml.Marshal` twice.  The library exposes `yaml.Marshler` and
+	// `yaml.Unmarshaller` which is a nicer implementation.  The challenge though
+	// is that the marshalling should ideally occur on the Provider implementation
+	// -- which would ultimately require "trial-and-error" to discover, or
+	// however, map to the correct implementation.  Because this interface is not
+	// implemented, this code is duplicated also inside of manifest.go
+	var iface map[string]interface{}
+	if err := yaml.Unmarshal(contents, &iface); err != nil {
+		return err
+	}
+
+	delete(iface, "provider")
+
+	contents, err = yaml.Marshal(iface)
+	if err != nil {
+		return err
+	}
+
 	if err := f.Truncate(0); err != nil {
 		return err
 	}
