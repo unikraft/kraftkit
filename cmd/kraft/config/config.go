@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// Authors: Alexander Jung <alex@unikraft.io>
+// Authors: Cezar Craciunoiu <cezar@unikraft.io>
 //
 // Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
 //
@@ -29,60 +29,85 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package conf
 
 import (
+	"log"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
-
+	"github.com/spf13/cobra"
+	confset "kraftkit.sh/cmd/kraft/config/set"
+	confunset "kraftkit.sh/cmd/kraft/config/unset"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-
-	"kraftkit.sh/cmd/kraft/build"
-	conf "kraftkit.sh/cmd/kraft/config"
-	"kraftkit.sh/cmd/kraft/events"
-	"kraftkit.sh/cmd/kraft/pkg"
-	"kraftkit.sh/cmd/kraft/ps"
-	"kraftkit.sh/cmd/kraft/rm"
-	"kraftkit.sh/cmd/kraft/run"
-	"kraftkit.sh/cmd/kraft/stop"
-
-	// Additional initializers
-	_ "kraftkit.sh/manifest"
+	"kraftkit.sh/iostreams"
 )
 
-func main() {
-	f := cmdfactory.New(
-		cmdfactory.WithPackageManager(),
-	)
-	cmd, err := cmdutil.NewCmd(f, "kraft",
+type configOptions struct {
+	ConfigManager func() (*config.ConfigManager, error)
+	Logger        func() (log.Logger, error)
+	IO            *iostreams.IOStreams
+
+	// Command-line arguments
+}
+
+func ConfigCmd(f *cmdfactory.Factory) *cobra.Command {
+	cmd, err := cmdutil.NewCmd(f, "config",
 		cmdutil.WithSubcmds(
-			pkg.PkgCmd(f),
-			build.BuildCmd(f),
-			ps.PsCmd(f),
-			rm.RemoveCmd(f),
-			conf.ConfigCmd(f),
-			run.RunCmd(f),
-			stop.StopCmd(f),
-			events.EventsCmd(f),
+			confunset.UnsetCmd(f),
+			confset.SetCmd(f),
 		),
 	)
 	if err != nil {
-		panic("could not initialize root commmand")
+		panic("could not initialize 'config' commmand")
 	}
 
-	cmd.Short = "Build and use highly customized and ultra-lightweight unikernels"
+	opts := &configOptions{
+		ConfigManager: f.ConfigManager,
+		IO:            f.IOStreams,
+	}
+
+	cmd.Short = "Configure Kraftkit settings and functionality"
+	cmd.Use = "config [FLAGS] [SUBCOMMAND]"
+	cmd.Args = cmdutil.MaxDirArgs(1)
 	cmd.Long = heredoc.Docf(`
+		Configure Kraftkit settings and functionality.
 
-       .
-      /^\     Build and use highly customized and ultra-lightweight unikernels.
-     :[ ]:    
-     | = |
-    /|/=\|\   Documentation:    https://kraftkit.sh/
-   (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-      v v 
-      ' '`)
+		Calling %[1]skraft config%[1]s without any subcommands will print
+		the current configuration.
+	`, "`")
+	cmd.Example = heredoc.Doc(`
+		# Print the current configuration
+		$ kraft config
+	`)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+		return configRun(opts)
+	}
+
+	return cmd
+}
+
+func configRun(opts *configOptions) error {
+	var err error
+
+	cfgm, err := opts.ConfigManager()
+	if err != nil {
+		return err
+	}
+
+	// Open config file
+	data, err := os.ReadFile(cfgm.ConfigFile)
+	if err != nil {
+		return err
+	}
+
+	// Print config file to stdout
+	_, err = opts.IO.Out.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
 }

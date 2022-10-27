@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// Authors: Alexander Jung <alex@unikraft.io>
+// Authors: Cezar Craciunoiu <cezar@unikraft.io>
 //
 // Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
 //
@@ -29,60 +29,61 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package confunset
 
 import (
-	"os"
-
 	"github.com/MakeNowJust/heredoc"
-
+	"github.com/spf13/cobra"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-
-	"kraftkit.sh/cmd/kraft/build"
-	conf "kraftkit.sh/cmd/kraft/config"
-	"kraftkit.sh/cmd/kraft/events"
-	"kraftkit.sh/cmd/kraft/pkg"
-	"kraftkit.sh/cmd/kraft/ps"
-	"kraftkit.sh/cmd/kraft/rm"
-	"kraftkit.sh/cmd/kraft/run"
-	"kraftkit.sh/cmd/kraft/stop"
-
-	// Additional initializers
-	_ "kraftkit.sh/manifest"
 )
 
-func main() {
-	f := cmdfactory.New(
-		cmdfactory.WithPackageManager(),
-	)
-	cmd, err := cmdutil.NewCmd(f, "kraft",
-		cmdutil.WithSubcmds(
-			pkg.PkgCmd(f),
-			build.BuildCmd(f),
-			ps.PsCmd(f),
-			rm.RemoveCmd(f),
-			conf.ConfigCmd(f),
-			run.RunCmd(f),
-			stop.StopCmd(f),
-			events.EventsCmd(f),
-		),
-	)
-	if err != nil {
-		panic("could not initialize root commmand")
+type UnsetOptions struct {
+	ConfigManager func() (*config.ConfigManager, error)
+
+	// Command-line arguments
+}
+
+func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
+	opts := &UnsetOptions{
+		ConfigManager: f.ConfigManager,
 	}
 
-	cmd.Short = "Build and use highly customized and ultra-lightweight unikernels"
-	cmd.Long = heredoc.Docf(`
+	cmd, err := cmdutil.NewCmd(f, "unset")
+	if err != nil {
+		panic("could not initialize subcommmand")
+	}
 
-       .
-      /^\     Build and use highly customized and ultra-lightweight unikernels.
-     :[ ]:    
-     | = |
-    /|/=\|\   Documentation:    https://kraftkit.sh/
-   (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-      v v 
-      ' '`)
+	cmd.Short = "Unset a configuration value for kraftkit"
+	cmd.Use = "set [FLAGS] KEY"
+	cmd.Long = heredoc.Doc(`
+		Unset a configuration value for kraftkit
+	`)
+	cmd.Aliases = []string{"u"}
+	cmd.Example = heredoc.Doc(`
+		$ kraft config unset 
+	`)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		return unsetRun(opts, args)
+	}
 
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+	return cmd
+}
+
+func unsetRun(opts *UnsetOptions, args []string) error {
+	cfgm, err := opts.ConfigManager()
+	if err != nil {
+		return err
+	}
+
+	// TODO: Unset values from the configuration
+
+	// Save new configuration
+	err = cfgm.Write(false)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
