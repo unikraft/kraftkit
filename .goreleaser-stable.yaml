@@ -1,0 +1,60 @@
+#! .goreleaser.yaml
+changelog:
+  #! Changelog generation implementation to use.
+  use: git
+
+release:
+  #! Repo in which the release will be created.
+  #! Default is extracted from the origin remote URL or empty if its private hosted.
+  github:
+    owner: unikraft
+    name: kraftkit
+
+  #! If set to true, will not auto-publish the release.
+  #! Default is false.
+  draft: false
+
+  #! If set to auto, will mark the release as not ready for production
+  #! in case there is an indicator for this in the tag e.g. v1.0.0-rc1
+  #! If set to true, will mark the release as not ready for production.
+  #! Default is false.
+  prerelease: false
+
+  #! What to do with the release notes in case there the release already exists.
+  #!
+  #! Valid options are:
+  #! - `keep-existing`: keep the existing notes
+  #! - `append`: append the current release notes to the existing notes
+  #! - `prepend`: prepend the current release notes to the existing notes
+  #! - `replace`: replace existing notes
+  #!
+  #! Default is `keep-existing`.
+  mode: replace
+
+  #! Header template for the release body.
+  header: |
+    ## KraftKit {{ .Tag }} ({{ .Date }})
+
+    This is a stable release of kraftkit.
+
+  #! Change the name of the release.
+  name_template: 'v{{ .Version }}'
+
+builds:
+#@ for binary in ["kraft"]:
+  - id: #@ "{}-linuxu".format(binary)
+    binary: #@ binary
+    main: #@ "./cmd/{}".format(binary)
+    env:
+      - CGO_ENABLED=1
+      - GOMOD=kraftkit.sh
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w 
+      - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
+      - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
+      - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
+#@ end
