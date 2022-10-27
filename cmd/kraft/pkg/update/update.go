@@ -128,7 +128,7 @@ func updateRun(opts *UpdateOptions) error {
 		},
 		[]*processtree.ProcessTreeItem{
 			processtree.NewProcessTreeItem(
-				"Updating",
+				"Updating...",
 				"",
 				func(l log.Logger) error {
 					// Apply the incoming logger which is tailored to display as a
