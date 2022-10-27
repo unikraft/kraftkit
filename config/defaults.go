@@ -48,6 +48,7 @@ const (
 	DefaultLogType       = "fancy"
 	DefaultRuntimeDir    = "/var/kraftkit"
 	DefaultEventsPidFile = "/var/kraftkit/events.pid"
+	DefaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
 func Defaults() map[string]string {
@@ -89,6 +90,10 @@ func NewDefaultConfig() (*Config, error) {
 	// ..and for cached source files
 	if len(c.Paths.Sources) == 0 {
 		c.Paths.Sources = filepath.Join(DataDir(), "sources")
+	}
+
+	if len(c.Unikraft.Manifests) == 0 {
+		c.Unikraft.Manifests = append(c.Unikraft.Manifests, DefaultManifestIndex)
 	}
 
 	return c, nil
