@@ -102,7 +102,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'build' commmand")
+		panic("could not initialize 'kraft build' commmand")
 	}
 
 	opts := &buildOptions{
@@ -253,7 +253,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 	}
 
 	if !schema.IsWorkdirInitialized(workdir) {
-		return fmt.Errorf("cannot build uninitialized project! start with: kraft build init")
+		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
 	}
 
 	// Interpret the application
