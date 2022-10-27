@@ -136,6 +136,8 @@ func (mm ManifestManager) update() (*ManifestIndex, error) {
 		// 	continue
 		// }
 
+		mm.opts.Log.Infof("fetching %s", manipath)
+
 		manifests, err := FindManifestsFromSource(manipath, mopts...)
 		if err != nil {
 			mm.opts.Log.Warnf("%s", err)
