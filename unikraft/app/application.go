@@ -328,7 +328,7 @@ func (a *ApplicationConfig) Set(mopts ...make.MakeOption) error {
 
 	// return a.DefConfig(mopts...)
 
-	return fmt.Errorf("not implemented: unikraft.app.ApplicationConfig.Set")
+	return nil
 }
 
 func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
@@ -353,7 +353,7 @@ func (a *ApplicationConfig) Unset(mopts ...make.MakeOption) error {
 
 	// return a.DefConfig(mopts...)
 
-	return fmt.Errorf("not implemented: unikraft.app.ApplicationConfig.Unset")
+	return nil
 }
 
 // Build offers an invocation of the Unikraft build system with the contextual
