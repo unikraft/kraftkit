@@ -184,7 +184,7 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	manifest := &Manifest{
 		Type:     t,
 		Name:     n,
-		GitRepo:  gp.repo,
+		Origin:   gp.repo,
 		Provider: gp,
 	}
 

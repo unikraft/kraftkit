@@ -91,10 +91,10 @@ func NewDirectoryProvider(path string, mopts ...ManifestOption) (Provider, error
 
 func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
 	manifest := &Manifest{
-		Type:         dp.typ,
-		Name:         dp.name,
-		Provider:     dp,
-		SourceOrigin: dp.dir,
+		Type:     dp.typ,
+		Name:     dp.name,
+		Provider: dp,
+		Origin:   dp.dir,
 		Channels: []ManifestChannel{
 			{
 				Name:     "default",

@@ -63,8 +63,8 @@ type Manifest struct {
 	// Description of what this manifest represents
 	Description string `yaml:"description,omitempty"`
 
-	// GitRepo represents the code repository by which this manifests is populated
-	GitRepo string `yaml:"git,omitempty"`
+	// Origin represents where (and therefore how) this manifest was populated
+	Origin string `yaml:"origin,omitempty"`
 
 	// Provider is the string name of the underlying implementation providing the
 	// contents of this manifest
@@ -76,9 +76,6 @@ type Manifest struct {
 
 	// Versions
 	Versions []ManifestVersion `yaml:"versions,omitempty"`
-
-	// SourceOrigin is original location of where this manifest was found
-	SourceOrigin string `yaml:"-"`
 
 	// auth is an internal property set by a ManifestOption which is used by the
 	// Manifest to access information a bout itself aswell as downloading a given
@@ -173,7 +170,7 @@ func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error
 	}
 
 	if providerName != "" {
-		manifest.Provider, err = NewProvidersFromString(providerName, manifest.SourceOrigin, mopts...)
+		manifest.Provider, err = NewProvidersFromString(providerName, manifest.Origin, mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +210,7 @@ func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error
 		return nil, err
 	}
 
-	manifest.SourceOrigin = path
+	manifest.Origin = path
 
 	return manifest, nil
 }
@@ -266,7 +263,7 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 		return nil, err
 	}
 
-	manifest.SourceOrigin = path
+	manifest.Origin = path
 
 	return manifest, nil
 }
@@ -317,7 +314,7 @@ func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) 
 	}
 
 	for _, manifest := range newManifests {
-		manifest.SourceOrigin = source // Save the origin of the manifest
+		manifest.Origin = source // Save the origin of the manifest
 		manifest.Provider = provider
 
 		if len(manifest.Manifest) > 0 {
@@ -404,7 +401,7 @@ func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("manifest does not have a default channel: %s", m.SourceOrigin)
+	return nil, fmt.Errorf("manifest does not have a default channel: %s", m.Origin)
 }
 
 // Auths returns the map of provided authentication configuration passed as an

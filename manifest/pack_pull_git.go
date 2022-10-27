@@ -49,7 +49,7 @@ func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPa
 
 	ppopts.Log().Infof("using git to pull manifest package %s", manifest.Name)
 
-	if len(manifest.GitRepo) == 0 {
+	if len(manifest.Origin) == 0 {
 		return fmt.Errorf("requesting Git with empty repository in manifest")
 	}
 
@@ -72,7 +72,7 @@ func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPa
 	// TODO: Authetication.  This needs to be handled via the authentication
 	// callback provided by CloneOptions.
 	// Attribute any supplied authentication, supplied with hostname as key
-	// u, err := url.Parse(manifest.GitRepo)
+	// u, err := url.Parse(manifest.Origin)
 	// if err != nil {
 	// 	return fmt.Errorf("could not parse Git repository: %v", err)
 	// }
@@ -90,14 +90,14 @@ func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPa
 		return fmt.Errorf("could not place component package: %s", err)
 	}
 
-	ppopts.Log().Infof("cloning %s into %s", manifest.GitRepo, local)
+	ppopts.Log().Infof("cloning %s into %s", manifest.Origin, local)
 
-	_, err = git.Clone(manifest.GitRepo, local, copts)
+	_, err = git.Clone(manifest.Origin, local, copts)
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)
 	}
 
-	ppopts.Log().Infof("successfulyl cloned %s into %s", manifest.GitRepo, local)
+	ppopts.Log().Infof("successfulyl cloned %s into %s", manifest.Origin, local)
 
 	return nil
 }

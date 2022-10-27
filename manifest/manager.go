@@ -318,7 +318,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 			}
 		}
 
-		if len(query.Source) > 0 && manifest.SourceOrigin != query.Source {
+		if len(query.Source) > 0 && manifest.Origin != query.Source {
 			continue
 		}
 
