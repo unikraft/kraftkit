@@ -82,8 +82,8 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(
 		&opts.Manager,
 		"manager", "M",
-		"auto",
-		"Force the handler type (Omittion will attempt auto-detect)",
+		"manifest",
+		"Force the handler type",
 	)
 
 	return cmd
