@@ -246,7 +246,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 		schema.WithDefaultConfigPath(),
 		schema.WithPackageManager(&pm),
 		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(true),
+		schema.WithDotConfig(false),
 	)
 	if err != nil {
 		return err
