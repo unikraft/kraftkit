@@ -41,6 +41,7 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -225,7 +226,16 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 
 	var contents []byte
 	if providerRequestCache == nil {
-		resp, err := http.Head(path)
+		client := &http.Client{}
+
+		head, err := http.NewRequest("HEAD", path, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		head.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+		resp, err := client.Do(head)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +244,14 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 			return nil, fmt.Errorf("manifest index not found: %s", path)
 		}
 
-		resp, err = http.Get(path)
+		get, err := http.NewRequest("GET", path, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+		resp, err = client.Do(get)
 		if err != nil {
 			return nil, err
 		}

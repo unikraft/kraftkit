@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v2"
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/pack"
 )
 
@@ -156,7 +157,16 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 		return nil, err
 	}
 
-	resp, err := http.Head(path)
+	client := &http.Client{}
+
+	head, err := http.NewRequest("HEAD", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	head.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+	resp, err := client.Do(head)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +175,14 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 		return nil, fmt.Errorf("manifest index not found: %s", path)
 	}
 
-	resp, err = http.Get(path)
+	get, err := http.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+	resp, err = client.Do(get)
 	if err != nil {
 		return nil, err
 	}
