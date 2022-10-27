@@ -33,13 +33,14 @@ package build
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/exec"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/schema"
 
 	"kraftkit.sh/internal/cmdfactory"
@@ -64,9 +65,7 @@ import (
 	"kraftkit.sh/cmd/kraft/build/properclean"
 	"kraftkit.sh/cmd/kraft/build/set"
 	"kraftkit.sh/cmd/kraft/build/unset"
-
-	// Additional initializers
-	_ "kraftkit.sh/manifest"
+	"kraftkit.sh/tui/processtree"
 )
 
 type buildOptions struct {
@@ -85,6 +84,10 @@ type buildOptions struct {
 	Fast         bool
 	Jobs         int
 	NoSyncConfig bool
+	NoPrepare    bool
+	NoFetch      bool
+	NoPull       bool
+	NoConfigure  bool
 	SaveBuildLog string
 }
 
@@ -217,6 +220,13 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		"Do not synchronize Unikraft's configuration before building",
 	)
 
+	cmd.Flags().BoolVar(
+		&opts.NoConfigure,
+		"no-configure",
+		false,
+		"Do not run Unikraft's configure step before building",
+	)
+
 	return cmd
 }
 
@@ -262,6 +272,115 @@ func buildRun(opts *buildOptions, workdir string) error {
 		return err
 	}
 
+	parallel := !cfgm.Config.NoParallel
+	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
+	if norender {
+		parallel = false
+	}
+
+	var missingPacks []pack.Package
+	var processes []*paraprogress.Process
+	var searches []*processtree.ProcessTreeItem
+
+	for _, component := range project.Components() {
+		component := component // loop closure
+
+		searches = append(searches, processtree.NewProcessTreeItem(
+			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Component().Name, component.Component().Version), "",
+			func(l log.Logger) error {
+				// Apply the incoming logger which is tailored to display as a
+				// sub-terminal within the fancy processtree.
+				pm.ApplyOptions(
+					packmanager.WithLogger(l),
+				)
+
+				p, err := pm.Catalog(packmanager.CatalogQuery{
+					Name:    component.Name(),
+					Source:  component.Source(),
+					Version: component.Version(),
+					NoCache: opts.NoCache,
+				})
+				if err != nil {
+					return err
+				}
+
+				if len(p) == 0 {
+					return fmt.Errorf("could not find: %s", component.Component().Name)
+				} else if len(p) > 1 {
+					return fmt.Errorf("too many options for %s", component.Component().Name)
+				}
+
+				missingPacks = append(missingPacks, p...)
+				return nil
+			},
+		))
+	}
+
+	if len(searches) > 0 {
+		treemodel, err := processtree.NewProcessTree(
+			[]processtree.ProcessTreeOption{
+				// processtree.WithVerb("Updating"),
+				processtree.IsParallel(parallel),
+				// processtree.WithRenderer(norender),
+				processtree.WithFailFast(true),
+				processtree.WithRenderer(false),
+				processtree.WithLogger(plog),
+			},
+			searches...,
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := treemodel.Start(); err != nil {
+			return fmt.Errorf("could not complete search: %v", err)
+		}
+	}
+
+	if len(missingPacks) > 0 {
+		for _, p := range missingPacks {
+			if p.Options() == nil {
+				return fmt.Errorf("unexpected error occurred please try again")
+			}
+			p := p // loop closure
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
+				func(l log.Logger, w func(progress float64)) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					p.ApplyOptions(
+						pack.WithLogger(l),
+					)
+
+					return p.Pull(
+						pack.WithPullProgressFunc(w),
+						pack.WithPullWorkdir(workdir),
+						pack.WithPullLogger(l),
+						// pack.WithPullChecksum(!opts.NoChecksum),
+						// pack.WithPullCache(!opts.NoCache),
+					)
+				},
+			))
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			processes,
+			paraprogress.IsParallel(parallel),
+			paraprogress.WithRenderer(norender),
+			paraprogress.WithLogger(plog),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return fmt.Errorf("could not pull all components: %v", err)
+		}
+	}
+
+	processes = []*paraprogress.Process{} // reset
+
 	var targets []target.TargetConfig
 
 	// Filter the targets by CLI selection
@@ -305,14 +424,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 		return nil
 	}
 
-	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
-	if !norender {
-		plog.SetOutput(ioutil.Discard)
-	}
-
-	var processes []*paraprogress.Process
 	var mopts []make.MakeOption
-
 	if opts.Jobs > 0 {
 		mopts = append(mopts, make.WithJobs(opts.Jobs))
 	} else {
@@ -322,6 +434,31 @@ func buildRun(opts *buildOptions, workdir string) error {
 	for _, targ := range targets {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
+		if !project.IsConfigured() && !opts.NoConfigure {
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
+				func(l log.Logger, w func(progress float64)) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					targ.ApplyOptions(
+						component.WithLogger(l),
+					)
+
+					return project.DefConfig(
+						&targ, // Target-specific options
+						nil,   // No extra configuration options
+						make.WithLogger(l),
+						// make.WithProgressFunc(w),
+						make.WithSilent(true),
+						make.WithExecOptions(
+							exec.WithStdin(opts.IO.In),
+							exec.WithStdout(l.Output()),
+							exec.WithStderr(l.Output()),
+						),
+					)
+				},
+			))
+		}
 
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
@@ -336,7 +473,12 @@ func buildRun(opts *buildOptions, workdir string) error {
 					app.WithBuildLogger(l),
 					app.WithBuildTarget(targ),
 					app.WithBuildProgressFunc(w),
-					app.WithBuildMakeOptions(mopts...),
+					app.WithBuildMakeOptions(append(mopts,
+						make.WithExecOptions(
+							exec.WithStdout(l.Output()),
+							exec.WithStderr(l.Output()),
+						),
+					)...),
 					app.WithBuildNoSyncConfig(opts.NoSyncConfig),
 					app.WithBuildLogFile(opts.SaveBuildLog),
 				)
@@ -344,7 +486,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 		))
 	}
 
-	model, err := paraprogress.NewParaProgress(
+	paramodel, err := paraprogress.NewParaProgress(
 		processes,
 		// Disable parallelization as:
 		//  - The first process may be pulling the container image, which is
@@ -354,10 +496,11 @@ func buildRun(opts *buildOptions, workdir string) error {
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(norender),
 		paraprogress.WithLogger(plog),
+		paraprogress.WithFailFast(true),
 	)
 	if err != nil {
 		return err
 	}
 
-	return model.Start()
+	return paramodel.Start()
 }
