@@ -150,13 +150,5 @@ func updateRun(opts *UpdateOptions) error {
 		return err
 	}
 
-	plog.Debugf("calculating total packages")
-	catalog, err := pm.Catalog(packmanager.CatalogQuery{})
-	if err != nil {
-		return err
-	}
-
-	plog.Infof("found %d packages", len(catalog))
-
 	return nil
 }
