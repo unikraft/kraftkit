@@ -71,6 +71,12 @@ nfpms:
     #! Your app's license.
     license: BSD 3-clause
 
+    #! Template to the path that the binaries should be installed.
+    bindir: /usr/local/bin
+
+    #! Kraftkit page.
+    homepage: https://kraftkit.sh
+
     dependencies:
       - libgit2-dev (>= 1.1)
       - libc6 (>= 2.14)
