@@ -50,5 +50,8 @@ jobs:
             --config goreleaser-stable.yaml \
             --rm-dist \
             --skip-validate
+          curl -F package=@$(ls ./dist/kraftkit_*.deb) https://${FURY_TOKEN}@push.fury.io/${FURY_USER}/
+          curl -F package=@$(ls ./dist/kraftkit_*.rpm) https://${FURY_TOKEN}@push.fury.io/${FURY_USER}/
+          curl -F package=@$(ls ./dist/kraftkit_*.apk) https://${FURY_TOKEN}@push.fury.io/${FURY_USER}/
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
