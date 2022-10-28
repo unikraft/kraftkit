@@ -40,6 +40,47 @@ release:
   #! Change the name of the release.
   name_template: 'v{{ .Version }}'
 
+nfpms:
+  #! You can change the name of the package.
+  #! This is parsed with the Go template engine and the following variables
+  #! are available:
+  #! - ProjectName
+  #! - Tag
+  #! - Version (Git tag without `v` prefix)
+  #! - Os
+  #! - Arch
+  #! - Arm (ARM version)
+  #! - Env (environment variables)
+  #! Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
+    #! Your app's vendor.
+    #! Default is empty.
+  - vendor: Alexander Jung
+
+    #! Your app's homepage.
+    #! Default is empty.
+    homepage: https://github.com/unikraft/kraftkit
+
+    #! Your app's maintainer (probably you).
+    #! Default is empty.
+    maintainer: Alexander Jung <alex@unikraft.io>
+
+    #! Your app's description.
+    #! Default is empty.
+    description: Build and use highly customized and ultra-lightweight unikernels.
+
+    #! Your app's license.
+    license: BSD 3-clause
+
+    dependencies:
+      - libgit2-dev (>= 1.1)
+      - libc6 (>= 2.14)
+
+    #! Formats to be generated.
+    formats:
+      - deb
+      - rpm
+      - apk
+
 builds:
 #@ for binary in ["kraft"]:
   - id: #@ "{}-linuxu".format(binary)
