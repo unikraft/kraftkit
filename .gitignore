@@ -1,2 +1,8 @@
 # Ignore distributables folder
 dist/
+
+# Ignore swap files
+*.swp
+*.swo
+*~
+.*~
