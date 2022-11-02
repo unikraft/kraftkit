@@ -392,6 +392,15 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 		}
 	}
 
+	if !bopts.noPrepare {
+		if err := a.Prepare(append(
+			bopts.mopts,
+			make.WithProgressFunc(nil),
+		)...); err != nil {
+			return err
+		}
+	}
+
 	return a.Make(bopts.mopts...)
 }
 

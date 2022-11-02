@@ -227,6 +227,13 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		"Do not run Unikraft's configure step before building",
 	)
 
+	cmd.Flags().BoolVar(
+		&opts.NoPrepare,
+		"no-prepare",
+		false,
+		"Do not run Unikraft's prepare step before building",
+	)
+
 	return cmd
 }
 
@@ -456,6 +463,23 @@ func buildRun(opts *buildOptions, workdir string) error {
 							exec.WithStderr(l.Output()),
 						),
 					)
+				},
+			))
+		}
+
+		if !opts.NoPrepare {
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("preparing %s (%s)", targ.Name(), targ.ArchPlatString()),
+				func(l log.Logger, w func(progress float64)) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					targ.ApplyOptions(
+						component.WithLogger(l),
+					)
+
+					return project.Prepare(append(mopts,
+						make.WithLogger(l),
+					)...)
 				},
 			))
 		}

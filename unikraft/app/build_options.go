@@ -47,6 +47,7 @@ type BuildOptions struct {
 	mopts        []make.MakeOption
 	onProgress   func(progress float64)
 	noSyncConfig bool
+	noPrepare    bool
 }
 
 type BuildOption func(opts *BuildOptions) error
@@ -125,6 +126,15 @@ func WithBuildLogFile(path string) BuildOption {
 func WithBuildNoSyncConfig(noSyncConfig bool) BuildOption {
 	return func(bo *BuildOptions) error {
 		bo.noSyncConfig = noSyncConfig
+		return nil
+	}
+}
+
+// WithBuildNoPrepare disables calling `make prepare` befere invoking the
+// main Unikraft's build invocation.
+func WithBuildNoPrepare(noPrepare bool) BuildOption {
+	return func(bo *BuildOptions) error {
+		bo.noPrepare = noPrepare
 		return nil
 	}
 }
