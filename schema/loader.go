@@ -193,20 +193,22 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	for _, library := range model.Libraries {
 		details.Configuration.OverrideBy(library.Configuration)
 	}
-
-	project := &app.ApplicationConfig{
-		ComponentConfig: component.ComponentConfig{
-			Name: projectName,
-		},
-		WorkingDir:    details.WorkingDir,
-		Filename:      model.Filename,
-		OutDir:        model.OutDir,
-		Unikraft:      model.Unikraft,
-		Libraries:     model.Libraries,
-		Targets:       model.Targets,
-		Configuration: details.Configuration,
-		Extensions:    model.Extensions,
+	project, err := app.NewApplicationOptions(
+		app.WithWorkingDir(details.WorkingDir),
+		app.WithFilename(model.Filename),
+		app.WithOutDir(model.OutDir),
+		app.WithUnikraft(model.Unikraft),
+		app.WithTemplate(model.Template),
+		app.WithLibraries(model.Libraries),
+		app.WithTargets(model.Targets),
+		app.WithConfiguration(details.Configuration),
+		app.WithExtensions(model.Extensions),
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	project.ComponentConfig.Name = projectName
 
 	project.ApplyOptions(append(opts.componentOptions,
 		component.WithType(unikraft.ComponentTypeApp),
