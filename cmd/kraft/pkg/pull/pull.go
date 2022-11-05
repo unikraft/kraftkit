@@ -49,6 +49,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/schema"
 	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
@@ -247,6 +248,103 @@ func pullRun(opts *PullOptions, query string) error {
 
 		_, err = project.Components()
 		if err != nil {
+			// Pull the template from the package manager
+			var packages []pack.Package
+			search := processtree.NewProcessTreeItem(
+				fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
+				func(l log.Logger) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					pm.ApplyOptions(
+						packmanager.WithLogger(l),
+					)
+
+					packages, err = pm.Catalog(packmanager.CatalogQuery{
+						Name:    project.Template().Name(),
+						Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
+						Version: project.Template().Version(),
+						NoCache: opts.NoCache,
+					})
+					if err != nil {
+						return err
+					}
+
+					if len(packages) == 0 {
+						return fmt.Errorf("could not find: %s", project.Template().Name())
+					} else if len(packages) > 1 {
+						return fmt.Errorf("too many options for %s", project.Template().Name())
+					}
+					return nil
+				},
+			)
+
+			treemodel, err := processtree.NewProcessTree(
+				[]processtree.ProcessTreeOption{
+					processtree.WithFailFast(true),
+					processtree.WithRenderer(false),
+					processtree.WithLogger(plog),
+				},
+				[]*processtree.ProcessTreeItem{search}...,
+			)
+			if err != nil {
+				return err
+			}
+
+			if err := treemodel.Start(); err != nil {
+				return fmt.Errorf("could not complete search: %v", err)
+			}
+
+			proc := paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
+				func(l log.Logger, w func(progress float64)) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					packages[0].ApplyOptions(
+						pack.WithLogger(l),
+					)
+
+					return packages[0].Pull(
+						pack.WithPullProgressFunc(w),
+						pack.WithPullWorkdir(workdir),
+						pack.WithPullLogger(l),
+						// pack.WithPullChecksum(!opts.NoChecksum),
+						// pack.WithPullCache(!opts.NoCache),
+					)
+				},
+			)
+
+			processes = append(processes, proc)
+
+			paramodel, err := paraprogress.NewParaProgress(
+				processes,
+				paraprogress.WithLogger(plog),
+				paraprogress.WithFailFast(true),
+			)
+			if err != nil {
+				return err
+			}
+
+			if err := paramodel.Start(); err != nil {
+				return fmt.Errorf("could not pull all components: %v", err)
+			}
+		}
+
+		templateWorkdir, err := unikraft.PlaceComponent(workdir, project.Template().Type(), project.Template().Name())
+		if err != nil {
+			return err
+		}
+
+		templateOps, err := schema.NewProjectOptions(
+			nil,
+			schema.WithLogger(plog),
+			schema.WithWorkingDirectory(templateWorkdir),
+			schema.WithDefaultConfigPath(),
+			schema.WithPackageManager(&pm),
+			schema.WithResolvedPaths(true),
+			schema.WithDotConfig(false),
+		)
+		if err != nil {
+			return err
 		}
 
 		// List the components
