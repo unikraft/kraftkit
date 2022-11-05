@@ -37,6 +37,7 @@ import (
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
+	kraftTemplate "kraftkit.sh/unikraft/template"
 )
 
 const (
@@ -253,6 +254,11 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 		return nil, err
 	}
 
+	cfg.Template, err = LoadTemplate(getSection(cfgIface, "template"), opts)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"), opts)
 	if err != nil {
 		return nil, err
@@ -305,6 +311,48 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 	}
 
 	return uk, nil
+}
+
+// LoadTemplate produces a TemplateConfig from a kraft file Dict the source Dict
+// is not validated if directly used. Use Load() to enable validation
+func LoadTemplate(source interface{}, opts *LoaderOptions) (kraftTemplate.TemplateConfig, error) {
+	base := component.ComponentConfig{}
+	dataToParse := make(map[string]interface{})
+
+	switch sourceTransformed := source.(type) {
+	case string:
+		if strings.Contains(sourceTransformed, "@") {
+			split := strings.Split(sourceTransformed, "@")
+			if len(split) == 2 {
+				dataToParse["source"] = split[0]
+				dataToParse["name"] = split[0]
+				dataToParse["version"] = split[1]
+			}
+		} else {
+			dataToParse["source"] = sourceTransformed
+			dataToParse["name"] = sourceTransformed
+		}
+	case map[string]interface{}:
+		dataToParse = source.(map[string]interface{})
+	}
+
+	if err := Transform(dataToParse, &base); err != nil {
+		return kraftTemplate.TemplateConfig{}, err
+	}
+
+	// Seed the shared attributes
+	template := kraftTemplate.TemplateConfig{
+		ComponentConfig: base,
+	}
+
+	if err := template.ApplyOptions(append(
+		opts.componentOptions,
+		component.WithType(unikraft.ComponentTypeApp),
+	)...); err != nil {
+		return template, err
+	}
+
+	return template, nil
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
