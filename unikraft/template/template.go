@@ -50,26 +50,32 @@ type TemplateConfig struct {
 	component.ComponentConfig
 }
 
+// Name returns the name of the template
 func (tc TemplateConfig) Name() string {
 	return tc.ComponentConfig.Name
 }
 
+// Source returns the source of the template
 func (tc TemplateConfig) Source() string {
 	return tc.ComponentConfig.Source
 }
 
+// Version returns the version of the template
 func (tc TemplateConfig) Version() string {
 	return tc.ComponentConfig.Version
 }
 
+// Type returns the type of the template
 func (tc TemplateConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
+// Component returns the component of the template
 func (tc TemplateConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
 }
 
+// KConfigMenu returns the path to the kconfig file of the template
 func (tc TemplateConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	sourceDir, err := tc.ComponentConfig.SourceDir()
 	if err != nil {
@@ -84,6 +90,7 @@ func (tc TemplateConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	return kconfig.Parse(config_uk)
 }
 
+// KConfigValues returns the kconfig values of the template
 func (tc TemplateConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	menu, err := tc.KConfigMenu()
 	if err != nil {
@@ -102,6 +109,7 @@ func (tc TemplateConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	return values, nil
 }
 
+// PrintInfo prints information about the template
 func (tc TemplateConfig) PrintInfo(io *iostreams.IOStreams) error {
 	fmt.Fprint(io.Out, "not implemented: unikraft.lib.LibraryConfig.PrintInfo")
 	return nil

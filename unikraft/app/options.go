@@ -58,6 +58,7 @@ func NewApplicationOptions(aopts ...ApplicationOption) (*ApplicationConfig, erro
 	return ao, nil
 }
 
+// WithWorkingDir sets the application's working directory
 func WithWorkingDir(workingDir string) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.workingDir = workingDir
@@ -65,6 +66,7 @@ func WithWorkingDir(workingDir string) ApplicationOption {
 	}
 }
 
+// WithFilename sets the application's file name
 func WithFilename(filename string) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.filename = filename
@@ -72,6 +74,7 @@ func WithFilename(filename string) ApplicationOption {
 	}
 }
 
+// WithOutDir sets the application's output directory
 func WithOutDir(outDir string) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.outDir = outDir
@@ -79,6 +82,7 @@ func WithOutDir(outDir string) ApplicationOption {
 	}
 }
 
+// WithTemplate sets the application's template
 func WithTemplate(template template.TemplateConfig) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.template = template
@@ -86,6 +90,7 @@ func WithTemplate(template template.TemplateConfig) ApplicationOption {
 	}
 }
 
+// WithUnikraft sets the application's core
 func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.unikraft = unikraft
@@ -93,6 +98,7 @@ func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
 	}
 }
 
+// WithLibraries sets the application's library list
 func WithLibraries(libraries lib.Libraries) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.libraries = libraries
@@ -100,6 +106,7 @@ func WithLibraries(libraries lib.Libraries) ApplicationOption {
 	}
 }
 
+// WithTargets sets the application's target list
 func WithTargets(targets target.Targets) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.targets = targets
@@ -107,6 +114,7 @@ func WithTargets(targets target.Targets) ApplicationOption {
 	}
 }
 
+// WithExtensions sets the application's extension list
 func WithExtensions(extensions component.Extensions) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.extensions = extensions
@@ -114,6 +122,7 @@ func WithExtensions(extensions component.Extensions) ApplicationOption {
 	}
 }
 
+// WithKraftFiles sets the application's kraft yaml files
 func WithKraftFiles(kraftFiles []string) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.kraftFiles = kraftFiles
@@ -121,6 +130,7 @@ func WithKraftFiles(kraftFiles []string) ApplicationOption {
 	}
 }
 
+// WithConfiguration sets the application's kconfig list
 func WithConfiguration(configuration kconfig.KConfigValues) ApplicationOption {
 	return func(ao *ApplicationConfig) error {
 		ao.configuration = configuration

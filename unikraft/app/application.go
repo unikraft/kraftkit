@@ -90,22 +90,27 @@ func (ac ApplicationConfig) Component() component.ComponentConfig {
 	return ac.ComponentConfig
 }
 
+// WorkingDir returns the path to the application's working directory
 func (ac ApplicationConfig) WorkingDir() string {
 	return ac.workingDir
 }
 
+// Filename returns the path to the application's executable
 func (ac ApplicationConfig) Filename() string {
 	return ac.filename
 }
 
+// OutDir returns the path to the application's output directory
 func (ac ApplicationConfig) OutDir() string {
 	return ac.outDir
 }
 
+// Template returns the application's template
 func (ac ApplicationConfig) Template() template.TemplateConfig {
 	return ac.template
 }
 
+// Unikraft returns the application's unikraft configuration
 func (ac ApplicationConfig) Unikraft() (core.UnikraftConfig, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return core.UnikraftConfig{}, fmt.Errorf("Unikraft(): template source is not unpacked in project")
@@ -114,6 +119,7 @@ func (ac ApplicationConfig) Unikraft() (core.UnikraftConfig, error) {
 	return ac.unikraft, nil
 }
 
+// Libraries returns the application libraries' configurations
 func (ac ApplicationConfig) Libraries() (lib.Libraries, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return lib.Libraries{}, fmt.Errorf("Libraries(): template source is not unpacked in project")
@@ -122,6 +128,7 @@ func (ac ApplicationConfig) Libraries() (lib.Libraries, error) {
 	return ac.libraries, nil
 }
 
+// Targets returns the application's targets
 func (ac ApplicationConfig) Targets() (target.Targets, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return target.Targets{}, fmt.Errorf("Targets(): template source is not unpacked in project")
@@ -130,6 +137,7 @@ func (ac ApplicationConfig) Targets() (target.Targets, error) {
 	return ac.targets, nil
 }
 
+// Extensions returns the application's extensions
 func (ac ApplicationConfig) Extensions() (component.Extensions, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return component.Extensions{}, fmt.Errorf("Extensions(): template source is not unpacked in project")
@@ -138,6 +146,7 @@ func (ac ApplicationConfig) Extensions() (component.Extensions, error) {
 	return ac.extensions, nil
 }
 
+// KraftFiles returns the application's kraft configuration files
 func (ac ApplicationConfig) KraftFiles() ([]string, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return []string{}, fmt.Errorf("KraftFiles(): template source is not unpacked in project")
@@ -146,6 +155,7 @@ func (ac ApplicationConfig) KraftFiles() ([]string, error) {
 	return ac.kraftFiles, nil
 }
 
+// Configuration returns the application's kconfig list
 func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
 		return kconfig.KConfigValues{}, fmt.Errorf("Configuration(): template source is not unpacked in project")
@@ -154,6 +164,7 @@ func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
 	return ac.configuration, nil
 }
 
+// MergeTemplate merges the application's configuration with the given configuration
 func (a *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
 	a.ComponentConfig = app.ComponentConfig
 
