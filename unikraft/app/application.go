@@ -153,6 +153,49 @@ func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
 
 	return ac.configuration, nil
 }
+
+func (a *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
+	a.ComponentConfig = app.ComponentConfig
+
+	a.workingDir = app.workingDir
+	a.filename = app.filename
+	a.outDir = app.outDir
+	a.template = app.template
+
+	// Change all workdirs
+	for i := range a.libraries {
+		lib := a.libraries[i]
+		lib.SetWorkdir(a.workingDir)
+		a.libraries[i] = lib
+	}
+
+	for id, lib := range app.libraries {
+		a.libraries[id] = lib
+	}
+
+	a.targets = app.targets
+
+	for id, ext := range app.extensions {
+		a.extensions[id] = ext
+	}
+
+	a.kraftFiles = append(a.kraftFiles, app.kraftFiles...)
+
+	for id, val := range app.configuration {
+		a.configuration[id] = val
+	}
+
+	// Need to first merge the app configuration over the template
+	uk := app.unikraft
+	uk.Configuration = a.unikraft.Configuration
+	for id, val := range app.unikraft.Configuration {
+		uk.Configuration[id] = val
+	}
+	a.unikraft = uk
+
+	return a
+}
+
 func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(ac.workingDir, unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {

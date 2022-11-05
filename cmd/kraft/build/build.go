@@ -391,6 +391,14 @@ func buildRun(opts *buildOptions, workdir string) error {
 	if err != nil {
 		return err
 	}
+
+	templateProject, err := schema.NewApplicationFromOptions(templateOps)
+	if err != nil {
+		return err
+	}
+
+	project = templateProject.MergeTemplate(project)
+
 	// Overwrite template with user options
 	components, err := project.Components()
 	if err != nil {

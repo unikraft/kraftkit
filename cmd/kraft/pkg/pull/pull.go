@@ -347,6 +347,12 @@ func pullRun(opts *PullOptions, query string) error {
 			return err
 		}
 
+		templateProject, err := schema.NewApplicationFromOptions(templateOps)
+		if err != nil {
+			return err
+		}
+
+		project = templateProject.MergeTemplate(project)
 		// List the components
 		components, err := project.Components()
 		if err != nil {
