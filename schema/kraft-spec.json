@@ -14,6 +14,13 @@
 
     "outdir": { "type": "string" },
 
+    "template": {
+      "id": "#/properties/template",
+      "$ref": "#/definitions/template",
+      "type": "string",
+      "additionalProperties": true
+    },
+
     "unikraft": {
       "id": "#/properties/unikraft",
       "$ref": "#/definitions/unikraft",
@@ -56,6 +63,16 @@
       "additionalProperties": true
     },
 
+    "template": {
+      "id": "#/definitions/template",
+      "type": [ "string", "object", "number" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] }
+      },
+      "additionalProperties": true
+    },
+  
     "target": {
       "id": "#/definitions/target",
       "type": [ "object" ],
