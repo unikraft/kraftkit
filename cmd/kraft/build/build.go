@@ -289,7 +289,17 @@ func buildRun(opts *buildOptions, workdir string) error {
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
 
-	for _, component := range project.Components() {
+	_, err = project.Components()
+	if err != nil {
+	}
+	}
+
+	// Overwrite template with user options
+	components, err := project.Components()
+	if err != nil {
+		return err
+	}
+	for _, component := range components {
 		component := component // loop closure
 
 		searches = append(searches, processtree.NewProcessTreeItem(

@@ -245,8 +245,16 @@ func pullRun(opts *PullOptions, query string) error {
 			return err
 		}
 
+		_, err = project.Components()
+		if err != nil {
+		}
+
 		// List the components
-		for _, c := range project.Components() {
+		components, err := project.Components()
+		if err != nil {
+			return err
+		}
+		for _, c := range components {
 			queries = append(queries, packmanager.CatalogQuery{
 				Name:    c.Name(),
 				Version: c.Version(),

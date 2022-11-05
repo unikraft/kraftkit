@@ -447,10 +447,17 @@ func (a *ApplicationConfig) TargetByName(name string) (*target.TargetConfig, err
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (ac *ApplicationConfig) Components() []component.Component {
+func (ac *ApplicationConfig) Components() ([]component.Component, error) {
 	components := []component.Component{
 		ac.Unikraft,
 	}
+
+	// Change to error and correctly check if structure is uninitialized
+	if ac.Template.Source() != "" && !ac.Template.IsUnpackedInProject() {
+		return nil, fmt.Errorf("template source is not unpacked in project")
+	}
+
+	components = append(components, ac.Template)
 
 	for _, library := range ac.Libraries {
 		components = append(components, library)
@@ -464,7 +471,7 @@ func (ac *ApplicationConfig) Components() []component.Component {
 	// 	components = append(components, targ)
 	// }
 
-	return components
+	return components, nil
 }
 
 func (ac ApplicationConfig) Type() unikraft.ComponentType {
