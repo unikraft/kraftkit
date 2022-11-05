@@ -331,11 +331,11 @@ func buildRun(opts *buildOptions, workdir string) error {
 		)
 		if err != nil {
 			return err
-	}
+		}
 
 		if err := treemodel.Start(); err != nil {
 			return fmt.Errorf("could not complete search: %v", err)
-	}
+		}
 
 		proc := paraprogress.NewProcess(
 			fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
@@ -508,10 +508,13 @@ func buildRun(opts *buildOptions, workdir string) error {
 
 	processes = []*paraprogress.Process{} // reset
 
-	var targets []target.TargetConfig
+	targets, err := project.Targets()
+	if err != nil {
+		return err
+	}
 
 	// Filter the targets by CLI selection
-	for _, targ := range project.Targets {
+	for _, targ := range targets {
 		switch true {
 		case
 			// If no arguments are supplied
