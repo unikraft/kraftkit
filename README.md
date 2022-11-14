@@ -3,6 +3,7 @@
 [![](https://pkg.go.dev/badge/kraftkit.sh.svg)](https://pkg.go.dev/kraftkit.sh)
 ![](https://img.shields.io/static/v1?label=license&message=BSD-3&color=%23385177)
 [![](https://img.shields.io/discord/762976922531528725.svg?label=discord&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)][unikraft-discord]
+[![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
 
 Kraftkit is a suite of tools and framework for building custom, minimal, immutable lightweight virtual machines based on [Unikraft](https://unikraft.org).
 With Kraftkitt, you can use unikernels at every of their lifecycle: from construction to production.
