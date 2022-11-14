@@ -104,7 +104,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 			confOpts = append(confOpts, arg+"=n")
 		}
 
-		return unsetRun(opts, workdir, confOpts)
+		return opts.Unset(workdir, confOpts)
 	}
 
 	cmd.Flags().StringVarP(
@@ -117,7 +117,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
+func (copts *UnsetOptions) Unset(workdir string, confOpts []string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

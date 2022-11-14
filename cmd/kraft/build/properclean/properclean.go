@@ -90,13 +90,13 @@ func PropercleanCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return propercleanRun(opts, workdir)
+		return opts.Properclean(workdir)
 	}
 
 	return cmd
 }
 
-func propercleanRun(copts *PropercleanOptions, workdir string) error {
+func (copts *PropercleanOptions) Properclean(workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

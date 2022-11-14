@@ -90,7 +90,7 @@ func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Long = heredoc.Doc(`
 		Follow the events of a unikernel`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runEvents(opts, args...)
+		return opts.RunEvents(args...)
 	}
 
 	cmd.Flags().BoolVarP(
@@ -165,7 +165,7 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runEvents(opts *eventsOptions, args ...string) error {
+func (opts *eventsOptions) RunEvents(args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()

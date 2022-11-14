@@ -153,7 +153,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return pkgRun(opts, workdir)
+		return opts.Pkg(workdir)
 	}
 
 	// TODO: Enable flag if multiple managers are detected?
@@ -252,7 +252,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func pkgRun(opts *pkgOptions, workdir string) error {
+func (opts *pkgOptions) Pkg(workdir string) error {
 	var err error
 
 	pm, err := opts.PackageManager()

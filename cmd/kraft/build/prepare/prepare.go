@@ -90,13 +90,13 @@ func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return prepareRun(opts, workdir)
+		return opts.Prepare(workdir)
 	}
 
 	return cmd
 }
 
-func prepareRun(copts *PrepareOptions, workdir string) error {
+func (copts *PrepareOptions) Prepare(workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

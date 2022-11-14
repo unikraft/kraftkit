@@ -92,7 +92,7 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 		if len(args) > 0 {
 			workdir = args[0]
 		}
-		return listRun(opts, workdir)
+		return opts.List(workdir)
 	}
 
 	cmd.Flags().IntVarP(
@@ -158,7 +158,7 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func listRun(opts *ListOptions, workdir string) error {
+func (opts *ListOptions) List(workdir string) error {
 	var err error
 
 	pm, err := opts.PackageManager()

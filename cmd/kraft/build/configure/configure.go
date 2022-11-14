@@ -89,13 +89,13 @@ func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return configureRun(opts, workdir)
+		return opts.Configure(workdir)
 	}
 
 	return cmd
 }
 
-func configureRun(copts *ConfigureOptions, workdir string) error {
+func (copts *ConfigureOptions) Configure(workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

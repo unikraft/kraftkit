@@ -147,7 +147,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return buildRun(opts, workdir)
+		return opts.Build(workdir)
 	}
 
 	cmd.Flags().BoolVarP(
@@ -237,7 +237,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func buildRun(opts *buildOptions, workdir string) error {
+func (opts *buildOptions) Build(workdir string) error {
 	var err error
 
 	cfgm, err := opts.ConfigManager()

@@ -93,7 +93,7 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
 
-		return runPs(opts, args...)
+		return opts.Ps(args...)
 	}
 
 	cmd.Flags().BoolVarP(
@@ -141,7 +141,7 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func runPs(opts *psOptions, args ...string) error {
+func (opts *psOptions) Ps(args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()

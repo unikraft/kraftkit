@@ -73,13 +73,13 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 		if len(args) > 0 {
 			source = args[0]
 		}
-		return sourceRun(opts, source)
+		return opts.Source(source)
 	}
 
 	return cmd
 }
 
-func sourceRun(opts *SourceOptions, source string) error {
+func (opts *SourceOptions) Source(source string) error {
 	var err error
 
 	pm, err := opts.PackageManager()

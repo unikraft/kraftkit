@@ -129,7 +129,7 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 			return err
 		}
 
-		return pullRun(opts, query)
+		return opts.Pull(query)
 	}
 
 	// TODO: Enable flag if multiple managers are detected?
@@ -199,7 +199,7 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func pullRun(opts *PullOptions, query string) error {
+func (opts *PullOptions) Pull(query string) error {
 	var err error
 	var project *app.ApplicationConfig
 	var processes []*paraprogress.Process

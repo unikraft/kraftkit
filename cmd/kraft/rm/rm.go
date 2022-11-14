@@ -79,7 +79,7 @@ func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Long = heredoc.Doc(`
 		Remove one or more running unikernels`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runRemove(opts, args...)
+		return opts.Remove(args...)
 	}
 
 	return cmd
@@ -140,7 +140,7 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runRemove(opts *rmOptions, args ...string) error {
+func (opts *rmOptions) Remove(args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()

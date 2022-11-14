@@ -90,13 +90,13 @@ func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return cleanRun(opts, workdir)
+		return opts.Clean(workdir)
 	}
 
 	return cmd
 }
 
-func cleanRun(copts *CleanOptions, workdir string) error {
+func (copts *CleanOptions) Clean(workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

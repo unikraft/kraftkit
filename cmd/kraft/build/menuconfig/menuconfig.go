@@ -90,13 +90,13 @@ func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return menuConfigRun(opts, workdir)
+		return opts.MenuConfig(workdir)
 	}
 
 	return cmd
 }
 
-func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
+func (mcopts *MenuConfigOptions) MenuConfig(workdir string) error {
 	pm, err := mcopts.PackageManager()
 	if err != nil {
 		return err

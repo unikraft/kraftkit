@@ -110,7 +110,7 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 			confOpts = append(confOpts, arg)
 		}
 
-		return setRun(opts, workdir, confOpts)
+		return opts.Set(workdir, confOpts)
 	}
 
 	cmd.Flags().StringVarP(
@@ -123,7 +123,7 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func setRun(copts *SetOptions, workdir string, confOpts []string) error {
+func (copts *SetOptions) Set(workdir string, confOpts []string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

@@ -94,13 +94,13 @@ func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 			workdir = args[0]
 		}
 
-		return fetchRun(opts, workdir)
+		return opts.Fetch(workdir)
 	}
 
 	return cmd
 }
 
-func fetchRun(copts *FetchOptions, workdir string) error {
+func (copts *FetchOptions) Fetch(workdir string) error {
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err

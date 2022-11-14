@@ -111,7 +111,7 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
 
-		return runRun(opts, args...)
+		return opts.Run(args...)
 	}
 
 	cmd.Flags().BoolVarP(
@@ -187,7 +187,7 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func runRun(opts *runOptions, args ...string) error {
+func (opts *runOptions) Run(args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()

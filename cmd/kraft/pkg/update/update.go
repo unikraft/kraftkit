@@ -75,7 +75,7 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 		$ kraft pkg update
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return updateRun(opts)
+		return opts.Update()
 	}
 
 	// TODO: Enable flag if multiple managers are detected?
@@ -89,7 +89,7 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 	return cmd
 }
 
-func updateRun(opts *UpdateOptions) error {
+func (opts *UpdateOptions) Update() error {
 	plog, err := opts.Logger()
 	if err != nil {
 		return err

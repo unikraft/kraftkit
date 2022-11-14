@@ -78,7 +78,7 @@ func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Long = heredoc.Doc(`
 		Stop one or more running unikernels`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runStop(opts, args...)
+		return opts.Stop(args...)
 	}
 
 	return cmd
@@ -139,7 +139,7 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runStop(opts *stopOptions, args ...string) error {
+func (opts *stopOptions) Stop(args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()
