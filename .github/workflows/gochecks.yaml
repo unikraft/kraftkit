@@ -23,6 +23,9 @@ jobs:
 
       - name: Install gofumpt
         run: go install mvdan.cc/gofumpt@v0.3.1
+      
+      - name: Install misspell
+        run: go install github.com/client9/misspell/cmd/misspell@v0.3.4    
 
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install libgit2-dev
@@ -57,6 +60,14 @@ jobs:
           run: |
             set -o pipefail
             staticcheck ./... | sed -e 's@\(.*\)\.go@./\1.go@g'
+
+      - name: spellcheck
+        if: ${{ success() || failure() }} # run this step even if the previous one failed
+        uses: protocol/multiple-go-modules@v1.2
+        with:
+          run: |
+            set -o pipefail
+            misspell -error . | sed -e 's@\(.*\)\.go@./\1.go@g'
 
       - name: go generate
         uses: protocol/multiple-go-modules@v1.2
