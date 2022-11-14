@@ -61,7 +61,7 @@ type stopOptions struct {
 func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "stop")
 	if err != nil {
-		panic("could not initialize 'kraft stop' commmand")
+		panic("could not initialize 'kraft stop' command")
 	}
 
 	opts := &stopOptions{

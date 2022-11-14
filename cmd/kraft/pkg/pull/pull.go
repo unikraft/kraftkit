@@ -82,7 +82,7 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "pull")
 	if err != nil {
-		panic("could not initialize root commmand")
+		panic("could not initialize root command")
 	}
 
 	cmd.Short = "Pull a Unikraft unikernel and/or its dependencies"

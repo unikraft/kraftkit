@@ -66,7 +66,7 @@ func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "fetch")
 	if err != nil {
-		panic("could not initialize 'kraft build fetch' commmand")
+		panic("could not initialize 'kraft build fetch' command")
 	}
 
 	cmd.Short = "Fetch a Unikraft unikernel's dependencies"

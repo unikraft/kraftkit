@@ -74,7 +74,7 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 		cmdutil.WithSubcmds(),
 	)
 	if err != nil {
-		panic("could not initialize 'kraft ps' commmand")
+		panic("could not initialize 'kraft ps' command")
 	}
 
 	opts := &psOptions{

@@ -62,7 +62,7 @@ func PropercleanCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "properclean")
 	if err != nil {
-		panic("could not initialize 'ukbuild properclean' commmand")
+		panic("could not initialize 'ukbuild properclean' command")
 	}
 
 	cmd.Short = "Completely remove the build artifacts of a Unikraft project"

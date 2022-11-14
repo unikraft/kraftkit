@@ -62,7 +62,7 @@ func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "prepare")
 	if err != nil {
-		panic("could not initialize 'kraft build prepare' commmand")
+		panic("could not initialize 'kraft build prepare' command")
 	}
 
 	cmd.Short = "Prepare a Unikraft unikernel"

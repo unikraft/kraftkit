@@ -52,7 +52,7 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "source")
 	if err != nil {
-		panic("could not initialize 'kraft pkg source' commmand")
+		panic("could not initialize 'kraft pkg source' command")
 	}
 
 	cmd.Short = "Add Unikraft component manifests"

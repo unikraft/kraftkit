@@ -61,7 +61,7 @@ type rmOptions struct {
 func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "rm")
 	if err != nil {
-		panic("could not initialize 'kraft rm' commmand")
+		panic("could not initialize 'kraft rm' command")
 	}
 
 	opts := &rmOptions{

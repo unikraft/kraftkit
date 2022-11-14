@@ -62,7 +62,7 @@ func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "configure")
 	if err != nil {
-		panic("could not initialize 'kraft build configure' commmand")
+		panic("could not initialize 'kraft build configure' command")
 	}
 
 	cmd.Short = "Configure a Unikraft unikernel its dependencies"

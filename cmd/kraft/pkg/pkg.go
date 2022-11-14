@@ -95,7 +95,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'kraft pkg' commmand")
+		panic("could not initialize 'kraft pkg' command")
 	}
 
 	opts := &pkgOptions{
@@ -425,7 +425,7 @@ func initAppPackage(ctx context.Context,
 	name := opts.Name
 
 	// This is a built in naming convention format, which for now allows us to
-	// differantiate between different targets.  This should be further discussed
+	// differentiate between different targets.  This should be further discussed
 	// the community if this is the best approach.  This can ultimately be
 	// overwritten using the --tag flag.
 	if len(name) == 0 && len(project.Targets) == 1 {

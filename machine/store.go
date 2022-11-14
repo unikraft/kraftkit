@@ -103,7 +103,7 @@ func NewMachineStoreFromPath(dir string, msopts ...MachineStoreOption) (*Machine
 func (ms *MachineStore) connect() error {
 	var db *badger.DB
 
-	// Perform a continious re-try to check for the dir lock on the badger
+	// Perform a continuous re-try to check for the dir lock on the badger
 	// database which may become free during a specified timeout period
 	if err := retrytimeout.RetryTimeout(ms.timeout, func() error {
 		var err error

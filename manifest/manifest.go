@@ -84,7 +84,7 @@ type Manifest struct {
 	auths map[string]config.AuthConfig
 
 	// log is an internal property used to perform logging within the context of
-	// the manfiest
+	// the manifest
 	log log.Logger
 }
 
