@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/moby/moby v20.10.18+incompatible
+	github.com/moby/moby v20.10.20+incompatible
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/errors v0.9.1
