@@ -1,6 +1,9 @@
 # Ignore distributables folder
 dist/
 
+# Ignore vscode folder
+.vscode/
+
 # Ignore swap files
 *.swp
 *.swo
