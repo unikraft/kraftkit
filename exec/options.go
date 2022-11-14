@@ -68,7 +68,7 @@ func NewExecOptions(eopts ...ExecOption) (*ExecOptions, error) {
 	return eo, nil
 }
 
-// WithEnvKey adds an additional enviroment by its key and value
+// WithEnvKey adds an additional environment by its key and value
 func WithEnvKey(key, val string) ExecOption {
 	return func(eo *ExecOptions) error {
 		if eo.env == nil {

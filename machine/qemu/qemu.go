@@ -49,7 +49,7 @@ import (
 	"kraftkit.sh/machine"
 	"kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
-	"kraftkit.sh/machine/qemu/qmp/v1alpha"
+	qmpv1alpha "kraftkit.sh/machine/qemu/qmp/v1alpha"
 
 	goprocess "github.com/shirou/gopsutil/v3/process"
 )
@@ -66,7 +66,7 @@ type QemuDriver struct {
 
 func init() {
 	// Register only used supported interfaces later used for serialization.  To
-	// include all will roughly increase the finaly binary size by +20MB.
+	// include all will roughly increase the final binary size by +20MB.
 
 	// Character devices
 	// gob.Register(QemuCharDevNull{})
@@ -1110,7 +1110,7 @@ func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state m
 	// Grab the actual state of the machine by querying QMP
 	status, err := qmpClient.QueryStatus(qmpv1alpha.QueryStatusRequest{})
 	if err != nil {
-		// We cannot ammend the status at this point, even if the process is
+		// We cannot amend the status at this point, even if the process is
 		// alive, since it is not an indicator of the state of the VM, only of the
 		// VMM.  So we return what we already know via LookupMachineConfig.
 		return state, fmt.Errorf("could not query machine status via QMP: %v", err)

@@ -71,7 +71,7 @@ func NewQMPEventMonitor[T utils.ComparableStringer](client io.ReadWriteCloser, t
 }
 
 // Accept receives exactly one input event from the QMP service and then
-// returns.  The method will wait until it recieves the event.
+// returns.  The method will wait until it receives the event.
 func (em *QMPEventMonitor[T]) Accept() (*QMPEvent[T], error) {
 	data, err := em.client.ReadBytes('\n')
 	if err != nil {

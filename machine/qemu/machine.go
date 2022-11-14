@@ -80,7 +80,7 @@ type QemuMachine struct {
 	MemMerge      bool                     `json_name:"mem-merge,omitempty"`
 	AESKeyWrap    bool                     `json_name:"qes-key-wrap,omitempty"`
 	DEAKeyWrap    bool                     `json_name:"dea-key-wrap,omitempty"`
-	SupressVMDesc bool                     `json_name:"supress-vmdesc,omitempty"`
+	SupressVMDesc bool                     `json_name:"suppress-vmdesc,omitempty"`
 	NVDIMM        bool                     `json_name:"nvdimm,omitempty"`
 	HMAT          bool                     `json_name:"hmat,omitempty"`
 }

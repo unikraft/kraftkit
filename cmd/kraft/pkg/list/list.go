@@ -74,7 +74,7 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "list")
 	if err != nil {
-		panic("could not initialize 'kraft pkg list' commmand")
+		panic("could not initialize 'kraft pkg list' command")
 	}
 
 	cmd.Short = "List installed Unikraft component packages"

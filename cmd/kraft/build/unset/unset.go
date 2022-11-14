@@ -66,7 +66,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "unset")
 	if err != nil {
-		panic("could not initialize 'kraft build unset' commmand")
+		panic("could not initialize 'kraft build unset' command")
 	}
 
 	cmd.Short = "Unset a variable for a Unikraft project"

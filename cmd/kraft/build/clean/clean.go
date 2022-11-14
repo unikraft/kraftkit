@@ -62,7 +62,7 @@ func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "clean")
 	if err != nil {
-		panic("could not initialize 'ukbuild clean' commmand")
+		panic("could not initialize 'ukbuild clean' command")
 	}
 
 	cmd.Short = "Remove the build object files of a Unikraft project"

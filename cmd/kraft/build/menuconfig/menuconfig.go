@@ -62,7 +62,7 @@ func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "menuconfig")
 	if err != nil {
-		panic("could not initialize 'kraft build menuconfig' commmand")
+		panic("could not initialize 'kraft build menuconfig' command")
 	}
 
 	cmd.Short = "menuconfig open's Unikraft configuration editor TUI"

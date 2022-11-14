@@ -106,7 +106,7 @@ func (mo *MakeOptions) Vars() []string {
 	return vars
 }
 
-// Unconditionally make all targets.  Equivelant to calling the flags
+// Unconditionally make all targets.  Equivalent to calling the flags
 // -B|--always-make
 func WithAlwaysMake(alwaysMake bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -115,7 +115,7 @@ func WithAlwaysMake(alwaysMake bool) MakeOption {
 	}
 }
 
-// Change to Directory before doing anything.  Equivelant to calling the flags
+// Change to Directory before doing anything.  Equivalent to calling the flags
 // -C|--directory
 func WithDirectory(dir string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -124,7 +124,7 @@ func WithDirectory(dir string) MakeOption {
 	}
 }
 
-// Print lots of debugging information.  Equivelant to calling the flags
+// Print lots of debugging information.  Equivalent to calling the flags
 // -d|--debug
 func WithDebug(debug bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -133,7 +133,7 @@ func WithDebug(debug bool) MakeOption {
 	}
 }
 
-// Environment variables override makefiles.  Equivelant to calling the flags
+// Environment variables override makefiles.  Equivalent to calling the flags
 // -e|--environment-overrides
 func WithEnvOverrides(envOverrides bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -170,7 +170,7 @@ func WithVars(vars map[string]string) MakeOption {
 	}
 }
 
-// Evaluate strings as makefile statements.  Equivelant to calling the flags
+// Evaluate strings as makefile statements.  Equivalent to calling the flags
 // -E|--eval
 func WithEvaluates(evaluates string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -184,7 +184,7 @@ func WithEvaluates(evaluates string) MakeOption {
 	}
 }
 
-// Read files as a makefile.  Equivelant to calling the flags
+// Read files as a makefile.  Equivalent to calling the flags
 // -f|--file|--makefile
 func WithFile(file string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -198,7 +198,7 @@ func WithFile(file string) MakeOption {
 	}
 }
 
-// Ignore errors from recipes.  Equivelant to calling the flags
+// Ignore errors from recipes.  Equivalent to calling the flags
 // -i|--ignore-errors
 func WithIgnoreErrors(ignoreErrors bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -207,7 +207,7 @@ func WithIgnoreErrors(ignoreErrors bool) MakeOption {
 	}
 }
 
-// Search directories for included makefiles.  Equivelant to calling the flags
+// Search directories for included makefiles.  Equivalent to calling the flags
 // `-I|--include-dir
 func WithIncludeDir(dir string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -221,7 +221,7 @@ func WithIncludeDir(dir string) MakeOption {
 	}
 }
 
-// Allow N jobs at once; infinite jobs with no arg.  Equivelant to calling the
+// Allow N jobs at once; infinite jobs with no arg.  Equivalent to calling the
 // flags -j|--jobs with a value
 func WithJobs(jobs int) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -230,7 +230,7 @@ func WithJobs(jobs int) MakeOption {
 	}
 }
 
-// Allow N jobs at once; infinite jobs with no arg.  Equivelant to calling the
+// Allow N jobs at once; infinite jobs with no arg.  Equivalent to calling the
 // flags -j|--jobs with a value
 func WithMaxJobs(maxJobs bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -245,7 +245,7 @@ func WithMaxJobs(maxJobs bool) MakeOption {
 	}
 }
 
-// Keep going when some targets can't be made.  Equivelant to calling the flags
+// Keep going when some targets can't be made.  Equivalent to calling the flags
 // -k|--keep-going
 func WithKeepGoing(keepGoing bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -254,7 +254,7 @@ func WithKeepGoing(keepGoing bool) MakeOption {
 	}
 }
 
-// Don't start multiple jobs unless load is below N.  Equivelant to calling the
+// Don't start multiple jobs unless load is below N.  Equivalent to calling the
 // flags -l|--load-average|--max-load
 func WithLoadAverage(loadAverage int) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -263,7 +263,7 @@ func WithLoadAverage(loadAverage int) MakeOption {
 	}
 }
 
-// Use the latest mtime between symlinks and target.  Equivelant to calling the
+// Use the latest mtime between symlinks and target.  Equivalent to calling the
 // flags -L|--check-symlink-times
 func WithCheckSymlinkTimes(cst bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -272,7 +272,7 @@ func WithCheckSymlinkTimes(cst bool) MakeOption {
 	}
 }
 
-// Don't actually run any recipe; just print them.  Equivelant to calling the
+// Don't actually run any recipe; just print them.  Equivalent to calling the
 // flags -n|--just-print|--dry-run|--recon
 func WithJustPrint(justPrint bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -281,7 +281,7 @@ func WithJustPrint(justPrint bool) MakeOption {
 	}
 }
 
-// Consider these files to be very old and don't remake them.  Equivelant to
+// Consider these files to be very old and don't remake them.  Equivalent to
 // calling the flags -o|--old-file|--assume-old
 func WithOldFile(file string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -295,7 +295,7 @@ func WithOldFile(file string) MakeOption {
 	}
 }
 
-// Print make's internal database.  Equivelant to calling the flags
+// Print make's internal database.  Equivalent to calling the flags
 // -p|--print-data-base
 func WithPrintDataBase(printDataBase bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -304,7 +304,7 @@ func WithPrintDataBase(printDataBase bool) MakeOption {
 	}
 }
 
-// Run no recipe; exit status says if up to date.  Equivelant to calling the
+// Run no recipe; exit status says if up to date.  Equivalent to calling the
 // flags -q|--question
 func WithQuestion(question bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -313,7 +313,7 @@ func WithQuestion(question bool) MakeOption {
 	}
 }
 
-// Disable the built-in implicit rules.  Equivelant to calling the flags
+// Disable the built-in implicit rules.  Equivalent to calling the flags
 // -r|--no-builtin-rules
 func WithNoBuiltinRules(nbr bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -322,7 +322,7 @@ func WithNoBuiltinRules(nbr bool) MakeOption {
 	}
 }
 
-// Disable the built-in variable settings.  Equivelant to calling the flags
+// Disable the built-in variable settings.  Equivalent to calling the flags
 // -R|--no-builtin-variables
 func WithNoBuiltinVariables(nbv bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -331,7 +331,7 @@ func WithNoBuiltinVariables(nbv bool) MakeOption {
 	}
 }
 
-// Don't echo recipes.  Equivelant to calling the flags -s|--silent|--quiet
+// Don't echo recipes.  Equivalent to calling the flags -s|--silent|--quiet
 func WithSilent(silent bool) MakeOption {
 	return func(mo *MakeOptions) error {
 		mo.silent = silent
@@ -339,7 +339,7 @@ func WithSilent(silent bool) MakeOption {
 	}
 }
 
-// Touch targets instead of remaking them.  Equivelant to calling the flags
+// Touch targets instead of remaking them.  Equivalent to calling the flags
 // -t|--touch
 func WithTouch(touch bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -348,7 +348,7 @@ func WithTouch(touch bool) MakeOption {
 	}
 }
 
-// Print tracing information.  Equivelant to calling the flag --trace
+// Print tracing information.  Equivalent to calling the flag --trace
 func WithTrace(trace bool) MakeOption {
 	return func(mo *MakeOptions) error {
 		mo.trace = trace
@@ -356,7 +356,7 @@ func WithTrace(trace bool) MakeOption {
 	}
 }
 
-// Print the version number of make and exit.  Equivelant to calling the flags
+// Print the version number of make and exit.  Equivalent to calling the flags
 // -v|--version
 func WithVersion(version bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -365,7 +365,7 @@ func WithVersion(version bool) MakeOption {
 	}
 }
 
-// Print the current directory.  Equivelant to calling the flags
+// Print the current directory.  Equivalent to calling the flags
 // -w|--print-directory
 func WithPrintDirectory(printDirectory bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -374,7 +374,7 @@ func WithPrintDirectory(printDirectory bool) MakeOption {
 	}
 }
 
-// Consider files to be infinitely new.  Equivelant to calling the flags
+// Consider files to be infinitely new.  Equivalent to calling the flags
 // -W|--what-if|--new-file|--assume-new
 func WithAssumeNew(file string) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -388,7 +388,7 @@ func WithAssumeNew(file string) MakeOption {
 	}
 }
 
-// Warn when an undefined variable is referenced.  Equivelant to calling the
+// Warn when an undefined variable is referenced.  Equivalent to calling the
 // flag --warn-undefined-variables
 func WithWarnUndefinedVariables(wuv bool) MakeOption {
 	return func(mo *MakeOptions) error {
@@ -397,7 +397,7 @@ func WithWarnUndefinedVariables(wuv bool) MakeOption {
 	}
 }
 
-// The targets to make (omittion will invoke all targets).  Equivelant to
+// The targets to make (omittion will invoke all targets).  Equivalent to
 // calling the flags
 func WithTarget(target ...string) MakeOption {
 	return func(mo *MakeOptions) error {

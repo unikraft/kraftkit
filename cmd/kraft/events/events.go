@@ -72,7 +72,7 @@ type eventsOptions struct {
 func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "events")
 	if err != nil {
-		panic("could not initialize 'kraft events' commmand")
+		panic("could not initialize 'kraft events' command")
 	}
 
 	opts := &eventsOptions{

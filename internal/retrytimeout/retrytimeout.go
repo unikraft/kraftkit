@@ -33,7 +33,7 @@ package retrytimeout
 
 import "time"
 
-// RetryTimeout perform a continious re-try to check the provided function if it
+// RetryTimeout perform a continuous re-try to check the provided function if it
 // errors. If it does not error during te provided timeout, this returns nil
 func RetryTimeout(timeout time.Duration, fn func() error) error {
 	var err error

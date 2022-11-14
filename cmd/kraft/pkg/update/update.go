@@ -62,7 +62,7 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "update")
 	if err != nil {
-		panic("could not initialize subcommmand")
+		panic("could not initialize subcommand")
 	}
 
 	cmd.Short = "Retrieve new lists of Unikraft components, libraries and packages"

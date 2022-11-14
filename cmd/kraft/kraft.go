@@ -67,7 +67,7 @@ func main() {
 		),
 	)
 	if err != nil {
-		panic("could not initialize root commmand")
+		panic("could not initialize root command")
 	}
 
 	cmd.Short = "Build and use highly customized and ultra-lightweight unikernels"

@@ -67,7 +67,7 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	cmd, err := cmdutil.NewCmd(f, "set")
 	if err != nil {
-		panic("could not initialize 'kraft build set' commmand")
+		panic("could not initialize 'kraft build set' command")
 	}
 
 	cmd.Short = "Set a variable for a Unikraft project"

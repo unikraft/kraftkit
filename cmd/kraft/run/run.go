@@ -86,7 +86,7 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 		cmdutil.WithSubcmds(),
 	)
 	if err != nil {
-		panic("could not initialize 'kraft run' commmand")
+		panic("could not initialize 'kraft run' command")
 	}
 
 	opts := &runOptions{
@@ -261,7 +261,7 @@ func runRun(opts *runOptions, args ...string) error {
 
 	// Determine if more than one positional arguments have been provided.  If
 	// this is the case, everything after the first position argument are kernel
-	// parameters which should be passed apporpriately.
+	// parameters which should be passed appropriately.
 	if len(args) > 1 {
 		entity = args[0]
 		kernelArgs = args[1:]
@@ -371,7 +371,7 @@ func runRun(opts *runOptions, args ...string) error {
 		// c). Is the provided first position argument a binary image?
 	} else if f, err := os.Stat(entity); err == nil && !f.IsDir() {
 		if len(opts.Architecture) == 0 || len(opts.Platform) == 0 {
-			return fmt.Errorf("cannot use `kraft run KERNEL` without specifiying --arch and --plat")
+			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
 		mopts = append(mopts,

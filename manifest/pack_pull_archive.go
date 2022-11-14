@@ -81,7 +81,7 @@ func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.Pu
 		if err != nil {
 			return fmt.Errorf("could not perform HEAD request on resource: %v", err)
 		} else if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("recieved HTTP error code %d on resource", res.StatusCode)
+			return fmt.Errorf("received HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
 			ppopts.Log().Warnf("could not determine package size before pulling")
 			pp.total = 0

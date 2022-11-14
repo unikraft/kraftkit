@@ -105,7 +105,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		),
 	)
 	if err != nil {
-		panic("could not initialize 'kraft build' commmand")
+		panic("could not initialize 'kraft build' command")
 	}
 
 	opts := &buildOptions{
