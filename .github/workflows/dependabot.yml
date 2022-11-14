@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "staging"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "09:00"
+    commit-message:
+      prefix: "gomod" # Prefix messages with
+      include: "scope" # List all updated dependencies
+    reviewers:
+      - "nderjung"
+      - "craciunoiuc"
+    assignees:
+      - "nderjung"
