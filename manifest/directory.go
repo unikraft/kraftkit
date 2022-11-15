@@ -37,8 +37,8 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/pack"
-	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app"
 )
 
 type DirectoryProvider struct {
@@ -59,7 +59,7 @@ func NewDirectoryProvider(path string, mopts ...ManifestOption) (Provider, error
 	dirname := filepath.Base(path)
 	t, n, _, err := unikraft.GuessTypeNameVersion(dirname)
 	if err != nil || t == unikraft.ComponentTypeUnknown {
-		for _, f := range schema.DefaultFileNames {
+		for _, f := range app.DefaultFileNames {
 			if f, err := os.Stat(filepath.Join(path, f)); err == nil && f.Size() > 0 {
 				t = unikraft.ComponentTypeApp
 				break

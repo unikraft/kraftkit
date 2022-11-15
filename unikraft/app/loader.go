@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package schema
+package app
 
 import (
 	"fmt"
@@ -30,8 +30,8 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/config"
 	"kraftkit.sh/unikraft/core"
@@ -108,7 +108,7 @@ func withComponentOptions(copts ...component.ComponentOption) func(*LoaderOption
 }
 
 // Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.ApplicationConfig, error) {
+func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*ApplicationConfig, error) {
 	if len(details.ConfigFiles) < 1 {
 		return nil, errors.Errorf("No files specified")
 	}
@@ -152,7 +152,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 		}
 
 		if !opts.SkipValidation {
-			if err := Validate(configDict); err != nil {
+			if err := schema.Validate(configDict); err != nil {
 				return nil, err
 			}
 		}
@@ -193,16 +193,16 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	for _, library := range model.Libraries {
 		details.Configuration.OverrideBy(library.Configuration)
 	}
-	project, err := app.NewApplicationOptions(
-		app.WithWorkingDir(details.WorkingDir),
-		app.WithFilename(model.Filename),
-		app.WithOutDir(model.OutDir),
-		app.WithUnikraft(model.Unikraft),
-		app.WithTemplate(model.Template),
-		app.WithLibraries(model.Libraries),
-		app.WithTargets(model.Targets),
-		app.WithConfiguration(details.Configuration),
-		app.WithExtensions(model.Extensions),
+	project, err := NewApplicationOptions(
+		WithWorkingDir(details.WorkingDir),
+		WithFilename(model.Filename),
+		WithOutDir(model.OutDir),
+		WithUnikraft(model.Unikraft),
+		WithTemplate(model.Template),
+		WithLibraries(model.Libraries),
+		WithTargets(model.Targets),
+		WithConfiguration(details.Configuration),
+		WithExtensions(model.Extensions),
 	)
 	if err != nil {
 		return nil, err

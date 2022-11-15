@@ -41,7 +41,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/internal/cmdfactory"
@@ -273,21 +272,21 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		}
 	}
 
-	projectOpts, err := schema.NewProjectOptions(
+	projectOpts, err := app.NewProjectOptions(
 		nil,
-		schema.WithLogger(plog),
-		schema.WithWorkingDirectory(workdir),
-		schema.WithDefaultConfigPath(),
-		schema.WithPackageManager(&pm),
-		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(true),
+		app.WithLogger(plog),
+		app.WithWorkingDirectory(workdir),
+		app.WithDefaultConfigPath(),
+		app.WithPackageManager(&pm),
+		app.WithResolvedPaths(true),
+		app.WithDotConfig(true),
 	)
 	if err != nil {
 		return err
 	}
 
 	// Interpret the application
-	project, err := schema.NewApplicationFromOptions(projectOpts)
+	project, err := app.NewApplicationFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}
@@ -397,7 +396,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 func initAppPackage(ctx context.Context,
 	project *app.ApplicationConfig,
 	targ target.TargetConfig,
-	projectOpts *schema.ProjectOptions,
+	projectOpts *app.ProjectOptions,
 	pm packmanager.PackageManager,
 	opts *pkgOptions,
 ) ([]pack.Package, error) {

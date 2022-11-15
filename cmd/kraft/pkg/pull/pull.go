@@ -47,7 +47,6 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/schema"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
@@ -229,19 +228,19 @@ func pullRun(opts *PullOptions, query string) error {
 	// so we can get a list of components
 	if f, err := os.Stat(query); err == nil && f.IsDir() {
 		workdir = query
-		projectOpts, err := schema.NewProjectOptions(
+		projectOpts, err := app.NewProjectOptions(
 			nil,
-			schema.WithLogger(plog),
-			schema.WithWorkingDirectory(workdir),
-			schema.WithDefaultConfigPath(),
-			schema.WithResolvedPaths(true),
+			app.WithLogger(plog),
+			app.WithWorkingDirectory(workdir),
+			app.WithDefaultConfigPath(),
+			app.WithResolvedPaths(true),
 		)
 		if err != nil {
 			return err
 		}
 
 		// Interpret the application
-		project, err := schema.NewApplicationFromOptions(projectOpts)
+		project, err := app.NewApplicationFromOptions(projectOpts)
 		if err != nil {
 			return err
 		}
@@ -334,20 +333,20 @@ func pullRun(opts *PullOptions, query string) error {
 			return err
 		}
 
-		templateOps, err := schema.NewProjectOptions(
+		templateOps, err := app.NewProjectOptions(
 			nil,
-			schema.WithLogger(plog),
-			schema.WithWorkingDirectory(templateWorkdir),
-			schema.WithDefaultConfigPath(),
-			schema.WithPackageManager(&pm),
-			schema.WithResolvedPaths(true),
-			schema.WithDotConfig(false),
+			app.WithLogger(plog),
+			app.WithWorkingDirectory(templateWorkdir),
+			app.WithDefaultConfigPath(),
+			app.WithPackageManager(&pm),
+			app.WithResolvedPaths(true),
+			app.WithDotConfig(false),
 		)
 		if err != nil {
 			return err
 		}
 
-		templateProject, err := schema.NewApplicationFromOptions(templateOps)
+		templateProject, err := app.NewApplicationFromOptions(templateOps)
 		if err != nil {
 			return err
 		}

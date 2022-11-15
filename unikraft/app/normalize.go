@@ -29,19 +29,17 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package schema
+package app
 
 import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"kraftkit.sh/unikraft/app"
 )
 
 // normalize a kraft project by moving deprecated attributes to their canonical
 // position and injecting implicit defaults
-func normalize(project *app.ApplicationConfig, resolvePaths bool) error {
+func normalize(project *ApplicationConfig, resolvePaths bool) error {
 	absWorkingDir, err := filepath.Abs(project.WorkingDir())
 	if err != nil {
 		return err
@@ -54,7 +52,7 @@ func normalize(project *app.ApplicationConfig, resolvePaths bool) error {
 	if err != nil {
 		return err
 	}
-	app.WithKraftFiles(absKraftFiles)(project)
+	WithKraftFiles(absKraftFiles)(project)
 
 	return nil
 }
