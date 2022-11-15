@@ -40,7 +40,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -162,61 +161,6 @@ type CommandEventsArgs struct {
 	QuitTogether bool
 	Granularity  time.Duration
 }
-
-type machineWaitGroup struct {
-	lock sync.RWMutex
-	mids []machine.MachineID
-}
-
-func (mwg *machineWaitGroup) Done(needle machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if !mwg.Contains(needle) {
-		return
-	}
-
-	for i, mid := range mwg.mids {
-		if mid == needle {
-			mwg.mids = append(mwg.mids[:i], mwg.mids[i+1:]...)
-			return
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Wait() {
-	for {
-		if len(mwg.mids) == 0 {
-			break
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Contains(needle machine.MachineID) bool {
-	for _, mid := range mwg.mids {
-		if mid == needle {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (mwg *machineWaitGroup) Add(mid machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if mwg.Contains(mid) {
-		return
-	}
-
-	mwg.mids = append(mwg.mids, mid)
-}
-
-var (
-	observations = new(machineWaitGroup)
-	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
-)
 
 func (copts *CommandOptions) initAppPackage(ctx context.Context,
 	project *ApplicationConfig,
@@ -1755,27 +1699,27 @@ func (copts *CommandOptions) Remove(args ...string) error {
 	for _, mid := range mids {
 		mid := mid // loop closure
 
-		if observations.Contains(mid) {
+		if machinedriver.Observations.Contains(mid) {
 			continue
 		}
 
-		observations.Add(mid)
+		machinedriver.Observations.Add(mid)
 
 		go func() {
-			observations.Add(mid)
+			machinedriver.Observations.Add(mid)
 
 			plog.Infof("removing %s...", mid.ShortString())
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 				plog.Errorf("could not look up machine config: %v", err)
-				observations.Done(mid)
+				machinedriver.Observations.Done(mid)
 				return
 			}
 
 			driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
 
-			if _, ok := drivers[driverType]; !ok {
+			if _, ok := machinedriver.Drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
 					machinedriveropts.WithLogger(plog),
 					machinedriveropts.WithMachineStore(store),
@@ -1783,14 +1727,14 @@ func (copts *CommandOptions) Remove(args ...string) error {
 				)
 				if err != nil {
 					plog.Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
-					observations.Done(mid)
+					machinedriver.Observations.Done(mid)
 					return
 				}
 
-				drivers[driverType] = driver
+				machinedriver.Drivers[driverType] = driver
 			}
 
-			driver := drivers[driverType]
+			driver := machinedriver.Drivers[driverType]
 
 			if err := driver.Destroy(ctx, mid); err != nil {
 				plog.Errorf("could not remove machine %s: %v", mid.ShortString(), err)
@@ -1798,11 +1742,11 @@ func (copts *CommandOptions) Remove(args ...string) error {
 				plog.Infof("removed %s", mid.ShortString())
 			}
 
-			observations.Done(mid)
+			machinedriver.Observations.Done(mid)
 		}()
 	}
 
-	observations.Wait()
+	machinedriver.Observations.Wait()
 
 	return nil
 }
@@ -2159,41 +2103,41 @@ func (copts *CommandOptions) Stop(args ...string) error {
 	for _, mid := range mids {
 		mid := mid // loop closure
 
-		if observations.Contains(mid) {
+		if machinedriver.Observations.Contains(mid) {
 			continue
 		}
 
-		observations.Add(mid)
+		machinedriver.Observations.Add(mid)
 
 		go func() {
-			observations.Add(mid)
+			machinedriver.Observations.Add(mid)
 
 			plog.Infof("stopping %s...", mid.ShortString())
 
 			state, err := store.LookupMachineState(mid)
 			if err != nil {
 				plog.Errorf("could not look up machine state: %v", err)
-				observations.Done(mid)
+				machinedriver.Observations.Done(mid)
 				return
 			}
 
 			switch state {
 			case machine.MachineStateDead, machine.MachineStateExited:
 				plog.Errorf("%s has exited", mid.ShortString())
-				observations.Done(mid)
+				machinedriver.Observations.Done(mid)
 				return
 			}
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 				plog.Errorf("could not look up machine config: %v", err)
-				observations.Done(mid)
+				machinedriver.Observations.Done(mid)
 				return
 			}
 
 			driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
 
-			if _, ok := drivers[driverType]; !ok {
+			if _, ok := machinedriver.Drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
 					machinedriveropts.WithLogger(plog),
 					machinedriveropts.WithMachineStore(store),
@@ -2201,14 +2145,14 @@ func (copts *CommandOptions) Stop(args ...string) error {
 				)
 				if err != nil {
 					plog.Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
-					observations.Done(mid)
+					machinedriver.Observations.Done(mid)
 					return
 				}
 
-				drivers[driverType] = driver
+				machinedriver.Drivers[driverType] = driver
 			}
 
-			driver := drivers[driverType]
+			driver := machinedriver.Drivers[driverType]
 
 			if err := driver.Stop(ctx, mid); err != nil {
 				plog.Errorf("could not stop machine %s: %v", mid.ShortString(), err)
@@ -2216,11 +2160,11 @@ func (copts *CommandOptions) Stop(args ...string) error {
 				plog.Infof("stopped %s", mid.ShortString())
 			}
 
-			observations.Done(mid)
+			machinedriver.Observations.Done(mid)
 		}()
 	}
 
-	observations.Wait()
+	machinedriver.Observations.Wait()
 
 	return nil
 }
@@ -2337,7 +2281,7 @@ seek:
 			default:
 			}
 
-			if observations.Contains(mid) {
+			if machinedriver.Observations.Contains(mid) {
 				continue
 			}
 
@@ -2350,22 +2294,22 @@ seek:
 			}
 
 			go func() {
-				observations.Add(mid)
+				machinedriver.Observations.Add(mid)
 
 				if args.QuitTogether {
-					defer observations.Done(mid)
+					defer machinedriver.Observations.Done(mid)
 				}
 
 				mcfg := &machine.MachineConfig{}
 				if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 					plog.Errorf("could not look up machine config: %v", err)
-					observations.Done(mid)
+					machinedriver.Observations.Done(mid)
 					return
 				}
 
 				driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
 
-				if _, ok := drivers[driverType]; !ok {
+				if _, ok := machinedriver.Drivers[driverType]; !ok {
 					driver, err := machinedriver.New(driverType,
 						machinedriveropts.WithLogger(plog),
 						machinedriveropts.WithMachineStore(store),
@@ -2373,14 +2317,14 @@ seek:
 					)
 					if err != nil {
 						plog.Errorf("could not instantiate machine driver for %s: %v", mid, err)
-						observations.Done(mid)
+						machinedriver.Observations.Done(mid)
 						return
 					}
 
-					drivers[driverType] = driver
+					machinedriver.Drivers[driverType] = driver
 				}
 
-				driver := drivers[driverType]
+				driver := machinedriver.Drivers[driverType]
 
 				events, errs, err := driver.ListenStatusUpdate(ctx, mid)
 				if err != nil {
@@ -2403,7 +2347,7 @@ seek:
 						}
 					}
 
-					observations.Done(mid)
+					machinedriver.Observations.Done(mid)
 					return
 				}
 
@@ -2420,7 +2364,7 @@ seek:
 									plog.Errorf("could not remove machine: %v: ", err)
 								}
 							}
-							observations.Done(mid)
+							machinedriver.Observations.Done(mid)
 							return
 						}
 
@@ -2428,10 +2372,10 @@ seek:
 						if !errors.Is(err, qmp.ErrAcceptedNonEvent) {
 							plog.Errorf("%v", err)
 						}
-						observations.Done(mid)
+						machinedriver.Observations.Done(mid)
 
 					case <-ctx.Done():
-						observations.Done(mid)
+						machinedriver.Observations.Done(mid)
 						return
 					}
 				}
@@ -2441,7 +2385,7 @@ seek:
 		time.Sleep(time.Second * args.Granularity)
 	}
 
-	observations.Wait()
+	machinedriver.Observations.Wait()
 
 	return nil
 }
