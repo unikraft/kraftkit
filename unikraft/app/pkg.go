@@ -42,41 +42,56 @@ import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/logger"
 	"kraftkit.sh/log"
+
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/target"
+
+	"kraftkit.sh/utils"
 )
 
 type CommandPullArgs struct {
-	Manager      string
-	Type         string
-	WithDeps     bool
-	Workdir      string
-	NoDeps       bool
-	Platform     string
-	Architecture string
-	AllVersions  bool
-	NoChecksum   bool
-	NoCache      bool
+	Manager      string `usage:"Force the handler type (Omition will attempt auto-detect)" default:"auto"`
+	Type         string `usage:"Do not use cache when building the image" default:"false"`
+	WithDeps     bool   `usage:"Pull dependencies" default:"false"`
+	NoDeps       bool   `usage:"Do not pull dependencies" default:"true"`
+	Platform     string `usage:"Specify the desired platform"`
+	Architecture string `usage:"Specify the desired architecture"`
+	AllVersions  bool   `usage:"Pull all versions" default:"false"`
+	NoChecksum   bool   `usage:"Do not verify package checksum (if available)" default:"false"`
+	NoCache      bool   `usage:"Do not use cache and pull directly from source" default:"false"`
 }
 
 type CommandPkgArgs struct {
-	Architecture string
-	DotConfig    string
-	Force        bool
-	Format       string
-	Initrd       string
-	Kernel       string
-	KernelDbg    bool
-	Name         string
-	Output       string
-	Platform     string
-	Target       string
-	Volumes      []string
-	WithDbg      bool
+	Architecture string   `usage:"Filter the creation of the package by architecture of known targets"`
+	DotConfig    string   `usage:"Override the path to the KConfig '.config' file"`
+	Force        bool     `usage:"Force the use of a packaging handler format" default:"false"`
+	Format       string   `usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Initrd       string   `usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
+	Kernel       string   `usage:"Override the path to the unikernel image"`
+	KernelDbg    bool     `usage:"Package the debuggable (symbolic) kernel image instead of the stripped image" default:"false"`
+	Name         string   `usage:"Specify the name of the package"`
+	Output       string   `usage:"Save the package at the following output"`
+	Platform     string   `usage:"Filter the creation of the package by platform of known targets"`
+	Target       string   `usage:"Package a particular known target"`
+	Volumes      []string `usage:"Additional volumes to bundle within the package"`
+	WithDbg      bool     `usage:"In addition to the stripped kernel, include the debug image" default:"false"`
+}
+
+type CommandListArgs struct {
+	LimitResults int  `usage:"Maximum number of items to print (-1 returns all)" default:"30"`
+	AsJSON       bool `usage:"Print in JSON format" default:"false"`
+	Update       bool `usage:"Get latest information about components before listing results" default:"false"`
+	ShowCore     bool `usage:"Show Unikraft core versions" default:"false"`
+	ShowArchs    bool `usage:"Show architectures" default:"false"`
+	ShowPlats    bool `usage:"Show platforms" default:"false"`
+	ShowLibs     bool `usage:"Show libraries" default:"false"`
+	ShowApps     bool `usage:"Show applications" default:"false"`
 }
 
 func (copts *CommandOptions) initAppPackage(ctx context.Context,
@@ -593,4 +608,94 @@ func (copts *CommandOptions) Pkg(args CommandPkgArgs) error {
 	}
 
 	return model.Start()
+}
+
+func (copts *CommandOptions) List(args CommandListArgs) error {
+	var err error
+
+	pm, err := copts.PackageManager()
+	if err != nil {
+		return err
+	}
+
+	plog, err := copts.Logger()
+	if err != nil {
+		return err
+	}
+
+	query := packmanager.CatalogQuery{}
+	if args.ShowCore {
+		query.Types = append(query.Types, unikraft.ComponentTypeCore)
+	}
+	if args.ShowArchs {
+		query.Types = append(query.Types, unikraft.ComponentTypeArch)
+	}
+	if args.ShowPlats {
+		query.Types = append(query.Types, unikraft.ComponentTypePlat)
+	}
+	if args.ShowLibs {
+		query.Types = append(query.Types, unikraft.ComponentTypeLib)
+	}
+	if args.ShowApps {
+		query.Types = append(query.Types, unikraft.ComponentTypeApp)
+	}
+
+	var packages []pack.Package
+
+	// List pacakges part of a project
+	if len(copts.Workdir) > 0 {
+		projectOpts, err := NewProjectOptions(
+			nil,
+			WithLogger(plog),
+			WithWorkingDirectory(copts.Workdir),
+			WithDefaultConfigPath(),
+			WithPackageManager(&pm),
+		)
+		if err != nil {
+			return err
+		}
+
+		// Interpret the application
+		app, err := NewApplicationFromOptions(projectOpts)
+		if err != nil {
+			return err
+		}
+
+		app.PrintInfo(copts.IO)
+
+	} else {
+		packages, err = pm.Catalog(query,
+			pack.WithWorkdir(copts.Workdir),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = copts.IO.StartPager()
+	if err != nil {
+		plog.Errorf("error starting pager: %v", err)
+	}
+
+	defer copts.IO.StopPager()
+
+	cs := copts.IO.ColorScheme()
+	table := utils.NewTablePrinter(copts.IO)
+
+	// Header row
+	table.AddField("TYPE", nil, cs.Bold)
+	table.AddField("PACKAGE", nil, cs.Bold)
+	table.AddField("LATEST", nil, cs.Bold)
+	table.AddField("FORMAT", nil, cs.Bold)
+	table.EndRow()
+
+	for _, pack := range packages {
+		table.AddField(string(pack.Options().Type), nil, nil)
+		table.AddField(pack.Name(), nil, nil)
+		table.AddField(pack.Options().Version, nil, nil)
+		table.AddField(pack.Format(), nil, nil)
+		table.EndRow()
+	}
+
+	return table.Render()
 }

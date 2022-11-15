@@ -47,146 +47,45 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/erikgeiser/promptkit/selection"
 	"github.com/moby/moby/pkg/namesgenerator"
+
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/logger"
+
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
-	"kraftkit.sh/pack"
-	"kraftkit.sh/packmanager"
-	"kraftkit.sh/unikraft"
+
 	"kraftkit.sh/utils"
 )
 
-type CommandListArgs struct {
-	LimitResults int
-	AsJSON       bool
-	Update       bool
-	ShowCore     bool
-	ShowArchs    bool
-	ShowPlats    bool
-	ShowLibs     bool
-	ShowApps     bool
-}
-
 type CommandPsArgs struct {
-	ShowAll      bool
-	Hypervisor   string
-	Architecture string
-	Platform     string
-	Quiet        bool
-	Long         bool
+	ShowAll      bool   `usage:"Show all machines (default shows just running)" default:"false"`
+	Hypervisor   string `usage:"Filter the list by hypervisor" default:"all"`
+	Architecture string `usage:"Filter the list by architecture"`
+	Platform     string `usage:"Filter the list by platform"`
+	Quiet        bool   `usage:"Only display machine IDs" default:"false"`
+	Long         bool   `usage:"Show more information" default:"false"`
 }
 
 type CommandRunArgs struct {
-	Architecture  string
-	Detach        bool
-	DisableAccel  bool
-	Hypervisor    string
-	Memory        int
-	NoMonitor     bool
-	PinCPUs       string
-	Platform      string
-	Remove        bool
-	Target        string
-	Volumes       []string
-	WithKernelDbg bool
+	Architecture  string   `usage:"Filter the creation of the package by architecture of known targets"`
+	Detach        bool     `usage:"Run unikernel in background" default:"false"`
+	DisableAccel  bool     `usage:"Disable acceleration of CPU (usually enables TCG)" default:"false"`
+	Hypervisor    string   `usage:"The hypervisor to run on" default:"auto"`
+	Memory        int      `usage:"Assign MB memory to the unikernel" default:"64"`
+	NoMonitor     bool     `usage:"Do not spawn a (or attach to an existing) KraftKit unikernel monitor" default:"false"`
+	PinCPUs       string   `usage:"Pin the image to certain CPUs"`
+	Platform      string   `usage:"Filter the creation of the package by platform of known targets"`
+	Remove        bool     `usage:"Automatically remove the unikernel when it shutsdown" default:"false"`
+	Target        string   `usage:"Explicitly use the defined project target"`
+	Volumes       []string `usage:"Volumes to attach to the image"`
+	WithKernelDbg bool     `usage:"Use the debuggable (symbolic) unikernel" default:"false"`
 }
 
 type CommandEventsArgs struct {
 	QuitTogether bool
 	Granularity  time.Duration
-}
-
-func (copts *CommandOptions) List(args CommandListArgs) error {
-	var err error
-
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
-	query := packmanager.CatalogQuery{}
-	if args.ShowCore {
-		query.Types = append(query.Types, unikraft.ComponentTypeCore)
-	}
-	if args.ShowArchs {
-		query.Types = append(query.Types, unikraft.ComponentTypeArch)
-	}
-	if args.ShowPlats {
-		query.Types = append(query.Types, unikraft.ComponentTypePlat)
-	}
-	if args.ShowLibs {
-		query.Types = append(query.Types, unikraft.ComponentTypeLib)
-	}
-	if args.ShowApps {
-		query.Types = append(query.Types, unikraft.ComponentTypeApp)
-	}
-
-	var packages []pack.Package
-
-	// List pacakges part of a project
-	if len(copts.Workdir) > 0 {
-		projectOpts, err := NewProjectOptions(
-			nil,
-			WithLogger(plog),
-			WithWorkingDirectory(copts.Workdir),
-			WithDefaultConfigPath(),
-			WithPackageManager(&pm),
-		)
-		if err != nil {
-			return err
-		}
-
-		// Interpret the application
-		app, err := NewApplicationFromOptions(projectOpts)
-		if err != nil {
-			return err
-		}
-
-		app.PrintInfo(copts.IO)
-
-	} else {
-		packages, err = pm.Catalog(query,
-			pack.WithWorkdir(copts.Workdir),
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = copts.IO.StartPager()
-	if err != nil {
-		plog.Errorf("error starting pager: %v", err)
-	}
-
-	defer copts.IO.StopPager()
-
-	cs := copts.IO.ColorScheme()
-	table := utils.NewTablePrinter(copts.IO)
-
-	// Header row
-	table.AddField("TYPE", nil, cs.Bold)
-	table.AddField("PACKAGE", nil, cs.Bold)
-	table.AddField("LATEST", nil, cs.Bold)
-	table.AddField("FORMAT", nil, cs.Bold)
-	table.EndRow()
-
-	for _, pack := range packages {
-		table.AddField(string(pack.Options().Type), nil, nil)
-		table.AddField(pack.Name(), nil, nil)
-		table.AddField(pack.Options().Version, nil, nil)
-		table.AddField(pack.Format(), nil, nil)
-		table.EndRow()
-	}
-
-	return table.Render()
 }
 
 func (copts *CommandOptions) Ps(args CommandPsArgs, ExtraArgs ...string) error {

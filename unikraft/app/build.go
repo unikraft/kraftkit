@@ -39,30 +39,34 @@ import (
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/logger"
 	"kraftkit.sh/log"
+
 	kmake "kraftkit.sh/make"
+
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
 
 type CommandBuildArgs struct {
-	NoCache      bool
-	Architecture string
-	Platform     string
-	DotConfig    string
-	Target       string
-	KernelDbg    bool
-	Fast         bool
-	Jobs         int
-	NoSyncConfig bool
-	NoPrepare    bool
-	NoFetch      bool
-	NoPull       bool
-	NoConfigure  bool
-	SaveBuildLog string
+	NoCache      bool   `usage:"Do not use cache when building the image" default:"false"`
+	Architecture string `usage:"The machine architecture of the resulting image"`
+	Platform     string `usage:"The platform to run the resulting image on"`
+	DotConfig    string `usage:"Override the path to the Kconfig file"`
+	Target       string `usage:"Build a particular target"`
+	KernelDbg    bool   `usage:"Build the image with debugging symbols in" default:"false"`
+	Fast         bool   `usage:"Use maximum parallization when performing the build" default:"false"`
+	Jobs         int    `usage:"Allow N jobs at once" default:"0"`
+	NoSyncConfig bool   `usage:"Do not synchronize Unikraft's configuration before building" default:"false"`
+	NoPrepare    bool   `usage:"Do not run Unikraft's prepare step before building" default:"false"`
+	NoFetch      bool   `usage:"Do not run Unikraft's fetch step before building" default:"false"`
+	NoPull       bool   `usage:"Do not run Unikraft's pull step before building" default:"false"`
+	NoConfigure  bool   `usage:"Do not run Unikraft's configure step before building" default:"false"`
+	SaveBuildLog string `usage:"Use the specified file to save the output from the build"`
 }
 
 func (copts *CommandOptions) Clean() error {
