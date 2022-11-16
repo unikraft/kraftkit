@@ -399,7 +399,7 @@ func (copts *CommandOptions) Unset(confOpts []string) error {
 	)
 }
 
-func (copts *CommandOptions) Build(args CommandBuildArgs) error {
+func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 	var err error
 
 	cfgm, err := copts.ConfigManager()

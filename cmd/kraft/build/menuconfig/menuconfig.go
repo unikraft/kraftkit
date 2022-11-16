@@ -37,24 +37,13 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
-	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type MenuConfigOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
-	IO             *iostreams.IOStreams
-}
-
 func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &MenuConfigOptions{
+	application := &app.CommandOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
@@ -79,59 +68,17 @@ func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 		$ kraft build menu path/to/app
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
 		if len(args) == 0 {
-			workdir, err = os.Getwd()
+			application.Workdir, err = os.Getwd()
 			if err != nil {
 				return err
 			}
 		} else {
-			workdir = args[0]
+			application.Workdir = args[0]
 		}
 
-		return menuConfigRun(opts, workdir)
+		return application.MenuConfig()
 	}
 
 	return cmd
-}
-
-func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
-	pm, err := mcopts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	plog, err := mcopts.Logger()
-	if err != nil {
-		return err
-	}
-
-	// Initialize at least the configuration options for a project
-	projectOpts, err := app.NewProjectOptions(
-		nil,
-		app.WithLogger(plog),
-		app.WithWorkingDirectory(workdir),
-		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
-		app.WithResolvedPaths(true),
-		app.WithDotConfig(false),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Interpret the application
-	project, err := app.NewApplicationFromOptions(projectOpts)
-	if err != nil {
-		return err
-	}
-
-	return project.Make(
-		make.WithExecOptions(
-			exec.WithStdin(mcopts.IO.In),
-			exec.WithStdout(mcopts.IO.Out),
-		),
-		make.WithTarget("menuconfig"),
-	)
 }

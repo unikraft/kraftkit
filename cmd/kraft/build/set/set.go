@@ -39,27 +39,13 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
-	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type SetOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
-	IO             *iostreams.IOStreams
-
-	// Command-line arguments
-	Workdir string
-}
-
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SetOptions{
+	application := &app.CommandOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
@@ -83,7 +69,6 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 		$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
 		confOpts := []string{}
 
 		// Skip if nothing can be set
@@ -92,10 +77,8 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 		}
 
 		// Set the working directory (remove the argument if it exists)
-		if opts.Workdir != "" {
-			workdir = opts.Workdir
-		} else {
-			workdir, err = os.Getwd()
+		if application.Workdir == "" {
+			application.Workdir, err = os.Getwd()
 			if err != nil {
 				return err
 			}
@@ -110,63 +93,15 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 			confOpts = append(confOpts, arg)
 		}
 
-		return setRun(opts, workdir, confOpts)
+		return application.Set(confOpts)
 	}
 
 	cmd.Flags().StringVarP(
-		&opts.Workdir,
+		&application.Workdir,
 		"workdir", "w",
 		"",
 		"Work on a unikernel at a path",
 	)
 
 	return cmd
-}
-
-func setRun(copts *SetOptions, workdir string, confOpts []string) error {
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
-	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", workdir)
-
-	// Check if the file exists
-	// TODO: offer option to start in interactive mode
-	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
-	}
-
-	// Initialize at least the configuration options for a project
-	projectOpts, err := app.NewProjectOptions(
-		nil,
-		app.WithLogger(plog),
-		app.WithWorkingDirectory(workdir),
-		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
-		app.WithResolvedPaths(true),
-		app.WithDotConfig(true),
-		app.WithConfig(confOpts),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Interpret the application
-	project, err := app.NewApplicationFromOptions(projectOpts)
-	if err != nil {
-		return err
-	}
-
-	return project.Set(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
-	)
 }

@@ -38,27 +38,13 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
-	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type UnsetOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
-	IO             *iostreams.IOStreams
-
-	// Command-line arguments
-	Workdir string
-}
-
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UnsetOptions{
+	application := &app.CommandOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,
@@ -82,7 +68,6 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 		$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
 		confOpts := []string{}
 
 		// Skip if nothing can be unset
@@ -91,10 +76,8 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 		}
 
 		// Set the working directory
-		if opts.Workdir != "" {
-			workdir = opts.Workdir
-		} else {
-			workdir, err = os.Getwd()
+		if application.Workdir == "" {
+			application.Workdir, err = os.Getwd()
 			if err != nil {
 				return err
 			}
@@ -104,63 +87,15 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 			confOpts = append(confOpts, arg+"=n")
 		}
 
-		return unsetRun(opts, workdir, confOpts)
+		return application.Unset(confOpts)
 	}
 
 	cmd.Flags().StringVarP(
-		&opts.Workdir,
+		&application.Workdir,
 		"workdir", "w",
 		"",
 		"Work on a unikernel at a path",
 	)
 
 	return cmd
-}
-
-func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
-	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", workdir)
-
-	// Check if the file exists
-	// TODO: offer option to start in interactive mode
-	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
-	}
-
-	// Initialize at least the configuration options for a project
-	projectOpts, err := app.NewProjectOptions(
-		nil,
-		app.WithLogger(plog),
-		app.WithWorkingDirectory(workdir),
-		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
-		app.WithResolvedPaths(true),
-		app.WithDotConfig(true),
-		app.WithConfig(confOpts),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Interpret the application
-	project, err := app.NewApplicationFromOptions(projectOpts)
-	if err != nil {
-		return err
-	}
-
-	return project.Unset(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
-	)
 }
