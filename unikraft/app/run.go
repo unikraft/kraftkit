@@ -88,7 +88,7 @@ type CommandEventsArgs struct {
 	Granularity  time.Duration
 }
 
-func (copts *CommandOptions) Ps(args CommandPsArgs, ExtraArgs ...string) error {
+func (copts *CommandOptions) Ps(args *CommandPsArgs, ExtraArgs ...string) error {
 	var err error
 
 	plog, err := copts.Logger()
@@ -326,7 +326,7 @@ func (copts *CommandOptions) Remove(args ...string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Run(args CommandRunArgs, ExtraArgs ...string) error {
+func (copts *CommandOptions) Run(args *CommandRunArgs, ExtraArgs ...string) error {
 	var err error
 
 	plog, err := copts.Logger()
@@ -744,7 +744,7 @@ func (copts *CommandOptions) Stop(args ...string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Events(args CommandEventsArgs, extraArgs ...string) error {
+func (copts *CommandOptions) Events(args *CommandEventsArgs, extraArgs ...string) error {
 	var err error
 
 	plog, err := copts.Logger()
