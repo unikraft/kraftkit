@@ -37,16 +37,11 @@ import (
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-
-	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft/app"
 )
 
-type SourceOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
-
 func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SourceOptions{
+	application := &app.CommandOptions{
 		PackageManager: f.PackageManager,
 	}
 
@@ -73,28 +68,8 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 		if len(args) > 0 {
 			source = args[0]
 		}
-		return sourceRun(opts, source)
+		return application.Source(source)
 	}
 
 	return cmd
-}
-
-func sourceRun(opts *SourceOptions, source string) error {
-	var err error
-
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	pm, err = pm.IsCompatible(source)
-	if err != nil {
-		return err
-	}
-
-	if err = pm.AddSource(source); err != nil {
-		return err
-	}
-
-	return nil
 }

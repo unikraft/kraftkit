@@ -94,6 +94,10 @@ type CommandListArgs struct {
 	ShowApps     bool `usage:"Show applications" default:"false"`
 }
 
+type CommandUpdateArgs struct {
+	Manager string `usage:"Force the handler type" default:"manifest"`
+}
+
 func (copts *CommandOptions) initAppPackage(ctx context.Context,
 	project *ApplicationConfig,
 	targ target.TargetConfig,
@@ -202,7 +206,7 @@ func (copts *CommandOptions) initAppPackage(ctx context.Context,
 	return pack, nil
 }
 
-func (copts *CommandOptions) Pull(args CommandPullArgs, query string) error {
+func (copts *CommandOptions) Pull(args *CommandPullArgs, query string) error {
 	var err error
 	var project *ApplicationConfig
 	var processes []*paraprogress.Process
@@ -468,7 +472,7 @@ func (copts *CommandOptions) Source(source string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Pkg(args CommandPkgArgs) error {
+func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
 	var err error
 
 	pm, err := copts.PackageManager()
@@ -544,7 +548,7 @@ func (copts *CommandOptions) Pkg(args CommandPkgArgs) error {
 				targ.Architecture.Name() == args.Architecture &&
 				targ.Platform.Name() == args.Platform:
 
-			packs, err := copts.initAppPackage(ctx, project, targ, projectOpts, pm, &args)
+			packs, err := copts.initAppPackage(ctx, project, targ, projectOpts, pm, args)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -610,7 +614,7 @@ func (copts *CommandOptions) Pkg(args CommandPkgArgs) error {
 	return model.Start()
 }
 
-func (copts *CommandOptions) List(args CommandListArgs) error {
+func (copts *CommandOptions) List(args *CommandListArgs) error {
 	var err error
 
 	pm, err := copts.PackageManager()
@@ -698,4 +702,68 @@ func (copts *CommandOptions) List(args CommandListArgs) error {
 	}
 
 	return table.Render()
+}
+
+func (copts *CommandOptions) Update(args *CommandUpdateArgs) error {
+	plog, err := copts.Logger()
+	if err != nil {
+		return err
+	}
+
+	cfgm, err := copts.ConfigManager()
+	if err != nil {
+		return err
+	}
+
+	pm, err := copts.PackageManager()
+	if err != nil {
+		return err
+	}
+
+	// Force a particular package manager
+	if len(args.Manager) > 0 && args.Manager != "auto" {
+		pm, err = pm.From(args.Manager)
+		if err != nil {
+			return err
+		}
+	}
+
+	parallel := !cfgm.Config.NoParallel
+	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
+	if norender {
+		parallel = false
+	}
+
+	model, err := processtree.NewProcessTree(
+		[]processtree.ProcessTreeOption{
+			// processtree.WithVerb("Updating"),
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithLogger(plog),
+		},
+		[]*processtree.ProcessTreeItem{
+			processtree.NewProcessTreeItem(
+				"Updating...",
+				"",
+				func(l log.Logger) error {
+					// Apply the incoming logger which is tailored to display as a
+					// sub-terminal within the fancy processtree.
+					pm.ApplyOptions(
+						packmanager.WithLogger(l),
+					)
+
+					return pm.Update()
+				},
+			),
+		}...,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := model.Start(); err != nil {
+		return err
+	}
+
+	return nil
 }
