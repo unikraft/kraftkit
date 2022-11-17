@@ -56,10 +56,6 @@ nfpms:
     #! Default is empty.
   - vendor: Alexander Jung
 
-    #! Your app's homepage.
-    #! Default is empty.
-    homepage: https://github.com/unikraft/kraftkit
-
     #! Your app's maintainer (probably you).
     #! Default is empty.
     maintainer: Alexander Jung <alex@unikraft.io>
