@@ -69,13 +69,13 @@ type CommandBuildArgs struct {
 	SaveBuildLog string `usage:"Use the specified file to save the output from the build"`
 }
 
-func (copts *CommandOptions) Clean() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Clean() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (copts *CommandOptions) Clean() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -102,20 +102,20 @@ func (copts *CommandOptions) Clean() error {
 
 	return project.Clean(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-			exec.WithStdout(copts.IO.Out),
-			exec.WithStderr(copts.IO.ErrOut),
+			exec.WithStdin(aopts.IO.In),
+			exec.WithStdout(aopts.IO.Out),
+			exec.WithStderr(aopts.IO.ErrOut),
 		),
 	)
 }
 
-func (copts *CommandOptions) Configure() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Configure() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (copts *CommandOptions) Configure() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -142,18 +142,18 @@ func (copts *CommandOptions) Configure() error {
 
 	return project.Configure(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(aopts.IO.In),
 		),
 	)
 }
 
-func (copts *CommandOptions) Fetch() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Fetch() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (copts *CommandOptions) Fetch() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -180,18 +180,18 @@ func (copts *CommandOptions) Fetch() error {
 
 	return project.Fetch(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(aopts.IO.In),
 		),
 	)
 }
 
-func (copts *CommandOptions) MenuConfig() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) MenuConfig() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (copts *CommandOptions) MenuConfig() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -218,20 +218,20 @@ func (copts *CommandOptions) MenuConfig() error {
 
 	return project.Make(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-			exec.WithStdout(copts.IO.Out),
+			exec.WithStdin(aopts.IO.In),
+			exec.WithStdout(aopts.IO.Out),
 		),
 		kmake.WithTarget("menuconfig"),
 	)
 }
 
-func (copts *CommandOptions) Prepare() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Prepare() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (copts *CommandOptions) Prepare() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -258,18 +258,18 @@ func (copts *CommandOptions) Prepare() error {
 
 	return project.Prepare(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(aopts.IO.In),
 		),
 	)
 }
 
-func (copts *CommandOptions) Properclean() error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Properclean() error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (copts *CommandOptions) Properclean() error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -296,26 +296,26 @@ func (copts *CommandOptions) Properclean() error {
 
 	return project.Properclean(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-			exec.WithStdout(copts.IO.Out),
-			exec.WithStderr(copts.IO.ErrOut),
+			exec.WithStdin(aopts.IO.In),
+			exec.WithStdout(aopts.IO.Out),
+			exec.WithStderr(aopts.IO.ErrOut),
 		),
 	)
 }
 
-func (copts *CommandOptions) Set(confOpts []string) error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Set(confOpts []string) error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
 	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", copts.Workdir)
+	dotconfig := fmt.Sprintf("%s/.config", aopts.Workdir)
 
 	// Check if the file exists
 	// TODO: offer option to start in interactive mode
@@ -327,7 +327,7 @@ func (copts *CommandOptions) Set(confOpts []string) error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -346,24 +346,24 @@ func (copts *CommandOptions) Set(confOpts []string) error {
 
 	return project.Set(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(aopts.IO.In),
 		),
 	)
 }
 
-func (copts *CommandOptions) Unset(confOpts []string) error {
-	pm, err := copts.PackageManager()
+func (aopts *ApplicationOptions) Unset(confOpts []string) error {
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
 	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", copts.Workdir)
+	dotconfig := fmt.Sprintf("%s/.config", aopts.Workdir)
 
 	// Check if the file exists
 	// TODO: offer option to start in interactive mode
@@ -375,7 +375,7 @@ func (copts *CommandOptions) Unset(confOpts []string) error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -394,25 +394,25 @@ func (copts *CommandOptions) Unset(confOpts []string) error {
 
 	return project.Unset(
 		kmake.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
+			exec.WithStdin(aopts.IO.In),
 		),
 	)
 }
 
-func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
+func (aopts *ApplicationOptions) Build(args *CommandBuildArgs) error {
 	var err error
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -431,7 +431,7 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 		return err
 	}
 
-	if !IsWorkdirInitialized(copts.Workdir) {
+	if !IsWorkdirInitialized(aopts.Workdir) {
 		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
 	}
 
@@ -510,10 +510,10 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 
 				return packages[0].Pull(
 					pack.WithPullProgressFunc(w),
-					pack.WithPullWorkdir(copts.Workdir),
+					pack.WithPullWorkdir(aopts.Workdir),
 					pack.WithPullLogger(l),
-					// pack.WithPullChecksum(!copts.NoChecksum),
-					// pack.WithPullCache(!copts.NoCache),
+					// pack.WithPullChecksum(!aopts.NoChecksum),
+					// pack.WithPullCache(!aopts.NoCache),
 				)
 			},
 		)
@@ -536,7 +536,7 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 		}
 	}
 
-	templateWorkdir, err := unikraft.PlaceComponent(copts.Workdir, project.Template().Type(), project.Template().Name())
+	templateWorkdir, err := unikraft.PlaceComponent(aopts.Workdir, project.Template().Type(), project.Template().Name())
 	if err != nil {
 		return err
 	}
@@ -643,10 +643,10 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 
 					return p.Pull(
 						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(copts.Workdir),
+						pack.WithPullWorkdir(aopts.Workdir),
 						pack.WithPullLogger(l),
-						// pack.WithPullChecksum(!copts.NoChecksum),
-						// pack.WithPullCache(!copts.NoCache),
+						// pack.WithPullChecksum(!aopts.NoChecksum),
+						// pack.WithPullCache(!aopts.NoCache),
 					)
 				},
 			))
@@ -743,7 +743,7 @@ func (copts *CommandOptions) Build(args *CommandBuildArgs) error {
 						// kmake.WithProgressFunc(w),
 						kmake.WithSilent(true),
 						kmake.WithExecOptions(
-							exec.WithStdin(copts.IO.In),
+							exec.WithStdin(aopts.IO.In),
 							exec.WithStdout(l.Output()),
 							exec.WithStderr(l.Output()),
 						),

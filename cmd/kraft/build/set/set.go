@@ -45,7 +45,7 @@ import (
 )
 
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
-	application := &app.CommandOptions{
+	application := &app.ApplicationOptions{
 		PackageManager: f.PackageManager,
 		Logger:         f.Logger,
 		IO:             f.IOStreams,

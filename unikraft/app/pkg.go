@@ -59,7 +59,7 @@ type CommandPullArgs struct {
 	Manager      string `usage:"Force the handler type (Omition will attempt auto-detect)" default:"auto"`
 	Type         string `usage:"Do not use cache when building the image" default:"false"`
 	WithDeps     bool   `usage:"Pull dependencies" default:"false"`
-	NoDeps       bool   `usage:"Do not pull dependencies" default:"true"`
+	NoDeps       bool   `usage:"Do not pull dependencies" default:"false"`
 	Platform     string `usage:"Specify the desired platform"`
 	Architecture string `usage:"Specify the desired architecture"`
 	AllVersions  bool   `usage:"Pull all versions" default:"false"`
@@ -98,7 +98,7 @@ type CommandUpdateArgs struct {
 	Manager string `usage:"Force the handler type" default:"manifest"`
 }
 
-func (copts *CommandOptions) initAppPackage(ctx context.Context,
+func (aopts *ApplicationOptions) initAppPackage(ctx context.Context,
 	project *ApplicationConfig,
 	targ target.TargetConfig,
 	projectOpts *ProjectOptions,
@@ -107,7 +107,7 @@ func (copts *CommandOptions) initAppPackage(ctx context.Context,
 ) ([]pack.Package, error) {
 	var err error
 
-	log, err := copts.Logger()
+	log, err := aopts.Logger()
 	if err != nil {
 		return nil, err
 	}
@@ -206,20 +206,20 @@ func (copts *CommandOptions) initAppPackage(ctx context.Context,
 	return pack, nil
 }
 
-func (copts *CommandOptions) Pull(args *CommandPullArgs, query string) error {
+func (aopts *ApplicationOptions) Pull(args *CommandPullArgs, query string) error {
 	var err error
 	var project *ApplicationConfig
 	var processes []*paraprogress.Process
 	var queries []packmanager.CatalogQuery
 
-	workdir := copts.Workdir
+	workdir := aopts.Workdir
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -446,16 +446,16 @@ func (copts *CommandOptions) Pull(args *CommandPullArgs, query string) error {
 	}
 
 	if project != nil {
-		project.PrintInfo(copts.IO)
+		project.PrintInfo(aopts.IO)
 	}
 
 	return nil
 }
 
-func (copts *CommandOptions) Source(source string) error {
+func (aopts *ApplicationOptions) Source(source string) error {
 	var err error
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
@@ -472,15 +472,15 @@ func (copts *CommandOptions) Source(source string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
+func (aopts *ApplicationOptions) Pkg(args *CommandPkgArgs) error {
 	var err error
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -496,7 +496,7 @@ func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
 	projectOpts, err := NewProjectOptions(
 		nil,
 		WithLogger(plog),
-		WithWorkingDirectory(copts.Workdir),
+		WithWorkingDirectory(aopts.Workdir),
 		WithDefaultConfigPath(),
 		WithPackageManager(&pm),
 		WithResolvedPaths(true),
@@ -548,7 +548,7 @@ func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
 				targ.Architecture.Name() == args.Architecture &&
 				targ.Platform.Name() == args.Platform:
 
-			packs, err := copts.initAppPackage(ctx, project, targ, projectOpts, pm, args)
+			packs, err := aopts.initAppPackage(ctx, project, targ, projectOpts, pm, args)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -565,7 +565,7 @@ func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
 		return nil
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -614,15 +614,15 @@ func (copts *CommandOptions) Pkg(args *CommandPkgArgs) error {
 	return model.Start()
 }
 
-func (copts *CommandOptions) List(args *CommandListArgs) error {
+func (aopts *ApplicationOptions) List(args *CommandListArgs) error {
 	var err error
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
@@ -647,11 +647,11 @@ func (copts *CommandOptions) List(args *CommandListArgs) error {
 	var packages []pack.Package
 
 	// List pacakges part of a project
-	if len(copts.Workdir) > 0 {
+	if len(aopts.Workdir) > 0 {
 		projectOpts, err := NewProjectOptions(
 			nil,
 			WithLogger(plog),
-			WithWorkingDirectory(copts.Workdir),
+			WithWorkingDirectory(aopts.Workdir),
 			WithDefaultConfigPath(),
 			WithPackageManager(&pm),
 		)
@@ -665,26 +665,26 @@ func (copts *CommandOptions) List(args *CommandListArgs) error {
 			return err
 		}
 
-		app.PrintInfo(copts.IO)
+		app.PrintInfo(aopts.IO)
 
 	} else {
 		packages, err = pm.Catalog(query,
-			pack.WithWorkdir(copts.Workdir),
+			pack.WithWorkdir(aopts.Workdir),
 		)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = copts.IO.StartPager()
+	err = aopts.IO.StartPager()
 	if err != nil {
 		plog.Errorf("error starting pager: %v", err)
 	}
 
-	defer copts.IO.StopPager()
+	defer aopts.IO.StopPager()
 
-	cs := copts.IO.ColorScheme()
-	table := utils.NewTablePrinter(copts.IO)
+	cs := aopts.IO.ColorScheme()
+	table := utils.NewTablePrinter(aopts.IO)
 
 	// Header row
 	table.AddField("TYPE", nil, cs.Bold)
@@ -704,18 +704,18 @@ func (copts *CommandOptions) List(args *CommandListArgs) error {
 	return table.Render()
 }
 
-func (copts *CommandOptions) Update(args *CommandUpdateArgs) error {
-	plog, err := copts.Logger()
+func (aopts *ApplicationOptions) Update(args *CommandUpdateArgs) error {
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
 
-	pm, err := copts.PackageManager()
+	pm, err := aopts.PackageManager()
 	if err != nil {
 		return err
 	}

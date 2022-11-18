@@ -88,15 +88,15 @@ type CommandEventsArgs struct {
 	Granularity  time.Duration
 }
 
-func (copts *CommandOptions) Ps(args *CommandPsArgs, ExtraArgs ...string) error {
+func (aopts *ApplicationOptions) Ps(args *CommandPsArgs, ExtraArgs ...string) error {
 	var err error
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -189,15 +189,15 @@ func (copts *CommandOptions) Ps(args *CommandPsArgs, ExtraArgs ...string) error 
 		})
 	}
 
-	err = copts.IO.StartPager()
+	err = aopts.IO.StartPager()
 	if err != nil {
 		plog.Errorf("error starting pager: %v", err)
 	}
 
-	defer copts.IO.StopPager()
+	defer aopts.IO.StopPager()
 
-	cs := copts.IO.ColorScheme()
-	table := utils.NewTablePrinter(copts.IO)
+	cs := aopts.IO.ColorScheme()
+	table := utils.NewTablePrinter(aopts.IO)
 
 	// Header row
 	table.AddField("MACHINE ID", nil, cs.Bold)
@@ -231,15 +231,15 @@ func (copts *CommandOptions) Ps(args *CommandPsArgs, ExtraArgs ...string) error 
 	return table.Render()
 }
 
-func (copts *CommandOptions) Remove(args ...string) error {
+func (aopts *ApplicationOptions) Remove(args ...string) error {
 	var err error
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -326,15 +326,15 @@ func (copts *CommandOptions) Remove(args ...string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Run(args *CommandRunArgs, ExtraArgs ...string) error {
+func (aopts *ApplicationOptions) Run(args *CommandRunArgs, ExtraArgs ...string) error {
 	var err error
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -629,21 +629,21 @@ func (copts *CommandOptions) Run(args *CommandRunArgs, ExtraArgs ...string) erro
 			}
 		}()
 
-		driver.TailWriter(ctx, mid, copts.IO.Out)
+		driver.TailWriter(ctx, mid, aopts.IO.Out)
 	}
 
 	return nil
 }
 
-func (copts *CommandOptions) Stop(args ...string) error {
+func (aopts *ApplicationOptions) Stop(args ...string) error {
 	var err error
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -744,15 +744,15 @@ func (copts *CommandOptions) Stop(args ...string) error {
 	return nil
 }
 
-func (copts *CommandOptions) Events(args *CommandEventsArgs, extraArgs ...string) error {
+func (aopts *ApplicationOptions) Events(args *CommandEventsArgs, extraArgs ...string) error {
 	var err error
 
-	plog, err := copts.Logger()
+	plog, err := aopts.Logger()
 	if err != nil {
 		return err
 	}
 
-	cfgm, err := copts.ConfigManager()
+	cfgm, err := aopts.ConfigManager()
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,7 @@ import (
 )
 
 func ListCmd(f *cmdfactory.Factory) *cobra.Command {
-	application := &app.CommandOptions{
+	application := &app.ApplicationOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,

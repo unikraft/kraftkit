@@ -44,7 +44,7 @@ import (
 )
 
 func PullCmd(f *cmdfactory.Factory) *cobra.Command {
-	application := &app.CommandOptions{
+	application := &app.ApplicationOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,
@@ -129,7 +129,7 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(
 		&args.NoDeps,
 		"no-deps", "D",
-		true,
+		false,
 		"Do not pull dependencies",
 	)
 

@@ -47,7 +47,7 @@ func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft stop' command")
 	}
 
-	application := &app.CommandOptions{
+	application := &app.ApplicationOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
 		Logger:         f.Logger,

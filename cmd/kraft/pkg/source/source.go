@@ -41,7 +41,7 @@ import (
 )
 
 func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
-	application := &app.CommandOptions{
+	application := &app.ApplicationOptions{
 		PackageManager: f.PackageManager,
 	}
 
