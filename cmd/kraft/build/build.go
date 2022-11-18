@@ -290,7 +290,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 	var searches []*processtree.ProcessTreeItem
 
 	_, err = project.Components()
-	if err != nil {
+	if err != nil && project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
@@ -374,30 +374,32 @@ func buildRun(opts *buildOptions, workdir string) error {
 		}
 	}
 
-	templateWorkdir, err := unikraft.PlaceComponent(workdir, project.Template().Type(), project.Template().Name())
-	if err != nil {
-		return err
-	}
+	if project.Template().Name() != "" {
+		templateWorkdir, err := unikraft.PlaceComponent(workdir, project.Template().Type(), project.Template().Name())
+		if err != nil {
+			return err
+		}
 
-	templateOps, err := schema.NewProjectOptions(
-		nil,
-		schema.WithLogger(plog),
-		schema.WithWorkingDirectory(templateWorkdir),
-		schema.WithDefaultConfigPath(),
-		schema.WithPackageManager(&pm),
-		schema.WithResolvedPaths(true),
-		schema.WithDotConfig(false),
-	)
-	if err != nil {
-		return err
-	}
+		templateOps, err := schema.NewProjectOptions(
+			nil,
+			schema.WithLogger(plog),
+			schema.WithWorkingDirectory(templateWorkdir),
+			schema.WithDefaultConfigPath(),
+			schema.WithPackageManager(&pm),
+			schema.WithResolvedPaths(true),
+			schema.WithDotConfig(false),
+		)
+		if err != nil {
+			return err
+		}
 
-	templateProject, err := schema.NewApplicationFromOptions(templateOps)
-	if err != nil {
-		return err
-	}
+		templateProject, err := schema.NewApplicationFromOptions(templateOps)
+		if err != nil {
+			return err
+		}
 
-	project = templateProject.MergeTemplate(project)
+		project = templateProject.MergeTemplate(project)
+	}
 
 	// Overwrite template with user options
 	components, err := project.Components()

@@ -574,7 +574,9 @@ func (ac *ApplicationConfig) Components() ([]component.Component, error) {
 		return nil, fmt.Errorf("template source is not unpacked in project")
 	}
 
-	components = append(components, ac.template)
+	if ac.template.Name() != "" {
+		components = append(components, ac.template)
+	}
 
 	for _, library := range ac.libraries {
 		components = append(components, library)
