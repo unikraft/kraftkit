@@ -33,17 +33,194 @@
 package app
 
 import (
+	"context"
+	"net/http"
+	"os"
+
+	"kraftkit.sh/internal/httpclient"
+	"kraftkit.sh/internal/logger"
 	"kraftkit.sh/log"
+	"kraftkit.sh/plugins"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/packmanager"
 )
 
-type CommandOptions struct {
+type ApplicationOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
 	Logger         func() (log.Logger, error)
+	HttpClient     func() (*http.Client, error)
+	PluginManager  func() (*plugins.PluginManager, error)
 	IO             *iostreams.IOStreams
 	Workdir        string
+}
+
+func New(workdir string) ApplicationOptions {
+	return newApplicationOptions(workdir)
+}
+
+func newApplicationOptions(workdir string) ApplicationOptions {
+	c := ApplicationOptions{
+		ConfigManager: configManagerFunc(),
+	}
+
+	c.Workdir = workdir
+
+	// Depends on Config
+	c.IO = ioStreams(&c)
+
+	// Depends on Config, IOStreams
+	c.HttpClient = httpClientFunc(&c)
+
+	// Depends on Config, IOStreams
+	c.Logger = loggerFunc(&c)
+
+	// Depends on Config, HttpClient, and IOStreams
+	c.PluginManager = pluginManagerFunc(&c)
+
+	// Depends on Config, HttpClient, and IOStreams
+	c.PackageManager = packageManagerFunc(&c)
+
+	// Force the terminal if desired
+	if spec := os.Getenv("KRAFTKIT_FORCE_TTY"); spec != "" {
+		c.IO.ForceTerminal(spec)
+	}
+
+	return c
+}
+
+func configManagerFunc() func() (*config.ConfigManager, error) {
+	var cfgm *config.ConfigManager
+	var cfge error
+
+	return func() (*config.ConfigManager, error) {
+		if cfgm != nil || cfge != nil {
+			return cfgm, cfge
+		}
+
+		cfgm, cfge = config.NewConfigManager(
+			config.WithDefaultConfigFile(),
+		)
+
+		return cfgm, cfge
+	}
+}
+
+func ioStreams(aopts *ApplicationOptions) *iostreams.IOStreams {
+	io := iostreams.System()
+	cfgm, err := aopts.ConfigManager()
+	if err != nil {
+		return io
+	}
+
+	if cfgm.Config.NoPrompt {
+		io.SetNeverPrompt(true)
+	} else if (io.ColorEnabled() || io.IsStdoutTTY()) && cfgm.Config.Log.Type == "" {
+		cfgm.Config.Log.Type = logger.LoggerTypeToString(logger.FANCY)
+	}
+
+	// Pager precedence
+	// 1. KRAFTKIT_PAGER
+	// 2. pager from config
+	// 3. PAGER
+	if kkPager, kkPagerExists := os.LookupEnv("KRAFTKIT_PAGER"); kkPagerExists {
+		io.SetPager(kkPager)
+	} else if pager := cfgm.Config.Pager; pager != "" {
+		io.SetPager(pager)
+	}
+
+	return io
+}
+
+func httpClientFunc(aopts *ApplicationOptions) func() (*http.Client, error) {
+	return func() (*http.Client, error) {
+		cfgm, err := aopts.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
+		return httpclient.NewHTTPClient(
+			aopts.IO,
+			cfgm.Config.HTTPUnixSocket,
+			true,
+		)
+	}
+}
+
+func loggerFunc(aopts *ApplicationOptions) func() (log.Logger, error) {
+	return func() (log.Logger, error) {
+		cfgm, err := aopts.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
+		l := logger.NewLogger(aopts.IO.Out, aopts.IO.ColorScheme())
+		l.SetLevel(logger.LogLevelFromString(cfgm.Config.Log.Level))
+
+		return l, nil
+	}
+}
+
+func packageManagerFunc(aopts *ApplicationOptions) func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
+	return func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
+		cfgm, err := aopts.ConfigManager()
+		if err != nil {
+			return nil, err
+		}
+
+		log, err := aopts.Logger()
+		if err != nil {
+			return nil, err
+		}
+
+		// Add access to global config and the instantiated logger to the options
+		opts = append(opts, []packmanager.PackageManagerOption{
+			packmanager.WithConfigManager(cfgm),
+			packmanager.WithLogger(log),
+		}...)
+
+		options, err := packmanager.NewPackageManagerOptions(
+			context.TODO(),
+			opts...,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		umbrella, err := packmanager.NewUmbrellaManagerFromOptions(options)
+		if err != nil {
+			return nil, err
+		}
+
+		return umbrella, nil
+	}
+}
+
+func pluginManagerFunc(aopts *ApplicationOptions) func() (*plugins.PluginManager, error) {
+	var pm *plugins.PluginManager
+	var perr error
+
+	return func() (*plugins.PluginManager, error) {
+		if pm != nil || perr != nil {
+			return pm, perr
+		}
+
+		var cfgm *config.ConfigManager
+		cfgm, perr = aopts.ConfigManager()
+		if perr != nil {
+			return nil, perr
+		}
+
+		var l log.Logger
+		l, perr = aopts.Logger()
+		if perr != nil {
+			return nil, perr
+		}
+
+		pm = plugins.NewPluginManager(cfgm.Config.Paths.Plugins, l)
+
+		return pm, perr
+	}
 }
