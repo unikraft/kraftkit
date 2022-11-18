@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package schema
+package app
 
 import (
 	"io/ioutil"
@@ -31,7 +31,6 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/config"
 )
@@ -323,7 +322,7 @@ func (o ProjectOptions) GetWorkingDir() (string, error) {
 }
 
 // NewApplicationFromOptions load a kraft project based on command line options
-func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*app.ApplicationConfig, error) {
+func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*ApplicationConfig, error) {
 	configPaths, err := getConfigPathsFromOptions(popts)
 	if err != nil {
 		return nil, err
@@ -385,7 +384,7 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 		return nil, err
 	}
 
-	app.WithKraftFiles(configPaths)(project)
+	WithKraftFiles(configPaths)(project)
 	return project, nil
 }
 
