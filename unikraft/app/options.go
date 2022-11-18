@@ -42,6 +42,7 @@ import (
 	"kraftkit.sh/unikraft/template"
 )
 
+// ApplicationOption is a function that operates on an ApplicationConfig
 type ApplicationOption func(ao *ApplicationConfig) error
 
 // NewApplicationOptions accepts a series of options and returns a rendered

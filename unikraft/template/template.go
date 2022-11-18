@@ -29,6 +29,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+// Package template implements the interface through which templates can
+// be edited and configured.
 package template
 
 import (
@@ -42,10 +44,13 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
+// Template interfaces with the standard component in Unikraft
 type Template interface {
 	component.Component
 }
 
+// TemplateConfig is the configuration of a template. It is identical to
+// the component configuration
 type TemplateConfig struct {
 	component.ComponentConfig
 }

@@ -165,46 +165,46 @@ func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
 }
 
 // MergeTemplate merges the application's configuration with the given configuration
-func (a *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
-	a.ComponentConfig = app.ComponentConfig
+func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
+	ac.ComponentConfig = app.ComponentConfig
 
-	a.workingDir = app.workingDir
-	a.filename = app.filename
-	a.outDir = app.outDir
-	a.template = app.template
+	ac.workingDir = app.workingDir
+	ac.filename = app.filename
+	ac.outDir = app.outDir
+	ac.template = app.template
 
 	// Change all workdirs
-	for i := range a.libraries {
-		lib := a.libraries[i]
-		lib.SetWorkdir(a.workingDir)
-		a.libraries[i] = lib
+	for i := range ac.libraries {
+		lib := ac.libraries[i]
+		lib.SetWorkdir(ac.workingDir)
+		ac.libraries[i] = lib
 	}
 
 	for id, lib := range app.libraries {
-		a.libraries[id] = lib
+		ac.libraries[id] = lib
 	}
 
-	a.targets = app.targets
+	ac.targets = app.targets
 
 	for id, ext := range app.extensions {
-		a.extensions[id] = ext
+		ac.extensions[id] = ext
 	}
 
-	a.kraftFiles = append(a.kraftFiles, app.kraftFiles...)
+	ac.kraftFiles = append(ac.kraftFiles, app.kraftFiles...)
 
 	for id, val := range app.configuration {
-		a.configuration[id] = val
+		ac.configuration[id] = val
 	}
 
 	// Need to first merge the app configuration over the template
 	uk := app.unikraft
-	uk.Configuration = a.unikraft.Configuration
+	uk.Configuration = ac.unikraft.Configuration
 	for id, val := range app.unikraft.Configuration {
 		uk.Configuration[id] = val
 	}
-	a.unikraft = uk
+	ac.unikraft = uk
 
-	return a
+	return ac
 }
 
 func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
@@ -239,8 +239,8 @@ func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 }
 
 // KConfigFile returns the path to the application's .config file
-func (a *ApplicationConfig) KConfigFile() (string, error) {
-	return filepath.Join(a.workingDir, DefaultKConfigFile), nil
+func (ac *ApplicationConfig) KConfigFile() (string, error) {
+	return filepath.Join(ac.workingDir, DefaultKConfigFile), nil
 }
 
 // IsConfigured returns a boolean to indicate whether the application has been
