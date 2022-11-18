@@ -37,6 +37,7 @@ import (
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
+	kraftTemplate "kraftkit.sh/unikraft/template"
 )
 
 const (
@@ -192,20 +193,22 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*app.A
 	for _, library := range model.Libraries {
 		details.Configuration.OverrideBy(library.Configuration)
 	}
-
-	project := &app.ApplicationConfig{
-		ComponentConfig: component.ComponentConfig{
-			Name: projectName,
-		},
-		WorkingDir:    details.WorkingDir,
-		Filename:      model.Filename,
-		OutDir:        model.OutDir,
-		Unikraft:      model.Unikraft,
-		Libraries:     model.Libraries,
-		Targets:       model.Targets,
-		Configuration: details.Configuration,
-		Extensions:    model.Extensions,
+	project, err := app.NewApplicationOptions(
+		app.WithWorkingDir(details.WorkingDir),
+		app.WithFilename(model.Filename),
+		app.WithOutDir(model.OutDir),
+		app.WithUnikraft(model.Unikraft),
+		app.WithTemplate(model.Template),
+		app.WithLibraries(model.Libraries),
+		app.WithTargets(model.Targets),
+		app.WithConfiguration(details.Configuration),
+		app.WithExtensions(model.Extensions),
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	project.ComponentConfig.Name = projectName
 
 	project.ApplyOptions(append(opts.componentOptions,
 		component.WithType(unikraft.ComponentTypeApp),
@@ -249,6 +252,11 @@ func loadSections(filename string, cfgIface map[string]interface{}, configDetail
 	}
 
 	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Template, err = LoadTemplate(getSection(cfgIface, "template"), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -305,6 +313,48 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 	}
 
 	return uk, nil
+}
+
+// LoadTemplate produces a TemplateConfig from a kraft file Dict the source Dict
+// is not validated if directly used. Use Load() to enable validation
+func LoadTemplate(source interface{}, opts *LoaderOptions) (kraftTemplate.TemplateConfig, error) {
+	base := component.ComponentConfig{}
+	dataToParse := make(map[string]interface{})
+
+	switch sourceTransformed := source.(type) {
+	case string:
+		if strings.Contains(sourceTransformed, "@") {
+			split := strings.Split(sourceTransformed, "@")
+			if len(split) == 2 {
+				dataToParse["source"] = split[0]
+				dataToParse["name"] = split[0]
+				dataToParse["version"] = split[1]
+			}
+		} else {
+			dataToParse["source"] = sourceTransformed
+			dataToParse["name"] = sourceTransformed
+		}
+	case map[string]interface{}:
+		dataToParse = source.(map[string]interface{})
+	}
+
+	if err := Transform(dataToParse, &base); err != nil {
+		return kraftTemplate.TemplateConfig{}, err
+	}
+
+	// Seed the shared attributes
+	template := kraftTemplate.TemplateConfig{
+		ComponentConfig: base,
+	}
+
+	if err := template.ApplyOptions(append(
+		opts.componentOptions,
+		component.WithType(unikraft.ComponentTypeApp),
+	)...); err != nil {
+		return template, err
+	}
+
+	return template, nil
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source

@@ -50,6 +50,7 @@ import (
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
+	"kraftkit.sh/unikraft/template"
 )
 
 const DefaultKConfigFile = ".config"
@@ -61,15 +62,16 @@ type Application interface {
 type ApplicationConfig struct {
 	component.ComponentConfig
 
-	WorkingDir    string                `yaml:"-" json:"-"`
-	Filename      string                `yaml:"-" json:"-"`
-	OutDir        string                `yaml:",omitempty" json:"outdir,omitempty"`
-	Unikraft      core.UnikraftConfig   `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries     lib.Libraries         `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets       target.Targets        `yaml:",omitempty" json:"targets,omitempty"`
-	Extensions    component.Extensions  `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	KraftFiles    []string              `yaml:"-" json:"-"`
-	Configuration kconfig.KConfigValues `yaml:"-" json:"-"`
+	workingDir    string                  `yaml:"-" json:"-"`
+	filename      string                  `yaml:"-" json:"-"`
+	outDir        string                  `yaml:",omitempty"`
+	template      template.TemplateConfig `yaml:",omitempty"`
+	unikraft      core.UnikraftConfig     `yaml:",omitempty"`
+	libraries     lib.Libraries           `yaml:",omitempty"`
+	targets       target.Targets          `yaml:",omitempty"`
+	extensions    component.Extensions    `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
+	kraftFiles    []string                `yaml:"-" json:"-"`
+	configuration kconfig.KConfigValues   `yaml:"-" json:"-"`
 }
 
 func (ac ApplicationConfig) Name() string {
@@ -88,8 +90,125 @@ func (ac ApplicationConfig) Component() component.ComponentConfig {
 	return ac.ComponentConfig
 }
 
+// WorkingDir returns the path to the application's working directory
+func (ac ApplicationConfig) WorkingDir() string {
+	return ac.workingDir
+}
+
+// Filename returns the path to the application's executable
+func (ac ApplicationConfig) Filename() string {
+	return ac.filename
+}
+
+// OutDir returns the path to the application's output directory
+func (ac ApplicationConfig) OutDir() string {
+	return ac.outDir
+}
+
+// Template returns the application's template
+func (ac ApplicationConfig) Template() template.TemplateConfig {
+	return ac.template
+}
+
+// Unikraft returns the application's unikraft configuration
+func (ac ApplicationConfig) Unikraft() (core.UnikraftConfig, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return core.UnikraftConfig{}, fmt.Errorf("Unikraft(): template source is not unpacked in project")
+	}
+
+	return ac.unikraft, nil
+}
+
+// Libraries returns the application libraries' configurations
+func (ac ApplicationConfig) Libraries() (lib.Libraries, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return lib.Libraries{}, fmt.Errorf("Libraries(): template source is not unpacked in project")
+	}
+
+	return ac.libraries, nil
+}
+
+// Targets returns the application's targets
+func (ac ApplicationConfig) Targets() (target.Targets, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return target.Targets{}, fmt.Errorf("Targets(): template source is not unpacked in project")
+	}
+
+	return ac.targets, nil
+}
+
+// Extensions returns the application's extensions
+func (ac ApplicationConfig) Extensions() (component.Extensions, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return component.Extensions{}, fmt.Errorf("Extensions(): template source is not unpacked in project")
+	}
+
+	return ac.extensions, nil
+}
+
+// KraftFiles returns the application's kraft configuration files
+func (ac ApplicationConfig) KraftFiles() ([]string, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return []string{}, fmt.Errorf("KraftFiles(): template source is not unpacked in project")
+	}
+
+	return ac.kraftFiles, nil
+}
+
+// Configuration returns the application's kconfig list
+func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return kconfig.KConfigValues{}, fmt.Errorf("Configuration(): template source is not unpacked in project")
+	}
+
+	return ac.configuration, nil
+}
+
+// MergeTemplate merges the application's configuration with the given configuration
+func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
+	ac.ComponentConfig = app.ComponentConfig
+
+	ac.workingDir = app.workingDir
+	ac.filename = app.filename
+	ac.outDir = app.outDir
+	ac.template = app.template
+
+	// Change all workdirs
+	for i := range ac.libraries {
+		lib := ac.libraries[i]
+		lib.SetWorkdir(ac.workingDir)
+		ac.libraries[i] = lib
+	}
+
+	for id, lib := range app.libraries {
+		ac.libraries[id] = lib
+	}
+
+	ac.targets = app.targets
+
+	for id, ext := range app.extensions {
+		ac.extensions[id] = ext
+	}
+
+	ac.kraftFiles = append(ac.kraftFiles, app.kraftFiles...)
+
+	for id, val := range app.configuration {
+		ac.configuration[id] = val
+	}
+
+	// Need to first merge the app configuration over the template
+	uk := app.unikraft
+	uk.Configuration = ac.unikraft.Configuration
+	for id, val := range app.unikraft.Configuration {
+		uk.Configuration[id] = val
+	}
+	ac.unikraft = uk
+
+	return ac
+}
+
 func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
-	config_uk := filepath.Join(ac.WorkingDir, unikraft.Config_uk)
+	config_uk := filepath.Join(ac.workingDir, unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
@@ -100,14 +219,14 @@ func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	vAll := kconfig.KConfigValues{}
 
-	vCore, err := ac.Unikraft.KConfigValues()
+	vCore, err := ac.unikraft.KConfigValues()
 	if err != nil {
 		return nil, fmt.Errorf("could not read Unikraft core KConfig values: %v", err)
 	}
 
 	vAll.OverrideBy(vCore)
 
-	for _, library := range ac.Libraries {
+	for _, library := range ac.libraries {
 		vLib, err := library.KConfigValues()
 		if err != nil {
 			return nil, fmt.Errorf("could not %s's KConfig values: %v", library.Name(), err)
@@ -121,7 +240,7 @@ func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 
 // KConfigFile returns the path to the application's .config file
 func (ac *ApplicationConfig) KConfigFile() (string, error) {
-	return filepath.Join(ac.WorkingDir, DefaultKConfigFile), nil
+	return filepath.Join(ac.workingDir, DefaultKConfigFile), nil
 }
 
 // IsConfigured returns a boolean to indicate whether the application has been
@@ -143,7 +262,7 @@ func (a *ApplicationConfig) IsConfigured() bool {
 func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 	var libraries []string
 
-	for _, library := range a.Libraries {
+	for _, library := range a.libraries {
 		if !library.IsUnpackedInProject() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
@@ -159,8 +278,8 @@ func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 	// TODO: Platforms & architectures
 
 	return &core.MakeArgs{
-		OutputDir:      a.OutDir,
-		ApplicationDir: a.WorkingDir,
+		OutputDir:      a.outDir,
+		ApplicationDir: a.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
 	}, nil
 }
@@ -170,7 +289,7 @@ func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 // which will be used by a number of well-known make command goals by Unikraft's
 // build system.
 func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
-	coreSrc, err := a.Unikraft.SourceDir()
+	coreSrc, err := a.unikraft.SourceDir()
 	if err != nil {
 		return err
 	}
@@ -191,7 +310,7 @@ func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
 
 	// Unikraft currently requires each application to have a `Makefile.uk`
 	// located within the working directory.  Create it if it does not exist:
-	makefile_uk := filepath.Join(a.WorkingDir, unikraft.Makefile_uk)
+	makefile_uk := filepath.Join(a.WorkingDir(), unikraft.Makefile_uk)
 	if _, err := os.Stat(makefile_uk); err != nil && os.IsNotExist(err) {
 		if _, err := os.OpenFile(makefile_uk, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666); err != nil {
 			return fmt.Errorf("could not create application %s: %v", makefile_uk, err)
@@ -367,7 +486,7 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 		}
 	}
 
-	if !a.Unikraft.IsUnpackedInProject() {
+	if !a.unikraft.IsUnpackedInProject() {
 		// TODO: Produce better error messages (see #34).  In this case, we should
 		// indicate that `kraft pkg pull` needs to occur
 		return fmt.Errorf("cannot build without Unikraft core component source")
@@ -407,7 +526,7 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 // LibraryNames return names for all libraries in this Compose config
 func (a *ApplicationConfig) LibraryNames() []string {
 	var names []string
-	for k := range a.Libraries {
+	for k := range a.libraries {
 		names = append(names, k)
 	}
 
@@ -419,7 +538,7 @@ func (a *ApplicationConfig) LibraryNames() []string {
 // TargetNames return names for all targets in this Compose config
 func (a *ApplicationConfig) TargetNames() []string {
 	var names []string
-	for _, k := range a.Targets {
+	for _, k := range a.targets {
 		names = append(names, k.Name())
 	}
 
@@ -434,7 +553,7 @@ func (a *ApplicationConfig) TargetByName(name string) (*target.TargetConfig, err
 		return nil, fmt.Errorf("no target name specified in lookup")
 	}
 
-	for _, k := range a.Targets {
+	for _, k := range a.targets {
 		if k.Name() == name {
 			return &k, nil
 		}
@@ -445,12 +564,21 @@ func (a *ApplicationConfig) TargetByName(name string) (*target.TargetConfig, err
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (ac *ApplicationConfig) Components() []component.Component {
+func (ac *ApplicationConfig) Components() ([]component.Component, error) {
 	components := []component.Component{
-		ac.Unikraft,
+		ac.unikraft,
 	}
 
-	for _, library := range ac.Libraries {
+	// Change to error and correctly check if structure is uninitialized
+	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
+		return nil, fmt.Errorf("template source is not unpacked in project")
+	}
+
+	if ac.template.Name() != "" {
+		components = append(components, ac.template)
+	}
+
+	for _, library := range ac.libraries {
 		components = append(components, library)
 	}
 
@@ -462,7 +590,7 @@ func (ac *ApplicationConfig) Components() []component.Component {
 	// 	components = append(components, targ)
 	// }
 
-	return components
+	return components, nil
 }
 
 func (ac ApplicationConfig) Type() unikraft.ComponentType {
@@ -472,18 +600,18 @@ func (ac ApplicationConfig) Type() unikraft.ComponentType {
 func (ac ApplicationConfig) PrintInfo(io *iostreams.IOStreams) error {
 	tree := treeprint.NewWithRoot(component.NameAndVersion(ac))
 
-	tree.AddBranch(component.NameAndVersion(ac.Unikraft))
+	tree.AddBranch(component.NameAndVersion(ac.unikraft))
 
-	if len(ac.Libraries) > 0 {
-		libraries := tree.AddBranch(fmt.Sprintf("libraries (%d)", len(ac.Libraries)))
-		for _, library := range ac.Libraries {
+	if len(ac.libraries) > 0 {
+		libraries := tree.AddBranch(fmt.Sprintf("libraries (%d)", len(ac.libraries)))
+		for _, library := range ac.libraries {
 			libraries.AddNode(component.NameAndVersion(library))
 		}
 	}
 
-	if len(ac.Targets) > 0 {
-		targets := tree.AddBranch(fmt.Sprintf("targets (%d)", len(ac.Targets)))
-		for _, target := range ac.Targets {
+	if len(ac.targets) > 0 {
+		targets := tree.AddBranch(fmt.Sprintf("targets (%d)", len(ac.targets)))
+		for _, target := range ac.targets {
 			targ := targets.AddBranch(component.NameAndVersion(target))
 			targ.AddNode(fmt.Sprintf("architecture: %s", component.NameAndVersion(target.Architecture)))
 			targ.AddNode(fmt.Sprintf("platform:     %s", component.NameAndVersion(target.Platform)))

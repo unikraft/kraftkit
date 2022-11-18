@@ -178,6 +178,11 @@ func (cc *ComponentConfig) Workdir() string {
 	return cc.workdir
 }
 
+// SetWorkdir sets the instantiated component's working directory
+func (cc *ComponentConfig) SetWorkdir(workdir string) {
+	cc.workdir = workdir
+}
+
 // SourceDir returns the well-known location of the component given its working
 // directory, type and name.
 func (cc *ComponentConfig) SourceDir() (string, error) {

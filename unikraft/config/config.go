@@ -40,6 +40,7 @@ import (
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
+	"kraftkit.sh/unikraft/template"
 )
 
 // ConfigDetails are the details about a group of ConfigFiles
@@ -85,12 +86,13 @@ type ConfigFile struct {
 
 // Config is a full kraft file configuration and model
 type Config struct {
-	Filename  string              `yaml:"-" json:"-"`
-	Name      string              `yaml:",omitempty" json:"name,omitempty"`
-	OutDir    string              `yaml:",omitempty" json:"outdir,omitempty"`
-	Unikraft  core.UnikraftConfig `yaml:",omitempty" json:"unikraft,omitempty"`
-	Libraries lib.Libraries       `yaml:",omitempty" json:"libraries,omitempty"`
-	Targets   target.Targets      `yaml:",omitempty" json:"targets,omitempty"`
+	Filename  string                  `yaml:"-" json:"-"`
+	Name      string                  `yaml:",omitempty" json:"name,omitempty"`
+	OutDir    string                  `yaml:",omitempty" json:"outdir,omitempty"`
+	Template  template.TemplateConfig `yaml:",omitempty" json:"template,omitempty"`
+	Unikraft  core.UnikraftConfig     `yaml:",omitempty" json:"unikraft,omitempty"`
+	Libraries lib.Libraries           `yaml:",omitempty" json:"libraries,omitempty"`
+	Targets   target.Targets          `yaml:",omitempty" json:"targets,omitempty"`
 
 	Extensions component.Extensions `yaml:",inline" json:"-"`
 }

@@ -385,7 +385,7 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 		return nil, err
 	}
 
-	project.KraftFiles = configPaths
+	app.WithKraftFiles(configPaths)(project)
 	return project, nil
 }
 

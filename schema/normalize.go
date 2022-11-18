@@ -42,17 +42,19 @@ import (
 // normalize a kraft project by moving deprecated attributes to their canonical
 // position and injecting implicit defaults
 func normalize(project *app.ApplicationConfig, resolvePaths bool) error {
-	absWorkingDir, err := filepath.Abs(project.WorkingDir)
+	absWorkingDir, err := filepath.Abs(project.WorkingDir())
 	if err != nil {
 		return err
 	}
-	project.WorkingDir = absWorkingDir
+	project.SetWorkdir(absWorkingDir)
 
-	absKraftFiles, err := absKraftFiles(project.KraftFiles)
+	// Ignore the error here, as it's a false positive
+	krafFiles, _ := project.KraftFiles()
+	absKraftFiles, err := absKraftFiles(krafFiles)
 	if err != nil {
 		return err
 	}
-	project.KraftFiles = absKraftFiles
+	app.WithKraftFiles(absKraftFiles)(project)
 
 	return nil
 }
