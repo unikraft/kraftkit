@@ -37,6 +37,7 @@ import (
 	"strconv"
 	"strings"
 
+	"kraftkit.sh/cmd/kraft/flag"
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -77,12 +78,19 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft ps' command")
 	}
 
-	opts := &psOptions{
-		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
-		IO:             f.IOStreams,
+	psFlags := &flag.Flags{
+		PsFlagGroup:     flag.NewPsFlagGroup(),
+		SpecFlagGroup:   flag.NewSpecFlagGroup(),
+		GlobalFlagGroup: flag.NewGlobalFlagGroup(),
 	}
+
+	psFlags.AddFlags(cmd)
+
+	opts := psFlags.ToOptions()
+	opts.PackageManager = f.PackageManager
+	opts.ConfigManager = f.ConfigManager
+	opts.Logger = f.Logger
+	opts.IO = f.IOStreams
 
 	cmd.Short = "List running unikernels"
 	cmd.Use = "ps [FLAGS]"
@@ -91,57 +99,57 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 		List running unikernels`)
 	cmd.Example = heredoc.Doc(``)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+		//opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
 
-		return runPs(opts, args...)
+		return runPs(&opts, args...)
 	}
 
-	cmd.Flags().BoolVarP(
-		&opts.ShowAll,
-		"all", "a",
-		false,
-		"Show all machines (default shows just running)",
-	)
+	// cmd.Flags().BoolVarP(
+	// 	&opts.ShowAll,
+	// 	"all", "a",
+	// 	false,
+	// 	"Show all machines (default shows just running)",
+	// )
 
-	cmd.Flags().BoolVarP(
-		&opts.Quiet,
-		"quiet", "q",
-		false,
-		"Only display machine IDs",
-	)
+	// cmd.Flags().BoolVarP(
+	// 	&opts.Quiet,
+	// 	"quiet", "q",
+	// 	false,
+	// 	"Only display machine IDs",
+	// )
 
-	cmd.Flags().VarP(
-		cmdutil.NewEnumFlag(machinedriver.DriverNames(), "all"),
-		"hypervisor",
-		"H",
-		"Set the hypervisor driver.",
-	)
+	// cmd.Flags().VarP(
+	// 	cmdutil.NewEnumFlag(machinedriver.DriverNames(), "all"),
+	// 	"hypervisor",
+	// 	"H",
+	// 	"Set the hypervisor driver.",
+	// )
 
-	cmd.Flags().StringVarP(
-		&opts.Architecture,
-		"arch", "m",
-		"",
-		"Filter the list by architecture",
-	)
+	// cmd.Flags().StringVarP(
+	// 	&opts.Architecture,
+	// 	"arch", "m",
+	// 	"",
+	// 	"Filter the list by architecture",
+	// )
 
-	cmd.Flags().StringVarP(
-		&opts.Platform,
-		"plat", "p",
-		"",
-		"Filter the list by platform",
-	)
+	// cmd.Flags().StringVarP(
+	// 	&opts.Platform,
+	// 	"plat", "p",
+	// 	"",
+	// 	"Filter the list by platform",
+	// )
 
-	cmd.Flags().BoolVarP(
-		&opts.Long,
-		"long", "l",
-		false,
-		"Show more information",
-	)
+	// cmd.Flags().BoolVarP(
+	// 	&opts.Long,
+	// 	"long", "l",
+	// 	false,
+	// 	"Show more information",
+	// )
 
 	return cmd
 }
 
-func runPs(opts *psOptions, args ...string) error {
+func runPs(opts *flag.Options, args ...string) error {
 	var err error
 
 	plog, err := opts.Logger()
