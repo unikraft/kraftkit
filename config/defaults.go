@@ -32,11 +32,15 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"strconv"
 )
+
+// Error definitions for common errors used in config.
+var ErrNotPointerValue = errors.New("not a pointer value")
 
 const (
 	DefaultNoPrompt      = "false"
@@ -105,7 +109,7 @@ func setDefaults(s interface{}) error {
 
 func setDefaultValue(v reflect.Value, def string) error {
 	if v.Kind() != reflect.Ptr {
-		return fmt.Errorf("not a pointer value")
+		return ErrNotPointerValue
 	}
 
 	v = reflect.Indirect(v)

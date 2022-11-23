@@ -32,12 +32,20 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+)
+
+// Error definitions for common errors used in config.
+var (
+	ErrEmptyFile    = errors.New("filename for YAML cannot be empty")
+	ErrMergeMapping = errors.New("can only merge mapping, sequence and scalar nodes")
+	ErrMergeNodes   = errors.New("cannot merge nodes of different kinds")
 )
 
 // YamlFeeder feeds using a YAML file.
@@ -72,7 +80,7 @@ func (f YamlFeeder) Feed(structure interface{}) error {
 
 func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 	if len(yf.File) == 0 {
-		return fmt.Errorf("filename for YAML cannot be empty")
+		return ErrEmptyFile
 	}
 
 	// Create parent directories if not present
@@ -130,7 +138,7 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 // https://stackoverflow.com/a/65784135
 func recursiveMerge(from, into *yaml.Node) error {
 	if from.Kind != into.Kind {
-		return fmt.Errorf("cannot merge nodes of different kinds")
+		return ErrMergeNodes
 	}
 
 	switch from.Kind {
@@ -169,7 +177,7 @@ func recursiveMerge(from, into *yaml.Node) error {
 	case yaml.DocumentNode:
 		recursiveMerge(from.Content[0], into.Content[0])
 	default:
-		return fmt.Errorf("can only merge mapping, sequence and scalar nodes")
+		return ErrMergeMapping
 	}
 
 	return nil
