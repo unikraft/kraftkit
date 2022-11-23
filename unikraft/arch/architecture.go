@@ -32,6 +32,7 @@
 package arch
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,12 +50,15 @@ type ArchitectureConfig struct {
 	component.ComponentConfig
 }
 
+// Error definitions for common errors used in arch.
+var ErrOmittedArchitecture = errors.New("cannot ommit architecture name")
+
 // ParseArchitectureConfig parse short syntax for architecture configuration
 func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
 	architecture := ArchitectureConfig{}
 
 	if len(value) == 0 {
-		return architecture, fmt.Errorf("cannot ommit architecture name")
+		return architecture, ErrOmittedArchitecture
 	}
 
 	architecture.ComponentConfig.Name = value

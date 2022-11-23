@@ -32,6 +32,7 @@
 package unikraft
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -47,6 +48,9 @@ const (
 	ComponentTypeLib     ComponentType = "lib"
 	ComponentTypeApp     ComponentType = "app"
 )
+
+// Error definitions for common errors used in unikraft.
+var ErrComponentTypeUnknown = errors.New("cannot place component of unknown type")
 
 func ComponentTypes() map[string]ComponentType {
 	return map[string]ComponentType{
@@ -114,5 +118,5 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 		return filepath.Join(workdir, ".unikraft", t.Plural(), name), nil
 	}
 
-	return "", fmt.Errorf("cannot place component of unknown type")
+	return "", ErrComponentTypeUnknown
 }

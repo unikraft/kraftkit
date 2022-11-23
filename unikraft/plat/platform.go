@@ -32,6 +32,7 @@
 package plat
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,12 +50,15 @@ type PlatformConfig struct {
 	component.ComponentConfig
 }
 
+// Error definitions for common errors used in plat.
+var ErrOmittedPlatform = errors.New("cannot ommit platform name")
+
 // ParsePlatformConfig parse short syntax for platform configuration
 func ParsePlatformConfig(value string) (PlatformConfig, error) {
 	platform := PlatformConfig{}
 
 	if len(value) == 0 {
-		return platform, fmt.Errorf("cannot ommit platform name")
+		return platform, ErrOmittedPlatform
 	}
 
 	platform.ComponentConfig.Name = value

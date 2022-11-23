@@ -32,6 +32,7 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,6 +54,9 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
+// Error definitions for common errors used in lib.
+var ErrOmittedArchitecture = errors.New("cannot ommit architecture name")
+
 // ParseLibraryConfig parse short syntax for LibraryConfig
 func ParseLibraryConfig(version string) (LibraryConfig, error) {
 	lib := LibraryConfig{}
@@ -66,7 +70,7 @@ func ParseLibraryConfig(version string) (LibraryConfig, error) {
 	}
 
 	if len(version) == 0 {
-		return lib, fmt.Errorf("cannot use empty string for version or source")
+		return lib, ErrOmittedArchitecture
 	}
 
 	lib.ComponentConfig.Version = version
