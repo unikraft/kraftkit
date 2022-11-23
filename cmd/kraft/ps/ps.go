@@ -242,15 +242,15 @@ func runPs(opts *psOptions, args ...string) error {
 		})
 	}
 
-	err = opts.IO.StartPager()
+	err = iostreams.G(ctx).StartPager()
 	if err != nil {
-		plog.Errorf("error starting pager: %v", err)
+		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
-	defer opts.IO.StopPager()
+	defer iostreams.G(ctx).StopPager()
 
-	cs := opts.IO.ColorScheme()
-	table := utils.NewTablePrinter(opts.IO)
+	cs := iostreams.G(ctx).ColorScheme()
+	table := utils.NewTablePrinter(ctx)
 
 	// Header row
 	table.AddField("MACHINE ID", nil, cs.Bold)
