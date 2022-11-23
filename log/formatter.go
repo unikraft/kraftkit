@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2017, Denis Parchenko.
+// Copyright (c) 2022, Unikraft GmbH. All rights reserved.
 package log
 
 import (
@@ -23,14 +24,14 @@ const defaultTimestampFormat = time.RFC3339
 var (
 	baseTimestamp      time.Time    = time.Now()
 	defaultColorScheme *ColorScheme = &ColorScheme{
-		InfoLevelStyle:  "green",
-		WarnLevelStyle:  "yellow",
-		ErrorLevelStyle: "red",
-		FatalLevelStyle: "red",
-		PanicLevelStyle: "red",
-		DebugLevelStyle: "blue",
-		PrefixStyle:     "cyan",
-		TimestampStyle:  "black+h",
+		InfoLevelStyle:  "black:green",
+		WarnLevelStyle:  "black:yellow",
+		ErrorLevelStyle: "black:red",
+		FatalLevelStyle: "black:red",
+		PanicLevelStyle: "black:red",
+		DebugLevelStyle: "black:blue",
+		PrefixStyle:     "black:cyan",
+		TimestampStyle:  "black:black+h",
 	}
 	noColorsColorScheme *compiledColorScheme = &compiledColorScheme{
 		InfoLevelColor:  ansi.ColorFunc(""),
@@ -251,7 +252,7 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 		levelText = strings.ToUpper(levelText)
 	}
 
-	level := levelColor(fmt.Sprintf("%5s", levelText))
+	level := levelColor(fmt.Sprintf(" %5s ", levelText))
 	prefix := ""
 	message := entry.Message
 
@@ -277,9 +278,9 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 		if !f.FullTimestamp {
 			timestamp = fmt.Sprintf("[%04d]", miniTS())
 		} else {
-			timestamp = fmt.Sprintf("[%s]", entry.Time.Format(timestampFormat))
+			timestamp = entry.Time.Format(timestampFormat)
 		}
-		fmt.Fprintf(b, "%s %s%s "+messageFormat, colorScheme.TimestampColor(timestamp), level, prefix, message)
+		fmt.Fprintf(b, " %s %s%s "+messageFormat, colorScheme.TimestampColor(timestamp), level, prefix, message)
 	}
 	for _, k := range keys {
 		if k != "prefix" {
