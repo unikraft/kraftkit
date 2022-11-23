@@ -40,10 +40,10 @@ ARG GO_VERSION=${GO_VERSION}
 RUN set -xe; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      build-essential \
-      libgit2-dev \
-      make \
-      git; \
+      build-essential=12.9 \
+      libgit2-dev=1.1.0+dfsg.1-4 \
+      make=4.3-4.1 \
+      git=1:2.30.2-1; \
     go install mvdan.cc/gofumpt@latest;
 
 WORKDIR /go/src/kraftkit.sh
