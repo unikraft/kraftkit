@@ -32,6 +32,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -57,6 +58,9 @@ type ManifestIndexProvider struct {
 	index *ManifestIndex
 	mopts []ManifestOption
 }
+
+// Error definitions for common errors used in manifest.
+var ErrManifestIndexNotFound = errors.New("nothing found in manifest index")
 
 // NewManifestIndexProvider accepts an input path which is checked against first
 // a local file on disk and then a remote URL.  If either of these checks pass,
@@ -117,7 +121,7 @@ func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIn
 	}
 
 	if index.Manifests == nil {
-		return nil, fmt.Errorf("nothing found in manifest index")
+		return nil, ErrManifestIndexNotFound
 	}
 
 	for i, manifest := range index.Manifests {

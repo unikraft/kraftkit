@@ -34,6 +34,7 @@ package manifest
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -56,6 +57,9 @@ type GitHubProvider struct {
 	log    log.Logger
 	branch string
 }
+
+// Error definitions for common errors used in manifest.
+var ErrNotWildcard = errors.New("not a wildcard")
 
 // NewGitHubProvider attempts to parse the input path as a location provided on
 // GitHub.  Additional context for authentication is necessary to use this
@@ -181,7 +185,7 @@ func (ghp GitHubProvider) String() string {
 // parse a GitHub source with a wildcard repository name, e.g. lib-*
 func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	if !strings.HasSuffix(ghp.repo.RepoName(), "*") {
-		return nil, fmt.Errorf("not a wildcard")
+		return nil, ErrNotWildcard
 	}
 
 	var repos []*github.Repository

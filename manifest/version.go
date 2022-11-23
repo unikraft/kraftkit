@@ -32,10 +32,13 @@
 package manifest
 
 import (
-	"fmt"
+	"errors"
 )
 
 type ManifestVersionType string
+
+// Error definitions for common errors used in manifest.
+var ErrorManifestVersionNotFound = errors.New("manifest version is not derived from Git")
 
 const (
 	ManifestVersionSemver ManifestVersionType = "semver"
@@ -53,7 +56,7 @@ type ManifestVersion struct {
 
 func (mv *ManifestVersion) ShortGitSha() (string, error) {
 	if mv.Type != ManifestVersionGitSha {
-		return "", fmt.Errorf("manifest version is not derived from Git")
+		return "", ErrorManifestVersionNotFound
 	}
 
 	return mv.Version[:7], nil
