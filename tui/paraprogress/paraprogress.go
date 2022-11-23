@@ -32,6 +32,7 @@
 package paraprogress
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -42,6 +43,9 @@ import (
 )
 
 var tprog *tea.Program
+
+// Error definitions for common errors used in paraprogress.
+var ErrNoProcesses = errors.New("no processes to perform")
 
 type ParaProgress struct {
 	processes     []*Process
@@ -60,7 +64,7 @@ type ParaProgress struct {
 
 func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
 	if len(processes) == 0 {
-		return nil, fmt.Errorf("no processes to perform")
+		return nil, ErrNoProcesses
 	}
 
 	md := &ParaProgress{
