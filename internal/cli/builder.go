@@ -6,6 +6,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -16,8 +17,11 @@ import (
 
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
-
 	"github.com/spf13/cobra"
+
+	"kraftkit.sh/config"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 )
 
 var caseRegexp = regexp.MustCompile("([a-z])([A-Z])")
@@ -32,10 +36,6 @@ type PreRunnable interface {
 
 type Runnable interface {
 	Run(cmd *cobra.Command, args []string) error
-}
-
-type customizer interface {
-	Customize(cmd *cobra.Command)
 }
 
 type fieldInfo struct {
@@ -79,10 +79,56 @@ func Main(cmd *cobra.Command) {
 	}
 }
 
+// defaultOptions is a cache of previously instantiated default cli options.
+var defaultOptions *CliOptions
+
+func contextualize(ctx context.Context, opts ...CliOption) context.Context {
+	if defaultOptions == nil {
+		defaultOptions = &CliOptions{}
+		for _, o := range []CliOption{
+			WithDefaultConfigManager(),
+			WithDefaultIOStreams(),
+			WithDefaultPackageManager(),
+			WithDefaultPluginManager(),
+			WithDefaultLogger(),
+			WithDefaultHTTPClient(),
+		} {
+			o(defaultOptions)
+		}
+	}
+
+	copts := defaultOptions
+
+	// Apply user-specified options and then defaults.  The default options are
+	// programmed in a way such to prefer exiting values (set initially by any
+	// user-specified options).
+	for _, o := range opts {
+		o(copts)
+	}
+
+	// Set up the config manager in the context if it is available
+	cfgm, err := copts.configManager()
+	if err == nil {
+		ctx = config.WithConfigManager(ctx, cfgm)
+	}
+
+	// Set up the logger in the context if it is available
+	if copts.logger != nil {
+		ctx = log.WithLogger(ctx, copts.logger)
+	}
+
+	// Set up the iostreams in the context if it is available
+	if copts.ioStreams != nil {
+		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
+	}
+
+	return ctx
+}
+
 // New populates a cobra.Command object by extracting args from struct tags of the
 // Runnable obj passed.  Also the Run method is assigned to the RunE of the command.
 // name = Override the struct field with
-func New(obj Runnable, cmd cobra.Command) *cobra.Command {
+func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 	var (
 		envs      []func()
 		arrays    = map[string]reflect.Value{}
@@ -176,7 +222,15 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 	}
 
 	if p, ok := obj.(PersistentPreRunnable); ok {
-		c.PersistentPreRunE = p.PersistentPre
+		c.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+			cmd.SetContext(contextualize(cmd.Context(), opts...))
+			return p.PersistentPre(cmd, args)
+		}
+	} else {
+		c.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+			cmd.SetContext(contextualize(cmd.Context(), opts...))
+			return nil
+		}
 	}
 
 	if p, ok := obj.(PreRunnable); ok {
@@ -187,11 +241,6 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.PreRunE = bind(c.PreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.RunE = bind(c.RunE, arrays, slices, maps, optInt, optBool, optString, envs)
-
-	cust, ok := obj.(customizer)
-	if ok {
-		cust.Customize(&c)
-	}
 
 	return &c
 }
