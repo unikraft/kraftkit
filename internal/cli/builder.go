@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Acorn Labs, Inc; All rights reserved.
+// Copyright 2022 Unikraft GmbH; All rights reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 package cli
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"regexp"
@@ -95,7 +97,7 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 
 	c := cmd
 	if c.Use == "" {
-		c.Use = Name(obj)
+		c.Use = fmt.Sprintf("%s [SUBCOMMAND] [FLAGS]", Name(obj))
 	}
 
 	for _, info := range fields(obj) {
