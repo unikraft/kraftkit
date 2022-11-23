@@ -24,6 +24,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -44,13 +45,15 @@ type TablePrinterOptions struct {
 	IsTTY bool
 }
 
-func NewTablePrinter(io *iostreams.IOStreams) TablePrinter {
-	return NewTablePrinterWithOptions(io, TablePrinterOptions{
+func NewTablePrinter(ctx context.Context) TablePrinter {
+	io := iostreams.G(ctx)
+	return NewTablePrinterWithOptions(ctx, TablePrinterOptions{
 		IsTTY: io.IsStdoutTTY(),
 	})
 }
 
-func NewTablePrinterWithOptions(io *iostreams.IOStreams, opts TablePrinterOptions) TablePrinter {
+func NewTablePrinterWithOptions(ctx context.Context, opts TablePrinterOptions) TablePrinter {
+	io := iostreams.G(ctx)
 	if opts.IsTTY {
 		var maxWidth int
 		if io.IsStdoutTTY() {

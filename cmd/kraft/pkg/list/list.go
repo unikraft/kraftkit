@@ -32,6 +32,8 @@
 package list
 
 import (
+	"context"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -161,6 +163,8 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 func listRun(opts *ListOptions, workdir string) error {
 	var err error
 
+	ctx := context.Background()
+
 	pm, err := opts.PackageManager()
 	if err != nil {
 		return err
@@ -228,7 +232,7 @@ func listRun(opts *ListOptions, workdir string) error {
 	defer opts.IO.StopPager()
 
 	cs := opts.IO.ColorScheme()
-	table := utils.NewTablePrinter(opts.IO)
+	table := utils.NewTablePrinter(ctx)
 
 	// Header row
 	table.AddField("TYPE", nil, cs.Bold)
