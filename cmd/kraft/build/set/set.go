@@ -32,6 +32,7 @@
 package set
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -57,6 +58,9 @@ type SetOptions struct {
 	// Command-line arguments
 	Workdir string
 }
+
+// Error definitions for common errors used in set.
+var ErrNoOptionToSet = errors.New("no options to set")
 
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &SetOptions{
@@ -88,7 +92,7 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 		// Skip if nothing can be set
 		if len(args) == 0 {
-			return fmt.Errorf("no options to set")
+			return ErrNoOptionToSet
 		}
 
 		// Set the working directory (remove the argument if it exists)

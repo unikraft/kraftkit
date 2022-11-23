@@ -32,6 +32,7 @@
 package unset
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -56,6 +57,9 @@ type UnsetOptions struct {
 	// Command-line arguments
 	Workdir string
 }
+
+// Error definitions for common errors used in unset.
+var ErrNoOptionToUnset = errors.New("no option to unset")
 
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &UnsetOptions{
@@ -87,7 +91,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 		// Skip if nothing can be unset
 		if len(args) == 0 {
-			return fmt.Errorf("no options to unset")
+			return ErrNoOptionToUnset
 		}
 
 		// Set the working directory

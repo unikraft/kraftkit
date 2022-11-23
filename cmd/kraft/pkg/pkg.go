@@ -33,6 +33,7 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -83,6 +84,9 @@ type pkgOptions struct {
 	Volumes      []string
 	WithDbg      bool
 }
+
+// Error definitions for common errors used in pkg.
+var ErrArchOrPlatNotSupportedWithTarget = errors.New("the `--arch` and `--plat` options are not supported in addition to `--target`")
 
 func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "pkg",
@@ -138,7 +142,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-			return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+			return ErrArchOrPlatNotSupportedWithTarget
 		}
 
 		var err error

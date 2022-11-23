@@ -32,6 +32,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -90,6 +91,12 @@ type buildOptions struct {
 	SaveBuildLog string
 }
 
+// Error definitions for common errors used in build.
+var (
+	ErrArchOrPlatNotSupportedWithTarget = errors.New("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	ErrUninitializedProject             = errors.New("cannot build uninitialized project! start with: ukbuild init")
+)
+
 func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "build",
 		cmdutil.WithSubcmds(
@@ -132,7 +139,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 	`)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-			return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+			return ErrArchOrPlatNotSupportedWithTarget
 		}
 
 		var err error
@@ -269,7 +276,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 	}
 
 	if !app.IsWorkdirInitialized(workdir) {
-		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
+		return ErrUninitializedProject
 	}
 
 	// Interpret the application
