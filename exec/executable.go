@@ -32,6 +32,7 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -42,6 +43,14 @@ type Executable struct {
 	args []string
 }
 
+// Error definitions for common errors used in exec.
+var (
+	ErrEmptyBinaryArgument     = errors.New("binary argument cannot be empty")
+	ErrParseFlagWithoutTag     = errors.New("could not parse flag without tag")
+	ErrOmitValueIf             = errors.New("omitvalueif requires value")
+	ErrDeriveInterfaceArgument = errors.New("cannot derive interface arguments from pointer: passed by reference")
+)
+
 // NewExecutable accepts an input argument bin which is the path or executable
 // name to be ultimately executed.  An optional positional argument args can be
 // provided which is of an interface type.  The interface can use the attribute
@@ -50,7 +59,7 @@ type Executable struct {
 // what is passed to the flag.
 func NewExecutable(bin string, face interface{}, args ...string) (*Executable, error) {
 	if len(bin) == 0 {
-		return nil, fmt.Errorf("binary argument cannot be empty")
+		return nil, ErrEmptyBinaryArgument
 	}
 
 	e := &Executable{}
@@ -88,7 +97,7 @@ type flag struct {
 func parseFlag(tag reflect.StructTag) (*flag, error) {
 	parts := strings.Split(tag.Get("flag"), ",")
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("could not parse flag without tag")
+		return nil, ErrParseFlagWithoutTag
 	}
 
 	f := &flag{
@@ -100,7 +109,7 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 		case strings.HasPrefix(part, "omitvalueif"):
 			omit := strings.Split(part, "=")
 			if len(omit) == 1 {
-				return nil, fmt.Errorf("omitvalueif requires value")
+				return nil, ErrOmitValueIf
 			}
 			f.omitvalueif = omit[1]
 
@@ -116,7 +125,7 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 // with tag annotations `flag`
 func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 	if face != nil && reflect.ValueOf(face).Kind() == reflect.Ptr {
-		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
+		return nil, ErrDeriveInterfaceArgument
 	}
 
 	t := reflect.TypeOf(face)
