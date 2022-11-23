@@ -237,10 +237,18 @@ func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 		c.PreRunE = p.Pre
 	}
 
+	c.SilenceErrors = true
+	c.SilenceUsage = true
+	c.DisableFlagsInUseLine = true
+
 	c.RunE = obj.Run
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.PreRunE = bind(c.PreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.RunE = bind(c.RunE, arrays, slices, maps, optInt, optBool, optString, envs)
+
+	// Set help and usage methods
+	c.SetUsageFunc(rootUsageFunc)
+	c.SetFlagErrorFunc(rootFlagErrorFunc)
 
 	return &c
 }
