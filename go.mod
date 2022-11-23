@@ -32,10 +32,10 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/errors v0.9.1
-	github.com/shirou/gopsutil/v3 v3.22.9
+	github.com/shirou/gopsutil/v3 v3.22.10
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
