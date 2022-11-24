@@ -5,15 +5,14 @@
 package configure
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -21,13 +20,11 @@ import (
 
 type ConfigureOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 }
 
 func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &ConfigureOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "configure")
@@ -66,6 +63,7 @@ func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func configureRun(copts *ConfigureOptions, workdir string) error {
+	ctx := context.Background()
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -91,8 +89,6 @@ func configureRun(copts *ConfigureOptions, workdir string) error {
 	}
 
 	return project.Configure(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
+		make.WithContext(ctx),
 	)
 }

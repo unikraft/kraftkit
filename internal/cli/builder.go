@@ -247,6 +247,9 @@ func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 	c.RunE = bind(c.RunE, arrays, slices, maps, optInt, optBool, optString, envs)
 
 	// Set help and usage methods
+	c.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		rootHelpFunc(iostreams.G(cmd.Context()).ColorScheme(), cmd, args)
+	})
 	c.SetUsageFunc(rootUsageFunc)
 	c.SetFlagErrorFunc(rootFlagErrorFunc)
 

@@ -18,6 +18,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
 
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/utils"
 )
@@ -127,6 +128,14 @@ func (p *Process) Start() tea.Cmd {
 		logger.SetOutput(p)
 		entry.Logger = &logger
 		p.ctx = log.WithLogger(p.ctx, entry)
+
+		// Set the output of the iostreams to the per-process isolated view.
+		io := *iostreams.G(p.ctx)
+		io.Out = p
+		io.SetStdoutTTY(false)
+		io.SetStderrTTY(false)
+		io.SetStdinTTY(false)
+		p.ctx = iostreams.WithIOStreams(p.ctx, &io)
 
 		err := p.processFunc(p.ctx, p.onProgress)
 		status := StatusSuccess

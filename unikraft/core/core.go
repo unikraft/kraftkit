@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -78,7 +77,6 @@ func (uc UnikraftConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	return uc.Configuration, nil
 }
 
-func (uc UnikraftConfig) PrintInfo(io *iostreams.IOStreams) error {
-	fmt.Fprint(io.Out, "not implemented: unikraft.core.UnikraftConfig.PrintInfo")
-	return nil
+func (uc UnikraftConfig) PrintInfo() string {
+	return "not implemented: unikraft.core.UnikraftConfig.PrintInfo"
 }

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
@@ -88,6 +89,8 @@ func (e *Process) Start() error {
 		)
 	} else if len(e.opts.stdoutcbs) > 0 {
 		e.cmd.Stdout = io.MultiWriter(e.opts.stdoutcbs...)
+	} else {
+		e.cmd.Stdout = iostreams.G(e.ctx).Out
 	}
 
 	// Set the stderr
@@ -105,11 +108,15 @@ func (e *Process) Start() error {
 		)
 	} else if len(e.opts.stderrcbs) > 0 {
 		e.cmd.Stderr = io.MultiWriter(e.opts.stderrcbs...)
+	} else {
+		e.cmd.Stderr = iostreams.G(e.ctx).ErrOut
 	}
 
 	// Set the stdin
 	if e.opts.stdin != nil {
 		e.cmd.Stdin = e.opts.stdin
+	} else {
+		e.cmd.Stdin = iostreams.G(e.ctx).In
 	}
 
 	// Add any set environmental variables including the host's

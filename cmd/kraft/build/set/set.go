@@ -32,6 +32,7 @@
 package set
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -39,10 +40,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -50,7 +49,6 @@ import (
 
 type SetOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Workdir string
@@ -59,7 +57,6 @@ type SetOptions struct {
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &SetOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "set")
@@ -121,6 +118,7 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func setRun(copts *SetOptions, workdir string, confOpts []string) error {
+	ctx := context.Background()
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -156,8 +154,6 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 	}
 
 	return project.Set(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
+		make.WithContext(ctx),
 	)
 }

@@ -43,7 +43,6 @@ import (
 type buildOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	NoCache      bool
@@ -82,7 +81,6 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &buildOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "Configure and build Unikraft unikernels "
@@ -517,7 +515,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 						// make.WithProgressFunc(w),
 						make.WithSilent(true),
 						make.WithExecOptions(
-							exec.WithStdin(opts.IO.In),
+							exec.WithStdin(iostreams.G(ctx).In),
 							exec.WithStdout(log.G(ctx).Writer()),
 							exec.WithStderr(log.G(ctx).Writer()),
 						),

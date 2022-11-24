@@ -36,7 +36,6 @@ import (
 type runOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Architecture  string
@@ -64,7 +63,6 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &runOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "Run a unikernel"
@@ -449,7 +447,7 @@ func runRun(opts *runOptions, args ...string) error {
 			}
 		}()
 
-		driver.TailWriter(ctx, mid, opts.IO.Out)
+		driver.TailWriter(ctx, mid, iostreams.G(ctx).Out)
 	}
 
 	return nil

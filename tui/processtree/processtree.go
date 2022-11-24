@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
 
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
@@ -266,6 +267,14 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 		logger.SetOutput(item)
 		entry.Logger = &logger
 		ctx = log.WithLogger(ctx, entry)
+
+		// Set the output of the iostreams to the per-process isolated view.
+		io := *iostreams.G(ctx)
+		io.Out = item
+		io.SetStdoutTTY(false)
+		io.SetStderrTTY(false)
+		io.SetStdinTTY(false)
+		ctx = iostreams.WithIOStreams(ctx, &io)
 
 		// Set the new context for the individual process.
 		item.ctx = ctx

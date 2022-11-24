@@ -30,7 +30,6 @@ import (
 type PullOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Manager      string
@@ -49,7 +48,6 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &PullOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "pull")
@@ -386,7 +384,7 @@ func pullRun(opts *PullOptions, query string) error {
 	}
 
 	if project != nil {
-		project.PrintInfo(opts.IO)
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
 	}
 
 	return nil

@@ -20,7 +20,6 @@ import (
 	"kraftkit.sh/internal/logger"
 
 	"kraftkit.sh/initrd"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -37,7 +36,6 @@ import (
 type pkgOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Architecture string
@@ -71,7 +69,6 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &pkgOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "Package and distribute Unikraft unikernels and their dependencies"

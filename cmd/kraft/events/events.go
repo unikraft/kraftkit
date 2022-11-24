@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
@@ -34,7 +33,6 @@ import (
 type eventsOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	QuitTogether bool
@@ -50,7 +48,6 @@ func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &eventsOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "Follow the events of a unikernel"

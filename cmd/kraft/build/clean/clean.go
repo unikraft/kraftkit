@@ -32,15 +32,14 @@
 package clean
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -48,13 +47,11 @@ import (
 
 type CleanOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 }
 
 func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &CleanOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "clean")
@@ -94,6 +91,8 @@ func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func cleanRun(copts *CleanOptions, workdir string) error {
+	ctx := context.Background()
+
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -119,10 +118,6 @@ func cleanRun(copts *CleanOptions, workdir string) error {
 	}
 
 	return project.Clean(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-			exec.WithStdout(copts.IO.Out),
-			exec.WithStderr(copts.IO.ErrOut),
-		),
+		make.WithContext(ctx),
 	)
 }

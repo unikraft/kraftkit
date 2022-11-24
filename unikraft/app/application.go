@@ -15,7 +15,6 @@ import (
 	"github.com/xlab/treeprint"
 
 	"kraftkit.sh/exec"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft"
@@ -550,7 +549,7 @@ func (ac ApplicationConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
-func (ac ApplicationConfig) PrintInfo(io *iostreams.IOStreams) error {
+func (ac ApplicationConfig) PrintInfo() string {
 	tree := treeprint.NewWithRoot(component.NameAndVersion(ac))
 
 	tree.AddBranch(component.NameAndVersion(ac.unikraft))
@@ -571,7 +570,5 @@ func (ac ApplicationConfig) PrintInfo(io *iostreams.IOStreams) error {
 		}
 	}
 
-	fmt.Fprintln(io.Out, tree.String())
-
-	return nil
+	return tree.String()
 }

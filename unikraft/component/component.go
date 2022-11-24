@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -64,9 +63,8 @@ type Component interface {
 	// when the relevant component packages have been retrieved
 	KConfigValues() (kconfig.KConfigValues, error)
 
-	// PrintInfo displays the information about the component via the provided
-	// iostream
-	PrintInfo(*iostreams.IOStreams) error
+	// PrintInfo returns human-readable information about the component
+	PrintInfo() string
 }
 
 // NameAndVersion accepts a component and provids the canonical string

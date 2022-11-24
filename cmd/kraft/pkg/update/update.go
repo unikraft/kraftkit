@@ -83,7 +83,7 @@ func updateRun(opts *UpdateOptions) error {
 	}
 
 	parallel := !cfgm.Config.NoParallel
-	norender := log.LoggerTypeFromString(cfgm.Config.Log.Type) != log.FANCY
+	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
 	if norender {
 		parallel = false
 	}

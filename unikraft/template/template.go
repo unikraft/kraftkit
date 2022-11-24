@@ -38,7 +38,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -115,7 +114,6 @@ func (tc TemplateConfig) KConfigValues() (kconfig.KConfigValues, error) {
 }
 
 // PrintInfo prints information about the template
-func (tc TemplateConfig) PrintInfo(io *iostreams.IOStreams) error {
-	fmt.Fprint(io.Out, "not implemented: unikraft.lib.LibraryConfig.PrintInfo")
-	return nil
+func (tc TemplateConfig) PrintInfo() string {
+	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
 }
