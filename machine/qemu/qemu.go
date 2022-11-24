@@ -633,7 +633,7 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU executable: %v", err)
 	}
 
-	process, err := exec.NewProcessFromExecutable(e, qd.dopts.ExecOptions...)
+	process, err := exec.NewProcessFromExecutable(ctx, e, qd.dopts.ExecOptions...)
 	if err != nil {
 		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU process: %v", err)
 	}

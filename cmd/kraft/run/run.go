@@ -374,7 +374,9 @@ func runRun(opts *runOptions, args ...string) error {
 				return err
 			}
 
-			process, err := exec.NewProcessFromExecutable(e,
+			process, err := exec.NewProcessFromExecutable(
+				ctx,
+				e,
 				exec.WithDetach(true),
 			)
 			if err != nil {

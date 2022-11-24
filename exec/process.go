@@ -20,11 +20,12 @@ type Process struct {
 	executable *Executable
 	opts       *ExecOptions
 	cmd        *exec.Cmd
+	ctx        context.Context
 }
 
 // NewProcess prepares a process to be executed from a given binary name and
 // optional execution options
-func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error) {
+func NewProcess(ctx context.Context, bin string, args []string, eopts ...ExecOption) (*Process, error) {
 	executable, err := NewExecutable(bin, nil)
 	if err != nil {
 		return nil, err
@@ -32,12 +33,12 @@ func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error
 
 	executable.args = append(executable.args, args...)
 
-	return NewProcessFromExecutable(executable, eopts...)
+	return NewProcessFromExecutable(ctx, executable, eopts...)
 }
 
 // NewProcessFromExecutable prepares a process to be executed from a given
 // *Executable object and optional execution options
-func NewProcessFromExecutable(executable *Executable, eopts ...ExecOption) (*Process, error) {
+func NewProcessFromExecutable(ctx context.Context, executable *Executable, eopts ...ExecOption) (*Process, error) {
 	if executable == nil {
 		return nil, fmt.Errorf("cannot prepare process without executable")
 	}
@@ -68,12 +69,12 @@ func (e *Process) Cmdline() string {
 
 // Start the process
 func (e *Process) Start() error {
-	if e.opts.ctx == nil {
-		e.opts.ctx = context.TODO()
+	if e.ctx == nil {
+		e.ctx = context.TODO()
 	}
 
 	e.cmd = exec.CommandContext(
-		e.opts.ctx,
+		e.ctx,
 		e.executable.bin,
 		e.executable.Args()...,
 	)
@@ -114,7 +115,7 @@ func (e *Process) Start() error {
 	// Add any set environmental variables including the host's
 	e.cmd.Env = append(os.Environ(), e.opts.env...)
 
-	log.G(e.opts.ctx).Debug(e.Cmdline())
+	log.G(e.ctx).Debug(e.Cmdline())
 
 	if e.opts.detach {
 		// the Setpgid flag is used to prevent the child process from exiting when

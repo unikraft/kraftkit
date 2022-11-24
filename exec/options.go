@@ -5,13 +5,11 @@
 package exec
 
 import (
-	"context"
 	"fmt"
 	"io"
 )
 
 type ExecOptions struct {
-	ctx       context.Context
 	stderr    io.Writer
 	stdout    io.Writer
 	stderrcbs []io.Writer
@@ -47,14 +45,6 @@ func WithEnvKey(key, val string) ExecOption {
 
 		eo.env = append(eo.env, fmt.Sprintf("%s=%s", key, val))
 
-		return nil
-	}
-}
-
-// WithContext sets the context for the process
-func WithContext(ctx context.Context) ExecOption {
-	return func(eo *ExecOptions) error {
-		eo.ctx = ctx
 		return nil
 	}
 }
