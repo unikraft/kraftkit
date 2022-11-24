@@ -142,7 +142,7 @@ install-golangci-lint: ## Install the Golang CI lint tool
 
 .PHONY: clean
 clean:
-	$(GO) clean -mod=readonly -cache -i -r
+	$(GO) clean -mod=readonly -modcache -cache -i -r
 
 .PHONY: properclean
 properclean: ENVIRONMENT ?= myself
