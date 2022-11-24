@@ -27,7 +27,6 @@ import (
 type stopOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 }
 
@@ -40,7 +39,6 @@ func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &stopOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -115,11 +113,6 @@ var (
 func runStop(opts *stopOptions, args ...string) error {
 	var err error
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
 	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
@@ -164,25 +157,25 @@ func runStop(opts *stopOptions, args ...string) error {
 		go func() {
 			observations.Add(mid)
 
-			plog.Infof("stopping %s...", mid.ShortString())
+			log.G(ctx).Infof("stopping %s...", mid.ShortString())
 
 			state, err := store.LookupMachineState(mid)
 			if err != nil {
-				plog.Errorf("could not look up machine state: %v", err)
+				log.G(ctx).Errorf("could not look up machine state: %v", err)
 				observations.Done(mid)
 				return
 			}
 
 			switch state {
 			case machine.MachineStateDead, machine.MachineStateExited:
-				plog.Errorf("%s has exited", mid.ShortString())
+				log.G(ctx).Errorf("%s has exited", mid.ShortString())
 				observations.Done(mid)
 				return
 			}
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-				plog.Errorf("could not look up machine config: %v", err)
+				log.G(ctx).Errorf("could not look up machine config: %v", err)
 				observations.Done(mid)
 				return
 			}
@@ -191,12 +184,11 @@ func runStop(opts *stopOptions, args ...string) error {
 
 			if _, ok := drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
-					driveropts.WithLogger(plog),
 					driveropts.WithMachineStore(store),
 					driveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
 				)
 				if err != nil {
-					plog.Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
+					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
 					observations.Done(mid)
 					return
 				}
@@ -207,9 +199,9 @@ func runStop(opts *stopOptions, args ...string) error {
 			driver := drivers[driverType]
 
 			if err := driver.Stop(ctx, mid); err != nil {
-				plog.Errorf("could not stop machine %s: %v", mid.ShortString(), err)
+				log.G(ctx).Errorf("could not stop machine %s: %v", mid.ShortString(), err)
 			} else {
-				plog.Infof("stopped %s", mid.ShortString())
+				log.G(ctx).Infof("stopped %s", mid.ShortString())
 			}
 
 			observations.Done(mid)

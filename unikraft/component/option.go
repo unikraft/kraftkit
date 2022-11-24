@@ -7,7 +7,6 @@ package component
 import (
 	"context"
 
-	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 )
@@ -17,13 +16,6 @@ type ComponentOption func(cc *ComponentConfig) error
 func WithWorkdir(path string) ComponentOption {
 	return func(cc *ComponentConfig) error {
 		cc.workdir = path
-		return nil
-	}
-}
-
-func WithLogger(log log.Logger) ComponentOption {
-	return func(cc *ComponentConfig) error {
-		cc.log = log
 		return nil
 	}
 }

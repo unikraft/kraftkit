@@ -5,12 +5,15 @@
 package exec
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
+
+	"kraftkit.sh/log"
 )
 
 type Process struct {
@@ -65,15 +68,15 @@ func (e *Process) Cmdline() string {
 
 // Start the process
 func (e *Process) Start() error {
-	if e.opts.ctx != nil {
-		e.cmd = exec.CommandContext(
-			e.opts.ctx,
-			e.executable.bin,
-			e.executable.Args()...,
-		)
-	} else {
-		e.cmd = exec.Command(e.executable.bin, e.executable.Args()...)
+	if e.opts.ctx == nil {
+		e.opts.ctx = context.TODO()
 	}
+
+	e.cmd = exec.CommandContext(
+		e.opts.ctx,
+		e.executable.bin,
+		e.executable.Args()...,
+	)
 
 	// Set the stdout
 	if e.opts.stdout != nil && len(e.opts.stdoutcbs) == 0 {
@@ -111,9 +114,7 @@ func (e *Process) Start() error {
 	// Add any set environmental variables including the host's
 	e.cmd.Env = append(os.Environ(), e.opts.env...)
 
-	if e.opts.log != nil {
-		e.opts.log.Debug(e.Cmdline())
-	}
+	log.G(e.opts.ctx).Debug(e.Cmdline())
 
 	if e.opts.detach {
 		// the Setpgid flag is used to prevent the child process from exiting when

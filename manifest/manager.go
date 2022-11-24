@@ -15,6 +15,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -29,9 +30,7 @@ type ManifestManager struct {
 var useGit = false
 
 func init() {
-	options, err := packmanager.NewPackageManagerOptions(
-		context.TODO(),
-	)
+	options, err := packmanager.NewPackageManagerOptions()
 	if err != nil {
 		panic(fmt.Sprintf("could not register package manager options: %s", err))
 	}
@@ -84,7 +83,7 @@ func (mm ManifestManager) ApplyOptions(pmopts ...packmanager.PackageManagerOptio
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
-func (mm ManifestManager) update() (*ManifestIndex, error) {
+func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	cfm := mm.opts.ConfigManager
 	if len(cfm.Config.Unikraft.Manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
@@ -97,7 +96,6 @@ func (mm ManifestManager) update() (*ManifestIndex, error) {
 	mopts := []ManifestOption{
 		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
 		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
-		WithLogger(mm.Options().Log),
 	}
 
 	for _, manipath := range cfm.Config.Unikraft.Manifests {
@@ -109,11 +107,11 @@ func (mm ManifestManager) update() (*ManifestIndex, error) {
 		// 	continue
 		// }
 
-		mm.opts.Log.Infof("fetching %s", manipath)
+		log.G(ctx).Infof("fetching %s", manipath)
 
-		manifests, err := FindManifestsFromSource(manipath, mopts...)
+		manifests, err := FindManifestsFromSource(ctx, manipath, mopts...)
 		if err != nil {
-			mm.opts.Log.Warnf("%s", err)
+			log.G(ctx).Warnf("%s", err)
 		}
 
 		localIndex.Manifests = append(localIndex.Manifests, manifests...)
@@ -122,13 +120,13 @@ func (mm ManifestManager) update() (*ManifestIndex, error) {
 	return localIndex, nil
 }
 
-func (mm ManifestManager) Update() error {
+func (mm ManifestManager) Update(ctx context.Context) error {
 	// Create parent directories if not present
 	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex()), 0o771); err != nil {
 		return err
 	}
 
-	localIndex, err := mm.update()
+	localIndex, err := mm.update(ctx)
 	if err != nil {
 		return err
 	}
@@ -149,9 +147,9 @@ func (mm ManifestManager) Update() error {
 			return err
 		}
 
-		mm.opts.Log.Infof("saving %s", fileloc)
+		log.G(ctx).Infof("saving %s", fileloc)
 		if err := manifest.WriteToFile(fileloc); err != nil {
-			mm.opts.Log.Errorf("could not save manifest: %s", err)
+			log.G(ctx).Errorf("could not save manifest: %s", err)
 		}
 
 		// Replace manifest with relative path
@@ -165,23 +163,23 @@ func (mm ManifestManager) Update() error {
 	return localIndex.WriteToFile(mm.LocalManifestIndex())
 }
 
-func (mm ManifestManager) AddSource(source string) error {
+func (mm ManifestManager) AddSource(ctx context.Context, source string) error {
 	cfm := mm.opts.ConfigManager
 	cfg := cfm.Config
 
 	for _, manifest := range cfg.Unikraft.Manifests {
 		if source == manifest {
-			mm.opts.Log.Warnf("manifest already saved: %s", source)
+			log.G(ctx).Warnf("manifest already saved: %s", source)
 			return nil
 		}
 	}
 
-	mm.opts.Log.Infof("adding to list of manifests: %s", source)
+	log.G(ctx).Infof("adding to list of manifests: %s", source)
 	cfg.Unikraft.Manifests = append(cfg.Unikraft.Manifests, source)
 	return cfm.Write(true)
 }
 
-func (mm ManifestManager) RemoveSource(source string) error {
+func (mm ManifestManager) RemoveSource(ctx context.Context, source string) error {
 	cfm := mm.opts.ConfigManager
 	cfg := cfm.Config
 	manifests := []string{}
@@ -192,19 +190,19 @@ func (mm ManifestManager) RemoveSource(source string) error {
 		}
 	}
 
-	mm.opts.Log.Infof("removing from list of manifests: %s", source)
+	log.G(ctx).Infof("removing from list of manifests: %s", source)
 	cfg.Unikraft.Manifests = manifests
 	return cfm.Write(false)
 }
 
 // Push the resulting package to the supported registry of the implementation.
-func (mm ManifestManager) Push(path string) error {
+func (mm ManifestManager) Push(ctx context.Context, path string) error {
 	return fmt.Errorf("not implemented pack.ManifestManager.Pushh")
 }
 
 // Pull a package from the support registry of the implementation.
-func (mm ManifestManager) Pull(path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
-	if _, err := mm.IsCompatible(path); err != nil {
+func (mm ManifestManager) Pull(ctx context.Context, path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
+	if _, err := mm.IsCompatible(ctx, path); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +213,7 @@ func (um ManifestManager) From(sub string) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
+func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
 	var err error
 	var index *ManifestIndex
 	var allManifests []*Manifest
@@ -223,18 +221,17 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 	mopts := []ManifestOption{
 		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
 		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
-		WithLogger(mm.Options().Log),
 	}
 
 	if len(query.Source) > 0 && query.NoCache {
-		manifest, err := FindManifestsFromSource(query.Source, mopts...)
+		manifest, err := FindManifestsFromSource(ctx, query.Source, mopts...)
 		if err != nil {
 			return nil, err
 		}
 
 		allManifests = append(allManifests, manifest...)
 	} else if query.NoCache {
-		index, err = mm.update()
+		index, err = mm.update(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +246,7 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 	if index != nil {
 		for _, manifest := range index.Manifests {
 			if len(manifest.Manifest) > 0 {
-				manifests, err := findManifestsFromSource(mm.LocalManifestsDir(), manifest.Manifest, mopts)
+				manifests, err := findManifestsFromSource(ctx, mm.LocalManifestsDir(), manifest.Manifest, mopts)
 				if err != nil {
 					return nil, err
 				}
@@ -325,9 +322,9 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageWithVersion(mm.opts.Context(), manifest, version, popts...)
+				p, err := NewPackageWithVersion(ctx, manifest, version, popts...)
 				if err != nil {
-					mm.opts.Log.Warnf("%v", err)
+					log.G(ctx).Warnf("%v", err)
 					continue
 					// TODO: Config option for fast-fail?
 					// return nil, err
@@ -336,9 +333,9 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 				packages = append(packages, p)
 			}
 		} else {
-			packs, err := NewPackageFromManifest(mm.opts.Context(), manifest, popts...)
+			packs, err := NewPackageFromManifest(ctx, manifest, popts...)
 			if err != nil {
-				mm.opts.Log.Warnf("%v", err)
+				log.G(ctx).Warnf("%v", err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
@@ -348,17 +345,17 @@ func (mm ManifestManager) Catalog(query packmanager.CatalogQuery, popts ...pack.
 		}
 	}
 
-	for i := range packages {
-		packages[i].ApplyOptions(
-			pack.WithLogger(mm.Options().Log),
-		)
-	}
+	// for i := range packages {
+	// 	packages[i].ApplyOptions(
+	// 		pack.WithLogger(mm.Options().Log),
+	// 	)
+	// }
 
 	return packages, nil
 }
 
-func (mm ManifestManager) IsCompatible(source string) (packmanager.PackageManager, error) {
-	if _, err := NewProvider(source); err != nil {
+func (mm ManifestManager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, error) {
+	if _, err := NewProvider(ctx, source); err != nil {
 		return nil, fmt.Errorf("incompatible source")
 	}
 

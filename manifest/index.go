@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 	"kraftkit.sh/internal/version"
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 )
 
@@ -29,28 +31,33 @@ type ManifestIndexProvider struct {
 	path  string
 	index *ManifestIndex
 	mopts []ManifestOption
+	ctx   context.Context
 }
 
 // NewManifestIndexProvider accepts an input path which is checked against first
 // a local file on disk and then a remote URL.  If either of these checks pass,
 // the Provider is instantiated since the path does indeed represent a
 // ManifestIndex.
-func NewManifestIndexProvider(path string, mopts ...ManifestOption) (Provider, error) {
+func NewManifestIndexProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	index, err := NewManifestIndexFromFile(path, mopts...)
 	if err == nil {
+		log.G(ctx).Debug("index retrieved from file")
 		return ManifestIndexProvider{
 			path:  path,
 			index: index,
 			mopts: mopts,
+			ctx:   ctx,
 		}, nil
 	}
 
 	index, err = NewManifestIndexFromURL(path, mopts...)
 	if err == nil {
+		log.G(ctx).Debug("index retrieved from URL")
 		return ManifestIndexProvider{
 			path:  path,
 			index: index,
 			mopts: mopts,
+			ctx:   ctx,
 		}, nil
 	}
 
@@ -61,7 +68,7 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	var manifests []*Manifest
 
 	for _, manifest := range mip.index.Manifests {
-		next, err := findManifestsFromSource(mip.path, manifest.Manifest, mip.mopts)
+		next, err := findManifestsFromSource(mip.ctx, mip.path, manifest.Manifest, mip.mopts)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +79,7 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	return manifests, nil
 }
 
-func (mip ManifestIndexProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (mip ManifestIndexProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullPackage")
 }
 

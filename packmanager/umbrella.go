@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 )
 
@@ -93,9 +94,9 @@ func (um UmbrellaManager) Options() *PackageManagerOptions {
 }
 
 // Update retrieves and stores locally a
-func (um UmbrellaManager) Update() error {
+func (um UmbrellaManager) Update(ctx context.Context) error {
 	for _, manager := range packageManagers {
-		err := manager.Update()
+		err := manager.Update(ctx)
 		if err != nil {
 			return err
 		}
@@ -104,10 +105,10 @@ func (um UmbrellaManager) Update() error {
 	return nil
 }
 
-func (um UmbrellaManager) AddSource(source string) error {
+func (um UmbrellaManager) AddSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Adding source %s via %s...", source, manager.Format())
-		err := manager.AddSource(source)
+		log.G(ctx).Tracef("Adding source %s via %s...", source, manager.Format())
+		err := manager.AddSource(ctx, source)
 		if err != nil {
 			return err
 		}
@@ -116,10 +117,10 @@ func (um UmbrellaManager) AddSource(source string) error {
 	return nil
 }
 
-func (um UmbrellaManager) RemoveSource(source string) error {
+func (um UmbrellaManager) RemoveSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Removing source %s via %s...", source, manager.Format())
-		err := manager.RemoveSource(source)
+		log.G(ctx).Tracef("Removing source %s via %s...", source, manager.Format())
+		err := manager.RemoveSource(ctx, source)
 		if err != nil {
 			return err
 		}
@@ -129,16 +130,16 @@ func (um UmbrellaManager) RemoveSource(source string) error {
 }
 
 // Push the resulting package to the supported registry of the implementation.
-func (um UmbrellaManager) Push(path string) error {
+func (um UmbrellaManager) Push(ctx context.Context, path string) error {
 	return fmt.Errorf("not implemented: pack.UmbrellaManager.Push")
 }
 
 // Pull a package from the support registry of the implementation.
-func (um UmbrellaManager) Pull(path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
+func (um UmbrellaManager) Pull(ctx context.Context, path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		um.opts.Log.Trace("Pulling %s via %s...", path, manager.Format())
-		parcel, err := manager.Pull(path, opts)
+		log.G(ctx).Tracef("Pulling %s via %s...", path, manager.Format())
+		parcel, err := manager.Pull(ctx, path, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -149,10 +150,10 @@ func (um UmbrellaManager) Pull(path string, opts *pack.PullPackageOptions) ([]pa
 	return packages, nil
 }
 
-func (mm UmbrellaManager) Catalog(query CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
+func (mm UmbrellaManager) Catalog(ctx context.Context, query CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		pack, err := manager.Catalog(query, popts...)
+		pack, err := manager.Catalog(ctx, query, popts...)
 		if err != nil {
 			return nil, err
 		}
@@ -165,11 +166,11 @@ func (mm UmbrellaManager) Catalog(query CatalogQuery, popts ...pack.PackageOptio
 
 // IsCompatible iterates through all package managers and returns the first
 // package manager which is compatible with the provided source
-func (mm UmbrellaManager) IsCompatible(source string) (PackageManager, error) {
+func (mm UmbrellaManager) IsCompatible(ctx context.Context, source string) (PackageManager, error) {
 	var err error
 	var pm PackageManager
 	for _, manager := range packageManagers {
-		pm, err = manager.IsCompatible(source)
+		pm, err = manager.IsCompatible(ctx, source)
 		if err == nil {
 			return pm, nil
 		}

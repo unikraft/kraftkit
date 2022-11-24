@@ -7,7 +7,6 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -38,7 +37,6 @@ import (
 type pkgOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -73,7 +71,6 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &pkgOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -232,11 +229,6 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		return err
 	}
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
 	// Force a particular package manager
 	if len(opts.Format) > 0 && opts.Format != "auto" {
 		pm, err = pm.From(opts.Format)
@@ -247,7 +239,6 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 
 	projectOpts, err := app.NewProjectOptions(
 		nil,
-		app.WithLogger(plog),
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
 		app.WithPackageManager(&pm),
@@ -313,7 +304,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	}
 
 	if len(packages) == 0 {
-		plog.Info("nothing to package")
+		log.G(ctx).Info("nothing to package")
 		return nil
 	}
 
@@ -326,8 +317,6 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
 	if norender {
 		parallel = false
-	} else {
-		plog.SetOutput(ioutil.Discard)
 	}
 
 	var tree []*processtree.ProcessTreeItem
@@ -338,24 +327,18 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		tree = append(tree, processtree.NewProcessTreeItem(
 			"Packaging "+p.CanonicalName(),
 			p.Options().ArchPlatString(),
-			func(l log.Logger) error {
-				// Apply the incoming logger which is tailored to display as a
-				// sub-terminal within the fancy processtree.
-				p.ApplyOptions(
-					pack.WithLogger(l),
-				)
-
-				return p.Pack()
+			func(ctx context.Context) error {
+				return p.Pack(ctx)
 			},
 		))
 	}
 
 	model, err := processtree.NewProcessTree(
+		ctx,
 		[]processtree.ProcessTreeOption{
 			processtree.WithVerb("Packaging..."),
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
-			processtree.WithLogger(plog),
 		},
 		tree...,
 	)
@@ -374,13 +357,7 @@ func initAppPackage(ctx context.Context,
 	opts *pkgOptions,
 ) ([]pack.Package, error) {
 	var err error
-
-	log, err := opts.Logger()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Tracef("initializing package")
+	log.G(ctx).Tracef("initializing package")
 
 	// Path to the kernel image
 	kernel := opts.Kernel
@@ -461,7 +438,7 @@ func initAppPackage(ctx context.Context,
 
 			// Skip this target as we cannot package it
 		} else if pm.Format() != targ.Format && !opts.Force {
-			log.Warn("skipping %s target %s", targ.Format, targ.Name)
+			log.G(ctx).Warnf("skipping %s target %s", targ.Format, targ.Name())
 			return nil, nil
 		}
 	}

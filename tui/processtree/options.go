@@ -4,22 +4,11 @@
 // You may not use this file expect in compliance with the License.
 package processtree
 
-import (
-	"kraftkit.sh/log"
-)
-
 type ProcessTreeOption func(pt *ProcessTree) error
 
 func WithVerb(verb string) ProcessTreeOption {
 	return func(pt *ProcessTree) error {
 		pt.verb = verb
-		return nil
-	}
-}
-
-func WithLogger(l log.Logger) ProcessTreeOption {
-	return func(pt *ProcessTree) error {
-		pt.log = l
 		return nil
 	}
 }

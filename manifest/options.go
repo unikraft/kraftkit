@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/log"
 	"kraftkit.sh/unikraft"
 )
 
@@ -17,13 +16,6 @@ type ManifestOption func(m *Manifest) error
 func WithAuthConfig(auths map[string]config.AuthConfig) ManifestOption {
 	return func(m *Manifest) error {
 		m.auths = auths
-		return nil
-	}
-}
-
-func WithLogger(l log.Logger) ManifestOption {
-	return func(m *Manifest) error {
-		m.log = l
 		return nil
 	}
 }

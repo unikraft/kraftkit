@@ -31,6 +31,8 @@
 
 package pack
 
+import "context"
+
 type Package interface {
 	// Options allows you to view the current options.
 	Options() *PackageOptions
@@ -49,12 +51,12 @@ type Package interface {
 	CanonicalName() string
 
 	// Package a package
-	Pack() error
+	Pack(context.Context) error
 
 	// Pull retreives the package artifacts given the context of the
 	// PackageOptions and allows for customization of the pull via the input
 	// optional PullPackageOptions
-	Pull(opts ...PullPackageOption) error
+	Pull(context.Context, ...PullPackageOption) error
 
 	// Format returns the name of the implementation.
 	Format() string

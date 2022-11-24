@@ -4,18 +4,7 @@
 // You may not use this file expect in compliance with the License.
 package paraprogress
 
-import (
-	"kraftkit.sh/log"
-)
-
 type ParaProgressOption func(md *ParaProgress) error
-
-func WithLogger(l log.Logger) ParaProgressOption {
-	return func(md *ParaProgress) error {
-		md.log = l
-		return nil
-	}
-}
 
 func WithRenderer(norender bool) ParaProgressOption {
 	return func(md *ParaProgress) error {

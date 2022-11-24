@@ -9,13 +9,11 @@ import (
 	"os"
 
 	"kraftkit.sh/exec"
-	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/target"
 )
 
 type BuildOptions struct {
-	log          log.Logger
 	target       []target.TargetConfig
 	mopts        []make.MakeOption
 	onProgress   func(progress float64)
@@ -24,18 +22,6 @@ type BuildOptions struct {
 }
 
 type BuildOption func(opts *BuildOptions) error
-
-// WithBuildLogger sets the logger which can be used by the underlying build
-// mechanisms
-func WithBuildLogger(l log.Logger) BuildOption {
-	return func(bo *BuildOptions) error {
-		bo.log = l
-		bo.mopts = append(bo.mopts,
-			make.WithLogger(l),
-		)
-		return nil
-	}
-}
 
 // WithBuildTarget specifies one or many of the listed targets defined by the
 // application's Kraftfile

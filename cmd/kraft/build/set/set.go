@@ -43,7 +43,6 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -51,7 +50,6 @@ import (
 
 type SetOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -61,7 +59,6 @@ type SetOptions struct {
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &SetOptions{
 		PackageManager: f.PackageManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -129,11 +126,6 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		return err
 	}
 
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
 	// Check if dotconfig exists in workdir
 	dotconfig := fmt.Sprintf("%s/.config", workdir)
 
@@ -146,7 +138,6 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
-		app.WithLogger(plog),
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
 		app.WithPackageManager(&pm),

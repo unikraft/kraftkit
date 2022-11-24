@@ -5,6 +5,7 @@
 package paraprogress
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -22,7 +23,7 @@ type ParaProgress struct {
 	width         int
 	timerWidth    int
 	parallel      bool
-	log           log.Logger
+	ctx           context.Context
 	norender      bool
 	maxConcurrent int
 	curr          int
@@ -31,7 +32,7 @@ type ParaProgress struct {
 	failFast      bool
 }
 
-func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
+func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
 	if len(processes) == 0 {
 		return nil, fmt.Errorf("no processes to perform")
 	}
@@ -40,6 +41,7 @@ func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaPro
 		processes: processes,
 		errChan:   make(chan error),
 		curr:      0,
+		ctx:       ctx,
 	}
 
 	for _, opt := range opts {
@@ -58,9 +60,9 @@ func NewParaProgress(processes []*Process, opts ...ParaProgressOption) (*ParaPro
 
 	for i := range processes {
 		processes[i].NameWidth = maxNameLen
-
-		md.processes[i].log = md.log.Clone()
-		md.processes[i].log.SetOutput(md.processes[i])
+		logger := log.G(ctx)
+		logger.Logger.Out = md.processes[i]
+		md.processes[i].ctx = log.WithLogger(ctx, logger)
 	}
 
 	return md, nil

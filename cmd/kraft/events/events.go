@@ -34,7 +34,6 @@ import (
 type eventsOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -51,7 +50,6 @@ func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &eventsOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -141,11 +139,6 @@ var (
 func runEvents(opts *eventsOptions, args ...string) error {
 	var err error
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
 	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
@@ -177,7 +170,7 @@ func runEvents(opts *eventsOptions, args ...string) error {
 			pidfile.Close()
 
 			if err := os.Remove(cfgm.Config.EventsPidFile); err != nil {
-				plog.Errorf("could not remove pid file: %v", err)
+				log.G(ctx).Errorf("could not remove pid file: %v", err)
 			}
 		}()
 
@@ -238,7 +231,7 @@ seek:
 
 			state, err := store.LookupMachineState(mid)
 			if err != nil {
-				plog.Errorf("could not look up machine state: %v", err)
+				log.G(ctx).Errorf("could not look up machine state: %v", err)
 				continue
 			}
 
@@ -254,11 +247,11 @@ seek:
 				continue
 			}
 
-			plog.Infof("monitoring %s", mid.ShortString())
+			log.G(ctx).Infof("monitoring %s", mid.ShortString())
 
 			var mcfg machine.MachineConfig
 			if err := store.LookupMachineConfig(mid, &mcfg); err != nil {
-				plog.Errorf("could not look up machine config: %v", err)
+				log.G(ctx).Errorf("could not look up machine config: %v", err)
 				continue
 			}
 
@@ -271,7 +264,7 @@ seek:
 
 				mcfg := &machine.MachineConfig{}
 				if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-					plog.Errorf("could not look up machine config: %v", err)
+					log.G(ctx).Errorf("could not look up machine config: %v", err)
 					observations.Done(mid)
 					return
 				}
@@ -280,12 +273,11 @@ seek:
 
 				if _, ok := drivers[driverType]; !ok {
 					driver, err := machinedriver.New(driverType,
-						driveropts.WithLogger(plog),
 						driveropts.WithMachineStore(store),
 						driveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
 					)
 					if err != nil {
-						plog.Errorf("could not instantiate machine driver for %s: %v", mid, err)
+						log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid, err)
 						observations.Done(mid)
 						return
 					}
@@ -297,21 +289,21 @@ seek:
 
 				events, errs, err := driver.ListenStatusUpdate(ctx, mid)
 				if err != nil {
-					plog.Warnf("could not listen for status updates for %s: %v", mid.ShortString(), err)
+					log.G(ctx).Warnf("could not listen for status updates for %s: %v", mid.ShortString(), err)
 
 					// Check the state of the machine using the driver, for a more
 					// accurate read
 					state, err := driver.State(ctx, mid)
 					if err != nil {
-						plog.Errorf("could not look up machine state: %v", err)
+						log.G(ctx).Errorf("could not look up machine state: %v", err)
 					}
 
 					switch state {
 					case machine.MachineStateExited, machine.MachineStateDead:
 						if mcfg.DestroyOnExit {
-							plog.Infof("removing %s...", mid.ShortString())
+							log.G(ctx).Infof("removing %s...", mid.ShortString())
 							if err := driver.Destroy(ctx, mid); err != nil {
-								plog.Errorf("could not remove machine: %v: ", err)
+								log.G(ctx).Errorf("could not remove machine: %v: ", err)
 							}
 						}
 					}
@@ -324,13 +316,13 @@ seek:
 					// Wait on either channel
 					select {
 					case state := <-events:
-						plog.Infof("%s : %s", mid.ShortString(), state.String())
+						log.G(ctx).Infof("%s : %s", mid.ShortString(), state.String())
 						switch state {
 						case machine.MachineStateExited, machine.MachineStateDead:
 							if mcfg.DestroyOnExit {
-								plog.Infof("removing %s...", mid.ShortString())
+								log.G(ctx).Infof("removing %s...", mid.ShortString())
 								if err := driver.Destroy(ctx, mid); err != nil {
-									plog.Errorf("could not remove machine: %v: ", err)
+									log.G(ctx).Errorf("could not remove machine: %v: ", err)
 								}
 							}
 							observations.Done(mid)
@@ -339,7 +331,7 @@ seek:
 
 					case err := <-errs:
 						if !errors.Is(err, qmp.ErrAcceptedNonEvent) {
-							plog.Errorf("%v", err)
+							log.G(ctx).Errorf("%v", err)
 						}
 						observations.Done(mid)
 

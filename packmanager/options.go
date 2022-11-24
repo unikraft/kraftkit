@@ -5,23 +5,15 @@
 package packmanager
 
 import (
-	"context"
-
 	"kraftkit.sh/config"
 	"kraftkit.sh/utils"
 
-	"kraftkit.sh/log"
 	"kraftkit.sh/unikraft"
 )
 
 // PackageManagerOptions contains configuration for the Package
 type PackageManagerOptions struct {
 	ConfigManager *config.ConfigManager
-	Log           log.Logger
-
-	// ctx should contain all implementation-specific options, using
-	// `context.WithValue`
-	ctx context.Context
 
 	// Store a list of the functions used to populate this struct, in case we wish
 	// to call them again (used now in the umbrella manager).
@@ -31,9 +23,8 @@ type PackageManagerOptions struct {
 type PackageManagerOption func(opts *PackageManagerOptions) error
 
 // NewPackageManagerOptions creates PackageManagerOptions
-func NewPackageManagerOptions(ctx context.Context, opts ...PackageManagerOption) (*PackageManagerOptions, error) {
+func NewPackageManagerOptions(opts ...PackageManagerOption) (*PackageManagerOptions, error) {
 	options := &PackageManagerOptions{
-		ctx:  ctx,
 		opts: opts,
 	}
 
@@ -47,24 +38,12 @@ func NewPackageManagerOptions(ctx context.Context, opts ...PackageManagerOption)
 	return options, nil
 }
 
-// WithLogger defines the log.Logger
-func WithLogger(l log.Logger) PackageManagerOption {
-	return func(o *PackageManagerOptions) error {
-		o.Log = l
-		return nil
-	}
-}
-
 // WithConfig provides access to global config
 func WithConfigManager(cm *config.ConfigManager) PackageManagerOption {
 	return func(o *PackageManagerOptions) error {
 		o.ConfigManager = cm
 		return nil
 	}
-}
-
-func (pmopts *PackageManagerOptions) Context() context.Context {
-	return pmopts.ctx
 }
 
 // CatalogQuery is the request structure with associated attributes which are

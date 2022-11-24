@@ -5,6 +5,7 @@
 package pull
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -29,7 +30,6 @@ import (
 type PullOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -49,7 +49,6 @@ func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &PullOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -178,13 +177,9 @@ func pullRun(opts *PullOptions, query string) error {
 	var queries []packmanager.CatalogQuery
 
 	workdir := opts.Workdir
+	ctx := context.Background()
 
 	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	plog, err := opts.Logger()
 	if err != nil {
 		return err
 	}
@@ -203,7 +198,6 @@ func pullRun(opts *PullOptions, query string) error {
 		workdir = query
 		projectOpts, err := app.NewProjectOptions(
 			nil,
-			app.WithLogger(plog),
 			app.WithWorkingDirectory(workdir),
 			app.WithDefaultConfigPath(),
 			app.WithResolvedPaths(true),
@@ -224,14 +218,8 @@ func pullRun(opts *PullOptions, query string) error {
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
 				fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
-				func(l log.Logger) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					pm.ApplyOptions(
-						packmanager.WithLogger(l),
-					)
-
-					packages, err = pm.Catalog(packmanager.CatalogQuery{
+				func(ctx context.Context) error {
+					packages, err = pm.Catalog(ctx, packmanager.CatalogQuery{
 						Name:    project.Template().Name(),
 						Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 						Version: project.Template().Version(),
@@ -251,10 +239,10 @@ func pullRun(opts *PullOptions, query string) error {
 			)
 
 			treemodel, err := processtree.NewProcessTree(
+				ctx,
 				[]processtree.ProcessTreeOption{
 					processtree.WithFailFast(true),
 					processtree.WithRenderer(false),
-					processtree.WithLogger(plog),
 				},
 				[]*processtree.ProcessTreeItem{search}...,
 			)
@@ -268,17 +256,11 @@ func pullRun(opts *PullOptions, query string) error {
 
 			proc := paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
-				func(l log.Logger, w func(progress float64)) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					packages[0].ApplyOptions(
-						pack.WithLogger(l),
-					)
-
+				func(ctx context.Context, w func(progress float64)) error {
 					return packages[0].Pull(
+						ctx,
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
-						pack.WithPullLogger(l),
 						// pack.WithPullChecksum(!opts.NoChecksum),
 						// pack.WithPullCache(!opts.NoCache),
 					)
@@ -288,8 +270,8 @@ func pullRun(opts *PullOptions, query string) error {
 			processes = append(processes, proc)
 
 			paramodel, err := paraprogress.NewParaProgress(
+				ctx,
 				processes,
-				paraprogress.WithLogger(plog),
 				paraprogress.WithFailFast(true),
 			)
 			if err != nil {
@@ -308,7 +290,6 @@ func pullRun(opts *PullOptions, query string) error {
 
 		templateOps, err := app.NewProjectOptions(
 			nil,
-			app.WithLogger(plog),
 			app.WithWorkingDirectory(templateWorkdir),
 			app.WithDefaultConfigPath(),
 			app.WithPackageManager(&pm),
@@ -364,13 +345,13 @@ func pullRun(opts *PullOptions, query string) error {
 	}
 
 	for _, c := range queries {
-		next, err := pm.Catalog(c)
+		next, err := pm.Catalog(ctx, c)
 		if err != nil {
 			return err
 		}
 
 		if len(next) == 0 {
-			plog.Warnf("could not find %s", c.String())
+			log.G(ctx).Warnf("could not find %s", c.String())
 			continue
 		}
 
@@ -378,17 +359,11 @@ func pullRun(opts *PullOptions, query string) error {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
-				func(l log.Logger, w func(progress float64)) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					p.ApplyOptions(
-						pack.WithLogger(l),
-					)
-
+				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
+						ctx,
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
-						pack.WithPullLogger(l),
 						pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(!opts.NoCache),
 					)
@@ -398,9 +373,9 @@ func pullRun(opts *PullOptions, query string) error {
 	}
 
 	model, err := paraprogress.NewParaProgress(
+		ctx,
 		processes,
 		paraprogress.IsParallel(true),
-		paraprogress.WithLogger(plog),
 	)
 	if err != nil {
 		return err

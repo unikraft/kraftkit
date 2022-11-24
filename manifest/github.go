@@ -14,6 +14,7 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v32/github"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"kraftkit.sh/internal/ghrepo"
@@ -26,8 +27,8 @@ type GitHubProvider struct {
 	repo   ghrepo.Interface
 	mopts  []ManifestOption
 	client *github.Client
-	log    log.Logger
 	branch string
+	ctx    context.Context
 }
 
 // NewGitHubProvider attempts to parse the input path as a location provided on
@@ -36,7 +37,7 @@ type GitHubProvider struct {
 // can both probe GitHub's API as well as exploit the fact that it is a Git
 // repository to retrieve information and deliver information as a Manifest
 // format.
-func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
+func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	var branch string
 	if strings.Contains(path, "@") {
 		split := strings.Split(path, "@")
@@ -63,8 +64,6 @@ func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
 
 	client := github.NewClient(nil)
 	if ghauth, ok := manifest.Auths()[repo.RepoHost()]; ok {
-		ctx := context.TODO()
-
 		if !ghauth.VerifySSL {
 			insecureClient := &http.Client{
 				Transport: &http.Transport{
@@ -75,7 +74,7 @@ func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
 			}
 
 			ctx = context.WithValue(
-				context.TODO(),
+				ctx,
 				oauth2.HTTPClient,
 				insecureClient,
 			)
@@ -111,8 +110,8 @@ func NewGitHubProvider(path string, mopts ...ManifestOption) (Provider, error) {
 		repo:   repo,
 		mopts:  mopts,
 		client: client,
-		log:    manifest.log,
 		branch: branch,
+		ctx:    ctx,
 	}, nil
 }
 
@@ -128,7 +127,7 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	if len(ghp.branch) > 0 {
 		repo += "@" + ghp.branch
 	}
-	manifest, err := gitProviderFromGitHub(repo, ghp.mopts...)
+	manifest, err := gitProviderFromGitHub(ghp.ctx, repo, ghp.mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,12 +137,12 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (ghp GitHubProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (ghp GitHubProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	if useGit {
-		return pullGit(manifest, popts, ppopts)
+		return pullGit(ctx, manifest, popts, ppopts)
 	}
 
-	return pullArchive(manifest, popts, ppopts)
+	return pullArchive(ctx, manifest, popts, ppopts)
 }
 
 func (ghp GitHubProvider) String() string {
@@ -162,8 +161,11 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	g := glob.MustCompile(ghp.repo.RepoName())
 
 	for {
+		log.G(ghp.ctx).WithFields(logrus.Fields{
+			"page": opts.Page,
+		}).Trace("querying GitHub API for repositories")
 		more, resp, err := ghp.client.Repositories.ListByOrg(
-			context.TODO(),
+			ghp.ctx,
 			ghp.repo.RepoOwner(),
 			&github.RepositoryListByOrgOptions{
 				ListOptions: opts,
@@ -178,7 +180,7 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 				continue
 			}
 
-			ghp.log.Infof("found via wildcard %s", *repo.HTMLURL)
+			log.G(ghp.ctx).Infof("found via wildcard %s", *repo.HTMLURL)
 			repos = append(repos, repo)
 		}
 
@@ -192,7 +194,7 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	var manifests []*Manifest
 
 	for _, repo := range repos {
-		manifest, err := gitProviderFromGitHub(*repo.HTMLURL, ghp.mopts...)
+		manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.HTMLURL, ghp.mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -220,10 +222,10 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 // with the Provider interface.  We can exploit this knowledge by accepting an
 // input GitHub repository and making the necessary known adjustments to the
 // channel and version Resource attribute.
-func gitProviderFromGitHub(repo string, mopts ...ManifestOption) (*Manifest, error) {
+func gitProviderFromGitHub(ctx context.Context, repo string, mopts ...ManifestOption) (*Manifest, error) {
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	provider, err := NewGitProvider(repo, mopts...)
+	provider, err := NewGitProvider(ctx, repo, mopts...)
 	if err != nil {
 		return nil, err
 	}

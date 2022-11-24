@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,11 +20,12 @@ type DirectoryProvider struct {
 	name  string
 	dir   string
 	mopts []ManifestOption
+	ctx   context.Context
 }
 
 // NewDirectoryProvider attempts to parse a provided path as a Unikraft
 // "microlibirary" directory
-func NewDirectoryProvider(path string, mopts ...ManifestOption) (Provider, error) {
+func NewDirectoryProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	if f, err := os.Stat(path); err != nil || (err == nil && !f.IsDir()) {
 		return nil, fmt.Errorf("could not access directory '%s': %v", path, err)
 	}
@@ -59,6 +61,7 @@ func NewDirectoryProvider(path string, mopts ...ManifestOption) (Provider, error
 		name:  n,
 		dir:   path,
 		mopts: mopts,
+		ctx:   ctx,
 	}, nil
 }
 
@@ -89,7 +92,7 @@ func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (dp DirectoryProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (dp DirectoryProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	if len(ppopts.Workdir()) == 0 {
 		return fmt.Errorf("cannot pull without without working directory")
 	}

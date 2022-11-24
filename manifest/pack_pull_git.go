@@ -5,22 +5,24 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/libgit2/git2go/v31"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
-func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func pullGit(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	if len(ppopts.Workdir()) == 0 {
 		return fmt.Errorf("cannot Git clone manifest package without working directory")
 	}
 
-	ppopts.Log().Infof("using git to pull manifest package %s", manifest.Name)
+	log.G(ctx).Infof("using git to pull manifest package %s", manifest.Name)
 
 	if len(manifest.Origin) == 0 {
 		return fmt.Errorf("requesting Git with empty repository in manifest")
@@ -63,14 +65,14 @@ func pullGit(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPa
 		return fmt.Errorf("could not place component package: %s", err)
 	}
 
-	ppopts.Log().Infof("cloning %s into %s", manifest.Origin, local)
+	log.G(ctx).Infof("cloning %s into %s", manifest.Origin, local)
 
 	_, err = git.Clone(manifest.Origin, local, copts)
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)
 	}
 
-	ppopts.Log().Infof("successfulyl cloned %s into %s", manifest.Origin, local)
+	log.G(ctx).Infof("successfulyl cloned %s into %s", manifest.Origin, local)
 
 	return nil
 }
