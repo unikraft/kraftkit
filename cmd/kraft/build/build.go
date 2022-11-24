@@ -42,7 +42,6 @@ import (
 
 type buildOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	NoCache      bool
@@ -80,7 +79,6 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &buildOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "Configure and build Unikraft unikernels "
@@ -209,12 +207,6 @@ func buildRun(opts *buildOptions, workdir string) error {
 	var err error
 
 	ctx := context.Background()
-
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
 	pm, err := opts.PackageManager()
 	if err != nil {
 		return err
@@ -243,8 +235,8 @@ func buildRun(opts *buildOptions, workdir string) error {
 		return err
 	}
 
-	parallel := !cfgm.Config.NoParallel
-	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
+	parallel := !config.G(ctx).NoParallel
+	norender := logger.LoggerTypeFromString(config.G(ctx).Log.Type) != logger.FANCY
 	if norender {
 		parallel = false
 	}

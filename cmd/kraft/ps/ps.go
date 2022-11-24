@@ -29,7 +29,6 @@ import (
 
 type psOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	ShowAll      bool
@@ -50,7 +49,6 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &psOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "List running unikernels"
@@ -114,7 +112,6 @@ func runPs(opts *psOptions, args ...string) error {
 	var err error
 
 	ctx := context.Background()
-	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
 	}
@@ -146,7 +143,7 @@ func runPs(opts *psOptions, args ...string) error {
 
 	var items []psTable
 
-	store, err := machine.NewMachineStoreFromPath(cfgm.Config.RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return err
 	}

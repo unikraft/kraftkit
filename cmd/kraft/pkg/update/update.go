@@ -20,7 +20,6 @@ import (
 
 type UpdateOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	Manager string
@@ -29,7 +28,6 @@ type UpdateOptions struct {
 func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &UpdateOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "update")
@@ -64,11 +62,6 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 func updateRun(opts *UpdateOptions) error {
 	ctx := context.Background()
 
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
 	pm, err := opts.PackageManager()
 	if err != nil {
 		return err
@@ -82,7 +75,7 @@ func updateRun(opts *UpdateOptions) error {
 		}
 	}
 
-	parallel := !cfgm.Config.NoParallel
+	parallel := !config.G(ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
 	if norender {
 		parallel = false

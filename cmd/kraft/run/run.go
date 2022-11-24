@@ -12,6 +12,12 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/MakeNowJust/heredoc"
+	"github.com/erikgeiser/promptkit/selection"
+	"github.com/moby/moby/pkg/namesgenerator"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
@@ -25,17 +31,10 @@ import (
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/internal/logger"
-
-	"github.com/MakeNowJust/heredoc"
-	"github.com/erikgeiser/promptkit/selection"
-	"github.com/moby/moby/pkg/namesgenerator"
-	"github.com/spf13/cobra"
 )
 
 type runOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	Architecture  string
@@ -62,7 +61,6 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &runOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "Run a unikernel"
@@ -159,11 +157,7 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 func runRun(opts *runOptions, args ...string) error {
 	var err error
 
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
+	ctx := context.Background()
 	var driverType *machinedriver.DriverType
 	if opts.Hypervisor == "auto" {
 		dt, err := machinedriver.DetectHostHypervisor()
@@ -172,22 +166,22 @@ func runRun(opts *runOptions, args ...string) error {
 		}
 		driverType = &dt
 	} else if opts.Hypervisor == "config" {
-		opts.Hypervisor = cfgm.Config.DefaultPlat
+		opts.Hypervisor = config.G(ctx).DefaultPlat
 	}
 
 	if driverType == nil && len(opts.Hypervisor) > 0 && !utils.Contains(machinedriver.DriverNames(), opts.Hypervisor) {
 		return fmt.Errorf("unknown hypervisor driver: %s", opts.Hypervisor)
 	}
 
-	debug := logger.LogLevelFromString(cfgm.Config.Log.Level) >= logger.DEBUG
-	store, err := machine.NewMachineStoreFromPath(cfgm.Config.RuntimeDir)
+	debug := log.Levels()[config.G(ctx).Log.Level] >= logrus.DebugLevel
+	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
 	driver, err := machinedriver.New(*driverType,
 		machinedriveropts.WithBackground(opts.Detach),
-		machinedriveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
+		machinedriveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
 		machinedriveropts.WithMachineStore(store),
 		machinedriveropts.WithDebug(debug),
 		machinedriveropts.WithExecOptions(
@@ -270,7 +264,7 @@ func runRun(opts *runOptions, args ...string) error {
 			}
 
 		} else if len(target) == 0 && len(app.TargetNames()) > 1 {
-			if cfgm.Config.NoPrompt {
+			if config.G(ctx).NoPrompt {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
 
@@ -345,8 +339,6 @@ func runRun(opts *runOptions, args ...string) error {
 		machine.WithArguments(kernelArgs),
 	)
 
-	ctx := context.Background()
-
 	// Create the machine
 	mid, err := driver.Create(ctx, mopts...)
 	if err != nil {
@@ -362,7 +354,7 @@ func runRun(opts *runOptions, args ...string) error {
 
 	if !opts.NoMonitor {
 		// Spawn an event monitor or attach to an existing monitor
-		_, err = os.Stat(cfgm.Config.EventsPidFile)
+		_, err = os.Stat(config.G(ctx).EventsPidFile)
 		if err != nil && os.IsNotExist(err) {
 			log.G(ctx).Debugf("launching event monitor...")
 

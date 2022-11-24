@@ -17,7 +17,6 @@ import (
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/internal/logger"
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
@@ -35,7 +34,6 @@ import (
 
 type pkgOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	Architecture string
@@ -68,7 +66,6 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &pkgOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "Package and distribute Unikraft unikernels and their dependencies"
@@ -305,13 +302,8 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		return nil
 	}
 
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
-	parallel := !cfgm.Config.NoParallel
-	norender := logger.LoggerTypeFromString(cfgm.Config.Log.Type) != logger.FANCY
+	parallel := !config.G(ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
 	if norender {
 		parallel = false
 	}

@@ -13,10 +13,9 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/config"
-
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
+
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -29,7 +28,6 @@ import (
 
 type PullOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	// Command-line arguments
 	Manager      string
@@ -47,7 +45,6 @@ type PullOptions struct {
 func PullCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &PullOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "pull")

@@ -5,7 +5,6 @@
 package packmanager
 
 import (
-	"kraftkit.sh/config"
 	"kraftkit.sh/utils"
 
 	"kraftkit.sh/unikraft"
@@ -13,8 +12,6 @@ import (
 
 // PackageManagerOptions contains configuration for the Package
 type PackageManagerOptions struct {
-	ConfigManager *config.ConfigManager
-
 	// Store a list of the functions used to populate this struct, in case we wish
 	// to call them again (used now in the umbrella manager).
 	opts []PackageManagerOption
@@ -36,14 +33,6 @@ func NewPackageManagerOptions(opts ...PackageManagerOption) (*PackageManagerOpti
 	}
 
 	return options, nil
-}
-
-// WithConfig provides access to global config
-func WithConfigManager(cm *config.ConfigManager) PackageManagerOption {
-	return func(o *PackageManagerOptions) error {
-		o.ConfigManager = cm
-		return nil
-	}
 }
 
 // CatalogQuery is the request structure with associated attributes which are
