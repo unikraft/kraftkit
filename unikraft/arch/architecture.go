@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -86,7 +85,6 @@ func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	return values, nil
 }
 
-func (ac ArchitectureConfig) PrintInfo(io *iostreams.IOStreams) error {
-	fmt.Fprint(io.Out, "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo")
-	return nil
+func (ac ArchitectureConfig) PrintInfo() string {
+	return "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo"
 }

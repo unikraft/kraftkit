@@ -32,16 +32,15 @@
 package unset
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -49,7 +48,6 @@ import (
 
 type UnsetOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Workdir string
@@ -58,7 +56,6 @@ type UnsetOptions struct {
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &UnsetOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "unset")
@@ -115,6 +112,7 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
+	ctx := context.Background()
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -150,8 +148,6 @@ func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
 	}
 
 	return project.Unset(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
+		make.WithContext(ctx),
 	)
 }

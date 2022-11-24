@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
@@ -27,7 +26,6 @@ import (
 type rmOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 }
 
 func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
@@ -39,7 +37,6 @@ func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &rmOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "Remove one or more running unikernels"

@@ -5,15 +5,14 @@
 package menuconfig
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -21,13 +20,11 @@ import (
 
 type MenuConfigOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 }
 
 func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &MenuConfigOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "menuconfig")
@@ -67,6 +64,7 @@ func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
+	ctx := context.Background()
 	pm, err := mcopts.PackageManager()
 	if err != nil {
 		return err
@@ -92,10 +90,7 @@ func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
 	}
 
 	return project.Make(
-		make.WithExecOptions(
-			exec.WithStdin(mcopts.IO.In),
-			exec.WithStdout(mcopts.IO.Out),
-		),
+		make.WithContext(ctx),
 		make.WithTarget("menuconfig"),
 	)
 }

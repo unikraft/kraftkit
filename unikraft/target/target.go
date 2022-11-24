@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"kraftkit.sh/initrd"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
@@ -81,7 +80,6 @@ func (tc *TargetConfig) ArchPlatString() string {
 	return tc.Platform.Name() + "-" + tc.Architecture.Name()
 }
 
-func (tc TargetConfig) PrintInfo(io *iostreams.IOStreams) error {
-	fmt.Fprint(io.Out, "not implemented: unikraft.plat.TargetConfig.PrintInfo")
-	return nil
+func (tc TargetConfig) PrintInfo() string {
+	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }

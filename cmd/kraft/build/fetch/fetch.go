@@ -5,15 +5,14 @@
 package fetch
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -21,7 +20,6 @@ import (
 
 type FetchOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	Platform     string
@@ -31,7 +29,6 @@ type FetchOptions struct {
 func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &FetchOptions{
 		PackageManager: f.PackageManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "fetch")
@@ -71,6 +68,7 @@ func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func fetchRun(copts *FetchOptions, workdir string) error {
+	ctx := context.Background()
 	pm, err := copts.PackageManager()
 	if err != nil {
 		return err
@@ -96,8 +94,6 @@ func fetchRun(copts *FetchOptions, workdir string) error {
 	}
 
 	return project.Fetch(
-		make.WithExecOptions(
-			exec.WithStdin(copts.IO.In),
-		),
+		make.WithContext(ctx),
 	)
 }

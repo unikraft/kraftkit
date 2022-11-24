@@ -30,7 +30,6 @@ import (
 type psOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	// Command-line arguments
 	ShowAll      bool
@@ -52,7 +51,6 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &psOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd.Short = "List running unikernels"

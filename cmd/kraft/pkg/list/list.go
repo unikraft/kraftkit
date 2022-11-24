@@ -6,6 +6,7 @@ package list
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -26,7 +27,6 @@ import (
 type ListOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	IO             *iostreams.IOStreams
 
 	LimitResults int
 	AsJSON       bool
@@ -42,7 +42,6 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &ListOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		IO:             f.IOStreams,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "list")
@@ -178,7 +177,7 @@ func listRun(opts *ListOptions, workdir string) error {
 			return err
 		}
 
-		app.PrintInfo(opts.IO)
+		fmt.Fprint(iostreams.G(ctx).Out, app.PrintInfo())
 
 	} else {
 		packages, err = pm.Catalog(
@@ -191,14 +190,14 @@ func listRun(opts *ListOptions, workdir string) error {
 		}
 	}
 
-	err = opts.IO.StartPager()
+	err = iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
-	defer opts.IO.StopPager()
+	defer iostreams.G(ctx).StopPager()
 
-	cs := opts.IO.ColorScheme()
+	cs := iostreams.G(ctx).ColorScheme()
 	table := utils.NewTablePrinter(ctx)
 
 	// Header row
