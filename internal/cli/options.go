@@ -210,19 +210,7 @@ func WithDefaultPackageManager() CliOption {
 		}
 
 		copts.packageManager = func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
-			cfgm, err := copts.configManager()
-			if err != nil {
-				return nil, err
-			}
-
-			// Add access to global config and the instantiated logger to the options
-			opts = append(opts, []packmanager.PackageManagerOption{
-				packmanager.WithConfigManager(cfgm),
-			}...)
-
-			options, err := packmanager.NewPackageManagerOptions(
-				opts...,
-			)
+			options, err := packmanager.NewPackageManagerOptions()
 			if err != nil {
 				return nil, err
 			}

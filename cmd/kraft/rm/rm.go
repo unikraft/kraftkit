@@ -25,7 +25,6 @@ import (
 
 type rmOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 }
 
 func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
@@ -36,7 +35,6 @@ func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &rmOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "Remove one or more running unikernels"

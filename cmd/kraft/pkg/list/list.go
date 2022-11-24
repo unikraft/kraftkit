@@ -11,7 +11,6 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/internal/cmdfactory"
@@ -26,7 +25,6 @@ import (
 
 type ListOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 
 	LimitResults int
 	AsJSON       bool
@@ -41,7 +39,6 @@ type ListOptions struct {
 func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &ListOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd, err := cmdutil.NewCmd(f, "list")

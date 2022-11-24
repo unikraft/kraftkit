@@ -25,7 +25,6 @@ import (
 
 type stopOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	ConfigManager  func() (*config.ConfigManager, error)
 }
 
 func StopCmd(f *cmdfactory.Factory) *cobra.Command {
@@ -36,7 +35,6 @@ func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 
 	opts := &stopOptions{
 		PackageManager: f.PackageManager,
-		ConfigManager:  f.ConfigManager,
 	}
 
 	cmd.Short = "Stop one or more running unikernels"
@@ -110,13 +108,8 @@ var (
 func runStop(opts *stopOptions, args ...string) error {
 	var err error
 
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
 	ctx := context.Background()
-	store, err := machine.NewMachineStoreFromPath(cfgm.Config.RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
@@ -182,7 +175,7 @@ func runStop(opts *stopOptions, args ...string) error {
 			if _, ok := drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
 					driveropts.WithMachineStore(store),
-					driveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
+					driveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
 				)
 				if err != nil {
 					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)

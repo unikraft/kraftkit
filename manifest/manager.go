@@ -84,8 +84,7 @@ func (mm ManifestManager) ApplyOptions(pmopts ...packmanager.PackageManagerOptio
 
 // update retrieves and returns a cache of the upstream manifest registry
 func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
-	cfm := mm.opts.ConfigManager
-	if len(cfm.Config.Unikraft.Manifests) == 0 {
+	if len(config.G(ctx).Unikraft.Manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
 
@@ -94,11 +93,11 @@ func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	}
 
 	mopts := []ManifestOption{
-		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
-		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
+		WithAuthConfig(config.G(ctx).Auth),
+		WithSourcesRootDir(config.G(ctx).Paths.Sources),
 	}
 
-	for _, manipath := range cfm.Config.Unikraft.Manifests {
+	for _, manipath := range config.G(ctx).Unikraft.Manifests {
 		// If the path of the manipath is the same as the current manifest or it
 		// resides in the same directory as KraftKit's configured path for manifests
 		// then we can skip this since we don't want to update ourselves.
@@ -122,7 +121,7 @@ func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 
 func (mm ManifestManager) Update(ctx context.Context) error {
 	// Create parent directories if not present
-	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex()), 0o771); err != nil {
+	if err := os.MkdirAll(filepath.Dir(mm.LocalManifestIndex(ctx)), 0o771); err != nil {
 		return err
 	}
 
@@ -142,7 +141,7 @@ func (mm ManifestManager) Update(ctx context.Context) error {
 			filename = manifest.Type.Plural() + "/" + filename
 		}
 
-		fileloc := filepath.Join(mm.LocalManifestsDir(), filename)
+		fileloc := filepath.Join(mm.LocalManifestsDir(ctx), filename)
 		if err := os.MkdirAll(filepath.Dir(fileloc), 0o771); err != nil {
 			return err
 		}
@@ -160,14 +159,11 @@ func (mm ManifestManager) Update(ctx context.Context) error {
 		}
 	}
 
-	return localIndex.WriteToFile(mm.LocalManifestIndex())
+	return localIndex.WriteToFile(mm.LocalManifestIndex(ctx))
 }
 
 func (mm ManifestManager) AddSource(ctx context.Context, source string) error {
-	cfm := mm.opts.ConfigManager
-	cfg := cfm.Config
-
-	for _, manifest := range cfg.Unikraft.Manifests {
+	for _, manifest := range config.G(ctx).Unikraft.Manifests {
 		if source == manifest {
 			log.G(ctx).Warnf("manifest already saved: %s", source)
 			return nil
@@ -175,24 +171,22 @@ func (mm ManifestManager) AddSource(ctx context.Context, source string) error {
 	}
 
 	log.G(ctx).Infof("adding to list of manifests: %s", source)
-	cfg.Unikraft.Manifests = append(cfg.Unikraft.Manifests, source)
-	return cfm.Write(true)
+	config.G(ctx).Unikraft.Manifests = append(config.G(ctx).Unikraft.Manifests, source)
+	return config.M(ctx).Write(true)
 }
 
 func (mm ManifestManager) RemoveSource(ctx context.Context, source string) error {
-	cfm := mm.opts.ConfigManager
-	cfg := cfm.Config
 	manifests := []string{}
 
-	for _, manifest := range cfg.Unikraft.Manifests {
+	for _, manifest := range config.G(ctx).Unikraft.Manifests {
 		if source != manifest {
 			manifests = append(manifests, manifest)
 		}
 	}
 
 	log.G(ctx).Infof("removing from list of manifests: %s", source)
-	cfg.Unikraft.Manifests = manifests
-	return cfm.Write(false)
+	config.G(ctx).Unikraft.Manifests = manifests
+	return config.M(ctx).Write(false)
 }
 
 // Push the resulting package to the supported registry of the implementation.
@@ -219,8 +213,8 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 	var allManifests []*Manifest
 
 	mopts := []ManifestOption{
-		WithAuthConfig(mm.Options().ConfigManager.Config.Auth),
-		WithSourcesRootDir(mm.Options().ConfigManager.Config.Paths.Sources),
+		WithAuthConfig(config.G(ctx).Auth),
+		WithSourcesRootDir(config.G(ctx).Paths.Sources),
 	}
 
 	if len(query.Source) > 0 && query.NoCache {
@@ -237,7 +231,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		}
 
 	} else {
-		index, err = NewManifestIndexFromFile(mm.LocalManifestIndex())
+		index, err = NewManifestIndexFromFile(mm.LocalManifestIndex(ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +240,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 	if index != nil {
 		for _, manifest := range index.Manifests {
 			if len(manifest.Manifest) > 0 {
-				manifests, err := findManifestsFromSource(ctx, mm.LocalManifestsDir(), manifest.Manifest, mopts)
+				manifests, err := findManifestsFromSource(ctx, mm.LocalManifestsDir(ctx), manifest.Manifest, mopts)
 				if err != nil {
 					return nil, err
 				}
@@ -363,17 +357,17 @@ func (mm ManifestManager) IsCompatible(ctx context.Context, source string) (pack
 }
 
 // LocalManifestDir returns the user configured path to all the manifests
-func (mm ManifestManager) LocalManifestsDir() string {
-	if len(mm.opts.ConfigManager.Config.Paths.Manifests) > 0 {
-		return mm.opts.ConfigManager.Config.Paths.Manifests
+func (mm ManifestManager) LocalManifestsDir(ctx context.Context) string {
+	if len(config.G(ctx).Paths.Manifests) > 0 {
+		return config.G(ctx).Paths.Manifests
 	}
 
 	return filepath.Join(config.DataDir(), "manifests")
 }
 
 // LocalManifestIndex returns the user configured path to the manifest index
-func (mm ManifestManager) LocalManifestIndex() string {
-	return filepath.Join(mm.LocalManifestsDir(), "index.yaml")
+func (mm ManifestManager) LocalManifestIndex(ctx context.Context) string {
+	return filepath.Join(mm.LocalManifestsDir(ctx), "index.yaml")
 }
 
 func (mm ManifestManager) Format() string {
