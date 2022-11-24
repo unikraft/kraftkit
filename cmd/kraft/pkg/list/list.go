@@ -26,7 +26,6 @@ import (
 type ListOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	LimitResults int
@@ -43,7 +42,6 @@ func ListCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &ListOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -143,11 +141,6 @@ func listRun(opts *ListOptions, workdir string) error {
 		return err
 	}
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
 	query := packmanager.CatalogQuery{}
 	if opts.ShowCore {
 		query.Types = append(query.Types, unikraft.ComponentTypeCore)
@@ -171,7 +164,6 @@ func listRun(opts *ListOptions, workdir string) error {
 	if len(workdir) > 0 {
 		projectOpts, err := app.NewProjectOptions(
 			nil,
-			app.WithLogger(plog),
 			app.WithWorkingDirectory(workdir),
 			app.WithDefaultConfigPath(),
 			app.WithPackageManager(&pm),
@@ -189,7 +181,9 @@ func listRun(opts *ListOptions, workdir string) error {
 		app.PrintInfo(opts.IO)
 
 	} else {
-		packages, err = pm.Catalog(query,
+		packages, err = pm.Catalog(
+			ctx,
+			query,
 			pack.WithWorkdir(workdir),
 		)
 		if err != nil {
@@ -199,7 +193,7 @@ func listRun(opts *ListOptions, workdir string) error {
 
 	err = opts.IO.StartPager()
 	if err != nil {
-		plog.Errorf("error starting pager: %v", err)
+		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
 	defer opts.IO.StopPager()

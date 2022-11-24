@@ -18,6 +18,7 @@
 package app
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,7 +30,6 @@ import (
 	"kraftkit.sh/internal/errs"
 	"kraftkit.sh/kconfig"
 
-	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/config"
@@ -42,7 +42,6 @@ type ProjectOptions struct {
 	ConfigPaths   []string
 	Configuration kconfig.KConfigValues
 	DotConfigFile string
-	log           log.Logger
 	loadOptions   []func(*LoaderOptions)
 }
 
@@ -61,14 +60,6 @@ func NewProjectOptions(configs []string, opts ...ProjectOptionsFn) (*ProjectOpti
 		}
 	}
 	return options, nil
-}
-
-// WithLogger defines the log.Logger
-func WithLogger(l log.Logger) ProjectOptionsFn {
-	return func(o *ProjectOptions) error {
-		o.log = l
-		return nil
-	}
 }
 
 // WithName defines ProjectOptions' name
@@ -254,13 +245,11 @@ func WithDefaultConfigPath() ProjectOptionsFn {
 		for {
 			candidates := findFiles(DefaultFileNames, pwd)
 			if len(candidates) > 0 {
-				winner := candidates[0]
 				if len(candidates) > 1 {
-					o.log.Warn("Found multiple config files with supported names: %s", strings.Join(candidates, ", "))
-					o.log.Warn("Using %s", winner)
+					return fmt.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
 				}
 
-				o.ConfigPaths = append(o.ConfigPaths, winner)
+				o.ConfigPaths = append(o.ConfigPaths, candidates[0])
 
 				return nil
 			}
@@ -368,12 +357,6 @@ func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.Compone
 	popts.loadOptions = append(popts.loadOptions,
 		withComponentOptions(copts...),
 	)
-
-	if popts.log != nil {
-		popts.loadOptions = append(popts.loadOptions,
-			withLoaderLogger(popts.log),
-		)
-	}
 
 	project, err := Load(config.ConfigDetails{
 		ConfigFiles:   configs,

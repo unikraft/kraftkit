@@ -14,7 +14,6 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -22,7 +21,6 @@ import (
 
 type FetchOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -33,7 +31,6 @@ type FetchOptions struct {
 func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &FetchOptions{
 		PackageManager: f.PackageManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -79,15 +76,9 @@ func fetchRun(copts *FetchOptions, workdir string) error {
 		return err
 	}
 
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
-		app.WithLogger(plog),
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
 		app.WithPackageManager(&pm),

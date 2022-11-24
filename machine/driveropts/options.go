@@ -83,17 +83,6 @@ func WithExecOptions(eopts ...exec.ExecOption) DriverOption {
 	}
 }
 
-// WithLogger provides access to a logger to be used within the package
-func WithLogger(l log.Logger) DriverOption {
-	return func(do *DriverOptions) error {
-		do.Log = l
-		do.ExecOptions = append(do.ExecOptions,
-			exec.WithLogger(l),
-		)
-		return nil
-	}
-}
-
 // WithBackground indicates as to whether the driver should start in the
 // background
 func WithBackground(background bool) DriverOption {

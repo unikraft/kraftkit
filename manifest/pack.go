@@ -35,6 +35,7 @@ import (
 	"context"
 	"fmt"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 )
 
@@ -144,7 +145,7 @@ func (mp ManifestPackage) CanonicalName() string {
 	return string(mp.PackageOptions.Type) + "/" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
 }
 
-func (mp ManifestPackage) Pack() error {
+func (mp ManifestPackage) Pack(ctx context.Context) error {
 	return fmt.Errorf("not implemented: pack.manifest.Pack")
 }
 
@@ -152,8 +153,8 @@ func (mp ManifestPackage) Compatible(ref string) bool {
 	return false
 }
 
-func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
-	mp.Log().Infof("pulling manifest package %s", mp.CanonicalName())
+func (mp ManifestPackage) Pull(ctx context.Context, opts ...pack.PullPackageOption) error {
+	log.G(mp.ctx).Infof("pulling manifest package %s", mp.CanonicalName())
 
 	popts, err := pack.NewPullPackageOptions(opts...)
 	if err != nil {
@@ -165,7 +166,7 @@ func (mp ManifestPackage) Pull(opts ...pack.PullPackageOption) error {
 		return fmt.Errorf("package does not contain manifest context")
 	}
 
-	return mp.PullPackage(manifest, mp.PackageOptions, popts)
+	return mp.PullPackage(ctx, manifest, mp.PackageOptions, popts)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

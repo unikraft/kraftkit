@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/archive"
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
@@ -35,7 +37,7 @@ func (pp *pullProgressArchive) Write(p []byte) (n int, err error) {
 
 // pullArchive is used internally to pull a specific Manifest resource using the
 // conventional archive.
-func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	resource, cache, checksum, err := resourceCacheChecksum(manifest)
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.Pu
 		} else if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("received HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
-			ppopts.Log().Warnf("could not determine package size before pulling")
+			log.G(ctx).Warnf("could not determine package size before pulling")
 			pp.total = 0
 		} else {
 			pp.total = int(res.ContentLength)
@@ -93,10 +95,10 @@ func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.Pu
 		}
 
 		if ppopts.CalculateChecksum() {
-			ppopts.Log().Debugf("calculating checksum for manifest package...")
+			log.G(ctx).Debugf("calculating checksum for manifest package...")
 
 			if len(checksum) == 0 {
-				ppopts.Log().Warnf("manifest does not specify checksum!")
+				log.G(ctx).Warnf("manifest does not specify checksum!")
 			} else {
 
 				f, err := os.Open(tmpCache)
@@ -114,7 +116,7 @@ func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.Pu
 					return fmt.Errorf("checksum of package does not match")
 				}
 
-				ppopts.Log().Debugf("checksum OK")
+				log.G(ctx).Debugf("checksum OK")
 			}
 		}
 
@@ -145,7 +147,7 @@ func pullArchive(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.Pu
 		}
 	}
 
-	ppopts.Log().Tracef("pull complete")
+	log.G(ctx).Tracef("pull complete")
 
 	return nil
 }

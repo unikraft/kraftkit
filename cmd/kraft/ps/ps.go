@@ -30,7 +30,6 @@ import (
 type psOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -53,7 +52,6 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &psOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -117,11 +115,7 @@ func PsCmd(f *cmdfactory.Factory) *cobra.Command {
 func runPs(opts *psOptions, args ...string) error {
 	var err error
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
+	ctx := context.Background()
 	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
@@ -164,8 +158,6 @@ func runPs(opts *psOptions, args ...string) error {
 		return err
 	}
 
-	ctx := context.Background()
-
 	drivers := make(map[machinedriver.DriverType]machinedriver.Driver)
 
 	for mid, mopts := range mids {
@@ -175,13 +167,13 @@ func runPs(opts *psOptions, args ...string) error {
 
 		driverType := machinedriver.DriverTypeFromName(mopts.DriverName)
 		if driverType == machinedriver.UnknownDriver {
-			plog.Warnf("unknown driver %s for %s", driverType.String(), mid)
+			log.G(ctx).Warnf("unknown driver %s for %s", driverType.String(), mid)
 			continue
 		}
 
 		if _, ok := drivers[driverType]; !ok {
 			driver, err := machinedriver.New(driverType,
-				machinedriveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
+				machinedriveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
 				machinedriveropts.WithMachineStore(store),
 			)
 			if err != nil {

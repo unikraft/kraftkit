@@ -5,6 +5,7 @@
 package paraprogress
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -65,8 +66,7 @@ type ProgressMsg struct {
 type Process struct {
 	id          int
 	percent     float64
-	processFunc func(log.Logger, func(float64)) error
-	log         log.Logger
+	processFunc func(context.Context, func(float64)) error
 	progress    progress.Model
 	spinner     spinner.Model
 	timer       stopwatch.Model
@@ -75,13 +75,14 @@ type Process struct {
 	width       int
 	logs        []string
 	err         error
+	ctx         context.Context
 
 	Name      string
 	NameWidth int
 	Status    ProcessStatus
 }
 
-func NewProcess(name string, processFunc func(log.Logger, func(float64)) error) *Process {
+func NewProcess(name string, processFunc func(context.Context, func(float64)) error) *Process {
 	d := &Process{
 		id:          nextID(),
 		Name:        name,
@@ -117,7 +118,17 @@ func (p *Process) Start() tea.Cmd {
 	}
 
 	cmds = append(cmds, func() tea.Msg {
-		err := p.processFunc(p.log, p.onProgress)
+		p := p // golang closures
+
+		// Set the output to the process Writer such that we can hijack logs and
+		// print them in a per-process isolated view.
+		entry := log.G(p.ctx).Dup()
+		logger := *entry.Logger //nolint:govet
+		logger.SetOutput(p)
+		entry.Logger = &logger
+		p.ctx = log.WithLogger(p.ctx, entry)
+
+		err := p.processFunc(p.ctx, p.onProgress)
 		status := StatusSuccess
 		if err != nil {
 			status = StatusFailed

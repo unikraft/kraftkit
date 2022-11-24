@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,7 +16,6 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
-	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
@@ -55,10 +55,6 @@ type Manifest struct {
 	// Manifest to access information a bout itself aswell as downloading a given
 	// resource
 	auths map[string]config.AuthConfig
-
-	// log is an internal property used to perform logging within the context of
-	// the manifest
-	log log.Logger
 }
 
 type ManifestProvider struct {
@@ -70,8 +66,8 @@ type ManifestProvider struct {
 // file on disk and a remote URL.  If populating a Manifest struct is possible
 // given the path, then this provider is able to return list of exactly 1
 // manifest.
-func NewManifestProvider(path string, mopts ...ManifestOption) (Provider, error) {
-	manifest, err := NewManifestFromFile(path, mopts...)
+func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+	manifest, err := NewManifestFromFile(ctx, path, mopts...)
 	if err == nil {
 		return ManifestProvider{
 			path:     path,
@@ -79,7 +75,7 @@ func NewManifestProvider(path string, mopts ...ManifestOption) (Provider, error)
 		}, nil
 	}
 
-	manifest, err = NewManifestFromURL(path, mopts...)
+	manifest, err = NewManifestFromURL(ctx, path, mopts...)
 	if err == nil {
 		return ManifestProvider{
 			path:     path,
@@ -94,8 +90,8 @@ func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
 }
 
-func (mp ManifestProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	return pullArchive(manifest, popts, ppopts)
+func (mp ManifestProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+	return pullArchive(ctx, manifest, popts, ppopts)
 }
 
 func (mp ManifestProvider) String() string {
@@ -103,7 +99,7 @@ func (mp ManifestProvider) String() string {
 }
 
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
-func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error) {
+func NewManifestFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOption) (*Manifest, error) {
 	// TODO: This deserialization mechanism is used to encode the provider into the
 	// resulting manifest file and feels a bit of a hack since we are running
 	// `yaml.Marshal` twice.  The library exposes `yaml.Marshler` and
@@ -144,7 +140,7 @@ func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error
 	}
 
 	if providerName != "" {
-		manifest.Provider, err = NewProvidersFromString(providerName, manifest.Origin, mopts...)
+		manifest.Provider, err = NewProvidersFromString(ctx, providerName, manifest.Origin, mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +156,7 @@ func NewManifestFromBytes(raw []byte, mopts ...ManifestOption) (*Manifest, error
 }
 
 // NewManifestFromFile reads in a manifest file from a given path
-func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error) {
+func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOption) (*Manifest, error) {
 	f, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -179,7 +175,7 @@ func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error
 		return nil, err
 	}
 
-	manifest, err := NewManifestFromBytes(contents, mopts...)
+	manifest, err := NewManifestFromBytes(ctx, contents, mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +187,7 @@ func NewManifestFromFile(path string, mopts ...ManifestOption) (*Manifest, error
 
 // NewManifestFromURL retrieves a provided path as a Manifest from a remote
 // location over HTTP
-func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error) {
+func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOption) (*Manifest, error) {
 	_, err := url.Parse(path)
 	if err != nil {
 		return nil, err
@@ -248,7 +244,7 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 		contents = providerRequestCache
 	}
 
-	manifest, err := NewManifestFromBytes(contents, mopts...)
+	manifest, err := NewManifestFromBytes(ctx, contents, mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -262,15 +258,15 @@ func NewManifestFromURL(path string, mopts ...ManifestOption) (*Manifest, error)
 // and attempts to instantiate a Provider which matches the given source.  If
 // the source is recognised by a provider, it is traversed to return all the
 // known Manifests.
-func FindManifestsFromSource(source string, mopts ...ManifestOption) ([]*Manifest, error) {
-	return findManifestsFromSource("", source, mopts)
+func FindManifestsFromSource(ctx context.Context, source string, mopts ...ManifestOption) ([]*Manifest, error) {
+	return findManifestsFromSource(ctx, "", source, mopts)
 }
 
 // findManifestsFromSource is an internal method which recursively traverses a
 // path to a manifest and if symbolic link is presented within the read
 // manifest, it is retrieved via this method.  This is only recursive if the
 // option to be followed is set.
-func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) ([]*Manifest, error) {
+func findManifestsFromSource(ctx context.Context, lastSource, source string, mopts []ManifestOption) ([]*Manifest, error) {
 	var manifests []*Manifest
 
 	// Follow relative paths by using the lastSource
@@ -293,7 +289,7 @@ func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) 
 		}
 	}
 
-	provider, err := NewProvider(source, mopts...)
+	provider, err := NewProvider(ctx, source, mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +305,7 @@ func findManifestsFromSource(lastSource, source string, mopts []ManifestOption) 
 
 		if len(manifest.Manifest) > 0 {
 			var next []*Manifest
-			next, err = findManifestsFromSource(source, manifest.Manifest, mopts)
+			next, err = findManifestsFromSource(ctx, source, manifest.Manifest, mopts)
 			if err != nil {
 				return nil, err
 			}

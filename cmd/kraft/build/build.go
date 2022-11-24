@@ -5,6 +5,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -26,7 +27,6 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/component"
 
 	// Subcommands
 	"kraftkit.sh/cmd/kraft/build/clean"
@@ -43,7 +43,6 @@ import (
 type buildOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 
 	// Command-line arguments
@@ -83,7 +82,6 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &buildOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -212,6 +210,8 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 func buildRun(opts *buildOptions, workdir string) error {
 	var err error
 
+	ctx := context.Background()
+
 	cfgm, err := opts.ConfigManager()
 	if err != nil {
 		return err
@@ -222,15 +222,9 @@ func buildRun(opts *buildOptions, workdir string) error {
 		return err
 	}
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
-		app.WithLogger(plog),
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
 		app.WithPackageManager(&pm),
@@ -266,14 +260,8 @@ func buildRun(opts *buildOptions, workdir string) error {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
-			func(l log.Logger) error {
-				// Apply the incoming logger which is tailored to display as a
-				// sub-terminal within the fancy processtree.
-				pm.ApplyOptions(
-					packmanager.WithLogger(l),
-				)
-
-				packages, err = pm.Catalog(packmanager.CatalogQuery{
+			func(ctx context.Context) error {
+				packages, err = pm.Catalog(ctx, packmanager.CatalogQuery{
 					Name:    project.Template().Name(),
 					Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 					Version: project.Template().Version(),
@@ -294,10 +282,10 @@ func buildRun(opts *buildOptions, workdir string) error {
 		)
 
 		treemodel, err := processtree.NewProcessTree(
+			ctx,
 			[]processtree.ProcessTreeOption{
 				processtree.WithFailFast(true),
 				processtree.WithRenderer(false),
-				processtree.WithLogger(plog),
 			},
 			[]*processtree.ProcessTreeItem{search}...,
 		)
@@ -311,17 +299,11 @@ func buildRun(opts *buildOptions, workdir string) error {
 
 		proc := paraprogress.NewProcess(
 			fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
-			func(l log.Logger, w func(progress float64)) error {
-				// Apply the incoming logger which is tailored to display as a
-				// sub-terminal within the fancy processtree.
-				packages[0].ApplyOptions(
-					pack.WithLogger(l),
-				)
-
+			func(ctx context.Context, w func(progress float64)) error {
 				return packages[0].Pull(
+					ctx,
 					pack.WithPullProgressFunc(w),
 					pack.WithPullWorkdir(workdir),
-					pack.WithPullLogger(l),
 					// pack.WithPullChecksum(!opts.NoChecksum),
 					// pack.WithPullCache(!opts.NoCache),
 				)
@@ -331,10 +313,10 @@ func buildRun(opts *buildOptions, workdir string) error {
 		processes = append(processes, proc)
 
 		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
 			processes,
 			paraprogress.IsParallel(parallel),
 			paraprogress.WithRenderer(norender),
-			paraprogress.WithLogger(plog),
 			paraprogress.WithFailFast(true),
 		)
 		if err != nil {
@@ -354,7 +336,6 @@ func buildRun(opts *buildOptions, workdir string) error {
 
 		templateOps, err := app.NewProjectOptions(
 			nil,
-			app.WithLogger(plog),
 			app.WithWorkingDirectory(templateWorkdir),
 			app.WithDefaultConfigPath(),
 			app.WithPackageManager(&pm),
@@ -383,14 +364,8 @@ func buildRun(opts *buildOptions, workdir string) error {
 
 		searches = append(searches, processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Component().Name, component.Component().Version), "",
-			func(l log.Logger) error {
-				// Apply the incoming logger which is tailored to display as a
-				// sub-terminal within the fancy processtree.
-				pm.ApplyOptions(
-					packmanager.WithLogger(l),
-				)
-
-				p, err := pm.Catalog(packmanager.CatalogQuery{
+			func(ctx context.Context) error {
+				p, err := pm.Catalog(ctx, packmanager.CatalogQuery{
 					Name: component.Name(),
 					Types: []unikraft.ComponentType{
 						unikraft.ComponentTypeCore,
@@ -419,13 +394,13 @@ func buildRun(opts *buildOptions, workdir string) error {
 
 	if len(searches) > 0 {
 		treemodel, err := processtree.NewProcessTree(
+			ctx,
 			[]processtree.ProcessTreeOption{
 				// processtree.WithVerb("Updating"),
 				processtree.IsParallel(parallel),
 				// processtree.WithRenderer(norender),
 				processtree.WithFailFast(true),
 				processtree.WithRenderer(false),
-				processtree.WithLogger(plog),
 			},
 			searches...,
 		)
@@ -446,17 +421,11 @@ func buildRun(opts *buildOptions, workdir string) error {
 			p := p // loop closure
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
-				func(l log.Logger, w func(progress float64)) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					p.ApplyOptions(
-						pack.WithLogger(l),
-					)
-
+				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
+						ctx,
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
-						pack.WithPullLogger(l),
 						// pack.WithPullChecksum(!opts.NoChecksum),
 						// pack.WithPullCache(!opts.NoCache),
 					)
@@ -465,10 +434,10 @@ func buildRun(opts *buildOptions, workdir string) error {
 		}
 
 		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
 			processes,
 			paraprogress.IsParallel(parallel),
 			paraprogress.WithRenderer(norender),
-			paraprogress.WithLogger(plog),
 			paraprogress.WithFailFast(true),
 		)
 		if err != nil {
@@ -524,7 +493,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 	}
 
 	if len(targets) == 0 {
-		plog.Info("no targets to build")
+		log.G(ctx).Info("no targets to build")
 		return nil
 	}
 
@@ -541,23 +510,16 @@ func buildRun(opts *buildOptions, workdir string) error {
 		if !project.IsConfigured() && !opts.NoConfigure {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
-				func(l log.Logger, w func(progress float64)) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					targ.ApplyOptions(
-						component.WithLogger(l),
-					)
-
+				func(ctx context.Context, w func(progress float64)) error {
 					return project.DefConfig(
 						&targ, // Target-specific options
 						nil,   // No extra configuration options
-						make.WithLogger(l),
 						// make.WithProgressFunc(w),
 						make.WithSilent(true),
 						make.WithExecOptions(
 							exec.WithStdin(opts.IO.In),
-							exec.WithStdout(l.Output()),
-							exec.WithStderr(l.Output()),
+							exec.WithStdout(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).Writer()),
 						),
 					)
 				},
@@ -567,37 +529,27 @@ func buildRun(opts *buildOptions, workdir string) error {
 		if !opts.NoPrepare {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("preparing %s (%s)", targ.Name(), targ.ArchPlatString()),
-				func(l log.Logger, w func(progress float64)) error {
-					// Apply the incoming logger which is tailored to display as a
-					// sub-terminal within the fancy processtree.
-					targ.ApplyOptions(
-						component.WithLogger(l),
-					)
-
+				func(ctx context.Context, w func(progress float64)) error {
 					return project.Prepare(append(mopts,
-						make.WithLogger(l),
-					)...)
+						make.WithExecOptions(
+							exec.WithStdout(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).Writer()),
+						))...,
+					)
 				},
 			))
 		}
 
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
-			func(l log.Logger, w func(progress float64)) error {
-				// Apply the incoming logger which is tailored to display as a
-				// sub-terminal within the fancy processtree.
-				targ.ApplyOptions(
-					component.WithLogger(l),
-				)
-
+			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
-					app.WithBuildLogger(l),
 					app.WithBuildTarget(targ),
 					app.WithBuildProgressFunc(w),
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(
-							exec.WithStdout(l.Output()),
-							exec.WithStderr(l.Output()),
+							exec.WithStdout(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).Writer()),
 						),
 					)...),
 					app.WithBuildNoSyncConfig(opts.NoSyncConfig),
@@ -608,6 +560,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 	}
 
 	paramodel, err := paraprogress.NewParaProgress(
+		ctx,
 		processes,
 		// Disable parallelization as:
 		//  - The first process may be pulling the container image, which is
@@ -616,7 +569,6 @@ func buildRun(opts *buildOptions, workdir string) error {
 		//    compilations (if the architecture does not change).
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(norender),
-		paraprogress.WithLogger(plog),
 		paraprogress.WithFailFast(true),
 	)
 	if err != nil {

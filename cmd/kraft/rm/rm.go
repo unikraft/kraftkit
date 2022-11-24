@@ -27,7 +27,6 @@ import (
 type rmOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
 	ConfigManager  func() (*config.ConfigManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 }
 
@@ -40,7 +39,6 @@ func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &rmOptions{
 		PackageManager: f.PackageManager,
 		ConfigManager:  f.ConfigManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -116,18 +114,8 @@ var (
 func runRemove(opts *rmOptions, args ...string) error {
 	var err error
 
-	plog, err := opts.Logger()
-	if err != nil {
-		return err
-	}
-
-	cfgm, err := opts.ConfigManager()
-	if err != nil {
-		return err
-	}
-
 	ctx := context.Background()
-	store, err := machine.NewMachineStoreFromPath(cfgm.Config.RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
@@ -165,11 +153,11 @@ func runRemove(opts *rmOptions, args ...string) error {
 		go func() {
 			observations.Add(mid)
 
-			plog.Infof("removing %s...", mid.ShortString())
+			log.G(ctx).Infof("removing %s...", mid.ShortString())
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-				plog.Errorf("could not look up machine config: %v", err)
+				log.G(ctx).Errorf("could not look up machine config: %v", err)
 				observations.Done(mid)
 				return
 			}
@@ -178,12 +166,11 @@ func runRemove(opts *rmOptions, args ...string) error {
 
 			if _, ok := drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
-					driveropts.WithLogger(plog),
 					driveropts.WithMachineStore(store),
-					driveropts.WithRuntimeDir(cfgm.Config.RuntimeDir),
+					driveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
 				)
 				if err != nil {
-					plog.Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
+					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
 					observations.Done(mid)
 					return
 				}
@@ -194,9 +181,9 @@ func runRemove(opts *rmOptions, args ...string) error {
 			driver := drivers[driverType]
 
 			if err := driver.Destroy(ctx, mid); err != nil {
-				plog.Errorf("could not remove machine %s: %v", mid.ShortString(), err)
+				log.G(ctx).Errorf("could not remove machine %s: %v", mid.ShortString(), err)
 			} else {
-				plog.Infof("removed %s", mid.ShortString())
+				log.G(ctx).Infof("removed %s", mid.ShortString())
 			}
 
 			observations.Done(mid)

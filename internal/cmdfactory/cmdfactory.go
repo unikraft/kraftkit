@@ -32,7 +32,6 @@
 package cmdfactory
 
 import (
-	"context"
 	"net/http"
 	"os"
 
@@ -185,19 +184,12 @@ func packageManagerFunc(f *Factory) func(opts ...packmanager.PackageManagerOptio
 			return nil, err
 		}
 
-		log, err := f.Logger()
-		if err != nil {
-			return nil, err
-		}
-
 		// Add access to global config and the instantiated logger to the options
 		opts = append(opts, []packmanager.PackageManagerOption{
 			packmanager.WithConfigManager(cfgm),
-			packmanager.WithLogger(log),
 		}...)
 
 		options, err := packmanager.NewPackageManagerOptions(
-			context.TODO(),
 			opts...,
 		)
 		if err != nil {

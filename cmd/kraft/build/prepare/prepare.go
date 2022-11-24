@@ -14,7 +14,6 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -22,14 +21,12 @@ import (
 
 type PrepareOptions struct {
 	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-	Logger         func() (log.Logger, error)
 	IO             *iostreams.IOStreams
 }
 
 func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
 	opts := &PrepareOptions{
 		PackageManager: f.PackageManager,
-		Logger:         f.Logger,
 		IO:             f.IOStreams,
 	}
 
@@ -75,15 +72,9 @@ func prepareRun(copts *PrepareOptions, workdir string) error {
 		return err
 	}
 
-	plog, err := copts.Logger()
-	if err != nil {
-		return err
-	}
-
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
-		app.WithLogger(plog),
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
 		app.WithPackageManager(&pm),

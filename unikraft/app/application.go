@@ -137,7 +137,8 @@ func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
 	return ac.configuration, nil
 }
 
-// MergeTemplate merges the application's configuration with the given configuration
+// MergeTemplate merges the application's configuration with the given
+// configuration
 func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
 	ac.ComponentConfig = app.ComponentConfig
 
@@ -296,9 +297,6 @@ func (a *ApplicationConfig) Make(mopts ...make.MakeOption) error {
 // SyncConfig updates the configuration
 func (a *ApplicationConfig) SyncConfig(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("syncconfig"),
 	)...)
 }
@@ -340,9 +338,6 @@ func (ac *ApplicationConfig) DefConfig(tc *target.TargetConfig, extra *kconfig.K
 	tmpfile.Sync()
 
 	return ac.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(ac.Log().Output()),
-		),
 		make.WithTarget("defconfig"),
 		make.WithVar("UK_DEFCONFIG", tmpfile.Name()),
 	)...)
@@ -351,9 +346,6 @@ func (ac *ApplicationConfig) DefConfig(tc *target.TargetConfig, extra *kconfig.K
 // Configure the application
 func (a *ApplicationConfig) Configure(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("configure"),
 	)...)
 }
@@ -361,9 +353,6 @@ func (a *ApplicationConfig) Configure(mopts ...make.MakeOption) error {
 // Prepare the application
 func (a *ApplicationConfig) Prepare(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("prepare"),
 	)...)
 }
@@ -371,9 +360,6 @@ func (a *ApplicationConfig) Prepare(mopts ...make.MakeOption) error {
 // Clean the application
 func (a *ApplicationConfig) Clean(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("clean"),
 	)...)
 }
@@ -381,9 +367,6 @@ func (a *ApplicationConfig) Clean(mopts ...make.MakeOption) error {
 // Delete the build folder of the application
 func (a *ApplicationConfig) Properclean(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("properclean"),
 	)...)
 }
@@ -391,9 +374,6 @@ func (a *ApplicationConfig) Properclean(mopts ...make.MakeOption) error {
 // Fetch component sources for the applications
 func (a *ApplicationConfig) Fetch(mopts ...make.MakeOption) error {
 	return a.Make(append(mopts,
-		make.WithExecOptions(
-			exec.WithStdout(a.Log().Output()),
-		),
 		make.WithTarget("fetch"),
 	)...)
 }
@@ -466,9 +446,9 @@ func (a *ApplicationConfig) Build(opts ...BuildOption) error {
 	}
 
 	eopts := []exec.ExecOption{}
-	if bopts.log != nil {
-		eopts = append(eopts, exec.WithStdout(bopts.log.Output()))
-	}
+	// if bopts.log != nil {
+	// 	eopts = append(eopts, exec.WithStdout(bopts.log.Output()))
+	// }
 
 	bopts.mopts = append(bopts.mopts, []make.MakeOption{
 		make.WithProgressFunc(bopts.onProgress),

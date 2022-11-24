@@ -21,26 +21,26 @@ type PackageManager interface {
 	ApplyOptions(...PackageManagerOption) error
 
 	// Update retrieves and stores locally a cache of the upstream registry.
-	Update() error
+	Update(context.Context) error
 
 	// Push a package to the supported registry of the implementation.
-	Push(string) error
+	Push(context.Context, string) error
 
 	// Pull package(s) from the supported registry of the implementation.
-	Pull(string, *pack.PullPackageOptions) ([]pack.Package, error)
+	Pull(context.Context, string, *pack.PullPackageOptions) ([]pack.Package, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(CatalogQuery, ...pack.PackageOption) ([]pack.Package, error)
+	Catalog(context.Context, CatalogQuery, ...pack.PackageOption) ([]pack.Package, error)
 
 	// Add a source to the package manager
-	AddSource(string) error
+	AddSource(context.Context, string) error
 
 	// Remove a source from the package manager
-	RemoveSource(string) error
+	RemoveSource(context.Context, string) error
 
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
-	IsCompatible(string) (PackageManager, error)
+	IsCompatible(context.Context, string) (PackageManager, error)
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.

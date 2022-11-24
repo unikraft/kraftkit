@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	gitconfig "github.com/go-git/go-git/v5/config"
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
@@ -23,10 +25,11 @@ type GitProvider struct {
 	refs   []*gitplumbing.Reference
 	mopts  []ManifestOption
 	branch string
+	ctx    context.Context
 }
 
 // NewGitProvider attempts to parse a provided path as a Git repository
-func NewGitProvider(path string, mopts ...ManifestOption) (Provider, error) {
+func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	var branch string
 	if strings.Contains(path, "@") {
 		split := strings.Split(path, "@")
@@ -57,6 +60,7 @@ func NewGitProvider(path string, mopts ...ManifestOption) (Provider, error) {
 		refs:   refs,
 		mopts:  mopts,
 		branch: branch,
+		ctx:    ctx,
 	}, nil
 }
 
@@ -172,7 +176,7 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 		return nil, err
 	}
 
-	manifest.log.Infof("probing %s", gp.repo)
+	log.G(gp.ctx).Infof("probing %s", gp.repo)
 
 	manifest.Channels = append(manifest.Channels, channels...)
 
@@ -200,12 +204,12 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (gp GitProvider) PullPackage(manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (gp GitProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
 	if useGit {
-		return pullGit(manifest, popts, ppopts)
+		return pullGit(ctx, manifest, popts, ppopts)
 	}
 
-	return pullArchive(manifest, popts, ppopts)
+	return pullArchive(ctx, manifest, popts, ppopts)
 }
 
 func (gp GitProvider) String() string {

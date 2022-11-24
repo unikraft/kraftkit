@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 
 	"kraftkit.sh/pack"
@@ -16,7 +17,7 @@ type Provider interface {
 	Manifests() ([]*Manifest, error)
 
 	// Pull from the provider
-	PullPackage(*Manifest, *pack.PackageOptions, *pack.PullPackageOptions) error
+	PullPackage(context.Context, *Manifest, *pack.PackageOptions, *pack.PullPackageOptions) error
 
 	// String returns the name of the provider
 	fmt.Stringer
@@ -29,29 +30,29 @@ var providerRequestCache []byte
 // provider which does not return an error is indicator that it is supported and
 // thus the return of NewProvider a compatible interface Provider able to gather
 // information about the manifest.
-func NewProvider(path string, mopts ...ManifestOption) (Provider, error) {
+func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	providerRequestCache = nil
-	provider, err := NewManifestIndexProvider(path, mopts...)
+	provider, err := NewManifestIndexProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
 	}
 
-	provider, err = NewManifestProvider(path, mopts...)
+	provider, err = NewManifestProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
 	}
 
-	provider, err = NewGitHubProvider(path, mopts...)
+	provider, err = NewGitHubProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
 	}
 
-	provider, err = NewGitProvider(path, mopts...)
+	provider, err = NewGitProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
 	}
 
-	provider, err = NewDirectoryProvider(path, mopts...)
+	provider, err = NewDirectoryProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
 	}
@@ -61,18 +62,18 @@ func NewProvider(path string, mopts ...ManifestOption) (Provider, error) {
 
 // NewProvidersFromString returns a provider based on a giving string which
 // identifies the provider
-func NewProvidersFromString(provider, path string, mopts ...ManifestOption) (Provider, error) {
+func NewProvidersFromString(ctx context.Context, provider, path string, mopts ...ManifestOption) (Provider, error) {
 	switch provider {
 	case "index":
-		return NewManifestIndexProvider(path, mopts...)
+		return NewManifestIndexProvider(ctx, path, mopts...)
 	case "manifest":
-		return NewManifestProvider(path, mopts...)
+		return NewManifestProvider(ctx, path, mopts...)
 	case "github":
-		return NewGitHubProvider(path, mopts...)
+		return NewGitHubProvider(ctx, path, mopts...)
 	case "git":
-		return NewGitProvider(path, mopts...)
+		return NewGitProvider(ctx, path, mopts...)
 	case "directory":
-		return NewDirectoryProvider(path, mopts...)
+		return NewDirectoryProvider(ctx, path, mopts...)
 	}
 
 	return nil, fmt.Errorf("could not determine provider for: %s", path)

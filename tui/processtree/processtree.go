@@ -5,6 +5,7 @@
 package processtree
 
 import (
+	"context"
 	"os"
 	"strings"
 	"time"
@@ -18,7 +19,7 @@ import (
 )
 
 type (
-	SpinnerProcess func(l log.Logger) error
+	SpinnerProcess func(ctx context.Context) error
 	processExitMsg *ProcessTreeItem
 )
 
@@ -51,7 +52,7 @@ type ProcessTreeItem struct {
 	logChan   chan *ProcessTreeItem
 	process   SpinnerProcess
 	timer     stopwatch.Model
-	log       log.Logger
+	ctx       context.Context
 }
 
 type ProcessTree struct {
@@ -59,7 +60,7 @@ type ProcessTree struct {
 	channel  chan *ProcessTreeItem
 	tree     []*ProcessTreeItem
 	quitting bool
-	log      log.Logger
+	ctx      context.Context
 	timer    stopwatch.Model
 	width    int
 	rightPad int
@@ -72,22 +73,24 @@ type ProcessTree struct {
 	failFast bool
 }
 
-func NewProcessTree(opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
+func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
+	pt := &ProcessTree{
+		tree:     tree,
+		ctx:      ctx,
+		timer:    stopwatch.NewWithInterval(time.Millisecond * 100),
+		channel:  make(chan *ProcessTreeItem),
+		errChan:  make(chan error),
+		finished: 0,
+	}
+
 	total := 0
 
-	TraverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
+	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
 		total += 1
 		return nil
 	})
 
-	pt := &ProcessTree{
-		tree:     tree,
-		timer:    stopwatch.NewWithInterval(time.Millisecond * 100),
-		channel:  make(chan *ProcessTreeItem),
-		errChan:  make(chan error),
-		total:    total,
-		finished: 0,
-	}
+	pt.total = total
 
 	for _, opt := range opts {
 		if err := opt(pt); err != nil {
@@ -160,13 +163,14 @@ func (pt *ProcessTree) Init() tea.Cmd {
 	}
 
 	// Initialize all timers
-	TraverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
-		pti.log = pt.log
+	pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
+		pti.ctx = pt.ctx
 
 		// Clone the logger for this process if we are in fancy render mode
 		if !pt.norender {
-			pti.log = pt.log.Clone()
-			pti.log.SetOutput(pti)
+			logger := log.G(pti.ctx)
+			logger.Logger.Out = pti
+			pti.ctx = log.WithLogger(pt.ctx, logger)
 		}
 
 		return nil
@@ -227,12 +231,12 @@ func (pt ProcessTree) getNextReadyChildren(tree []*ProcessTreeItem) []*ProcessTr
 	return items
 }
 
-func TraverseTreeAndCall(items []*ProcessTreeItem, callback func(*ProcessTreeItem) error) error {
-	for _, item := range items {
+func (pt *ProcessTree) traverseTreeAndCall(items []*ProcessTreeItem, callback func(*ProcessTreeItem) error) error {
+	for i, item := range items {
 		item := item
 
 		if len(item.children) > 0 {
-			if err := TraverseTreeAndCall(item.children, callback); err != nil {
+			if err := pt.traverseTreeAndCall(item.children, callback); err != nil {
 				return err
 			}
 		}
@@ -241,6 +245,8 @@ func TraverseTreeAndCall(items []*ProcessTreeItem, callback func(*ProcessTreeIte
 		if err := callback(item); err != nil {
 			return err
 		}
+
+		items[i] = item
 	}
 
 	return nil
@@ -248,11 +254,27 @@ func TraverseTreeAndCall(items []*ProcessTreeItem, callback func(*ProcessTreeIte
 
 func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 	return func() tea.Msg {
-		// Start the process
+		item := item // golang closures
+
+		// Clone the context to be used individually by each process
+		ctx := pt.ctx
+
+		// Set the output to the process Writer such that we can hijack logs and
+		// print them in a per-process isolated view.
+		entry := log.G(ctx).Dup()
+		logger := *entry.Logger //nolint:govet
+		logger.SetOutput(item)
+		entry.Logger = &logger
+		ctx = log.WithLogger(ctx, entry)
+
+		// Set the new context for the individual process.
+		item.ctx = ctx
+
+		// Set the process to running
 		item.status = StatusRunning
 
-		if err := item.process(item.log); err != nil {
-			item.log.Error(err)
+		if err := item.process(item.ctx); err != nil {
+			log.G(item.ctx).Error(err)
 			item.status = StatusFailed
 			pt.err = err
 			if pt.failFast {

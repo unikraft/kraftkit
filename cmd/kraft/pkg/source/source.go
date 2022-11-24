@@ -5,6 +5,8 @@
 package source
 
 import (
+	"context"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -55,17 +57,19 @@ func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
 func sourceRun(opts *SourceOptions, source string) error {
 	var err error
 
+	ctx := context.Background()
+
 	pm, err := opts.PackageManager()
 	if err != nil {
 		return err
 	}
 
-	pm, err = pm.IsCompatible(source)
+	pm, err = pm.IsCompatible(ctx, source)
 	if err != nil {
 		return err
 	}
 
-	if err = pm.AddSource(source); err != nil {
+	if err = pm.AddSource(ctx, source); err != nil {
 		return err
 	}
 
