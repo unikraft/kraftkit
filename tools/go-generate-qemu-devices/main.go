@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -62,10 +63,13 @@ func main() {
 	flag.Parse()
 	defer glog.Flush()
 
+	ctx := context.Background()
+
 	// Invoke `qemu-system-* -device help` which will return all the possible
 	// devices support by QEMU.
 	var devicesRaw bytes.Buffer
 	execFindDevices, err := exec.NewProcess(
+		ctx,
 		*qemuBinary,
 		[]string{"-device", "help"},
 		exec.WithStdout(bufio.NewWriter(&devicesRaw)),
@@ -116,6 +120,7 @@ func main() {
 			// Perform the invocation
 			var optionsRaw bytes.Buffer
 			execFindOptions, err := exec.NewProcess(
+				ctx,
 				*qemuBinary,
 				[]string{"-device", fmt.Sprintf("%s,help", device.Name)},
 				exec.WithStdout(bufio.NewWriter(&optionsRaw)),
