@@ -12,19 +12,13 @@ import (
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
-
 	"kraftkit.sh/packmanager"
 )
 
-type SourceOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type SourceOptions struct{}
 
 func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SourceOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &SourceOptions{}
 	cmd, err := cmdutil.NewCmd(f, "source")
 	if err != nil {
 		panic("could not initialize 'kraft pkg source' command")
@@ -58,11 +52,7 @@ func sourceRun(opts *SourceOptions, source string) error {
 	var err error
 
 	ctx := context.Background()
-
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
+	pm := packmanager.G(ctx)
 
 	pm, err = pm.IsCompatible(ctx, source)
 	if err != nil {

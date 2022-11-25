@@ -33,9 +33,6 @@ import (
 )
 
 type pkgOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Architecture string
 	DotConfig    string
 	Force        bool
@@ -64,10 +61,7 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft pkg' command")
 	}
 
-	opts := &pkgOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &pkgOptions{}
 	cmd.Short = "Package and distribute Unikraft unikernels and their dependencies"
 	cmd.Use = "pkg [FLAGS] [SUBCOMMAND|DIR]"
 	cmd.Args = cmdutil.MaxDirArgs(1)
@@ -218,24 +212,11 @@ func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
 func pkgRun(opts *pkgOptions, workdir string) error {
 	var err error
 
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
-	// Force a particular package manager
-	if len(opts.Format) > 0 && opts.Format != "auto" {
-		pm, err = pm.From(opts.Format)
-		if err != nil {
-			return err
-		}
-	}
-
+	ctx := context.Background()
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(true),
 	)
@@ -249,7 +230,6 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 		return err
 	}
 
-	ctx := context.Background()
 	var packages []pack.Package
 
 	// Generate a package for every matching requested target
@@ -285,7 +265,7 @@ func pkgRun(opts *pkgOptions, workdir string) error {
 				targ.Architecture.Name() == opts.Architecture &&
 				targ.Platform.Name() == opts.Platform:
 
-			packs, err := initAppPackage(ctx, project, targ, projectOpts, pm, opts)
+			packs, err := initAppPackage(ctx, project, targ, projectOpts, opts)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -342,7 +322,6 @@ func initAppPackage(ctx context.Context,
 	project *app.ApplicationConfig,
 	targ target.TargetConfig,
 	projectOpts *app.ProjectOptions,
-	pm packmanager.PackageManager,
 	opts *pkgOptions,
 ) ([]pack.Package, error) {
 	var err error
@@ -416,6 +395,8 @@ func initAppPackage(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare package for target: %s: %v", targ.Name(), err)
 	}
+
+	pm := packmanager.G(ctx)
 
 	// Switch the package manager the desired format for this target
 	if len(targ.Format) > 0 && targ.Format != "auto" {

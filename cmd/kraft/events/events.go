@@ -21,7 +21,6 @@ import (
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
-	"kraftkit.sh/packmanager"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
@@ -31,9 +30,6 @@ import (
 )
 
 type eventsOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	QuitTogether bool
 	Granularity  time.Duration
 }
@@ -44,10 +40,7 @@ func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft events' command")
 	}
 
-	opts := &eventsOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &eventsOptions{}
 	cmd.Short = "Follow the events of a unikernel"
 	cmd.Hidden = true
 	cmd.Use = "events [FLAGS] [MACHINE ID]"

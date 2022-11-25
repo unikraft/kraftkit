@@ -42,22 +42,15 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
 type UnsetOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Workdir string
 }
 
 func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UnsetOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &UnsetOptions{}
 	cmd, err := cmdutil.NewCmd(f, "unset")
 	if err != nil {
 		panic("could not initialize 'kraft build unset' command")
@@ -113,10 +106,6 @@ func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
 	ctx := context.Background()
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Check if dotconfig exists in workdir
 	dotconfig := fmt.Sprintf("%s/.config", workdir)
@@ -132,7 +121,6 @@ func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(true),
 		app.WithConfig(confOpts),

@@ -14,7 +14,6 @@ import (
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
-	"kraftkit.sh/packmanager"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
@@ -23,9 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type rmOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type rmOptions struct{}
 
 func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "rm")
@@ -33,10 +30,7 @@ func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft rm' command")
 	}
 
-	opts := &rmOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &rmOptions{}
 	cmd.Short = "Remove one or more running unikernels"
 	cmd.Hidden = true
 	cmd.Use = "rm [FLAGS] MACHINE [MACHINE [...]]"

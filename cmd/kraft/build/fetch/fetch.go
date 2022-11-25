@@ -14,23 +14,16 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
 type FetchOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Platform     string
 	Architecture string
 }
 
 func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &FetchOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &FetchOptions{}
 	cmd, err := cmdutil.NewCmd(f, "fetch")
 	if err != nil {
 		panic("could not initialize 'kraft build fetch' command")
@@ -69,17 +62,12 @@ func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
 
 func fetchRun(copts *FetchOptions, workdir string) error {
 	ctx := context.Background()
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(false),
 	)

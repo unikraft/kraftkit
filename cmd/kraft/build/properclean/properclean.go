@@ -41,19 +41,13 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type PropercleanOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type PropercleanOptions struct{}
 
 func PropercleanCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PropercleanOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &PropercleanOptions{}
 	cmd, err := cmdutil.NewCmd(f, "properclean")
 	if err != nil {
 		panic("could not initialize 'ukbuild properclean' command")
@@ -92,17 +86,12 @@ func PropercleanCmd(f *cmdfactory.Factory) *cobra.Command {
 
 func propercleanRun(copts *PropercleanOptions, workdir string) error {
 	ctx := context.Background()
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(false),
 	)

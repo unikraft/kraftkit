@@ -24,8 +24,6 @@ import (
 )
 
 type ListOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
 	LimitResults int
 	AsJSON       bool
 	Update       bool
@@ -37,10 +35,7 @@ type ListOptions struct {
 }
 
 func ListCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &ListOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &ListOptions{}
 	cmd, err := cmdutil.NewCmd(f, "list")
 	if err != nil {
 		panic("could not initialize 'kraft pkg list' command")
@@ -131,12 +126,6 @@ func listRun(opts *ListOptions, workdir string) error {
 	var err error
 
 	ctx := context.Background()
-
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
-
 	query := packmanager.CatalogQuery{}
 	if opts.ShowCore {
 		query.Types = append(query.Types, unikraft.ComponentTypeCore)
@@ -162,7 +151,6 @@ func listRun(opts *ListOptions, workdir string) error {
 			nil,
 			app.WithWorkingDirectory(workdir),
 			app.WithDefaultConfigPath(),
-			app.WithPackageManager(&pm),
 		)
 		if err != nil {
 			return err
@@ -177,7 +165,7 @@ func listRun(opts *ListOptions, workdir string) error {
 		fmt.Fprint(iostreams.G(ctx).Out, app.PrintInfo())
 
 	} else {
-		packages, err = pm.Catalog(
+		packages, err = packmanager.G(ctx).Catalog(
 			ctx,
 			query,
 			pack.WithWorkdir(workdir),
