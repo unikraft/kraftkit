@@ -14,19 +14,13 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type MenuConfigOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type MenuConfigOptions struct{}
 
 func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &MenuConfigOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &MenuConfigOptions{}
 	cmd, err := cmdutil.NewCmd(f, "menuconfig")
 	if err != nil {
 		panic("could not initialize 'kraft build menuconfig' command")
@@ -65,17 +59,12 @@ func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
 
 func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
 	ctx := context.Background()
-	pm, err := mcopts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(false),
 	)

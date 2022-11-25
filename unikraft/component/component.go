@@ -13,7 +13,6 @@ import (
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 )
 
@@ -29,7 +28,6 @@ type ComponentConfig struct {
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
 	workdir string
-	pm      *packmanager.PackageManager
 	log     log.Logger
 	ctype   unikraft.ComponentType // embed the component type within the config
 

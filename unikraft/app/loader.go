@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -56,9 +55,6 @@ type LoaderOptions struct {
 	ResolvePaths bool
 	// Interpolation options
 	Interpolate *interp.Options
-	// PackageManager can be injected to each component to allow easy retrieval of
-	// the component itself with regard to its source files as well as Unikraft's
-	PackageManager *packmanager.PackageManager
 	// Set project projectName
 	projectName string
 	// Indicates when the projectName was imperatively set or guessed from path
@@ -119,14 +115,6 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*Appli
 	opts.componentOptions = append(opts.componentOptions,
 		component.WithWorkdir(details.WorkingDir),
 	)
-
-	// If we have a set package manager, we can directly inject this to each
-	// component.
-	if opts.PackageManager != nil {
-		opts.componentOptions = append(opts.componentOptions,
-			component.WithPackageManager(opts.PackageManager),
-		)
-	}
 
 	var configs []*config.Config
 	for i, file := range details.ConfigFiles {

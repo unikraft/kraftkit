@@ -25,7 +25,6 @@ import (
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/utils"
 
@@ -34,9 +33,6 @@ import (
 )
 
 type runOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Architecture  string
 	Detach        bool
 	DisableAccel  bool
@@ -59,10 +55,7 @@ func RunCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft run' command")
 	}
 
-	opts := &runOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &runOptions{}
 	cmd.Short = "Run a unikernel"
 	cmd.Use = "run [FLAGS] [PROJECT|KERNEL] [ARGS]"
 	cmd.Aliases = []string{"launch", "r"}
@@ -243,7 +236,6 @@ func runRun(opts *runOptions, args ...string) error {
 			nil,
 			app.WithWorkingDirectory(workdir),
 			app.WithDefaultConfigPath(),
-			// app.WithPackageManager(&pm),
 			app.WithResolvedPaths(true),
 			app.WithDotConfig(false),
 		)

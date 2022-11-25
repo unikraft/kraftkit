@@ -43,22 +43,15 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
 type SetOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Workdir string
 }
 
 func SetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SetOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &SetOptions{}
 	cmd, err := cmdutil.NewCmd(f, "set")
 	if err != nil {
 		panic("could not initialize 'kraft build set' command")
@@ -119,10 +112,6 @@ func SetCmd(f *cmdfactory.Factory) *cobra.Command {
 
 func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 	ctx := context.Background()
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Check if dotconfig exists in workdir
 	dotconfig := fmt.Sprintf("%s/.config", workdir)
@@ -138,7 +127,6 @@ func setRun(copts *SetOptions, workdir string, confOpts []string) error {
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(true),
 		app.WithConfig(confOpts),

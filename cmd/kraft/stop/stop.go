@@ -14,7 +14,6 @@ import (
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
-	"kraftkit.sh/packmanager"
 
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
@@ -23,9 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type stopOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type stopOptions struct{}
 
 func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 	cmd, err := cmdutil.NewCmd(f, "stop")
@@ -33,10 +30,7 @@ func StopCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft stop' command")
 	}
 
-	opts := &stopOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &stopOptions{}
 	cmd.Short = "Stop one or more running unikernels"
 	cmd.Hidden = true
 	cmd.Use = "stop [FLAGS] MACHINE [MACHINE [...]]"

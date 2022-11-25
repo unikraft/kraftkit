@@ -19,17 +19,11 @@ import (
 )
 
 type UpdateOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Manager string
 }
 
 func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UpdateOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &UpdateOptions{}
 	cmd, err := cmdutil.NewCmd(f, "update")
 	if err != nil {
 		panic("could not initialize subcommand")
@@ -60,12 +54,10 @@ func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
 }
 
 func updateRun(opts *UpdateOptions) error {
-	ctx := context.Background()
+	var err error
 
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
+	ctx := context.Background()
+	pm := packmanager.G(ctx)
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {

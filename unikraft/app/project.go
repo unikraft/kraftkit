@@ -30,7 +30,6 @@ import (
 	"kraftkit.sh/internal/errs"
 	"kraftkit.sh/kconfig"
 
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/config"
 )
@@ -262,17 +261,6 @@ func WithDefaultConfigPath() ProjectOptionsFn {
 
 			pwd = parent
 		}
-	}
-}
-
-// WithPackageManager provides access to the package manager of choice to be
-// able to retrieve component sources
-func WithPackageManager(pm *packmanager.PackageManager) ProjectOptionsFn {
-	return func(o *ProjectOptions) error {
-		o.loadOptions = append(o.loadOptions, func(options *LoaderOptions) {
-			options.PackageManager = pm
-		})
-		return nil
 	}
 }
 

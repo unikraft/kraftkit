@@ -27,9 +27,6 @@ import (
 )
 
 type PullOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	Manager      string
 	Type         string
 	WithDeps     bool
@@ -43,10 +40,7 @@ type PullOptions struct {
 }
 
 func PullCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PullOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &PullOptions{}
 	cmd, err := cmdutil.NewCmd(f, "pull")
 	if err != nil {
 		panic("could not initialize root command")
@@ -173,11 +167,7 @@ func pullRun(opts *PullOptions, query string) error {
 
 	workdir := opts.Workdir
 	ctx := context.Background()
-
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
+	pm := packmanager.G(ctx)
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
@@ -287,7 +277,6 @@ func pullRun(opts *PullOptions, query string) error {
 			nil,
 			app.WithWorkingDirectory(templateWorkdir),
 			app.WithDefaultConfigPath(),
-			app.WithPackageManager(&pm),
 			app.WithResolvedPaths(true),
 			app.WithDotConfig(false),
 		)

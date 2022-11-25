@@ -41,9 +41,6 @@ import (
 )
 
 type buildOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
 	NoCache      bool
 	Architecture string
 	Platform     string
@@ -77,10 +74,7 @@ func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
 		panic("could not initialize 'kraft build' command")
 	}
 
-	opts := &buildOptions{
-		PackageManager: f.PackageManager,
-	}
-
+	opts := &buildOptions{}
 	cmd.Short = "Configure and build Unikraft unikernels "
 	cmd.Use = "build [FLAGS] [SUBCOMMAND|DIR]"
 	cmd.Args = cmdutil.MaxDirArgs(1)
@@ -207,17 +201,12 @@ func buildRun(opts *buildOptions, workdir string) error {
 	var err error
 
 	ctx := context.Background()
-	pm, err := opts.PackageManager()
-	if err != nil {
-		return err
-	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(false),
 	)
@@ -251,7 +240,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
 			func(ctx context.Context) error {
-				packages, err = pm.Catalog(ctx, packmanager.CatalogQuery{
+				packages, err = packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
 					Name:    project.Template().Name(),
 					Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 					Version: project.Template().Version(),
@@ -328,7 +317,6 @@ func buildRun(opts *buildOptions, workdir string) error {
 			nil,
 			app.WithWorkingDirectory(templateWorkdir),
 			app.WithDefaultConfigPath(),
-			app.WithPackageManager(&pm),
 			app.WithResolvedPaths(true),
 			app.WithDotConfig(false),
 		)
@@ -355,7 +343,7 @@ func buildRun(opts *buildOptions, workdir string) error {
 		searches = append(searches, processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Component().Name, component.Component().Version), "",
 			func(ctx context.Context) error {
-				p, err := pm.Catalog(ctx, packmanager.CatalogQuery{
+				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
 					Name: component.Name(),
 					Types: []unikraft.ComponentType{
 						unikraft.ComponentTypeCore,

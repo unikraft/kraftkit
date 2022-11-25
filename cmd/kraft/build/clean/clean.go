@@ -41,18 +41,13 @@ import (
 	"kraftkit.sh/internal/cmdfactory"
 	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type CleanOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-}
+type CleanOptions struct{}
 
 func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &CleanOptions{
-		PackageManager: f.PackageManager,
-	}
+	opts := &CleanOptions{}
 
 	cmd, err := cmdutil.NewCmd(f, "clean")
 	if err != nil {
@@ -93,17 +88,11 @@ func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
 func cleanRun(copts *CleanOptions, workdir string) error {
 	ctx := context.Background()
 
-	pm, err := copts.PackageManager()
-	if err != nil {
-		return err
-	}
-
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
 		app.WithDefaultConfigPath(),
-		app.WithPackageManager(&pm),
 		app.WithResolvedPaths(true),
 		app.WithDotConfig(false),
 	)
