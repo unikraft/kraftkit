@@ -5,63 +5,54 @@
 package fetch
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type FetchOptions struct {
-	Platform     string
-	Architecture string
+type Fetch struct {
+	Architecture string `long:"arch" short:"m" usage:""`
+	Platform     string `long:"plat" short:"p" usage:""`
 }
 
-func FetchCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &FetchOptions{}
-	cmd, err := cmdutil.NewCmd(f, "fetch")
-	if err != nil {
-		panic("could not initialize 'kraft build fetch' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Fetch{}, cobra.Command{
+		Short:   "Fetch a Unikraft unikernel's dependencies",
+		Use:     "fetch [DIR]",
+		Aliases: []string{"f"},
+		Args:    cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			Fetch a Unikraft unikernel's dependencies`),
+		Example: heredoc.Doc(`
+			# Fetch the cwd project
+			$ kraft build fetch
 
-	cmd.Short = "Fetch a Unikraft unikernel's dependencies"
-	cmd.Use = "fetch [DIR]"
-	cmd.Aliases = []string{"f"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-		Fetch a Unikraft unikernel's dependencies`)
-	cmd.Example = heredoc.Doc(`
-		# Fetch the cwd project
-		$ kraft build fetch
+			# Fetch a project at a path
+			$ kraft build fetch path/to/app
+		`),
+	})
+}
 
-		# Fetch a project at a path
-		$ kraft build fetch path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
+func (opts *Fetch) Run(cmd *cobra.Command, args []string) error {
+	var err error
 
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
 		}
-
-		return fetchRun(opts, workdir)
+	} else {
+		workdir = args[0]
 	}
-
-	return cmd
-}
-
-func fetchRun(copts *FetchOptions, workdir string) error {
-	ctx := context.Background()
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

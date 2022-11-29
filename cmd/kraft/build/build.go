@@ -17,8 +17,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/internal/logger"
 
 	"kraftkit.sh/iostreams"
@@ -27,6 +26,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
 	"kraftkit.sh/cmd/kraft/build/clean"
@@ -40,167 +40,72 @@ import (
 	"kraftkit.sh/tui/processtree"
 )
 
-type buildOptions struct {
-	NoCache      bool
-	Architecture string
-	Platform     string
-	DotConfig    string
-	Target       string
-	KernelDbg    bool
-	Fast         bool
-	Jobs         int
-	NoSyncConfig bool
-	NoPrepare    bool
-	NoFetch      bool
-	NoPull       bool
-	NoConfigure  bool
-	SaveBuildLog string
+type Build struct {
+	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Fast         bool   `long:"fast" usage:"Use maximum parallization when performing the build"`
+	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
+	NoSyncConfig bool   `long:"no-sync-config" usage:"Do not synchronize Unikraft's configuration before building"`
+	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 }
 
-func BuildCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "build",
-		cmdutil.WithSubcmds(
-			configure.ConfigureCmd(f),
-			fetch.FetchCmd(f),
-			menuconfig.MenuConfigCmd(f),
-			prepare.PrepareCmd(f),
-			set.SetCmd(f),
-			unset.UnsetCmd(f),
-			clean.CleanCmd(f),
-			properclean.PropercleanCmd(f),
-		),
-	)
-	if err != nil {
-		panic("could not initialize 'kraft build' command")
-	}
+func New() *cobra.Command {
+	cmd := cli.New(&Build{}, cobra.Command{
+		Short: "Configure and build Unikraft unikernels ",
+		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
+		Args:  cli.MaxDirArgs(1),
+		Long: heredoc.Docf(`
+			Configure and build Unikraft unikernels.
 
-	opts := &buildOptions{}
-	cmd.Short = "Configure and build Unikraft unikernels "
-	cmd.Use = "build [FLAGS] [SUBCOMMAND|DIR]"
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Docf(`
-		Configure and build Unikraft unikernels.
+			The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
+			arguments, you will be guided through interactive mode.
+		`, "`"),
+		Example: heredoc.Doc(`
+			# Build the current project (cwd)
+			$ kraft build
 
-		The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
-		arguments, you will be guided through interactive mode.
-	`, "`")
-	cmd.Example = heredoc.Doc(`
-		# Build the current project (cwd)
-		$ kraft build
+			# Build path to a Unikraft project
+			$ kraft build path/to/app
+		`),
+	})
 
-		# Build path to a Unikraft project
-		$ kraft build path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-			return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-		}
-
-		var err error
-		var workdir string
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return buildRun(opts, workdir)
-	}
-
-	cmd.Flags().BoolVarP(
-		&opts.NoCache,
-		"no-cache", "F",
-		false,
-		"Force a rebuild even if existing intermediate artifacts already exist",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Architecture,
-		"arch", "m",
-		"",
-		"Filter the creation of the build by architecture of known targets",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Platform,
-		"plat", "p",
-		"",
-		"Filter the creation of the build by platform of known targets",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.DotConfig,
-		"config", "c",
-		"",
-		"Override the path to the KConfig `.config` file",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.KernelDbg,
-		"dbg",
-		false,
-		"Build the debuggable (symbolic) kernel image instead of the stripped image",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Target,
-		"target", "t",
-		"",
-		"Build a particular known target",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.Fast,
-		"fast",
-		false,
-		"Use maximum parallization when performing the build",
-	)
-
-	cmd.Flags().IntVarP(
-		&opts.Jobs,
-		"jobs", "j",
-		0,
-		"Allow N jobs at once",
-	)
-
-	cmd.Flags().StringVar(
-		&opts.SaveBuildLog,
-		"build-log",
-		"",
-		"Use the specified file to save the output from the build",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.NoSyncConfig,
-		"no-sync-config",
-		false,
-		"Do not synchronize Unikraft's configuration before building",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.NoConfigure,
-		"no-configure",
-		false,
-		"Do not run Unikraft's configure step before building",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.NoPrepare,
-		"no-prepare",
-		false,
-		"Do not run Unikraft's prepare step before building",
-	)
+	cmd.AddCommand(configure.New())
+	cmd.AddCommand(fetch.New())
+	cmd.AddCommand(menuconfig.New())
+	cmd.AddCommand(prepare.New())
+	cmd.AddCommand(set.New())
+	cmd.AddCommand(unset.New())
+	cmd.AddCommand(clean.New())
+	cmd.AddCommand(properclean.New())
 
 	return cmd
 }
 
-func buildRun(opts *buildOptions, workdir string) error {
+func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	var err error
+	var workdir string
 
-	ctx := context.Background()
+	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
+		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	}
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
+
+	ctx := cmd.Context()
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

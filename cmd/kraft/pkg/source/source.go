@@ -5,53 +5,40 @@
 package source
 
 import (
-	"context"
-
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/packmanager"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type SourceOptions struct{}
+type Source struct{}
 
-func SourceCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SourceOptions{}
-	cmd, err := cmdutil.NewCmd(f, "source")
-	if err != nil {
-		panic("could not initialize 'kraft pkg source' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Source{}, cobra.Command{
+		Short: "Add Unikraft component manifests",
+		Use:   "source [FLAGS] [SOURCE]",
+		Args:  cli.MinimumArgs(1, "must specify component or manifest"),
+		Example: heredoc.Docf(`
+			# Add a single component as a Git repository
+			$ kraft pkg source https://github.com/unikraft/unikraft.git
 
-	cmd.Short = "Add Unikraft component manifests"
-	cmd.Use = "source [FLAGS] [SOURCE]"
-	cmd.Args = cmdutil.MinimumArgs(1, "must specify component or manifest")
-	cmd.Aliases = []string{"a"}
-	cmd.Long = heredoc.Docf(`
-	`, "`")
-	cmd.Example = heredoc.Docf(`
-		# Add a single component as a Git repository
-		$ kraft pkg source https://github.com/unikraft/unikraft.git
-
-		# Add a manifest of components
-		$ kraft pkg source https://raw.github.com/unikraft/index/stable/index.yaml
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		source := ""
-		if len(args) > 0 {
-			source = args[0]
-		}
-		return sourceRun(opts, source)
-	}
-
-	return cmd
+			# Add a manifest of components
+			$ kraft pkg source https://raw.github.com/unikraft/index/stable/index.yaml
+		`),
+	})
 }
 
-func sourceRun(opts *SourceOptions, source string) error {
+func (opts *Source) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	source := ""
+	if len(args) > 0 {
+		source = args[0]
+	}
+
+	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
 	pm, err = pm.IsCompatible(ctx, source)

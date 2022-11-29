@@ -5,60 +5,51 @@
 package prepare
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type PrepareOptions struct{}
+type Prepare struct{}
 
-func PrepareCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PrepareOptions{}
-	cmd, err := cmdutil.NewCmd(f, "prepare")
-	if err != nil {
-		panic("could not initialize 'kraft build prepare' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Prepare{}, cobra.Command{
+		Short:   "Prepare a Unikraft unikernel",
+		Use:     "prepare [DIR]",
+		Aliases: []string{"p"},
+		Args:    cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			prepare a Unikraft unikernel`),
+		Example: heredoc.Doc(`
+			# Prepare the cwd project
+			$ kraft build prepare
 
-	cmd.Short = "Prepare a Unikraft unikernel"
-	cmd.Use = "prepare [DIR]"
-	cmd.Aliases = []string{"p"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-		prepare a Unikraft unikernel`)
-	cmd.Example = heredoc.Doc(`
-		# Prepare the cwd project
-		$ kraft build prepare
-
-		# Prepare a project at a path
-		$ kraft build prepare path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return prepareRun(opts, workdir)
-	}
-
-	return cmd
+			# Prepare a project at a path
+			$ kraft build prepare path/to/app
+		`),
+	})
 }
 
-func prepareRun(copts *PrepareOptions, workdir string) error {
-	ctx := context.Background()
+func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

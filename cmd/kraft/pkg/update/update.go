@@ -11,52 +11,34 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type UpdateOptions struct {
-	Manager string
+type Update struct {
+	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
-func UpdateCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UpdateOptions{}
-	cmd, err := cmdutil.NewCmd(f, "update")
-	if err != nil {
-		panic("could not initialize subcommand")
-	}
-
-	cmd.Short = "Retrieve new lists of Unikraft components, libraries and packages"
-	cmd.Use = "update [FLAGS]"
-	cmd.Long = heredoc.Doc(`
-		Retrieve new lists of Unikraft components, libraries and packages
-	`)
-	cmd.Aliases = []string{"u"}
-	cmd.Example = heredoc.Doc(`
-		$ kraft pkg update
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return updateRun(opts)
-	}
-
-	// TODO: Enable flag if multiple managers are detected?
-	cmd.Flags().StringVarP(
-		&opts.Manager,
-		"manager", "M",
-		"manifest",
-		"Force the handler type",
-	)
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&Update{}, cobra.Command{
+		Short: "Retrieve new lists of Unikraft components, libraries and packages",
+		Use:   "update [FLAGS]",
+		Long: heredoc.Doc(`
+			Retrieve new lists of Unikraft components, libraries and packages.`),
+		Aliases: []string{"u"},
+		Example: heredoc.Doc(`
+			$ kraft pkg update
+		`),
+	})
 }
 
-func updateRun(opts *UpdateOptions) error {
+func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
 	// Force a particular package manager

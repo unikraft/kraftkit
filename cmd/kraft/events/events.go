@@ -15,6 +15,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
+
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
@@ -22,51 +25,24 @@ import (
 	"kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
-
-	"github.com/MakeNowJust/heredoc"
-	"github.com/spf13/cobra"
+	"kraftkit.sh/internal/cli"
 )
 
-type eventsOptions struct {
-	QuitTogether bool
-	Granularity  time.Duration
+type Events struct {
+	Granularity  time.Duration `long:"poll-granularity" short:"g" usage:"How often the machine store and state should polled"`
+	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
 
-func EventsCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "events")
-	if err != nil {
-		panic("could not initialize 'kraft events' command")
-	}
-
-	opts := &eventsOptions{}
-	cmd.Short = "Follow the events of a unikernel"
-	cmd.Hidden = true
-	cmd.Use = "events [FLAGS] [MACHINE ID]"
-	cmd.Args = cobra.MaximumNArgs(1)
-	cmd.Aliases = []string{"event", "e"}
-	cmd.Long = heredoc.Doc(`
-		Follow the events of a unikernel`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runEvents(opts, args...)
-	}
-
-	cmd.Flags().BoolVarP(
-		&opts.QuitTogether,
-		"quit-together", "q",
-		false,
-		"Exit event loop when machine exits",
-	)
-
-	cmd.Flags().DurationVarP(
-		&opts.Granularity,
-		"poll-granularity", "g",
-		1,
-		"How often the machine store and state should polled",
-	)
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&Events{}, cobra.Command{
+		Short:   "Follow the events of a unikernel",
+		Hidden:  true,
+		Use:     "events [FLAGS] [MACHINE ID]",
+		Args:    cobra.MaximumNArgs(1),
+		Aliases: []string{"event", "e"},
+		Long: heredoc.Doc(`
+			Follow the events of a unikernel`),
+	})
 }
 
 type machineWaitGroup struct {
@@ -124,10 +100,10 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runEvents(opts *eventsOptions, args ...string) error {
+func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(cmd.Context())
 	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		cancel()

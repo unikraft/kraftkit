@@ -28,129 +28,59 @@ import (
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/utils"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/internal/cli"
 )
 
-type runOptions struct {
-	Architecture  string
-	Detach        bool
-	DisableAccel  bool
+type Run struct {
+	Architecture  string `long:"arch" short:"m" usage:"Set the architecture"`
+	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
+	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
 	Hypervisor    string
-	Memory        int
-	NoMonitor     bool
-	PinCPUs       string
-	Platform      string
-	Remove        bool
-	Target        string
-	Volumes       []string
-	WithKernelDbg bool
+	Memory        int      `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
+	NoMonitor     bool     `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
+	PinCPUs       string   `long:"" short:"" usage:""`
+	Platform      string   `long:"plat" short:"p" usage:"Set the platform"`
+	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	Volumes       []string `long:"" short:"" usage:""`
+	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 }
 
-func RunCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "run",
-		cmdutil.WithSubcmds(),
-	)
-	if err != nil {
-		panic("could not initialize 'kraft run' command")
-	}
+func New() *cobra.Command {
+	cmd := cli.New(&Run{}, cobra.Command{
+		Short:   "Run a unikernel",
+		Use:     "run [FLAGS] [PROJECT|KERNEL] [ARGS]",
+		Aliases: []string{"launch", "r"},
+		Long: heredoc.Doc(`
+			Launch a unikernel`),
+		Example: heredoc.Doc(`
+			# Run a unikernel kernel image
+			kraft run path/to/kernel-x86_64-kvm
 
-	opts := &runOptions{}
-	cmd.Short = "Run a unikernel"
-	cmd.Use = "run [FLAGS] [PROJECT|KERNEL] [ARGS]"
-	cmd.Aliases = []string{"launch", "r"}
-	cmd.Long = heredoc.Doc(`
-		Launch a unikernel`)
-	cmd.Example = heredoc.Doc(`
-		# Run a unikernel kernel image
-		kraft run path/to/kernel-x86_64-kvm
-
-		# Run a project which only has one target
-		kraft run path/to/project
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
-
-		return runRun(opts, args...)
-	}
-
-	cmd.Flags().BoolVarP(
-		&opts.Detach,
-		"detach", "d",
-		false,
-		"Run unikernel in background.",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.WithKernelDbg,
-		"symbolic",
-		false,
-		"Use the debuggable (symbolic) unikernel.",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.DisableAccel,
-		"disable-acceleration", "W",
-		false,
-		"Disable acceleration of CPU (usually enables TCG).",
-	)
-
-	cmd.Flags().IntVarP(
-		&opts.Memory,
-		"memory", "M",
-		64,
-		"Assign MB memory to the unikernel.",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Target,
-		"target", "t",
-		"",
-		"Explicitly use the defined project target.",
-	)
+			# Run a project which only has one target
+			kraft run path/to/project
+		`),
+	})
 
 	cmd.Flags().VarP(
-		cmdutil.NewEnumFlag(machinedriver.DriverNames(), "auto"),
+		cli.NewEnumFlag(machinedriver.DriverNames(), "auto"),
 		"hypervisor",
 		"H",
 		"Set the hypervisor machine driver.",
 	)
 
-	cmd.Flags().StringVar(
-		&opts.Architecture,
-		"arch",
-		"",
-		"Filter the creation of the package by architecture of known targets",
-	)
-
-	cmd.Flags().StringVar(
-		&opts.Platform,
-		"plat",
-		"",
-		"Filter the creation of the package by platform of known targets",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.NoMonitor,
-		"no-monitor",
-		false,
-		"Do not spawn a (or attach to an existing) KraftKit unikernel monitor",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.Remove,
-		"rm",
-		false,
-		"Automatically remove the unikernel when it shutsdown",
-	)
-
 	return cmd
 }
 
-func runRun(opts *runOptions, args ...string) error {
+func (opts *Run) Pre(cmd *cobra.Command, args []string) error {
+	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+	return nil
+}
+
+func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	var driverType *machinedriver.DriverType
 	if opts.Hypervisor == "auto" {
 		dt, err := machinedriver.DetectHostHypervisor()

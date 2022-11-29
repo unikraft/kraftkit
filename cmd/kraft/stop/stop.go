@@ -5,9 +5,11 @@
 package stop
 
 import (
-	"context"
 	"fmt"
 	"sync"
+
+	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -15,33 +17,20 @@ import (
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
-
-	"github.com/MakeNowJust/heredoc"
-	"github.com/spf13/cobra"
+	"kraftkit.sh/internal/cli"
 )
 
-type stopOptions struct{}
+type Stop struct{}
 
-func StopCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "stop")
-	if err != nil {
-		panic("could not initialize 'kraft stop' command")
-	}
-
-	opts := &stopOptions{}
-	cmd.Short = "Stop one or more running unikernels"
-	cmd.Hidden = true
-	cmd.Use = "stop [FLAGS] MACHINE [MACHINE [...]]"
-	cmd.Args = cobra.MinimumNArgs(1)
-	cmd.Long = heredoc.Doc(`
-		Stop one or more running unikernels`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runStop(opts, args...)
-	}
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&Stop{}, cobra.Command{
+		Short: "Stop one or more running unikernels",
+		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
+		Args:  cobra.MinimumNArgs(1),
+		Long: heredoc.Doc(`
+			Stop one or more running unikernels
+		`),
+	})
 }
 
 type machineWaitGroup struct {
@@ -99,10 +88,10 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runStop(opts *stopOptions, args ...string) error {
+func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)

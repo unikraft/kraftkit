@@ -5,59 +5,50 @@
 package configure
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type ConfigureOptions struct{}
+type Configure struct{}
 
-func ConfigureCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &ConfigureOptions{}
-	cmd, err := cmdutil.NewCmd(f, "configure")
-	if err != nil {
-		panic("could not initialize 'kraft build configure' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Configure{}, cobra.Command{
+		Short: "Configure a Unikraft unikernel its dependencies",
+		Use:   "configure [DIR]",
+		Args:  cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			Configure a Unikraft unikernel its dependencies`),
+		Example: heredoc.Doc(`
+			# Configure the cwd project
+			$ kraft build configure
 
-	cmd.Short = "Configure a Unikraft unikernel its dependencies"
-	cmd.Use = "configure [DIR]"
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-		Configure a Unikraft unikernel its dependencies`)
-	cmd.Example = heredoc.Doc(`
-		# Configure the cwd project
-		$ kraft build configure
-
-		# Configure a project at a path
-		$ kraft build configure path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return configureRun(opts, workdir)
-	}
-
-	return cmd
+			# Configure a project at a path
+			$ kraft build configure path/to/app
+		`),
+	})
 }
 
-func configureRun(copts *ConfigureOptions, workdir string) error {
-	ctx := context.Background()
+func (opts *Configure) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

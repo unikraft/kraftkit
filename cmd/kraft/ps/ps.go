@@ -5,7 +5,6 @@
 package ps
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,105 +15,46 @@ import (
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
-	"kraftkit.sh/packmanager"
 	"kraftkit.sh/utils"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/internal/cli"
 
-	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
 
-type psOptions struct {
-	PackageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
-
-	// Command-line arguments
-	ShowAll      bool
+type Ps struct {
+	Architecture string `long:"arch" short:"m" usage:"Filter the list by architecture"`
 	Hypervisor   string
-	Architecture string
-	Platform     string
-	Quiet        bool
-	Long         bool
+	Long         bool   `long:"long" short:"l" usage:"Show more information"`
+	Platform     string `long:"plat" short:"p" usage:"Filter the list by platform"`
+	Quiet        bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
+	ShowAll      bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
 }
 
-func PsCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "ps",
-		cmdutil.WithSubcmds(),
-	)
-	if err != nil {
-		panic("could not initialize 'kraft ps' command")
-	}
-
-	opts := &psOptions{
-		PackageManager: f.PackageManager,
-	}
-
-	cmd.Short = "List running unikernels"
-	cmd.Use = "ps [FLAGS]"
-	cmd.Args = cobra.MaximumNArgs(0)
-	cmd.Long = heredoc.Doc(`
-		List running unikernels`)
-	cmd.Example = heredoc.Doc(``)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
-
-		return runPs(opts, args...)
-	}
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowAll,
-		"all", "a",
-		false,
-		"Show all machines (default shows just running)",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.Quiet,
-		"quiet", "q",
-		false,
-		"Only display machine IDs",
-	)
+func New() *cobra.Command {
+	cmd := cli.New(&Ps{}, cobra.Command{
+		Short: "List running unikernels",
+		Use:   "ps [FLAGS]",
+		Args:  cobra.MaximumNArgs(0),
+		Long:  "List running unikernels",
+	})
 
 	cmd.Flags().VarP(
-		cmdutil.NewEnumFlag(machinedriver.DriverNames(), "all"),
+		cli.NewEnumFlag(machinedriver.DriverNames(), "all"),
 		"hypervisor",
 		"H",
 		"Set the hypervisor driver.",
 	)
 
-	cmd.Flags().StringVarP(
-		&opts.Architecture,
-		"arch", "m",
-		"",
-		"Filter the list by architecture",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Platform,
-		"plat", "p",
-		"",
-		"Filter the list by platform",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.Long,
-		"long", "l",
-		false,
-		"Show more information",
-	)
-
 	return cmd
 }
 
-func runPs(opts *psOptions, args ...string) error {
+func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
-	if err != nil {
-		return err
-	}
+	ctx := cmd.Context()
+	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
 
 	var onlyDriverType *machinedriver.DriverType
 	if opts.Hypervisor == "all" {

@@ -13,9 +13,6 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
-
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -24,149 +21,78 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type PullOptions struct {
-	Manager      string
-	Type         string
-	WithDeps     bool
-	Workdir      string
-	NoDeps       bool
-	Platform     string
-	Architecture string
-	AllVersions  bool
-	NoChecksum   bool
-	NoCache      bool
+type Pull struct {
+	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
+	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	Manager      string `long:"manager" short:"M" usage:"Force the handler type (Omittion will attempt auto-detect)" default:"auto"`
+	NoCache      bool   `long:"no-cache" short:"Z" usage:"Do not use cache and pull directly from source"`
+	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
+	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
+	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
+	WithDeps     bool   `long:"with-deps" short:"d" usage:"Pull dependencies"`
+	Workdir      string `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
 
-func PullCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PullOptions{}
-	cmd, err := cmdutil.NewCmd(f, "pull")
-	if err != nil {
-		panic("could not initialize root command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Pull{}, cobra.Command{
+		Short:   "Pull a Unikraft unikernel and/or its dependencies",
+		Use:     "pull [FLAGS] [PACKAGE|DIR]",
+		Aliases: []string{"p"},
+		Long: heredoc.Doc(`
+			Pull a Unikraft unikernel, component microlibrary from a remote location
+		`),
+		Example: heredoc.Doc(`
+			# Pull the dependencies for a project in the current working directory
+			$ kraft pkg pull
+			
+			# Pull dependencies for a project at a path
+			$ kraft pkg pull path/to/app
 
-	cmd.Short = "Pull a Unikraft unikernel and/or its dependencies"
-	cmd.Use = "pull [FLAGS] [PACKAGE|DIR]"
-	cmd.Aliases = []string{"p"}
-	// cmd.Args = cmdutil(1)
-	cmd.Long = heredoc.Doc(`
-		Pull a Unikraft unikernel, component microlibrary from a remote location`)
-	cmd.Example = heredoc.Doc(`
-		# Pull the dependencies for a project in the current working directory
-		$ kraft pkg pull
-		
-		# Pull dependencies for a project at a path
-		$ kraft pkg pull path/to/app
+			# Pull a source repository
+			$ kraft pkg pull github.com/unikraft/app-nginx.git
 
-		# Pull a source repository
-		$ kraft pkg pull github.com/unikraft/app-nginx.git
-
-		# Pull an OCI-packaged Unikraft unikernel
-		$ kraft pkg pull unikraft.io/nginx:1.21.6
-
-		# Pull from a manifest
-		$ kraft pkg pull nginx@1.21.6
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		query := ""
-		if len(args) > 0 {
-			query = strings.Join(args, " ")
-		}
-
-		if len(query) == 0 {
-			query, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := cmdutil.MutuallyExclusive(
-			"the `--with-deps` option is not supported with `--no-deps`",
-			opts.WithDeps,
-			opts.NoDeps,
-		); err != nil {
-			return err
-		}
-
-		return pullRun(opts, query)
-	}
-
-	// TODO: Enable flag if multiple managers are detected?
-	cmd.Flags().StringVarP(
-		&opts.Manager,
-		"manager", "M",
-		"auto",
-		"Force the handler type (Omittion will attempt auto-detect)",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.WithDeps,
-		"with-deps", "d",
-		false,
-		"Pull dependencies",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Workdir,
-		"workdir", "w",
-		"",
-		"Set a path to working directory to pull components to",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.NoDeps,
-		"no-deps", "D",
-		true,
-		"Do not pull dependencies",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Architecture,
-		"arch", "m",
-		"",
-		"Specify the desired architecture",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Platform,
-		"plat", "p",
-		"",
-		"Specify the desired architecture",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.AllVersions,
-		"all-versions", "a",
-		false,
-		"Pull all versions",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.NoChecksum,
-		"no-checksum", "C",
-		false,
-		"Do not verify package checksum (if available)",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.NoChecksum,
-		"no-cache", "Z",
-		false,
-		"Do not use cache and pull directly from source",
-	)
-
-	return cmd
+			# Pull from a manifest
+			$ kraft pkg pull nginx:1.21.6
+		`),
+	})
 }
 
-func pullRun(opts *PullOptions, query string) error {
+func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
+	if err := cli.MutuallyExclusive(
+		"the `--with-deps` option is not supported with `--no-deps`",
+		opts.WithDeps,
+		opts.NoDeps,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var project *app.ApplicationConfig
 	var processes []*paraprogress.Process
 	var queries []packmanager.CatalogQuery
 
+	query := ""
+	if len(args) > 0 {
+		query = strings.Join(args, " ")
+	}
+
+	if len(query) == 0 {
+		query, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
 	workdir := opts.Workdir
-	ctx := context.Background()
+	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
 	// Force a particular package manager

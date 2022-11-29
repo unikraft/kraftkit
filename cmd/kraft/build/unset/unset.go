@@ -32,80 +32,65 @@
 package unset
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type UnsetOptions struct {
-	Workdir string
+type Unset struct {
+	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func UnsetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &UnsetOptions{}
-	cmd, err := cmdutil.NewCmd(f, "unset")
-	if err != nil {
-		panic("could not initialize 'kraft build unset' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Unset{}, cobra.Command{
+		Short:   "Unset a variable for a Unikraft project",
+		Use:     "unset [OPTIONS] [param ...]",
+		Aliases: []string{"u"},
+		Long: heredoc.Doc(`
+			unset a variable for a Unikraft project`),
+		Example: heredoc.Doc(`
+			# Unset variables in the cwd project
+			$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
-	cmd.Short = "Unset a variable for a Unikraft project"
-	cmd.Use = "unset [OPTIONS] [param ...]"
-	cmd.Aliases = []string{"u"}
-	cmd.Long = heredoc.Doc(`
-		unset a variable for a Unikraft project`)
-	cmd.Example = heredoc.Doc(`
-		# Unset variables in the cwd project
-		$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
-
-		# Unset variables in a project at a path
-		$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-		confOpts := []string{}
-
-		// Skip if nothing can be unset
-		if len(args) == 0 {
-			return fmt.Errorf("no options to unset")
-		}
-
-		// Set the working directory
-		if opts.Workdir != "" {
-			workdir = opts.Workdir
-		} else {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		}
-
-		for _, arg := range args {
-			confOpts = append(confOpts, arg+"=n")
-		}
-
-		return unsetRun(opts, workdir, confOpts)
-	}
-
-	cmd.Flags().StringVarP(
-		&opts.Workdir,
-		"workdir", "w",
-		"",
-		"Work on a unikernel at a path",
-	)
-
-	return cmd
+			# Unset variables in a project at a path
+			$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+		`),
+	})
 }
 
-func unsetRun(copts *UnsetOptions, workdir string, confOpts []string) error {
-	ctx := context.Background()
+func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+
+	workdir := ""
+	confOpts := []string{}
+
+	// Skip if nothing can be unset
+	if len(args) == 0 {
+		return fmt.Errorf("no options to unset")
+	}
+
+	// Set the working directory
+	if opts.Workdir != "" {
+		workdir = opts.Workdir
+	} else {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, arg := range args {
+		confOpts = append(confOpts, arg+"=n")
+	}
 
 	// Check if dotconfig exists in workdir
 	dotconfig := fmt.Sprintf("%s/.config", workdir)

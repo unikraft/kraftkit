@@ -5,9 +5,11 @@
 package rm
 
 import (
-	"context"
 	"fmt"
 	"sync"
+
+	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -15,34 +17,20 @@ import (
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
-
-	"github.com/MakeNowJust/heredoc"
-	"github.com/spf13/cobra"
+	"kraftkit.sh/internal/cli"
 )
 
-type rmOptions struct{}
+type Rm struct{}
 
-func RemoveCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "rm")
-	if err != nil {
-		panic("could not initialize 'kraft rm' command")
-	}
-
-	opts := &rmOptions{}
-	cmd.Short = "Remove one or more running unikernels"
-	cmd.Hidden = true
-	cmd.Use = "rm [FLAGS] MACHINE [MACHINE [...]]"
-	cmd.Args = cobra.MinimumNArgs(1)
-	cmd.Aliases = []string{"remove"}
-	cmd.Long = heredoc.Doc(`
-		Remove one or more running unikernels`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runRemove(opts, args...)
-	}
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&Rm{}, cobra.Command{
+		Short:   "Remove one or more running unikernels",
+		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
+		Args:    cobra.MinimumNArgs(1),
+		Aliases: []string{"remove"},
+		Long: heredoc.Doc(`
+			Remove one or more running unikernels`),
+	})
 }
 
 type machineWaitGroup struct {
@@ -100,10 +88,10 @@ var (
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
-func runRemove(opts *rmOptions, args ...string) error {
+func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
