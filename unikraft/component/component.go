@@ -28,7 +28,6 @@ type ComponentConfig struct {
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
 	workdir string
-	log     log.Logger
 	ctype   unikraft.ComponentType // embed the component type within the config
 
 	// Context should contain all implementation-specific options, using
@@ -138,10 +137,6 @@ func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {
 	return nil
 }
 
-func (cc *ComponentConfig) Log() log.Logger {
-	return cc.log
-}
-
 // Workdir exposes the instantiated component's working directory
 func (cc *ComponentConfig) Workdir() string {
 	return cc.workdir
@@ -167,7 +162,7 @@ func (cc *ComponentConfig) SourceDir() (string, error) {
 func (cc *ComponentConfig) IsUnpackedInProject() bool {
 	local, err := cc.SourceDir()
 	if err != nil {
-		cc.log.Errorf("could not place component: %v", err)
+		log.G(cc.ctx).Errorf("could not place component: %v", err)
 		return false
 	}
 
