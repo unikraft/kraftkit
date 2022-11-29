@@ -32,61 +32,50 @@
 package clean
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type CleanOptions struct{}
+type Clean struct{}
 
-func CleanCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &CleanOptions{}
+func New() *cobra.Command {
+	return cli.New(&Clean{}, cobra.Command{
+		Short: "Remove the build object files of a Unikraft project",
+		Use:   "clean [DIR]",
+		Args:  cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			Remove the build object files of a Unikraft project`),
+		Example: heredoc.Doc(`
+			# Clean the cwd build directory
+			$ kraft build clean
 
-	cmd, err := cmdutil.NewCmd(f, "clean")
-	if err != nil {
-		panic("could not initialize 'ukbuild clean' command")
-	}
-
-	cmd.Short = "Remove the build object files of a Unikraft project"
-	cmd.Use = "clean [DIR]"
-	cmd.Aliases = []string{"pc"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-	remove the build object files of a Unikraft project`)
-	cmd.Example = heredoc.Doc(`
-		# Clean the cwd build directory
-		$ kraft build clean
-
-		# clean a project at a path
-		$ kraft build clean path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return cleanRun(opts, workdir)
-	}
-
-	return cmd
+			# clean a project at a path
+			$ kraft build clean path/to/app
+		`),
+	})
 }
 
-func cleanRun(copts *CleanOptions, workdir string) error {
-	ctx := context.Background()
+func (opts *Clean) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

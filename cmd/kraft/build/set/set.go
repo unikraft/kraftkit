@@ -32,7 +32,6 @@
 package set
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -40,78 +39,64 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type SetOptions struct {
-	Workdir string
+type Set struct {
+	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func SetCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &SetOptions{}
-	cmd, err := cmdutil.NewCmd(f, "set")
-	if err != nil {
-		panic("could not initialize 'kraft build set' command")
-	}
+func New() *cobra.Command {
+	return cli.New(&Set{}, cobra.Command{
+		Short:   "Set a variable for a Unikraft project",
+		Use:     "set [OPTIONS] [param=value ...]",
+		Aliases: []string{"s"},
+		Long: heredoc.Doc(`
+			set a variable for a Unikraft project`),
+		Example: heredoc.Doc(`
+			# Set variables in the cwd project
+			$ kraft build set LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
 
-	cmd.Short = "Set a variable for a Unikraft project"
-	cmd.Use = "set [OPTIONS] [param=value ...]"
-	cmd.Aliases = []string{"s"}
-	cmd.Long = heredoc.Doc(`
-		set a variable for a Unikraft project`)
-	cmd.Example = heredoc.Doc(`
-		# Set variables in the cwd project
-		$ kraft build set LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
-
-		# Set variables in a project at a path
-		$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-		confOpts := []string{}
-
-		// Skip if nothing can be set
-		if len(args) == 0 {
-			return fmt.Errorf("no options to set")
-		}
-
-		// Set the working directory (remove the argument if it exists)
-		if opts.Workdir != "" {
-			workdir = opts.Workdir
-		} else {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		}
-
-		// Set the configuration options, skip the first one if needed
-		for _, arg := range args {
-			if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
-				return fmt.Errorf("invalid or malformed argument: %s", arg)
-			}
-
-			confOpts = append(confOpts, arg)
-		}
-
-		return setRun(opts, workdir, confOpts)
-	}
-
-	cmd.Flags().StringVarP(
-		&opts.Workdir,
-		"workdir", "w",
-		"",
-		"Work on a unikernel at a path",
-	)
-
-	return cmd
+			# Set variables in a project at a path
+			$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+		`),
+	})
 }
 
-func setRun(copts *SetOptions, workdir string, confOpts []string) error {
-	ctx := context.Background()
+func (opts *Set) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+
+	workdir := ""
+	confOpts := []string{}
+
+	// Skip if nothing can be set
+	if len(args) == 0 {
+		return fmt.Errorf("no options to set")
+	}
+
+	// Set the working directory (remove the argument if it exists)
+	if opts.Workdir != "" {
+		workdir = opts.Workdir
+	} else {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Set the configuration options, skip the first one if needed
+	for _, arg := range args {
+		if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
+			return fmt.Errorf("invalid or malformed argument: %s", arg)
+		}
+
+		confOpts = append(confOpts, arg)
+	}
 
 	// Check if dotconfig exists in workdir
 	dotconfig := fmt.Sprintf("%s/.config", workdir)

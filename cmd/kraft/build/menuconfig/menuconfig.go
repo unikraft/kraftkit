@@ -5,60 +5,51 @@
 package menuconfig
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type MenuConfigOptions struct{}
+type MenuConfig struct{}
 
-func MenuConfigCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &MenuConfigOptions{}
-	cmd, err := cmdutil.NewCmd(f, "menuconfig")
-	if err != nil {
-		panic("could not initialize 'kraft build menuconfig' command")
-	}
-
-	cmd.Short = "menuconfig open's Unikraft configuration editor TUI"
-	cmd.Use = "menuconfig [DIR]"
-	cmd.Aliases = []string{"m", "menu"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-		Open Unikraft's configuration editor TUI`)
-	cmd.Example = heredoc.Doc(`
-		# Open the menuconfig in the cwd project
-		$ kraft build menuconfig
-		
-		# Open the menuconfig for a project at a path
-		$ kraft build menu path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return menuConfigRun(opts, workdir)
-	}
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&MenuConfig{}, cobra.Command{
+		Short:   "menuconfig open's Unikraft configuration editor TUI",
+		Use:     "menuconfig [DIR]",
+		Aliases: []string{"m", "menu"},
+		Args:    cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			Open Unikraft's configuration editor TUI`),
+		Example: heredoc.Doc(`
+			# Open the menuconfig in the cwd project
+			$ kraft build menuconfig
+			
+			# Open the menuconfig for a project at a path
+			$ kraft build menu path/to/app
+		`),
+	})
 }
 
-func menuConfigRun(mcopts *MenuConfigOptions, workdir string) error {
-	ctx := context.Background()
+func (opts *MenuConfig) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(

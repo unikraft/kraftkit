@@ -5,12 +5,10 @@
 package main
 
 import (
-	"os"
-
 	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
+	"kraftkit.sh/internal/cli"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/events"
@@ -24,36 +22,40 @@ import (
 	_ "kraftkit.sh/manifest"
 )
 
+type Kraft struct{}
+
+func New() *cobra.Command {
+	cmd := cli.New(&Kraft{}, cobra.Command{
+		Short: "Build and use highly customized and ultra-lightweight unikernels",
+		Long: heredoc.Docf(`
+        .
+       /^\     Build and use highly customized and ultra-lightweight unikernels.
+      :[ ]:
+      | = |
+     /|/=\|\   Documentation:    https://kraftkit.sh/
+    (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
+       v v
+       ' '`),
+		CompletionOptions: cobra.CompletionOptions{
+			HiddenDefaultCmd: true,
+		},
+	})
+
+	cmd.AddCommand(pkg.New())
+	cmd.AddCommand(build.New())
+	cmd.AddCommand(ps.New())
+	cmd.AddCommand(rm.New())
+	cmd.AddCommand(run.New())
+	cmd.AddCommand(stop.New())
+	cmd.AddCommand(events.New())
+
+	return cmd
+}
+
+func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
+	return cmd.Help()
+}
+
 func main() {
-	f := cmdfactory.New(
-		cmdfactory.WithPackageManager(),
-	)
-	cmd, err := cmdutil.NewCmd(f, "kraft",
-		cmdutil.WithSubcmds(
-			pkg.PkgCmd(f),
-			build.BuildCmd(f),
-			ps.PsCmd(f),
-			rm.RemoveCmd(f),
-			run.RunCmd(f),
-			stop.StopCmd(f),
-			events.EventsCmd(f),
-		),
-	)
-	if err != nil {
-		panic("could not initialize root command")
-	}
-
-	cmd.Short = "Build and use highly customized and ultra-lightweight unikernels"
-	cmd.Long = heredoc.Docf(`
-
-       .
-      /^\     Build and use highly customized and ultra-lightweight unikernels.
-     :[ ]:    
-     | = |
-    /|/=\|\   Documentation:    https://kraftkit.sh/
-   (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-      v v 
-      ' '`)
-
-	os.Exit(int(cmdutil.Execute(f, cmd)))
+	cli.Main(New())
 }

@@ -5,7 +5,6 @@
 package list
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -13,119 +12,55 @@ import (
 
 	"kraftkit.sh/unikraft/app"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/utils"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type ListOptions struct {
-	LimitResults int
-	AsJSON       bool
-	Update       bool
-	ShowCore     bool
-	ShowArchs    bool
-	ShowPlats    bool
-	ShowLibs     bool
-	ShowApps     bool
+type List struct {
+	Limit     int  `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
+	NoLimit   bool `long:"no-limit" usage:"Do not limit the number of items to print"`
+	ShowApps  bool `long:"apps" short:"" usage:"Show applications"`
+	ShowArchs bool `long:"archs" short:"M" usage:"Show architectures"`
+	ShowCore  bool `long:"core" short:"C" usage:"Show Unikraft core versions"`
+	ShowLibs  bool `long:"libs" short:"L" usage:"Show libraries"`
+	ShowPlats bool `long:"plats" short:"P" usage:"Show platforms"`
+	Update    bool `long:"update" short:"u" usage:"Get latest information about components before listing results"`
 }
 
-func ListCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &ListOptions{}
-	cmd, err := cmdutil.NewCmd(f, "list")
-	if err != nil {
-		panic("could not initialize 'kraft pkg list' command")
-	}
-
-	cmd.Short = "List installed Unikraft component packages"
-	cmd.Use = "list [FLAGS] [DIR]"
-	cmd.Aliases = []string{"l", "ls"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-		List installed Unikraft component packages.
-	`)
-	cmd.Example = heredoc.Doc(`
-		$ kraft pkg list
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-		if len(args) > 0 {
-			workdir = args[0]
-		}
-		return listRun(opts, workdir)
-	}
-
-	cmd.Flags().IntVarP(
-		&opts.LimitResults,
-		"limit", "l",
-		30,
-		"Maximum number of items to print (-1 returns all)",
-	)
-
-	noLimitResults := false
-	cmd.Flags().BoolVarP(
-		&noLimitResults,
-		"no-limit", "T",
-		false,
-		"Do not limit the number of items to print",
-	)
-	if noLimitResults {
-		opts.LimitResults = -1
-	}
-
-	cmd.Flags().BoolVarP(
-		&opts.Update,
-		"update", "U",
-		false,
-		"Get latest information about components before listing results",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowCore,
-		"core", "C",
-		false,
-		"Show Unikraft core versions",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowArchs,
-		"arch", "M",
-		false,
-		"Show architectures",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowPlats,
-		"plats", "P",
-		false,
-		"Show platforms",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowLibs,
-		"libs", "L",
-		false,
-		"Show libraries",
-	)
-
-	cmd.Flags().BoolVarP(
-		&opts.ShowApps,
-		"apps", "A",
-		false,
-		"Show applications",
-	)
-
-	return cmd
+func New() *cobra.Command {
+	return cli.New(&List{}, cobra.Command{
+		Short:   "List installed Unikraft component packages",
+		Use:     "list [FLAGS] [DIR]",
+		Aliases: []string{"l", "ls"},
+		Args:    cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			List installed Unikraft component packages.
+		`),
+		Example: heredoc.Doc(`
+			$ kraft pkg list
+		`),
+	})
 }
 
-func listRun(opts *ListOptions, workdir string) error {
+func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := context.Background()
+	ctx := cmd.Context()
+	workdir := ""
+	if len(args) > 0 {
+		workdir = args[0]
+	}
+
+	if opts.NoLimit {
+		opts.Limit = -1
+	}
+
 	query := packmanager.CatalogQuery{}
 	if opts.ShowCore {
 		query.Types = append(query.Types, unikraft.ComponentTypeCore)

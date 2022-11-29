@@ -15,9 +15,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
-
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -26,193 +23,96 @@ import (
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 
+	"kraftkit.sh/internal/cli"
+
 	"kraftkit.sh/cmd/kraft/pkg/list"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
 	"kraftkit.sh/cmd/kraft/pkg/source"
 	"kraftkit.sh/cmd/kraft/pkg/update"
 )
 
-type pkgOptions struct {
-	Architecture string
-	DotConfig    string
-	Force        bool
-	Format       string
-	Initrd       string
-	Kernel       string
-	KernelDbg    bool
-	Name         string
-	Output       string
-	Platform     string
-	Target       string
-	Volumes      []string
-	WithDbg      bool
+type Pkg struct {
+	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	DotConfig    string   `local:"true" long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Force        bool     `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
+	Format       string   `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Initrd       string   `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
+	Kernel       string   `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
+	KernelDbg    bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
+	Name         string   `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	Output       string   `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
+	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	Volumes      []string `local:"true" long:"volume" short:"v" usage:"Additional volumes to bundle within the package"`
+	WithDbg      bool     `local:"true" long:"with-dbg" usage:"In addition to the stripped kernel, include the debug image"`
 }
 
-func PkgCmd(f *cmdfactory.Factory) *cobra.Command {
-	cmd, err := cmdutil.NewCmd(f, "pkg",
-		cmdutil.WithSubcmds(
-			list.ListCmd(f),
-			pull.PullCmd(f),
-			source.SourceCmd(f),
-			update.UpdateCmd(f),
-		),
-	)
-	if err != nil {
-		panic("could not initialize 'kraft pkg' command")
-	}
+func New() *cobra.Command {
+	cmd := cli.New(&Pkg{}, cobra.Command{
+		Short: "Package and distribute Unikraft unikernels and their dependencies",
+		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
+		Args:  cli.MaxDirArgs(1),
+		Long: heredoc.Docf(`
+			Package and distribute Unikraft unikernels and their dependencies.
 
-	opts := &pkgOptions{}
-	cmd.Short = "Package and distribute Unikraft unikernels and their dependencies"
-	cmd.Use = "pkg [FLAGS] [SUBCOMMAND|DIR]"
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Docf(`
-		Package and distribute Unikraft unikernels and their dependencies.
+			With %[1]skraft pkg%[1]s you are able to turn output artifacts from %[1]skraft build%[1]s
+			into a distributable archive ready for deployment.  At the same time,
+			%[1]skraft pkg%[1]s allows you to manage these archives: pulling, pushing, or
+			adding them to a project.
 
-		With %[1]skraft pkg%[1]s you are able to turn output artifacts from %[1]skraft build%[1]s
-		into a distributable archive ready for deployment.  At the same time,
-		%[1]skraft pkg%[1]s allows you to manage these archives: pulling, pushing, or
-		adding them to a project.
+			The default behaviour of %[1]skraft pkg%[1]s is to package a project.  Given no
+			arguments, you will be guided through interactive mode.
 
-		The default behaviour of %[1]skraft pkg%[1]s is to package a project.  Given no
-		arguments, you will be guided through interactive mode.
+			For initram and disk images, passing in a directory as the argument will
+			result automatically packaging that directory into the requested format.
+			Separating the input with a %[1]s:%[1]s delimiter allows you to set the
+			output that of the artifact.
+		`, "`"),
+		Example: heredoc.Doc(`
+			# Package the current Unikraft project (cwd)
+			$ kraft pkg
 
-		For initram and disk images, passing in a directory as the argument will
-		result automatically packaging that directory into the requested format.
-		Separating the input with a %[1]s:%[1]s delimeter allows you to set the
-		output that of the artifact.
-	`, "`")
-	cmd.Example = heredoc.Doc(`
-		# Package the current Unikraft project (cwd)
-		$ kraft pkg
+			# Package path to a Unikraft project
+			$ kraft pkg path/to/application
 
-		# Package path to a Unikraft project
-		$ kraft pkg path/to/application
+			# Package with an additional initramfs
+			$ kraft pkg --initrd ./root-fs .
 
-		# Package with an additional initramfs
-		$ kraft pkg --initrd ./root-fs .
+			# Same as above but also save the resulting CPIO artifact locally
+			$ kraft pkg --initrd ./root-fs:./root-fs.cpio .
+		`),
+	})
 
-		# Same as above but also save the resulting CPIO artifact locally
-		$ kraft pkg --initrd ./root-fs:./root-fs.cpio .
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-			return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-		}
-
-		var err error
-		var workdir string
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return pkgRun(opts, workdir)
-	}
-
-	// TODO: Enable flag if multiple managers are detected?
-	cmd.Flags().StringVarP(
-		&opts.Format,
-		"as", "M",
-		"auto",
-		"Force the packaging despite possible conflicts",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.Force,
-		"force-format",
-		false,
-		"Force the use of a packaging handler format",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Architecture,
-		"arch", "m",
-		"",
-		"Filter the creation of the package by architecture of known targets",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Platform,
-		"plat", "p",
-		"",
-		"Filter the creation of the package by platform of known targets",
-	)
-
-	cmd.Flags().StringVar(
-		&opts.Name,
-		"name",
-		"",
-		"Specify the name of the package.",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Kernel,
-		"kernel", "k",
-		"",
-		"Override the path to the unikernel image",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.DotConfig,
-		"config", "c",
-		"",
-		"Override the path to the KConfig `.config` file",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.KernelDbg,
-		"dbg",
-		false,
-		"Package the debuggable (symbolic) kernel image instead of the stripped image",
-	)
-
-	cmd.Flags().BoolVar(
-		&opts.WithDbg,
-		"with-dbg",
-		false,
-		"In addition to the stripped kernel, include the debug image",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Target,
-		"target", "t",
-		"",
-		"Package a particular known target",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Initrd,
-		"initrd", "i",
-		"",
-		"Path to init ramdisk to bundle within the package (passing a path will "+
-			"automatically generate a CPIO image)",
-	)
-
-	cmd.Flags().StringSliceVarP(
-		&opts.Volumes,
-		"volumes", "v",
-		[]string{},
-		"Additional volumes to bundle within the package",
-	)
-
-	cmd.Flags().StringVarP(
-		&opts.Output,
-		"output", "o",
-		"",
-		"Save the package at the following output.",
-	)
+	cmd.AddCommand(list.New())
+	cmd.AddCommand(pull.New())
+	cmd.AddCommand(source.New())
+	cmd.AddCommand(update.New())
 
 	return cmd
 }
 
-func pkgRun(opts *pkgOptions, workdir string) error {
-	var err error
+func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
+	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
+		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	}
 
-	ctx := context.Background()
+	return nil
+}
+
+func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
+	var err error
+	var workdir string
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
+
+	ctx := cmd.Context()
 	projectOpts, err := app.NewProjectOptions(
 		nil,
 		app.WithWorkingDirectory(workdir),
@@ -322,7 +222,7 @@ func initAppPackage(ctx context.Context,
 	project *app.ApplicationConfig,
 	targ target.TargetConfig,
 	projectOpts *app.ProjectOptions,
-	opts *pkgOptions,
+	opts *Pkg,
 ) ([]pack.Package, error) {
 	var err error
 	log.G(ctx).Tracef("initializing package")

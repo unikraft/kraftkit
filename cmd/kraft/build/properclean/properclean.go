@@ -32,60 +32,53 @@
 package properclean
 
 import (
-	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cmdfactory"
-	"kraftkit.sh/internal/cmdutil"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
+
+	"kraftkit.sh/internal/cli"
 )
 
-type PropercleanOptions struct{}
+type ProperClean struct{}
 
-func PropercleanCmd(f *cmdfactory.Factory) *cobra.Command {
-	opts := &PropercleanOptions{}
-	cmd, err := cmdutil.NewCmd(f, "properclean")
-	if err != nil {
-		panic("could not initialize 'ukbuild properclean' command")
-	}
+func New() *cobra.Command {
+	cmd := cli.New(&ProperClean{}, cobra.Command{
+		Short:   "Completely remove the build artifacts of a Unikraft project",
+		Use:     "properclean [DIR]",
+		Aliases: []string{"pc"},
+		Args:    cli.MaxDirArgs(1),
+		Long: heredoc.Doc(`
+			Remove the Unikraft project build folder containing all build artifacts`),
+		Example: heredoc.Doc(`
+			# Properclean the cwd build directory
+			$ kraft build properclean
 
-	cmd.Short = "Completely remove the build artifacts of a Unikraft project"
-	cmd.Use = "properclean [DIR]"
-	cmd.Aliases = []string{"pc"}
-	cmd.Args = cmdutil.MaxDirArgs(1)
-	cmd.Long = heredoc.Doc(`
-	remove a Unikraft project build folder`)
-	cmd.Example = heredoc.Doc(`
-		# Properclean the cwd build directory
-		$ kraft build properclean
-
-		# Properclean a project at a path
-		$ kraft build properclean path/to/app
-	`)
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		workdir := ""
-
-		if len(args) == 0 {
-			workdir, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		} else {
-			workdir = args[0]
-		}
-
-		return propercleanRun(opts, workdir)
-	}
+			# Properclean a project at a path
+			$ kraft build properclean path/to/app
+		`),
+	})
 
 	return cmd
 }
 
-func propercleanRun(copts *PropercleanOptions, workdir string) error {
-	ctx := context.Background()
+func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
+	var err error
+
+	ctx := cmd.Context()
+	workdir := ""
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
 
 	// Initialize at least the configuration options for a project
 	projectOpts, err := app.NewProjectOptions(
