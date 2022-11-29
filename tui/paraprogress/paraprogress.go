@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
-	"kraftkit.sh/log"
+	// "kraftkit.sh/log"
 )
 
 var tprog *tea.Program
@@ -59,10 +59,13 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 	}
 
 	for i := range processes {
+		processes[i].norender = md.norender
 		processes[i].NameWidth = maxNameLen
-		logger := log.G(ctx)
-		logger.Logger.Out = md.processes[i]
-		md.processes[i].ctx = log.WithLogger(ctx, logger)
+		pctx := ctx
+		// logger := log.G(ctx)
+		// logger.Logger.Out = md.processes[i]
+		// log.WithLogger(ctx, logger)
+		md.processes[i].ctx = pctx
 	}
 
 	return md, nil
@@ -172,6 +175,10 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (md ParaProgress) View() string {
+	if md.norender {
+		return ""
+	}
+
 	var content []string
 
 	for _, process := range md.processes {

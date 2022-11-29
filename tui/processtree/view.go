@@ -22,6 +22,10 @@ var (
 )
 
 func (pt ProcessTree) View() string {
+	if pt.norender {
+		return ""
+	}
+
 	s := ""
 
 	finished := 0
@@ -47,6 +51,10 @@ func (pt ProcessTree) View() string {
 				" (" + strconv.Itoa(finished) + "/" + strconv.Itoa(pt.total) + ")",
 		)
 		s = title + "\n" + s
+	}
+
+	if pt.norender {
+		s += " no render! \n"
 	}
 
 	if !pt.quitting {

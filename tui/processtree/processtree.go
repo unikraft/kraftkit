@@ -53,6 +53,7 @@ type ProcessTreeItem struct {
 	logChan   chan *ProcessTreeItem
 	process   SpinnerProcess
 	timer     stopwatch.Model
+	norender  bool
 	ctx       context.Context
 }
 
@@ -84,20 +85,21 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 		finished: 0,
 	}
 
-	total := 0
-
-	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
-		total += 1
-		return nil
-	})
-
-	pt.total = total
-
 	for _, opt := range opts {
 		if err := opt(pt); err != nil {
 			return nil, err
 		}
 	}
+
+	total := 0
+
+	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
+		total += 1
+		item.norender = pt.norender
+		return nil
+	})
+
+	pt.total = total
 
 	return pt, nil
 }
@@ -261,21 +263,25 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 		// Clone the context to be used individually by each process
 		ctx := pt.ctx
 
-		// Set the output to the process Writer such that we can hijack logs and
-		// print them in a per-process isolated view.
-		entry := log.G(ctx).Dup()
-		logger := *entry.Logger //nolint:govet
-		logger.SetOutput(item)
-		entry.Logger = &logger
-		ctx = log.WithLogger(ctx, entry)
+		if pt.norender {
+			log.G(ctx).Info(item.textLeft)
+		} else {
+			// Set the output to the process Writer such that we can hijack logs and
+			// print them in a per-process isolated view.
+			entry := log.G(ctx).Dup()
+			logger := *entry.Logger //nolint:govet
+			logger.SetOutput(item)
+			entry.Logger = &logger
+			ctx = log.WithLogger(ctx, entry)
 
-		// Set the output of the iostreams to the per-process isolated view.
-		io := *iostreams.G(ctx)
-		io.Out = item
-		io.SetStdoutTTY(false)
-		io.SetStderrTTY(false)
-		io.SetStdinTTY(false)
-		ctx = iostreams.WithIOStreams(ctx, &io)
+			// Set the output of the iostreams to the per-process isolated view.
+			io := *iostreams.G(ctx)
+			io.Out = item
+			io.SetStdoutTTY(false)
+			io.SetStderrTTY(false)
+			io.SetStdinTTY(false)
+			ctx = iostreams.WithIOStreams(ctx, &io)
+		}
 
 		// Set the new context for the individual process.
 		item.ctx = ctx
