@@ -334,6 +334,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	processes = []*paraprogress.Process{} // reset
 
+	var selected target.Targets
 	targets, err := project.Targets()
 	if err != nil {
 		return err
@@ -368,15 +369,15 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				targ.Architecture.Name() == opts.Architecture &&
 				targ.Platform.Name() == opts.Platform:
 
-			targets = append(targets, targ)
+			selected = append(selected, targ)
 
 		default:
 			continue
 		}
 	}
 
-	if len(targets) == 0 {
-		log.G(ctx).Info("no targets to build")
+	if len(selected) == 0 {
+		log.G(ctx).Info("no selected to build")
 		return nil
 	}
 
@@ -387,7 +388,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		mopts = append(mopts, make.WithMaxJobs(opts.Fast))
 	}
 
-	for _, targ := range targets {
+	for _, targ := range selected {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
 		if !project.IsConfigured() && !opts.NoConfigure {
