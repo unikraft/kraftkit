@@ -104,7 +104,7 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	case StatusRunning, StatusRunningChild, StatusRunningButAChildHasFailed:
 		textLeft += "(" + pti.spinner.View() + ")"
 	default:
-		textLeft += " "
+		textLeft += "[ ]"
 	}
 
 	textLeft += " " + pti.textLeft
