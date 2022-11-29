@@ -76,6 +76,7 @@ type Process struct {
 	width       int
 	logs        []string
 	err         error
+	norender    bool
 	ctx         context.Context
 
 	Name      string
@@ -121,21 +122,25 @@ func (p *Process) Start() tea.Cmd {
 	cmds = append(cmds, func() tea.Msg {
 		p := p // golang closures
 
-		// Set the output to the process Writer such that we can hijack logs and
-		// print them in a per-process isolated view.
-		entry := log.G(p.ctx).Dup()
-		logger := *entry.Logger //nolint:govet
-		logger.SetOutput(p)
-		entry.Logger = &logger
-		p.ctx = log.WithLogger(p.ctx, entry)
+		if p.norender {
+			log.G(p.ctx).Info(p.Name)
+		} else {
+			// Set the output to the process Writer such that we can hijack logs and
+			// print them in a per-process isolated view.
+			entry := log.G(p.ctx).Dup()
+			logger := *entry.Logger //nolint:govet
+			logger.SetOutput(p)
+			entry.Logger = &logger
+			p.ctx = log.WithLogger(p.ctx, entry)
 
-		// Set the output of the iostreams to the per-process isolated view.
-		io := *iostreams.G(p.ctx)
-		io.Out = p
-		io.SetStdoutTTY(false)
-		io.SetStderrTTY(false)
-		io.SetStdinTTY(false)
-		p.ctx = iostreams.WithIOStreams(p.ctx, &io)
+			// Set the output of the iostreams to the per-process isolated view.
+			io := *iostreams.G(p.ctx)
+			io.Out = p
+			io.SetStdoutTTY(false)
+			io.SetStderrTTY(false)
+			io.SetStdinTTY(false)
+			p.ctx = iostreams.WithIOStreams(p.ctx, &io)
+		}
 
 		err := p.processFunc(p.ctx, p.onProgress)
 		status := StatusSuccess
