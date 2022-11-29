@@ -18,7 +18,6 @@ import (
 	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/internal/cli"
-	"kraftkit.sh/internal/logger"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -130,10 +129,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	parallel := !config.G(ctx).NoParallel
-	norender := logger.LoggerTypeFromString(config.G(ctx).Log.Type) != logger.FANCY
-	if norender {
-		parallel = false
-	}
+	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
 
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
@@ -168,10 +164,11 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		treemodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
 				processtree.WithFailFast(true),
-				processtree.WithRenderer(false),
 			},
-			[]*processtree.ProcessTreeItem{search}...,
+			search,
 		)
 		if err != nil {
 			return err
@@ -279,11 +276,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		treemodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
-				// processtree.WithVerb("Updating"),
 				processtree.IsParallel(parallel),
-				// processtree.WithRenderer(norender),
+				processtree.WithRenderer(norender),
 				processtree.WithFailFast(true),
-				processtree.WithRenderer(false),
 			},
 			searches...,
 		)
@@ -451,7 +446,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		//    necessary for the subsequent build steps;
 		//  - The Unikraft build system can re-use compiled files from previous
 		//    compilations (if the architecture does not change).
-		paraprogress.IsParallel(false),
+		paraprogress.IsParallel(parallel),
 		paraprogress.WithRenderer(norender),
 		paraprogress.WithFailFast(true),
 	)

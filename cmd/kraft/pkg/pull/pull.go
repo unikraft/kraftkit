@@ -13,6 +13,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -94,6 +95,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	workdir := opts.Workdir
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
+	parallel := !config.G(ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
@@ -152,8 +155,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			treemodel, err := processtree.NewProcessTree(
 				ctx,
 				[]processtree.ProcessTreeOption{
+					processtree.IsParallel(parallel),
+					processtree.WithRenderer(norender),
 					processtree.WithFailFast(true),
-					processtree.WithRenderer(false),
 				},
 				[]*processtree.ProcessTreeItem{search}...,
 			)
@@ -183,6 +187,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			paramodel, err := paraprogress.NewParaProgress(
 				ctx,
 				processes,
+				paraprogress.IsParallel(parallel),
+				paraprogress.WithRenderer(norender),
 				paraprogress.WithFailFast(true),
 			)
 			if err != nil {
@@ -285,7 +291,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	model, err := paraprogress.NewParaProgress(
 		ctx,
 		processes,
-		paraprogress.IsParallel(true),
+		paraprogress.IsParallel(parallel),
+		paraprogress.WithRenderer(norender),
+		paraprogress.WithFailFast(true),
 	)
 	if err != nil {
 		return err
