@@ -98,7 +98,8 @@ func Main(cmd *cobra.Command) {
 	expandRegisteredFlags(cmd)
 	ctx := signals.SetupSignalContext()
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		log.G(ctx).Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
