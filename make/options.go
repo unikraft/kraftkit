@@ -15,29 +15,30 @@ import (
 // the invocation of GNU Make.
 type MakeOptions struct {
 	alwaysMake             bool     `flag:"-B"`
-	directory              string   `flag:"-C"`
+	checkSymlinkTimes      bool     `flag:"-L"`
 	debug                  bool     `flag:"-d"`
+	directory              string   `flag:"-C"`
 	envOverrides           bool     `flag:"-e"`
 	evaluates              []string `flag:"-E"`
 	files                  []string `flag:"-f"`
 	ignoreErrors           bool     `flag:"-i"`
 	includeDirs            []string `flag:"-I"`
 	jobs                   *int     `flag:"-j,omitvalueif=0"`
+	justPrint              bool     `flag:"-n"`
 	keepGoing              bool     `flag:"-k"`
 	loadAverage            *int     `flag:"-l"`
-	checkSymlinkTimes      bool     `flag:"-L"`
-	justPrint              bool     `flag:"-n"`
-	oldFiles               []string `flag:"-o"`
-	printDataBase          bool     `flag:"-p"`
-	question               bool     `flag:"-q"`
+	newFiles               []string `flag:"-W"`
 	noBuiltinRules         bool     `flag:"-r"`
 	noBuiltinVariables     bool     `flag:"-R"`
+	noPrintDirectory       bool     `flag:"--no-print-directory"`
+	oldFiles               []string `flag:"-o"`
+	printDataBase          bool     `flag:"-p"`
+	printDirectory         bool     `flag:"-w"`
+	question               bool     `flag:"-q"`
 	silent                 bool     `flag:"-s"`
 	touch                  bool     `flag:"-t"`
 	trace                  bool     `flag:"--trace"`
 	version                bool     `flag:"-v"`
-	printDirectory         bool     `flag:"-w"`
-	newFiles               []string `flag:"-W"`
 	warnUndefinedVariables bool     `flag:"--warn-undefined-variables"`
 
 	bin        string
@@ -298,6 +299,15 @@ func WithNoBuiltinRules(nbr bool) MakeOption {
 func WithNoBuiltinVariables(nbv bool) MakeOption {
 	return func(mo *MakeOptions) error {
 		mo.noBuiltinVariables = nbv
+		return nil
+	}
+}
+
+// Turn off directory printing, even if it was turned on implicitly.  Equivalent
+// to calling the flags --no-print-directory
+func WithNoPrintDirectory(npd bool) MakeOption {
+	return func(mo *MakeOptions) error {
+		mo.noPrintDirectory = npd
 		return nil
 	}
 }
