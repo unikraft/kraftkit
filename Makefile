@@ -71,6 +71,7 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
                  $(3)
 GO          ?= go
 GOFUMPT     ?= gofumpt
+GOCILINT    ?= golangci-lint
 
 # Misc
 Q           ?= @
@@ -146,6 +147,10 @@ deps:
 .PHONY: fmt
 fmt:
 	$(GOFUMPT) -e -l -w $(WORKDIR)
+
+.PHONY: cicheck
+cicheck:
+	$(GOCILINT) run
 
 .PHONY: clean
 clean:
