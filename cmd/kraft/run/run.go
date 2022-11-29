@@ -124,10 +124,24 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	// The following sequence checks the position argument of `kraft run ENTITY`
 	// where ENTITY can either be:
 	// a). path to a project which either uses the only specified target or one
-	//     specified via the -t flag;
+	//     specified via the -t flag, e.g.:
+	//
+	//     $ kraft run path/to/project # with 1 default target
+	//     # or for multiple targets
+	//     $ kraft run -t target-name path/to/project
+	//
 	// b). a target defined within the context of `workdir` (which is either set
-	//     via -w or is the current working directory); or
-	// c). path to a kernel.
+	//     via -w or is the current working directory), e.g.:
+	//
+	//     $ cd path/to/project
+	//     $ kraft run target-name
+	//     # or
+	//     $ kraft run -w path/to/project target-name
+	//
+	// c). path to a kernel, e.g.:
+	//
+	//     $ kraft run path/to/kernel
+	//
 	var workdir string
 	var entity string
 	var kernelArgs []string
