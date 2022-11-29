@@ -51,9 +51,6 @@ func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 
 	parallel := !config.G(ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
-	if norender {
-		parallel = false
-	}
 
 	model, err := processtree.NewProcessTree(
 		ctx,
