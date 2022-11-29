@@ -16,7 +16,6 @@ import (
 	"unsafe"
 
 	"github.com/rancher/wrangler/pkg/signals"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -99,7 +98,7 @@ func Main(cmd *cobra.Command) {
 	expandRegisteredFlags(cmd)
 	ctx := signals.SetupSignalContext()
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		logrus.Fatal(err)
+		log.G(ctx).Fatal(err)
 	}
 }
 
