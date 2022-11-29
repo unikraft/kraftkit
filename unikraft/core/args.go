@@ -43,10 +43,10 @@ const (
 )
 
 type MakeArgs struct {
-	OutputDir      string    `export:"O,omitempty"`
-	ApplicationDir string    `export:"A"`
-	PlatformDirs   string    `export:"P,omitempty"`
-	LibraryDirs    string    `export:"L,omitempty"`
-	Verbosity      Verbosity `export:"V,omitempty" default:"0"`
-	ConfigPath     string    `export:"C,omitempty"`
+	OutputDir      string `export:"O,omitempty"`
+	ApplicationDir string `export:"A"`
+	PlatformDirs   string `export:"P,omitempty"`
+	LibraryDirs    string `export:"L,omitempty"`
+	// Verbosity      Verbosity `export:"V,omitempty" default:"0"`
+	ConfigPath string `export:"C,omitempty"`
 }
