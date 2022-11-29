@@ -46,8 +46,6 @@ func WithDefaultLogger() CliOption {
 
 		// Set up a default logger based on the internal TextFormatter
 		logger := logrus.New()
-		formatter := new(log.TextFormatter)
-		formatter.FullTimestamp = true
 
 		// Configure the logger based on parameters set by in KraftKit's
 		// configuration
@@ -56,11 +54,47 @@ func WithDefaultLogger() CliOption {
 			copts.logger = log.L
 		}
 
-		formatter.DisableTimestamp = true
-		if cfgm.Config.Log.Timestamps {
-			formatter.DisableTimestamp = false
-		} else {
-			formatter.TimestampFormat = ">"
+		switch log.LoggerTypeFromString(cfgm.Config.Log.Type) {
+		case log.QUIET:
+			formatter := new(logrus.TextFormatter)
+			logger.Formatter = formatter
+
+		case log.BASIC:
+			formatter := new(log.TextFormatter)
+			formatter.FullTimestamp = true
+			formatter.DisableTimestamp = true
+			formatter.DisableColors = true
+
+			if cfgm.Config.Log.Timestamps {
+				formatter.DisableTimestamp = false
+			} else {
+				formatter.TimestampFormat = ">"
+			}
+
+			logger.Formatter = formatter
+
+		case log.FANCY:
+			formatter := new(log.TextFormatter)
+			formatter.FullTimestamp = true
+			formatter.DisableTimestamp = true
+
+			if cfgm.Config.Log.Timestamps {
+				formatter.DisableTimestamp = false
+			} else {
+				formatter.TimestampFormat = ">"
+			}
+
+			logger.Formatter = formatter
+
+		case log.JSON:
+			formatter := new(logrus.JSONFormatter)
+			formatter.DisableTimestamp = true
+
+			if cfgm.Config.Log.Timestamps {
+				formatter.DisableTimestamp = false
+			}
+
+			logger.Formatter = formatter
 		}
 
 		level, ok := log.Levels()[cfgm.Config.Log.Level]
@@ -75,7 +109,6 @@ func WithDefaultLogger() CliOption {
 		}
 
 		// Save the logger
-		logger.Formatter = formatter
 		copts.logger = logrus.NewEntry(logger)
 	}
 }
