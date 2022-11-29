@@ -18,13 +18,21 @@ import (
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
-var caseRegexp = regexp.MustCompile("([a-z])([A-Z])")
+var (
+	caseRegexp    = regexp.MustCompile("([a-z])([A-Z])")
+	flagOverrides = make(map[string][]*pflag.Flag)
+)
+
+func RegisterFlag(cmdline string, flag *pflag.Flag) {
+	flagOverrides[cmdline] = append(flagOverrides[cmdline], flag)
+}
 
 type PersistentPreRunnable interface {
 	PersistentPre(cmd *cobra.Command, args []string) error
@@ -72,7 +80,23 @@ func Name(obj any) string {
 	return commandName
 }
 
+func expandRegisteredFlags(cmd *cobra.Command) {
+	// Add flag overrides which can be provided by plugins
+	for arg, flags := range flagOverrides {
+		args := strings.Fields(arg)
+		subCmd, _, err := cmd.Traverse(args[1:])
+		if err != nil {
+			continue
+		}
+
+		for _, flag := range flags {
+			subCmd.Flags().AddFlag(flag)
+		}
+	}
+}
+
 func Main(cmd *cobra.Command) {
+	expandRegisteredFlags(cmd)
 	ctx := signals.SetupSignalContext()
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		logrus.Fatal(err)
