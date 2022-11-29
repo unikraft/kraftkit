@@ -223,6 +223,7 @@ func (pt ProcessTree) getNextReadyChildren(tree []*ProcessTreeItem) []*ProcessTr
 		// no children and the status is pending
 		if len(subprocesses) == 0 &&
 			failed == 0 &&
+			(pt.parallel || (len(items) == 0 && !pt.parallel)) &&
 			completed == len(item.children) &&
 			(item.status == StatusPending || item.status == StatusRunningChild) {
 			items = append(items, item)
