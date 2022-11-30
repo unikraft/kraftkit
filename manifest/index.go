@@ -66,18 +66,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 }
 
 func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
-	var manifests []*Manifest
-
-	for _, manifest := range mip.index.Manifests {
-		next, err := findManifestsFromSource(mip.ctx, mip.path, manifest.Manifest, mip.mopts)
-		if err != nil {
-			return nil, err
-		}
-
-		manifests = append(manifests, next...)
-	}
-
-	return manifests, nil
+	return mip.index.Manifests, nil
 }
 
 func (mip ManifestIndexProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
