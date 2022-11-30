@@ -57,8 +57,10 @@ func New() *cobra.Command {
 			$ kraft pkg pull github.com/unikraft/app-nginx.git
 
 			# Pull from a manifest
-			$ kraft pkg pull nginx:1.21.6
-		`),
+			$ kraft pkg pull nginx:1.21.6`),
+		Annotations: map[string]string{
+			"help:group": "pkg",
+		},
 	})
 }
 

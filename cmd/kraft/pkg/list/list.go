@@ -43,8 +43,10 @@ func New() *cobra.Command {
 			List installed Unikraft component packages.
 		`),
 		Example: heredoc.Doc(`
-			$ kraft pkg list
-		`),
+			$ kraft pkg list`),
+		Annotations: map[string]string{
+			"help:group": "pkg",
+		},
 	})
 }
 

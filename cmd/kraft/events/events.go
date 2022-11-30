@@ -42,6 +42,9 @@ func New() *cobra.Command {
 		Aliases: []string{"event", "e"},
 		Long: heredoc.Doc(`
 			Follow the events of a unikernel`),
+		Annotations: map[string]string{
+			"help:group": "run",
+		},
 	})
 }
 

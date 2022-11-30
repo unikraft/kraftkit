@@ -28,8 +28,10 @@ func New() *cobra.Command {
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
 		Args:  cobra.MinimumNArgs(1),
 		Long: heredoc.Doc(`
-			Stop one or more running unikernels
-		`),
+			Stop one or more running unikernels`),
+		Annotations: map[string]string{
+			"help:group": "run",
+		},
 	})
 }
 

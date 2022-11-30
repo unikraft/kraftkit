@@ -41,6 +41,21 @@ func New() *cobra.Command {
 		},
 	})
 
+	cmd.AddGroup(
+		&cobra.Group{
+			ID:    "build",
+			Title: "BUILD COMMANDS",
+		},
+		&cobra.Group{
+			ID:    "pkg",
+			Title: "PACKAGING COMMANDS",
+		},
+		&cobra.Group{
+			ID:    "run",
+			Title: "RUNTIME COMMANDS",
+		},
+	)
+
 	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(build.New())
 	cmd.AddCommand(ps.New())

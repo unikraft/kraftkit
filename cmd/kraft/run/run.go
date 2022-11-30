@@ -58,8 +58,10 @@ func New() *cobra.Command {
 			kraft run path/to/kernel-x86_64-kvm
 
 			# Run a project which only has one target
-			kraft run path/to/project
-		`),
+			kraft run path/to/project`),
+		Annotations: map[string]string{
+			"help:group": "run",
+		},
 	})
 
 	cmd.Flags().VarP(

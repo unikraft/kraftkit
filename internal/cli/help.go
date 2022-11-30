@@ -11,8 +11,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"kraftkit.sh/internal/text"
 	"kraftkit.sh/iostreams"
+
+	"kraftkit.sh/internal/text"
 )
 
 func rootUsageFunc(command *cobra.Command) error {
@@ -29,8 +30,6 @@ func rootUsageFunc(command *cobra.Command) error {
 		}
 		return nil
 	}
-
-	// TODO: Introduce flag groupings (e.g. "Global Flags" and "Subcommand Flags")
 
 	flagUsages := command.LocalFlags().FlagUsagesWrapped(80)
 	if flagUsages != "" {
@@ -86,103 +85,141 @@ func isRootCmd(command *cobra.Command) bool {
 	return command != nil && !command.HasParent()
 }
 
-func rootHelpFunc(cs *iostreams.ColorScheme, command *cobra.Command, args []string) {
-	if isRootCmd(command.Parent()) && len(args) >= 2 && args[1] != "--help" && args[1] != "-h" {
-		nestedSuggestFunc(command, args[1])
+func traverse(cmd *cobra.Command) []*cobra.Command {
+	var cmds []*cobra.Command
+
+	for _, cmd := range cmd.Commands() {
+		cmds = append(cmds, cmd)
+
+		if len(cmd.Commands()) > 0 {
+			cmds = append(cmds, traverse(cmd)...)
+		}
+	}
+
+	return cmds
+}
+
+func fullname(cmd *cobra.Command) string {
+	name := ""
+
+	for {
+		name = cmd.Name() + " " + name
+		if !cmd.HasParent() || isRootCmd(cmd.Parent()) {
+			break
+		}
+		cmd = cmd.Parent()
+	}
+
+	return strings.TrimSpace(name)
+}
+
+func rootHelpFunc(cmd *cobra.Command, args []string) {
+	if isRootCmd(cmd.Parent()) && len(args) >= 2 && args[1] != "--help" && args[1] != "-h" {
+		nestedSuggestFunc(cmd, args[1])
 		hasFailed = true
 		return
 	}
 
-	coreCommands := []string{}
-	actionsCommands := []string{}
-	additionalCommands := []string{}
-	for _, c := range command.Commands() {
-		if c.Short == "" {
-			continue
-		}
-		if c.Hidden {
-			continue
-		}
-
-		s := rpad(c.Name(), c.NamePadding()) + c.Short
-		if _, ok := c.Annotations["IsCore"]; ok {
-			coreCommands = append(coreCommands, s)
-		} else if _, ok := c.Annotations["IsActions"]; ok {
-			actionsCommands = append(actionsCommands, s)
-		} else {
-			additionalCommands = append(additionalCommands, s)
-		}
-	}
-
-	// If there are no core commands, assume everything is a core command
-	if len(coreCommands) == 0 {
-		coreCommands = additionalCommands
-		additionalCommands = []string{}
-	}
-
 	type helpEntry struct {
-		Title string
-		Body  string
+		title string
+		body  string
 	}
 
-	longText := command.Long
+	longText := cmd.Long
 	if longText == "" {
-		longText = command.Short
-	}
-	if longText != "" && command.LocalFlags().Lookup("jq") != nil {
-		longText = strings.TrimRight(longText, "\n") +
-			"\n\nFor more information about output formatting flags, see `gh help formatting`."
+		longText = cmd.Short
 	}
 
 	helpEntries := []helpEntry{}
 	if longText != "" {
 		helpEntries = append(helpEntries, helpEntry{"", longText})
 	}
-	helpEntries = append(helpEntries, helpEntry{"USAGE", command.UseLine()})
-	if len(coreCommands) > 0 {
-		helpEntries = append(helpEntries, helpEntry{"CORE COMMANDS", strings.Join(coreCommands, "\n")})
-	}
-	if len(actionsCommands) > 0 {
-		helpEntries = append(helpEntries, helpEntry{"ACTIONS COMMANDS", strings.Join(actionsCommands, "\n")})
-	}
-	if len(additionalCommands) > 0 {
-		helpEntries = append(helpEntries, helpEntry{"ADDITIONAL COMMANDS", strings.Join(additionalCommands, "\n")})
+	helpEntries = append(helpEntries, helpEntry{"USAGE", cmd.UseLine()})
+
+	if isRootCmd(cmd) {
+		maxPad := 0
+		mapping := make(map[string][]*cobra.Command)
+
+		for _, c := range traverse(cmd) {
+			if c.Short == "" {
+				continue
+			}
+			if c.Hidden {
+				continue
+			}
+
+			group, ok := c.Annotations["help:group"]
+			if !ok {
+				continue
+			}
+
+			pad := len(fullname(c))
+			if pad > maxPad {
+				maxPad = pad
+			}
+
+			mapping[group] = append(mapping[group], c)
+		}
+
+		for _, group := range cmd.Groups() {
+
+			var usages []string
+
+			for _, c := range mapping[group.ID] {
+				usages = append(usages, rpad(fullname(c), maxPad+2)+c.Short)
+			}
+
+			if len(usages) > 0 {
+				helpEntries = append(helpEntries, helpEntry{
+					title: group.Title,
+					body:  strings.Join(usages, "\n"),
+				})
+			}
+		}
+	} else {
+		var usages []string
+		for _, c := range cmd.Commands() {
+			if c.Short == "" {
+				continue
+			}
+			if c.Hidden {
+				continue
+			}
+			usages = append(usages, rpad(c.Name(), c.NamePadding())+c.Short)
+		}
+
+		if len(usages) > 0 {
+			helpEntries = append(helpEntries, helpEntry{
+				title: "SUBCOMMANDS",
+				body:  strings.Join(usages, "\n"),
+			})
+		}
 	}
 
-	flagUsages := command.LocalFlags().FlagUsagesWrapped(80)
+	flagUsages := cmd.LocalFlags().FlagUsagesWrapped(80)
 	if flagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"FLAGS", dedent(flagUsages)})
 	}
-	inheritedFlagUsages := command.InheritedFlags().FlagUsagesWrapped(80)
+
+	inheritedFlagUsages := cmd.InheritedFlags().FlagUsagesWrapped(80)
 	if inheritedFlagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"INHERITED FLAGS", dedent(inheritedFlagUsages)})
 	}
-	if _, ok := command.Annotations["help:arguments"]; ok {
-		helpEntries = append(helpEntries, helpEntry{"ARGUMENTS", command.Annotations["help:arguments"]})
-	}
-	if command.Example != "" {
-		helpEntries = append(helpEntries, helpEntry{"EXAMPLES", command.Example})
-	}
-	if _, ok := command.Annotations["help:environment"]; ok {
-		helpEntries = append(helpEntries, helpEntry{"ENVIRONMENT VARIABLES", command.Annotations["help:environment"]})
-	}
-	// 	helpEntries = append(helpEntries, helpEntry{"LEARN MORE", fmt.Sprintf(`
-	// Use '%s <command> <subcommand> --help' for more information about a command.
-	// Read the manual at https://unikraft.org/docs/`, f.RootCmd.Name())})
-	if _, ok := command.Annotations["help:feedback"]; ok {
-		helpEntries = append(helpEntries, helpEntry{"FEEDBACK", command.Annotations["help:feedback"]})
+
+	if cmd.Example != "" {
+		helpEntries = append(helpEntries, helpEntry{"EXAMPLES", cmd.Example})
 	}
 
-	out := command.OutOrStdout()
+	out := iostreams.G(cmd.Context()).Out
+	cs := iostreams.G(cmd.Context()).ColorScheme()
 	for _, e := range helpEntries {
-		if e.Title != "" {
-			// If there is a title, add indentation to each line in the body
-			fmt.Fprintln(out, cs.Bold(e.Title))
-			fmt.Fprintln(out, text.Indent(strings.Trim(e.Body, "\r\n"), "  "))
-		} else {
-			// If there is no title print the body as is
-			fmt.Fprintln(out, e.Body)
+		if e.title != "" && e.body != "" {
+			fmt.Fprintln(out, cs.Bold(e.title))
+			fmt.Fprintln(out, text.Indent(strings.Trim(e.body, "\r\n"), "  "))
+		} else if e.body != "" {
+			fmt.Fprintln(out, e.body)
 		}
+
 		fmt.Fprintln(out)
 	}
 }
