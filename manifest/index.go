@@ -190,7 +190,6 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 	if err != nil {
 		return nil, err
 	}
-	providerRequestCache = contents
 
 	index, err := NewManifestIndexFromBytes(contents, mopts...)
 	if err != nil {

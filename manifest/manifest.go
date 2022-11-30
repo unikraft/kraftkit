@@ -194,54 +194,50 @@ func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOptio
 	}
 
 	var contents []byte
-	if providerRequestCache == nil {
-		client := &http.Client{}
+	client := &http.Client{}
 
-		head, err := http.NewRequest("HEAD", path, nil)
-		if err != nil {
-			return nil, err
-		}
+	head, err := http.NewRequestWithContext(ctx, "HEAD", path, nil)
+	if err != nil {
+		return nil, err
+	}
 
-		head.Header.Set("User-Agent", "kraftkit/"+version.Version())
+	head.Header.Set("User-Agent", "kraftkit/"+version.Version())
 
-		resp, err := client.Do(head)
-		if err != nil {
-			return nil, err
-		}
-		resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("manifest index not found: %s", path)
-		}
+	resp, err := client.Do(head)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("manifest index not found: %s", path)
+	}
 
-		get, err := http.NewRequest("GET", path, nil)
-		if err != nil {
-			return nil, err
-		}
+	get, err := http.NewRequestWithContext(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
 
-		get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+	get.Header.Set("User-Agent", "kraftkit/"+version.Version())
 
-		resp, err = client.Do(get)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
+	resp, err = client.Do(get)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
-		}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received %d error when retrieving: %s", resp.StatusCode, path)
+	}
 
-		// Check if we're directly pointing to a compatible manifest file
-		ext := filepath.Ext(path)
-		if ext != ".yml" && ext != ".yaml" {
-			return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
-		}
+	// Check if we're directly pointing to a compatible manifest file
+	ext := filepath.Ext(path)
+	if ext != ".yml" && ext != ".yaml" {
+		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+	}
 
-		contents, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		contents = providerRequestCache
+	contents, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
 	}
 
 	manifest, err := NewManifestFromBytes(ctx, contents, mopts...)
