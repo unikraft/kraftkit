@@ -29,7 +29,6 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
-	"kraftkit.sh/cmd/kraft/build/prepare"
 	"kraftkit.sh/cmd/kraft/build/properclean"
 	"kraftkit.sh/cmd/kraft/build/set"
 	"kraftkit.sh/cmd/kraft/build/unset"
@@ -74,7 +73,6 @@ func New() *cobra.Command {
 		},
 	})
 
-	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(set.New())
 	cmd.AddCommand(unset.New())
 	cmd.AddCommand(properclean.New())

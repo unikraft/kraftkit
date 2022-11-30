@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/cmd/kraft/fetch"
 	"kraftkit.sh/cmd/kraft/menu"
 	"kraftkit.sh/cmd/kraft/pkg"
+	"kraftkit.sh/cmd/kraft/prepare"
 	"kraftkit.sh/cmd/kraft/ps"
 	"kraftkit.sh/cmd/kraft/rm"
 	"kraftkit.sh/cmd/kraft/run"
@@ -67,6 +68,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(fetch.New())
 	cmd.AddCommand(menu.New())
 	cmd.AddCommand(pkg.New())
+	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
