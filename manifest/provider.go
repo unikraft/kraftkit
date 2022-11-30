@@ -23,15 +23,12 @@ type Provider interface {
 	fmt.Stringer
 }
 
-var providerRequestCache []byte
-
 // NewProvider ultimately returns one of the supported manifest providers by
 // attempting an ordered instantiation based on the input source.  For the
 // provider which does not return an error is indicator that it is supported and
 // thus the return of NewProvider a compatible interface Provider able to gather
 // information about the manifest.
 func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
-	providerRequestCache = nil
 	provider, err := NewManifestIndexProvider(ctx, path, mopts...)
 	if err == nil {
 		return provider, nil
