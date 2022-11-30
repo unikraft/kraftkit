@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/cmd/kraft/ps"
 	"kraftkit.sh/cmd/kraft/rm"
 	"kraftkit.sh/cmd/kraft/run"
+	"kraftkit.sh/cmd/kraft/set"
 	"kraftkit.sh/cmd/kraft/stop"
 
 	// Additional initializers
@@ -74,6 +75,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
+	cmd.AddCommand(set.New())
 	cmd.AddCommand(stop.New())
 
 	return cmd

@@ -29,7 +29,6 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
-	"kraftkit.sh/cmd/kraft/build/set"
 	"kraftkit.sh/cmd/kraft/build/unset"
 	"kraftkit.sh/tui/processtree"
 )
@@ -72,7 +71,6 @@ func New() *cobra.Command {
 		},
 	})
 
-	cmd.AddCommand(set.New())
 	cmd.AddCommand(unset.New())
 
 	return cmd
