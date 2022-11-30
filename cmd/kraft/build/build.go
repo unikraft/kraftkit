@@ -28,8 +28,6 @@ import (
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 
-	// Subcommands
-	"kraftkit.sh/cmd/kraft/build/unset"
 	"kraftkit.sh/tui/processtree"
 )
 
@@ -50,7 +48,7 @@ type Build struct {
 }
 
 func New() *cobra.Command {
-	cmd := cli.New(&Build{}, cobra.Command{
+	return cli.New(&Build{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels ",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cli.MaxDirArgs(1),
@@ -70,10 +68,6 @@ func New() *cobra.Command {
 			"help:group": "build",
 		},
 	})
-
-	cmd.AddCommand(unset.New())
-
-	return cmd
 }
 
 func (opts *Build) Run(cmd *cobra.Command, args []string) error {

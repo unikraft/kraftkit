@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/cmd/kraft/run"
 	"kraftkit.sh/cmd/kraft/set"
 	"kraftkit.sh/cmd/kraft/stop"
+	"kraftkit.sh/cmd/kraft/unset"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -77,6 +78,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(run.New())
 	cmd.AddCommand(set.New())
 	cmd.AddCommand(stop.New())
+	cmd.AddCommand(unset.New())
 
 	return cmd
 }
