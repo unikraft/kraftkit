@@ -333,12 +333,6 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		}
 	}
 
-	// for i := range packages {
-	// 	packages[i].ApplyOptions(
-	// 		pack.WithLogger(mm.Options().Log),
-	// 	)
-	// }
-
 	return packages, nil
 }
 
