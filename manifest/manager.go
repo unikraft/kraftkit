@@ -239,18 +239,11 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 	}
 
 	if index != nil {
-		for _, manifest := range index.Manifests {
-			if len(manifest.Manifest) > 0 {
-				manifests, err := findManifestsFromSource(ctx, mm.LocalManifestsDir(ctx), manifest.Manifest, mopts)
-				if err != nil {
-					return nil, err
-				}
-
-				allManifests = append(allManifests, manifests...)
-			} else {
-				allManifests = append(allManifests, manifest)
-			}
+		manifests, err := FindManifestsFromSource(ctx, index.Origin, mopts...)
+		if err != nil {
+			return nil, err
 		}
+		allManifests = append(allManifests, manifests...)
 	}
 
 	var packages []pack.Package

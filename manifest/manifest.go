@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
@@ -294,23 +295,42 @@ func findManifestsFromSource(ctx context.Context, lastSource, source string, mop
 		return nil, err
 	}
 
-	for _, manifest := range newManifests {
-		manifest.Origin = source // Save the origin of the manifest
-		manifest.Provider = provider
+	var wg sync.WaitGroup
+	var mu sync.RWMutex
+	wg.Add(len(newManifests))
 
-		if len(manifest.Manifest) > 0 {
-			var next []*Manifest
-			next, err = findManifestsFromSource(ctx, source, manifest.Manifest, mopts)
-			if err != nil {
-				return nil, err
-			}
+	for i := range newManifests {
+		go func(i int) {
+			if len(newManifests[i].Manifest) > 0 {
+				defer wg.Done()
+				next, ohno := findManifestsFromSource(ctx, source, newManifests[i].Manifest, mopts)
+				if ohno != nil {
+					mu.Lock()
+					err = ohno
+					mu.Unlock()
+					return
+				}
 
-			if len(next) > 0 {
-				manifests = append(manifests, next...)
+				if len(next) > 0 {
+					mu.Lock()
+					manifests = append(manifests, next...)
+					mu.Unlock()
+				}
+			} else {
+				mu.Lock()
+				newManifests[i].Origin = source // Save the origin of the manifest
+				newManifests[i].Provider = provider
+				manifests = append(manifests, newManifests[i])
+				mu.Unlock()
+				wg.Done()
 			}
-		} else {
-			manifests = append(manifests, manifest)
-		}
+		}(i)
+	}
+
+	wg.Wait()
+
+	if err != nil {
+		return nil, err
 	}
 
 	return manifests, nil
