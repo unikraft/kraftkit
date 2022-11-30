@@ -188,9 +188,9 @@ func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOpti
 // NewManifestFromURL retrieves a provided path as a Manifest from a remote
 // location over HTTP
 func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOption) (*Manifest, error) {
-	_, err := url.Parse(path)
-	if err != nil {
-		return nil, err
+	u, err := url.Parse(path)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return nil, fmt.Errorf("provided path was not a valid URL")
 	}
 
 	var contents []byte
