@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
+	"unicode"
 
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
@@ -346,6 +348,38 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 			packages = append(packages, packs)
 		}
 	}
+
+	// Sort packages by name before returning
+	sort.SliceStable(packages, func(i, j int) bool {
+		iRunes := []rune(packages[i].Name())
+		jRunes := []rune(packages[j].Name())
+
+		max := len(iRunes)
+		if max > len(jRunes) {
+			max = len(jRunes)
+		}
+
+		for idx := 0; idx < max; idx++ {
+			ir := iRunes[idx]
+			jr := jRunes[idx]
+
+			lir := unicode.ToLower(ir)
+			ljr := unicode.ToLower(jr)
+
+			if lir != ljr {
+				return lir < ljr
+			}
+
+			// the lowercase runes are the same, so compare the original
+			if ir != jr {
+				return ir < jr
+			}
+		}
+
+		// If the strings are the same up to the length of the shortest string,
+		// the shorter string comes first
+		return len(iRunes) < len(jRunes)
+	})
 
 	return packages, nil
 }
