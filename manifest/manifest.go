@@ -270,10 +270,9 @@ func findManifestsFromSource(ctx context.Context, lastSource, source string, mop
 		if f, err := os.Stat(lastSource); err == nil && f.IsDir() {
 			source = filepath.Join(lastSource, source)
 		} else {
-			_, err := url.ParseRequestURI(lastSource)
-			u, err2 := url.Parse(lastSource)
+			u, err := url.ParseRequestURI(lastSource)
 
-			if err != nil || err2 != nil || u.Scheme == "" || u.Host == "" {
+			if err != nil || u.Scheme == "" || u.Host == "" {
 				// Source is not an URL, so we can assume it's file structured
 				dir, _ := filepath.Split(lastSource)
 				source = filepath.Join(dir, source)
