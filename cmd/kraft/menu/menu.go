@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file expect in compliance with the License.
-package menuconfig
+package menu
 
 import (
 	"os"
@@ -16,21 +16,21 @@ import (
 	"kraftkit.sh/internal/cli"
 )
 
-type MenuConfig struct{}
+type Menu struct{}
 
 func New() *cobra.Command {
-	return cli.New(&MenuConfig{}, cobra.Command{
-		Short:   "menuconfig open's Unikraft configuration editor TUI",
-		Use:     "menuconfig [DIR]",
-		Aliases: []string{"m", "menu"},
+	return cli.New(&Menu{}, cobra.Command{
+		Short:   "Open's Unikraft configuration editor TUI",
+		Use:     "menu [DIR]",
+		Aliases: []string{"m", "menuconfig"},
 		Args:    cli.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Open Unikraft's configuration editor TUI`),
 		Example: heredoc.Doc(`
-			# Open the menuconfig in the cwd project
-			$ kraft build menuconfig
+			# Open configuration editor in the cwd project
+			$ kraft menu
 			
-			# Open the menuconfig for a project at a path
+			# Open configuration editor for a project at a path
 			$ kraft build menu path/to/app`),
 		Annotations: map[string]string{
 			"help:group": "build",
@@ -38,7 +38,7 @@ func New() *cobra.Command {
 	})
 }
 
-func (opts *MenuConfig) Run(cmd *cobra.Command, args []string) error {
+func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
