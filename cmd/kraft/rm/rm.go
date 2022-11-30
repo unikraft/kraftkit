@@ -30,6 +30,9 @@ func New() *cobra.Command {
 		Aliases: []string{"remove"},
 		Long: heredoc.Doc(`
 			Remove one or more running unikernels`),
+		Annotations: map[string]string{
+			"help:group": "run",
+		},
 	})
 }
 

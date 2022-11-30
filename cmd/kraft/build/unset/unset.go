@@ -60,8 +60,10 @@ func New() *cobra.Command {
 			$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
 			# Unset variables in a project at a path
-			$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
-		`),
+			$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
+		Annotations: map[string]string{
+			"help:group": "build",
+		},
 	})
 }
 

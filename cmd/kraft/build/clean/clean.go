@@ -57,8 +57,10 @@ func New() *cobra.Command {
 			$ kraft build clean
 
 			# clean a project at a path
-			$ kraft build clean path/to/app
-		`),
+			$ kraft build clean path/to/app`),
+		Annotations: map[string]string{
+			"help:group": "build",
+		},
 	})
 }
 

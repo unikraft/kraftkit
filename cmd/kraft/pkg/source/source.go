@@ -25,8 +25,10 @@ func New() *cobra.Command {
 			$ kraft pkg source https://github.com/unikraft/unikraft.git
 
 			# Add a manifest of components
-			$ kraft pkg source https://raw.github.com/unikraft/index/stable/index.yaml
-		`),
+			$ kraft pkg source https://raw.github.com/unikraft/index/stable/index.yaml`),
+		Annotations: map[string]string{
+			"help:group": "pkg",
+		},
 	})
 }
 
