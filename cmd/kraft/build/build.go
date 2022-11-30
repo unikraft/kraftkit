@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
@@ -400,7 +401,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						make.WithExecOptions(
 							exec.WithStdin(iostreams.G(ctx).In),
 							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
 						),
 					)
 				},
@@ -414,7 +415,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					return project.Prepare(append(mopts,
 						make.WithExecOptions(
 							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
 						))...,
 					)
 				},
@@ -430,7 +431,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(
 							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
 						),
 					)...),
 					app.WithBuildNoSyncConfig(opts.NoSyncConfig),
