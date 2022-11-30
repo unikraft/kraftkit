@@ -63,7 +63,6 @@ func WithDefaultLogger() CliOption {
 			formatter := new(log.TextFormatter)
 			formatter.FullTimestamp = true
 			formatter.DisableTimestamp = true
-			formatter.DisableColors = true
 
 			if cfgm.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false

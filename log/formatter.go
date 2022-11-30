@@ -24,7 +24,7 @@ const defaultTimestampFormat = time.RFC3339
 var (
 	baseTimestamp      time.Time    = time.Now()
 	defaultColorScheme *ColorScheme = &ColorScheme{
-		InfoLevelStyle:  "black:green",
+		InfoLevelStyle:  "black:white",
 		WarnLevelStyle:  "black:yellow",
 		ErrorLevelStyle: "black:red",
 		FatalLevelStyle: "black:red",
@@ -85,9 +85,6 @@ type TextFormatter struct {
 	// Disable timestamp logging. useful when output is redirected to logging
 	// system that already adds timestamps.
 	DisableTimestamp bool
-
-	// Disable the conversion of the log levels to uppercase
-	DisableUppercase bool
 
 	// Enable logging the full timestamp when a TTY is attached instead of just
 	// the time passed since beginning of execution.
@@ -229,30 +226,29 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	var levelText string
 	switch entry.Level {
 	case logrus.InfoLevel:
+		levelText = "i"
 		levelColor = colorScheme.InfoLevelColor
 	case logrus.WarnLevel:
+		levelText = "W"
 		levelColor = colorScheme.WarnLevelColor
 	case logrus.ErrorLevel:
+		levelText = "E"
 		levelColor = colorScheme.ErrorLevelColor
 	case logrus.FatalLevel:
+		levelText = "!"
 		levelColor = colorScheme.FatalLevelColor
 	case logrus.PanicLevel:
+		levelText = "X"
 		levelColor = colorScheme.PanicLevelColor
+	case logrus.TraceLevel:
+		levelText = "T"
+		levelColor = colorScheme.DebugLevelColor
 	default:
+		levelText = "D"
 		levelColor = colorScheme.DebugLevelColor
 	}
 
-	if entry.Level != logrus.WarnLevel {
-		levelText = entry.Level.String()
-	} else {
-		levelText = "warn"
-	}
-
-	if !f.DisableUppercase {
-		levelText = strings.ToUpper(levelText)
-	}
-
-	level := levelColor(fmt.Sprintf(" %5s ", levelText))
+	level := levelColor(fmt.Sprintf(" %1s ", levelText))
 	prefix := ""
 	message := entry.Message
 
@@ -348,12 +344,12 @@ func (f *TextFormatter) appendValue(b *bytes.Buffer, value interface{}) {
 // This is to not silently overwrite `time`, `msg` and `level` fields when
 // dumping it. If this code wasn't there doing:
 //
-//  logrus.WithField("level", 1).Info("hello")
+//	logrus.WithField("level", 1).Info("hello")
 //
 // would just silently drop the user provided level. Instead with this code
 // it'll be logged as:
 //
-//  {"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
+//	{"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
 func prefixFieldClashes(data logrus.Fields) {
 	if t, ok := data["time"]; ok {
 		data["fields.time"] = t
