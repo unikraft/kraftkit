@@ -15,12 +15,15 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/version"
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
-	"gopkg.in/yaml.v2"
+	"kraftkit.sh/internal/version"
 )
 
 type Manifest struct {
@@ -70,14 +73,24 @@ type ManifestProvider struct {
 func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	manifest, err := NewManifestFromFile(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Debugf("retrieved manifest")
 		return ManifestProvider{
 			path:     path,
 			manifest: manifest,
 		}, nil
 	}
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Debugf("was not a path")
+
 	manifest, err = NewManifestFromURL(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Debugf("retrieved manifest")
 		return ManifestProvider{
 			path:     path,
 			manifest: manifest,
@@ -204,6 +217,11 @@ func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOptio
 
 	head.Header.Set("User-Agent", "kraftkit/"+version.Version())
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"url":    path,
+		"method": "HEAD",
+	}).Trace("http")
+
 	resp, err := client.Do(head)
 	if err != nil {
 		return nil, err
@@ -219,6 +237,11 @@ func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOptio
 	}
 
 	get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"url":    path,
+		"method": "GET",
+	}).Trace("http")
 
 	resp, err = client.Do(get)
 	if err != nil {

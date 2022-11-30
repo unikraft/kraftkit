@@ -8,6 +8,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 )
 
@@ -29,28 +32,58 @@ type Provider interface {
 // thus the return of NewProvider a compatible interface Provider able to gather
 // information about the manifest.
 func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Trace("trying index provider")
 	provider, err := NewManifestIndexProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using index provider")
 		return provider, nil
 	}
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Trace("trying manifest provider")
 	provider, err = NewManifestProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using manifest provider")
 		return provider, nil
 	}
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Trace("trying github provider")
 	provider, err = NewGitHubProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using github provider")
 		return provider, nil
 	}
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Trace("trying git provider")
 	provider, err = NewGitProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using git provider")
 		return provider, nil
 	}
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
+	}).Trace("trying directory provider")
 	provider, err = NewDirectoryProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using directory provider")
 		return provider, nil
 	}
 
