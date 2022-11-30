@@ -11,6 +11,7 @@ import (
 	"kraftkit.sh/internal/cli"
 
 	"kraftkit.sh/cmd/kraft/build"
+	"kraftkit.sh/cmd/kraft/clean"
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/pkg"
 	"kraftkit.sh/cmd/kraft/ps"
@@ -57,6 +58,7 @@ func New() *cobra.Command {
 	)
 
 	cmd.AddCommand(build.New())
+	cmd.AddCommand(clean.New())
 	cmd.AddCommand(events.New())
 	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(ps.New())
