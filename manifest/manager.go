@@ -232,7 +232,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		}
 
 	} else {
-		index, err = NewManifestIndexFromFile(mm.LocalManifestIndex(ctx))
+		index, err = NewManifestIndexFromFile(ctx, mm.LocalManifestIndex(ctx))
 		if err != nil {
 			return nil, err
 		}
