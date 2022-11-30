@@ -25,6 +25,7 @@ type ManifestIndex struct {
 	Name        string      `yaml:"name,omitempty"`
 	LastUpdated time.Time   `yaml:"last_updated"`
 	Manifests   []*Manifest `yaml:"manifests"`
+	Origin      string      `yaml:"-"`
 }
 
 type ManifestIndexProvider struct {
@@ -126,7 +127,14 @@ func NewManifestIndexFromFile(path string, mopts ...ManifestOption) (*ManifestIn
 		return nil, err
 	}
 
-	return NewManifestIndexFromBytes(contents, mopts...)
+	index, err := NewManifestIndexFromBytes(contents, mopts...)
+	if err != nil {
+		return nil, err
+	}
+
+	index.Origin = path
+
+	return index, nil
 }
 
 // NewManifestFromURL retrieves a provided path as a ManifestIndex from a remote
@@ -188,6 +196,8 @@ func NewManifestIndexFromURL(path string, mopts ...ManifestOption) (*ManifestInd
 	if err != nil {
 		return nil, err
 	}
+
+	index.Origin = path
 
 	return index, nil
 }
