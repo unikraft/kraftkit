@@ -140,7 +140,7 @@ func NewManifestFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOpti
 	}
 
 	if providerName != "" {
-		manifest.Provider, err = NewProvidersFromString(ctx, providerName, manifest.Origin, mopts...)
+		manifest.Provider, err = NewProviderFromString(ctx, providerName, manifest.Origin, manifest, mopts...)
 		if err != nil {
 			return nil, err
 		}

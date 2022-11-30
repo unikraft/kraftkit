@@ -57,14 +57,22 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 	return nil, fmt.Errorf("could not determine provider for: %s", path)
 }
 
-// NewProvidersFromString returns a provider based on a giving string which
+// NewProviderFromString returns a provider based on a giving string which
 // identifies the provider
-func NewProvidersFromString(ctx context.Context, provider, path string, mopts ...ManifestOption) (Provider, error) {
+func NewProviderFromString(ctx context.Context, provider, path string, entity any, mopts ...ManifestOption) (Provider, error) {
 	switch provider {
 	case "index":
-		return NewManifestIndexProvider(ctx, path, mopts...)
+		return ManifestIndexProvider{
+			path:  path,
+			index: entity.(*ManifestIndex),
+			mopts: mopts,
+			ctx:   ctx,
+		}, nil
 	case "manifest":
-		return NewManifestProvider(ctx, path, mopts...)
+		return ManifestProvider{
+			path:     path,
+			manifest: entity.(*Manifest),
+		}, nil
 	case "github":
 		return NewGitHubProvider(ctx, path, mopts...)
 	case "git":
