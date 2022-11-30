@@ -29,7 +29,6 @@ import (
 	"kraftkit.sh/unikraft/target"
 
 	// Subcommands
-	"kraftkit.sh/cmd/kraft/build/configure"
 	"kraftkit.sh/cmd/kraft/build/fetch"
 	"kraftkit.sh/cmd/kraft/build/menuconfig"
 	"kraftkit.sh/cmd/kraft/build/prepare"
@@ -77,7 +76,6 @@ func New() *cobra.Command {
 		},
 	})
 
-	cmd.AddCommand(configure.New())
 	cmd.AddCommand(fetch.New())
 	cmd.AddCommand(menuconfig.New())
 	cmd.AddCommand(prepare.New())
