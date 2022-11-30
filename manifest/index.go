@@ -15,10 +15,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"kraftkit.sh/internal/version"
+
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
+
+	"kraftkit.sh/internal/version"
 )
 
 type ManifestIndex struct {
@@ -147,6 +150,11 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 
 	head.Header.Set("User-Agent", "kraftkit/"+version.Version())
 
+	log.G(ctx).WithFields(logrus.Fields{
+		"url":    path,
+		"method": "HEAD",
+	}).Trace("http")
+
 	resp, err := client.Do(head)
 	if err != nil {
 		return nil, err
@@ -162,6 +170,11 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 	}
 
 	get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"url":    path,
+		"method": "GET",
+	}).Trace("http")
 
 	resp, err = client.Do(get)
 	if err != nil {

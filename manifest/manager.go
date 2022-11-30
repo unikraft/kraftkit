@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gobwas/glob"
+	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -107,7 +108,9 @@ func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 		// 	continue
 		// }
 
-		log.G(ctx).Infof("fetching %s", manipath)
+		log.G(ctx).WithFields(logrus.Fields{
+			"manifest": manipath,
+		}).Debug("fetching")
 
 		manifests, err := FindManifestsFromSource(ctx, manipath, mopts...)
 		if err != nil {
@@ -147,7 +150,10 @@ func (mm ManifestManager) Update(ctx context.Context) error {
 			return err
 		}
 
-		log.G(ctx).Infof("saving %s", fileloc)
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": fileloc,
+		}).Debugf("saving manifest")
+
 		if err := manifest.WriteToFile(fileloc); err != nil {
 			log.G(ctx).Errorf("could not save manifest: %s", err)
 		}
@@ -217,6 +223,14 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		WithAuthConfig(config.G(ctx).Auth),
 		WithSourcesRootDir(config.G(ctx).Paths.Sources),
 	}
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"name":    query.Name,
+		"version": query.Version,
+		"source":  query.Source,
+		"types":   query.Types,
+		"cache":   !query.NoCache,
+	}).Debug("querying manifest catalog")
 
 	if len(query.Source) > 0 && query.NoCache {
 		manifest, err := FindManifestsFromSource(ctx, query.Source, mopts...)
@@ -337,6 +351,9 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 }
 
 func (mm ManifestManager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, error) {
+	log.G(ctx).WithFields(logrus.Fields{
+		"source": source,
+	}).Debug("checking if source is compatible with ManifestManager")
 	if _, err := NewProvider(ctx, source); err != nil {
 		return nil, fmt.Errorf("incompatible source")
 	}

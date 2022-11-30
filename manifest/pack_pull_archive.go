@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"kraftkit.sh/archive"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -50,6 +52,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 	}
 
 	if f, err := os.Stat(cache); !ppopts.UseCache() || err != nil || f.Size() == 0 {
+		log.G(ctx).WithFields(logrus.Fields{
+			"url":    resource,
+			"method": "HEAD",
+		}).Trace("http")
+
 		// Get the total size of the remote resource.  Note: this fails for GitHub
 		// archives as Content-Length is, for some reason, always set to 0.
 		res, err := http.Head(resource)
@@ -76,6 +83,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 		}
 
 		defer f.Close()
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"url":    resource,
+			"method": "HEAD",
+		}).Trace("http")
 
 		// Perform the request to actually retrieve the file
 		res, err = http.Get(resource)
@@ -116,7 +128,10 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 					return fmt.Errorf("checksum of package does not match")
 				}
 
-				log.G(ctx).Debugf("checksum OK")
+				log.G(ctx).WithFields(logrus.Fields{
+					"url":      resource,
+					"checksum": checksum,
+				}).Debug("checksum OK")
 			}
 		}
 
@@ -146,8 +161,6 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 			return fmt.Errorf("could not unarchive: %v", err)
 		}
 	}
-
-	log.G(ctx).Tracef("pull complete")
 
 	return nil
 }
