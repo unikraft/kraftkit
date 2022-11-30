@@ -56,13 +56,13 @@ func New() *cobra.Command {
 		},
 	)
 
-	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(build.New())
+	cmd.AddCommand(events.New())
+	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
 	cmd.AddCommand(stop.New())
-	cmd.AddCommand(events.New())
 
 	return cmd
 }
