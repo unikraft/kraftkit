@@ -28,6 +28,7 @@ import (
 )
 
 // Schema is the kraft-spec JSON schema
+//
 //go:embed kraft-spec.json
 var Schema string
 
