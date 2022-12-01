@@ -350,6 +350,19 @@ func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetCon
 	tmpfile.Write([]byte(values.String()))
 	tmpfile.Sync()
 
+	// TODO: This make dependency should be upstreamed into the Unikraft core as a
+	// dependency of `make defconfig`
+	if err := ac.Make(
+		ctx,
+		tc,
+		append(mopts,
+			make.WithTarget(fmt.Sprintf("%s/Makefile", ac.outDir)),
+			make.WithProgressFunc(nil),
+		)...,
+	); err != nil {
+		return err
+	}
+
 	return ac.Make(
 		ctx,
 		tc,
