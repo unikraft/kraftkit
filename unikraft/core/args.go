@@ -47,6 +47,7 @@ type MakeArgs struct {
 	ApplicationDir string `export:"A"`
 	PlatformDirs   string `export:"P,omitempty"`
 	LibraryDirs    string `export:"L,omitempty"`
+	Name           string `export:"N,omitempty"`
 	// Verbosity      Verbosity `export:"V,omitempty" default:"0"`
 	ConfigPath string `export:"C,omitempty"`
 }

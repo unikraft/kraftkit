@@ -252,12 +252,18 @@ func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, e
 
 	// TODO: Platforms & architectures
 
-	return &core.MakeArgs{
+	args := &core.MakeArgs{
 		OutputDir:      a.outDir,
 		ApplicationDir: a.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
 		ConfigPath:     a.KConfigFile(tc),
-	}, nil
+	}
+
+	if tc != nil {
+		args.Name = tc.Name()
+	}
+
+	return args, nil
 }
 
 // Make is a method which invokes Unikraft's build system.  You can pass in make
