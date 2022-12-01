@@ -271,9 +271,12 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		// Overwrite additional attributes if pattern-matchable
 		if err == nil {
 			query.Name = n
-			query.Version = v
 			if t != unikraft.ComponentTypeUnknown {
 				query.Types = append(query.Types, t)
+			}
+
+			if len(v) > 0 {
+				query.Version = v
 			}
 		}
 
