@@ -270,6 +270,7 @@ func (a *ApplicationConfig) Make(ctx context.Context, tc *target.TargetConfig, m
 
 	mopts = append(mopts,
 		make.WithDirectory(coreSrc),
+		make.WithNoPrintDirectory(true),
 	)
 
 	args, err := a.MakeArgs(tc)
