@@ -168,7 +168,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					pack.WithPullProgressFunc(w),
 					pack.WithPullWorkdir(workdir),
 					// pack.WithPullChecksum(!opts.NoChecksum),
-					// pack.WithPullCache(!opts.NoCache),
+					pack.WithPullCache(!opts.NoCache),
 				)
 			},
 		)
@@ -284,7 +284,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
 						// pack.WithPullChecksum(!opts.NoChecksum),
-						// pack.WithPullCache(!opts.NoCache),
+						pack.WithPullCache(!opts.NoCache),
 					)
 				},
 			))
