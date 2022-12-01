@@ -80,15 +80,6 @@ func WithBuildLogFile(path string) BuildOption {
 	}
 }
 
-// WithBuildNoSyncConfig disables calling `make syncconfig` befere invoking the
-// main Unikraft's build invocation.
-func WithBuildNoSyncConfig(noSyncConfig bool) BuildOption {
-	return func(bo *BuildOptions) error {
-		bo.noSyncConfig = noSyncConfig
-		return nil
-	}
-}
-
 // WithBuildNoPrepare disables calling `make prepare` befere invoking the
 // main Unikraft's build invocation.
 func WithBuildNoPrepare(noPrepare bool) BuildOption {
