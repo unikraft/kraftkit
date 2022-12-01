@@ -127,5 +127,5 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Set(ctx)
+	return project.Set(ctx, nil)
 }

@@ -99,5 +99,5 @@ func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Properclean(ctx)
+	return project.Properclean(ctx, nil)
 }

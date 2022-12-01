@@ -210,28 +210,30 @@ func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	return vAll, nil
 }
 
-// KConfigFile returns the path to the application's .config file
-func (ac *ApplicationConfig) KConfigFile() (string, error) {
-	return filepath.Join(ac.workingDir, kconfig.DotConfigFileName), nil
+// KConfigFile returns the path to the application's .config file or the
+// target-specific `.config` file which is formatted `.config.<TARGET-NAME>`
+func (ac *ApplicationConfig) KConfigFile(tc *target.TargetConfig) string {
+	k := filepath.Join(ac.workingDir, kconfig.DotConfigFileName)
+
+	if tc != nil {
+		k += "." + tc.Name()
+	}
+
+	return k
 }
 
 // IsConfigured returns a boolean to indicate whether the application has been
 // previously configured.  This is deteremined by finding a non-empty `.config`
 // file within the application's source directory
-func (a *ApplicationConfig) IsConfigured() bool {
-	k, err := a.KConfigFile()
-	if err != nil {
-		return false
-	}
-
-	f, err := os.Stat(k)
+func (ac *ApplicationConfig) IsConfigured(tc *target.TargetConfig) bool {
+	f, err := os.Stat(ac.KConfigFile(tc))
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
 // MakeArgs returns the populated `core.MakeArgs` based on the contents of the
 // instantiated `ApplicationConfig`.  This information can be passed directly to
 // Unikraft's build system.
-func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
+func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, error) {
 	var libraries []string
 
 	for _, library := range a.libraries {
@@ -260,7 +262,7 @@ func (a *ApplicationConfig) MakeArgs() (*core.MakeArgs, error) {
 // options based on the `make` package.  Ultimately, this is an abstract method
 // which will be used by a number of well-known make command goals by Unikraft's
 // build system.
-func (a *ApplicationConfig) Make(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Make(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	coreSrc, err := a.unikraft.SourceDir()
 	if err != nil {
 		return err
@@ -270,7 +272,7 @@ func (a *ApplicationConfig) Make(ctx context.Context, mopts ...make.MakeOption) 
 		make.WithDirectory(coreSrc),
 	)
 
-	args, err := a.MakeArgs()
+	args, err := a.MakeArgs(tc)
 	if err != nil {
 		return err
 	}
@@ -293,9 +295,10 @@ func (a *ApplicationConfig) Make(ctx context.Context, mopts ...make.MakeOption) 
 }
 
 // SyncConfig updates the configuration
-func (a *ApplicationConfig) SyncConfig(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) SyncConfig(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("syncconfig"),
 		)...,
@@ -340,6 +343,7 @@ func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetCon
 
 	return ac.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("defconfig"),
 			make.WithVar("UK_DEFCONFIG", tmpfile.Name()),
@@ -348,9 +352,10 @@ func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetCon
 }
 
 // Configure the application
-func (a *ApplicationConfig) Configure(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Configure(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("configure"),
 		)...,
@@ -358,9 +363,10 @@ func (a *ApplicationConfig) Configure(ctx context.Context, mopts ...make.MakeOpt
 }
 
 // Prepare the application
-func (a *ApplicationConfig) Prepare(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Prepare(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("prepare"),
 		)...,
@@ -368,9 +374,10 @@ func (a *ApplicationConfig) Prepare(ctx context.Context, mopts ...make.MakeOptio
 }
 
 // Clean the application
-func (a *ApplicationConfig) Clean(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Clean(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("clean"),
 		)...,
@@ -378,9 +385,10 @@ func (a *ApplicationConfig) Clean(ctx context.Context, mopts ...make.MakeOption)
 }
 
 // Delete the build folder of the application
-func (a *ApplicationConfig) Properclean(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Properclean(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("properclean"),
 		)...,
@@ -388,16 +396,17 @@ func (a *ApplicationConfig) Properclean(ctx context.Context, mopts ...make.MakeO
 }
 
 // Fetch component sources for the applications
-func (a *ApplicationConfig) Fetch(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Fetch(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	return a.Make(
 		ctx,
+		tc,
 		append(mopts,
 			make.WithTarget("fetch"),
 		)...,
 	)
 }
 
-func (a *ApplicationConfig) Set(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Set(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	// Write the configuration to a temporary file
 	// tmpfile, err := ioutil.TempFile("", a.Name()+"-config*")
 	// if err != nil {
@@ -422,7 +431,7 @@ func (a *ApplicationConfig) Set(ctx context.Context, mopts ...make.MakeOption) e
 	return nil
 }
 
-func (a *ApplicationConfig) Unset(ctx context.Context, mopts ...make.MakeOption) error {
+func (a *ApplicationConfig) Unset(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
 	// // Write the configuration to a temporary file
 	// tmpfile, err := ioutil.TempFile("", a.Name()+"-config*")
 	// if err != nil {
@@ -449,7 +458,7 @@ func (a *ApplicationConfig) Unset(ctx context.Context, mopts ...make.MakeOption)
 
 // Build offers an invocation of the Unikraft build system with the contextual
 // information of the ApplicationConfigs
-func (a *ApplicationConfig) Build(ctx context.Context, opts ...BuildOption) error {
+func (a *ApplicationConfig) Build(ctx context.Context, tc *target.TargetConfig, opts ...BuildOption) error {
 	bopts := &BuildOptions{}
 	for _, o := range opts {
 		err := o(bopts)
@@ -475,15 +484,18 @@ func (a *ApplicationConfig) Build(ctx context.Context, opts ...BuildOption) erro
 	}...)
 
 	if !bopts.noPrepare {
-		if err := a.Prepare(ctx, append(
-			bopts.mopts,
-			make.WithProgressFunc(nil),
-		)...); err != nil {
+		if err := a.Prepare(
+			ctx,
+			tc,
+			append(
+				bopts.mopts,
+				make.WithProgressFunc(nil),
+			)...); err != nil {
 			return err
 		}
 	}
 
-	return a.Make(ctx, bopts.mopts...)
+	return a.Make(ctx, tc, bopts.mopts...)
 }
 
 // LibraryNames return names for all libraries in this Compose config

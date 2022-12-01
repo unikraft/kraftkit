@@ -96,5 +96,5 @@ func (opts *Clean) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Clean(ctx)
+	return project.Clean(ctx, nil)
 }

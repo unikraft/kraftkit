@@ -10,27 +10,15 @@ import (
 
 	"kraftkit.sh/exec"
 	"kraftkit.sh/make"
-	"kraftkit.sh/unikraft/target"
 )
 
 type BuildOptions struct {
-	target       []target.TargetConfig
-	mopts        []make.MakeOption
-	onProgress   func(progress float64)
-	noSyncConfig bool
-	noPrepare    bool
+	mopts      []make.MakeOption
+	onProgress func(progress float64)
+	noPrepare  bool
 }
 
 type BuildOption func(opts *BuildOptions) error
-
-// WithBuildTarget specifies one or many of the listed targets defined by the
-// application's Kraftfile
-func WithBuildTarget(targets ...target.TargetConfig) BuildOption {
-	return func(bo *BuildOptions) error {
-		bo.target = append(bo.target, targets...)
-		return nil
-	}
-}
 
 // WithBuildMakeOptions allows customization of the invocation of the GNU make
 // tool
