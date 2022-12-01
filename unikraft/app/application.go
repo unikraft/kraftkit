@@ -26,8 +26,6 @@ import (
 	"kraftkit.sh/unikraft/template"
 )
 
-const DefaultKConfigFile = ".config"
-
 type Application interface {
 	component.Component
 }
@@ -214,7 +212,7 @@ func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 
 // KConfigFile returns the path to the application's .config file
 func (ac *ApplicationConfig) KConfigFile() (string, error) {
-	return filepath.Join(ac.workingDir, DefaultKConfigFile), nil
+	return filepath.Join(ac.workingDir, kconfig.DotConfigFileName), nil
 }
 
 // IsConfigured returns a boolean to indicate whether the application has been
