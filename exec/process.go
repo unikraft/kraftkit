@@ -21,12 +21,11 @@ type Process struct {
 	executable *Executable
 	opts       *ExecOptions
 	cmd        *exec.Cmd
-	ctx        context.Context
 }
 
 // NewProcess prepares a process to be executed from a given binary name and
 // optional execution options
-func NewProcess(ctx context.Context, bin string, args []string, eopts ...ExecOption) (*Process, error) {
+func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error) {
 	executable, err := NewExecutable(bin, nil)
 	if err != nil {
 		return nil, err
@@ -34,12 +33,12 @@ func NewProcess(ctx context.Context, bin string, args []string, eopts ...ExecOpt
 
 	executable.args = append(executable.args, args...)
 
-	return NewProcessFromExecutable(ctx, executable, eopts...)
+	return NewProcessFromExecutable(executable, eopts...)
 }
 
 // NewProcessFromExecutable prepares a process to be executed from a given
 // *Executable object and optional execution options
-func NewProcessFromExecutable(ctx context.Context, executable *Executable, eopts ...ExecOption) (*Process, error) {
+func NewProcessFromExecutable(executable *Executable, eopts ...ExecOption) (*Process, error) {
 	if executable == nil {
 		return nil, fmt.Errorf("cannot prepare process without executable")
 	}
@@ -69,13 +68,9 @@ func (e *Process) Cmdline() string {
 }
 
 // Start the process
-func (e *Process) Start() error {
-	if e.ctx == nil {
-		e.ctx = context.TODO()
-	}
-
+func (e *Process) Start(ctx context.Context) error {
 	e.cmd = exec.CommandContext(
-		e.ctx,
+		ctx,
 		e.executable.bin,
 		e.executable.Args()...,
 	)
@@ -90,7 +85,7 @@ func (e *Process) Start() error {
 	} else if len(e.opts.stdoutcbs) > 0 {
 		e.cmd.Stdout = io.MultiWriter(e.opts.stdoutcbs...)
 	} else {
-		e.cmd.Stdout = iostreams.G(e.ctx).Out
+		e.cmd.Stdout = iostreams.G(ctx).Out
 	}
 
 	// Set the stderr
@@ -109,20 +104,20 @@ func (e *Process) Start() error {
 	} else if len(e.opts.stderrcbs) > 0 {
 		e.cmd.Stderr = io.MultiWriter(e.opts.stderrcbs...)
 	} else {
-		e.cmd.Stderr = iostreams.G(e.ctx).ErrOut
+		e.cmd.Stderr = iostreams.G(ctx).ErrOut
 	}
 
 	// Set the stdin
 	if e.opts.stdin != nil {
 		e.cmd.Stdin = e.opts.stdin
 	} else {
-		e.cmd.Stdin = iostreams.G(e.ctx).In
+		e.cmd.Stdin = iostreams.G(ctx).In
 	}
 
 	// Add any set environmental variables including the host's
 	e.cmd.Env = append(os.Environ(), e.opts.env...)
 
-	log.G(e.ctx).Debug(e.Cmdline())
+	log.G(ctx).Debug(e.Cmdline())
 
 	if e.opts.detach {
 		// the Setpgid flag is used to prevent the child process from exiting when
@@ -162,8 +157,8 @@ func (e *Process) Wait() error {
 }
 
 // StartAndWait starts the process and waits for it to exit
-func (e *Process) StartAndWait() error {
-	if err := e.Start(); err != nil {
+func (e *Process) StartAndWait(ctx context.Context) error {
+	if err := e.Start(ctx); err != nil {
 		return err
 	}
 
