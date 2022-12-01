@@ -47,7 +47,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Debugf("retrieved index")
+		}).Trace("retrieved index")
 		return ManifestIndexProvider{
 			path:  path,
 			index: index,
@@ -60,7 +60,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Debug("retrieved index")
+		}).Trace("retrieved index")
 		return ManifestIndexProvider{
 			path:  path,
 			index: index,

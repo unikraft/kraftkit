@@ -75,22 +75,18 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Debugf("retrieved manifest")
+		}).Trace("retrieved manifest")
 		return ManifestProvider{
 			path:     path,
 			manifest: manifest,
 		}, nil
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"path": path,
-	}).Debugf("was not a path")
-
 	manifest, err = NewManifestFromURL(ctx, path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Debugf("retrieved manifest")
+		}).Trace("retrieved manifest")
 		return ManifestProvider{
 			path:     path,
 			manifest: manifest,
