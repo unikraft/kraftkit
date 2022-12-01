@@ -369,7 +369,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	for _, targ := range selected {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
-		if !project.IsConfigured() && !opts.NoConfigure {
+		if !opts.NoConfigure {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
 				func(ctx context.Context, w func(progress float64)) error {
