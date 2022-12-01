@@ -121,5 +121,5 @@ func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Unset(ctx)
+	return project.Unset(ctx, nil)
 }

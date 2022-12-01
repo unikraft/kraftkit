@@ -73,6 +73,7 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 
 	return project.Make(
 		ctx,
+		nil,
 		make.WithTarget("menuconfig"),
 	)
 }

@@ -69,5 +69,5 @@ func (opts *Configure) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Configure(ctx)
+	return project.Configure(ctx, nil)
 }

@@ -394,6 +394,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Prepare(
 						ctx,
+						&targ, // Target-specific options
 						append(
 							mopts,
 							make.WithProgressFunc(w),
@@ -412,7 +413,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
 					ctx,
-					app.WithBuildTarget(targ),
+					&targ, // Target-specific options
 					app.WithBuildProgressFunc(w),
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(

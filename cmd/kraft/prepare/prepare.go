@@ -70,5 +70,5 @@ func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Prepare(ctx)
+	return project.Prepare(ctx, nil)
 }

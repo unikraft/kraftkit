@@ -73,5 +73,5 @@ func (opts *Fetch) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Fetch(ctx)
+	return project.Fetch(ctx, nil)
 }
