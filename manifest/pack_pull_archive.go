@@ -139,6 +139,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 		if err := os.Rename(tmpCache, cache); err != nil {
 			return fmt.Errorf("could not move downloaded package '%s' to destination '%s': %v", tmpCache, cache, err)
 		}
+	} else {
+		log.G(ctx).WithFields(logrus.Fields{
+			"local":  cache,
+			"remote": resource,
+		}).Debug("using cache")
 	}
 
 	local := cache
@@ -155,6 +160,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 
 	// Unarchive the package to the given workdir
 	if len(local) > 0 {
+		log.G(ctx).WithFields(logrus.Fields{
+			"from": cache,
+			"to":   local,
+		}).Trace("unarchiving")
+
 		if err := archive.Unarchive(cache, local,
 			archive.StripComponents(1),
 		); err != nil {
