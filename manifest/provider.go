@@ -34,23 +34,23 @@ type Provider interface {
 func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"path": path,
-	}).Trace("trying index provider")
-	provider, err := NewManifestIndexProvider(ctx, path, mopts...)
+	}).Trace("trying manifest provider")
+	provider, err := NewManifestProvider(ctx, path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Trace("using index provider")
+		}).Trace("using manifest provider")
 		return provider, nil
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"path": path,
-	}).Trace("trying manifest provider")
-	provider, err = NewManifestProvider(ctx, path, mopts...)
+	}).Trace("trying index provider")
+	provider, err = NewManifestIndexProvider(ctx, path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
-		}).Trace("using manifest provider")
+		}).Trace("using index provider")
 		return provider, nil
 	}
 
