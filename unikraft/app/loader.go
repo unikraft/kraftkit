@@ -425,7 +425,7 @@ func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdi
 				// build system, see for example `KVM_IMAGE`.  TODO: This format should
 				// likely be upstreamed into the core as a generic for all platforms.
 				"%s_%s-%s",
-				projectName,
+				target.ComponentConfig.Name,
 				target.Platform.Name(),
 				target.Architecture.Name(),
 			))
