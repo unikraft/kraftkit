@@ -256,6 +256,7 @@ func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, e
 		OutputDir:      a.outDir,
 		ApplicationDir: a.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
+		ConfigPath:     a.KConfigFile(tc),
 	}, nil
 }
 
