@@ -435,7 +435,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		//    necessary for the subsequent build steps;
 		//  - The Unikraft build system can re-use compiled files from previous
 		//    compilations (if the architecture does not change).
-		paraprogress.IsParallel(parallel),
+		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(norender),
 		paraprogress.WithFailFast(true),
 	)
