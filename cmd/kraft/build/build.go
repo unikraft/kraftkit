@@ -230,10 +230,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
 					Name: component.Name(),
 					Types: []unikraft.ComponentType{
-						unikraft.ComponentTypeCore,
-						unikraft.ComponentTypeLib,
-						unikraft.ComponentTypePlat,
-						unikraft.ComponentTypeArch,
+						component.Type(),
 					},
 					Version: component.Version(),
 					NoCache: opts.NoCache,
