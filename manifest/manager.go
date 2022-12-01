@@ -262,6 +262,8 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 		allManifests = append(allManifests, manifests...)
 	}
 
+	log.G(ctx).Debugf("found %d manifests in catalog", len(allManifests))
+
 	var packages []pack.Package
 	var g glob.Glob
 
