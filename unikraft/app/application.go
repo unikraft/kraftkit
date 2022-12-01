@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
 
-	"kraftkit.sh/exec"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
@@ -495,14 +494,8 @@ func (a *ApplicationConfig) Build(ctx context.Context, tc *target.TargetConfig, 
 		return fmt.Errorf("cannot build without Unikraft core component source")
 	}
 
-	eopts := []exec.ExecOption{}
-	// if bopts.log != nil {
-	// 	eopts = append(eopts, exec.WithStdout(bopts.log.Output()))
-	// }
-
 	bopts.mopts = append(bopts.mopts, []make.MakeOption{
 		make.WithProgressFunc(bopts.onProgress),
-		make.WithExecOptions(eopts...),
 	}...)
 
 	if !bopts.noPrepare {
