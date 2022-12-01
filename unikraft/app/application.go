@@ -13,10 +13,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
 
 	"kraftkit.sh/exec"
 	"kraftkit.sh/kconfig"
+	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -327,6 +329,12 @@ func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetCon
 
 	if extra != nil {
 		values.OverrideBy(*extra)
+	}
+
+	for _, v := range values {
+		log.G(ctx).WithFields(logrus.Fields{
+			v.Name: v.Value,
+		}).Debugf("defconfig")
 	}
 
 	// Write the configuration to a temporary file
