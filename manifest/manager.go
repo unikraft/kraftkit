@@ -119,6 +119,7 @@ func (mm ManifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 			log.G(ctx).Warnf("%s", err)
 		}
 
+		localIndex.Origin = manipath
 		localIndex.Manifests = append(localIndex.Manifests, manifests...)
 	}
 
