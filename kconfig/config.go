@@ -162,7 +162,7 @@ const (
 	Prefix = "CONFIG_"
 )
 
-//  Value returns config value, or No if it's not present at all.
+// Value returns config value, or No if it's not present at all.
 func (cf *DotConfigFile) Value(name string) string {
 	cfg := cf.Map[name]
 	if cfg == nil {
