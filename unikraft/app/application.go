@@ -476,15 +476,6 @@ func (a *ApplicationConfig) Build(ctx context.Context, opts ...BuildOption) erro
 		make.WithExecOptions(eopts...),
 	}...)
 
-	if !bopts.noSyncConfig {
-		if err := a.SyncConfig(append(
-			bopts.mopts,
-			make.WithProgressFunc(nil),
-		)...); err != nil {
-			return err
-		}
-	}
-
 	if !bopts.noPrepare {
 		if err := a.Prepare(ctx, append(
 			bopts.mopts,

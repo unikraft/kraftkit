@@ -41,7 +41,6 @@ type Build struct {
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
-	NoSyncConfig bool   `long:"no-sync-config" usage:"Do not synchronize Unikraft's configuration before building"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
@@ -420,7 +419,6 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
 						),
 					)...),
-					app.WithBuildNoSyncConfig(opts.NoSyncConfig),
 					app.WithBuildLogFile(opts.SaveBuildLog),
 				)
 			},
