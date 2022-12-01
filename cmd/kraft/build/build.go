@@ -376,7 +376,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						ctx,
 						&targ, // Target-specific options
 						nil,   // No extra configuration options
-						// make.WithProgressFunc(w),
+						make.WithProgressFunc(w),
 						make.WithSilent(true),
 						make.WithExecOptions(
 							exec.WithStdin(iostreams.G(ctx).In),
@@ -396,6 +396,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						ctx,
 						append(
 							mopts,
+							make.WithProgressFunc(w),
 							make.WithExecOptions(
 								exec.WithStdout(log.G(ctx).Writer()),
 								exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
