@@ -38,7 +38,6 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/internal/cli"
@@ -122,7 +121,5 @@ func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Unset(
-		make.WithContext(ctx),
-	)
+	return project.Unset(ctx)
 }

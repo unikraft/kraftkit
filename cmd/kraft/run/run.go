@@ -303,7 +303,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			process, err := exec.NewProcessFromExecutable(
-				ctx,
 				e,
 				exec.WithDetach(true),
 			)
@@ -311,7 +310,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			if err := process.Start(); err != nil {
+			if err := process.Start(ctx); err != nil {
 				return err
 			}
 		} else if err != nil {

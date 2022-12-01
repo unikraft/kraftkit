@@ -5,7 +5,6 @@
 package make
 
 import (
-	"context"
 	"fmt"
 
 	"kraftkit.sh/exec"
@@ -46,7 +45,6 @@ type MakeOptions struct {
 	vars       map[string]string
 	onProgress func(float64)
 	eopts      []exec.ExecOption
-	ctx        context.Context
 }
 
 type MakeOption func(mo *MakeOptions) error
@@ -416,14 +414,6 @@ func WithExecOptions(eopts ...exec.ExecOption) MakeOption {
 
 		mo.eopts = append(mo.eopts, eopts...)
 
-		return nil
-	}
-}
-
-// WithContext sets the desired context
-func WithContext(ctx context.Context) MakeOption {
-	return func(mo *MakeOptions) error {
-		mo.ctx = ctx
 		return nil
 	}
 }

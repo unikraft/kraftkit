@@ -69,7 +69,6 @@ func main() {
 	// devices support by QEMU.
 	var devicesRaw bytes.Buffer
 	execFindDevices, err := exec.NewProcess(
-		ctx,
 		*qemuBinary,
 		[]string{"-device", "help"},
 		exec.WithStdout(bufio.NewWriter(&devicesRaw)),
@@ -79,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := execFindDevices.StartAndWait(); err != nil {
+	if err := execFindDevices.StartAndWait(ctx); err != nil {
 		glog.V(1).Infof("could not invoke qemu: %v", err)
 	}
 

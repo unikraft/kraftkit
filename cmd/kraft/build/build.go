@@ -374,6 +374,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.DefConfig(
+						ctx,
 						&targ, // Target-specific options
 						nil,   // No extra configuration options
 						// make.WithProgressFunc(w),
@@ -392,11 +393,15 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("preparing %s (%s)", targ.Name(), targ.ArchPlatString()),
 				func(ctx context.Context, w func(progress float64)) error {
-					return project.Prepare(append(mopts,
-						make.WithExecOptions(
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
-						))...,
+					return project.Prepare(
+						ctx,
+						append(
+							mopts,
+							make.WithExecOptions(
+								exec.WithStdout(log.G(ctx).Writer()),
+								exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+							),
+						)...,
 					)
 				},
 			))
@@ -406,6 +411,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
 			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
+					ctx,
 					app.WithBuildTarget(targ),
 					app.WithBuildProgressFunc(w),
 					app.WithBuildMakeOptions(append(mopts,

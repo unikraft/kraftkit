@@ -5,6 +5,7 @@
 package make
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -125,7 +126,6 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 		}
 		make.cpw = &calculateProgressWriter{}
 		calcProgressProcess, err := exec.NewProcessFromExecutable(
-			make.opts.ctx,
 			calcProgressExec,
 			append(make.opts.eopts,
 				exec.WithStdout(make.cpw),
@@ -154,7 +154,7 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 		return nil, err
 	}
 
-	mainProcess, err := exec.NewProcessFromExecutable(make.opts.ctx, mainExec, make.opts.eopts...)
+	mainProcess, err := exec.NewProcessFromExecutable(mainExec, make.opts.eopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +170,6 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 }
 
 // Execute starts and waits on the prepared make invocation
-func (m *Make) Execute() error {
-	return m.seq.StartAndWait()
+func (m *Make) Execute(ctx context.Context) error {
+	return m.seq.StartAndWait(ctx)
 }

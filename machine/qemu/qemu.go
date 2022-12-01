@@ -633,7 +633,7 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU executable: %v", err)
 	}
 
-	process, err := exec.NewProcessFromExecutable(ctx, e, qd.dopts.ExecOptions...)
+	process, err := exec.NewProcessFromExecutable(e, qd.dopts.ExecOptions...)
 	if err != nil {
 		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU process: %v", err)
 	}
@@ -643,7 +643,7 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 	// Start and also wait for the process to quit as we have invoked
 	// daemonization of the process.  When it exits, we'll have a PID we can use
 	// to manipulate the VMM.
-	if err := process.StartAndWait(); err != nil {
+	if err := process.StartAndWait(ctx); err != nil {
 		return machine.NullMachineID, fmt.Errorf("could not start and wait for QEMU process: %v", err)
 	}
 
