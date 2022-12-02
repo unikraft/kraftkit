@@ -6,7 +6,7 @@
 [![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
 
 Kraftkit is a suite of tools and framework for building custom, minimal, immutable lightweight virtual machines based on [Unikraft](https://unikraft.org).
-With Kraftkitt, you can use unikernels at every of their lifecycle: from construction to production.
+With KraftKit, you can use unikernels at every of their lifecycle: from construction to production.
 
 You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
 
