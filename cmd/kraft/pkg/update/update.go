@@ -10,12 +10,11 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Update struct {
@@ -23,7 +22,7 @@ type Update struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Update{}, cobra.Command{
+	return cmdfactory.New(&Update{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",
 		Long: heredoc.Doc(`

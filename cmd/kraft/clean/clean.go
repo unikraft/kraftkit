@@ -37,18 +37,17 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Clean struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Clean{}, cobra.Command{
+	return cmdfactory.New(&Clean{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",
-		Args:  cli.MaxDirArgs(1),
+		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Remove the build object files of a Unikraft project`),
 		Example: heredoc.Doc(`

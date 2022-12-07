@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -16,8 +17,6 @@ import (
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/utils"
-
-	"kraftkit.sh/internal/cli"
 
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -33,7 +32,7 @@ type Ps struct {
 }
 
 func New() *cobra.Command {
-	cmd := cli.New(&Ps{}, cobra.Command{
+	cmd := cmdfactory.New(&Ps{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",
 		Args:  cobra.MaximumNArgs(0),
@@ -44,7 +43,7 @@ func New() *cobra.Command {
 	})
 
 	cmd.Flags().VarP(
-		cli.NewEnumFlag(machinedriver.DriverNames(), "all"),
+		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "all"),
 		"hypervisor",
 		"H",
 		"Set the hypervisor driver.",

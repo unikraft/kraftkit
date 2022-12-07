@@ -38,9 +38,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Unset struct {
@@ -48,7 +47,7 @@ type Unset struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Unset{}, cobra.Command{
+	return cmdfactory.New(&Unset{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
 		Use:     "unset [OPTIONS] [param ...]",
 		Aliases: []string{"u"},

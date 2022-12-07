@@ -13,6 +13,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -22,8 +23,6 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Pull struct {
@@ -39,7 +38,7 @@ type Pull struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Pull{}, cobra.Command{
+	return cmdfactory.New(&Pull{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
 		Aliases: []string{"p"},
@@ -65,7 +64,7 @@ func New() *cobra.Command {
 }
 
 func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
-	if err := cli.MutuallyExclusive(
+	if err := cmdfactory.MutuallyExclusive(
 		"the `--with-deps` option is not supported with `--no-deps`",
 		opts.WithDeps,
 		opts.NoDeps,

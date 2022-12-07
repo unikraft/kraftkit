@@ -12,14 +12,13 @@ import (
 
 	"kraftkit.sh/unikraft/app"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/utils"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type List struct {
@@ -34,11 +33,11 @@ type List struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&List{}, cobra.Command{
+	return cmdfactory.New(&List{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "list [FLAGS] [DIR]",
 		Aliases: []string{"l", "ls"},
-		Args:    cli.MaxDirArgs(1),
+		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			List installed Unikraft component packages.
 		`),

@@ -11,19 +11,18 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Stop struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Stop{}, cobra.Command{
+	return cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
 		Args:  cobra.MinimumNArgs(1),

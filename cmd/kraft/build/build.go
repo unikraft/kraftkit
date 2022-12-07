@@ -13,12 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
-
-	"kraftkit.sh/internal/cli"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -47,10 +46,10 @@ type Build struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Build{}, cobra.Command{
+	return cmdfactory.New(&Build{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels ",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
-		Args:  cli.MaxDirArgs(1),
+		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
 			Configure and build Unikraft unikernels.
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2019 GitHub Inc.
 // Copyright (c) 2022 Unikraft GmbH.
-package cli
+package cmdfactory
 
 import (
 	"errors"

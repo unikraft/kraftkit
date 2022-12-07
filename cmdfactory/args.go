@@ -3,7 +3,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the MIT License (the "License").
 // You may not use this file expect in compliance with the License.
-package cli
+package cmdfactory
 
 import (
 	"fmt"

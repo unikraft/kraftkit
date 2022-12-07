@@ -10,19 +10,18 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Prepare struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Prepare{}, cobra.Command{
+	return cmdfactory.New(&Prepare{}, cobra.Command{
 		Short:   "Prepare a Unikraft unikernel",
 		Use:     "prepare [DIR]",
 		Aliases: []string{"p"},
-		Args:    cli.MaxDirArgs(1),
+		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			prepare a Unikraft unikernel`),
 		Example: heredoc.Doc(`

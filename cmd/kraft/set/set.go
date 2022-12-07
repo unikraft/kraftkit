@@ -39,9 +39,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Set struct {
@@ -49,7 +48,7 @@ type Set struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Set{}, cobra.Command{
+	return cmdfactory.New(&Set{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Use:     "set [OPTIONS] [param=value ...]",
 		Aliases: []string{"s"},

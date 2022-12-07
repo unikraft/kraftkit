@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
@@ -27,8 +28,6 @@ import (
 	machinedriveropts "kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/utils"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Run struct {
@@ -47,7 +46,7 @@ type Run struct {
 }
 
 func New() *cobra.Command {
-	cmd := cli.New(&Run{}, cobra.Command{
+	cmd := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] [PROJECT|KERNEL] [ARGS]",
 		Aliases: []string{"launch", "r"},
@@ -65,7 +64,7 @@ func New() *cobra.Command {
 	})
 
 	cmd.Flags().VarP(
-		cli.NewEnumFlag(machinedriver.DriverNames(), "auto"),
+		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
 		"hypervisor",
 		"H",
 		"Set the hypervisor machine driver.",

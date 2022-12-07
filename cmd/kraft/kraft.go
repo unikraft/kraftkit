@@ -8,7 +8,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/cmdfactory"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -33,7 +33,7 @@ import (
 type Kraft struct{}
 
 func New() *cobra.Command {
-	cmd := cli.New(&Kraft{}, cobra.Command{
+	cmd := cmdfactory.New(&Kraft{}, cobra.Command{
 		Short: "Build and use highly customized and ultra-lightweight unikernels",
 		Long: heredoc.Docf(`
         .
@@ -88,5 +88,5 @@ func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
-	cli.Main(New())
+	cmdfactory.Main(New())
 }
