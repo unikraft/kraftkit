@@ -71,11 +71,11 @@ func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
 
 	switch ac.Name() {
 	case "x86_64", "amd64":
-		arch.WriteString("MARCH_X86_64_GENERIC")
+		arch.WriteString("ARCH_X86_64")
 	case "arm32":
-		arch.WriteString("MARCH_ARM32_CORTEXA7")
+		arch.WriteString("ARCH_ARM_32")
 	case "arm64":
-		arch.WriteString("MCPU_ARM64_NONE")
+		arch.WriteString("ARCH_ARM_64")
 	default:
 		return nil, fmt.Errorf("unknown architecture: %s", ac.Name())
 	}
