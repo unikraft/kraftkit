@@ -416,19 +416,19 @@ func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdi
 		}
 
 		if target.ComponentConfig.Name == "" {
-			target.ComponentConfig.Name = projectName
+			// The filename pattern below is a baked in assumption within Unikraft's
+			// build system, see for example `KVM_IMAGE`.  TODO: This format should
+			// likely be upstreamed into the core as a generic for all platforms.
+			target.ComponentConfig.Name = fmt.Sprintf(
+				"%s_%s-%s",
+				projectName,
+				target.Platform.Name(),
+				target.Architecture.Name(),
+			)
 		}
 
 		if target.Kernel == "" {
-			target.Kernel = filepath.Join(outdir, fmt.Sprintf(
-				// The filename pattern below is a baked in assumption within Unikraft's
-				// build system, see for example `KVM_IMAGE`.  TODO: This format should
-				// likely be upstreamed into the core as a generic for all platforms.
-				"%s_%s-%s",
-				target.ComponentConfig.Name,
-				target.Platform.Name(),
-				target.Architecture.Name(),
-			))
+			target.Kernel = filepath.Join(outdir, target.ComponentConfig.Name)
 		}
 
 		if target.KernelDbg == "" {
