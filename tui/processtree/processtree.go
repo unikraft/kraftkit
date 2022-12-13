@@ -94,7 +94,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 	total := 0
 
 	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
-		total += 1
+		total++
 		item.norender = pt.norender
 		return nil
 	})
@@ -214,9 +214,9 @@ func (pt ProcessTree) getNextReadyChildren(tree []*ProcessTreeItem) []*ProcessTr
 			for _, child := range item.children {
 				if child.status == StatusFailed ||
 					child.status == StatusFailedChild {
-					failed += 1
+					failed++
 				} else if child.status == StatusSuccess {
-					completed += 1
+					completed++
 				}
 			}
 		}

@@ -58,7 +58,7 @@ func (opw *onProgressWriter) Write(b []byte) (int, error) {
 	for _, line := range lines {
 		for _, ignore := range IgnoredMakePrefixes {
 			if !strings.HasPrefix(line, ignore) {
-				opw.current += 1
+				opw.current++
 			}
 		}
 	}
@@ -84,7 +84,7 @@ func (cpw *calculateProgressWriter) Write(b []byte) (int, error) {
 	for _, line := range lines {
 		for _, ignore := range IgnoredMakePrefixes {
 			if !strings.HasPrefix(line, ignore) {
-				cpw.totalLines += 1
+				cpw.totalLines++
 			}
 		}
 	}

@@ -137,7 +137,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			md.quitting = true
 			cmds = append(cmds, tea.Quit)
 		} else if (!md.failFast || msg.status == StatusSuccess) && !md.parallel {
-			md.curr += 1
+			md.curr++
 			if len(md.processes) > md.curr {
 				cmds = append(cmds, md.processes[md.curr].Start())
 			}
@@ -157,7 +157,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if md.processes[i].Status == StatusFailed ||
 			md.processes[i].Status == StatusSuccess ||
 			md.processes[i].percent == 1 {
-			complete += 1
+			complete++
 		}
 	}
 

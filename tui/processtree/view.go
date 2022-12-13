@@ -35,7 +35,7 @@ func (pt ProcessTree) View() string {
 		if pti.status == StatusSuccess ||
 			pti.status == StatusFailed ||
 			pti.status == StatusFailedChild {
-			finished += 1
+			finished++
 		}
 
 		return nil
@@ -73,13 +73,13 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	for _, child := range pti.children {
 		if child.status == StatusFailed ||
 			child.status == StatusFailedChild {
-			failed += 1
+			failed++
 		} else if child.status == StatusSuccess {
-			completed += 1
+			completed++
 		} else if child.status == StatusRunningChild ||
 			child.status == StatusRunning ||
 			child.status == StatusRunningButAChildHasFailed {
-			running += 1
+			running++
 		}
 	}
 

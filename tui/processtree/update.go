@@ -56,7 +56,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.status == StatusSuccess ||
 			msg.status == StatusFailed ||
 			msg.status == StatusFailedChild {
-			pt.finished += 1
+			pt.finished++
 		}
 
 		// No more processes then exit
