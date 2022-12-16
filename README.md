@@ -6,7 +6,7 @@
 [![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
 
 Kraftkit is a suite of tools and framework for building custom, minimal, immutable lightweight virtual machines based on [Unikraft](https://unikraft.org).
-With KraftKit, you can use unikernels at every of their lifecycle: from construction to production.
+With KraftKit, you can use unikernels at every stage of their lifecycle: from construction to production.
 
 You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
 
@@ -14,11 +14,13 @@ You can quickly and easily install KraftKit using the interactive installer.  Si
 curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 ```
 
-Alternatively you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
+Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
 
 ## Quick-start
 
-Building a unikernel with KraftKit is designed to be simple, simply add a `Kraftfile` to your project directory, which specifies the libraries needed for your unikernel:
+Building a unikernel with KraftKit is designed to be simple. 
+
+Add a `Kraftfile` to your project directory, which specifies the libraries needed for your unikernel:
 
 ```yaml
 specification: v0.5
