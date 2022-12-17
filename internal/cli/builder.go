@@ -192,7 +192,7 @@ func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 
 		flags := c.PersistentFlags()
 		if fieldType.Tag.Get("local") == "true" {
-			flags = c.LocalFlags()
+			flags = c.Flags()
 		}
 
 		switch fieldType.Type.Kind() {
