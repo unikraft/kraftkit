@@ -11,19 +11,18 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Rm struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Rm{}, cobra.Command{
+	return cmdfactory.New(&Rm{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
 		Args:    cobra.MinimumNArgs(1),

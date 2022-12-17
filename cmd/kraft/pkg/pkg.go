@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -22,8 +23,6 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
-
-	"kraftkit.sh/internal/cli"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
@@ -48,10 +47,10 @@ type Pkg struct {
 }
 
 func New() *cobra.Command {
-	cmd := cli.New(&Pkg{}, cobra.Command{
+	cmd := cmdfactory.New(&Pkg{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
-		Args:  cli.MaxDirArgs(1),
+		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
 			Package and distribute Unikraft unikernels and their dependencies.
 

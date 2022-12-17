@@ -18,14 +18,13 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	"kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Events struct {
@@ -34,7 +33,7 @@ type Events struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Events{}, cobra.Command{
+	return cmdfactory.New(&Events{}, cobra.Command{
 		Short:   "Follow the events of a unikernel",
 		Hidden:  true,
 		Use:     "events [FLAGS] [MACHINE ID]",

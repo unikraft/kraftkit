@@ -10,20 +10,19 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/make"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Menu struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Menu{}, cobra.Command{
+	return cmdfactory.New(&Menu{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [DIR]",
 		Aliases: []string{"m", "menuconfig"},
-		Args:    cli.MaxDirArgs(1),
+		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Open Unikraft's configuration editor TUI`),
 		Example: heredoc.Doc(`

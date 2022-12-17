@@ -37,19 +37,18 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type ProperClean struct{}
 
 func New() *cobra.Command {
-	cmd := cli.New(&ProperClean{}, cobra.Command{
+	cmd := cmdfactory.New(&ProperClean{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
 		Aliases: []string{"pc"},
-		Args:    cli.MaxDirArgs(1),
+		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Remove the Unikraft project build folder containing all build artifacts`),
 		Example: heredoc.Doc(`

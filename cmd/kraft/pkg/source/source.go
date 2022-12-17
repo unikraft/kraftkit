@@ -8,18 +8,17 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Source struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Source{}, cobra.Command{
+	return cmdfactory.New(&Source{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",
-		Args:  cli.MinimumArgs(1, "must specify component or manifest"),
+		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
 		Example: heredoc.Docf(`
 			# Add a single component as a Git repository
 			$ kraft pkg source https://github.com/unikraft/unikraft.git

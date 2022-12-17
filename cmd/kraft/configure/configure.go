@@ -10,18 +10,17 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Configure struct{}
 
 func New() *cobra.Command {
-	return cli.New(&Configure{}, cobra.Command{
+	return cmdfactory.New(&Configure{}, cobra.Command{
 		Short: "Configure a Unikraft unikernel its dependencies",
 		Use:   "configure [DIR]",
-		Args:  cli.MaxDirArgs(1),
+		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Configure a Unikraft unikernel its dependencies`),
 		Example: heredoc.Doc(`

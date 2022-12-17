@@ -10,9 +10,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/unikraft/app"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type Fetch struct {
@@ -21,11 +20,11 @@ type Fetch struct {
 }
 
 func New() *cobra.Command {
-	return cli.New(&Fetch{}, cobra.Command{
+	return cmdfactory.New(&Fetch{}, cobra.Command{
 		Short:   "Fetch a Unikraft unikernel's dependencies",
 		Use:     "fetch [DIR]",
 		Aliases: []string{"f"},
-		Args:    cli.MaxDirArgs(1),
+		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			Fetch a Unikraft unikernel's dependencies`),
 		Example: heredoc.Doc(`

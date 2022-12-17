@@ -16,13 +16,12 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
-
-	"kraftkit.sh/internal/cli"
 )
 
 type ManifestManager struct {
@@ -48,9 +47,9 @@ func init() {
 	packmanager.RegisterPackageManager(ManifestContext, manager)
 
 	// Register additional command-line flags
-	cli.RegisterFlag(
+	cmdfactory.RegisterFlag(
 		"kraft pkg pull",
-		cli.BoolVarP(
+		cmdfactory.BoolVarP(
 			&useGit,
 			"git", "g",
 			false,
