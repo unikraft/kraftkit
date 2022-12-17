@@ -178,7 +178,7 @@ func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 			continue
 		}
 
-		name, alias := name(fieldType.Name, fieldType.Tag.Get("name"), fieldType.Tag.Get("short"))
+		name, alias := name(fieldType.Name, fieldType.Tag.Get("long"), fieldType.Tag.Get("short"))
 		usage := fieldType.Tag.Get("usage")
 		env := strings.Split(fieldType.Tag.Get("env"), ",")
 		defValue := fieldType.Tag.Get("default")
@@ -192,7 +192,7 @@ func New(obj Runnable, cmd cobra.Command, opts ...CliOption) *cobra.Command {
 
 		flags := c.PersistentFlags()
 		if fieldType.Tag.Get("local") == "true" {
-			flags = c.LocalFlags()
+			flags = c.Flags()
 		}
 
 		switch fieldType.Type.Kind() {
