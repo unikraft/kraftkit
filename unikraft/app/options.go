@@ -45,9 +45,9 @@ import (
 // ApplicationOption is a function that operates on an ApplicationConfig
 type ApplicationOption func(ao *ApplicationConfig) error
 
-// NewApplicationOptions accepts a series of options and returns a rendered
+// NewApplicationFromOptions accepts a series of options and returns a rendered
 // *ApplicationOptions structure
-func NewApplicationOptions(aopts ...ApplicationOption) (*ApplicationConfig, error) {
+func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, error) {
 	ao := &ApplicationConfig{}
 
 	for _, o := range aopts {

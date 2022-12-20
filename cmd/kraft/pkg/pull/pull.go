@@ -121,8 +121,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		// Interpret the application
-		project, err := app.NewApplicationFromOptions(projectOpts)
+		// Interpret the project directory
+		project, err := app.NewProjectFromOptions(projectOpts)
 		if err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		templateProject, err := app.NewApplicationFromOptions(templateOps)
+		templateProject, err := app.NewProjectFromOptions(templateOps)
 		if err != nil {
 			return err
 		}

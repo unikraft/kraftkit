@@ -92,13 +92,13 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		// Interpret the application
-		app, err := app.NewApplicationFromOptions(projectOpts)
+		// Interpret the project directory
+		project, err := app.NewProjectFromOptions(projectOpts)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprint(iostreams.G(ctx).Out, app.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(

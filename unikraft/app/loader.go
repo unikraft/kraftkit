@@ -171,7 +171,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*Appli
 	for _, library := range model.Libraries {
 		details.Configuration.OverrideBy(library.Configuration)
 	}
-	project, err := NewApplicationOptions(
+	project, err := NewApplicationFromOptions(
 		WithWorkingDir(details.WorkingDir),
 		WithFilename(model.Filename),
 		WithOutDir(model.OutDir),

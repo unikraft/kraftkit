@@ -62,8 +62,8 @@ func (opts *Configure) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Interpret the application
-	project, err := app.NewApplicationFromOptions(projectOpts)
+	// Interpret the project directory
+	project, err := app.NewProjectFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}

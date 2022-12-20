@@ -298,8 +298,8 @@ func (o ProjectOptions) GetWorkingDir() (string, error) {
 	return os.Getwd()
 }
 
-// NewApplicationFromOptions load a kraft project based on command line options
-func NewApplicationFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*ApplicationConfig, error) {
+// NewProjectFromOptions load a kraft project based on command line options
+func NewProjectFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*ApplicationConfig, error) {
 	configPaths, err := getConfigPathsFromOptions(popts)
 	if err != nil {
 		return nil, err
