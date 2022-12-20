@@ -53,19 +53,12 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize at least the configuration options for a project
-	projectOpts, err := app.NewProjectOptions(
-		nil,
+	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultConfigPath(),
 		app.WithProjectResolvedPaths(true),
 		app.WithProjectDotConfig(false),
 	)
-	if err != nil {
-		return err
-	}
-
-	// Interpret the project directory
-	project, err := app.NewProjectFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}

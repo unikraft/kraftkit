@@ -7,7 +7,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
 //
-// 		http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,16 +17,12 @@
 package app
 
 import (
-	"io/ioutil"
-	"os"
+	"fmt"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
-	"kraftkit.sh/internal/errs"
-
+	"kraftkit.sh/schema"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
-	"kraftkit.sh/unikraft/config"
 )
 
 // DefaultFileNames defines the kraft file names for auto-discovery (in order
@@ -47,91 +43,122 @@ func IsWorkdirInitialized(dir string) bool {
 }
 
 // NewProjectFromOptions load a kraft project based on command line options
-func NewProjectFromOptions(popts *ProjectOptions, copts ...component.ComponentOption) (*ApplicationConfig, error) {
-	configPaths, err := getConfigPathsFromOptions(popts)
+func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
+	popts, err := NewProjectOptions(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("could not apply project options: %v", err)
+	}
+
+	workdir, err := popts.Workdir()
 	if err != nil {
 		return nil, err
 	}
 
-	var configs []config.ConfigFile
-	for _, f := range configPaths {
-		var b []byte
-		if f == "-" {
-			b, err = ioutil.ReadAll(os.Stdin)
+	absWorkdir, err := filepath.Abs(workdir)
+	if err != nil {
+		return nil, err
+	}
+
+	if popts.name != "" {
+		popts.SetProjectName(popts.name, false)
+	} else {
+		popts.SetProjectName(filepath.Base(absWorkdir), true)
+	}
+
+	if len(popts.kraftfiles) < 1 {
+		return nil, fmt.Errorf("no Kraft files specified")
+	}
+
+	popts.copts = append(popts.copts,
+		component.WithWorkdir(workdir),
+	)
+
+	var all []*ApplicationConfig
+
+	for i, file := range popts.kraftfiles {
+		iface := file.config
+		if iface == nil {
+			dict, err := parseConfig(file.content, popts)
 			if err != nil {
 				return nil, err
 			}
-		} else {
-			f, err := filepath.Abs(f)
-			if err != nil {
-				return nil, err
-			}
-			b, err = ioutil.ReadFile(f)
-			if err != nil {
+
+			iface = dict
+			file.config = dict
+			popts.kraftfiles[i] = file
+		}
+
+		if !popts.skipValidation {
+			if err := schema.Validate(iface); err != nil {
 				return nil, err
 			}
 		}
-		configs = append(configs, config.ConfigFile{
-			Filename: f,
-			Content:  b,
-		})
-	}
 
-	workingDir, err := popts.GetWorkingDir()
-	if err != nil {
-		return nil, err
-	}
-	absWorkingDir, err := filepath.Abs(workingDir)
-	if err != nil {
-		return nil, err
-	}
+		iface = groupXFieldsIntoExtensions(iface)
 
-	popts.loadOptions = append(popts.loadOptions,
-		withNamePrecedence(absWorkingDir, popts),
-	)
-
-	popts.loadOptions = append(popts.loadOptions,
-		withComponentOptions(copts...),
-	)
-
-	project, err := Load(config.ConfigDetails{
-		ConfigFiles:   configs,
-		WorkingDir:    workingDir,
-		Configuration: popts.Configuration,
-	}, popts.loadOptions...)
-	if err != nil {
-		return nil, err
-	}
-
-	WithKraftFiles(configPaths)(project)
-	return project, nil
-}
-
-func absolutePaths(p []string) ([]string, error) {
-	var paths []string
-	for _, f := range p {
-		if f == "-" {
-			paths = append(paths, f)
-			continue
-		}
-		abs, err := filepath.Abs(f)
+		app, err := NewApplicationFromInterface(iface, popts)
 		if err != nil {
 			return nil, err
 		}
-		f = abs
-		if _, err := os.Stat(f); err != nil {
+
+		all = append(all, app)
+	}
+
+	app, err := MergeApplicationConfigs(all)
+	if err != nil {
+		return nil, err
+	}
+
+	projectName, projectNameImperativelySet := popts.GetProjectName()
+	app.ComponentConfig.Name = normalizeProjectName(app.ComponentConfig.Name)
+	if !projectNameImperativelySet && app.ComponentConfig.Name != "" {
+		projectName = app.ComponentConfig.Name
+	}
+
+	if projectName != "" {
+		popts.kconfig.Set(unikraft.UK_NAME, projectName)
+	}
+
+	if len(app.unikraft.ComponentConfig.Source) > 0 {
+		if p, err := os.Stat(app.unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
+			popts.kconfig.Set(unikraft.UK_BASE, app.unikraft.ComponentConfig.Source)
+		}
+	}
+
+	popts.kconfig.OverrideBy(app.unikraft.Configuration)
+
+	for _, library := range app.libraries {
+		popts.kconfig.OverrideBy(library.Configuration)
+	}
+
+	project, err := NewApplicationFromOptions(
+		WithName(projectName),
+		WithWorkingDir(popts.workdir),
+		WithFilename(app.filename),
+		WithOutDir(app.outDir),
+		WithUnikraft(app.unikraft),
+		WithTemplate(app.template),
+		WithLibraries(app.libraries),
+		WithTargets(app.targets),
+		WithConfiguration(popts.kconfig),
+		WithExtensions(app.extensions),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	project.ComponentConfig.Name = projectName
+
+	project.ApplyOptions(append(popts.copts,
+		component.WithType(unikraft.ComponentTypeApp),
+	)...)
+
+	if !popts.skipNormalization {
+		err = normalize(project, popts.resolvePaths)
+		if err != nil {
 			return nil, err
 		}
-		paths = append(paths, f)
-	}
-	return paths, nil
-}
-
-// getConfigPathsFromOptions retrieves the config files for project based on project options
-func getConfigPathsFromOptions(options *ProjectOptions) ([]string, error) {
-	if len(options.ConfigPaths) != 0 {
-		return absolutePaths(options.ConfigPaths)
 	}
 
-	return nil, errors.Wrap(errs.ErrNotFound, "no configuration file provided")
+	return project, nil
 }

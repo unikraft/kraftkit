@@ -114,19 +114,14 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
-	projectOpts, err := app.NewProjectOptions(
-		nil,
+
+	// Interpret the project directory
+	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultConfigPath(),
 		app.WithProjectResolvedPaths(true),
 		app.WithProjectDotConfig(true),
 	)
-	if err != nil {
-		return err
-	}
-
-	// Interpret the project directory
-	project, err := app.NewProjectFromOptions(projectOpts)
 	if err != nil {
 		return err
 	}
@@ -166,7 +161,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				targ.Architecture.Name() == opts.Architecture &&
 				targ.Platform.Name() == opts.Platform:
 
-			packs, err := initAppPackage(ctx, project, targ, projectOpts, opts)
+			packs, err := initAppPackage(ctx, project, targ, opts)
 			if err != nil {
 				return fmt.Errorf("could not create package: %s", err)
 			}
@@ -219,7 +214,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 func initAppPackage(ctx context.Context,
 	project *app.ApplicationConfig,
 	targ target.TargetConfig,
-	projectOpts *app.ProjectOptions,
 	opts *Pkg,
 ) ([]pack.Package, error) {
 	var err error
@@ -234,11 +228,6 @@ func initAppPackage(ctx context.Context,
 	// Prefer the debuggable (symbolic) kernel as the main kernel
 	if opts.KernelDbg && !opts.WithDbg {
 		kernel = targ.KernelDbg
-	}
-
-	workdir, err := projectOpts.GetWorkingDir()
-	if err != nil {
-		return nil, err
 	}
 
 	name := opts.Name
@@ -270,14 +259,14 @@ func initAppPackage(ctx context.Context,
 		pack.WithArchitecture(targ.Architecture.Name()),
 		pack.WithPlatform(targ.Platform.Name()),
 		pack.WithKernel(kernel),
-		pack.WithWorkdir(workdir),
+		pack.WithWorkdir(project.WorkingDir()),
 		pack.WithLocalLocation(opts.Output, opts.Force),
 	}
 
 	// Options for the initramfs if set
 	initrdConfig := targ.Initrd
 	if len(opts.Initrd) > 0 {
-		initrdConfig, err = initrd.ParseInitrdConfig(projectOpts.WorkingDir, opts.Initrd)
+		initrdConfig, err = initrd.ParseInitrdConfig(project.WorkingDir(), opts.Initrd)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse --initrd flag with value %s: %s", opts.Initrd, err)
 		}

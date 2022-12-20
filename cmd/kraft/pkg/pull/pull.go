@@ -111,18 +111,11 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	// so we can get a list of components
 	if f, err := os.Stat(query); err == nil && f.IsDir() {
 		workdir = query
-		projectOpts, err := app.NewProjectOptions(
-			nil,
+		project, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultConfigPath(),
 			app.WithProjectResolvedPaths(true),
 		)
-		if err != nil {
-			return err
-		}
-
-		// Interpret the project directory
-		project, err := app.NewProjectFromOptions(projectOpts)
 		if err != nil {
 			return err
 		}
@@ -206,18 +199,12 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		templateOps, err := app.NewProjectOptions(
-			nil,
+		templateProject, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultConfigPath(),
 			app.WithProjectResolvedPaths(true),
 			app.WithProjectDotConfig(false),
 		)
-		if err != nil {
-			return err
-		}
-
-		templateProject, err := app.NewProjectFromOptions(templateOps)
 		if err != nil {
 			return err
 		}

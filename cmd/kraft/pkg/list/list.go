@@ -83,17 +83,10 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	// List pacakges part of a project
 	if len(workdir) > 0 {
-		projectOpts, err := app.NewProjectOptions(
-			nil,
+		project, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultConfigPath(),
 		)
-		if err != nil {
-			return err
-		}
-
-		// Interpret the project directory
-		project, err := app.NewProjectFromOptions(projectOpts)
 		if err != nil {
 			return err
 		}

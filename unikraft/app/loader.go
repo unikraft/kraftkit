@@ -19,18 +19,15 @@ package app
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
-	"github.com/compose-spec/compose-go/template"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
-	"kraftkit.sh/unikraft/config"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
@@ -42,173 +39,63 @@ const (
 	DefaultConfigFile = ".config"
 )
 
-// Load reads a ConfigDetails and returns a fully loaded configuration
-func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*ApplicationConfig, error) {
-	if len(details.ConfigFiles) < 1 {
-		return nil, errors.Errorf("No files specified")
-	}
-
-	opts := &LoaderOptions{
-		Interpolate: &interp.Options{
-			Substitute:      template.Substitute,
-			LookupValue:     details.LookupConfig,
-			TypeCastMapping: interpolateTypeCastMapping,
-		},
-	}
-
-	for _, op := range options {
-		op(opts)
-	}
-
-	opts.componentOptions = append(opts.componentOptions,
-		component.WithWorkdir(details.WorkingDir),
-	)
-
-	var configs []*config.Config
-	for i, file := range details.ConfigFiles {
-		configDict := file.Config
-		if configDict == nil {
-			dict, err := parseConfig(file.Content, opts)
-			if err != nil {
-				return nil, err
-			}
-			configDict = dict
-			file.Config = dict
-			details.ConfigFiles[i] = file
-		}
-
-		if !opts.SkipValidation {
-			if err := schema.Validate(configDict); err != nil {
-				return nil, err
-			}
-		}
-
-		configDict = groupXFieldsIntoExtensions(configDict)
-
-		cfg, err := loadSections(file.Filename, configDict, details, opts)
-		if err != nil {
-			return nil, err
-		}
-
-		configs = append(configs, cfg)
-	}
-
-	model, err := merge(configs)
-	if err != nil {
-		return nil, err
-	}
-
-	projectName, projectNameImperativelySet := opts.GetProjectName()
-	model.Name = normalizeProjectName(model.Name)
-	if !projectNameImperativelySet && model.Name != "" {
-		projectName = model.Name
-	}
-
-	if projectName != "" {
-		details.Configuration.Set(unikraft.UK_NAME, projectName)
-	}
-
-	if len(model.Unikraft.ComponentConfig.Source) > 0 {
-		if p, err := os.Stat(model.Unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
-			details.Configuration.Set(unikraft.UK_BASE, model.Unikraft.ComponentConfig.Source)
-		}
-	}
-
-	details.Configuration.OverrideBy(model.Unikraft.Configuration)
-
-	for _, library := range model.Libraries {
-		details.Configuration.OverrideBy(library.Configuration)
-	}
-	project, err := NewApplicationFromOptions(
-		WithName(projectName),
-		WithWorkingDir(details.WorkingDir),
-		WithFilename(model.Filename),
-		WithOutDir(model.OutDir),
-		WithUnikraft(model.Unikraft),
-		WithTemplate(model.Template),
-		WithLibraries(model.Libraries),
-		WithTargets(model.Targets),
-		WithConfiguration(details.Configuration),
-		WithExtensions(model.Extensions),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	project.ComponentConfig.Name = projectName
-
-	project.ApplyOptions(append(opts.componentOptions,
-		component.WithType(unikraft.ComponentTypeApp),
-	)...)
-
-	if !opts.SkipNormalization {
-		err = normalize(project, opts.ResolvePaths)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return project, nil
-}
-
-func loadSections(filename string, cfgIface map[string]interface{}, configDetails config.ConfigDetails, opts *LoaderOptions) (*config.Config, error) {
+func NewApplicationFromInterface(iface map[string]interface{}, popts *ProjectOptions) (*ApplicationConfig, error) {
 	var err error
-	cfg := config.Config{
-		Filename: filename,
-	}
+	app := ApplicationConfig{}
 
 	name := ""
-	if n, ok := cfgIface["name"]; ok {
+	if n, ok := iface["name"]; ok {
 		name, ok = n.(string)
 		if !ok {
 			return nil, errors.New("project name must be a string")
 		}
 	}
-	cfg.Name = name
+
+	app.ComponentConfig.Name = name
 
 	outdir := DefaultOutputDir
-	if n, ok := cfgIface["outdir"]; ok {
+	if n, ok := iface["outdir"]; ok {
 		outdir, ok = n.(string)
 		if !ok {
 			return nil, errors.New("output directory must be a string")
 		}
 	}
 
-	if opts.ResolvePaths {
-		cfg.OutDir = configDetails.RelativePath(outdir)
+	if popts.resolvePaths {
+		app.outDir = popts.RelativePath(outdir)
 	}
 
-	cfg.Unikraft, err = LoadUnikraft(getSection(cfgIface, "unikraft"), opts)
+	app.unikraft, err = LoadUnikraft(getSection(iface, "unikraft"), popts)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Template, err = LoadTemplate(getSection(cfgIface, "template"), opts)
+	app.template, err = LoadTemplate(getSection(iface, "template"), popts)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Libraries, err = LoadLibraries(getSectionMap(cfgIface, "libraries"), opts)
+	app.libraries, err = LoadLibraries(getSectionMap(iface, "libraries"), popts)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Targets, err = LoadTargets(getSectionList(cfgIface, "targets"), configDetails, cfg.OutDir, opts)
+	app.targets, err = LoadTargets(getSectionList(iface, "targets"), app.outDir, popts)
 	if err != nil {
 		return nil, err
 	}
 
-	extensions := getSectionMap(cfgIface, "extensions")
+	extensions := getSectionMap(iface, "extensions")
 	if len(extensions) > 0 {
-		cfg.Extensions = extensions
+		app.extensions = extensions
 	}
 
-	return &cfg, nil
+	return &app, nil
 }
 
 // LoadUnikraft produces a UnikraftConfig from a kraft file Dict the source Dict
-// is not validated if directly used. Use Load() to enable validation
-func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig, error) {
+// is not validated if directly used.
+func LoadUnikraft(source interface{}, popts *ProjectOptions) (core.UnikraftConfig, error) {
 	// Populate the unikraft component with shared `ComponentConfig` attributes
 	base := map[string]component.ComponentConfig{}
 	remap := map[string]interface{}{
@@ -233,7 +120,7 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 	}
 
 	if err := uk.ApplyOptions(append(
-		opts.componentOptions,
+		popts.copts,
 		component.WithType(unikraft.ComponentTypeCore),
 	)...); err != nil {
 		return uk, err
@@ -243,8 +130,8 @@ func LoadUnikraft(source interface{}, opts *LoaderOptions) (core.UnikraftConfig,
 }
 
 // LoadTemplate produces a TemplateConfig from a kraft file Dict the source Dict
-// is not validated if directly used. Use Load() to enable validation
-func LoadTemplate(source interface{}, opts *LoaderOptions) (kraftTemplate.TemplateConfig, error) {
+// is not validated if directly used.
+func LoadTemplate(source interface{}, popts *ProjectOptions) (kraftTemplate.TemplateConfig, error) {
 	base := component.ComponentConfig{}
 	dataToParse := make(map[string]interface{})
 
@@ -275,7 +162,7 @@ func LoadTemplate(source interface{}, opts *LoaderOptions) (kraftTemplate.Templa
 	}
 
 	if err := template.ApplyOptions(append(
-		opts.componentOptions,
+		popts.copts,
 		component.WithType(unikraft.ComponentTypeApp),
 	)...); err != nil {
 		return template, err
@@ -285,8 +172,8 @@ func LoadTemplate(source interface{}, opts *LoaderOptions) (kraftTemplate.Templa
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
-// Dict is not validated if directly used. Use Load() to enable validation
-func LoadLibraries(source map[string]interface{}, opts *LoaderOptions) (map[string]lib.LibraryConfig, error) {
+// Dict is not validated if directly used.
+func LoadLibraries(source map[string]interface{}, popts *ProjectOptions) (map[string]lib.LibraryConfig, error) {
 	// Populate all library components with shared `ComponentConfig` attributes
 	bases := make(map[string]component.ComponentConfig)
 	if err := Transform(source, &bases); err != nil {
@@ -305,7 +192,7 @@ func LoadLibraries(source map[string]interface{}, opts *LoaderOptions) (map[stri
 		library.ComponentConfig = comp
 
 		if err := library.ApplyOptions(append(
-			opts.componentOptions,
+			popts.copts,
 			component.WithType(unikraft.ComponentTypeLib),
 		)...); err != nil {
 			return libraries, err
@@ -324,7 +211,7 @@ func LoadLibraries(source map[string]interface{}, opts *LoaderOptions) (map[stri
 
 // LoadTargets produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdir string, opts *LoaderOptions) ([]target.TargetConfig, error) {
+func LoadTargets(source []interface{}, outdir string, popts *ProjectOptions) ([]target.TargetConfig, error) {
 	// Populate all target components with shared `ComponentConfig` attributes
 	bases := []component.ComponentConfig{}
 	if err := Transform(source, &bases); err != nil {
@@ -339,26 +226,26 @@ func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdi
 		}
 	}
 
-	projectName, _ := opts.GetProjectName()
+	projectName, _ := popts.GetProjectName()
 
 	for i, target := range targets {
 		if err := Transform(source[i], &target); err != nil {
 			return targets, err
 		}
 
-		if err := target.ApplyOptions(opts.componentOptions...); err != nil {
+		if err := target.ApplyOptions(popts.copts...); err != nil {
 			return targets, err
 		}
 
 		if err := target.Architecture.ApplyOptions(append(
-			opts.componentOptions,
+			popts.copts,
 			component.WithType(unikraft.ComponentTypeArch),
 		)...); err != nil {
 			return targets, err
 		}
 
 		if err := target.Platform.ApplyOptions(append(
-			opts.componentOptions,
+			popts.copts,
 			component.WithType(unikraft.ComponentTypePlat),
 		)...); err != nil {
 			return targets, err
@@ -387,8 +274,8 @@ func LoadTargets(source []interface{}, configDetails config.ConfigDetails, outdi
 			target.KernelDbg = fmt.Sprintf("%s.dbg", target.Kernel)
 		}
 
-		if opts.ResolvePaths {
-			target.Kernel = configDetails.RelativePath(target.Kernel)
+		if popts.resolvePaths {
+			target.Kernel = popts.RelativePath(target.Kernel)
 		}
 
 		targets[i] = target
@@ -424,13 +311,13 @@ func getSectionList(config map[string]interface{}, key string) []interface{} {
 	return section.([]interface{})
 }
 
-func parseConfig(b []byte, opts *LoaderOptions) (map[string]interface{}, error) {
+func parseConfig(b []byte, popts *ProjectOptions) (map[string]interface{}, error) {
 	yml, err := ParseYAML(b)
 	if err != nil {
 		return nil, err
 	}
-	if !opts.SkipInterpolation {
-		return interp.Interpolate(yml, *opts.Interpolate)
+	if !popts.skipInterpolation {
+		return interp.Interpolate(yml, *popts.interpolate)
 	}
 	return yml, err
 }

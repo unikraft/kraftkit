@@ -7,7 +7,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
 //
-// 		http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,38 +18,67 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/compose-spec/compose-go/dotenv"
+	interp "github.com/compose-spec/compose-go/interpolation"
+	"github.com/compose-spec/compose-go/template"
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/kconfig"
+	"kraftkit.sh/unikraft/component"
 )
 
-// ProjectOptions groups the command line options recommended for a Compose
-// implementation
-type ProjectOptions struct {
-	Name          string
-	WorkingDir    string
-	ConfigPaths   []string
-	Configuration kconfig.KConfigValues
-	DotConfigFile string
-	loadOptions   []func(*LoaderOptions)
+// kraftfile is a filename and the contents of the file
+type kraftfile struct {
+	// path is the path of the yaml configuration file
+	path string
+
+	// content is the raw yaml content. Will be loaded from Filename if not set
+	content []byte
+
+	// config if the yaml tree for this config file. Will be parsed from Content
+	// if not set
+	config map[string]interface{}
 }
 
-func (popts *ProjectOptions) GetWorkingDir() (string, error) {
-	if popts.WorkingDir != "" {
-		return popts.WorkingDir, nil
+// ProjectOptions group configuration options used to instantiate a new
+// ApplicationConfig from a working directory and set of kraftfiles
+type ProjectOptions struct {
+	name              string
+	workdir           string
+	kraftfiles        []kraftfile
+	kconfig           kconfig.KConfigValues
+	dotConfigFile     string
+	skipValidation    bool
+	skipInterpolation bool
+	skipNormalization bool
+	resolvePaths      bool
+	interpolate       *interp.Options
+
+	// Indicates when the projectName was imperatively set or guessed from path
+	projectNameImperativelySet bool
+
+	// Slice of component options to apply to each loaded component
+	copts []component.ComponentOption
+}
+
+// Workdir returns the working directory determined by provided kraft files
+func (popts *ProjectOptions) Workdir() (string, error) {
+	if popts.workdir != "" {
+		return popts.workdir, nil
 	}
 
-	for _, path := range popts.ConfigPaths {
-		if path != "-" {
-			absPath, err := filepath.Abs(path)
+	for _, file := range popts.kraftfiles {
+		if file.path != "" && file.path != "-" {
+			absPath, err := filepath.Abs(file.path)
 			if err != nil {
 				return "", err
 			}
+
 			return filepath.Dir(absPath), nil
 		}
 	}
@@ -57,13 +86,92 @@ func (popts *ProjectOptions) GetWorkingDir() (string, error) {
 	return os.Getwd()
 }
 
+// RelativePath resolve a relative path based project's working directory
+func (popts *ProjectOptions) RelativePath(path string) string {
+	if path[0] == '~' {
+		home, _ := os.UserHomeDir()
+		path = filepath.Join(home, path[1:])
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	return filepath.Join(popts.workdir, path)
+}
+
+// LookupConfig provides a lookup function for config variables
+func (popts *ProjectOptions) LookupConfig(key string) (string, bool) {
+	v, ok := popts.kconfig[key]
+	return v.Value, ok
+}
+
+// SetProjectName sets the project name along with whether the name is set
+// imperatively (i.e. whether it was derived from the working directory)
+func (popts *ProjectOptions) SetProjectName(name string, imperativelySet bool) {
+	popts.name = normalizeProjectName(name)
+	popts.projectNameImperativelySet = imperativelySet
+}
+
+// GetProjectName returns the project name and whether the project name was set
+// impartively (i.e. by the working directory's name)
+func (popts *ProjectOptions) GetProjectName() (string, bool) {
+	return popts.name, popts.projectNameImperativelySet
+}
+
+// AddKraftfile adds and extracts the file contents and attaches it to the
+// ProjectOptions.
+func (popts *ProjectOptions) AddKraftfile(file string) error {
+	if popts.kraftfiles == nil {
+		popts.kraftfiles = make([]kraftfile, 0)
+	}
+
+	var b []byte
+	var err error
+
+	if file == "-" {
+		b, err = ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		abs, err := filepath.Abs(file)
+		if err != nil {
+			return err
+		}
+
+		f := abs
+		if _, err := os.Stat(f); err != nil {
+			return err
+		}
+
+		b, err = ioutil.ReadFile(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	popts.kraftfiles = append(popts.kraftfiles, kraftfile{
+		path:    file,
+		content: b,
+	})
+
+	return nil
+}
+
 type ProjectOption func(*ProjectOptions) error
 
 // NewProjectOptions creates ProjectOptions
-func NewProjectOptions(configs []string, opts ...ProjectOption) (*ProjectOptions, error) {
+func NewProjectOptions(opts ...ProjectOption) (*ProjectOptions, error) {
 	popts := &ProjectOptions{
-		ConfigPaths:   configs,
-		Configuration: kconfig.KConfigValues{},
+		kconfig: kconfig.KConfigValues{},
+	}
+
+	popts.interpolate = &interp.Options{
+		Substitute:      template.Substitute,
+		LookupValue:     popts.LookupConfig,
+		TypeCastMapping: interpolateTypeCastMapping,
 	}
 
 	for _, o := range opts {
@@ -79,24 +187,24 @@ func NewProjectOptions(configs []string, opts ...ProjectOption) (*ProjectOptions
 // WithProjectName defines ProjectOptions' name
 func WithProjectName(name string) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.Name = name
+		popts.name = name
 		return nil
 	}
 }
 
 // WithProjectWorkdir defines ProjectOptions' working directory
-func WithProjectWorkdir(pwd string) ProjectOption {
+func WithProjectWorkdir(workdir string) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		if pwd == "" {
+		if workdir == "" {
 			return nil
 		}
 
-		abs, err := filepath.Abs(pwd)
+		abs, err := filepath.Abs(workdir)
 		if err != nil {
 			return err
 		}
 
-		popts.WorkingDir = abs
+		popts.workdir = abs
 
 		return nil
 	}
@@ -107,31 +215,39 @@ func WithProjectWorkdir(pwd string) ProjectOption {
 func WithProjectConfig(config []string) ProjectOption {
 	return func(popts *ProjectOptions) error {
 		for k, v := range getAsEqualsMap(config) {
-			popts.Configuration.Set(k, v)
+			popts.kconfig.Set(k, v)
 		}
 		return nil
 	}
 }
 
-// WithProjectConfigFile set an alternate config file
-func WithProjectConfigFile(file string) ProjectOption {
+// WithProjectKraftfile adds a kraft file to the project
+func WithProjectKraftfile(file string) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.DotConfigFile = file
+		popts.AddKraftfile(file)
+		return nil
+	}
+}
+
+// WithProjectDotConfigFile set an alternate config file
+func WithProjectDotConfigFile(file string) ProjectOption {
+	return func(popts *ProjectOptions) error {
+		popts.dotConfigFile = file
 		return nil
 	}
 }
 
 func withProjectDotConfig(popts *ProjectOptions) error {
-	if popts.DotConfigFile == "" {
-		wd, err := popts.GetWorkingDir()
+	if popts.dotConfigFile == "" {
+		wd, err := popts.Workdir()
 		if err != nil {
 			return err
 		}
 
-		popts.DotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
+		popts.dotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
 	}
 
-	dotConfigFile := popts.DotConfigFile
+	dotConfigFile := popts.dotConfigFile
 
 	abs, err := filepath.Abs(dotConfigFile)
 	if err != nil {
@@ -142,8 +258,8 @@ func withProjectDotConfig(popts *ProjectOptions) error {
 
 	s, err := os.Stat(dotConfigFile)
 	if os.IsNotExist(err) {
-		if popts.DotConfigFile != "" {
-			return errors.Errorf("couldn't find config file: %s", popts.DotConfigFile)
+		if popts.dotConfigFile != "" {
+			return errors.Errorf("couldn't find config file: %s", popts.dotConfigFile)
 		}
 		return nil
 	}
@@ -153,7 +269,7 @@ func withProjectDotConfig(popts *ProjectOptions) error {
 	}
 
 	if s.IsDir() {
-		if popts.DotConfigFile == "" {
+		if popts.dotConfigFile == "" {
 			return nil
 		}
 		return errors.Errorf("%s is a directory", dotConfigFile)
@@ -190,7 +306,7 @@ func withProjectDotConfig(popts *ProjectOptions) error {
 		config.Set(k, v)
 	}
 
-	popts.Configuration = config
+	popts.kconfig = config
 
 	return nil
 }
@@ -209,9 +325,7 @@ func WithProjectDotConfig(enforce bool) ProjectOption {
 // WithProjectInterpolation set ProjectOptions to enable/skip interpolation
 func WithProjectInterpolation(interpolation bool) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.loadOptions = append(popts.loadOptions, func(options *LoaderOptions) {
-			options.SkipInterpolation = !interpolation
-		})
+		popts.skipInterpolation = !interpolation
 		return nil
 	}
 }
@@ -219,9 +333,7 @@ func WithProjectInterpolation(interpolation bool) ProjectOption {
 // WithProjectNormalization set ProjectOptions to enable/skip normalization
 func WithProjectNormalization(normalization bool) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.loadOptions = append(popts.loadOptions, func(options *LoaderOptions) {
-			options.SkipNormalization = !normalization
-		})
+		popts.skipNormalization = !normalization
 		return nil
 	}
 }
@@ -229,9 +341,16 @@ func WithProjectNormalization(normalization bool) ProjectOption {
 // WithProjectResolvedPaths set ProjectOptions to enable paths resolution
 func WithProjectResolvedPaths(resolve bool) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.loadOptions = append(popts.loadOptions, func(options *LoaderOptions) {
-			options.ResolvePaths = resolve
-		})
+		popts.resolvePaths = resolve
+		return nil
+	}
+}
+
+// WithSkipValidation sets the LoaderOptions to skip validation when loading
+// sections
+func WithProjectSkipValidation(skipValidation bool) ProjectOption {
+	return func(popts *ProjectOptions) error {
+		popts.skipValidation = true
 		return nil
 	}
 }
@@ -262,11 +381,11 @@ func getAsEqualsMap(em []string) map[string]string {
 // directory
 func WithProjectDefaultConfigPath() ProjectOption {
 	return func(popts *ProjectOptions) error {
-		if len(popts.ConfigPaths) > 0 {
+		if len(popts.kraftfiles) > 0 {
 			return nil
 		}
 
-		pwd, err := popts.GetWorkingDir()
+		pwd, err := popts.Workdir()
 		if err != nil {
 			return err
 		}
@@ -278,7 +397,7 @@ func WithProjectDefaultConfigPath() ProjectOption {
 					return fmt.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
 				}
 
-				popts.ConfigPaths = append(popts.ConfigPaths, candidates[0])
+				popts.AddKraftfile(candidates[0])
 
 				return nil
 			}
@@ -291,5 +410,14 @@ func WithProjectDefaultConfigPath() ProjectOption {
 
 			pwd = parent
 		}
+	}
+}
+
+// WithProjectComponentOptions adds the set of options to apply to each
+// component during their instantiation
+func WithProjectComponentOptions(copts ...component.ComponentOption) ProjectOption {
+	return func(popts *ProjectOptions) error {
+		popts.copts = copts
+		return nil
 	}
 }
