@@ -85,8 +85,8 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	if len(workdir) > 0 {
 		projectOpts, err := app.NewProjectOptions(
 			nil,
-			app.WithWorkingDirectory(workdir),
-			app.WithDefaultConfigPath(),
+			app.WithProjectWorkdir(workdir),
+			app.WithProjectDefaultConfigPath(),
 		)
 		if err != nil {
 			return err
