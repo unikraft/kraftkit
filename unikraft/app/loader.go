@@ -120,6 +120,7 @@ func Load(details config.ConfigDetails, options ...func(*LoaderOptions)) (*Appli
 		details.Configuration.OverrideBy(library.Configuration)
 	}
 	project, err := NewApplicationFromOptions(
+		WithName(projectName),
 		WithWorkingDir(details.WorkingDir),
 		WithFilename(model.Filename),
 		WithOutDir(model.OutDir),

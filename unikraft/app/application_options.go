@@ -32,6 +32,14 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, 
 	return ao, nil
 }
 
+// WithName sets the application component name
+func WithName(name string) ApplicationOption {
+	return func(ac *ApplicationConfig) error {
+		ac.ComponentConfig.Name = name
+		return nil
+	}
+}
+
 // WithWorkingDir sets the application's working directory
 func WithWorkingDir(workingDir string) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
