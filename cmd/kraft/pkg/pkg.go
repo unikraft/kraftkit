@@ -118,7 +118,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	// Interpret the project directory
 	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultConfigPath(),
+		app.WithProjectDefaultKraftfiles(),
 		app.WithProjectResolvedPaths(true),
 		app.WithProjectDotConfig(true),
 	)

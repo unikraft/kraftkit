@@ -377,9 +377,9 @@ func getAsEqualsMap(em []string) map[string]string {
 	return m
 }
 
-// WithProjectDefaultConfigPath searches for default config files from working
+// WithProjectDefaultKraftfiles searches for default kraft files from working
 // directory
-func WithProjectDefaultConfigPath() ProjectOption {
+func WithProjectDefaultKraftfiles() ProjectOption {
 	return func(popts *ProjectOptions) error {
 		if len(popts.kraftfiles) > 0 {
 			return nil

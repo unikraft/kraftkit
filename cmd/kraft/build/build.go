@@ -90,7 +90,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultConfigPath(),
+		app.WithProjectDefaultKraftfiles(),
 		app.WithProjectResolvedPaths(true),
 		app.WithProjectDotConfig(false),
 	)
@@ -191,7 +191,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 		templateProject, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(templateWorkdir),
-			app.WithProjectDefaultConfigPath(),
+			app.WithProjectDefaultKraftfiles(),
 			app.WithProjectResolvedPaths(true),
 			app.WithProjectDotConfig(false),
 		)
