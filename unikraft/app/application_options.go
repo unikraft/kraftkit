@@ -6,8 +6,11 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"kraftkit.sh/kconfig"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
@@ -21,15 +24,63 @@ type ApplicationOption func(ao *ApplicationConfig) error
 // NewApplicationFromOptions accepts a series of options and returns a rendered
 // *ApplicationConfig structure
 func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, error) {
-	ao := &ApplicationConfig{}
+	var err error
+	ac := &ApplicationConfig{}
 
 	for _, o := range aopts {
-		if err := o(ao); err != nil {
+		if err := o(ac); err != nil {
 			return nil, fmt.Errorf("could not apply option: %v", err)
 		}
 	}
 
-	return ao, nil
+	if ac.ComponentConfig.Name != "" {
+		ac.configuration.Set(unikraft.UK_NAME, ac.ComponentConfig.Name)
+	}
+
+	if ac.outDir == "" {
+		if ac.workingDir == "" {
+			ac.workingDir, err = os.Getwd()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		ac.outDir = filepath.Join(ac.workingDir, unikraft.BuildDir)
+	}
+
+	if len(ac.unikraft.ComponentConfig.Source) > 0 {
+		if p, err := os.Stat(ac.unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
+			ac.configuration.Set(unikraft.UK_BASE, ac.unikraft.ComponentConfig.Source)
+		}
+	}
+
+	for i, t := range ac.targets {
+		if t.ComponentConfig.Name == "" {
+			t.ComponentConfig.Name = ac.ComponentConfig.Name
+		}
+
+		if t.Kernel == "" {
+			kernelName, err := target.KernelName(t)
+			if err != nil {
+				return nil, err
+			}
+
+			t.Kernel = filepath.Join(ac.outDir, kernelName)
+		}
+
+		if t.KernelDbg == "" {
+			kernelDbgName, err := target.KernelDbgName(t)
+			if err != nil {
+				return nil, err
+			}
+
+			t.KernelDbg = filepath.Join(ac.outDir, kernelDbgName)
+		}
+
+		ac.targets[i] = t
+	}
+
+	return ac, nil
 }
 
 // WithName sets the application component name

@@ -19,7 +19,6 @@ package app
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
@@ -80,7 +79,7 @@ func NewApplicationFromInterface(iface map[string]interface{}, popts *ProjectOpt
 		return nil, err
 	}
 
-	app.targets, err = LoadTargets(getSectionList(iface, "targets"), app.outDir, popts)
+	app.targets, err = LoadTargets(getSectionList(iface, "targets"), popts)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +210,7 @@ func LoadLibraries(source map[string]interface{}, popts *ProjectOptions) (map[st
 
 // LoadTargets produces a LibraryConfig map from a kraft file Dict the source
 // Dict is not validated if directly used. Use Load() to enable validation
-func LoadTargets(source []interface{}, outdir string, popts *ProjectOptions) ([]target.TargetConfig, error) {
+func LoadTargets(source []interface{}, popts *ProjectOptions) ([]target.TargetConfig, error) {
 	// Populate all target components with shared `ComponentConfig` attributes
 	bases := []component.ComponentConfig{}
 	if err := Transform(source, &bases); err != nil {
@@ -225,8 +224,6 @@ func LoadTargets(source []interface{}, outdir string, popts *ProjectOptions) ([]
 			ComponentConfig: targ,
 		}
 	}
-
-	projectName, _ := popts.GetProjectName()
 
 	for i, target := range targets {
 		if err := Transform(source[i], &target); err != nil {
@@ -249,33 +246,6 @@ func LoadTargets(source []interface{}, outdir string, popts *ProjectOptions) ([]
 			component.WithType(unikraft.ComponentTypePlat),
 		)...); err != nil {
 			return targets, err
-		}
-
-		if target.ComponentConfig.Name == "" {
-			// The filename pattern below is a baked in assumption within Unikraft's
-			// build system, see for example `KVM_IMAGE`.  TODO: This format should
-			// likely be upstreamed into the core as a generic for all platforms.
-			target.ComponentConfig.Name = fmt.Sprintf(
-				"%s_%s-%s",
-				projectName,
-				target.Platform.Name(),
-				target.Architecture.Name(),
-			)
-		}
-
-		if target.Kernel == "" {
-			target.Kernel = filepath.Join(outdir, target.ComponentConfig.Name)
-		}
-
-		if target.KernelDbg == "" {
-			// Another baked-in assumption from the Unikraft build system.  See for
-			// example `KVM_DEBUG_IMAGE` which simply makes the same suffix appendage.
-			// TODO: As above, this should likely be upstreamed as a generic.
-			target.KernelDbg = fmt.Sprintf("%s.dbg", target.Kernel)
-		}
-
-		if popts.resolvePaths {
-			target.Kernel = popts.RelativePath(target.Kernel)
 		}
 
 		targets[i] = target

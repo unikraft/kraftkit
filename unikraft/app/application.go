@@ -217,7 +217,7 @@ func (ac *ApplicationConfig) KConfigFile(tc *target.TargetConfig) string {
 	k := filepath.Join(ac.workingDir, kconfig.DotConfigFileName)
 
 	if tc != nil {
-		k += "." + tc.Name()
+		k += "." + filepath.Base(tc.Kernel)
 	}
 
 	return k
