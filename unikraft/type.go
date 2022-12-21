@@ -106,12 +106,12 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 	// TODO: Should the hidden-file (`.`) be optional?
 	switch t {
 	case ComponentTypeCore:
-		return filepath.Join(workdir, ".unikraft", "unikraft"), nil
+		return filepath.Join(workdir, VendorDir, "unikraft"), nil
 	case ComponentTypeApp,
 		ComponentTypeLib,
 		ComponentTypeArch,
 		ComponentTypePlat:
-		return filepath.Join(workdir, ".unikraft", t.Plural(), name), nil
+		return filepath.Join(workdir, VendorDir, t.Plural(), name), nil
 	}
 
 	return "", fmt.Errorf("cannot place component of unknown type")
