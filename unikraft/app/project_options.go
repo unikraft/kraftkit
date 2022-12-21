@@ -109,7 +109,7 @@ func (popts *ProjectOptions) LookupConfig(key string) (string, bool) {
 // SetProjectName sets the project name along with whether the name is set
 // imperatively (i.e. whether it was derived from the working directory)
 func (popts *ProjectOptions) SetProjectName(name string, imperativelySet bool) {
-	popts.name = normalizeProjectName(name)
+	popts.name = name
 	popts.projectNameImperativelySet = imperativelySet
 }
 
