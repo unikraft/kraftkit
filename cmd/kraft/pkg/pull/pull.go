@@ -114,7 +114,6 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		project, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultKraftfiles(),
-			app.WithProjectResolvedPaths(true),
 		)
 		if err != nil {
 			return err
@@ -202,8 +201,6 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		templateProject, err := app.NewProjectFromOptions(
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultKraftfiles(),
-			app.WithProjectResolvedPaths(true),
-			app.WithProjectDotConfig(false),
 		)
 		if err != nil {
 			return err

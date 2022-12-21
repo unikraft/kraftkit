@@ -111,8 +111,6 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
-		app.WithProjectResolvedPaths(true),
-		app.WithProjectDotConfig(true),
 		app.WithProjectConfig(confOpts),
 	)
 	if err != nil {

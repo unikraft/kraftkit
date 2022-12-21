@@ -105,8 +105,6 @@ func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
 	project, err := app.NewProjectFromOptions(
 		app.WithProjectWorkdir(workdir),
 		// app.WithProjectDefaultConfigPath(),
-		// app.WithProjectResolvedPaths(true),
-		// app.WithProjectDotConfig(true),
 		app.WithProjectConfig(confOpts),
 	)
 	if err != nil {
