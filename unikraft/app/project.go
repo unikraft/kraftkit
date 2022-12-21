@@ -109,20 +109,13 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 		return nil, err
 	}
 
-	projectName, projectNameImperativelySet := popts.GetProjectName()
-	app.ComponentConfig.Name = normalizeProjectName(app.ComponentConfig.Name)
-	if !projectNameImperativelySet && app.ComponentConfig.Name != "" {
+	projectName, _ := popts.GetProjectName()
+	if app.ComponentConfig.Name != "" {
 		projectName = app.ComponentConfig.Name
 	}
 
-	if projectName != "" {
-		popts.kconfig.Set(unikraft.UK_NAME, projectName)
-	}
-
-	if len(app.unikraft.ComponentConfig.Source) > 0 {
-		if p, err := os.Stat(app.unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
-			popts.kconfig.Set(unikraft.UK_BASE, app.unikraft.ComponentConfig.Source)
-		}
+	if !popts.skipNormalization {
+		projectName = normalizeProjectName(projectName)
 	}
 
 	popts.kconfig.OverrideBy(app.unikraft.Configuration)
