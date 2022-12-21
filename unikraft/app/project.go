@@ -118,6 +118,10 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 		projectName = normalizeProjectName(projectName)
 	}
 
+	if popts.resolvePaths {
+		app.outDir = popts.RelativePath(app.outDir)
+	}
+
 	popts.kconfig.OverrideBy(app.unikraft.Configuration)
 
 	for _, library := range app.libraries {
