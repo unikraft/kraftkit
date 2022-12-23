@@ -81,18 +81,20 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
-	var driverType *machinedriver.DriverType
+	driverType := machinedriver.UnknownDriver
+
 	if opts.Hypervisor == "auto" {
-		dt, err := machinedriver.DetectHostHypervisor()
+		driverType, err = machinedriver.DetectHostHypervisor()
 		if err != nil {
 			return err
 		}
-		driverType = &dt
 	} else if opts.Hypervisor == "config" {
 		opts.Hypervisor = config.G(ctx).DefaultPlat
+	} else {
+		driverType = machinedriver.DriverTypeFromName(opts.Hypervisor)
 	}
 
-	if driverType == nil && len(opts.Hypervisor) > 0 && !utils.Contains(machinedriver.DriverNames(), opts.Hypervisor) {
+	if driverType == machinedriver.UnknownDriver {
 		return fmt.Errorf("unknown hypervisor driver: %s", opts.Hypervisor)
 	}
 
@@ -102,7 +104,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
-	driver, err := machinedriver.New(*driverType,
+	driver, err := machinedriver.New(driverType,
 		machinedriveropts.WithBackground(opts.Detach),
 		machinedriveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
 		machinedriveropts.WithMachineStore(store),
