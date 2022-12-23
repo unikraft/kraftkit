@@ -37,7 +37,6 @@ type Run struct {
 	Hypervisor    string
 	Memory        int      `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
 	NoMonitor     bool     `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
-	PinCPUs       string   `long:"" short:"" usage:""`
 	Platform      string   `long:"plat" short:"p" usage:"Set the platform"`
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
