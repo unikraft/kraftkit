@@ -177,36 +177,27 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	// b). use a defined working directory as a Unikraft project
 	if len(workdir) > 0 {
 		target := opts.Target
-		projectOpts, err := app.NewProjectOptions(
-			nil,
-			app.WithWorkingDirectory(workdir),
-			app.WithDefaultConfigPath(),
-			app.WithResolvedPaths(true),
-			app.WithDotConfig(false),
+		project, err := app.NewProjectFromOptions(
+			app.WithProjectWorkdir(workdir),
+			app.WithProjectDefaultKraftfiles(),
 		)
 		if err != nil {
 			return err
 		}
 
-		// Interpret the application
-		app, err := app.NewApplicationFromOptions(projectOpts)
-		if err != nil {
-			return err
-		}
-
-		if len(app.TargetNames()) == 1 {
-			target = app.TargetNames()[0]
+		if len(project.TargetNames()) == 1 {
+			target = project.TargetNames()[0]
 			if len(opts.Target) > 0 && opts.Target != target {
 				return fmt.Errorf("unknown target: %s", opts.Target)
 			}
 
-		} else if len(target) == 0 && len(app.TargetNames()) > 1 {
+		} else if len(target) == 0 && len(project.TargetNames()) > 1 {
 			if config.G(ctx).NoPrompt {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
 
 			sp := selection.New("select target:",
-				selection.Choices(app.TargetNames()),
+				selection.Choices(project.TargetNames()),
 			)
 			sp.Filter = nil
 
@@ -217,11 +208,11 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 			target = selectedTarget.String
 
-		} else if target != "" && utils.Contains(app.TargetNames(), target) {
+		} else if target != "" && utils.Contains(project.TargetNames(), target) {
 			return fmt.Errorf("unknown target: %s", target)
 		}
 
-		t, err := app.TargetByName(target)
+		t, err := project.TargetByName(target)
 		if err != nil {
 			return err
 		}
@@ -239,7 +230,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithPlatform(t.Platform.Name()),
 			machine.WithName(machine.MachineName(t.Name())),
 			machine.WithAcceleration(!opts.DisableAccel),
-			machine.WithSource("project://"+app.Name()+":"+t.Name()),
+			machine.WithSource("project://"+project.Name()+":"+t.Name()),
 		)
 
 		// Use the symbolic debuggable kernel image?

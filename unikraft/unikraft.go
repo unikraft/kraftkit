@@ -47,4 +47,8 @@ const (
 	Config_uk     = "Config.uk"
 	Makefile_uk   = "Makefile.uk"
 	Exportsyms_uk = "exportsyms.uk"
+
+	// Built-in paths
+	VendorDir = ".unikraft"
+	BuildDir  = "build"
 )

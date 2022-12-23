@@ -83,22 +83,15 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	// List pacakges part of a project
 	if len(workdir) > 0 {
-		projectOpts, err := app.NewProjectOptions(
-			nil,
-			app.WithWorkingDirectory(workdir),
-			app.WithDefaultConfigPath(),
+		project, err := app.NewProjectFromOptions(
+			app.WithProjectWorkdir(workdir),
+			app.WithProjectDefaultKraftfiles(),
 		)
 		if err != nil {
 			return err
 		}
 
-		// Interpret the application
-		app, err := app.NewApplicationFromOptions(projectOpts)
-		if err != nil {
-			return err
-		}
-
-		fmt.Fprint(iostreams.G(ctx).Out, app.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(

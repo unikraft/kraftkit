@@ -83,3 +83,30 @@ func (tc *TargetConfig) ArchPlatString() string {
 func (tc TargetConfig) PrintInfo() string {
 	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }
+
+// TargetName returns the name of the kernel image based on standard pattern
+// which is baked within Unikraft's build system, see for example `KVM_IMAGE`.
+// If we do not have a target name, return an error.
+func KernelName(target TargetConfig) (string, error) {
+	if target.ComponentConfig.Name == "" {
+		return "", fmt.Errorf("target name not set, cannot determine binary name")
+	}
+
+	return fmt.Sprintf(
+		"%s_%s-%s",
+		target.ComponentConfig.Name,
+		target.Platform.Name(),
+		target.Architecture.Name(),
+	), nil
+}
+
+// KernelDbgName is identical to KernelName but is used to access the symbolic
+// kernel image which has not been stripped.
+func KernelDbgName(target TargetConfig) (string, error) {
+	name, err := KernelName(target)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s.dbg", name), nil
+}

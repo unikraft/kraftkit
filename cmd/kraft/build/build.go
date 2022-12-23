@@ -88,12 +88,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// Initialize at least the configuration options for a project
-	projectOpts, err := app.NewProjectOptions(
-		nil,
-		app.WithWorkingDirectory(workdir),
-		app.WithDefaultConfigPath(),
-		app.WithResolvedPaths(true),
-		app.WithDotConfig(false),
+	project, err := app.NewProjectFromOptions(
+		app.WithProjectWorkdir(workdir),
+		app.WithProjectDefaultKraftfiles(),
 	)
 	if err != nil {
 		return err
@@ -101,12 +98,6 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	if !app.IsWorkdirInitialized(workdir) {
 		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
-	}
-
-	// Interpret the application
-	project, err := app.NewApplicationFromOptions(projectOpts)
-	if err != nil {
-		return err
 	}
 
 	parallel := !config.G(ctx).NoParallel
@@ -196,18 +187,10 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		templateOps, err := app.NewProjectOptions(
-			nil,
-			app.WithWorkingDirectory(templateWorkdir),
-			app.WithDefaultConfigPath(),
-			app.WithResolvedPaths(true),
-			app.WithDotConfig(false),
+		templateProject, err := app.NewProjectFromOptions(
+			app.WithProjectWorkdir(templateWorkdir),
+			app.WithProjectDefaultKraftfiles(),
 		)
-		if err != nil {
-			return err
-		}
-
-		templateProject, err := app.NewApplicationFromOptions(templateOps)
 		if err != nil {
 			return err
 		}

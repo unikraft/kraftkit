@@ -20,36 +20,35 @@ package app
 import (
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
-	"kraftkit.sh/unikraft/config"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
 )
 
-func merge(configs []*config.Config) (*config.Config, error) {
-	base := configs[0]
-	for _, override := range configs[1:] {
+func MergeApplicationConfigs(apps []*ApplicationConfig) (*ApplicationConfig, error) {
+	base := apps[0]
+	for _, override := range apps[1:] {
 		var err error
-		base.Name = mergeNames(base.Name, override.Name)
+		base.ComponentConfig.Name = mergeNames(base.ComponentConfig.Name, override.ComponentConfig.Name)
 
-		base.Unikraft, err = mergeUnikraft(base.Unikraft, override.Unikraft)
+		base.unikraft, err = mergeUnikraft(base.unikraft, override.unikraft)
 		if err != nil {
-			return base, errors.Wrapf(err, "cannot merge services from %s", override.Filename)
+			return base, errors.Wrapf(err, "cannot merge services from %s", override.filename)
 		}
 
-		base.Libraries, err = mergeLibraries(base.Libraries, override.Libraries)
+		base.libraries, err = mergeLibraries(base.libraries, override.libraries)
 		if err != nil {
-			return base, errors.Wrapf(err, "cannot merge volumes from %s", override.Filename)
+			return base, errors.Wrapf(err, "cannot merge volumes from %s", override.filename)
 		}
 
-		base.Targets, err = mergeTargets(base.Targets, override.Targets)
+		base.targets, err = mergeTargets(base.targets, override.targets)
 		if err != nil {
-			return base, errors.Wrapf(err, "cannot merge networks from %s", override.Filename)
+			return base, errors.Wrapf(err, "cannot merge networks from %s", override.filename)
 		}
 
-		base.Extensions, err = mergeExtensions(base.Extensions, override.Extensions)
+		base.extensions, err = mergeExtensions(base.extensions, override.extensions)
 		if err != nil {
-			return base, errors.Wrapf(err, "cannot merge extensions from %s", override.Filename)
+			return base, errors.Wrapf(err, "cannot merge extensions from %s", override.filename)
 		}
 	}
 	return base, nil
