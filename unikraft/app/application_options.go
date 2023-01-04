@@ -155,10 +155,10 @@ func WithExtensions(extensions component.Extensions) ApplicationOption {
 	}
 }
 
-// WithKraftFiles sets the application's kraft yaml files
-func WithKraftFiles(kraftFiles []string) ApplicationOption {
+// WithKraftfiles sets the application's kraft yaml files
+func WithKraftfiles(kraftfiles []string) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
-		ac.kraftFiles = kraftFiles
+		ac.kraftfiles = kraftfiles
 		return nil
 	}
 }

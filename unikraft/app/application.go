@@ -42,7 +42,7 @@ type ApplicationConfig struct {
 	libraries     lib.Libraries           `yaml:",omitempty"`
 	targets       target.Targets          `yaml:",omitempty"`
 	extensions    component.Extensions    `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	kraftFiles    []string                `yaml:"-" json:"-"`
+	kraftfiles    []string                `yaml:"-" json:"-"`
 	configuration kconfig.KConfigValues   `yaml:"-" json:"-"`
 }
 
@@ -118,13 +118,13 @@ func (ac ApplicationConfig) Extensions() (component.Extensions, error) {
 	return ac.extensions, nil
 }
 
-// KraftFiles returns the application's kraft configuration files
-func (ac ApplicationConfig) KraftFiles() ([]string, error) {
+// Kraftfiles returns the application's kraft configuration files
+func (ac ApplicationConfig) Kraftfiles() ([]string, error) {
 	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return []string{}, fmt.Errorf("KraftFiles(): template source is not unpacked in project")
+		return []string{}, fmt.Errorf("Kraftfiles(): template source is not unpacked in project")
 	}
 
-	return ac.kraftFiles, nil
+	return ac.kraftfiles, nil
 }
 
 // Configuration returns the application's kconfig list
@@ -163,7 +163,7 @@ func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationC
 		ac.extensions[id] = ext
 	}
 
-	ac.kraftFiles = append(ac.kraftFiles, app.kraftFiles...)
+	ac.kraftfiles = append(ac.kraftfiles, app.kraftfiles...)
 
 	for id, val := range app.configuration {
 		ac.configuration[id] = val

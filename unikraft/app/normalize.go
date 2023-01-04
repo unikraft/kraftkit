@@ -47,26 +47,26 @@ func normalize(project *ApplicationConfig, resolvePaths bool) error {
 	project.SetWorkdir(absWorkingDir)
 
 	// Ignore the error here, as it's a false positive
-	krafFiles, _ := project.KraftFiles()
-	absKraftFiles, err := absKraftFiles(krafFiles)
+	kraftiles, _ := project.Kraftfiles()
+	absKraftfiles, err := absKraftfiles(kraftiles)
 	if err != nil {
 		return err
 	}
-	WithKraftFiles(absKraftFiles)(project)
+	WithKraftfiles(absKraftfiles)(project)
 
 	return nil
 }
 
-func absKraftFiles(kraftFiles []string) ([]string, error) {
-	absKraftFiles := make([]string, len(kraftFiles))
-	for i, kraftFile := range kraftFiles {
+func absKraftfiles(kraftfiles []string) ([]string, error) {
+	absKraftfiles := make([]string, len(kraftfiles))
+	for i, kraftFile := range kraftfiles {
 		absKraftfile, err := filepath.Abs(kraftFile)
 		if err != nil {
 			return nil, err
 		}
-		absKraftFiles[i] = absKraftfile
+		absKraftfiles[i] = absKraftfile
 	}
-	return absKraftFiles, nil
+	return absKraftfiles, nil
 }
 
 func normalizeProjectName(s string) string {
