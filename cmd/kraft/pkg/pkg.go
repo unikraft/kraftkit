@@ -119,6 +119,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 	// Interpret the project directory
 	project, err := app.NewProjectFromOptions(
+		ctx,
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
 	)
@@ -148,18 +149,18 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 			// If only the --arch flag is supplied and the target's arch matches
 			len(opts.Architecture) > 0 &&
 				len(opts.Platform) == 0 &&
-				targ.Architecture.Name() == opts.Architecture,
+				targ.Architecture().Name() == opts.Architecture,
 
 			// If only the --plat flag is supplied and the target's platform matches
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) == 0 &&
-				targ.Platform.Name() == opts.Platform,
+				targ.Platform().Name() == opts.Platform,
 
 			// If both the --arch and --plat flag are supplied and match the target
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) > 0 &&
-				targ.Architecture.Name() == opts.Architecture &&
-				targ.Platform.Name() == opts.Platform:
+				targ.Architecture().Name() == opts.Architecture &&
+				targ.Platform().Name() == opts.Platform:
 
 			packs, err := initAppPackage(ctx, project, targ, opts)
 			if err != nil {
@@ -222,12 +223,12 @@ func initAppPackage(ctx context.Context,
 	// Path to the kernel image
 	kernel := opts.Kernel
 	if len(kernel) == 0 {
-		kernel = targ.Kernel
+		kernel = targ.Kernel()
 	}
 
 	// Prefer the debuggable (symbolic) kernel as the main kernel
 	if opts.KernelDbg && !opts.WithDbg {
-		kernel = targ.KernelDbg
+		kernel = targ.KernelDbg()
 	}
 
 	name := opts.Name
@@ -256,15 +257,15 @@ func initAppPackage(ctx context.Context,
 		pack.WithName(name),
 		pack.WithVersion(version),
 		pack.WithType(unikraft.ComponentTypeApp),
-		pack.WithArchitecture(targ.Architecture.Name()),
-		pack.WithPlatform(targ.Platform.Name()),
+		pack.WithArchitecture(targ.Architecture().Name()),
+		pack.WithPlatform(targ.Platform().Name()),
 		pack.WithKernel(kernel),
 		pack.WithWorkdir(project.WorkingDir()),
 		pack.WithLocalLocation(opts.Output, opts.Force),
 	}
 
 	// Options for the initramfs if set
-	initrdConfig := targ.Initrd
+	initrdConfig := targ.Initrd()
 	if len(opts.Initrd) > 0 {
 		initrdConfig, err = initrd.ParseInitrdConfig(project.WorkingDir(), opts.Initrd)
 		if err != nil {
@@ -286,16 +287,16 @@ func initAppPackage(ctx context.Context,
 	pm := packmanager.G(ctx)
 
 	// Switch the package manager the desired format for this target
-	if len(targ.Format) > 0 && targ.Format != "auto" {
+	if len(targ.Format()) > 0 && targ.Format() != "auto" {
 		if pm.Format() == "umbrella" {
-			pm, err = pm.From(targ.Format)
+			pm, err = pm.From(targ.Format())
 			if err != nil {
 				return nil, err
 			}
 
 			// Skip this target as we cannot package it
-		} else if pm.Format() != targ.Format && !opts.Force {
-			log.G(ctx).Warnf("skipping %s target %s", targ.Format, targ.Name())
+		} else if pm.Format() != targ.Format() && !opts.Force {
+			log.G(ctx).Warnf("skipping %s target %s", targ.Format(), targ.Name())
 			return nil, nil
 		}
 	}

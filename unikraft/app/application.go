@@ -32,34 +32,32 @@ type Application interface {
 }
 
 type ApplicationConfig struct {
-	component.ComponentConfig
-
-	workingDir    string                  `yaml:"-" json:"-"`
-	filename      string                  `yaml:"-" json:"-"`
-	outDir        string                  `yaml:",omitempty"`
-	template      template.TemplateConfig `yaml:",omitempty"`
-	unikraft      core.UnikraftConfig     `yaml:",omitempty"`
-	libraries     lib.Libraries           `yaml:",omitempty"`
-	targets       target.Targets          `yaml:",omitempty"`
-	extensions    component.Extensions    `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
-	kraftfiles    []string                `yaml:"-" json:"-"`
-	configuration kconfig.KeyValueMap     `yaml:"-" json:"-"`
+	name          string
+	version       string
+	source        string
+	path          string
+	workingDir    string
+	filename      string
+	outDir        string
+	template      template.TemplateConfig
+	unikraft      core.UnikraftConfig
+	libraries     lib.Libraries
+	targets       target.Targets
+	kraftfiles    []string
+	configuration kconfig.KeyValueMap
+	extensions    component.Extensions
 }
 
 func (ac ApplicationConfig) Name() string {
-	return ac.ComponentConfig.Name
+	return ac.name
 }
 
 func (ac ApplicationConfig) Source() string {
-	return ac.ComponentConfig.Source
+	return ac.source
 }
 
 func (ac ApplicationConfig) Version() string {
-	return ac.ComponentConfig.Version
-}
-
-func (ac ApplicationConfig) Component() component.ComponentConfig {
-	return ac.ComponentConfig
+	return ac.version
 }
 
 // WorkingDir returns the path to the application's working directory
@@ -110,8 +108,10 @@ func (ac ApplicationConfig) Kraftfiles() ([]string, error) {
 // MergeTemplate merges the application's configuration with the given
 // configuration
 func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
-	ac.ComponentConfig = app.ComponentConfig
-
+	ac.name = app.name
+	ac.source = app.source
+	ac.version = app.version
+	ac.path = app.path
 	ac.workingDir = app.workingDir
 	ac.filename = app.filename
 	ac.outDir = app.outDir
@@ -141,10 +141,7 @@ func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationC
 
 	// Need to first merge the app configuration over the template
 	uk := app.unikraft
-	uk.Configuration = ac.unikraft.Configuration
-	for id, val := range app.unikraft.Configuration {
-		uk.Configuration[id] = val
-	}
+	uk.KConfig().OverrideBy(ac.unikraft.KConfig())
 	ac.unikraft = uk
 
 	return ac
@@ -176,7 +173,7 @@ func (ac *ApplicationConfig) KConfigFile(tc *target.TargetConfig) string {
 	k := filepath.Join(ac.workingDir, kconfig.DotConfigFileName)
 
 	if tc != nil {
-		k += "." + filepath.Base(tc.Kernel)
+		k += "." + filepath.Base(tc.Kernel())
 	}
 
 	return k
@@ -548,8 +545,8 @@ func (ac ApplicationConfig) PrintInfo() string {
 		targets := tree.AddBranch(fmt.Sprintf("targets (%d)", len(ac.targets)))
 		for _, target := range ac.targets {
 			targ := targets.AddBranch(component.NameAndVersion(target))
-			targ.AddNode(fmt.Sprintf("architecture: %s", component.NameAndVersion(target.Architecture)))
-			targ.AddNode(fmt.Sprintf("platform:     %s", component.NameAndVersion(target.Platform)))
+			targ.AddNode(fmt.Sprintf("architecture: %s", component.NameAndVersion(target.Architecture())))
+			targ.AddNode(fmt.Sprintf("platform:     %s", component.NameAndVersion(target.Platform())))
 		}
 	}
 

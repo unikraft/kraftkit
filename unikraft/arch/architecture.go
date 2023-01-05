@@ -19,32 +19,46 @@ type Architecture interface {
 }
 
 type ArchitectureConfig struct {
-	component.ComponentConfig
+	// name of the library.
+	name string
+
+	// version of the library.
+	version string
+
+	// source of the library (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
+
+	// path is the location to this library within the context of a project.
+	path string
+
+	// kconfig list of kconfig key-values specific to this library.
+	kconfig kconfig.KeyValueMap
 }
 
-// ParseArchitectureConfig parse short syntax for architecture configuration
-func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
+// NewArchitectureFromSchema parse short syntax for architecture configuration
+func NewArchitectureFromSchema(value string) (ArchitectureConfig, error) {
 	architecture := ArchitectureConfig{}
 
 	if len(value) == 0 {
 		return architecture, fmt.Errorf("cannot ommit architecture name")
 	}
 
-	architecture.ComponentConfig.Name = value
+	architecture.name = value
 
 	return architecture, nil
 }
 
 func (ac ArchitectureConfig) Name() string {
-	return ac.ComponentConfig.Name
+	return ac.name
 }
 
 func (ac ArchitectureConfig) Source() string {
-	return ac.ComponentConfig.Source
+	return ac.source
 }
 
 func (ac ArchitectureConfig) Version() string {
-	return ac.ComponentConfig.Version
+	return ac.version
 }
 
 func (ac ArchitectureConfig) Type() unikraft.ComponentType {
@@ -52,7 +66,7 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 }
 
 func (ac ArchitectureConfig) Path() string {
-	return ac.ComponentConfig.Path
+	return ac.path
 }
 
 func (ac ArchitectureConfig) IsUnpacked() bool {
@@ -63,10 +77,6 @@ func (ac ArchitectureConfig) IsUnpacked() bool {
 	return false
 }
 
-func (ac ArchitectureConfig) Component() component.ComponentConfig {
-	return ac.ComponentConfig
-}
-
 func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// Architectures are built directly into the Unikraft core for now.
 	return nil, nil
@@ -74,7 +84,7 @@ func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KCo
 
 func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
-	values.OverrideBy(ac.Configuration)
+	values.OverrideBy(ac.kconfig)
 
 	// The following are built-in assumptions given the naming conventions used
 	// within the Unikraft core.

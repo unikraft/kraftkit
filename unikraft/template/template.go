@@ -47,32 +47,35 @@ type Template interface {
 // TemplateConfig is the configuration of a template. It is identical to
 // the component configuration
 type TemplateConfig struct {
-	component.ComponentConfig
+	// name of the template.
+	name string
+
+	// version of the template.
+	version string
+
+	// source of the template (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
 }
 
 // Name returns the name of the template
 func (tc TemplateConfig) Name() string {
-	return tc.ComponentConfig.Name
+	return tc.name
 }
 
 // Source returns the source of the template
 func (tc TemplateConfig) Source() string {
-	return tc.ComponentConfig.Source
+	return tc.source
 }
 
 // Version returns the version of the template
 func (tc TemplateConfig) Version() string {
-	return tc.ComponentConfig.Version
+	return tc.version
 }
 
 // Type returns the type of the template
 func (tc TemplateConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
-}
-
-// Component returns the component of the template
-func (tc TemplateConfig) Component() component.ComponentConfig {
-	return tc.ComponentConfig
 }
 
 func (tc TemplateConfig) Path() string {

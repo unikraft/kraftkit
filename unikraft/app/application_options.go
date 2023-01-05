@@ -35,8 +35,8 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, 
 		}
 	}
 
-	if ac.ComponentConfig.Name != "" {
-		ac.configuration.Set(unikraft.UK_NAME, ac.ComponentConfig.Name)
+	if ac.name != "" {
+		ac.configuration.Set(unikraft.UK_NAME, ac.name)
 	}
 
 	if ac.outDir == "" {
@@ -50,36 +50,10 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, 
 		ac.outDir = filepath.Join(ac.workingDir, unikraft.BuildDir)
 	}
 
-	if len(ac.unikraft.ComponentConfig.Source) > 0 {
-		if p, err := os.Stat(ac.unikraft.ComponentConfig.Source); err == nil && p.IsDir() {
-			ac.configuration.Set(unikraft.UK_BASE, ac.unikraft.ComponentConfig.Source)
+	if len(ac.unikraft.Source()) > 0 {
+		if p, err := os.Stat(ac.unikraft.Source()); err == nil && p.IsDir() {
+			ac.configuration.Set(unikraft.UK_BASE, ac.unikraft.Source())
 		}
-	}
-
-	for i, t := range ac.targets {
-		if t.ComponentConfig.Name == "" {
-			t.ComponentConfig.Name = ac.ComponentConfig.Name
-		}
-
-		if t.Kernel == "" {
-			kernelName, err := target.KernelName(t)
-			if err != nil {
-				return nil, err
-			}
-
-			t.Kernel = filepath.Join(ac.outDir, kernelName)
-		}
-
-		if t.KernelDbg == "" {
-			kernelDbgName, err := target.KernelDbgName(t)
-			if err != nil {
-				return nil, err
-			}
-
-			t.KernelDbg = filepath.Join(ac.outDir, kernelDbgName)
-		}
-
-		ac.targets[i] = t
 	}
 
 	return ac, nil
@@ -88,7 +62,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, 
 // WithName sets the application component name
 func WithName(name string) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
-		ac.ComponentConfig.Name = name
+		ac.name = name
 		return nil
 	}
 }
@@ -166,13 +140,13 @@ func WithKraftfiles(kraftfiles []string) ApplicationOption {
 }
 
 // WithConfiguration sets the application's kconfig list
-func WithConfiguration(configuration ...*kconfig.KeyValue) ApplicationOption {
+func WithConfiguration(config ...*kconfig.KeyValue) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
-		if ac.Configuration == nil {
-			ac.Configuration = kconfig.KeyValueMap{}
+		if ac.configuration == nil {
+			ac.configuration = kconfig.KeyValueMap{}
 		}
 
-		ac.Configuration.Override(configuration...)
+		ac.configuration.Override(config...)
 		return nil
 	}
 }

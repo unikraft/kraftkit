@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -20,40 +19,30 @@ type Unikraft interface {
 }
 
 type UnikraftConfig struct {
-	component.ComponentConfig
-}
+	// version of the core.
+	version string
 
-// ParseUnikraftConfig parse short syntax for UnikraftConfig
-func ParseUnikraftConfig(version string) (UnikraftConfig, error) {
-	core := UnikraftConfig{}
+	// source of the core (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
 
-	if strings.Contains(version, "@") {
-		split := strings.Split(version, "@")
-		if len(split) == 2 {
-			core.ComponentConfig.Source = split[0]
-			version = split[1]
-		}
-	}
+	// path is the location to this core within the context of a project.
+	path string
 
-	if len(version) == 0 {
-		return core, fmt.Errorf("cannot use empty string for version or source")
-	}
-
-	core.ComponentConfig.Version = version
-
-	return core, nil
+	// kconfig list of kconfig key-values specific to this core.
+	kconfig kconfig.KeyValueMap
 }
 
 func (uc UnikraftConfig) Name() string {
-	return uc.ComponentConfig.Name
+	return "unikraft"
 }
 
 func (uc UnikraftConfig) Source() string {
-	return uc.ComponentConfig.Source
+	return uc.source
 }
 
 func (uc UnikraftConfig) Version() string {
-	return uc.ComponentConfig.Version
+	return uc.version
 }
 
 func (uc UnikraftConfig) Type() unikraft.ComponentType {
@@ -61,7 +50,7 @@ func (uc UnikraftConfig) Type() unikraft.ComponentType {
 }
 
 func (uc UnikraftConfig) Path() string {
-	return uc.ComponentConfig.Path
+	return uc.path
 }
 
 func (uc UnikraftConfig) IsUnpacked() bool {
@@ -72,21 +61,17 @@ func (uc UnikraftConfig) IsUnpacked() bool {
 	return false
 }
 
-func (uc UnikraftConfig) Component() component.ComponentConfig {
-	return uc.ComponentConfig
-}
-
 func (uc UnikraftConfig) KConfigTree(extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(uc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk, uc.Configuration.Override(extra...).Slice()...)
+	return kconfig.Parse(config_uk, uc.kconfig.Override(extra...).Slice()...)
 }
 
 func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
-	return uc.Configuration
+	return uc.kconfig
 }
 
 func (uc UnikraftConfig) PrintInfo() string {

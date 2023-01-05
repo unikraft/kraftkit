@@ -89,6 +89,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(
+		ctx,
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
 	)
@@ -188,6 +189,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		templateProject, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -207,7 +209,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		component := component // loop closure
 
 		searches = append(searches, processtree.NewProcessTreeItem(
-			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Component().Name, component.Component().Version), "",
+			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Name(), component.Version()), "",
 			func(ctx context.Context) error {
 				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
 					Name: component.Name(),
@@ -222,9 +224,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				}
 
 				if len(p) == 0 {
-					return fmt.Errorf("could not find: %s", component.Component().Name)
+					return fmt.Errorf("could not find: %s", component.Name())
 				} else if len(p) > 1 {
-					return fmt.Errorf("too many options for %s", component.Component().Name)
+					return fmt.Errorf("too many options for %s", component.Name())
 				}
 
 				missingPacks = append(missingPacks, p...)
@@ -312,18 +314,18 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			// If only the --arch flag is supplied and the target's arch matches
 			len(opts.Architecture) > 0 &&
 				len(opts.Platform) == 0 &&
-				targ.Architecture.Name() == opts.Architecture,
+				targ.Architecture().Name() == opts.Architecture,
 
 			// If only the --plat flag is supplied and the target's platform matches
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) == 0 &&
-				targ.Platform.Name() == opts.Platform,
+				targ.Platform().Name() == opts.Platform,
 
 			// If both the --arch and --plat flag are supplied and match the target
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) > 0 &&
-				targ.Architecture.Name() == opts.Architecture &&
-				targ.Platform.Name() == opts.Platform:
+				targ.Architecture().Name() == opts.Architecture &&
+				targ.Platform().Name() == opts.Platform:
 
 			selected = append(selected, targ)
 

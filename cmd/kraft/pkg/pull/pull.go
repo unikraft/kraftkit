@@ -108,6 +108,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	if f, err := os.Stat(query); err == nil && f.IsDir() {
 		workdir = query
 		project, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -195,6 +196,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		templateProject, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultKraftfiles(),
 		)

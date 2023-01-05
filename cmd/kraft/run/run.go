@@ -179,6 +179,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	if len(workdir) > 0 {
 		target := opts.Target
 		project, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -217,16 +218,16 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		// Validate selection of target
-		if len(opts.Architecture) > 0 && (opts.Architecture != t.Architecture.Name()) {
+		if len(opts.Architecture) > 0 && (opts.Architecture != t.Architecture().Name()) {
 			return fmt.Errorf("selected target (%s) does not match specified architecture (%s)", t.ArchPlatString(), opts.Architecture)
 		}
-		if len(opts.Platform) > 0 && (opts.Platform != t.Platform.Name()) {
+		if len(opts.Platform) > 0 && (opts.Platform != t.Platform().Name()) {
 			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", t.ArchPlatString(), opts.Platform)
 		}
 
 		mopts = append(mopts,
-			machine.WithArchitecture(t.Architecture.Name()),
-			machine.WithPlatform(t.Platform.Name()),
+			machine.WithArchitecture(t.Architecture().Name()),
+			machine.WithPlatform(t.Platform().Name()),
 			machine.WithName(machine.MachineName(t.Name())),
 			machine.WithAcceleration(!opts.DisableAccel),
 			machine.WithSource("project://"+project.Name()+":"+t.Name()),
@@ -234,9 +235,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// Use the symbolic debuggable kernel image?
 		if opts.WithKernelDbg {
-			mopts = append(mopts, machine.WithKernel(t.KernelDbg))
+			mopts = append(mopts, machine.WithKernel(t.KernelDbg()))
 		} else {
-			mopts = append(mopts, machine.WithKernel(t.Kernel))
+			mopts = append(mopts, machine.WithKernel(t.Kernel()))
 		}
 
 		// If no entity was set earlier and we're not within the context of a working

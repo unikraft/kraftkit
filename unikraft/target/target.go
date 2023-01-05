@@ -11,36 +11,74 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
-	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/plat"
 )
 
 type TargetConfig struct {
-	component.ComponentConfig
+	// name of the target.
+	name string
 
-	Architecture arch.ArchitectureConfig `yaml:",omitempty" json:"architecture,omitempty"`
-	Platform     plat.PlatformConfig     `yaml:",omitempty" json:"platform,omitempty"`
-	Format       string                  `yaml:",omitempty" json:"format,omitempty"`
-	Kernel       string                  `yaml:",omitempty" json:"kernel,omitempty"`
-	KernelDbg    string                  `yaml:",omitempty" json:"kerneldbg,omitempty"`
-	Initrd       *initrd.InitrdConfig    `yaml:",omitempty" json:"initrd,omitempty"`
-	Command      []string                `yaml:",omitempty" json:"commands"`
+	// architecture is the target architecture.
+	architecture arch.ArchitectureConfig
 
-	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+	// platform is the target platform.
+	platform plat.PlatformConfig
+
+	// kconfig list of kconfig key-values specific to this library.
+	kconfig kconfig.KeyValueMap
+
+	// format is the desired packaging format.
+	format string
+
+	// kernel is the path to the kernel for this target.
+	kernel string
+
+	// kernelDbg is the path to the symbolic (unstripped) kernel for this target.
+	kernelDbg string
+
+	// initrd is the configuration for the initrd.
+	initrd *initrd.InitrdConfig
+
+	// command is the command-line arguments set for this target.
+	command []string
 }
 
 type Targets []TargetConfig
 
 func (tc TargetConfig) Name() string {
-	return tc.ComponentConfig.Name
+	return tc.name
 }
 
 func (tc TargetConfig) Source() string {
-	return tc.ComponentConfig.Source
+	return ""
 }
 
 func (tc TargetConfig) Version() string {
-	return tc.ComponentConfig.Version
+	return ""
+}
+
+func (tc TargetConfig) Architecture() arch.ArchitectureConfig {
+	return tc.architecture
+}
+
+func (tc TargetConfig) Platform() plat.PlatformConfig {
+	return tc.platform
+}
+
+func (tc TargetConfig) Kernel() string {
+	return tc.kernel
+}
+
+func (tc TargetConfig) KernelDbg() string {
+	return tc.kernelDbg
+}
+
+func (tc TargetConfig) Initrd() *initrd.InitrdConfig {
+	return tc.initrd
+}
+
+func (tc TargetConfig) Format() string {
+	return tc.format
 }
 
 func (tc TargetConfig) Type() unikraft.ComponentType {
@@ -55,15 +93,11 @@ func (tc TargetConfig) IsUnpacked() bool {
 	return false
 }
 
-func (tc TargetConfig) Component() component.ComponentConfig {
-	return tc.ComponentConfig
-}
-
 func (tc TargetConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
-	values.OverrideBy(tc.Configuration)
-	values.OverrideBy(tc.Architecture.KConfig())
-	values.OverrideBy(tc.Platform.KConfig())
+	values.OverrideBy(tc.kconfig)
+	values.OverrideBy(tc.architecture.KConfig())
+	values.OverrideBy(tc.platform.KConfig())
 
 	return values
 }
@@ -75,7 +109,7 @@ func (tc TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFi
 // ArchPlatString returns the canonical name for platform architecture string
 // combination
 func (tc *TargetConfig) ArchPlatString() string {
-	return tc.Platform.Name() + "-" + tc.Architecture.Name()
+	return tc.platform.Name() + "-" + tc.architecture.Name()
 }
 
 func (tc TargetConfig) PrintInfo() string {
@@ -86,15 +120,15 @@ func (tc TargetConfig) PrintInfo() string {
 // which is baked within Unikraft's build system, see for example `KVM_IMAGE`.
 // If we do not have a target name, return an error.
 func KernelName(target TargetConfig) (string, error) {
-	if target.ComponentConfig.Name == "" {
+	if target.Name() == "" {
 		return "", fmt.Errorf("target name not set, cannot determine binary name")
 	}
 
 	return fmt.Sprintf(
 		"%s_%s-%s",
-		target.ComponentConfig.Name,
-		target.Platform.Name(),
-		target.Architecture.Name(),
+		target.Name(),
+		target.platform.Name(),
+		target.architecture.Name(),
 	), nil
 }
 

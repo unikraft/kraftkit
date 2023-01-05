@@ -29,7 +29,7 @@ func MergeApplicationConfigs(apps []*ApplicationConfig) (*ApplicationConfig, err
 	base := apps[0]
 	for _, override := range apps[1:] {
 		var err error
-		base.ComponentConfig.Name = mergeNames(base.ComponentConfig.Name, override.ComponentConfig.Name)
+		base.name = mergeNames(base.name, override.name)
 
 		base.unikraft, err = mergeUnikraft(base.unikraft, override.unikraft)
 		if err != nil {
@@ -66,7 +66,7 @@ func mergeUnikraft(base, override core.UnikraftConfig) (core.UnikraftConfig, err
 	return base, err
 }
 
-func mergeLibraries(base, override map[string]lib.LibraryConfig) (map[string]lib.LibraryConfig, error) {
+func mergeLibraries(base, override lib.Libraries) (lib.Libraries, error) {
 	err := mergo.Map(&base, &override, mergo.WithOverride)
 	return base, err
 }

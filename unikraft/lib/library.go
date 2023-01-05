@@ -6,10 +6,8 @@ package lib
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -21,90 +19,43 @@ type Library interface {
 }
 
 type LibraryConfig struct {
-	component.ComponentConfig
+	// name of the library.
+	name string
+
+	// version of the library.
+	version string
+
+	// source of the library (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
+
+	// path is the location to this library within the context of a project.
+	path string
+
+	// kconfig list of kconfig key-values specific to this library.
+	kconfig kconfig.KeyValueMap
 }
 
 type Libraries map[string]LibraryConfig
 
-// NewLibraryFromSchema is a static
-func NewLibraryFromSchema(name string, props interface{}) (LibraryConfig, error) {
-	lib := LibraryConfig{}
-
-	if len(name) > 0 {
-		lib.ComponentConfig.Name = name
-	}
-
-	switch entry := props.(type) {
-	case string:
-		if strings.Contains(entry, "@") {
-			split := strings.Split(entry, "@")
-			if len(split) == 2 {
-				lib.ComponentConfig.Source = split[0]
-				lib.ComponentConfig.Version = split[1]
-			}
-		} else if f, err := os.Stat(entry); err == nil && f.IsDir() {
-			lib.ComponentConfig.Source = entry
-		} else if u, err := url.Parse(entry); err == nil && u.Scheme != "" && u.Host != "" {
-			lib.ComponentConfig.Source = u.Path
-		} else {
-			lib.ComponentConfig.Version = entry
-		}
-
-	// TODO: This is handled by the transformer, do we really need to do this
-	// here?
-	case map[string]interface{}:
-		for key, prop := range entry {
-			switch key {
-			case "version":
-				lib.ComponentConfig.Version = prop.(string)
-			case "source":
-				prop := prop.(string)
-				if strings.Contains(prop, "@") {
-					split := strings.Split(prop, "@")
-					if len(split) == 2 {
-						lib.ComponentConfig.Version = split[1]
-						prop = split[0]
-					}
-				}
-
-				lib.ComponentConfig.Source = prop
-
-			case "kconfig":
-				switch tprop := prop.(type) {
-				case map[string]interface{}:
-					lib.ComponentConfig.Configuration = kconfig.NewKeyValueMapFromMap(tprop)
-				case []interface{}:
-					lib.ComponentConfig.Configuration = kconfig.NewKeyValueMapFromSlice(tprop...)
-				}
-			}
-		}
-	}
-
-	return lib, nil
-}
-
 func (lc LibraryConfig) Name() string {
-	return lc.ComponentConfig.Name
+	return lc.name
 }
 
 func (lc LibraryConfig) Source() string {
-	return lc.ComponentConfig.Source
+	return lc.source
 }
 
 func (lc LibraryConfig) Version() string {
-	return lc.ComponentConfig.Version
+	return lc.version
 }
 
 func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
 }
 
-func (lc LibraryConfig) Component() component.ComponentConfig {
-	return lc.ComponentConfig
-}
-
 func (lc LibraryConfig) Path() string {
-	return lc.ComponentConfig.Path
+	return lc.path
 }
 
 func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
@@ -113,14 +64,14 @@ func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigF
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk, lc.KConfig().Override(env...).Slice()...)
+	return kconfig.Parse(config_uk, lc.kconfig.Override(env...).Slice()...)
 }
 
 func (lc LibraryConfig) KConfig() kconfig.KeyValueMap {
 	menu, _ := lc.KConfigTree()
 
 	values := kconfig.KeyValueMap{}
-	values.OverrideBy(lc.Configuration)
+	values.OverrideBy(lc.kconfig)
 
 	if menu == nil {
 		return values

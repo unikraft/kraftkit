@@ -5,7 +5,6 @@
 package plat
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -19,32 +18,33 @@ type Platform interface {
 }
 
 type PlatformConfig struct {
-	component.ComponentConfig
-}
+	// name of the platform.
+	name string
 
-// ParsePlatformConfig parse short syntax for platform configuration
-func ParsePlatformConfig(value string) (PlatformConfig, error) {
-	platform := PlatformConfig{}
+	// version of the platform.
+	version string
 
-	if len(value) == 0 {
-		return platform, fmt.Errorf("cannot ommit platform name")
-	}
+	// source of the platform (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
 
-	platform.ComponentConfig.Name = value
+	// path is the location to this platform within the context of a project.
+	path string
 
-	return platform, nil
+	// kconfig list of kconfig key-values specific to this platform.
+	kconfig kconfig.KeyValueMap
 }
 
 func (pc PlatformConfig) Name() string {
-	return pc.ComponentConfig.Name
+	return pc.name
 }
 
 func (pc PlatformConfig) Source() string {
-	return pc.ComponentConfig.Source
+	return pc.source
 }
 
 func (pc PlatformConfig) Version() string {
-	return pc.ComponentConfig.Version
+	return pc.version
 }
 
 func (pc PlatformConfig) Type() unikraft.ComponentType {
@@ -52,7 +52,7 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 }
 
 func (pc PlatformConfig) Path() string {
-	return pc.ComponentConfig.Path
+	return pc.path
 }
 
 func (pc PlatformConfig) IsUnpacked() bool {
@@ -63,10 +63,6 @@ func (pc PlatformConfig) IsUnpacked() bool {
 	return false
 }
 
-func (pc PlatformConfig) Component() component.ComponentConfig {
-	return pc.ComponentConfig
-}
-
 func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// TODO: Try within the Unikraft codebase as well as via an external
 	// microlibrary.  For now, return nil as undetermined.
@@ -75,7 +71,7 @@ func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfig
 
 func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
-	values.OverrideBy(pc.Configuration)
+	values.OverrideBy(pc.kconfig)
 
 	// The following are built-in assumptions given the naming conventions used
 	// within the Unikraft core.  Ultimately, this should be discovered by probing

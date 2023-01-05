@@ -54,6 +54,7 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 
 	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(
+		ctx,
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
 	)

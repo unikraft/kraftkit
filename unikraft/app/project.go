@@ -17,10 +17,12 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"kraftkit.sh/schema"
+	"kraftkit.sh/unikraft"
 )
 
 // DefaultFileNames defines the kraft file names for auto-discovery (in order
@@ -41,7 +43,7 @@ func IsWorkdirInitialized(dir string) bool {
 }
 
 // NewProjectFromOptions load a kraft project based on command line options
-func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
+func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (*ApplicationConfig, error) {
 	popts, err := NewProjectOptions(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("could not apply project options: %v", err)
@@ -69,6 +71,9 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 
 	var all []*ApplicationConfig
 
+	name, _ := popts.GetProjectName()
+	outdir := DefaultOutputDir
+
 	for i, file := range popts.kraftfiles {
 		iface := file.config
 		if iface == nil {
@@ -90,7 +95,27 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 
 		iface = groupXFieldsIntoExtensions(iface)
 
-		app, err := NewApplicationFromInterface(iface, popts)
+		if n, ok := iface["name"]; ok {
+			name, ok = n.(string)
+		}
+
+		if n, ok := iface["outdir"]; ok {
+			name, ok = n.(string)
+		}
+
+		popts.kraftfiles[i].config = iface
+	}
+
+	uk := &unikraft.Context{
+		UK_NAME:   name,
+		UK_BASE:   popts.RelativePath(workdir),
+		BUILD_DIR: popts.RelativePath(outdir),
+	}
+
+	ctx = unikraft.WithContext(ctx, uk)
+
+	for _, file := range popts.kraftfiles {
+		app, err := NewApplicationFromInterface(ctx, file.config, popts)
 		if err != nil {
 			return nil, err
 		}
@@ -104,22 +129,18 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 	}
 
 	projectName, _ := popts.GetProjectName()
-	if app.ComponentConfig.Name != "" {
-		projectName = app.ComponentConfig.Name
+	if app.name != "" {
+		projectName = app.name
 	}
 
 	if !popts.skipNormalization {
 		projectName = normalizeProjectName(projectName)
 	}
 
-	if popts.resolvePaths {
-		app.outDir = popts.RelativePath(app.outDir)
-	}
-
-	popts.kconfig.OverrideBy(app.unikraft.Configuration)
+	popts.kconfig.OverrideBy(app.unikraft.KConfig())
 
 	for _, library := range app.libraries {
-		popts.kconfig.OverrideBy(library.Configuration)
+		popts.kconfig.OverrideBy(library.KConfig())
 	}
 
 	project, err := NewApplicationFromOptions(
@@ -138,7 +159,7 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 		return nil, err
 	}
 
-	project.ComponentConfig.Name = projectName
+	project.name = projectName
 
 	if !popts.skipNormalization {
 		err = normalize(project, popts.resolvePaths)
