@@ -131,36 +131,7 @@ func LoadUnikraft(source interface{}, popts *ProjectOptions) (core.UnikraftConfi
 // LoadTemplate produces a TemplateConfig from a kraft file Dict the source Dict
 // is not validated if directly used.
 func LoadTemplate(source interface{}, popts *ProjectOptions) (kraftTemplate.TemplateConfig, error) {
-	base := component.ComponentConfig{}
-	dataToParse := make(map[string]interface{})
-
-	switch sourceTransformed := source.(type) {
-	case string:
-		if strings.Contains(sourceTransformed, "@") {
-			split := strings.Split(sourceTransformed, "@")
-			if len(split) == 2 {
-				dataToParse["source"] = split[0]
-				dataToParse["name"] = split[0]
-				dataToParse["version"] = split[1]
-			}
-		} else {
-			dataToParse["source"] = sourceTransformed
-			dataToParse["name"] = sourceTransformed
-		}
-	case map[string]interface{}:
-		dataToParse = source.(map[string]interface{})
-	}
-
-	if err := Transform(dataToParse, &base); err != nil {
-		return kraftTemplate.TemplateConfig{}, err
-	}
-
-	// Seed the shared attributes
-	template := kraftTemplate.TemplateConfig{
-		ComponentConfig: base,
-	}
-
-	return template, nil
+	return kraftTemplate.TemplateConfig{}, nil
 }
 
 // LoadLibraries produces a LibraryConfig map from a kraft file Dict the source
