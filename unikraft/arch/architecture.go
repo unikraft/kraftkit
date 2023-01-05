@@ -72,7 +72,7 @@ func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KCo
 	return nil, nil
 }
 
-func (ac ArchitectureConfig) KConfig() (kconfig.KeyValueMap, error) {
+func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(ac.Configuration)
 
@@ -89,13 +89,11 @@ func (ac ArchitectureConfig) KConfig() (kconfig.KeyValueMap, error) {
 		arch.WriteString("ARCH_ARM_32")
 	case "arm64":
 		arch.WriteString("ARCH_ARM_64")
-	default:
-		return nil, fmt.Errorf("unknown architecture: %s", ac.Name())
 	}
 
 	values.Set(arch.String(), kconfig.Yes)
 
-	return values, nil
+	return values
 }
 
 func (ac ArchitectureConfig) PrintInfo() string {

@@ -73,7 +73,7 @@ func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfig
 	return nil, nil
 }
 
-func (pc PlatformConfig) KConfig() (kconfig.KeyValueMap, error) {
+func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(pc.Configuration)
 
@@ -88,7 +88,7 @@ func (pc PlatformConfig) KConfig() (kconfig.KeyValueMap, error) {
 
 	values.Set(plat.String(), kconfig.Yes)
 
-	return values, nil
+	return values
 }
 
 func (pc PlatformConfig) PrintInfo() string {

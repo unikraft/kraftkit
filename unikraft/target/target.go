@@ -59,23 +59,13 @@ func (tc TargetConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
 }
 
-func (tc TargetConfig) KConfig() (kconfig.KeyValueMap, error) {
-	arch, err := tc.Architecture.KConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not read architecture KConfig values: %v", err)
-	}
-
-	plat, err := tc.Platform.KConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not read platform KConfig values: %v", err)
-	}
-
+func (tc TargetConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(tc.Configuration)
-	values.OverrideBy(arch)
-	values.OverrideBy(plat)
+	values.OverrideBy(tc.Architecture.KConfig())
+	values.OverrideBy(tc.Platform.KConfig())
 
-	return values, nil
+	return values
 }
 
 func (tc TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {

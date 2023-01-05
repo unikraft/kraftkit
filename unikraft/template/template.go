@@ -84,8 +84,8 @@ func (tc TemplateConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfig
 	return nil, nil
 }
 
-func (tc TemplateConfig) KConfig() (kconfig.KeyValueMap, error) {
-	return nil, nil
+func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
+	return nil
 }
 
 // PrintInfo prints information about the template

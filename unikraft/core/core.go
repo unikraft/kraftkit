@@ -85,8 +85,8 @@ func (uc UnikraftConfig) KConfigTree(extra ...*kconfig.KeyValue) (*kconfig.KConf
 	return kconfig.Parse(config_uk, uc.Configuration.Override(extra...).Slice()...)
 }
 
-func (uc UnikraftConfig) KConfig() (kconfig.KeyValueMap, error) {
-	return uc.Configuration, nil
+func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
+	return uc.Configuration
 }
 
 func (uc UnikraftConfig) PrintInfo() string {

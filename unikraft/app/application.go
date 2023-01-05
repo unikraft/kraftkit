@@ -156,34 +156,18 @@ func (ac ApplicationConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KCon
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	kvalues, err := ac.KConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return kconfig.Parse(config_uk, kvalues.Override(env...).Slice()...)
+	return kconfig.Parse(config_uk, ac.KConfig().Override(env...).Slice()...)
 }
 
-func (ac ApplicationConfig) KConfig() (kconfig.KeyValueMap, error) {
-	vAll := kconfig.KeyValueMap{}
-
-	vCore, err := ac.unikraft.KConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not read Unikraft core KConfig values: %v", err)
-	}
-
-	vAll.OverrideBy(vCore)
+func (ac ApplicationConfig) KConfig() kconfig.KeyValueMap {
+	all := kconfig.KeyValueMap{}
+	all.OverrideBy(ac.unikraft.KConfig())
 
 	for _, library := range ac.libraries {
-		vLib, err := library.KConfig()
-		if err != nil {
-			return nil, fmt.Errorf("could not %s's KConfig values: %v", library.Name(), err)
-		}
-
-		vAll.OverrideBy(vLib)
+		all.OverrideBy(library.KConfig())
 	}
 
-	return vAll, nil
+	return all
 }
 
 // KConfigFile returns the path to the application's .config file or the
@@ -281,21 +265,11 @@ func (a *ApplicationConfig) SyncConfig(ctx context.Context, tc *target.TargetCon
 
 // Defconfig updates the configuration
 func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetConfig, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
-	appk, err := ac.KConfig()
-	if err != nil {
-		return fmt.Errorf("could not read application KConfig values: %v", err)
-	}
-
 	values := kconfig.KeyValueMap{}
-	values.OverrideBy(appk)
+	values.OverrideBy(ac.KConfig())
 
 	if tc != nil {
-		targk, err := tc.KConfig()
-		if err != nil {
-			return fmt.Errorf("could not read target KConfig values: %v", err)
-		}
-
-		values.OverrideBy(targk)
+		values.OverrideBy(tc.KConfig())
 	}
 
 	if extra != nil {

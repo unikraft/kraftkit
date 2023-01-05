@@ -53,7 +53,7 @@ type Component interface {
 
 	// KConfig returns the component's set of file KConfig which is known when the
 	// relevant component packages have been retrieved
-	KConfig() (kconfig.KeyValueMap, error)
+	KConfig() kconfig.KeyValueMap
 
 	// PrintInfo returns human-readable information about the component
 	PrintInfo() string
