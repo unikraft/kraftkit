@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/schema"
-	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/component"
 )
 
 // DefaultFileNames defines the kraft file names for auto-discovery (in order
@@ -68,10 +66,6 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 	if len(popts.kraftfiles) < 1 {
 		return nil, fmt.Errorf("no Kraft files specified")
 	}
-
-	popts.copts = append(popts.copts,
-		component.WithWorkdir(workdir),
-	)
 
 	var all []*ApplicationConfig
 
@@ -145,10 +139,6 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 	}
 
 	project.ComponentConfig.Name = projectName
-
-	project.ApplyOptions(append(popts.copts,
-		component.WithType(unikraft.ComponentTypeApp),
-	)...)
 
 	if !popts.skipNormalization {
 		err = normalize(project, popts.resolvePaths)

@@ -51,13 +51,12 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypePlat
 }
 
-func (pc PlatformConfig) IsUnpacked() bool {
-	local, err := pc.ComponentConfig.SourceDir()
-	if err != nil {
-		return false
-	}
+func (pc PlatformConfig) Path() string {
+	return pc.ComponentConfig.Path
+}
 
-	if f, err := os.Stat(local); err == nil && f.IsDir() {
+func (pc PlatformConfig) IsUnpacked() bool {
+	if f, err := os.Stat(pc.Path()); err == nil && f.IsDir() {
 		return true
 	}
 

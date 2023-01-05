@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
@@ -51,6 +50,7 @@ func NewApplicationFromInterface(iface map[string]interface{}, popts *ProjectOpt
 	}
 
 	app.ComponentConfig.Name = name
+	app.ComponentConfig.Path = popts.workdir
 
 	outdir := DefaultOutputDir
 	if n, ok := iface["outdir"]; ok {
@@ -118,12 +118,11 @@ func LoadUnikraft(source interface{}, popts *ProjectOptions) (core.UnikraftConfi
 		uk.ComponentConfig.Name = "unikraft"
 	}
 
-	if err := uk.ApplyOptions(append(
-		popts.copts,
-		component.WithType(unikraft.ComponentTypeCore),
-	)...); err != nil {
-		return uk, err
-	}
+	uk.ComponentConfig.Path, _ = unikraft.PlaceComponent(
+		popts.workdir,
+		unikraft.ComponentTypeCore,
+		uk.ComponentConfig.Name,
+	)
 
 	return uk, nil
 }
@@ -160,13 +159,6 @@ func LoadTemplate(source interface{}, popts *ProjectOptions) (kraftTemplate.Temp
 		ComponentConfig: base,
 	}
 
-	if err := template.ApplyOptions(append(
-		popts.copts,
-		component.WithType(unikraft.ComponentTypeApp),
-	)...); err != nil {
-		return template, err
-	}
-
 	return template, nil
 }
 
@@ -189,13 +181,11 @@ func LoadLibraries(source map[string]interface{}, popts *ProjectOptions) (map[st
 
 		// Seed the the library components with the shared component attributes
 		library.ComponentConfig = comp
-
-		if err := library.ApplyOptions(append(
-			popts.copts,
-			component.WithType(unikraft.ComponentTypeLib),
-		)...); err != nil {
-			return libraries, err
-		}
+		library.ComponentConfig.Path, _ = unikraft.PlaceComponent(
+			popts.workdir,
+			unikraft.ComponentTypeLib,
+			name,
+		)
 
 		switch {
 		case library.ComponentConfig.Name == "":
@@ -227,24 +217,6 @@ func LoadTargets(source []interface{}, popts *ProjectOptions) ([]target.TargetCo
 
 	for i, target := range targets {
 		if err := Transform(source[i], &target); err != nil {
-			return targets, err
-		}
-
-		if err := target.ApplyOptions(popts.copts...); err != nil {
-			return targets, err
-		}
-
-		if err := target.Architecture.ApplyOptions(append(
-			popts.copts,
-			component.WithType(unikraft.ComponentTypeArch),
-		)...); err != nil {
-			return targets, err
-		}
-
-		if err := target.Platform.ApplyOptions(append(
-			popts.copts,
-			component.WithType(unikraft.ComponentTypePlat),
-		)...); err != nil {
 			return targets, err
 		}
 

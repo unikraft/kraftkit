@@ -5,7 +5,6 @@
 package component
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -23,15 +22,9 @@ type ComponentConfig struct {
 	Version       string              `yaml:",omitempty" json:"version,omitempty"`
 	Source        string              `yaml:",omitempty" json:"source,omitempty"`
 	Configuration kconfig.KeyValueMap `yaml:",omitempty" json:"kconfig,omitempty"`
+	Path          string              `yaml:",omitempty" json:"path,omitempty"`
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
-
-	workdir string
-	ctype   unikraft.ComponentType // embed the component type within the config
-
-	// Context should contain all implementation-specific options, using
-	// `context.WithValue`
-	ctx context.Context
 }
 
 // Component is the abstract interface for managing the individual microlibrary
@@ -50,6 +43,9 @@ type Component interface {
 
 	// Component returns the component's configuration
 	Component() ComponentConfig
+
+	// Path is the location to this library within the context of a project.
+	Path() string
 
 	// KConfigTree returns the component's KConfig configuration menu tree which
 	// returns all possible options for the component
@@ -124,34 +120,4 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 	}
 
 	return component, nil
-}
-
-func (cc *ComponentConfig) ApplyOptions(opts ...ComponentOption) error {
-	for _, opt := range opts {
-		if err := opt(cc); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Workdir exposes the instantiated component's working directory
-func (cc *ComponentConfig) Workdir() string {
-	return cc.workdir
-}
-
-// SetWorkdir sets the instantiated component's working directory
-func (cc *ComponentConfig) SetWorkdir(workdir string) {
-	cc.workdir = workdir
-}
-
-// SourceDir returns the well-known location of the component given its working
-// directory, type and name.
-func (cc *ComponentConfig) SourceDir() (string, error) {
-	return unikraft.PlaceComponent(
-		cc.workdir,
-		cc.ctype,
-		cc.Name,
-	)
 }

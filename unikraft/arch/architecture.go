@@ -51,13 +51,12 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
 }
 
-func (ac ArchitectureConfig) IsUnpacked() bool {
-	local, err := ac.ComponentConfig.SourceDir()
-	if err != nil {
-		return false
-	}
+func (ac ArchitectureConfig) Path() string {
+	return ac.ComponentConfig.Path
+}
 
-	if f, err := os.Stat(local); err == nil && f.IsDir() {
+func (ac ArchitectureConfig) IsUnpacked() bool {
+	if f, err := os.Stat(ac.Path()); err == nil && f.IsDir() {
 		return true
 	}
 

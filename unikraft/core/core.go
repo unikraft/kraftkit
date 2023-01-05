@@ -60,13 +60,12 @@ func (uc UnikraftConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeCore
 }
 
-func (uc UnikraftConfig) IsUnpacked() bool {
-	local, err := uc.ComponentConfig.SourceDir()
-	if err != nil {
-		return false
-	}
+func (uc UnikraftConfig) Path() string {
+	return uc.ComponentConfig.Path
+}
 
-	if f, err := os.Stat(local); err == nil && f.IsDir() {
+func (uc UnikraftConfig) IsUnpacked() bool {
+	if f, err := os.Stat(uc.Path()); err == nil && f.IsDir() {
 		return true
 	}
 
@@ -78,12 +77,7 @@ func (uc UnikraftConfig) Component() component.ComponentConfig {
 }
 
 func (uc UnikraftConfig) KConfigTree(extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	sourceDir, err := uc.SourceDir()
-	if err != nil {
-		return nil, err
-	}
-
-	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
+	config_uk := filepath.Join(uc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}

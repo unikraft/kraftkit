@@ -66,13 +66,12 @@ func (lc LibraryConfig) Component() component.ComponentConfig {
 	return lc.ComponentConfig
 }
 
-func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	sourceDir, err := lc.ComponentConfig.SourceDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not get library source directory: %v", err)
-	}
+func (lc LibraryConfig) Path() string {
+	return lc.ComponentConfig.Path
+}
 
-	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
+func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+	config_uk := filepath.Join(lc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
@@ -104,12 +103,7 @@ func (lc LibraryConfig) KConfig() (kconfig.KeyValueMap, error) {
 }
 
 func (lc LibraryConfig) IsUnpacked() bool {
-	local, err := lc.ComponentConfig.SourceDir()
-	if err != nil {
-		return false
-	}
-
-	if f, err := os.Stat(local); err == nil && f.IsDir() {
+	if f, err := os.Stat(lc.Path()); err == nil && f.IsDir() {
 		return true
 	}
 

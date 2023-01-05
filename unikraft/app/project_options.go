@@ -29,7 +29,6 @@ import (
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/unikraft/component"
 )
 
 // kraftfile is a filename and the contents of the file
@@ -61,9 +60,6 @@ type ProjectOptions struct {
 
 	// Indicates when the projectName was imperatively set or guessed from path
 	projectNameImperativelySet bool
-
-	// Slice of component options to apply to each loaded component
-	copts []component.ComponentOption
 }
 
 // Workdir returns the working directory determined by provided kraft files
@@ -410,14 +406,5 @@ func WithProjectDefaultKraftfiles() ProjectOption {
 
 			pwd = parent
 		}
-	}
-}
-
-// WithProjectComponentOptions adds the set of options to apply to each
-// component during their instantiation
-func WithProjectComponentOptions(copts ...component.ComponentOption) ProjectOption {
-	return func(popts *ProjectOptions) error {
-		popts.copts = copts
-		return nil
 	}
 }

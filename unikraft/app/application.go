@@ -120,7 +120,6 @@ func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationC
 	// Change all workdirs
 	for i := range ac.libraries {
 		lib := ac.libraries[i]
-		lib.SetWorkdir(ac.workingDir)
 		ac.libraries[i] = lib
 	}
 
@@ -218,12 +217,7 @@ func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, e
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
-		src, err := library.SourceDir()
-		if err != nil {
-			return nil, err
-		}
-
-		libraries = append(libraries, src)
+		libraries = append(libraries, library.Path())
 	}
 
 	// TODO: Platforms & architectures
@@ -247,13 +241,8 @@ func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, e
 // which will be used by a number of well-known make command goals by Unikraft's
 // build system.
 func (a *ApplicationConfig) Make(ctx context.Context, tc *target.TargetConfig, mopts ...make.MakeOption) error {
-	coreSrc, err := a.unikraft.SourceDir()
-	if err != nil {
-		return err
-	}
-
 	mopts = append(mopts,
-		make.WithDirectory(coreSrc),
+		make.WithDirectory(a.unikraft.Path()),
 		make.WithNoPrintDirectory(true),
 	)
 
@@ -563,6 +552,10 @@ func (ac *ApplicationConfig) Components() ([]component.Component, error) {
 
 func (ac ApplicationConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
+}
+
+func (ac ApplicationConfig) Path() string {
+	return ac.workingDir
 }
 
 func (ac ApplicationConfig) PrintInfo() string {
