@@ -66,7 +66,7 @@ func (lc LibraryConfig) Component() component.ComponentConfig {
 	return lc.ComponentConfig
 }
 
-func (lc LibraryConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	sourceDir, err := lc.ComponentConfig.SourceDir()
 	if err != nil {
 		return nil, fmt.Errorf("could not get library source directory: %v", err)
@@ -77,16 +77,21 @@ func (lc LibraryConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk)
+	kconfigValues, err := lc.KConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kconfig.Parse(config_uk, kconfigValues.Override(env...).Slice()...)
 }
 
-func (lc LibraryConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	menu, err := lc.KConfigMenu()
+func (lc LibraryConfig) KConfig() (kconfig.KeyValueMap, error) {
+	menu, err := lc.KConfigTree()
 	if err != nil {
 		return nil, fmt.Errorf("could not list KConfig values: %v", err)
 	}
 
-	values := kconfig.KConfigValues{}
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(lc.Configuration)
 
 	if menu == nil {

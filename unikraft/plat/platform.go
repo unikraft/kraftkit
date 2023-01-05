@@ -54,14 +54,14 @@ func (pc PlatformConfig) Component() component.ComponentConfig {
 	return pc.ComponentConfig
 }
 
-func (pc PlatformConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// TODO: Try within the Unikraft codebase as well as via an external
 	// microlibrary.  For now, return nil as undetermined.
 	return nil, nil
 }
 
-func (pc PlatformConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	values := kconfig.KConfigValues{}
+func (pc PlatformConfig) KConfig() (kconfig.KeyValueMap, error) {
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(pc.Configuration)
 
 	// The following are built-in assumptions given the naming conventions used

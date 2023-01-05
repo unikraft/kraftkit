@@ -79,8 +79,8 @@ func (tc TemplateConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
 }
 
-// KConfigMenu returns the path to the kconfig file of the template
-func (tc TemplateConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+// KConfigTree returns the path to the kconfig file of the template
+func (tc TemplateConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	sourceDir, err := tc.ComponentConfig.SourceDir()
 	if err != nil {
 		return nil, fmt.Errorf("could not get library source directory: %v", err)
@@ -91,24 +91,28 @@ func (tc TemplateConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk)
+	kconfigValues, err := tc.KConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kconfig.Parse(config_uk, kconfigValues.Override(env...).Slice()...)
 }
 
-// KConfigValues returns the kconfig values of the template
-func (tc TemplateConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	menu, err := tc.KConfigMenu()
+func (tc TemplateConfig) KConfig() (kconfig.KeyValueMap, error) {
+	tree, err := tc.KConfigTree()
 	if err != nil {
 		return nil, fmt.Errorf("could not list KConfig values: %v", err)
 	}
 
-	values := kconfig.KConfigValues{}
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(tc.Configuration)
 
-	if menu == nil {
+	if tree == nil {
 		return values, nil
 	}
 
-	values.Set(kconfig.Prefix+menu.Root.Name, kconfig.Yes)
+	values.Set(kconfig.Prefix+tree.Root.Name, kconfig.Yes)
 
 	return values, nil
 }

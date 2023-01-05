@@ -43,7 +43,7 @@ type ApplicationConfig struct {
 	targets       target.Targets          `yaml:",omitempty"`
 	extensions    component.Extensions    `yaml:",inline" json:"-"` // https://github.com/golang/go/issues/6213
 	kraftfiles    []string                `yaml:"-" json:"-"`
-	configuration kconfig.KConfigValues   `yaml:"-" json:"-"`
+	configuration kconfig.KeyValueMap     `yaml:"-" json:"-"`
 }
 
 func (ac ApplicationConfig) Name() string {
@@ -127,15 +127,6 @@ func (ac ApplicationConfig) Kraftfiles() ([]string, error) {
 	return ac.kraftfiles, nil
 }
 
-// Configuration returns the application's kconfig list
-func (ac ApplicationConfig) Configuration() (kconfig.KConfigValues, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return kconfig.KConfigValues{}, fmt.Errorf("Configuration(): template source is not unpacked in project")
-	}
-
-	return ac.configuration, nil
-}
-
 // MergeTemplate merges the application's configuration with the given
 // configuration
 func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationConfig {
@@ -180,19 +171,24 @@ func (ac *ApplicationConfig) MergeTemplate(app *ApplicationConfig) *ApplicationC
 	return ac
 }
 
-func (ac ApplicationConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (ac ApplicationConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(ac.workingDir, unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk)
+	kvalues, err := ac.KConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return kconfig.Parse(config_uk, kvalues.Override(env...).Slice()...)
 }
 
-func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	vAll := kconfig.KConfigValues{}
+func (ac ApplicationConfig) KConfig() (kconfig.KeyValueMap, error) {
+	vAll := kconfig.KeyValueMap{}
 
-	vCore, err := ac.unikraft.KConfigValues()
+	vCore, err := ac.unikraft.KConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not read Unikraft core KConfig values: %v", err)
 	}
@@ -200,7 +196,7 @@ func (ac ApplicationConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	vAll.OverrideBy(vCore)
 
 	for _, library := range ac.libraries {
-		vLib, err := library.KConfigValues()
+		vLib, err := library.KConfig()
 		if err != nil {
 			return nil, fmt.Errorf("could not %s's KConfig values: %v", library.Name(), err)
 		}
@@ -315,17 +311,17 @@ func (a *ApplicationConfig) SyncConfig(ctx context.Context, tc *target.TargetCon
 }
 
 // Defconfig updates the configuration
-func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetConfig, extra *kconfig.KConfigValues, mopts ...make.MakeOption) error {
-	appk, err := ac.KConfigValues()
+func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetConfig, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+	appk, err := ac.KConfig()
 	if err != nil {
 		return fmt.Errorf("could not read application KConfig values: %v", err)
 	}
 
-	values := kconfig.KConfigValues{}
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(appk)
 
 	if tc != nil {
-		targk, err := tc.KConfigValues()
+		targk, err := tc.KConfig()
 		if err != nil {
 			return fmt.Errorf("could not read target KConfig values: %v", err)
 		}
@@ -334,12 +330,12 @@ func (ac *ApplicationConfig) DefConfig(ctx context.Context, tc *target.TargetCon
 	}
 
 	if extra != nil {
-		values.OverrideBy(*extra)
+		values.OverrideBy(extra)
 	}
 
-	for _, v := range values {
+	for _, kv := range values {
 		log.G(ctx).WithFields(logrus.Fields{
-			v.Name: v.Value,
+			kv.Key: kv.Value,
 		}).Debugf("defconfig")
 	}
 

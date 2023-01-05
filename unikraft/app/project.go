@@ -137,7 +137,7 @@ func NewProjectFromOptions(opts ...ProjectOption) (*ApplicationConfig, error) {
 		WithTemplate(app.template),
 		WithLibraries(app.libraries),
 		WithTargets(app.targets),
-		WithConfiguration(popts.kconfig),
+		WithConfiguration(popts.kconfig.Slice()...),
 		WithExtensions(app.extensions),
 	)
 	if err != nil {

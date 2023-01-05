@@ -25,7 +25,9 @@ type ApplicationOption func(ao *ApplicationConfig) error
 // *ApplicationConfig structure
 func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, error) {
 	var err error
-	ac := &ApplicationConfig{}
+	ac := &ApplicationConfig{
+		configuration: kconfig.KeyValueMap{},
+	}
 
 	for _, o := range aopts {
 		if err := o(ac); err != nil {
@@ -164,9 +166,13 @@ func WithKraftfiles(kraftfiles []string) ApplicationOption {
 }
 
 // WithConfiguration sets the application's kconfig list
-func WithConfiguration(configuration kconfig.KConfigValues) ApplicationOption {
+func WithConfiguration(configuration ...*kconfig.KeyValue) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
-		ac.configuration = configuration
+		if ac.Configuration == nil {
+			ac.Configuration = kconfig.KeyValueMap{}
+		}
+
+		ac.Configuration.Override(configuration...)
 		return nil
 	}
 }

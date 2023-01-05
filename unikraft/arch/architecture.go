@@ -54,13 +54,13 @@ func (ac ArchitectureConfig) Component() component.ComponentConfig {
 	return ac.ComponentConfig
 }
 
-func (ac ArchitectureConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// Architectures are built directly into the Unikraft core for now.
 	return nil, nil
 }
 
-func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	values := kconfig.KConfigValues{}
+func (ac ArchitectureConfig) KConfig() (kconfig.KeyValueMap, error) {
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(ac.Configuration)
 
 	// The following are built-in assumptions given the naming conventions used

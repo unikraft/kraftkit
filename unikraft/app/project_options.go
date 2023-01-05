@@ -51,7 +51,7 @@ type ProjectOptions struct {
 	name              string
 	workdir           string
 	kraftfiles        []kraftfile
-	kconfig           kconfig.KConfigValues
+	kconfig           kconfig.KeyValueMap
 	dotConfigFile     string
 	skipValidation    bool
 	skipInterpolation bool
@@ -165,7 +165,7 @@ type ProjectOption func(*ProjectOptions) error
 // NewProjectOptions creates ProjectOptions
 func NewProjectOptions(opts ...ProjectOption) (*ProjectOptions, error) {
 	popts := &ProjectOptions{
-		kconfig: kconfig.KConfigValues{},
+		kconfig: kconfig.KeyValueMap{},
 	}
 
 	popts.interpolate = &interp.Options{
@@ -282,7 +282,7 @@ func withProjectDotConfig(popts *ProjectOptions) error {
 
 	defer file.Close()
 
-	config := kconfig.KConfigValues{}
+	config := kconfig.KeyValueMap{}
 
 	notInConfigSet := make(map[string]interface{})
 	env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {

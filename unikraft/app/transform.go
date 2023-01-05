@@ -83,7 +83,7 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(kconfig.KConfigValues{}):   transformKConfig,
+		reflect.TypeOf(kconfig.KeyValueMap{}):     transformKConfig,
 		reflect.TypeOf(target.Command{}):          transformCommand,
 		reflect.TypeOf([]target.TargetConfig{}):   transformTarget,
 		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
@@ -293,7 +293,7 @@ var transformKConfig TransformerFunc = func(data interface{}) (interface{}, erro
 		return nil, err
 	}
 
-	kconf := kconfig.KConfigValues{}
+	kconf := kconfig.KeyValueMap{}
 
 	for k, v := range config.(map[string]string) {
 		kconf.Set(k, v)

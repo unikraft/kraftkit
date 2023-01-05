@@ -16,19 +16,19 @@ import (
 
 const DotConfigFileName = ".config"
 
-// KConfigValues is a map of KConfigValue
-type KConfigValues map[string]*KConfigValue
+// KeyValueMap is a map of KeyValues
+type KeyValueMap map[string]*KeyValue
 
-// NewKConfigValuesFromSlice build a new Mapping from a set of KEY=VALUE strings
-func NewKConfigValuesFromSlice(values ...interface{}) KConfigValues {
-	mapping := KConfigValues{}
+// NewKeyValueMapFromSlice build a new Mapping from a set of KEY=VALUE strings
+func NewKeyValueMapFromSlice(values ...interface{}) KeyValueMap {
+	mapping := KeyValueMap{}
 
 	for _, value := range values {
 		str := fmt.Sprintf("%s", value)
 		tokens := strings.SplitN(str, "=", 2)
 		if len(tokens) > 1 {
-			mapping[tokens[0]] = &KConfigValue{
-				Name:  tokens[0],
+			mapping[tokens[0]] = &KeyValue{
+				Key:   tokens[0],
 				Value: tokens[1],
 			}
 		} else {
@@ -39,13 +39,13 @@ func NewKConfigValuesFromSlice(values ...interface{}) KConfigValues {
 	return mapping
 }
 
-// NewKConfigValuesFromMap build a new Mapping from a set of KEY=VALUE strings
-func NewKConfigValuesFromMap(values map[string]interface{}) KConfigValues {
-	mapping := KConfigValues{}
+// NewKeyValueMapFromMap build a new Mapping from a set of KEY=VALUE strings
+func NewKeyValueMapFromMap(values map[string]interface{}) KeyValueMap {
+	mapping := KeyValueMap{}
 
 	for key, value := range values {
-		mapping[key] = &KConfigValue{
-			Name: key,
+		mapping[key] = &KeyValue{
+			Key: key,
 		}
 
 		switch casting := value.(type) {
@@ -66,77 +66,77 @@ func NewKConfigValuesFromMap(values map[string]interface{}) KConfigValues {
 }
 
 // Override accepts a list of key value pairs and overrides the key in the map
-func (kvm KConfigValues) Override(extra ...*KConfigValue) KConfigValues {
+func (kvm KeyValueMap) Override(extra ...*KeyValue) KeyValueMap {
 	for _, kv := range extra {
-		kvm[kv.Name] = kv
+		kvm[kv.Key] = kv
 	}
 
 	return kvm
 }
 
 // OverrideBy update KeyValueMap with values from another KeyValueMap
-func (kco KConfigValues) OverrideBy(other KConfigValues) KConfigValues {
+func (kvm KeyValueMap) OverrideBy(other KeyValueMap) KeyValueMap {
 	for k, v := range other {
-		kco[k] = v
+		kvm[k] = v
 	}
-	return kco
+	return kvm
 }
 
 // Set a new key with specified value
-func (kco KConfigValues) Set(key, value string) KConfigValues {
-	kco[key] = &KConfigValue{
-		Name:  key,
+func (kvm KeyValueMap) Set(key, value string) KeyValueMap {
+	kvm[key] = &KeyValue{
+		Key:   key,
 		Value: value,
 	}
 
-	return kco
+	return kvm
 }
 
 // Unset a specific key
-func (kco KConfigValues) Unset(key string) KConfigValues {
-	delete(kco, key)
+func (kvm KeyValueMap) Unset(key string) KeyValueMap {
+	delete(kvm, key)
 
-	return kco
+	return kvm
 }
 
 // Resolve update a KConfig for keys without value (`key`, but not `key=`)
-func (kco KConfigValues) Resolve(lookupFn func(string) (string, bool)) KConfigValues {
-	for k, v := range kco {
+func (kvm KeyValueMap) Resolve(lookupFn func(string) (string, bool)) KeyValueMap {
+	for k, v := range kvm {
 		if v == nil {
 			if value, ok := lookupFn(k); ok {
-				kco[k] = &KConfigValue{
-					Name:  k,
+				kvm[k] = &KeyValue{
+					Key:   k,
 					Value: value,
 				}
 			}
 		}
 	}
 
-	return kco
+	return kvm
 }
 
 // RemoveEmpty excludes keys that are not associated with a value
-func (kco KConfigValues) RemoveEmpty() KConfigValues {
-	for k, v := range kco {
+func (kvm KeyValueMap) RemoveEmpty() KeyValueMap {
+	for k, v := range kvm {
 		if v == nil || v.Value == "" {
-			delete(kco, k)
+			delete(kvm, k)
 		}
 	}
 
-	return kco
+	return kvm
 }
 
 // String returns the serialized string representing a .config file
-func (kco KConfigValues) String() string {
+func (kvm KeyValueMap) String() string {
 	var ret strings.Builder
 
-	for _, v := range kco {
+	for _, v := range kvm {
 		if v.Value == "n" {
 			ret.WriteString("# ")
-			ret.WriteString(v.Name)
+			ret.WriteString(v.Key)
 			ret.WriteString(" is not set")
 		} else {
-			ret.WriteString(v.Name)
+			ret.WriteString(v.Key)
 			ret.WriteString("=")
 			ret.WriteString(v.Value)
 		}
@@ -153,13 +153,14 @@ func (kco KConfigValues) String() string {
 // should never mention CONFIG_. Use Yes/Mod/No consts to check for/set config
 // to particular values.
 type DotConfigFile struct {
-	Configs  []*KConfigValue
-	Map      map[string]*KConfigValue // duplicates Configs for convenience
+	Slice    []*KeyValue
+	Map      KeyValueMap // duplicates Configs for convenience
 	comments []string
 }
 
-type KConfigValue struct {
-	Name     string
+// KeyValue represents a KConfig option with its name and its value.
+type KeyValue struct {
+	Key      string
 	Value    string
 	comments []string
 }
@@ -185,13 +186,13 @@ func (cf *DotConfigFile) Value(name string) string {
 func (cf *DotConfigFile) Set(name, val string) {
 	cfg := cf.Map[name]
 	if cfg == nil {
-		cfg = &KConfigValue{
-			Name:  name,
+		cfg = &KeyValue{
+			Key:   name,
 			Value: val,
 		}
 
 		cf.Map[name] = cfg
-		cf.Configs = append(cf.Configs, cfg)
+		cf.Slice = append(cf.Slice, cfg)
 	}
 
 	cfg.Value = val
@@ -210,7 +211,7 @@ func (cf *DotConfigFile) Unset(name string) {
 }
 
 func (cf *DotConfigFile) ModToYes() {
-	for _, cfg := range cf.Configs {
+	for _, cfg := range cf.Slice {
 		if cfg.Value == Mod {
 			cfg.Value = Yes
 		}
@@ -218,7 +219,7 @@ func (cf *DotConfigFile) ModToYes() {
 }
 
 func (cf *DotConfigFile) ModToNo() {
-	for _, cfg := range cf.Configs {
+	for _, cfg := range cf.Slice {
 		if cfg.Value == Mod {
 			cfg.Value = No
 		}
@@ -227,15 +228,15 @@ func (cf *DotConfigFile) ModToNo() {
 
 func (cf *DotConfigFile) Serialize() []byte {
 	buf := new(bytes.Buffer)
-	for _, cfg := range cf.Configs {
+	for _, cfg := range cf.Slice {
 		for _, comment := range cfg.comments {
 			fmt.Fprintf(buf, "%v\n", comment)
 		}
 
 		if cfg.Value == No {
-			fmt.Fprintf(buf, "# %v%v is not set\n", Prefix, cfg.Name)
+			fmt.Fprintf(buf, "# %v%v is not set\n", Prefix, cfg.Key)
 		} else {
-			fmt.Fprintf(buf, "%v%v=%v\n", Prefix, cfg.Name, cfg.Value)
+			fmt.Fprintf(buf, "%v%v=%v\n", Prefix, cfg.Key, cfg.Value)
 		}
 	}
 
@@ -257,7 +258,7 @@ func ParseConfig(file string) (*DotConfigFile, error) {
 
 func ParseConfigData(data []byte, file string) (*DotConfigFile, error) {
 	cf := &DotConfigFile{
-		Map: make(map[string]*KConfigValue),
+		Map: make(map[string]*KeyValue),
 	}
 
 	s := bufio.NewScanner(bytes.NewReader(data))
@@ -270,15 +271,15 @@ func ParseConfigData(data []byte, file string) (*DotConfigFile, error) {
 
 func (cf *DotConfigFile) Clone() *DotConfigFile {
 	cf1 := &DotConfigFile{
-		Map:      make(map[string]*KConfigValue),
+		Map:      make(map[string]*KeyValue),
 		comments: cf.comments,
 	}
 
-	for _, cfg := range cf.Configs {
-		cfg1 := new(KConfigValue)
+	for _, cfg := range cf.Slice {
+		cfg1 := new(KeyValue)
 		*cfg1 = *cfg
-		cf1.Configs = append(cf1.Configs, cfg1)
-		cf1.Map[cfg1.Name] = cfg1
+		cf1.Slice = append(cf1.Slice, cfg1)
+		cf1.Map[cfg1.Key] = cfg1
 	}
 
 	return cf1

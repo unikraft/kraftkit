@@ -64,16 +64,21 @@ func (uc UnikraftConfig) Component() component.ComponentConfig {
 	return uc.ComponentConfig
 }
 
-func (uc UnikraftConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
-	config_uk := filepath.Join(uc.ComponentConfig.Workdir(), unikraft.Config_uk)
+func (uc UnikraftConfig) KConfigTree(extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+	sourceDir, err := uc.SourceDir()
+	if err != nil {
+		return nil, err
+	}
+
+	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
 	}
 
-	return kconfig.Parse(config_uk)
+	return kconfig.Parse(config_uk, uc.Configuration.Override(extra...).Slice()...)
 }
 
-func (uc UnikraftConfig) KConfigValues() (kconfig.KConfigValues, error) {
+func (uc UnikraftConfig) KConfig() (kconfig.KeyValueMap, error) {
 	return uc.Configuration, nil
 }
 

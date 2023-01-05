@@ -20,10 +20,10 @@ import (
 // microlibraries, whether they are a library, platform, architecture, an
 // application itself or the Unikraft core.
 type ComponentConfig struct {
-	Name          string                `yaml:",omitempty" json:"-"`
-	Version       string                `yaml:",omitempty" json:"version,omitempty"`
-	Source        string                `yaml:",omitempty" json:"source,omitempty"`
-	Configuration kconfig.KConfigValues `yaml:",omitempty" json:"kconfig,omitempty"`
+	Name          string              `yaml:",omitempty" json:"-"`
+	Version       string              `yaml:",omitempty" json:"version,omitempty"`
+	Source        string              `yaml:",omitempty" json:"source,omitempty"`
+	Configuration kconfig.KeyValueMap `yaml:",omitempty" json:"kconfig,omitempty"`
 
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
@@ -52,13 +52,13 @@ type Component interface {
 	// Component returns the component's configuration
 	Component() ComponentConfig
 
-	// KConfigMenu returns the component's KConfig configuration menu which
+	// KConfigTree returns the component's KConfig configuration menu tree which
 	// returns all possible options for the component
-	KConfigMenu() (*kconfig.KConfigFile, error)
+	KConfigTree(...*kconfig.KeyValue) (*kconfig.KConfigFile, error)
 
-	// KConfigValeus returns the component's set of file KConfig which is known
-	// when the relevant component packages have been retrieved
-	KConfigValues() (kconfig.KConfigValues, error)
+	// KConfig returns the component's set of file KConfig which is known when the
+	// relevant component packages have been retrieved
+	KConfig() (kconfig.KeyValueMap, error)
 
 	// PrintInfo returns human-readable information about the component
 	PrintInfo() string
@@ -116,9 +116,9 @@ func ParseComponentConfig(name string, props interface{}) (ComponentConfig, erro
 			case "kconfig":
 				switch tprop := prop.(type) {
 				case map[string]interface{}:
-					component.Configuration = kconfig.NewKConfigValuesFromMap(tprop)
+					component.Configuration = kconfig.NewKeyValueMapFromMap(tprop)
 				case []interface{}:
-					component.Configuration = kconfig.NewKConfigValuesFromSlice(tprop...)
+					component.Configuration = kconfig.NewKeyValueMapFromSlice(tprop...)
 				}
 			}
 		}

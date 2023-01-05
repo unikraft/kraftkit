@@ -51,18 +51,18 @@ func (tc TargetConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
 }
 
-func (tc TargetConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	arch, err := tc.Architecture.KConfigValues()
+func (tc TargetConfig) KConfig() (kconfig.KeyValueMap, error) {
+	arch, err := tc.Architecture.KConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not read architecture KConfig values: %v", err)
 	}
 
-	plat, err := tc.Platform.KConfigValues()
+	plat, err := tc.Platform.KConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not read platform KConfig values: %v", err)
 	}
 
-	values := kconfig.KConfigValues{}
+	values := kconfig.KeyValueMap{}
 	values.OverrideBy(tc.Configuration)
 	values.OverrideBy(arch)
 	values.OverrideBy(plat)
@@ -70,7 +70,7 @@ func (tc TargetConfig) KConfigValues() (kconfig.KConfigValues, error) {
 	return values, nil
 }
 
-func (tc TargetConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (tc TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 
