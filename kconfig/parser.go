@@ -17,12 +17,14 @@ type parser struct {
 	col     int
 	line    int
 	err     error
+	env     KeyValueMap
 }
 
-func newParser(data []byte, file string) *parser {
+func newParser(data []byte, file string, env KeyValueMap) *parser {
 	return &parser{
 		data: data,
 		file: file,
+		env:  env,
 	}
 }
 

@@ -118,17 +118,21 @@ type kconfigParser struct {
 	helpIdent int
 }
 
-func Parse(file string) (*KConfigFile, error) {
+func Parse(file string, env ...*KeyValue) (*KConfigFile, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open Kconfig file %v: %v", file, err)
 	}
-	return ParseData(data, file)
+	return ParseData(data, file, env...)
 }
 
-func ParseData(data []byte, file string) (*KConfigFile, error) {
+func ParseData(data []byte, file string, extra ...*KeyValue) (*KConfigFile, error) {
+	env := KeyValueMap{}
+	for _, kcv := range extra {
+		env[kcv.Key] = kcv
+	}
 	kp := &kconfigParser{
-		parser:  newParser(data, file),
+		parser:  newParser(data, file, env),
 		baseDir: filepath.Dir(file),
 	}
 
@@ -382,7 +386,7 @@ func (kp *kconfigParser) includeSource(file string) {
 	}
 
 	kp.includes = append(kp.includes, kp.parser)
-	kp.parser = newParser(data, file)
+	kp.parser = newParser(data, file, kp.env)
 	kp.parseFile()
 	err = kp.err
 	kp.parser = kp.includes[len(kp.includes)-1]
