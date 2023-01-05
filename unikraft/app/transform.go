@@ -82,15 +82,15 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 
 func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
-		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(kconfig.KeyValueMap{}):     transformKConfig,
-		reflect.TypeOf(target.Command{}):          transformCommand,
-		reflect.TypeOf([]target.TargetConfig{}):   transformTarget,
-		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
-		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
-		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
-		reflect.TypeOf(lib.LibraryConfig{}):       transformLibrary,
-		reflect.TypeOf(core.UnikraftConfig{}):     transformUnikraft,
+		reflect.TypeOf(map[string]string{}):            transformMapStringString,
+		reflect.TypeOf(kconfig.KeyValueMap{}):          transformKConfig,
+		reflect.TypeOf(target.Command{}):               transformCommand,
+		reflect.TypeOf([]target.TargetConfig{}):        transformTarget,
+		reflect.TypeOf(arch.ArchitectureConfig{}):      transformArchitecture,
+		reflect.TypeOf(plat.PlatformConfig{}):          transformPlatform,
+		reflect.TypeOf(initrd.InitrdConfig{}):          transformInitrd,
+		reflect.TypeOf(map[string]lib.LibraryConfig{}): transformLibraries,
+		reflect.TypeOf(core.UnikraftConfig{}):          transformUnikraft,
 		// Use a map as we need to access the name (which is the key)
 		reflect.TypeOf(map[string]component.ComponentConfig{}): transformComponents,
 	}
@@ -258,17 +258,27 @@ var transformComponents TransformerFunc = func(data interface{}) (interface{}, e
 		return components, nil
 	}
 
-	return data, errors.Errorf("invalid type %T for component map", data)
-}
-
-var transformLibrary TransformerFunc = func(data interface{}) (interface{}, error) {
+var transformLibraries TransformerFunc = func(data interface{}) (interface{}, error) {
 	switch value := data.(type) {
 	case map[string]interface{}:
-		return toMapStringString(value, false), nil
-	case map[string]string:
-		return value, nil
-	case string:
-		return lib.ParseLibraryConfig(value)
+		libraries := make(map[string]interface{}, len(value))
+		for name, props := range value {
+			switch props.(type) {
+			case string, map[string]interface{}:
+				comp, err := lib.NewLibraryFromSchema(name, props)
+				if err != nil {
+					return nil, err
+				}
+				libraries[name] = comp
+
+			default:
+				return data, errors.Errorf("invalid type %T for component", props)
+			}
+
+			return libraries, nil
+		}
+
+		return libraries, nil
 	}
 
 	return data, errors.Errorf("invalid type %T for library", data)

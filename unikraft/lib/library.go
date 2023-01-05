@@ -6,6 +6,7 @@ package lib
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,23 +26,59 @@ type LibraryConfig struct {
 
 type Libraries map[string]LibraryConfig
 
-// ParseLibraryConfig parse short syntax for LibraryConfig
-func ParseLibraryConfig(version string) (LibraryConfig, error) {
+// NewLibraryFromSchema is a static
+func NewLibraryFromSchema(name string, props interface{}) (LibraryConfig, error) {
 	lib := LibraryConfig{}
 
-	if strings.Contains(version, "@") {
-		split := strings.Split(version, "@")
-		if len(split) == 2 {
-			lib.ComponentConfig.Source = split[0]
-			version = split[1]
+	if len(name) > 0 {
+		lib.ComponentConfig.Name = name
+	}
+
+	switch entry := props.(type) {
+	case string:
+		if strings.Contains(entry, "@") {
+			split := strings.Split(entry, "@")
+			if len(split) == 2 {
+				lib.ComponentConfig.Source = split[0]
+				lib.ComponentConfig.Version = split[1]
+			}
+		} else if f, err := os.Stat(entry); err == nil && f.IsDir() {
+			lib.ComponentConfig.Source = entry
+		} else if u, err := url.Parse(entry); err == nil && u.Scheme != "" && u.Host != "" {
+			lib.ComponentConfig.Source = u.Path
+		} else {
+			lib.ComponentConfig.Version = entry
+		}
+
+	// TODO: This is handled by the transformer, do we really need to do this
+	// here?
+	case map[string]interface{}:
+		for key, prop := range entry {
+			switch key {
+			case "version":
+				lib.ComponentConfig.Version = prop.(string)
+			case "source":
+				prop := prop.(string)
+				if strings.Contains(prop, "@") {
+					split := strings.Split(prop, "@")
+					if len(split) == 2 {
+						lib.ComponentConfig.Version = split[1]
+						prop = split[0]
+					}
+				}
+
+				lib.ComponentConfig.Source = prop
+
+			case "kconfig":
+				switch tprop := prop.(type) {
+				case map[string]interface{}:
+					lib.ComponentConfig.Configuration = kconfig.NewKeyValueMapFromMap(tprop)
+				case []interface{}:
+					lib.ComponentConfig.Configuration = kconfig.NewKeyValueMapFromSlice(tprop...)
+				}
+			}
 		}
 	}
-
-	if len(version) == 0 {
-		return lib, fmt.Errorf("cannot use empty string for version or source")
-	}
-
-	lib.ComponentConfig.Version = version
 
 	return lib, nil
 }

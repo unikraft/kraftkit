@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
@@ -172,12 +173,12 @@ func LoadLibraries(source map[string]interface{}, popts *ProjectOptions) (map[st
 	}
 
 	libraries := make(map[string]lib.LibraryConfig)
+	if err := Transform(source, &libraries); err != nil {
+		return libraries, err
+	}
+
 	for name, comp := range bases {
 		library := lib.LibraryConfig{}
-
-		if err := Transform(source[name], &library); err != nil {
-			return libraries, err
-		}
 
 		// Seed the the library components with the shared component attributes
 		library.ComponentConfig = comp
