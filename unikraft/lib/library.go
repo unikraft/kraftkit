@@ -103,6 +103,19 @@ func (lc LibraryConfig) KConfig() (kconfig.KeyValueMap, error) {
 	return values, nil
 }
 
+func (lc LibraryConfig) IsUnpacked() bool {
+	local, err := lc.ComponentConfig.SourceDir()
+	if err != nil {
+		return false
+	}
+
+	if f, err := os.Stat(local); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
+}
+
 func (lc LibraryConfig) PrintInfo() string {
 	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
 }

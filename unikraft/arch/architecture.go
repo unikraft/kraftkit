@@ -6,6 +6,7 @@ package arch
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"kraftkit.sh/kconfig"
@@ -48,6 +49,19 @@ func (ac ArchitectureConfig) Version() string {
 
 func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
+}
+
+func (ac ArchitectureConfig) IsUnpacked() bool {
+	local, err := ac.ComponentConfig.SourceDir()
+	if err != nil {
+		return false
+	}
+
+	if f, err := os.Stat(local); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
 }
 
 func (ac ArchitectureConfig) Component() component.ComponentConfig {

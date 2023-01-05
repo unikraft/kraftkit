@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/log"
 	"kraftkit.sh/unikraft"
 )
 
@@ -155,20 +154,4 @@ func (cc *ComponentConfig) SourceDir() (string, error) {
 		cc.ctype,
 		cc.Name,
 	)
-}
-
-// IsUnpackedInProject indicates whether the package has been unpacked into a
-// project specified by the working directory option
-func (cc *ComponentConfig) IsUnpackedInProject() bool {
-	local, err := cc.SourceDir()
-	if err != nil {
-		log.G(cc.ctx).Errorf("could not place component: %v", err)
-		return false
-	}
-
-	if f, err := os.Stat(local); err == nil && f.IsDir() {
-		return true
-	}
-
-	return false
 }

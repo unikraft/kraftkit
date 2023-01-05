@@ -6,6 +6,7 @@ package plat
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"kraftkit.sh/kconfig"
@@ -48,6 +49,19 @@ func (pc PlatformConfig) Version() string {
 
 func (pc PlatformConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypePlat
+}
+
+func (pc PlatformConfig) IsUnpacked() bool {
+	local, err := pc.ComponentConfig.SourceDir()
+	if err != nil {
+		return false
+	}
+
+	if f, err := os.Stat(local); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
 }
 
 func (pc PlatformConfig) Component() component.ComponentConfig {

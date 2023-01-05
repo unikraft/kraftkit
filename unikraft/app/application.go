@@ -84,46 +84,26 @@ func (ac ApplicationConfig) Template() template.TemplateConfig {
 
 // Unikraft returns the application's unikraft configuration
 func (ac ApplicationConfig) Unikraft() (core.UnikraftConfig, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return core.UnikraftConfig{}, fmt.Errorf("Unikraft(): template source is not unpacked in project")
-	}
-
 	return ac.unikraft, nil
 }
 
 // Libraries returns the application libraries' configurations
 func (ac ApplicationConfig) Libraries() (lib.Libraries, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return lib.Libraries{}, fmt.Errorf("Libraries(): template source is not unpacked in project")
-	}
-
 	return ac.libraries, nil
 }
 
 // Targets returns the application's targets
 func (ac ApplicationConfig) Targets() (target.Targets, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return target.Targets{}, fmt.Errorf("Targets(): template source is not unpacked in project")
-	}
-
 	return ac.targets, nil
 }
 
 // Extensions returns the application's extensions
 func (ac ApplicationConfig) Extensions() (component.Extensions, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return component.Extensions{}, fmt.Errorf("Extensions(): template source is not unpacked in project")
-	}
-
 	return ac.extensions, nil
 }
 
 // Kraftfiles returns the application's kraft configuration files
 func (ac ApplicationConfig) Kraftfiles() ([]string, error) {
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return []string{}, fmt.Errorf("Kraftfiles(): template source is not unpacked in project")
-	}
-
 	return ac.kraftfiles, nil
 }
 
@@ -234,7 +214,7 @@ func (a *ApplicationConfig) MakeArgs(tc *target.TargetConfig) (*core.MakeArgs, e
 	var libraries []string
 
 	for _, library := range a.libraries {
-		if !library.IsUnpackedInProject() {
+		if !library.IsUnpacked() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
@@ -491,7 +471,7 @@ func (a *ApplicationConfig) Build(ctx context.Context, tc *target.TargetConfig, 
 		}
 	}
 
-	if !a.unikraft.IsUnpackedInProject() {
+	if !a.unikraft.IsUnpacked() {
 		// TODO: Produce better error messages (see #34).  In this case, we should
 		// indicate that `kraft pkg pull` needs to occur
 		return fmt.Errorf("cannot build without Unikraft core component source")
@@ -560,11 +540,6 @@ func (a *ApplicationConfig) TargetByName(name string) (*target.TargetConfig, err
 func (ac *ApplicationConfig) Components() ([]component.Component, error) {
 	components := []component.Component{
 		ac.unikraft,
-	}
-
-	// Change to error and correctly check if structure is uninitialized
-	if ac.template.Source() != "" && !ac.template.IsUnpackedInProject() {
-		return nil, fmt.Errorf("template source is not unpacked in project")
 	}
 
 	if ac.template.Name() != "" {

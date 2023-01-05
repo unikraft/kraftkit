@@ -47,6 +47,10 @@ func (tc TargetConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeUnknown
 }
 
+func (tc TargetConfig) IsUnpacked() bool {
+	return false
+}
+
 func (tc TargetConfig) Component() component.ComponentConfig {
 	return tc.ComponentConfig
 }

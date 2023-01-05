@@ -60,6 +60,19 @@ func (uc UnikraftConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeCore
 }
 
+func (uc UnikraftConfig) IsUnpacked() bool {
+	local, err := uc.ComponentConfig.SourceDir()
+	if err != nil {
+		return false
+	}
+
+	if f, err := os.Stat(local); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
+}
+
 func (uc UnikraftConfig) Component() component.ComponentConfig {
 	return uc.ComponentConfig
 }
