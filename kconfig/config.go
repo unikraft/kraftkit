@@ -82,6 +82,15 @@ func (kvm KeyValueMap) OverrideBy(other KeyValueMap) KeyValueMap {
 	return kvm
 }
 
+// Slice returns the map as a slice
+func (kvm KeyValueMap) Slice() []*KeyValue {
+	var slice []*KeyValue
+	for _, kv := range kvm {
+		slice = append(slice, kv)
+	}
+	return slice
+}
+
 // Set a new key with specified value
 func (kvm KeyValueMap) Set(key, value string) KeyValueMap {
 	kvm[key] = &KeyValue{
