@@ -65,7 +65,16 @@ func NewKConfigValuesFromMap(values map[string]interface{}) KConfigValues {
 	return mapping
 }
 
-// OverrideBy update KConfigValues with values from another KConfigValues
+// Override accepts a list of key value pairs and overrides the key in the map
+func (kvm KConfigValues) Override(extra ...*KConfigValue) KConfigValues {
+	for _, kv := range extra {
+		kvm[kv.Name] = kv
+	}
+
+	return kvm
+}
+
+// OverrideBy update KeyValueMap with values from another KeyValueMap
 func (kco KConfigValues) OverrideBy(other KConfigValues) KConfigValues {
 	for k, v := range other {
 		kco[k] = v
