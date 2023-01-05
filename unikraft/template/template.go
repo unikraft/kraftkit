@@ -34,10 +34,6 @@
 package template
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -81,40 +77,11 @@ func (tc TemplateConfig) Component() component.ComponentConfig {
 
 // KConfigTree returns the path to the kconfig file of the template
 func (tc TemplateConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	sourceDir, err := tc.ComponentConfig.SourceDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not get library source directory: %v", err)
-	}
-
-	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
-	if _, err := os.Stat(config_uk); err != nil {
-		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
-	}
-
-	kconfigValues, err := tc.KConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return kconfig.Parse(config_uk, kconfigValues.Override(env...).Slice()...)
+	return nil, nil
 }
 
 func (tc TemplateConfig) KConfig() (kconfig.KeyValueMap, error) {
-	tree, err := tc.KConfigTree()
-	if err != nil {
-		return nil, fmt.Errorf("could not list KConfig values: %v", err)
-	}
-
-	values := kconfig.KeyValueMap{}
-	values.OverrideBy(tc.Configuration)
-
-	if tree == nil {
-		return values, nil
-	}
-
-	values.Set(kconfig.Prefix+tree.Root.Name, kconfig.Yes)
-
-	return values, nil
+	return nil, nil
 }
 
 // PrintInfo prints information about the template
