@@ -23,7 +23,7 @@ type ApplicationOption func(ao *ApplicationConfig) error
 
 // NewApplicationFromOptions accepts a series of options and returns a rendered
 // *ApplicationConfig structure
-func NewApplicationFromOptions(aopts ...ApplicationOption) (*ApplicationConfig, error) {
+func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) {
 	var err error
 	ac := &ApplicationConfig{
 		configuration: kconfig.KeyValueMap{},

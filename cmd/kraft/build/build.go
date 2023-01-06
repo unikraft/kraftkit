@@ -197,7 +197,10 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		project = templateProject.MergeTemplate(project)
+		project, err = templateProject.MergeTemplate(ctx, project)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Overwrite template with user options
@@ -293,13 +296,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	processes = []*paraprogress.Process{} // reset
 
 	var selected target.Targets
-	targets, err := project.Targets()
-	if err != nil {
-		return err
-	}
 
 	// Filter the targets by CLI selection
-	for _, targ := range targets {
+	for _, targ := range project.Targets() {
 		switch true {
 		case
 			// If no arguments are supplied

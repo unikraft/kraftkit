@@ -43,7 +43,7 @@ func IsWorkdirInitialized(dir string) bool {
 }
 
 // NewProjectFromOptions load a kraft project based on command line options
-func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (*ApplicationConfig, error) {
+func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Application, error) {
 	popts, err := NewProjectOptions(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("could not apply project options: %v", err)
@@ -162,7 +162,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (*Applica
 	project.name = projectName
 
 	if !popts.skipNormalization {
-		err = normalize(project, popts.resolvePaths)
+		err = normalize(project.(*ApplicationConfig), popts.resolvePaths)
 		if err != nil {
 			return nil, err
 		}

@@ -47,8 +47,7 @@ func normalize(project *ApplicationConfig, resolvePaths bool) error {
 	project.workingDir = absWorkingDir
 
 	// Ignore the error here, as it's a false positive
-	kraftiles, _ := project.Kraftfiles()
-	absKraftfiles, err := absKraftfiles(kraftiles)
+	absKraftfiles, err := absKraftfiles(project.Kraftfiles())
 	if err != nil {
 		return err
 	}

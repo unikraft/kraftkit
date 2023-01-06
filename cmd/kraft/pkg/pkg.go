@@ -130,11 +130,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	var packages []pack.Package
 
 	// Generate a package for every matching requested target
-	targets, err := project.Targets()
-	if err != nil {
-		return err
-	}
-	for _, targ := range targets {
+	for _, targ := range project.Targets() {
 		switch true {
 		case
 			// If no arguments are supplied
@@ -233,16 +229,11 @@ func initAppPackage(ctx context.Context,
 
 	name := opts.Name
 
-	targets, err := project.Targets()
-	if err != nil {
-		return nil, err
-	}
-
 	// This is a built in naming convention format, which for now allows us to
 	// differentiate between different targets.  This should be further discussed
 	// the community if this is the best approach.  This can ultimately be
 	// overwritten using the --tag flag.
-	if len(name) == 0 && len(targets) == 1 {
+	if len(name) == 0 && len(project.Targets()) == 1 {
 		name = project.Name()
 	} else if len(name) == 0 {
 		name = project.Name() + "-" + targ.Name()

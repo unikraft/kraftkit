@@ -204,7 +204,11 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		project = templateProject.MergeTemplate(project)
+		project, err = templateProject.MergeTemplate(ctx, project)
+		if err != nil {
+			return err
+		}
+
 		// List the components
 		components, err := project.Components()
 		if err != nil {
