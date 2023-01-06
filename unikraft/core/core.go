@@ -5,13 +5,16 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/unikraft/lib"
 )
 
 const (
@@ -23,6 +26,9 @@ const (
 
 type Unikraft interface {
 	component.Component
+
+	// Libraries returns the application libraries' configurations
+	Libraries(ctx context.Context) (lib.Libraries, error)
 }
 
 type UnikraftConfig struct {
@@ -83,6 +89,81 @@ func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
 
 func (uc UnikraftConfig) PrintInfo() string {
 	return "not implemented: unikraft.core.UnikraftConfig.PrintInfo"
+}
+
+func (uk UnikraftConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
+	// Unikraft internal build system recognises internal libraries simply by
+	// iterating over the contents of the lib/ dir.  We do the same here.
+	config_uk_lib, err := uk.CONFIG_UK_LIB()
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := ioutil.ReadDir(config_uk_lib)
+	if err != nil {
+		return nil, err
+	}
+
+	libs := lib.Libraries{}
+
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
+		}
+
+		more, err := lib.NewFromDir(
+			ctx,
+			filepath.Join(config_uk_lib, f.Name()),
+			lib.WithIsInternal(true),
+			lib.WithSource(uk.Source()),
+			lib.WithVersion(uk.Version()),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, l := range more {
+			libs[l.Name()] = l
+		}
+	}
+
+	config_uk_plat, err := uk.CONFIG_UK_PLAT()
+	if err != nil {
+		return nil, err
+	}
+
+	files, err = ioutil.ReadDir(config_uk_plat)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
+		}
+
+		more, err := lib.NewFromDir(
+			ctx,
+			filepath.Join(config_uk_plat, f.Name()),
+			lib.WithIsInternal(true),
+			lib.WithSource(uk.Source()),
+			lib.WithVersion(uk.Version()),
+		)
+		if err != nil {
+			// Instead of breaking and error-ing out, we simply continue since the
+			// plat/ directory (for now, 02/01/23) still contains a common/ and
+			// drivers/ directory which is inconsistent with how libs/ is organised.
+			// This is an on-going discussion under the topic of "platform
+			// re-architecture".
+			continue
+		}
+
+		for k, l := range more {
+			libs[k] = l
+		}
+	}
+
+	return libs, nil
 }
 
 func (uk UnikraftConfig) CONFIG_UK_PLAT() (string, error) {
