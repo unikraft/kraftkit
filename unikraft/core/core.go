@@ -14,6 +14,13 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
+const (
+	CONFIG_UK_PLAT = "plat"
+	CONFIG_UK_LIB  = "lib"
+	CONFIG         = "support/kconfig"
+	CONFIGLIB      = "support/kconfiglib"
+)
+
 type Unikraft interface {
 	component.Component
 }
@@ -76,4 +83,24 @@ func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
 
 func (uc UnikraftConfig) PrintInfo() string {
 	return "not implemented: unikraft.core.UnikraftConfig.PrintInfo"
+}
+
+func (uk UnikraftConfig) CONFIG_UK_PLAT() (string, error) {
+	return filepath.Join(uk.path, CONFIG_UK_PLAT), nil
+}
+
+func (uk UnikraftConfig) CONFIG_UK_LIB() (string, error) {
+	return filepath.Join(uk.path, CONFIG_UK_LIB), nil
+}
+
+func (uk UnikraftConfig) CONFIG_CONFIG_IN() (string, error) {
+	return filepath.Join(uk.path, unikraft.Config_uk), nil
+}
+
+func (uk UnikraftConfig) CONFIG() (string, error) {
+	return filepath.Join(uk.path, CONFIG), nil
+}
+
+func (uk UnikraftConfig) CONFIGLIB() (string, error) {
+	return filepath.Join(uk.path, CONFIGLIB), nil
 }
