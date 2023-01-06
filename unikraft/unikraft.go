@@ -28,6 +28,9 @@ const (
 	Localsyms_uk  = "localsyms.uk"
 	Makefile_uk   = "Makefile.uk"
 
+	// Standard Makefile.uk variables
+	UK_PROVIDED_SYSCALLS = "UK_PROVIDED_SYSCALLS"
+
 	// Built-in paths
 	VendorDir = ".unikraft"
 	BuildDir  = "build"
