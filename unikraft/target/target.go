@@ -11,8 +11,38 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/plat"
 )
+
+type Target interface {
+	component.Component
+
+	// ArchPlatString returns the canonical name for platform architecture string
+	// combination
+	ArchPlatString() string
+
+	// Architecture is the component architecture for this target.
+	Architecture() arch.Architecture
+
+	// Platform is the component platform for this target.
+	Platform() plat.Platform
+
+	// Format is the desired package implementation for this target.
+	Format() string
+
+	// Kernel is the path to the kernel for this target.
+	Kernel() string
+
+	// KernelDbg is the path to the symbolic (unstripped) kernel for this target.
+	KernelDbg() string
+
+	// Initrd contains the initramfs configuration for this target.
+	Initrd() *initrd.InitrdConfig
+
+	// Command is the command-line arguments set for this target.
+	Command() []string
+}
 
 type TargetConfig struct {
 	// name of the target.
@@ -57,11 +87,11 @@ func (tc TargetConfig) Version() string {
 	return ""
 }
 
-func (tc TargetConfig) Architecture() arch.ArchitectureConfig {
+func (tc TargetConfig) Architecture() arch.Architecture {
 	return tc.architecture
 }
 
-func (tc TargetConfig) Platform() plat.PlatformConfig {
+func (tc TargetConfig) Platform() plat.Platform {
 	return tc.platform
 }
 
@@ -89,6 +119,10 @@ func (tc TargetConfig) Path() string {
 	return ""
 }
 
+func (tc TargetConfig) Command() []string {
+	return tc.command
+}
+
 func (tc TargetConfig) IsUnpacked() bool {
 	return false
 }
@@ -106,9 +140,7 @@ func (tc TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFi
 	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 
-// ArchPlatString returns the canonical name for platform architecture string
-// combination
-func (tc *TargetConfig) ArchPlatString() string {
+func (tc TargetConfig) ArchPlatString() string {
 	return tc.platform.Name() + "-" + tc.architecture.Name()
 }
 
