@@ -6,15 +6,20 @@ package unikraft
 
 const (
 	// Environmental variables recognized by Unikraft's build system.
-	UK_NAME        = "CONFIG_UK_NAME"
-	UK_DEFNAME     = "CONFIG_UK_DEFNAME"
-	UK_CONFIG      = "CONFIG_UK_CONFIG"
-	UK_FULLVERSION = "CONFIG_UK_FULLVERSION"
-	UK_CODENAME    = "CONFIG_UK_CODENAME"
-	UK_ARCH        = "CONFIG_UK_ARCH"
-	UK_BASE        = "CONFIG_UK_BASE"
-	UK_APP         = "CONFIG_UK_APP"
-	UK_DEFCONFIG   = "UK_DEFCONFIG"
+	UK_NAME          = "CONFIG_UK_NAME"
+	UK_DEFNAME       = "CONFIG_UK_DEFNAME"
+	UK_CONFIG        = "CONFIG_UK_CONFIG"
+	UK_FULLVERSION   = "CONFIG_UK_FULLVERSION"
+	UK_CODENAME      = "CONFIG_UK_CODENAME"
+	UK_ARCH          = "CONFIG_UK_ARCH"
+	UK_BASE          = "CONFIG_UK_BASE"
+	UK_APP           = "CONFIG_UK_APP"
+	UK_DEFCONFIG     = "UK_DEFCONFIG"
+	KCONFIG_APP_DIR  = "KCONFIG_APP_DIR"
+	KCONFIG_LIB_DIR  = "KCONFIG_LIB_DIR"
+	KCONFIG_LIB_IN   = "KCONFIG_LIB_IN"
+	KCONFIG_PLAT_DIR = "KCONFIG_PLAT_DIR"
+	KCONFIG_PLAT_IN  = "KCONFIG_PLAT_IN"
 
 	// Filenames which represent ecosystem files
 	Config_uk     = "Config.uk"
