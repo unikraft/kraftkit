@@ -86,8 +86,19 @@ func (ac ApplicationConfig) Unikraft() (core.UnikraftConfig, error) {
 }
 
 // Libraries returns the application libraries' configurations
-func (ac ApplicationConfig) Libraries() (lib.Libraries, error) {
-	return ac.libraries, nil
+func (ac ApplicationConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
+	uklibs, err := ac.unikraft.Libraries(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	libs := ac.libraries
+
+	for _, uklib := range uklibs {
+		libs[uklib.Name()] = uklib
+	}
+
+	return libs, nil
 }
 
 // Targets returns the application's targets
