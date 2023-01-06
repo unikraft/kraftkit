@@ -18,8 +18,10 @@ const (
 
 	// Filenames which represent ecosystem files
 	Config_uk     = "Config.uk"
-	Makefile_uk   = "Makefile.uk"
 	Exportsyms_uk = "exportsyms.uk"
+	Linker_uk     = "Linker.uk"
+	Localsyms_uk  = "localsyms.uk"
+	Makefile_uk   = "Makefile.uk"
 
 	// Built-in paths
 	VendorDir = ".unikraft"
