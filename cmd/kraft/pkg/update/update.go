@@ -75,9 +75,5 @@ func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := model.Start(); err != nil {
-		return err
-	}
-
-	return nil
+	return model.Start()
 }
