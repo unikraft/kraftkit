@@ -146,8 +146,7 @@ func (pt *ProcessTree) Start() error {
 	tprog = tea.NewProgram(pt, teaOpts...)
 
 	go func() {
-		err := tprog.Start()
-		if err == nil {
+		if _, err := tprog.Run(); err != nil {
 			pt.errChan <- pt.err
 		} else {
 			pt.errChan <- err

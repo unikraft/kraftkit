@@ -87,8 +87,7 @@ func (pd *ParaProgress) Start() error {
 	tprog = tea.NewProgram(pd, teaOpts...)
 
 	go func() {
-		err := tprog.Start()
-		if err == nil {
+		if _, err := tprog.Run(); err != nil {
 			pd.errChan <- pd.err
 		} else {
 			pd.errChan <- err
@@ -169,7 +168,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if complete == len(md.processes) {
 		md.quitting = true
-		return md, tea.Sequentially(tea.Batch(cmds...), tea.Quit)
+		return md, tea.Sequence(tea.Batch(cmds...), tea.Quit)
 	}
 
 	return md, tea.Batch(cmds...)
