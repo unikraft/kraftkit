@@ -204,12 +204,12 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (gp GitProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popts ...pack.PullOption) error {
 	if useGit {
-		return pullGit(ctx, manifest, popts, ppopts)
+		return pullGit(ctx, manifest, popts...)
 	}
 
-	return pullArchive(ctx, manifest, popts, ppopts)
+	return pullArchive(ctx, manifest, popts...)
 }
 
 func (gp GitProvider) String() string {

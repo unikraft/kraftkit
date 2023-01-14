@@ -22,29 +22,18 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/component"
 )
 
-type ManifestManager struct {
-	opts *packmanager.PackageManagerOptions
-}
+type ManifestManager struct{}
 
 // useGit is a local variable used within the context of the manifest package
 // and is dynamically injected as a CLI option.
 var useGit = false
 
 func init() {
-	options, err := packmanager.NewPackageManagerOptions()
-	if err != nil {
-		panic(fmt.Sprintf("could not register package manager options: %s", err))
-	}
-
-	manager, err := NewManifestPackageManagerFromOptions(options)
-	if err != nil {
-		panic(fmt.Sprintf("could not register package manager: %s", err))
-	}
-
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestContext, manager)
+	packmanager.RegisterPackageManager(ManifestContext, ManifestManager{})
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
@@ -56,33 +45,6 @@ func init() {
 			"Use Git when pulling sources",
 		),
 	)
-}
-
-func NewManifestPackageManagerFromOptions(opts *packmanager.PackageManagerOptions) (packmanager.PackageManager, error) {
-	return ManifestManager{
-		opts: opts,
-	}, nil
-}
-
-// NewPackage initializes a new package
-func (mm ManifestManager) NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions) ([]pack.Package, error) {
-	p, err := NewPackageFromOptions(ctx, opts, nil)
-	return []pack.Package{p}, err
-}
-
-// Options allows you to view the current options.
-func (mm ManifestManager) Options() *packmanager.PackageManagerOptions {
-	return mm.opts
-}
-
-func (mm ManifestManager) ApplyOptions(pmopts ...packmanager.PackageManagerOption) error {
-	for _, opt := range pmopts {
-		if err := opt(mm.opts); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
@@ -198,25 +160,19 @@ func (mm ManifestManager) RemoveSource(ctx context.Context, source string) error
 	return config.M(ctx).Write(false)
 }
 
-// Push the resulting package to the supported registry of the implementation.
-func (mm ManifestManager) Push(ctx context.Context, path string) error {
-	return fmt.Errorf("not implemented pack.ManifestManager.Pushh")
+func (mm ManifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+	return nil, fmt.Errorf("not implemented manifest.ManifestManager.Pack")
 }
 
-// Pull a package from the support registry of the implementation.
-func (mm ManifestManager) Pull(ctx context.Context, path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
-	if _, err := mm.IsCompatible(ctx, path); err != nil {
-		return nil, err
-	}
-
-	return nil, fmt.Errorf("not implemented pack.ManifestManager.Pull")
+func (mm ManifestManager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
+	return nil, fmt.Errorf("not implemented manifest.ManifestManager.Unpack")
 }
 
 func (um ManifestManager) From(sub string) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
+func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([]pack.Package, error) {
 	var err error
 	var index *ManifestIndex
 	var allManifests []*Manifest
@@ -331,7 +287,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageWithVersion(ctx, manifest, version, popts...)
+				p, err := NewPackageFromManifestWithVersion(ctx, manifest, version, mopts...)
 				if err != nil {
 					log.G(ctx).Warnf("%v", err)
 					continue
@@ -342,7 +298,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 				packages = append(packages, p)
 			}
 		} else {
-			packs, err := NewPackageFromManifest(ctx, manifest, popts...)
+			more, err := NewPackageFromManifest(ctx, manifest, mopts...)
 			if err != nil {
 				log.G(ctx).Warnf("%v", err)
 				continue
@@ -350,7 +306,7 @@ func (mm ManifestManager) Catalog(ctx context.Context, query packmanager.Catalog
 				// return nil, err
 			}
 
-			packages = append(packages, packs)
+			packages = append(packages, more)
 		}
 	}
 

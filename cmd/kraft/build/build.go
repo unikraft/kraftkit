@@ -152,7 +152,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		proc := paraprogress.NewProcess(
-			fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
+			fmt.Sprintf("pulling %s", packages[0].Name()),
 			func(ctx context.Context, w func(progress float64)) error {
 				return packages[0].Pull(
 					ctx,
@@ -259,12 +259,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	if len(missingPacks) > 0 {
 		for _, p := range missingPacks {
-			if p.Options() == nil {
-				return fmt.Errorf("unexpected error occurred please try again")
-			}
 			p := p // loop closure
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
+				fmt.Sprintf("pulling %s", p.Name()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
 						ctx,

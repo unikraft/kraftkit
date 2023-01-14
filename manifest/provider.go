@@ -19,8 +19,8 @@ type Provider interface {
 	// Provider
 	Manifests() ([]*Manifest, error)
 
-	// Pull from the provider
-	PullPackage(context.Context, *Manifest, *pack.PackageOptions, *pack.PullPackageOptions) error
+	// PullManifest from the provider.
+	PullManifest(context.Context, *Manifest, ...pack.PullOption) error
 
 	// String returns the name of the provider
 	fmt.Stringer

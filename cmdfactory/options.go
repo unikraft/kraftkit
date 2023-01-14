@@ -24,7 +24,7 @@ type CliOptions struct {
 	ioStreams      *iostreams.IOStreams
 	logger         *logrus.Entry
 	configManager  func() (*config.ConfigManager, error)
-	packageManager func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error)
+	packageManager func() (packmanager.PackageManager, error)
 	pluginManager  func() (*plugins.PluginManager, error)
 	httpClient     func() (*http.Client, error)
 }
@@ -227,7 +227,7 @@ func WithDefaultHTTPClient() CliOption {
 // with the command.
 func WithPackageManager(pm packmanager.PackageManager) CliOption {
 	return func(copts *CliOptions) {
-		copts.packageManager = func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
+		copts.packageManager = func() (packmanager.PackageManager, error) {
 			return pm, nil
 		}
 	}
@@ -241,13 +241,10 @@ func WithDefaultPackageManager() CliOption {
 			return
 		}
 
-		copts.packageManager = func(opts ...packmanager.PackageManagerOption) (packmanager.PackageManager, error) {
-			options, err := packmanager.NewPackageManagerOptions()
-			if err != nil {
-				return nil, err
-			}
-
-			return packmanager.NewUmbrellaManagerFromOptions(options)
+		copts.packageManager = func() (packmanager.PackageManager, error) {
+			// TODO: Add configuration option that allows us to statically set a
+			// preferred package manager.
+			return packmanager.UmbrellaManager{}, nil
 		}
 	}
 }

@@ -76,8 +76,8 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	return mip.index.Manifests, nil
 }
 
-func (mip ManifestIndexProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullPackage")
+func (mip ManifestIndexProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullManifest")
 }
 
 func (mip ManifestIndexProvider) String() string {

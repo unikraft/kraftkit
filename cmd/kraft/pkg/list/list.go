@@ -98,7 +98,6 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		packages, err = packmanager.G(ctx).Catalog(
 			ctx,
 			query,
-			pack.WithWorkdir(workdir),
 		)
 		if err != nil {
 			return err
@@ -123,9 +122,9 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	table.EndRow()
 
 	for _, pack := range packages {
-		table.AddField(string(pack.Options().Type), nil, nil)
+		table.AddField(string(pack.Type()), nil, nil)
 		table.AddField(pack.Name(), nil, nil)
-		table.AddField(pack.Options().Version, nil, nil)
+		table.AddField(pack.Version(), nil, nil)
 		table.AddField(pack.Format(), nil, nil)
 		table.EndRow()
 	}

@@ -137,12 +137,12 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (ghp GitHubProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func (ghp GitHubProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
 	if useGit {
-		return pullGit(ctx, manifest, popts, ppopts)
+		return pullGit(ctx, manifest, opts...)
 	}
 
-	return pullArchive(ctx, manifest, popts, ppopts)
+	return pullArchive(ctx, manifest, opts...)
 }
 
 func (ghp GitHubProvider) String() string {

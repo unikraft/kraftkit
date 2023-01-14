@@ -4,32 +4,30 @@
 // You may not use this file except in compliance with the License.
 package pack
 
-import "context"
+import (
+	"context"
+
+	"kraftkit.sh/unikraft"
+)
 
 type Package interface {
-	// Options allows you to view the current options.
-	Options() *PackageOptions
+	// Type returns the component type that this package encapsulates.
+	Type() unikraft.ComponentType
 
-	// ApplyOptions allows one to update the options of a package
-	ApplyOptions(opts ...PackageOption) error
-
-	// Determine if the provided path is a compatible media type
-	Compatible(string) bool
-
-	// Name is the simple package name
+	// Name returns the name of the component within this package.
 	Name() string
 
-	// CanonicalName represents the full name which can be understood by the
-	// respective package manager.
-	CanonicalName() string
+	// Version returns the version that is contained within this package.
+	Version() string
 
-	// Package a package
-	Pack(context.Context) error
+	// Metadata returns any additional metadata associated with this package.
+	Metadata() any
 
-	// Pull retreives the package artifacts given the context of the
-	// PackageOptions and allows for customization of the pull via the input
-	// optional PullPackageOptions
-	Pull(context.Context, ...PullPackageOption) error
+	// Push the package to a remotely retrievable destination.
+	Push(context.Context, ...PushOption) error
+
+	// Pull retreives the package from a remotely retrievable location.
+	Pull(context.Context, ...PullOption) error
 
 	// Format returns the name of the implementation.
 	Format() string

@@ -17,8 +17,13 @@ import (
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
-func pullGit(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	if len(ppopts.Workdir()) == 0 {
+func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	popts, err := pack.NewPullOptions(opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(popts.Workdir()) == 0 {
 		return fmt.Errorf("cannot Git clone manifest package without working directory")
 	}
 
@@ -32,7 +37,7 @@ func pullGit(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions
 		FetchOptions: &git.FetchOptions{
 			RemoteCallbacks: git.RemoteCallbacks{
 				TransferProgressCallback: func(stats git.TransferProgress) git.ErrorCode {
-					ppopts.OnProgress(float64(stats.IndexedObjects) / float64(stats.TotalObjects))
+					popts.OnProgress(float64(stats.IndexedObjects) / float64(stats.TotalObjects))
 					return 0
 				},
 			},
@@ -40,8 +45,11 @@ func pullGit(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions
 		CheckoutOpts: &git.CheckoutOptions{
 			Strategy: git.CheckoutSafe,
 		},
-		CheckoutBranch: popts.Version,
 		Bare:           false,
+	}
+
+	if popts.Version() != "" {
+		copts.CheckoutBranch = popts.Version()
 	}
 
 	// TODO: Authetication.  This needs to be handled via the authentication
@@ -57,7 +65,7 @@ func pullGit(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions
 	// }
 
 	local, err := unikraft.PlaceComponent(
-		ppopts.Workdir(),
+		popts.Workdir(),
 		manifest.Type,
 		manifest.Name,
 	)

@@ -39,19 +39,24 @@ func (pp *pullProgressArchive) Write(p []byte) (n int, err error) {
 
 // pullArchive is used internally to pull a specific Manifest resource using the
 // conventional archive.
-func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
+func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	popts, err := pack.NewPullOptions(opts...)
+	if err != nil {
+		return err
+	}
+
 	resource, cache, checksum, err := resourceCacheChecksum(manifest)
 	if err != nil {
 		return err
 	}
 
 	pp := &pullProgressArchive{
-		onProgress: ppopts.OnProgress,
+		onProgress: popts.OnProgress,
 		total:      0,
 		downloaded: 0,
 	}
 
-	if f, err := os.Stat(cache); !ppopts.UseCache() || err != nil || f.Size() == 0 {
+	if f, err := os.Stat(cache); !popts.UseCache() || err != nil || f.Size() == 0 {
 		log.G(ctx).WithFields(logrus.Fields{
 			"url":    resource,
 			"method": "HEAD",
@@ -106,7 +111,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 			return err
 		}
 
-		if ppopts.CalculateChecksum() {
+		if popts.CalculateChecksum() {
 			log.G(ctx).Debugf("calculating checksum for manifest package...")
 
 			if len(checksum) == 0 {
@@ -147,9 +152,9 @@ func pullArchive(ctx context.Context, manifest *Manifest, popts *pack.PackageOpt
 	}
 
 	local := cache
-	if len(ppopts.Workdir()) > 0 {
+	if len(popts.Workdir()) > 0 {
 		local, err = unikraft.PlaceComponent(
-			ppopts.Workdir(),
+			popts.Workdir(),
 			manifest.Type,
 			manifest.Name,
 		)

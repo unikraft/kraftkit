@@ -10,6 +10,7 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft/component"
 )
 
 var packageManagers = make(map[pack.ContextKey]PackageManager)
@@ -32,41 +33,7 @@ func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error 
 
 // UmbrellaManager is an ad-hoc package manager capable of cross managing any
 // registered package manager.
-type UmbrellaManager struct {
-	opts *PackageManagerOptions
-}
-
-func NewUmbrellaManagerFromOptions(opts *PackageManagerOptions) (PackageManager, error) {
-	umbrella := UmbrellaManager{
-		opts: opts,
-	}
-
-	// Apply options on the umbrella manager to all "sub" registered package
-	// managers
-	for _, manager := range packageManagers {
-		for _, o := range opts.opts {
-			if err := o(manager.Options()); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return umbrella, nil
-}
-
-func (um UmbrellaManager) NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions) ([]pack.Package, error) {
-	var packages []pack.Package
-	for _, manager := range packageManagers {
-		packed, err := manager.NewPackageFromOptions(ctx, opts)
-		if err != nil {
-			return packages, err
-		}
-
-		packages = append(packages, packed...)
-	}
-
-	return packages, nil
-}
+type UmbrellaManager struct{}
 
 func (um UmbrellaManager) From(sub string) (PackageManager, error) {
 	for _, manager := range packageManagers {
@@ -76,21 +43,6 @@ func (um UmbrellaManager) From(sub string) (PackageManager, error) {
 	}
 
 	return nil, fmt.Errorf("unknown package manager: %s", sub)
-}
-
-func (um UmbrellaManager) ApplyOptions(pmopts ...PackageManagerOption) error {
-	for _, manager := range packageManagers {
-		if err := manager.ApplyOptions(pmopts...); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Options allows you to view the current options.
-func (um UmbrellaManager) Options() *PackageManagerOptions {
-	return um.opts
 }
 
 // Update retrieves and stores locally a
@@ -129,31 +81,42 @@ func (um UmbrellaManager) RemoveSource(ctx context.Context, source string) error
 	return nil
 }
 
-// Push the resulting package to the supported registry of the implementation.
-func (um UmbrellaManager) Push(ctx context.Context, path string) error {
-	return fmt.Errorf("not implemented: pack.UmbrellaManager.Push")
-}
+func (um UmbrellaManager) Pack(ctx context.Context, entity component.Component, opts ...PackOption) ([]pack.Package, error) {
+	var ret []pack.Package
 
-// Pull a package from the support registry of the implementation.
-func (um UmbrellaManager) Pull(ctx context.Context, path string, opts *pack.PullPackageOptions) ([]pack.Package, error) {
-	var packages []pack.Package
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Pulling %s via %s...", path, manager.Format())
-		parcel, err := manager.Pull(ctx, path, opts)
+		log.G(ctx).Tracef("Packing %s via %s...", entity.Name(), manager.Format())
+		more, err := manager.Pack(ctx, entity, opts...)
 		if err != nil {
 			return nil, err
 		}
 
-		packages = append(packages, parcel...)
+		ret = append(ret, more...)
 	}
 
-	return packages, nil
+	return ret, nil
 }
 
-func (mm UmbrellaManager) Catalog(ctx context.Context, query CatalogQuery, popts ...pack.PackageOption) ([]pack.Package, error) {
+func (um UmbrellaManager) Unpack(ctx context.Context, entity pack.Package, opts ...UnpackOption) ([]component.Component, error) {
+	var ret []component.Component
+
+	for _, manager := range packageManagers {
+		log.G(ctx).Tracef("Unpacking %s via %s...", entity.Name(), manager.Format())
+		more, err := manager.Unpack(ctx, entity, opts...)
+		if err != nil {
+			return nil, err
+		}
+
+		ret = append(ret, more...)
+	}
+
+	return ret, nil
+}
+
+func (mm UmbrellaManager) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		pack, err := manager.Catalog(ctx, query, popts...)
+		pack, err := manager.Catalog(ctx, query)
 		if err != nil {
 			return nil, err
 		}

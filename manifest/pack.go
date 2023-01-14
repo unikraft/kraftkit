@@ -10,37 +10,29 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 )
 
 type ManifestPackage struct {
-	*pack.PackageOptions
-	Provider
-
-	ctx context.Context
+	manifest *Manifest
+	version  string
 }
 
 const (
 	ManifestContext pack.ContextKey = "manifest"
 )
 
-// NewPackageFromOptions generates a manifest implementation of the pack.Package
-// construct based on the input options
-func NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions, provider Provider) (pack.Package, error) {
-	if ctx == nil {
-		return nil, fmt.Errorf("cannot create NewPackageFromOptions without context")
+// NewPackageFromManifestWithVersion generates a new package based on an input
+// manifest which in itself may contain various versions and channels.  With the
+// provided version as a positional parameter, the manifest can be reduced to
+// represent a specific version.
+func NewPackageFromManifestWithVersion(ctx context.Context, manifest *Manifest, version string, opts ...ManifestOption) (pack.Package, error) {
+	// Apply the options to this manifest
+	for _, opt := range opts {
+		if err := opt(manifest); err != nil {
+			return nil, err
+		}
 	}
-
-	return ManifestPackage{
-		PackageOptions: opts,
-		Provider:       provider,
-		ctx:            ctx,
-	}, nil
-}
-
-// NewPackageWithVersion generates a manifest implementation of the pack.Package
-// construct based on the input Manifest for a particular version
-func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version string, popts ...pack.PackageOption) (pack.Package, error) {
-	resource := ""
 
 	var channels []ManifestChannel
 	var versions []ManifestVersion
@@ -49,13 +41,12 @@ func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version stri
 	for _, channel := range manifest.Channels {
 		if channel.Name == version {
 			channels = append(channels, channel)
-			resource = channel.Resource
 		}
 	}
 
 	for _, ver := range manifest.Versions {
 		if ver.Version == version {
-			resource = ver.Resource
+			// resource = ver.Resource
 			versions = append(versions, ver)
 		}
 	}
@@ -63,83 +54,54 @@ func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version stri
 	manifest.Channels = channels
 	manifest.Versions = versions
 
-	// Save the full manifest within the context via the `ContextKey`
-	ctx = context.WithValue(
-		ctx,
-		ManifestContext,
-		manifest,
-	)
-
-	popts = append(popts,
-		pack.WithName(manifest.Name),
-		pack.WithRemoteLocation(resource),
-		pack.WithType(manifest.Type),
-		pack.WithVersion(version),
-	)
-
-	pkgOpts, err := pack.NewPackageOptions(popts...)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare package for target: %s", err)
+	if len(channels) == 0 && len(versions) == 0 {
+		return nil, fmt.Errorf("unknown version: %s", version)
 	}
 
-	return NewPackageFromOptions(ctx, pkgOpts, manifest.Provider)
+	return &ManifestPackage{manifest, version}, nil
 }
 
 // NewPackageFromManifest generates a manifest implementation of the
-// pack.Package construct based on the input Manifest
-func NewPackageFromManifest(ctx context.Context, manifest *Manifest, popts ...pack.PackageOption) (pack.Package, error) {
+// pack.Package construct based on the input Manifest using its default channel
+func NewPackageFromManifest(ctx context.Context, manifest *Manifest, opts ...ManifestOption) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPackageWithVersion(ctx, manifest, channel.Name, popts...)
+	return NewPackageFromManifestWithVersion(ctx, manifest, channel.Name, opts...)
 }
 
-func (mp ManifestPackage) ApplyOptions(opts ...pack.PackageOption) error {
-	for _, o := range opts {
-		if err := o(mp.PackageOptions); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (mp ManifestPackage) Options() *pack.PackageOptions {
-	return mp.PackageOptions
+func (mp ManifestPackage) Type() unikraft.ComponentType {
+	return mp.manifest.Type
 }
 
 func (mp ManifestPackage) Name() string {
-	return mp.PackageOptions.Name
+	return mp.manifest.Name
 }
 
-func (mp ManifestPackage) CanonicalName() string {
-	return string(mp.PackageOptions.Type) + "/" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
+func (mp ManifestPackage) Version() string {
+	return mp.version
 }
 
-func (mp ManifestPackage) Pack(ctx context.Context) error {
-	return fmt.Errorf("not implemented: pack.manifest.Pack")
+func (mp ManifestPackage) Metadata() any {
+	return mp.manifest
 }
 
-func (mp ManifestPackage) Compatible(ref string) bool {
-	return false
+func (mp ManifestPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
+	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
 }
 
-func (mp ManifestPackage) Pull(ctx context.Context, opts ...pack.PullPackageOption) error {
-	log.G(mp.ctx).Infof("pulling manifest package %s", mp.CanonicalName())
+func (mp ManifestPackage) Pull(ctx context.Context, opts ...pack.PullOption) error {
+	log.G(ctx).Infof("pulling manifest package %s", mp.Name())
 
-	popts, err := pack.NewPullPackageOptions(opts...)
-	if err != nil {
-		return err
+	if mp.manifest.Provider == nil {
+		return fmt.Errorf("uninitialized manifest provider")
 	}
 
-	manifest := mp.ctx.Value(ManifestContext).(*Manifest)
-	if manifest == nil {
-		return fmt.Errorf("package does not contain manifest context")
-	}
+	opts = append(opts, pack.WithPullVersion(mp.version))
 
-	return mp.PullPackage(ctx, manifest, mp.PackageOptions, popts)
+	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache
