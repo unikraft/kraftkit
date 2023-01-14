@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
+	"kraftkit.sh/iostreams"
 	// "kraftkit.sh/log"
 )
 
@@ -75,7 +76,7 @@ func (pd *ParaProgress) Start() error {
 	teaOpts := []tea.ProgramOption{}
 
 	if pd.norender {
-		teaOpts = append(teaOpts, tea.WithoutRenderer())
+		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(iostreams.G(pd.ctx).In))
 	} else {
 		// Set this super early (even before bubbletea), as fast exiting processes
 		// may not have received the window size update and therefore pd.width is

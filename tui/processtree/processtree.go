@@ -135,7 +135,7 @@ func (pt *ProcessTree) Start() error {
 	var teaOpts []tea.ProgramOption
 
 	if pt.norender {
-		teaOpts = []tea.ProgramOption{tea.WithoutRenderer()}
+		teaOpts = []tea.ProgramOption{tea.WithoutRenderer(), tea.WithInput(iostreams.G(pt.ctx).In)}
 	} else {
 		// Set this super early (even before bubbletea), as fast exiting processes
 		// may not have received the window size update and therefore pt.width is
