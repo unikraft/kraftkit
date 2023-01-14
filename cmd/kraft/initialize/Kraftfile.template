@@ -1,0 +1,11 @@
+specification: v0.5
+
+unikraft: stable
+
+libraries:
+  newlib: stable
+
+targets:
+  - name: {{.Name}} 
+    architecture: {{.Architecture}}
+    platform: {{.Platform}}
