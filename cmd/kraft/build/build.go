@@ -333,8 +333,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(selected) == 0 {
-		log.G(ctx).Info("no selected to build")
-		return nil
+		return fmt.Errorf("no targets selected to build")
 	}
 
 	var mopts []make.MakeOption
