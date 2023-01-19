@@ -10,7 +10,7 @@ require (
 	mvdan.cc/gofumpt v0.4.0
 )
 
-require ( 
+require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect

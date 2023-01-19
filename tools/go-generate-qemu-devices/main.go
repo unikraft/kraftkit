@@ -119,7 +119,6 @@ func main() {
 			// Perform the invocation
 			var optionsRaw bytes.Buffer
 			execFindOptions, err := exec.NewProcess(
-				ctx,
 				*qemuBinary,
 				[]string{"-device", fmt.Sprintf("%s,help", device.Name)},
 				exec.WithStdout(bufio.NewWriter(&optionsRaw)),
@@ -129,7 +128,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			if err := execFindOptions.StartAndWait(); err != nil {
+			if err := execFindOptions.StartAndWait(ctx); err != nil {
 				glog.V(1).Infof("could not invoke qemu: %v", err)
 			}
 
