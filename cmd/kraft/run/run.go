@@ -197,9 +197,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
 
-			sp := selection.New("select target:",
-				selection.Choices(project.TargetNames()),
-			)
+			sp := selection.New("select target:", project.TargetNames())
 			sp.Filter = nil
 
 			selectedTarget, err := sp.RunPrompt()
@@ -207,7 +205,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			target = selectedTarget.String
+			target = selectedTarget
 
 		} else if target != "" && utils.Contains(project.TargetNames(), target) {
 			return fmt.Errorf("unknown target: %s", target)
