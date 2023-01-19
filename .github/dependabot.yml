@@ -15,3 +15,33 @@ updates:
       - "craciunoiuc"
     assignees:
       - "nderjung"
+  - package-ecosystem: "gomod"
+    directory: "/tools/go-generate-qemu-devices"
+    target-branch: "staging"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "09:00"
+    commit-message:
+      prefix: "gomod" # Prefix messages with
+      include: "scope" # List all updated dependencies
+    reviewers:
+      - "nderjung"
+      - "craciunoiuc"
+    assignees:
+      - "nderjung"
+  - package-ecosystem: "gomod"
+    directory: "/tools/protoc-gen-go-netconn"
+    target-branch: "staging"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "09:00"
+    commit-message:
+      prefix: "gomod" # Prefix messages with
+      include: "scope" # List all updated dependencies
+    reviewers:
+      - "nderjung"
+      - "craciunoiuc"
+    assignees:
+      - "nderjung"
