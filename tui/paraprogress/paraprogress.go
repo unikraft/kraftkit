@@ -168,7 +168,11 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if complete == len(md.processes) {
 		md.quitting = true
-		return md, tea.Sequence(tea.Batch(cmds...), tea.Quit)
+		batch := tea.Batch(cmds...)
+		if batch == nil {
+			return md, tea.Quit
+		}
+		return md, tea.Sequence(batch, tea.Quit)
 	}
 
 	return md, tea.Batch(cmds...)
