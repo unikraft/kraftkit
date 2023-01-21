@@ -67,6 +67,14 @@ func WithName(name string) ApplicationOption {
 	}
 }
 
+// WithVersion sets the application version
+func WithVersion(version string) ApplicationOption {
+	return func(ac *ApplicationConfig) error {
+		ac.version = version
+		return nil
+	}
+}
+
 // WithWorkingDir sets the application's working directory
 func WithWorkingDir(workingDir string) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
