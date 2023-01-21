@@ -83,6 +83,15 @@ func WithWorkingDir(workingDir string) ApplicationOption {
 	}
 }
 
+// WithSource sets the library's source which indicates where it was retrieved
+// and in component context and not the origin.
+func WithSource(source string) ApplicationOption {
+	return func(ac *ApplicationConfig) error {
+		ac.source = source
+		return nil
+	}
+}
+
 // WithFilename sets the application's file name
 func WithFilename(filename string) ApplicationOption {
 	return func(ac *ApplicationConfig) error {
