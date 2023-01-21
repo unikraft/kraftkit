@@ -116,8 +116,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		_, err = project.Components()
-		if err != nil {
+		if _, err = project.Components(); err != nil {
 			// Pull the template from the package manager
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
