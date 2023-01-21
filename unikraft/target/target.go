@@ -5,6 +5,7 @@
 package target
 
 import (
+	"context"
 	"fmt"
 
 	"kraftkit.sh/initrd"
@@ -144,7 +145,7 @@ func (tc TargetConfig) ArchPlatString() string {
 	return tc.platform.Name() + "-" + tc.architecture.Name()
 }
 
-func (tc TargetConfig) PrintInfo() string {
+func (tc TargetConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }
 

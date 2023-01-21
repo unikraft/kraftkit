@@ -87,7 +87,7 @@ func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
 	return uc.kconfig
 }
 
-func (uc UnikraftConfig) PrintInfo() string {
+func (uc UnikraftConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.core.UnikraftConfig.PrintInfo"
 }
 

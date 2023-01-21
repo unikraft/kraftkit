@@ -5,6 +5,7 @@
 package arch
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -106,6 +107,6 @@ func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 	return values
 }
 
-func (ac ArchitectureConfig) PrintInfo() string {
+func (ac ArchitectureConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo"
 }

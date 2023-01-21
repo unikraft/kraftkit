@@ -5,6 +5,7 @@
 package plat
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -87,6 +88,6 @@ func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	return values
 }
 
-func (pc PlatformConfig) PrintInfo() string {
+func (pc PlatformConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.PlatformConfig.PrintInfo"
 }

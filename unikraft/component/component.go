@@ -5,6 +5,7 @@
 package component
 
 import (
+	"context"
 	"fmt"
 
 	"kraftkit.sh/kconfig"
@@ -37,7 +38,7 @@ type Component interface {
 	KConfig() kconfig.KeyValueMap
 
 	// PrintInfo returns human-readable information about the component
-	PrintInfo() string
+	PrintInfo(context.Context) string
 }
 
 // NameAndVersion accepts a component and provids the canonical string

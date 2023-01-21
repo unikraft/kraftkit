@@ -92,7 +92,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(

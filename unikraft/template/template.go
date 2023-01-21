@@ -34,6 +34,8 @@
 package template
 
 import (
+	"context"
+
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -92,6 +94,6 @@ func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
 }
 
 // PrintInfo prints information about the template
-func (tc TemplateConfig) PrintInfo() string {
-	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
+func (tc TemplateConfig) PrintInfo(ctx context.Context) string {
+	return "not implemented: unikraft.template.TemplateConfig.PrintInfo"
 }

@@ -540,7 +540,7 @@ func (ac ApplicationConfig) Path() string {
 	return ac.workingDir
 }
 
-func (ac ApplicationConfig) PrintInfo() string {
+func (ac ApplicationConfig) PrintInfo(ctx context.Context) string {
 	tree := treeprint.NewWithRoot(component.NameAndVersion(ac))
 
 	tree.AddBranch(component.NameAndVersion(ac.unikraft))

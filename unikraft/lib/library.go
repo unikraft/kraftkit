@@ -204,7 +204,7 @@ func (lc LibraryConfig) IsUnpacked() bool {
 	return false
 }
 
-func (lc LibraryConfig) PrintInfo() string {
+func (lc LibraryConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
 }
 

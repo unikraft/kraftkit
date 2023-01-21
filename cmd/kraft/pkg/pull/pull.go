@@ -287,7 +287,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if project != nil {
-		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 	}
 
 	return nil
