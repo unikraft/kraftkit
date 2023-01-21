@@ -96,11 +96,11 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		iface = groupXFieldsIntoExtensions(iface)
 
 		if n, ok := iface["name"]; ok {
-			name, ok = n.(string)
+			name = n.(string)
 		}
 
 		if n, ok := iface["outdir"]; ok {
-			name, ok = n.(string)
+			name = n.(string)
 		}
 
 		popts.kraftfiles[i].config = iface

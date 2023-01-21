@@ -45,7 +45,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		CheckoutOpts: &git.CheckoutOptions{
 			Strategy: git.CheckoutSafe,
 		},
-		Bare:           false,
+		Bare: false,
 	}
 
 	if popts.Version() != "" {
