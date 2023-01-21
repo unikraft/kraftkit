@@ -244,7 +244,7 @@ func WithDefaultPackageManager() CliOption {
 		copts.packageManager = func() (packmanager.PackageManager, error) {
 			// TODO: Add configuration option that allows us to statically set a
 			// preferred package manager.
-			return packmanager.UmbrellaManager{}, nil
+			return packmanager.NewUmbrellaManager(), nil
 		}
 	}
 }

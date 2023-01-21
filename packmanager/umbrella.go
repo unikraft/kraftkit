@@ -31,11 +31,18 @@ func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error 
 	return nil
 }
 
-// UmbrellaManager is an ad-hoc package manager capable of cross managing any
+// umbrella is an ad-hoc package manager capable of cross managing any
 // registered package manager.
-type UmbrellaManager struct{}
+type umbrella struct{}
 
-func (um UmbrellaManager) From(sub string) (PackageManager, error) {
+// NewUmbrellaManager returns a `PackageManager` which can be used to manipulate
+// multiple `PackageManager`s.  The purpose is to be able to package, unpackage,
+// search and generally manipulate packages of multiple types simultaneously.
+func NewUmbrellaManager() PackageManager {
+	return umbrella{}
+}
+
+func (u umbrella) From(sub string) (PackageManager, error) {
 	for _, manager := range packageManagers {
 		if manager.Format() == sub {
 			return manager, nil
@@ -45,8 +52,7 @@ func (um UmbrellaManager) From(sub string) (PackageManager, error) {
 	return nil, fmt.Errorf("unknown package manager: %s", sub)
 }
 
-// Update retrieves and stores locally a
-func (um UmbrellaManager) Update(ctx context.Context) error {
+func (u umbrella) Update(ctx context.Context) error {
 	for _, manager := range packageManagers {
 		err := manager.Update(ctx)
 		if err != nil {
@@ -57,7 +63,7 @@ func (um UmbrellaManager) Update(ctx context.Context) error {
 	return nil
 }
 
-func (um UmbrellaManager) AddSource(ctx context.Context, source string) error {
+func (u umbrella) AddSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
 		log.G(ctx).Tracef("Adding source %s via %s...", source, manager.Format())
 		err := manager.AddSource(ctx, source)
@@ -69,7 +75,7 @@ func (um UmbrellaManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-func (um UmbrellaManager) RemoveSource(ctx context.Context, source string) error {
+func (u umbrella) RemoveSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
 		log.G(ctx).Tracef("Removing source %s via %s...", source, manager.Format())
 		err := manager.RemoveSource(ctx, source)
@@ -81,7 +87,7 @@ func (um UmbrellaManager) RemoveSource(ctx context.Context, source string) error
 	return nil
 }
 
-func (um UmbrellaManager) Pack(ctx context.Context, entity component.Component, opts ...PackOption) ([]pack.Package, error) {
+func (u umbrella) Pack(ctx context.Context, entity component.Component, opts ...PackOption) ([]pack.Package, error) {
 	var ret []pack.Package
 
 	for _, manager := range packageManagers {
@@ -97,7 +103,7 @@ func (um UmbrellaManager) Pack(ctx context.Context, entity component.Component, 
 	return ret, nil
 }
 
-func (um UmbrellaManager) Unpack(ctx context.Context, entity pack.Package, opts ...UnpackOption) ([]component.Component, error) {
+func (u umbrella) Unpack(ctx context.Context, entity pack.Package, opts ...UnpackOption) ([]component.Component, error) {
 	var ret []component.Component
 
 	for _, manager := range packageManagers {
@@ -113,7 +119,7 @@ func (um UmbrellaManager) Unpack(ctx context.Context, entity pack.Package, opts 
 	return ret, nil
 }
 
-func (mm UmbrellaManager) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Package, error) {
+func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
 		pack, err := manager.Catalog(ctx, query)
@@ -127,9 +133,7 @@ func (mm UmbrellaManager) Catalog(ctx context.Context, query CatalogQuery) ([]pa
 	return packages, nil
 }
 
-// IsCompatible iterates through all package managers and returns the first
-// package manager which is compatible with the provided source
-func (mm UmbrellaManager) IsCompatible(ctx context.Context, source string) (PackageManager, error) {
+func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, error) {
 	var err error
 	var pm PackageManager
 	for _, manager := range packageManagers {
@@ -142,6 +146,6 @@ func (mm UmbrellaManager) IsCompatible(ctx context.Context, source string) (Pack
 	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
-func (um UmbrellaManager) Format() string {
+func (u umbrella) Format() string {
 	return string(UmbrellaContext)
 }
