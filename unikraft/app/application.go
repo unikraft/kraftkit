@@ -121,6 +121,10 @@ type Application interface {
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
 	Components() ([]component.Component, error)
+
+	// WithTarget is a reducer that returns the application with only the provided
+	// target.
+	WithTarget(target.Target) (Application, error)
 }
 
 type ApplicationConfig struct {
@@ -626,4 +630,10 @@ func (app ApplicationConfig) PrintInfo(ctx context.Context) string {
 	}
 
 	return tree.String()
+}
+
+func (app ApplicationConfig) WithTarget(targ target.Target) (Application, error) {
+	ret := app
+	ret.targets = target.Targets{targ.(target.TargetConfig)}
+	return ret, nil
 }
