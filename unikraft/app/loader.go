@@ -32,8 +32,8 @@ const (
 	DefaultConfigFile = ".config"
 )
 
-func NewApplicationFromInterface(ctx context.Context, iface map[string]interface{}, popts *ProjectOptions) (*ApplicationConfig, error) {
-	app := ApplicationConfig{}
+func NewApplicationFromInterface(ctx context.Context, iface map[string]interface{}, popts *ProjectOptions) (Application, error) {
+	app := application{}
 
 	name := ""
 	if n, ok := iface["name"]; ok {

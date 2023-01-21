@@ -18,14 +18,15 @@ import (
 	"kraftkit.sh/unikraft/template"
 )
 
-// ApplicationOption is a function that operates on an ApplicationConfig
-type ApplicationOption func(ao *ApplicationConfig) error
+// ApplicationOption is a function that manipulates the instantiation of an
+// Application.
+type ApplicationOption func(ao *application) error
 
 // NewApplicationFromOptions accepts a series of options and returns a rendered
 // *ApplicationConfig structure
 func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) {
 	var err error
-	ac := &ApplicationConfig{
+	ac := &application{
 		configuration: kconfig.KeyValueMap{},
 	}
 
@@ -61,7 +62,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 
 // WithName sets the application component name
 func WithName(name string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.name = name
 		return nil
 	}
@@ -69,7 +70,7 @@ func WithName(name string) ApplicationOption {
 
 // WithVersion sets the application version
 func WithVersion(version string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.version = version
 		return nil
 	}
@@ -77,7 +78,7 @@ func WithVersion(version string) ApplicationOption {
 
 // WithWorkingDir sets the application's working directory
 func WithWorkingDir(workingDir string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.workingDir = workingDir
 		return nil
 	}
@@ -86,7 +87,7 @@ func WithWorkingDir(workingDir string) ApplicationOption {
 // WithSource sets the library's source which indicates where it was retrieved
 // and in component context and not the origin.
 func WithSource(source string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.source = source
 		return nil
 	}
@@ -94,7 +95,7 @@ func WithSource(source string) ApplicationOption {
 
 // WithFilename sets the application's file name
 func WithFilename(filename string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.filename = filename
 		return nil
 	}
@@ -102,7 +103,7 @@ func WithFilename(filename string) ApplicationOption {
 
 // WithOutDir sets the application's output directory
 func WithOutDir(outDir string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.outDir = outDir
 		return nil
 	}
@@ -110,7 +111,7 @@ func WithOutDir(outDir string) ApplicationOption {
 
 // WithTemplate sets the application's template
 func WithTemplate(template template.TemplateConfig) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.template = template
 		return nil
 	}
@@ -118,7 +119,7 @@ func WithTemplate(template template.TemplateConfig) ApplicationOption {
 
 // WithUnikraft sets the application's core
 func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.unikraft = unikraft
 		return nil
 	}
@@ -126,7 +127,7 @@ func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
 
 // WithLibraries sets the application's library list
 func WithLibraries(libraries lib.Libraries) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.libraries = libraries
 		return nil
 	}
@@ -134,7 +135,7 @@ func WithLibraries(libraries lib.Libraries) ApplicationOption {
 
 // WithTargets sets the application's target list
 func WithTargets(targets target.Targets) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.targets = targets
 		return nil
 	}
@@ -142,7 +143,7 @@ func WithTargets(targets target.Targets) ApplicationOption {
 
 // WithExtensions sets the application's extension list
 func WithExtensions(extensions component.Extensions) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.extensions = extensions
 		return nil
 	}
@@ -150,7 +151,7 @@ func WithExtensions(extensions component.Extensions) ApplicationOption {
 
 // WithKraftfiles sets the application's kraft yaml files
 func WithKraftfiles(kraftfiles []string) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		ac.kraftfiles = kraftfiles
 		return nil
 	}
@@ -158,7 +159,7 @@ func WithKraftfiles(kraftfiles []string) ApplicationOption {
 
 // WithConfiguration sets the application's kconfig list
 func WithConfiguration(config ...*kconfig.KeyValue) ApplicationOption {
-	return func(ac *ApplicationConfig) error {
+	return func(ac *application) error {
 		if ac.configuration == nil {
 			ac.configuration = kconfig.KeyValueMap{}
 		}

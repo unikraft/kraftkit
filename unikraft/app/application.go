@@ -68,7 +68,7 @@ type Application interface {
 	IsConfigured(target.Target) bool
 
 	// MakeArgs returns the populated `core.MakeArgs` based on the contents of the
-	// instantiated `ApplicationConfig`.  This information can be passed directly
+	// instantiated `application`.  This information can be passed directly
 	// to Unikraft's build system.
 	MakeArgs(target.Target) (*core.MakeArgs, error)
 
@@ -127,7 +127,7 @@ type Application interface {
 	WithTarget(target.Target) (Application, error)
 }
 
-type ApplicationConfig struct {
+type application struct {
 	name          string
 	version       string
 	source        string
@@ -144,39 +144,39 @@ type ApplicationConfig struct {
 	extensions    component.Extensions
 }
 
-func (app ApplicationConfig) Name() string {
+func (app application) Name() string {
 	return app.name
 }
 
-func (app ApplicationConfig) Source() string {
+func (app application) Source() string {
 	return app.source
 }
 
-func (app ApplicationConfig) Version() string {
+func (app application) Version() string {
 	return app.version
 }
 
-func (app ApplicationConfig) WorkingDir() string {
+func (app application) WorkingDir() string {
 	return app.workingDir
 }
 
-func (app ApplicationConfig) Filename() string {
+func (app application) Filename() string {
 	return app.filename
 }
 
-func (app ApplicationConfig) OutDir() string {
+func (app application) OutDir() string {
 	return app.outDir
 }
 
-func (app ApplicationConfig) Template() template.Template {
+func (app application) Template() template.Template {
 	return app.template
 }
 
-func (app ApplicationConfig) Unikraft() core.Unikraft {
+func (app application) Unikraft() core.Unikraft {
 	return app.unikraft
 }
 
-func (app ApplicationConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
+func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
 	uklibs, err := app.unikraft.Libraries(ctx)
 	if err != nil {
 		return nil, err
@@ -191,19 +191,19 @@ func (app ApplicationConfig) Libraries(ctx context.Context) (lib.Libraries, erro
 	return libs, nil
 }
 
-func (app ApplicationConfig) Targets() target.Targets {
+func (app application) Targets() target.Targets {
 	return app.targets
 }
 
-func (app ApplicationConfig) Extensions() component.Extensions {
+func (app application) Extensions() component.Extensions {
 	return app.extensions
 }
 
-func (app ApplicationConfig) Kraftfiles() []string {
+func (app application) Kraftfiles() []string {
 	return app.kraftfiles
 }
 
-func (app ApplicationConfig) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
+func (app application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
 	app.name = merge.Name()
 	app.source = merge.Source()
 	app.version = merge.Version()
@@ -239,7 +239,7 @@ func (app ApplicationConfig) MergeTemplate(ctx context.Context, merge Applicatio
 	return app, nil
 }
 
-func (app ApplicationConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (app application) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(app.workingDir, unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
@@ -248,7 +248,7 @@ func (app ApplicationConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KCo
 	return kconfig.Parse(config_uk, app.KConfig().Override(env...).Slice()...)
 }
 
-func (app ApplicationConfig) KConfig() kconfig.KeyValueMap {
+func (app application) KConfig() kconfig.KeyValueMap {
 	all := kconfig.KeyValueMap{}
 	all.OverrideBy(app.unikraft.KConfig())
 
@@ -259,7 +259,7 @@ func (app ApplicationConfig) KConfig() kconfig.KeyValueMap {
 	return all
 }
 
-func (app ApplicationConfig) KConfigFile(tc target.Target) string {
+func (app application) KConfigFile(tc target.Target) string {
 	k := filepath.Join(app.workingDir, kconfig.DotConfigFileName)
 
 	if tc != nil {
@@ -269,12 +269,12 @@ func (app ApplicationConfig) KConfigFile(tc target.Target) string {
 	return k
 }
 
-func (app ApplicationConfig) IsConfigured(tc target.Target) bool {
+func (app application) IsConfigured(tc target.Target) bool {
 	f, err := os.Stat(app.KConfigFile(tc))
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
-func (app ApplicationConfig) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
+func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	var libraries []string
 
 	for _, library := range app.libraries {
@@ -301,7 +301,7 @@ func (app ApplicationConfig) MakeArgs(tc target.Target) (*core.MakeArgs, error) 
 	return args, nil
 }
 
-func (app ApplicationConfig) Make(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Make(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	mopts = append(mopts,
 		make.WithDirectory(app.unikraft.Path()),
 		make.WithNoPrintDirectory(true),
@@ -329,7 +329,7 @@ func (app ApplicationConfig) Make(ctx context.Context, tc target.Target, mopts .
 	return m.Execute(ctx)
 }
 
-func (app ApplicationConfig) SyncConfig(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) SyncConfig(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -339,7 +339,7 @@ func (app ApplicationConfig) SyncConfig(ctx context.Context, tc target.Target, m
 	)
 }
 
-func (app ApplicationConfig) DefConfig(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+func (app application) DefConfig(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(app.KConfig())
 
@@ -393,7 +393,7 @@ func (app ApplicationConfig) DefConfig(ctx context.Context, tc target.Target, ex
 	)
 }
 
-func (app ApplicationConfig) Configure(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Configure(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -403,7 +403,7 @@ func (app ApplicationConfig) Configure(ctx context.Context, tc target.Target, mo
 	)
 }
 
-func (app ApplicationConfig) Prepare(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Prepare(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -413,7 +413,7 @@ func (app ApplicationConfig) Prepare(ctx context.Context, tc target.Target, mopt
 	)
 }
 
-func (app ApplicationConfig) Clean(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Clean(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -423,7 +423,7 @@ func (app ApplicationConfig) Clean(ctx context.Context, tc target.Target, mopts 
 	)
 }
 
-func (app ApplicationConfig) Properclean(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Properclean(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -433,7 +433,7 @@ func (app ApplicationConfig) Properclean(ctx context.Context, tc target.Target, 
 	)
 }
 
-func (app ApplicationConfig) Fetch(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Fetch(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	return app.Make(
 		ctx,
 		tc,
@@ -443,7 +443,7 @@ func (app ApplicationConfig) Fetch(ctx context.Context, tc target.Target, mopts 
 	)
 }
 
-func (app ApplicationConfig) Set(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Set(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	// Write the configuration to a temporary file
 	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
 	// if err != nil {
@@ -468,7 +468,7 @@ func (app ApplicationConfig) Set(ctx context.Context, tc target.Target, mopts ..
 	return nil
 }
 
-func (app ApplicationConfig) Unset(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+func (app application) Unset(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
 	// // Write the configuration to a temporary file
 	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
 	// if err != nil {
@@ -494,8 +494,8 @@ func (app ApplicationConfig) Unset(ctx context.Context, tc target.Target, mopts 
 }
 
 // Build offers an invocation of the Unikraft build system with the contextual
-// information of the ApplicationConfigs
-func (app ApplicationConfig) Build(ctx context.Context, tc target.Target, opts ...BuildOption) error {
+// information of the applications
+func (app application) Build(ctx context.Context, tc target.Target, opts ...BuildOption) error {
 	bopts := &BuildOptions{}
 	for _, o := range opts {
 		err := o(bopts)
@@ -530,7 +530,7 @@ func (app ApplicationConfig) Build(ctx context.Context, tc target.Target, opts .
 }
 
 // LibraryNames return names for all libraries in this Compose config
-func (app ApplicationConfig) LibraryNames() []string {
+func (app application) LibraryNames() []string {
 	var names []string
 	for k := range app.libraries {
 		names = append(names, k)
@@ -542,7 +542,7 @@ func (app ApplicationConfig) LibraryNames() []string {
 }
 
 // TargetNames return names for all targets in this Compose config
-func (app ApplicationConfig) TargetNames() []string {
+func (app application) TargetNames() []string {
 	var names []string
 	for _, k := range app.targets {
 		names = append(names, k.Name())
@@ -554,7 +554,7 @@ func (app ApplicationConfig) TargetNames() []string {
 }
 
 // TargetByName returns the `*target.TargetConfig` based on an input name
-func (app ApplicationConfig) TargetByName(name string) (target.Target, error) {
+func (app application) TargetByName(name string) (target.Target, error) {
 	if len(name) == 0 {
 		return nil, fmt.Errorf("no target name specified in lookup")
 	}
@@ -570,7 +570,7 @@ func (app ApplicationConfig) TargetByName(name string) (target.Target, error) {
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (app ApplicationConfig) Components() ([]component.Component, error) {
+func (app application) Components() ([]component.Component, error) {
 	components := []component.Component{
 		app.unikraft,
 	}
@@ -594,15 +594,15 @@ func (app ApplicationConfig) Components() ([]component.Component, error) {
 	return components, nil
 }
 
-func (app ApplicationConfig) Type() unikraft.ComponentType {
+func (app application) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
-func (app ApplicationConfig) Path() string {
+func (app application) Path() string {
 	return app.workingDir
 }
 
-func (app ApplicationConfig) PrintInfo(ctx context.Context) string {
+func (app application) PrintInfo(ctx context.Context) string {
 	tree := treeprint.NewWithRoot(component.NameAndVersion(app))
 
 	uk := tree.AddBranch(component.NameAndVersion(app.unikraft))
@@ -632,7 +632,7 @@ func (app ApplicationConfig) PrintInfo(ctx context.Context) string {
 	return tree.String()
 }
 
-func (app ApplicationConfig) WithTarget(targ target.Target) (Application, error) {
+func (app application) WithTarget(targ target.Target) (Application, error) {
 	ret := app
 	ret.targets = target.Targets{targ.(target.TargetConfig)}
 	return ret, nil

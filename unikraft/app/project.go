@@ -69,7 +69,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		return nil, fmt.Errorf("no Kraft files specified")
 	}
 
-	var all []*ApplicationConfig
+	var all []*application
 
 	name, _ := popts.GetProjectName()
 	outdir := DefaultOutputDir
@@ -120,10 +120,10 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 			return nil, err
 		}
 
-		all = append(all, app)
+		all = append(all, app.(*application))
 	}
 
-	app, err := MergeApplicationConfigs(all)
+	app, err := mergeApplicationConfigs(all)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if !popts.skipNormalization {
-		err = normalize(project.(*ApplicationConfig), popts.resolvePaths)
+		err = normalize(project.(*application), popts.resolvePaths)
 		if err != nil {
 			return nil, err
 		}

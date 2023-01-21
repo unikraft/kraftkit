@@ -73,7 +73,7 @@ func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	var err error
-	var project *app.ApplicationConfig
+	var project app.Application
 	var processes []*paraprogress.Process
 	var queries []packmanager.CatalogQuery
 

@@ -25,7 +25,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-func MergeApplicationConfigs(apps []*ApplicationConfig) (*ApplicationConfig, error) {
+func mergeApplicationConfigs(apps []*application) (*application, error) {
 	base := apps[0]
 	for _, override := range apps[1:] {
 		var err error
