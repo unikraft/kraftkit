@@ -217,7 +217,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			queries = append(queries, packmanager.CatalogQuery{
 				Name:    c.Name(),
 				Version: c.Version(),
+				Source:  c.Source(),
 				Types:   []unikraft.ComponentType{c.Type()},
+				NoCache: opts.NoCache,
 			})
 		}
 
