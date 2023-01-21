@@ -14,6 +14,14 @@ func WithIsInternal(internal bool) LibraryOption {
 	}
 }
 
+// WithName sets the name of this library component.
+func WithName(name string) LibraryOption {
+	return func(lc *LibraryConfig) error {
+		lc.name = name
+		return nil
+	}
+}
+
 // WithSource sets the library's source which indicates where it was retrieved
 // and in component context and not the origin.
 func WithSource(source string) LibraryOption {
