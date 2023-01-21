@@ -32,6 +32,10 @@ type PlatformConfig struct {
 	// path is the location to this platform within the context of a project.
 	path string
 
+	// internal dictates whether the platform comes from the Unikraft core
+	// repository.
+	internal bool
+
 	// kconfig list of kconfig key-values specific to this platform.
 	kconfig kconfig.KeyValueMap
 }
