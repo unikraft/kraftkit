@@ -13,7 +13,7 @@ import (
 	"kraftkit.sh/unikraft"
 )
 
-type ManifestPackage struct {
+type mpack struct {
 	manifest *Manifest
 	version  string
 }
@@ -58,7 +58,7 @@ func NewPackageFromManifestWithVersion(ctx context.Context, manifest *Manifest, 
 		return nil, fmt.Errorf("unknown version: %s", version)
 	}
 
-	return &ManifestPackage{manifest, version}, nil
+	return &mpack{manifest, version}, nil
 }
 
 // NewPackageFromManifest generates a manifest implementation of the
@@ -72,27 +72,27 @@ func NewPackageFromManifest(ctx context.Context, manifest *Manifest, opts ...Man
 	return NewPackageFromManifestWithVersion(ctx, manifest, channel.Name, opts...)
 }
 
-func (mp ManifestPackage) Type() unikraft.ComponentType {
+func (mp mpack) Type() unikraft.ComponentType {
 	return mp.manifest.Type
 }
 
-func (mp ManifestPackage) Name() string {
+func (mp mpack) Name() string {
 	return mp.manifest.Name
 }
 
-func (mp ManifestPackage) Version() string {
+func (mp mpack) Version() string {
 	return mp.version
 }
 
-func (mp ManifestPackage) Metadata() any {
+func (mp mpack) Metadata() any {
 	return mp.manifest
 }
 
-func (mp ManifestPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
+func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
 	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
 }
 
-func (mp ManifestPackage) Pull(ctx context.Context, opts ...pack.PullOption) error {
+func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	log.G(ctx).Infof("pulling manifest package %s", mp.Name())
 
 	if mp.manifest.Provider == nil {
@@ -129,6 +129,6 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	return resource, cache, checksum, err
 }
 
-func (mp ManifestPackage) Format() string {
+func (mp mpack) Format() string {
 	return string(ManifestContext)
 }
