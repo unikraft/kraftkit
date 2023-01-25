@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package build
 
 import (
@@ -89,6 +89,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(
+		ctx,
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
 	)
@@ -151,7 +152,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		proc := paraprogress.NewProcess(
-			fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
+			fmt.Sprintf("pulling %s", packages[0].Name()),
 			func(ctx context.Context, w func(progress float64)) error {
 				return packages[0].Pull(
 					ctx,
@@ -188,6 +189,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		templateProject, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -195,7 +197,10 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		project = templateProject.MergeTemplate(project)
+		project, err = templateProject.MergeTemplate(ctx, project)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Overwrite template with user options
@@ -207,7 +212,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		component := component // loop closure
 
 		searches = append(searches, processtree.NewProcessTreeItem(
-			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Component().Name, component.Component().Version), "",
+			fmt.Sprintf("finding %s/%s:%s...", component.Type(), component.Name(), component.Version()), "",
 			func(ctx context.Context) error {
 				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
 					Name: component.Name(),
@@ -222,9 +227,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				}
 
 				if len(p) == 0 {
-					return fmt.Errorf("could not find: %s", component.Component().Name)
+					return fmt.Errorf("could not find: %s", component.Name())
 				} else if len(p) > 1 {
-					return fmt.Errorf("too many options for %s", component.Component().Name)
+					return fmt.Errorf("too many options for %s", component.Name())
 				}
 
 				missingPacks = append(missingPacks, p...)
@@ -254,12 +259,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	if len(missingPacks) > 0 {
 		for _, p := range missingPacks {
-			if p.Options() == nil {
-				return fmt.Errorf("unexpected error occurred please try again")
-			}
 			p := p // loop closure
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
+				fmt.Sprintf("pulling %s", p.Name()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
 						ctx,
@@ -291,13 +293,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	processes = []*paraprogress.Process{} // reset
 
 	var selected target.Targets
-	targets, err := project.Targets()
-	if err != nil {
-		return err
-	}
 
 	// Filter the targets by CLI selection
-	for _, targ := range targets {
+	for _, targ := range project.Targets() {
 		switch true {
 		case
 			// If no arguments are supplied
@@ -312,18 +310,18 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			// If only the --arch flag is supplied and the target's arch matches
 			len(opts.Architecture) > 0 &&
 				len(opts.Platform) == 0 &&
-				targ.Architecture.Name() == opts.Architecture,
+				targ.Architecture().Name() == opts.Architecture,
 
 			// If only the --plat flag is supplied and the target's platform matches
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) == 0 &&
-				targ.Platform.Name() == opts.Platform,
+				targ.Platform().Name() == opts.Platform,
 
 			// If both the --arch and --plat flag are supplied and match the target
 			len(opts.Platform) > 0 &&
 				len(opts.Architecture) > 0 &&
-				targ.Architecture.Name() == opts.Architecture &&
-				targ.Platform.Name() == opts.Platform:
+				targ.Architecture().Name() == opts.Architecture &&
+				targ.Platform().Name() == opts.Platform:
 
 			selected = append(selected, targ)
 

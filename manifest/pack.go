@@ -1,34 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//
-// Authors: Alexander Jung <alex@unikraft.io>
-//
-// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 package manifest
 
 import (
@@ -37,37 +10,29 @@ import (
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 )
 
-type ManifestPackage struct {
-	*pack.PackageOptions
-	Provider
-
-	ctx context.Context
+type mpack struct {
+	manifest *Manifest
+	version  string
 }
 
 const (
 	ManifestContext pack.ContextKey = "manifest"
 )
 
-// NewPackageFromOptions generates a manifest implementation of the pack.Package
-// construct based on the input options
-func NewPackageFromOptions(ctx context.Context, opts *pack.PackageOptions, provider Provider) (pack.Package, error) {
-	if ctx == nil {
-		return nil, fmt.Errorf("cannot create NewPackageFromOptions without context")
+// NewPackageFromManifestWithVersion generates a new package based on an input
+// manifest which in itself may contain various versions and channels.  With the
+// provided version as a positional parameter, the manifest can be reduced to
+// represent a specific version.
+func NewPackageFromManifestWithVersion(ctx context.Context, manifest *Manifest, version string, opts ...ManifestOption) (pack.Package, error) {
+	// Apply the options to this manifest
+	for _, opt := range opts {
+		if err := opt(manifest); err != nil {
+			return nil, err
+		}
 	}
-
-	return ManifestPackage{
-		PackageOptions: opts,
-		Provider:       provider,
-		ctx:            ctx,
-	}, nil
-}
-
-// NewPackageWithVersion generates a manifest implementation of the pack.Package
-// construct based on the input Manifest for a particular version
-func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version string, popts ...pack.PackageOption) (pack.Package, error) {
-	resource := ""
 
 	var channels []ManifestChannel
 	var versions []ManifestVersion
@@ -76,13 +41,12 @@ func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version stri
 	for _, channel := range manifest.Channels {
 		if channel.Name == version {
 			channels = append(channels, channel)
-			resource = channel.Resource
 		}
 	}
 
 	for _, ver := range manifest.Versions {
 		if ver.Version == version {
-			resource = ver.Resource
+			// resource = ver.Resource
 			versions = append(versions, ver)
 		}
 	}
@@ -90,83 +54,54 @@ func NewPackageWithVersion(ctx context.Context, manifest *Manifest, version stri
 	manifest.Channels = channels
 	manifest.Versions = versions
 
-	// Save the full manifest within the context via the `ContextKey`
-	ctx = context.WithValue(
-		ctx,
-		ManifestContext,
-		manifest,
-	)
-
-	popts = append(popts,
-		pack.WithName(manifest.Name),
-		pack.WithRemoteLocation(resource),
-		pack.WithType(manifest.Type),
-		pack.WithVersion(version),
-	)
-
-	pkgOpts, err := pack.NewPackageOptions(popts...)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare package for target: %s", err)
+	if len(channels) == 0 && len(versions) == 0 {
+		return nil, fmt.Errorf("unknown version: %s", version)
 	}
 
-	return NewPackageFromOptions(ctx, pkgOpts, manifest.Provider)
+	return &mpack{manifest, version}, nil
 }
 
 // NewPackageFromManifest generates a manifest implementation of the
-// pack.Package construct based on the input Manifest
-func NewPackageFromManifest(ctx context.Context, manifest *Manifest, popts ...pack.PackageOption) (pack.Package, error) {
+// pack.Package construct based on the input Manifest using its default channel
+func NewPackageFromManifest(ctx context.Context, manifest *Manifest, opts ...ManifestOption) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPackageWithVersion(ctx, manifest, channel.Name, popts...)
+	return NewPackageFromManifestWithVersion(ctx, manifest, channel.Name, opts...)
 }
 
-func (mp ManifestPackage) ApplyOptions(opts ...pack.PackageOption) error {
-	for _, o := range opts {
-		if err := o(mp.PackageOptions); err != nil {
-			return err
-		}
+func (mp mpack) Type() unikraft.ComponentType {
+	return mp.manifest.Type
+}
+
+func (mp mpack) Name() string {
+	return mp.manifest.Name
+}
+
+func (mp mpack) Version() string {
+	return mp.version
+}
+
+func (mp mpack) Metadata() any {
+	return mp.manifest
+}
+
+func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
+	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
+}
+
+func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
+	log.G(ctx).Infof("pulling manifest package %s", mp.Name())
+
+	if mp.manifest.Provider == nil {
+		return fmt.Errorf("uninitialized manifest provider")
 	}
 
-	return nil
-}
+	opts = append(opts, pack.WithPullVersion(mp.version))
 
-func (mp ManifestPackage) Options() *pack.PackageOptions {
-	return mp.PackageOptions
-}
-
-func (mp ManifestPackage) Name() string {
-	return mp.PackageOptions.Name
-}
-
-func (mp ManifestPackage) CanonicalName() string {
-	return string(mp.PackageOptions.Type) + "/" + mp.PackageOptions.Name + ":" + mp.PackageOptions.Version
-}
-
-func (mp ManifestPackage) Pack(ctx context.Context) error {
-	return fmt.Errorf("not implemented: pack.manifest.Pack")
-}
-
-func (mp ManifestPackage) Compatible(ref string) bool {
-	return false
-}
-
-func (mp ManifestPackage) Pull(ctx context.Context, opts ...pack.PullPackageOption) error {
-	log.G(mp.ctx).Infof("pulling manifest package %s", mp.CanonicalName())
-
-	popts, err := pack.NewPullPackageOptions(opts...)
-	if err != nil {
-		return err
-	}
-
-	manifest := mp.ctx.Value(ManifestContext).(*Manifest)
-	if manifest == nil {
-		return fmt.Errorf("package does not contain manifest context")
-	}
-
-	return mp.PullPackage(ctx, manifest, mp.PackageOptions, popts)
+	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache
@@ -194,6 +129,6 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	return resource, cache, checksum, err
 }
 
-func (mp ManifestPackage) Format() string {
+func (mp mpack) Format() string {
 	return string(ManifestContext)
 }

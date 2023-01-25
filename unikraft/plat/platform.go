@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package plat
 
 import (
-	"fmt"
+	"context"
+	"os"
 	"strings"
 
 	"kraftkit.sh/kconfig"
@@ -18,51 +19,64 @@ type Platform interface {
 }
 
 type PlatformConfig struct {
-	component.ComponentConfig
-}
+	// name of the platform.
+	name string
 
-// ParsePlatformConfig parse short syntax for platform configuration
-func ParsePlatformConfig(value string) (PlatformConfig, error) {
-	platform := PlatformConfig{}
+	// version of the platform.
+	version string
 
-	if len(value) == 0 {
-		return platform, fmt.Errorf("cannot ommit platform name")
-	}
+	// source of the platform (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
 
-	platform.ComponentConfig.Name = value
+	// path is the location to this platform within the context of a project.
+	path string
 
-	return platform, nil
+	// internal dictates whether the platform comes from the Unikraft core
+	// repository.
+	internal bool
+
+	// kconfig list of kconfig key-values specific to this platform.
+	kconfig kconfig.KeyValueMap
 }
 
 func (pc PlatformConfig) Name() string {
-	return pc.ComponentConfig.Name
+	return pc.name
 }
 
 func (pc PlatformConfig) Source() string {
-	return pc.ComponentConfig.Source
+	return pc.source
 }
 
 func (pc PlatformConfig) Version() string {
-	return pc.ComponentConfig.Version
+	return pc.version
 }
 
 func (pc PlatformConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypePlat
 }
 
-func (pc PlatformConfig) Component() component.ComponentConfig {
-	return pc.ComponentConfig
+func (pc PlatformConfig) Path() string {
+	return pc.path
 }
 
-func (pc PlatformConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (pc PlatformConfig) IsUnpacked() bool {
+	if f, err := os.Stat(pc.Path()); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
+}
+
+func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// TODO: Try within the Unikraft codebase as well as via an external
 	// microlibrary.  For now, return nil as undetermined.
 	return nil, nil
 }
 
-func (pc PlatformConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	values := kconfig.KConfigValues{}
-	values.OverrideBy(pc.Configuration)
+func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
+	values := kconfig.KeyValueMap{}
+	values.OverrideBy(pc.kconfig)
 
 	// The following are built-in assumptions given the naming conventions used
 	// within the Unikraft core.  Ultimately, this should be discovered by probing
@@ -75,9 +89,9 @@ func (pc PlatformConfig) KConfigValues() (kconfig.KConfigValues, error) {
 
 	values.Set(plat.String(), kconfig.Yes)
 
-	return values, nil
+	return values
 }
 
-func (pc PlatformConfig) PrintInfo() string {
+func (pc PlatformConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.PlatformConfig.PrintInfo"
 }

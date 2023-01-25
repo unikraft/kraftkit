@@ -34,9 +34,7 @@
 package template
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"context"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -51,22 +49,30 @@ type Template interface {
 // TemplateConfig is the configuration of a template. It is identical to
 // the component configuration
 type TemplateConfig struct {
-	component.ComponentConfig
+	// name of the template.
+	name string
+
+	// version of the template.
+	version string
+
+	// source of the template (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
 }
 
 // Name returns the name of the template
 func (tc TemplateConfig) Name() string {
-	return tc.ComponentConfig.Name
+	return tc.name
 }
 
 // Source returns the source of the template
 func (tc TemplateConfig) Source() string {
-	return tc.ComponentConfig.Source
+	return tc.source
 }
 
 // Version returns the version of the template
 func (tc TemplateConfig) Version() string {
-	return tc.ComponentConfig.Version
+	return tc.version
 }
 
 // Type returns the type of the template
@@ -74,46 +80,20 @@ func (tc TemplateConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
-// Component returns the component of the template
-func (tc TemplateConfig) Component() component.ComponentConfig {
-	return tc.ComponentConfig
+func (tc TemplateConfig) Path() string {
+	return ""
 }
 
-// KConfigMenu returns the path to the kconfig file of the template
-func (tc TemplateConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
-	sourceDir, err := tc.ComponentConfig.SourceDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not get library source directory: %v", err)
-	}
-
-	config_uk := filepath.Join(sourceDir, unikraft.Config_uk)
-	if _, err := os.Stat(config_uk); err != nil {
-		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
-	}
-
-	return kconfig.Parse(config_uk)
+// KConfigTree returns the path to the kconfig file of the template
+func (tc TemplateConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+	return nil, nil
 }
 
-// KConfigValues returns the kconfig values of the template
-func (tc TemplateConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	menu, err := tc.KConfigMenu()
-	if err != nil {
-		return nil, fmt.Errorf("could not list KConfig values: %v", err)
-	}
-
-	values := kconfig.KConfigValues{}
-	values.OverrideBy(tc.Configuration)
-
-	if menu == nil {
-		return values, nil
-	}
-
-	values.Set(kconfig.Prefix+menu.Root.Name, kconfig.Yes)
-
-	return values, nil
+func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
+	return nil
 }
 
 // PrintInfo prints information about the template
-func (tc TemplateConfig) PrintInfo() string {
-	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
+func (tc TemplateConfig) PrintInfo(ctx context.Context) string {
+	return "not implemented: unikraft.template.TemplateConfig.PrintInfo"
 }

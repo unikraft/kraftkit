@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package list
 
 import (
@@ -84,6 +84,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	// List pacakges part of a project
 	if len(workdir) > 0 {
 		project, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -91,13 +92,12 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(
 			ctx,
 			query,
-			pack.WithWorkdir(workdir),
 		)
 		if err != nil {
 			return err
@@ -122,9 +122,9 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	table.EndRow()
 
 	for _, pack := range packages {
-		table.AddField(string(pack.Options().Type), nil, nil)
+		table.AddField(string(pack.Type()), nil, nil)
 		table.AddField(pack.Name(), nil, nil)
-		table.AddField(pack.Options().Version, nil, nil)
+		table.AddField(pack.Version(), nil, nil)
 		table.AddField(pack.Format(), nil, nil)
 		table.EndRow()
 	}

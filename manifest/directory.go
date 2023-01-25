@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package manifest
 
 import (
@@ -92,8 +92,13 @@ func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (dp DirectoryProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	if len(ppopts.Workdir()) == 0 {
+func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	popts, err := pack.NewPullOptions(opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(popts.Workdir()) == 0 {
 		return fmt.Errorf("cannot pull without without working directory")
 	}
 
@@ -103,7 +108,7 @@ func (dp DirectoryProvider) PullPackage(ctx context.Context, manifest *Manifest,
 	}
 
 	local, err := unikraft.PlaceComponent(
-		ppopts.Workdir(),
+		popts.Workdir(),
 		manifest.Type,
 		manifest.Name,
 	)

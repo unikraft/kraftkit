@@ -1,36 +1,33 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package packmanager
 
 import (
 	"context"
 
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft/component"
 )
 
 type PackageManager interface {
-	// NewPackage initializes a new package
-	NewPackageFromOptions(context.Context, *pack.PackageOptions) ([]pack.Package, error)
-
-	// Options allows you to view the current options.
-	Options() *PackageManagerOptions
-
-	// ApplyOptions allows one to update the options of a package manager
-	ApplyOptions(...PackageManagerOption) error
-
 	// Update retrieves and stores locally a cache of the upstream registry.
 	Update(context.Context) error
 
-	// Push a package to the supported registry of the implementation.
-	Push(context.Context, string) error
+	// Pack turns the provided component into the distributable package.  Since
+	// components can comprise of other components, it is possible to return more
+	// than one package.  It is possible to disable this and "flatten" a component
+	// into a single package by setting a relevant `pack.PackOption`.
+	Pack(context.Context, component.Component, ...PackOption) ([]pack.Package, error)
 
-	// Pull package(s) from the supported registry of the implementation.
-	Pull(context.Context, string, *pack.PullPackageOptions) ([]pack.Package, error)
+	// Unpack turns a given package into a usable component.  Since a package can
+	// compromise of a multiple components, it is possible to return multiple
+	// components.
+	Unpack(context.Context, pack.Package, ...UnpackOption) ([]component.Component, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(context.Context, CatalogQuery, ...pack.PackageOption) ([]pack.Package, error)
+	Catalog(context.Context, CatalogQuery) ([]pack.Package, error)
 
 	// Add a source to the package manager
 	AddSource(context.Context, string) error

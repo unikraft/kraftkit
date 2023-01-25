@@ -39,34 +39,33 @@ import (
 
 // normalize a kraft project by moving deprecated attributes to their canonical
 // position and injecting implicit defaults
-func normalize(project *ApplicationConfig, resolvePaths bool) error {
+func normalize(project *application, resolvePaths bool) error {
 	absWorkingDir, err := filepath.Abs(project.WorkingDir())
 	if err != nil {
 		return err
 	}
-	project.SetWorkdir(absWorkingDir)
+	project.workingDir = absWorkingDir
 
 	// Ignore the error here, as it's a false positive
-	krafFiles, _ := project.KraftFiles()
-	absKraftFiles, err := absKraftFiles(krafFiles)
+	absKraftfiles, err := absKraftfiles(project.Kraftfiles())
 	if err != nil {
 		return err
 	}
-	WithKraftFiles(absKraftFiles)(project)
+	WithKraftfiles(absKraftfiles)(project)
 
 	return nil
 }
 
-func absKraftFiles(kraftFiles []string) ([]string, error) {
-	absKraftFiles := make([]string, len(kraftFiles))
-	for i, kraftFile := range kraftFiles {
+func absKraftfiles(kraftfiles []string) ([]string, error) {
+	absKraftfiles := make([]string, len(kraftfiles))
+	for i, kraftFile := range kraftfiles {
 		absKraftfile, err := filepath.Abs(kraftFile)
 		if err != nil {
 			return nil, err
 		}
-		absKraftFiles[i] = absKraftfile
+		absKraftfiles[i] = absKraftfile
 	}
-	return absKraftFiles, nil
+	return absKraftfiles, nil
 }
 
 func normalizeProjectName(s string) string {

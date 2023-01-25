@@ -29,7 +29,6 @@ import (
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/unikraft/component"
 )
 
 // kraftfile is a filename and the contents of the file
@@ -51,7 +50,7 @@ type ProjectOptions struct {
 	name              string
 	workdir           string
 	kraftfiles        []kraftfile
-	kconfig           kconfig.KConfigValues
+	kconfig           kconfig.KeyValueMap
 	dotConfigFile     string
 	skipValidation    bool
 	skipInterpolation bool
@@ -61,9 +60,6 @@ type ProjectOptions struct {
 
 	// Indicates when the projectName was imperatively set or guessed from path
 	projectNameImperativelySet bool
-
-	// Slice of component options to apply to each loaded component
-	copts []component.ComponentOption
 }
 
 // Workdir returns the working directory determined by provided kraft files
@@ -165,7 +161,7 @@ type ProjectOption func(*ProjectOptions) error
 // NewProjectOptions creates ProjectOptions
 func NewProjectOptions(opts ...ProjectOption) (*ProjectOptions, error) {
 	popts := &ProjectOptions{
-		kconfig: kconfig.KConfigValues{},
+		kconfig: kconfig.KeyValueMap{},
 	}
 
 	popts.interpolate = &interp.Options{
@@ -282,7 +278,7 @@ func withProjectDotConfig(popts *ProjectOptions) error {
 
 	defer file.Close()
 
-	config := kconfig.KConfigValues{}
+	config := kconfig.KeyValueMap{}
 
 	notInConfigSet := make(map[string]interface{})
 	env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
@@ -410,14 +406,5 @@ func WithProjectDefaultKraftfiles() ProjectOption {
 
 			pwd = parent
 		}
-	}
-}
-
-// WithProjectComponentOptions adds the set of options to apply to each
-// component during their instantiation
-func WithProjectComponentOptions(copts ...component.ComponentOption) ProjectOption {
-	return func(popts *ProjectOptions) error {
-		popts.copts = copts
-		return nil
 	}
 }

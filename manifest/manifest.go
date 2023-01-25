@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package manifest
 
 import (
@@ -100,8 +100,8 @@ func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
 }
 
-func (mp ManifestProvider) PullPackage(ctx context.Context, manifest *Manifest, popts *pack.PackageOptions, ppopts *pack.PullPackageOptions) error {
-	return pullArchive(ctx, manifest, popts, ppopts)
+func (mp ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	return pullArchive(ctx, manifest, opts...)
 }
 
 func (mp ManifestProvider) String() string {
@@ -190,7 +190,7 @@ func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOpti
 		return nil, err
 	}
 
-	manifest.Origin = path
+	// manifest.Origin = path
 
 	return manifest, nil
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package menu
 
 import (
@@ -54,6 +54,7 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 
 	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(
+		ctx,
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectDefaultKraftfiles(),
 	)

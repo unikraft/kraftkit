@@ -1,62 +1,33 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//
-// Authors: Alexander Jung <alex@unikraft.io>
-//
-// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 package pack
 
-import "context"
+import (
+	"context"
+
+	"kraftkit.sh/unikraft"
+)
 
 type Package interface {
-	// Options allows you to view the current options.
-	Options() *PackageOptions
+	// Type returns the component type that this package encapsulates.
+	Type() unikraft.ComponentType
 
-	// ApplyOptions allows one to update the options of a package
-	ApplyOptions(opts ...PackageOption) error
-
-	// Determine if the provided path is a compatible media type
-	Compatible(string) bool
-
-	// Name is the simple package name
+	// Name returns the name of the component within this package.
 	Name() string
 
-	// CanonicalName represents the full name which can be understood by the
-	// respective package manager.
-	CanonicalName() string
+	// Version returns the version that is contained within this package.
+	Version() string
 
-	// Package a package
-	Pack(context.Context) error
+	// Metadata returns any additional metadata associated with this package.
+	Metadata() any
 
-	// Pull retreives the package artifacts given the context of the
-	// PackageOptions and allows for customization of the pull via the input
-	// optional PullPackageOptions
-	Pull(context.Context, ...PullPackageOption) error
+	// Push the package to a remotely retrievable destination.
+	Push(context.Context, ...PushOption) error
+
+	// Pull retreives the package from a remotely retrievable location.
+	Pull(context.Context, ...PullOption) error
 
 	// Format returns the name of the implementation.
 	Format() string

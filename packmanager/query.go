@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package packmanager
 
 import (
@@ -9,31 +9,6 @@ import (
 
 	"kraftkit.sh/unikraft"
 )
-
-// PackageManagerOptions contains configuration for the Package
-type PackageManagerOptions struct {
-	// Store a list of the functions used to populate this struct, in case we wish
-	// to call them again (used now in the umbrella manager).
-	opts []PackageManagerOption
-}
-
-type PackageManagerOption func(opts *PackageManagerOptions) error
-
-// NewPackageManagerOptions creates PackageManagerOptions
-func NewPackageManagerOptions(opts ...PackageManagerOption) (*PackageManagerOptions, error) {
-	options := &PackageManagerOptions{
-		opts: opts,
-	}
-
-	for _, o := range opts {
-		err := o(options)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return options, nil
-}
 
 // CatalogQuery is the request structure with associated attributes which are
 // used to search the package manager's catalog
@@ -53,11 +28,6 @@ type CatalogQuery struct {
 	// NoCache forces the package manager to update values in-memory without
 	// interacting with any underlying cache
 	NoCache bool
-}
-
-func NewCatalogQuery(s string) CatalogQuery {
-	query := CatalogQuery{}
-	return query
 }
 
 func (cq CatalogQuery) String() string {

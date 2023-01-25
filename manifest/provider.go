@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package manifest
 
 import (
@@ -19,8 +19,8 @@ type Provider interface {
 	// Provider
 	Manifests() ([]*Manifest, error)
 
-	// Pull from the provider
-	PullPackage(context.Context, *Manifest, *pack.PackageOptions, *pack.PullPackageOptions) error
+	// PullManifest from the provider.
+	PullManifest(context.Context, *Manifest, ...pack.PullOption) error
 
 	// String returns the name of the provider
 	fmt.Stringer

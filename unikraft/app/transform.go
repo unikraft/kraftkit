@@ -18,6 +18,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -29,7 +30,6 @@ import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
-	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
@@ -37,7 +37,7 @@ import (
 )
 
 // TransformerFunc defines a function to perform the actual transformation
-type TransformerFunc func(interface{}) (interface{}, error)
+type TransformerFunc func(context.Context, interface{}) (interface{}, error)
 
 // Transformer defines a map to type transformer
 type Transformer struct {
@@ -47,16 +47,17 @@ type Transformer struct {
 
 // Transform converts the source into the target struct with compose types
 // transformer and the specified transformers if any.
-func Transform(source interface{}, target interface{}, additionalTransformers ...Transformer) error {
+func Transform(ctx context.Context, source interface{}, target interface{}, additionalTransformers ...Transformer) error {
 	data := mapstructure.Metadata{}
 	config := &mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			createTransformHook(additionalTransformers...),
+			createTransformHook(ctx, additionalTransformers...),
 			mapstructure.StringToTimeDurationHookFunc(),
 		),
-		Result:     target,
-		Metadata:   &data,
-		ZeroFields: false,
+		Result:           target,
+		Metadata:         &data,
+		ZeroFields:       false,
+		WeaklyTypedInput: true,
 		MatchName: func(mapKey, fieldName string) bool {
 			maps := map[string]string{
 				"kconfig": "Configuration",
@@ -80,19 +81,17 @@ func Transform(source interface{}, target interface{}, additionalTransformers ..
 	return decoder.Decode(source)
 }
 
-func createTransformHook(additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
-	transforms := map[reflect.Type]func(interface{}) (interface{}, error){
+func createTransformHook(ctx context.Context, additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
+	transforms := map[reflect.Type]TransformerFunc{
 		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(kconfig.KConfigValues{}):   transformKConfig,
+		reflect.TypeOf(kconfig.KeyValueMap{}):     transformKConfig,
 		reflect.TypeOf(target.Command{}):          transformCommand,
-		reflect.TypeOf([]target.TargetConfig{}):   transformTarget,
-		reflect.TypeOf(arch.ArchitectureConfig{}): transformArchitecture,
-		reflect.TypeOf(plat.PlatformConfig{}):     transformPlatform,
+		reflect.TypeOf(arch.ArchitectureConfig{}): arch.TransformFromSchema,
+		reflect.TypeOf(plat.PlatformConfig{}):     plat.TransformFromSchema,
+		reflect.TypeOf(target.TargetConfig{}):     target.TransformFromSchema,
 		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
-		reflect.TypeOf(lib.LibraryConfig{}):       transformLibrary,
-		reflect.TypeOf(core.UnikraftConfig{}):     transformUnikraft,
-		// Use a map as we need to access the name (which is the key)
-		reflect.TypeOf(map[string]component.ComponentConfig{}): transformComponents,
+		reflect.TypeOf(lib.Libraries{}):           lib.TransformMapFromSchema,
+		reflect.TypeOf(core.UnikraftConfig{}):     core.TransformFromSchema,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -104,7 +103,7 @@ func createTransformHook(additionalTransformers ...Transformer) mapstructure.Dec
 		if !ok {
 			return data, nil
 		}
-		return transform(data)
+		return transform(ctx, data)
 	}
 }
 
@@ -127,7 +126,7 @@ func toMapStringString(value map[string]interface{}, allowNil bool) map[string]i
 	return output
 }
 
-var transformMapStringString TransformerFunc = func(data interface{}) (interface{}, error) {
+var transformMapStringString TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
 	switch value := data.(type) {
 	case map[string]interface{}:
 		return toMapStringString(value, false), nil
@@ -138,33 +137,7 @@ var transformMapStringString TransformerFunc = func(data interface{}) (interface
 	}
 }
 
-var transformArchitecture TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		return toMapStringString(value, false), nil
-	case map[string]string:
-		return value, nil
-	case string:
-		return arch.ParseArchitectureConfig(value)
-	default:
-		return data, errors.Errorf("invalid type %T for architecture", value)
-	}
-}
-
-var transformPlatform TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		return toMapStringString(value, false), nil
-	case map[string]string:
-		return value, nil
-	case string:
-		return plat.ParsePlatformConfig(value)
-	default:
-		return data, errors.Errorf("invalid type %T for platform", value)
-	}
-}
-
-var transformInitrd TransformerFunc = func(data interface{}) (interface{}, error) {
+var transformInitrd TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
 	switch value := data.(type) {
 	case map[string]interface{}:
 		if format, ok := value["format"]; ok {
@@ -209,91 +182,20 @@ func transformValueToMapEntry(value string, separator string, allowNil bool) (st
 	}
 }
 
-var transformCommand TransformerFunc = func(value interface{}) (interface{}, error) {
+var transformCommand TransformerFunc = func(ctx context.Context, value interface{}) (interface{}, error) {
 	if str, ok := value.(string); ok {
 		return shellwords.Parse(str)
 	}
 	return value, nil
 }
 
-var transformTarget TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch entries := data.(type) {
-	case []interface{}:
-		// We process the list instead of individual items here.
-		// The reason is that one entry might be mapped to multiple TargetConfig.
-		// Therefore we take an input of a list and return an output of a list.
-		var targets []interface{}
-		for _, entry := range entries {
-			switch value := entry.(type) {
-			case map[string]interface{}:
-				targets = append(targets, groupXFieldsIntoExtensions(value))
-			default:
-				return data, errors.Errorf("invalid type %T for target", value)
-			}
-		}
-		return targets, nil
-	default:
-		return data, errors.Errorf("invalid type %T for target", entries)
-	}
-}
-
-var transformComponents TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch entries := data.(type) {
-	case map[string]interface{}:
-		components := make(map[string]interface{}, len(entries))
-		for name, props := range entries {
-			switch props.(type) {
-			case string, map[string]interface{}:
-				comp, err := component.ParseComponentConfig(name, props)
-				if err != nil {
-					return nil, err
-				}
-				components[name] = comp
-
-			default:
-				return data, errors.Errorf("invalid type %T for component", props)
-			}
-		}
-
-		return components, nil
-	}
-
-	return data, errors.Errorf("invalid type %T for component map", data)
-}
-
-var transformLibrary TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		return toMapStringString(value, false), nil
-	case map[string]string:
-		return value, nil
-	case string:
-		return lib.ParseLibraryConfig(value)
-	}
-
-	return data, errors.Errorf("invalid type %T for library", data)
-}
-
-var transformUnikraft TransformerFunc = func(data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		return toMapStringString(value, false), nil
-	case map[string]string:
-		return value, nil
-	case string:
-		return core.ParseUnikraftConfig(value)
-	}
-
-	return data, errors.Errorf("invalid type %T for unikraft", data)
-}
-
-var transformKConfig TransformerFunc = func(data interface{}) (interface{}, error) {
+var transformKConfig TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
 	config, err := transformMappingOrList(data, "=", true)
 	if err != nil {
 		return nil, err
 	}
 
-	kconf := kconfig.KConfigValues{}
+	kconf := kconfig.KeyValueMap{}
 
 	for k, v := range config.(map[string]string) {
 		kconf.Set(k, v)

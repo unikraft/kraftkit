@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package pull
 
 import (
@@ -73,7 +73,7 @@ func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	var err error
-	var project *app.ApplicationConfig
+	var project app.Application
 	var processes []*paraprogress.Process
 	var queries []packmanager.CatalogQuery
 
@@ -108,6 +108,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	if f, err := os.Stat(query); err == nil && f.IsDir() {
 		workdir = query
 		project, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(workdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -115,8 +116,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		_, err = project.Components()
-		if err != nil {
+		if _, err = project.Components(); err != nil {
 			// Pull the template from the package manager
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
@@ -159,7 +159,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			proc := paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", packages[0].Options().TypeNameVersion()),
+				fmt.Sprintf("pulling %s", packages[0].Name()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return packages[0].Pull(
 						ctx,
@@ -195,6 +195,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		templateProject, err := app.NewProjectFromOptions(
+			ctx,
 			app.WithProjectWorkdir(templateWorkdir),
 			app.WithProjectDefaultKraftfiles(),
 		)
@@ -202,7 +203,11 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		project = templateProject.MergeTemplate(project)
+		project, err = templateProject.MergeTemplate(ctx, project)
+		if err != nil {
+			return err
+		}
+
 		// List the components
 		components, err := project.Components()
 		if err != nil {
@@ -212,7 +217,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			queries = append(queries, packmanager.CatalogQuery{
 				Name:    c.Name(),
 				Version: c.Version(),
+				Source:  c.Source(),
 				Types:   []unikraft.ComponentType{c.Type()},
+				NoCache: opts.NoCache,
 			})
 		}
 
@@ -255,7 +262,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		for _, p := range next {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", p.Options().TypeNameVersion()),
+				fmt.Sprintf("pulling %s", p.Name()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
 						ctx,
@@ -285,7 +292,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if project != nil {
-		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo())
+		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 	}
 
 	return nil

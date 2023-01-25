@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package arch
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"kraftkit.sh/kconfig"
@@ -18,50 +20,72 @@ type Architecture interface {
 }
 
 type ArchitectureConfig struct {
-	component.ComponentConfig
+	// name of the library.
+	name string
+
+	// version of the library.
+	version string
+
+	// source of the library (can be either remote or local, this attribute is
+	// ultimately handled by the packmanager).
+	source string
+
+	// path is the location to this library within the context of a project.
+	path string
+
+	// kconfig list of kconfig key-values specific to this library.
+	kconfig kconfig.KeyValueMap
 }
 
-// ParseArchitectureConfig parse short syntax for architecture configuration
-func ParseArchitectureConfig(value string) (ArchitectureConfig, error) {
+// NewArchitectureFromSchema parse short syntax for architecture configuration
+func NewArchitectureFromSchema(value string) (ArchitectureConfig, error) {
 	architecture := ArchitectureConfig{}
 
 	if len(value) == 0 {
 		return architecture, fmt.Errorf("cannot ommit architecture name")
 	}
 
-	architecture.ComponentConfig.Name = value
+	architecture.name = value
 
 	return architecture, nil
 }
 
 func (ac ArchitectureConfig) Name() string {
-	return ac.ComponentConfig.Name
+	return ac.name
 }
 
 func (ac ArchitectureConfig) Source() string {
-	return ac.ComponentConfig.Source
+	return ac.source
 }
 
 func (ac ArchitectureConfig) Version() string {
-	return ac.ComponentConfig.Version
+	return ac.version
 }
 
 func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
 }
 
-func (ac ArchitectureConfig) Component() component.ComponentConfig {
-	return ac.ComponentConfig
+func (ac ArchitectureConfig) Path() string {
+	return ac.path
 }
 
-func (ac ArchitectureConfig) KConfigMenu() (*kconfig.KConfigFile, error) {
+func (ac ArchitectureConfig) IsUnpacked() bool {
+	if f, err := os.Stat(ac.Path()); err == nil && f.IsDir() {
+		return true
+	}
+
+	return false
+}
+
+func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// Architectures are built directly into the Unikraft core for now.
 	return nil, nil
 }
 
-func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
-	values := kconfig.KConfigValues{}
-	values.OverrideBy(ac.Configuration)
+func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
+	values := kconfig.KeyValueMap{}
+	values.OverrideBy(ac.kconfig)
 
 	// The following are built-in assumptions given the naming conventions used
 	// within the Unikraft core.
@@ -76,15 +100,13 @@ func (ac ArchitectureConfig) KConfigValues() (kconfig.KConfigValues, error) {
 		arch.WriteString("ARCH_ARM_32")
 	case "arm64":
 		arch.WriteString("ARCH_ARM_64")
-	default:
-		return nil, fmt.Errorf("unknown architecture: %s", ac.Name())
 	}
 
 	values.Set(arch.String(), kconfig.Yes)
 
-	return values, nil
+	return values
 }
 
-func (ac ArchitectureConfig) PrintInfo() string {
+func (ac ArchitectureConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo"
 }
