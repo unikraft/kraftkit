@@ -8,47 +8,46 @@ package config
 // by some service.  Most APIs and services which can be authenticated have the
 // defined four parameters found within AuthConfig.
 type AuthConfig struct {
-	User      string `json:"user"       yaml:"user"       env:"KRAFTKIT_AUTH_%s_USER"`
-	Token     string `json:"token"      yaml:"token"      env:"KRAFTKIT_AUTH_%s_TOKEN"`
-	Endpoint  string `json:"endpoint"   yaml:"endpoint"   env:"KRAFTKIT_AUTH_%s_ENDPOINT"`
-	VerifySSL bool   `json:"verify_ssl" yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL"`
+	User      string `yaml:"user" env:"KRAFTKIT_AUTH_%s_USER" long:"auth-%s-user"`
+	Token     string `yaml:"token" env:"KRAFTKIT_AUTH_%s_TOKEN" long:"auth-%s-token"`
+	Endpoint  string `yaml:"endpoint" env:"KRAFTKIT_AUTH_%s_ENDPOINT" long:"auth-%s-endpoint"`
+	VerifySSL bool   `yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" long:"auth-%s-verify-ssl"`
 }
 
 type Config struct {
-	NoPrompt       bool   `json:"no_prompt"        yaml:"no_prompt"                  env:"KRAFTKIT_NO_PROMPT"`
-	NoParallel     bool   `json:"no_parallel"      yaml:"no_parallel"                env:"KRAFTKIT_NO_PARALLEL"`
-	Emojis         bool   `json:"no_emojis"        yaml:"no_emojis"                  env:"KRAFTKIT_NO_EMOJIS"`
-	Editor         string `json:"editor"           yaml:"editor,omitempty"           env:"KRAFTKIT_EDITOR"`
-	Browser        string `json:"browser"          yaml:"browser,omitempty"          env:"KRAFTKIT_BROWSER"`
-	GitProtocol    string `json:"git_protocol"     yaml:"git_protocol"               env:"KRAFTKIT_GIT_PROTOCOL"`
-	Pager          string `json:"pager"            yaml:"pager,omitempty"            env:"KRAFTKIT_PAGER"`
-	HTTPUnixSocket string `json:"http_unix_socket" yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET"`
-	RuntimeDir     string `json:"runtime_dir"      yaml:"runtime_dir"                env:"KRAFTKIT_RUNTIME_DIR"`
-	DefaultPlat    string `json:"default_plat"     yaml:"default_plat"               env:"KRAFTKIT_DEFAULT_PLAT"`
-	DefaultArch    string `json:"default_arch"     yaml:"default_arch"               env:"KRAFTKIT_DEFAULT_ARCH"`
-	EventsPidFile  string `json:"events_pidfile"   yaml:"events_pidfile"             env:"KRAFTKIT_EVENTS_PIDFILE"`
+	NoPrompt       bool   `yaml:"no_prompt" env:"KRAFTKIT_NO_PROMPT" long:"no-prompt" usage:"Do not prompt for user interaction" default:"false"`
+	NoParallel     bool   `yaml:"no_parallel" env:"KRAFTKIT_NO_PARALLEL" long:"no-parallel" usage:"Do not run internal tasks in parallel" default:"true"`
+	NoEmojis       bool   `yaml:"no_emojis" env:"KRAFTKIT_NO_EMOJIS" long:"no-emojis" usage:"Do not use emojis in any console output" default:"true"`
+	Editor         string `yaml:"editor" env:"KRAFTKIT_EDITOR" long:"editor" usage:"Set the text editor to open when prompt to edit a file"`
+	GitProtocol    string `yaml:"git_protocol" env:"KRAFTKIT_GIT_PROTOCOL" long:"git-protocol" usage:"Preferred Git protocol to use" default:"https"`
+	Pager          string `yaml:"pager,omitempty" env:"KRAFTKIT_PAGER" long:"pager" usage:"System pager to pipe output to"`
+	HTTPUnixSocket string `yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET" long:"http-unix-sock" usage:"When making HTTP(S) connections, pipe requests via this shared socket"`
+	RuntimeDir     string `yaml:"runtime_dir" env:"KRAFTKIT_RUNTIME_DIR" long:"runtime-dir" usage:"Directory for placing runtime files (e.g. pidfiles)" default:"/var/kraftkit"`
+	DefaultPlat    string `yaml:"default_plat" env:"KRAFTKIT_DEFAULT_PLAT" usage:"The default platform to use when invoking platform-specific code" noattribute:"true"`
+	DefaultArch    string `yaml:"default_arch" env:"KRAFTKIT_DEFAULT_ARCH" usage:"The default architecture to use when invoking architecture-specific code" noattribute:"true"`
+	EventsPidFile  string `yaml:"events_pidfile" env:"KRAFTKIT_EVENTS_PIDFILE" long:"events-pid-file" usage:"Events process ID used when running multiple unikernels" default:"/var/kraftkit/events.pid"`
 
 	Paths struct {
-		Plugins   string `json:"plugins"   yaml:"plugins,omitempty"   env:"KRAFTKIT_PATHS_PLUGINS"`
-		Config    string `json:"config"    yaml:"config,omitempty"    env:"KRAFTKIT_PATHS_CONFIG"`
-		Manifests string `json:"manifests" yaml:"manifests,omitempty" env:"KRAFTKIT_PATHS_MANIFESTS"`
-		Sources   string `json:"sources"   yaml:"sources,omitempty"   env:"KRAFTKIT_PATHS_SOURCES"`
-	} `json:"paths" yaml:"paths,omitempty"`
+		Plugins   string `yaml:"plugins,omitempty" env:"KRAFTKIT_PATHS_PLUGINS" long:"plugins-dir" usage:"Path to KraftKit plugin directory"`
+		Config    string `yaml:"config,omitempty" env:"KRAFTKIT_PATHS_CONFIG" long:"config-dir" usage:"Path to KraftKit config file"`
+		Manifests string `yaml:"manifests,omitempty" env:"KRAFTKIT_PATHS_MANIFESTS" long:"manifests-dir" usage:"Path to Unikraft manifest cache"`
+		Sources   string `yaml:"sources,omitempty" env:"KRAFTKIT_PATHS_SOURCES" long:"sources-dir" usage:"Path to Unikraft component cache"`
+	} `yaml:"paths,omitempty"`
 
 	Log struct {
-		Level      string `json:"level"      yaml:"level"      env:"KRAFTKIT_LOG_LEVEL"`
-		Timestamps bool   `json:"timestamps" yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS"`
-		Type       string `json:"type"       yaml:"type"       env:"KRAFTKIT_LOG_TYPE"`
-	} `json:"log" yaml:"log"`
+		Level      string `yaml:"level" env:"KRAFTKIT_LOG_LEVEL" long:"log-level" usage:"Log level verbosity" default:"info"`
+		Timestamps bool   `yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" long:"log-timestamps" usage:"Enable log timestamps"`
+		Type       string `yaml:"type" env:"KRAFTKIT_LOG_TYPE" long:"log-type" usage:"Log type" default:"fancy"`
+	} `yaml:"log"`
 
 	Unikraft struct {
-		Mirrors   []string `json:"mirrors"   yaml:"mirrors"   env:"KRAFTKIT_UNIKRAFT_MIRRORS"`
-		Manifests []string `json:"manifests" yaml:"manifests" env:"KRAFTKIT_UNIKRAFT_MANIFESTS"`
-	} `json:"unikraft" yaml:"unikraft"`
+		Mirrors   []string `yaml:"mirrors" env:"KRAFTKIT_UNIKRAFT_MIRRORS" long:"with-mirror" usage:"Paths to mirrors of Unikraft component artifacts"`
+		Manifests []string `yaml:"manifests" env:"KRAFTKIT_UNIKRAFT_MANIFESTS" long:"with-manifest" usage:"Paths to package or component manifests"`
+	} `yaml:"unikraft"`
 
-	Auth map[string]AuthConfig `json:"auth" yaml:"auth,omitempty"`
+	Auth map[string]AuthConfig `yaml:"auth,omitempty" noattribute:"true"`
 
-	Aliases map[string]map[string]string `json:"aliases" yaml:"aliases"`
+	Aliases map[string]map[string]string `yaml:"aliases" noattribute:"true"`
 }
 
 type ConfigDetail struct {

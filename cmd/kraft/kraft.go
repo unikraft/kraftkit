@@ -6,6 +6,7 @@ package main
 
 import (
 	"github.com/MakeNowJust/heredoc"
+	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -88,5 +89,5 @@ func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
-	cmdfactory.Main(New())
+	cmdfactory.Main(signals.SetupSignalContext(), New())
 }
