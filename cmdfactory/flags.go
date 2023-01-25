@@ -10,6 +10,19 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// VarF returns and instantiated flag based on a pointer value, a name and
+// usage line.
+func VarF(value pflag.Value, name, usage string) *pflag.Flag {
+	flag := &pflag.Flag{
+		Name:     name,
+		Usage:    usage,
+		Value:    value,
+		DefValue: value.String(),
+	}
+
+	return flag
+}
+
 // VarPF is like VarP, but returns the flag created
 func VarPF(value pflag.Value, name, shorthand, usage string) *pflag.Flag {
 	flag := &pflag.Flag{
