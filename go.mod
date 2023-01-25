@@ -32,7 +32,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.13.0
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/wrangler v1.0.0
+	github.com/rancher/wrangler v1.0.1
 	github.com/shirou/gopsutil/v3 v3.22.12
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
