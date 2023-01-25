@@ -12,31 +12,10 @@ import (
 )
 
 const (
-	DefaultNoPrompt      = "false"
-	DefaultNoParallel    = "true"
-	DefaultNoEmojis      = "false"
-	DefaultGitProtocol   = "https"
-	DefaultLogLevel      = "info"
-	DefaultLogTimestamps = "false"
-	DefaultLogType       = "fancy"
 	DefaultRuntimeDir    = "/var/kraftkit"
 	DefaultEventsPidFile = "/var/kraftkit/events.pid"
-	DefaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
+	defaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
-
-func Defaults() map[string]string {
-	return map[string]string{
-		"KRAFTKIT_NO_PROMPT":      DefaultNoPrompt,
-		"KRAFTKIT_NO_PARALLEL":    DefaultNoParallel,
-		"KRAFTKIT_NO_EMOJIS":      DefaultNoEmojis,
-		"KRAFTKIT_GIT_PROTOCOL":   DefaultGitProtocol,
-		"KRAFTKIT_LOG_LEVEL":      DefaultLogLevel,
-		"KRAFTKIT_LOG_TIMESTAMPS": DefaultLogTimestamps,
-		"KRAFTKIT_LOG_TYPE":       DefaultLogType,
-		"KRAFTKIT_RUNTIME_DIR":    DefaultRuntimeDir,
-		"KRAFTKIT_EVENTS_PIDFILE": DefaultEventsPidFile,
-	}
-}
 
 func NewDefaultConfig() (*Config, error) {
 	c := &Config{}
@@ -66,7 +45,7 @@ func NewDefaultConfig() (*Config, error) {
 	}
 
 	if len(c.Unikraft.Manifests) == 0 {
-		c.Unikraft.Manifests = append(c.Unikraft.Manifests, DefaultManifestIndex)
+		c.Unikraft.Manifests = append(c.Unikraft.Manifests, defaultManifestIndex)
 	}
 
 	return c, nil
@@ -114,7 +93,7 @@ func setDefaultValue(v reflect.Value, def string) error {
 		// Iterate over the struct fields
 		for i := 0; i < v.NumField(); i++ {
 			// Use the `env` tag to look up the default value
-			def = Defaults()[v.Type().Field(i).Tag.Get("env")]
+			def = v.Type().Field(i).Tag.Get("default")
 			if err := setDefaultValue(
 				v.Field(i).Addr(),
 				def,
