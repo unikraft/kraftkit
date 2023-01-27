@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/version"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -39,11 +40,11 @@ func New() *cobra.Command {
         .
        /^\     Build and use highly customized and ultra-lightweight unikernels.
       :[ ]:
-      | = |
+      | = |    Version:          %s
      /|/=\|\   Documentation:    https://kraftkit.sh/
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
        v v
-       ' '`),
+       ' '`, version.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
