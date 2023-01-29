@@ -133,8 +133,8 @@ github.com/charmbracelet/lipgloss v0.6.0/go.mod h1:tHh2wr34xcHjC2HCXIlGSG1jaDF0S
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
-github.com/cli/cli/v2 v2.21.2 h1:SL8Er1r4TfEN9Ntafzv9iOYXWy9EXKYb/wo1jMrepWE=
-github.com/cli/cli/v2 v2.21.2/go.mod h1:NxmrH+swKQ2MnntFtocP8RIq6erFOMnREJDl7UtuqdU=
+github.com/cli/cli/v2 v2.22.1 h1:b3p6t1469IaOfrb2SQ7gj6zEX7cKuSct/l5N2sKLX7w=
+github.com/cli/cli/v2 v2.22.1/go.mod h1:NU6w598AQ0gMWVd+TzDw1gzg7neuNIT0VRIpf90oucw=
 github.com/cli/go-gh v1.0.0 h1:zE1YUAUYqGXNZuICEBeOkIMJ5F50BS0ftvtoWGlsEFI=
 github.com/cli/go-gh v1.0.0/go.mod h1:bqxLdCoTZ73BuiPEJx4olcO/XKhVZaFDchFagYRBweE=
 github.com/cli/safeexec v1.0.1 h1:e/C79PbXF4yYTN/wauC4tviMxEV13BwljGj0N9j+N00=
