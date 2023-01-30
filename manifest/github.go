@@ -24,6 +24,7 @@ import (
 )
 
 type GitHubProvider struct {
+	path   string
 	repo   ghrepo.Interface
 	mopts  []ManifestOption
 	client *github.Client
@@ -107,6 +108,7 @@ func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption
 	}
 
 	return GitHubProvider{
+		path:   path,
 		repo:   repo,
 		mopts:  mopts,
 		client: client,
@@ -123,7 +125,7 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	repo := ghrepo.GenerateRepoURL(ghp.repo, "")
+	repo := ghp.path
 	if len(ghp.branch) > 0 {
 		repo += "@" + ghp.branch
 	}
@@ -180,7 +182,7 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 				continue
 			}
 
-			log.G(ghp.ctx).Infof("found via wildcard %s", *repo.HTMLURL)
+			log.G(ghp.ctx).Infof("found via wildcard %s", *repo.CloneURL)
 			repos = append(repos, repo)
 		}
 
@@ -194,7 +196,7 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	var manifests []*Manifest
 
 	for _, repo := range repos {
-		manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.HTMLURL, ghp.mopts...)
+		manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.CloneURL, ghp.mopts...)
 		if err != nil {
 			return nil, err
 		}
