@@ -158,6 +158,7 @@ func (pt *ProcessTree) Start() error {
 }
 
 func (pt *ProcessTree) Init() tea.Cmd {
+	//nolint:staticcheck
 	cmds := []tea.Cmd{
 		waitForProcessExit(pt.channel),
 		spinner.Tick,

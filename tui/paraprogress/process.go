@@ -109,6 +109,7 @@ func (p *Process) Init() tea.Cmd {
 }
 
 func (p *Process) Start() tea.Cmd {
+	//nolint:staticcheck
 	cmds := []tea.Cmd{
 		spinner.Tick,
 		func() tea.Msg {
