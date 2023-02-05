@@ -78,7 +78,7 @@ endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
-$(addprefix $(.PROXY), $(BIN)): deps
+$(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
 		-gcflags=all='$(GO_GCFLAGS)' \
@@ -114,8 +114,8 @@ else
 	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
 endif
 
-.PHONY: deps
-deps:
+.PHONY: tidy
+tidy:
 	$(GO) mod tidy -compat=$(GO_VERSION)
 
 .PHONY: fmt
