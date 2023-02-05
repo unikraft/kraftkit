@@ -120,7 +120,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			// Pull the template from the package manager
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
-				fmt.Sprintf("finding %s/%s:%s...", project.Template().Type(), project.Template().Name(), project.Template().Version()), "",
+				fmt.Sprintf("finding %s...",
+					unikraft.TypeNameVersion(project.Template()),
+				), "",
 				func(ctx context.Context) error {
 					packages, err = pm.Catalog(ctx, packmanager.CatalogQuery{
 						Name:    project.Template().Name(),
@@ -133,9 +135,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					}
 
 					if len(packages) == 0 {
-						return fmt.Errorf("could not find: %s", project.Template().Name())
+						return fmt.Errorf("could not find: %s", unikraft.TypeNameVersion(project.Template()))
 					} else if len(packages) > 1 {
-						return fmt.Errorf("too many options for %s", project.Template().Name())
+						return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
 					}
 					return nil
 				},
@@ -159,7 +161,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			proc := paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", packages[0].Name()),
+				fmt.Sprintf("pulling %s...",
+					unikraft.TypeNameVersion(packages[0]),
+				),
 				func(ctx context.Context, w func(progress float64)) error {
 					return packages[0].Pull(
 						ctx,
@@ -262,7 +266,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		for _, p := range next {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", p.Name()),
+				fmt.Sprintf("pulling %s...",
+					unikraft.TypeNameVersion(p),
+				),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
 						ctx,
