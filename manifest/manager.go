@@ -197,12 +197,17 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 	}).Debug("querying manifest catalog")
 
 	if len(query.Source) > 0 && query.NoCache {
-		manifest, err := FindManifestsFromSource(ctx, query.Source, mopts...)
+		provider, err := NewProvider(ctx, query.Source, mopts...)
 		if err != nil {
 			return nil, err
 		}
 
-		allManifests = append(allManifests, manifest...)
+		manifests, err := provider.Manifests()
+		if err != nil {
+			return nil, err
+		}
+
+		allManifests = append(allManifests, manifests...)
 	} else if query.NoCache {
 		index, err = m.update(ctx)
 		if err != nil {
@@ -243,9 +248,9 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 				query.Version = v
 			}
 		}
-
-		g = glob.MustCompile(query.Name)
 	}
+
+	g = glob.MustCompile(query.Name)
 
 	for _, manifest := range allManifests {
 		if len(query.Types) > 0 {

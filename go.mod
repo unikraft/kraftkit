@@ -7,12 +7,12 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/briandowns/spinner v1.20.0
 	github.com/cavaliergopher/cpio v1.0.1
-	github.com/charmbracelet/bubbles v0.14.0
+	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.1
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/cli/cli/v2 v2.21.2
+	github.com/cli/cli/v2 v2.22.1
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.8.2
+	github.com/compose-spec/compose-go v1.9.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
@@ -32,7 +32,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.13.0
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/wrangler v1.0.0
+	github.com/rancher/wrangler v1.0.1
 	github.com/shirou/gopsutil/v3 v3.22.12
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1

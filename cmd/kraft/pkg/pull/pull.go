@@ -226,22 +226,22 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		// Is this a list (space delimetered) of packages to pull?
 	} else {
 		for _, c := range strings.Split(query, " ") {
-			query := packmanager.CatalogQuery{}
-			t, n, v, err := unikraft.GuessTypeNameVersion(c)
-			if err != nil {
-				continue
-			}
+			query := packmanager.CatalogQuery{NoCache: opts.NoCache}
 
-			if t != unikraft.ComponentTypeUnknown {
-				query.Types = append(query.Types, t)
-			}
+			if t, n, v, err := unikraft.GuessTypeNameVersion(c); err == nil {
+				if t != unikraft.ComponentTypeUnknown {
+					query.Types = append(query.Types, t)
+				}
 
-			if len(n) > 0 {
-				query.Name = n
-			}
+				if len(n) > 0 {
+					query.Name = n
+				}
 
-			if len(v) > 0 {
-				query.Version = v
+				if len(v) > 0 {
+					query.Version = v
+				}
+			} else {
+				query.Source = c
 			}
 
 			queries = append(queries, query)
