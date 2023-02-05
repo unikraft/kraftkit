@@ -15,7 +15,7 @@ RUN set -xe; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       build-essential \
-      libgit2-dev \
+      cmake \
       make \
       git; \
     go install mvdan.cc/gofumpt@latest;

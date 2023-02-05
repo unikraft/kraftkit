@@ -8,6 +8,7 @@ WORKDIR     ?= $(CURDIR)
 TESTDIR     ?= $(WORKDIR)/tests
 DISTDIR     ?= $(WORKDIR)/dist
 INSTALLDIR  ?= /usr/local/bin/
+VENDORDIR   ?= $(WORKDIR)/vendor
 
 # Arguments
 REGISTRY    ?= ghcr.io
@@ -46,6 +47,8 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
 GO          ?= go
 GOFUMPT     ?= gofumpt
 GOCILINT    ?= golangci-lint
+MKDIR       ?= mkdir
+GIT         ?= git
 
 # Misc
 Q           ?= @
@@ -78,9 +81,11 @@ endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
-$(addprefix $(.PROXY), $(BIN)): tidy
+$(addprefix $(.PROXY), $(BIN)): git2go tidy
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
+		-tags static \
+		-mod=readonly \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
@@ -107,6 +112,7 @@ container:
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
+devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
 devenv:
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself,bash)
@@ -136,3 +142,15 @@ properclean: IMAGE       ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TA
 properclean:
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
+
+.PHONY: git2go
+git2go: $(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc
+
+$(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
+	$(MAKE) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 install-static
+
+$(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2: $(VENDORDIR)/github.com/libgit2/git2go
+	$(GIT) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 submodule update --init --recursive
+
+$(VENDORDIR)/github.com/libgit2/git2go:
+	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@/v31

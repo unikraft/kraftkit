@@ -22,8 +22,11 @@ jobs:
         run: go install mvdan.cc/gofumpt@v0.3.1
 
       # Temporary workaround until this pipeline uses the 'myself' buildenv
-      - name: Install libgit2-dev
-        run: apt-get update && apt-get install -y --no-install-recommends libgit2-dev
+      - name: Install build dependencies
+        run: |
+          apt-get update;
+          apt-get install -y --no-install-recommends \
+            cmake;
 
       - name: Check that go.mod is tidy
         uses: protocol/multiple-go-modules@v1.2
