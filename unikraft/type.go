@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 type ComponentType string
@@ -103,4 +104,23 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 	}
 
 	return "", fmt.Errorf("cannot place component of unknown type")
+}
+
+// TypeNameVersion returns the canonical name of the component using the format
+// <TYPE>/<NAME>:<VERSION>
+func TypeNameVersion(entity Nameable) string {
+	var ret strings.Builder
+	if entity.Type() != ComponentTypeUnknown {
+		ret.WriteString(string(entity.Type()))
+		ret.WriteString("/")
+	}
+
+	ret.WriteString(entity.Name())
+
+	if entity.Version() != "" {
+		ret.WriteString(":")
+		ret.WriteString(entity.Version())
+	}
+
+	return ret.String()
 }
