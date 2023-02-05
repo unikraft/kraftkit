@@ -11,14 +11,7 @@ import (
 )
 
 type Package interface {
-	// Type returns the component type that this package encapsulates.
-	Type() unikraft.ComponentType
-
-	// Name returns the name of the component within this package.
-	Name() string
-
-	// Version returns the version that is contained within this package.
-	Version() string
+	unikraft.Nameable
 
 	// Metadata returns any additional metadata associated with this package.
 	Metadata() any
