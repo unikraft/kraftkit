@@ -44,6 +44,20 @@ func (ct ComponentType) Plural() string {
 	return string(ct) + "s"
 }
 
+// Nameable represents an abstract interface which can be cast to structures
+// which contain canonical information about a component.  This allows us to
+// generate a string representation of the entity.
+type Nameable interface {
+	// Type returns the entity's static component type.
+	Type() ComponentType
+
+	// Name returns the entity name.
+	Name() string
+
+	// Version returns the entity version.
+	Version() string
+}
+
 // GuessNameAndType attempts to parse the input string, which could be formatted
 // such that its type, name and version are present
 func GuessTypeNameVersion(input string) (ComponentType, string, string, error) {
