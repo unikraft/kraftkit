@@ -51,36 +51,26 @@ func New() *cobra.Command {
 		},
 	})
 
-	cmd.AddGroup(
-		&cobra.Group{
-			ID:    "build",
-			Title: "BUILD COMMANDS",
-		},
-		&cobra.Group{
-			ID:    "pkg",
-			Title: "PACKAGING COMMANDS",
-		},
-		&cobra.Group{
-			ID:    "run",
-			Title: "RUNTIME COMMANDS",
-		},
-	)
-
+	cmd.AddGroup(&cobra.Group{ID: "build", Title: "BUILD COMMANDS"})
 	cmd.AddCommand(build.New())
 	cmd.AddCommand(clean.New())
 	cmd.AddCommand(configure.New())
-	cmd.AddCommand(events.New())
 	cmd.AddCommand(fetch.New())
 	cmd.AddCommand(menu.New())
-	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(properclean.New())
+	cmd.AddCommand(set.New())
+	cmd.AddCommand(unset.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
+	cmd.AddCommand(pkg.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
+	cmd.AddCommand(events.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
-	cmd.AddCommand(set.New())
 	cmd.AddCommand(stop.New())
-	cmd.AddCommand(unset.New())
 
 	return cmd
 }
