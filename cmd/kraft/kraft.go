@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/version"
+	kitversion "kraftkit.sh/internal/version"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/cmd/kraft/set"
 	"kraftkit.sh/cmd/kraft/stop"
 	"kraftkit.sh/cmd/kraft/unset"
+	"kraftkit.sh/cmd/kraft/version"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -45,7 +46,7 @@ func New() *cobra.Command {
      /|/=\|\   Documentation:    https://kraftkit.sh/
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
        v v
-       ' '`, version.Version()),
+       ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
@@ -71,6 +72,9 @@ func New() *cobra.Command {
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
 	cmd.AddCommand(stop.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
+	cmd.AddCommand(version.New())
 
 	return cmd
 }
