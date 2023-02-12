@@ -41,8 +41,8 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/oauth2 v0.4.0
-	golang.org/x/sys v0.4.0
-	golang.org/x/term v0.4.0
+	golang.org/x/sys v0.5.0
+	golang.org/x/term v0.5.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
