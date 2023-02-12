@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.1
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/cli/cli/v2 v2.22.1
+	github.com/cli/cli/v2 v2.23.0
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.9.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
