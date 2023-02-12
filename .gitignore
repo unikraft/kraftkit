@@ -3,6 +3,7 @@ dist/
 
 # Ignore vscode folder
 .vscode/
+!.vscode/settings.json
 
 # Ignore tool binaries
 tools/go-generate-qemu-devices/go-generate-qemu-devices
