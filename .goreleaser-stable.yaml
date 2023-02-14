@@ -16,7 +16,7 @@ release:
   name_template: 'v{{ .Version }}'
 
 nfpms:
-  - vendor: Alexander Jung
+  - vendor: Unikraft
     maintainer: Alexander Jung <alex@unikraft.io>
     description: Build and use highly customized and ultra-lightweight unikernels.
     license: BSD 3-clause
