@@ -2,6 +2,9 @@
 changelog:
   use: git
 
+gomod:
+  mod: readonly
+
 release:
   github:
     owner: unikraft
