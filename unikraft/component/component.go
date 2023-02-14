@@ -14,17 +14,10 @@ import (
 
 // Component is the abstract interface for managing the individual microlibrary
 type Component interface {
-	// Name returns the component name
-	Name() string
+	unikraft.Nameable
 
 	// Source returns the component source
 	Source() string
-
-	// Version returns the component version
-	Version() string
-
-	// Type returns the component's static constant type
-	Type() unikraft.ComponentType
 
 	// Path is the location to this library within the context of a project.
 	Path() string

@@ -1,33 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//
-// Authors: Alexander Jung <alex@unikraft.io>
-//
-// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 
 package unikraft
 
@@ -35,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 type ComponentType string
@@ -68,6 +43,20 @@ func (ct ComponentType) Plural() string {
 	}
 
 	return string(ct) + "s"
+}
+
+// Nameable represents an abstract interface which can be cast to structures
+// which contain canonical information about a component.  This allows us to
+// generate a string representation of the entity.
+type Nameable interface {
+	// Type returns the entity's static component type.
+	Type() ComponentType
+
+	// Name returns the entity name.
+	Name() string
+
+	// Version returns the entity version.
+	Version() string
 }
 
 // GuessNameAndType attempts to parse the input string, which could be formatted
@@ -115,4 +104,23 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 	}
 
 	return "", fmt.Errorf("cannot place component of unknown type")
+}
+
+// TypeNameVersion returns the canonical name of the component using the format
+// <TYPE>/<NAME>:<VERSION>
+func TypeNameVersion(entity Nameable) string {
+	var ret strings.Builder
+	if entity.Type() != ComponentTypeUnknown {
+		ret.WriteString(string(entity.Type()))
+		ret.WriteString("/")
+	}
+
+	ret.WriteString(entity.Name())
+
+	if entity.Version() != "" {
+		ret.WriteString(":")
+		ret.WriteString(entity.Version())
+	}
+
+	return ret.String()
 }
