@@ -1,82 +1,32 @@
 #! .goreleaser.yaml
 changelog:
-  #! Changelog generation implementation to use.
-  use: git
+  use: github
+
+gomod:
+  mod: readonly
 
 release:
-  #! Repo in which the release will be created.
-  #! Default is extracted from the origin remote URL or empty if its private hosted.
   github:
     owner: unikraft
     name: kraftkit
-
-  #! If set to true, will not auto-publish the release.
-  #! Default is false.
   draft: false
-
-  #! If set to auto, will mark the release as not ready for production
-  #! in case there is an indicator for this in the tag e.g. v1.0.0-rc1
-  #! If set to true, will mark the release as not ready for production.
-  #! Default is false.
   prerelease: false
-
-  #! What to do with the release notes in case there the release already exists.
-  #!
-  #! Valid options are:
-  #! - `keep-existing`: keep the existing notes
-  #! - `append`: append the current release notes to the existing notes
-  #! - `prepend`: prepend the current release notes to the existing notes
-  #! - `replace`: replace existing notes
-  #!
-  #! Default is `keep-existing`.
   mode: replace
-
-  #! Header template for the release body.
   header: |
     ## KraftKit {{ .Tag }} ({{ .Date }})
 
     This is a stable release of kraftkit.
-
-  #! Change the name of the release.
   name_template: 'v{{ .Version }}'
 
 nfpms:
-  #! You can change the name of the package.
-  #! This is parsed with the Go template engine and the following variables
-  #! are available:
-  #! - ProjectName
-  #! - Tag
-  #! - Version (Git tag without `v` prefix)
-  #! - Os
-  #! - Arch
-  #! - Arm (ARM version)
-  #! - Env (environment variables)
-  #! Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
-    #! Your app's vendor.
-    #! Default is empty.
-  - vendor: Alexander Jung
-
-    #! Your app's maintainer (probably you).
-    #! Default is empty.
+  - vendor: Unikraft
     maintainer: Alexander Jung <alex@unikraft.io>
-
-    #! Your app's description.
-    #! Default is empty.
     description: Build and use highly customized and ultra-lightweight unikernels.
-
-    #! Your app's license.
     license: BSD 3-clause
-
-    #! Template to the path that the binaries should be installed.
     bindir: /usr/local/bin
-
-    #! Kraftkit page.
     homepage: https://kraftkit.sh
-
     dependencies:
       - libc6 (>= 2.14)
-
-    #! Formats to be generated.
     formats:
       - deb
       - rpm
