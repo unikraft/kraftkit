@@ -18,7 +18,8 @@ RUN set -xe; \
       cmake \
       make \
       git; \
-    go install mvdan.cc/gofumpt@latest;
+    go install mvdan.cc/gofumpt@latest; \
+    git config --global --add safe.directory /go/src/kraftkit.sh;
 
 WORKDIR /go/src/kraftkit.sh
 
