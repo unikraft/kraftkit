@@ -1,6 +1,6 @@
 #! .goreleaser.yaml
 changelog:
-  use: git
+  use: github
 
 gomod:
   mod: readonly
