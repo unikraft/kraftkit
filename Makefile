@@ -1,39 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
-#
-# Authors: Alexander Jung <alex@unikraft.io>
-#
-# Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+# Licensed under the BSD-3-Clause License (the "License").
+# You may not use this file except in compliance with the License.
 
 # Directories
 WORKDIR     ?= $(CURDIR)
 TESTDIR     ?= $(WORKDIR)/tests
 DISTDIR     ?= $(WORKDIR)/dist
 INSTALLDIR  ?= /usr/local/bin/
+VENDORDIR   ?= $(WORKDIR)/vendor
 
 # Arguments
 REGISTRY    ?= ghcr.io
@@ -72,6 +47,8 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
 GO          ?= go
 GOFUMPT     ?= gofumpt
 GOCILINT    ?= golangci-lint
+MKDIR       ?= mkdir
+GIT         ?= git
 
 # Misc
 Q           ?= @
@@ -104,9 +81,11 @@ endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
-$(addprefix $(.PROXY), $(BIN)): deps
+$(addprefix $(.PROXY), $(BIN)): git2go tidy
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
+		-tags static \
+		-mod=readonly \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
@@ -133,6 +112,7 @@ container:
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
+devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
 devenv:
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself,bash)
@@ -140,8 +120,8 @@ else
 	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
 endif
 
-.PHONY: deps
-deps:
+.PHONY: tidy
+tidy:
 	$(GO) mod tidy -compat=$(GO_VERSION)
 
 .PHONY: fmt
@@ -162,3 +142,15 @@ properclean: IMAGE       ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TA
 properclean:
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
+
+.PHONY: git2go
+git2go: $(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc
+
+$(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
+	$(MAKE) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 install-static
+
+$(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2: $(VENDORDIR)/github.com/libgit2/git2go
+	$(GIT) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 submodule update --init --recursive
+
+$(VENDORDIR)/github.com/libgit2/git2go:
+	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@/v31

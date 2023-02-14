@@ -1,0 +1,8 @@
+go 1.18
+
+use (
+  "."
+  "./tools/go-generate-qemu-devices"
+  "./tools/protoc-gen-go-netconn"
+  "./vendor/github.com/libgit2/git2go/v31"
+)

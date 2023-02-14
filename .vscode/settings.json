@@ -1,0 +1,10 @@
+{
+  "go.buildFlags": [
+    "-mod=readonly"
+  ],
+  "gopls": {
+    "build.buildFlags": [
+      "-mod=readonly",
+    ],
+  }
+}
