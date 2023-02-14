@@ -350,8 +350,8 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.DefConfig(
 						ctx,
-						&targ, // Target-specific options
-						nil,   // No extra configuration options
+						targ, // Target-specific options
+						nil,  // No extra configuration options
 						make.WithProgressFunc(w),
 						make.WithSilent(true),
 						make.WithExecOptions(
@@ -370,7 +370,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Prepare(
 						ctx,
-						&targ, // Target-specific options
+						targ, // Target-specific options
 						append(
 							mopts,
 							make.WithProgressFunc(w),
@@ -389,7 +389,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
 					ctx,
-					&targ, // Target-specific options
+					targ, // Target-specific options
 					app.WithBuildProgressFunc(w),
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(
