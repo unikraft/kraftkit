@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/version"
+	kitversion "kraftkit.sh/internal/version"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/cmd/kraft/set"
 	"kraftkit.sh/cmd/kraft/stop"
 	"kraftkit.sh/cmd/kraft/unset"
+	"kraftkit.sh/cmd/kraft/version"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -45,42 +46,35 @@ func New() *cobra.Command {
      /|/=\|\   Documentation:    https://kraftkit.sh/
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
        v v
-       ' '`, version.Version()),
+       ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
 	})
 
-	cmd.AddGroup(
-		&cobra.Group{
-			ID:    "build",
-			Title: "BUILD COMMANDS",
-		},
-		&cobra.Group{
-			ID:    "pkg",
-			Title: "PACKAGING COMMANDS",
-		},
-		&cobra.Group{
-			ID:    "run",
-			Title: "RUNTIME COMMANDS",
-		},
-	)
-
+	cmd.AddGroup(&cobra.Group{ID: "build", Title: "BUILD COMMANDS"})
 	cmd.AddCommand(build.New())
 	cmd.AddCommand(clean.New())
 	cmd.AddCommand(configure.New())
-	cmd.AddCommand(events.New())
 	cmd.AddCommand(fetch.New())
 	cmd.AddCommand(menu.New())
-	cmd.AddCommand(pkg.New())
 	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(properclean.New())
+	cmd.AddCommand(set.New())
+	cmd.AddCommand(unset.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
+	cmd.AddCommand(pkg.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
+	cmd.AddCommand(events.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
-	cmd.AddCommand(set.New())
 	cmd.AddCommand(stop.New())
-	cmd.AddCommand(unset.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
+	cmd.AddCommand(version.New())
 
 	return cmd
 }
