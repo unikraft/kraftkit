@@ -37,7 +37,8 @@ jobs:
         run: |
           apt-get update;
           apt-get install -y --no-install-recommends \
-            cmake;
+            cmake \
+            make;
       
       - name: Generate GoReleaser configuration
         run: |
