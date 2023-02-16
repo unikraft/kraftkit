@@ -36,7 +36,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -108,7 +107,7 @@ func (pm *PluginManager) parseBinaryPluginDir(fi fs.FileInfo) (Plugin, error) {
 	}
 
 	manifestPath := filepath.Join(pm.dataDir, fi.Name(), PluginManifestFile)
-	manifest, err := ioutil.ReadFile(manifestPath)
+	manifest, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return ext, fmt.Errorf("could not open %s for reading: %w", manifestPath, err)
 	}
@@ -192,7 +191,7 @@ func (pm *PluginManager) List() ([]Plugin, error) {
 		}
 	}
 
-	entries, err := ioutil.ReadDir(pm.dataDir)
+	entries, err := os.ReadDir(pm.dataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -204,15 +203,19 @@ func (pm *PluginManager) List() ([]Plugin, error) {
 
 		var plugin Plugin
 		var err error
+		finfo, err := f.Info()
+		if err != nil {
+			return nil, err
+		}
 		if f.IsDir() {
-			plugin, err = pm.parsePluginDir(f)
+			plugin, err = pm.parsePluginDir(finfo)
 			if err != nil {
 				return nil, err
 			}
 
 			results = append(results, plugin)
 		} else {
-			plugin, err = pm.parsePluginFile(f)
+			plugin, err = pm.parsePluginFile(finfo)
 			if err != nil {
 				return nil, err
 			}

@@ -18,7 +18,7 @@ package app
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -126,7 +126,7 @@ func (popts *ProjectOptions) AddKraftfile(file string) error {
 	var err error
 
 	if file == "-" {
-		b, err = ioutil.ReadAll(os.Stdin)
+		b, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func (popts *ProjectOptions) AddKraftfile(file string) error {
 			return err
 		}
 
-		b, err = ioutil.ReadFile(f)
+		b, err = os.ReadFile(f)
 		if err != nil {
 			return err
 		}
