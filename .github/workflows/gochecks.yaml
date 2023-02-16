@@ -19,7 +19,7 @@ jobs:
           go-version: "1.20.x"
 
       - name: Install gofumpt
-        run: go install mvdan.cc/gofumpt@v0.3.1
+        run: go install mvdan.cc/gofumpt@v0.4.0
 
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install build dependencies
@@ -32,6 +32,7 @@ jobs:
         uses: protocol/multiple-go-modules@v1.2
         with:
           run: |
+            git config --global --add safe.directory '*'
             go mod tidy
             if [[ -n $(git ls-files --other --exclude-standard --directory -- go.sum) ]]; then
               echo "go.sum was added by go mod tidy"
@@ -47,7 +48,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.50.1
+          version: v1.51.1
 
       - name: go generate
         uses: protocol/multiple-go-modules@v1.2
