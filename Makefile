@@ -134,7 +134,7 @@ cicheck:
 
 .PHONY: clean
 clean:
-	$(GO) clean -cache -i -r
+	$(GO) clean -mod=readonly -cache -i -r
 
 .PHONY: properclean
 properclean: ENVIRONMENT ?= myself
