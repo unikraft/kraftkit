@@ -7,7 +7,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -99,7 +98,7 @@ func (uk UnikraftConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
 		return nil, err
 	}
 
-	files, err := ioutil.ReadDir(config_uk_lib)
+	files, err := os.ReadDir(config_uk_lib)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (uk UnikraftConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
 		return nil, err
 	}
 
-	files, err = ioutil.ReadDir(config_uk_plat)
+	files, err = os.ReadDir(config_uk_plat)
 	if err != nil {
 		return nil, err
 	}

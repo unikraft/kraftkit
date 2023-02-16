@@ -33,7 +33,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -89,7 +89,7 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 
 	defer f.Close()
 
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return fmt.Errorf("could not read file: %v", err)
 	}

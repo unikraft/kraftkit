@@ -12,7 +12,7 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
-    container: goreleaser/goreleaser-cross:v1.18.3
+    container: goreleaser/goreleaser-cross:v1.20.0
     steps:
       - name: Checkout
         uses: actions/checkout@v2

@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -118,7 +117,7 @@ func NewManifestIndexFromFile(ctx context.Context, path string, mopts ...Manifes
 		return nil, fmt.Errorf("manifest index is empty: %s", path)
 	}
 
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

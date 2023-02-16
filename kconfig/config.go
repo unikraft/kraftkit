@@ -9,7 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -257,7 +257,7 @@ func (cf *DotConfigFile) Serialize() []byte {
 }
 
 func ParseConfig(file string) (*DotConfigFile, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open .config file %v: %v", file, err)
 	}

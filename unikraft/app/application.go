@@ -7,7 +7,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -358,7 +357,7 @@ func (app application) DefConfig(ctx context.Context, tc target.Target, extra kc
 	}
 
 	// Write the configuration to a temporary file
-	tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
+	tmpfile, err := os.CreateTemp("", app.Name()+"-config*")
 	if err != nil {
 		return fmt.Errorf("could not create temporary defconfig file: %v", err)
 	}

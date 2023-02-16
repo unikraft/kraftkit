@@ -11,7 +11,7 @@ package kconfig
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 )
@@ -119,7 +119,7 @@ type kconfigParser struct {
 }
 
 func Parse(file string, env ...*KeyValue) (*KConfigFile, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open Kconfig file %v: %v", file, err)
 	}
@@ -379,7 +379,7 @@ func (kp *kconfigParser) parseProperty(prop string) {
 func (kp *kconfigParser) includeSource(file string) {
 	kp.newCurrent(nil)
 	file = filepath.Join(kp.baseDir, file)
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		kp.failf("%v", err)
 		return
