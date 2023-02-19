@@ -56,8 +56,8 @@ github.com/cloudflare/circl v1.1.0/go.mod h1:prBCrKB9DV4poKZY1l9zBXg2QJY7mvgRvtM
 github.com/cloudflare/circl v1.3.2 h1:VWp8dY3yH69fdM7lM6A1+NhhVoDu9vqK0jOgmkQHFWk=
 github.com/cloudflare/circl v1.3.2/go.mod h1:+CauBF6R70Jqcyl8N2hC8pAXYbWkGIezuSbuGLtRhnw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/compose-spec/compose-go v1.10.0 h1:MGrEv+WyETQWB4ARKTHRTvoZ0CZGi8lyFlveGNMej40=
-github.com/compose-spec/compose-go v1.10.0/go.mod h1:Tb5Ae2PsYN3GTqYqzl2IRbTPiJtPZZjMw8UKUvmehFk=
+github.com/compose-spec/compose-go v1.11.0 h1:YLl0wf4YU9ZVei6mqLxAfI2gWOrqnTsPBAcIe9cO9Zk=
+github.com/compose-spec/compose-go v1.11.0/go.mod h1:huuiqxbQTZLkagcN9D/1tEKZwMXVetYeIWtjCAVsoXw=
 github.com/containerd/console v1.0.3 h1:lIr7SlA5PxZyMV30bDW0MGbiOPXwc63yRuCP0ARubLw=
 github.com/containerd/console v1.0.3/go.mod h1:7LqA/THxQ86k76b8c/EMSiaJ3h1eZkMkXar0TQ1gf3U=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
