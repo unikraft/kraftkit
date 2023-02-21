@@ -134,16 +134,26 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 
 		name, alias := name(fieldType.Name, fieldType.Tag.Get("long"), fieldType.Tag.Get("short"))
 		usage := fieldType.Tag.Get("usage")
-		env := strings.Split(fieldType.Tag.Get("env"), ",")
+		envName := fieldType.Tag.Get("env")
 		defValue := fieldType.Tag.Get("default")
-		if len(env) == 1 && env[0] == "" {
-			env = nil
-		}
 		defInt, err := strconv.Atoi(defValue)
 		if err != nil {
 			defInt = 0
 		}
 		strValue := v.String()
+
+		// Set the value from the environmental value, if known, it takes precedent
+		// over the provided value which would otherwise come from a configuration
+		// file.
+		if envName != "" {
+			if envValue := os.Getenv(envName); envValue != "" {
+				strValue = os.Getenv(envValue)
+			}
+		}
+
+		if strValue == "" && defValue != "" {
+			strValue = defValue
+		}
 
 		flags := c.PersistentFlags()
 		if fieldType.Tag.Get("local") == "true" {
@@ -200,18 +210,6 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		default:
 			// Unknown kind on field " + fieldType.Name + " on " + objValue.Type().Name()
 			continue
-		}
-
-		for _, env := range env {
-			envs = append(envs, func() {
-				v := os.Getenv(env)
-				if v != "" {
-					fv, err := flags.GetString(name)
-					if err == nil && (fv == "" || fv == defValue) {
-						_ = flags.Set(name, v)
-					}
-				}
-			})
 		}
 	}
 
