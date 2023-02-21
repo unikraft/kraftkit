@@ -101,8 +101,8 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
 	}
 
-	parallel := !config.G(ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
+	parallel := !config.G[config.KraftKit](ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process

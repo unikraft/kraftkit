@@ -25,7 +25,7 @@ import (
 type CliOptions struct {
 	ioStreams      *iostreams.IOStreams
 	logger         *logrus.Entry
-	configManager  *config.ConfigManager
+	configManager  *config.ConfigManager[config.KraftKit]
 	packageManager packmanager.PackageManager
 	pluginManager  *plugins.PluginManager
 	httpClient     *http.Client
@@ -119,8 +119,13 @@ func withDefaultLogger() CliOption {
 // default options.
 func withDefaultConfigManager(cmd *cobra.Command) CliOption {
 	return func(copts *CliOptions) error {
+		cfg, err := config.NewDefaultKraftKitConfig()
+		if err != nil {
+			return err
+		}
 		cfgm, err := config.NewConfigManager(
-			config.WithFile(config.ConfigFile(), true),
+			cfg,
+			config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
 		)
 		if err != nil {
 			return err

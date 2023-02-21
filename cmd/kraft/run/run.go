@@ -89,7 +89,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else if opts.Hypervisor == "config" {
-		opts.Hypervisor = config.G(ctx).DefaultPlat
+		opts.Hypervisor = config.G[config.KraftKit](ctx).DefaultPlat
 	} else {
 		driverType = machinedriver.DriverTypeFromName(opts.Hypervisor)
 	}
@@ -98,15 +98,15 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unknown hypervisor driver: %s", opts.Hypervisor)
 	}
 
-	debug := log.Levels()[config.G(ctx).Log.Level] >= logrus.DebugLevel
-	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
+	debug := log.Levels()[config.G[config.KraftKit](ctx).Log.Level] >= logrus.DebugLevel
+	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
 	driver, err := machinedriver.New(driverType,
 		machinedriveropts.WithBackground(opts.Detach),
-		machinedriveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
+		machinedriveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
 		machinedriveropts.WithMachineStore(store),
 		machinedriveropts.WithDebug(debug),
 		machinedriveropts.WithExecOptions(
@@ -194,7 +194,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			}
 
 		} else if len(target) == 0 && len(project.TargetNames()) > 1 {
-			if config.G(ctx).NoPrompt {
+			if config.G[config.KraftKit](ctx).NoPrompt {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
 
@@ -282,7 +282,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 	if !opts.NoMonitor {
 		// Spawn an event monitor or attach to an existing monitor
-		_, err = os.Stat(config.G(ctx).EventsPidFile)
+		_, err = os.Stat(config.G[config.KraftKit](ctx).EventsPidFile)
 		if err != nil && os.IsNotExist(err) {
 			log.G(ctx).Debugf("launching event monitor...")
 

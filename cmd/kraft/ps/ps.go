@@ -85,7 +85,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 
 	var items []psTable
 
-	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 
 		if _, ok := drivers[driverType]; !ok {
 			driver, err := machinedriver.New(driverType,
-				machinedriveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
+				machinedriveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
 				machinedriveropts.WithMachineStore(store),
 			)
 			if err != nil {

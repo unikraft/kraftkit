@@ -106,7 +106,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx, cancel := context.WithCancel(cmd.Context())
-	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("could not access machine store: %v", err)
@@ -115,13 +115,13 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	var pidfile *os.File
 
 	// Check if a pid has already been enabled
-	if _, err := os.Stat(config.G(ctx).EventsPidFile); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(config.G(ctx).EventsPidFile), 0o755); err != nil {
+	if _, err := os.Stat(config.G[config.KraftKit](ctx).EventsPidFile); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(config.G[config.KraftKit](ctx).EventsPidFile), 0o755); err != nil {
 			cancel()
 			return err
 		}
 
-		pidfile, err = os.OpenFile(config.G(ctx).EventsPidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666)
+		pidfile, err = os.OpenFile(config.G[config.KraftKit](ctx).EventsPidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666)
 		if err != nil {
 			cancel()
 			return fmt.Errorf("could not create pidfile: %v", err)
@@ -130,7 +130,8 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		defer func() {
 			pidfile.Close()
 
-			if err := os.Remove(config.G(ctx).EventsPidFile); err != nil {
+			log.G(ctx).Info("removing pid file")
+			if err := os.Remove(config.G[config.KraftKit](ctx).EventsPidFile); err != nil {
 				log.G(ctx).Errorf("could not remove pid file: %v", err)
 			}
 		}()
@@ -235,7 +236,7 @@ seek:
 				if _, ok := drivers[driverType]; !ok {
 					driver, err := machinedriver.New(driverType,
 						driveropts.WithMachineStore(store),
-						driveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
+						driveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
 					)
 					if err != nil {
 						log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid, err)

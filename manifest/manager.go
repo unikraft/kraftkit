@@ -55,7 +55,7 @@ func NewManifestManager() packmanager.PackageManager {
 
 // update retrieves and returns a cache of the upstream manifest registry
 func (m manager) update(ctx context.Context) (*ManifestIndex, error) {
-	if len(config.G(ctx).Unikraft.Manifests) == 0 {
+	if len(config.G[config.KraftKit](ctx).Unikraft.Manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
 
@@ -64,11 +64,11 @@ func (m manager) update(ctx context.Context) (*ManifestIndex, error) {
 	}
 
 	mopts := []ManifestOption{
-		WithAuthConfig(config.G(ctx).Auth),
-		WithSourcesRootDir(config.G(ctx).Paths.Sources),
+		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+		WithSourcesRootDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
-	for _, manipath := range config.G(ctx).Unikraft.Manifests {
+	for _, manipath := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 		// If the path of the manipath is the same as the current manifest or it
 		// resides in the same directory as KraftKit's configured path for manifests
 		// then we can skip this since we don't want to update ourselves.
@@ -140,7 +140,7 @@ func (m manager) Update(ctx context.Context) error {
 }
 
 func (m manager) AddSource(ctx context.Context, source string) error {
-	for _, manifest := range config.G(ctx).Unikraft.Manifests {
+	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 		if source == manifest {
 			log.G(ctx).Warnf("manifest already saved: %s", source)
 			return nil
@@ -148,22 +148,25 @@ func (m manager) AddSource(ctx context.Context, source string) error {
 	}
 
 	log.G(ctx).Infof("adding to list of manifests: %s", source)
-	config.G(ctx).Unikraft.Manifests = append(config.G(ctx).Unikraft.Manifests, source)
-	return config.M(ctx).Write(true)
+	config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
+		config.G[config.KraftKit](ctx).Unikraft.Manifests,
+		source,
+	)
+	return config.M[config.KraftKit](ctx).Write(true)
 }
 
 func (m manager) RemoveSource(ctx context.Context, source string) error {
 	manifests := []string{}
 
-	for _, manifest := range config.G(ctx).Unikraft.Manifests {
+	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 		if source != manifest {
 			manifests = append(manifests, manifest)
 		}
 	}
 
 	log.G(ctx).Infof("removing from list of manifests: %s", source)
-	config.G(ctx).Unikraft.Manifests = manifests
-	return config.M(ctx).Write(false)
+	config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
+	return config.M[config.KraftKit](ctx).Write(false)
 }
 
 func (m manager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
@@ -184,8 +187,8 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 	var allManifests []*Manifest
 
 	mopts := []ManifestOption{
-		WithAuthConfig(config.G(ctx).Auth),
-		WithSourcesRootDir(config.G(ctx).Paths.Sources),
+		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+		WithSourcesRootDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
@@ -369,8 +372,8 @@ func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.P
 
 // LocalManifestDir returns the user configured path to all the manifests
 func (m manager) LocalManifestsDir(ctx context.Context) string {
-	if len(config.G(ctx).Paths.Manifests) > 0 {
-		return config.G(ctx).Paths.Manifests
+	if len(config.G[config.KraftKit](ctx).Paths.Manifests) > 0 {
+		return config.G[config.KraftKit](ctx).Paths.Manifests
 	}
 
 	return filepath.Join(config.DataDir(), "manifests")
