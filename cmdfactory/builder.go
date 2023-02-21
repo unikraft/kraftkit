@@ -108,7 +108,7 @@ func Main(ctx context.Context, cmd *cobra.Command) {
 // AttributeFlags associates a given struct with public attributes and a set of
 // tags with the provided cobra command so as to enable dynamic population of
 // CLI flags.
-func AttributeFlags(c *cobra.Command, obj any) {
+func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 	var (
 		envs      []func()
 		arrays    = map[string]reflect.Value{}
@@ -213,6 +213,11 @@ func AttributeFlags(c *cobra.Command, obj any) {
 				}
 			})
 		}
+	}
+
+	// If any arguments are passed, parse them immediately
+	if len(args) > 0 {
+		c.ParseFlags(args)
 	}
 
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)

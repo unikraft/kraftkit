@@ -126,9 +126,8 @@ func withDefaultConfigManager(cmd *cobra.Command) CliOption {
 			return err
 		}
 
-		// Attribute all arguments with configuration
-		cmdfactory.AttributeFlags(cmd, cfgm.Config)
-		cmd.ParseFlags(os.Args[1:])
+		// Attribute all configuration flags and command-line argument values
+		cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...)
 
 		copts.configManager = cfgm
 
