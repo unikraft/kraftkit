@@ -94,7 +94,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
-	store, err := machine.NewMachineStoreFromPath(config.G(ctx).RuntimeDir)
+	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
 	if err != nil {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
@@ -146,7 +146,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			if _, ok := drivers[driverType]; !ok {
 				driver, err := machinedriver.New(driverType,
 					driveropts.WithMachineStore(store),
-					driveropts.WithRuntimeDir(config.G(ctx).RuntimeDir),
+					driveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
 				)
 				if err != nil {
 					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)

@@ -92,8 +92,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	workdir := opts.Workdir
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
-	parallel := !config.G(ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G(ctx).Log.Type) != log.FANCY
+	parallel := !config.G[config.KraftKit](ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {

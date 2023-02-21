@@ -15,23 +15,23 @@ import (
 
 // ConfigManager uses the package facilities, there should be at least one
 // instance of it. It holds the configuration feeders and structs.
-type ConfigManager struct {
-	Config     *Config
+type ConfigManager[C any] struct {
+	Config     *C
 	ConfigFile string
 	Feeders    []Feeder
 }
 
-type ConfigManagerOption func(cm *ConfigManager) error
+type ConfigManagerOption[C any] func(cm *ConfigManager[C]) error
 
-func WithFeeder(feeder Feeder) ConfigManagerOption {
-	return func(cm *ConfigManager) error {
+func WithFeeder[C any](feeder Feeder) ConfigManagerOption[C] {
+	return func(cm *ConfigManager[C]) error {
 		cm.AddFeeder(feeder)
 		return nil
 	}
 }
 
-func WithFile(file string, forceCreate bool) ConfigManagerOption {
-	return func(cm *ConfigManager) error {
+func WithFile[C any](file string, forceCreate bool) ConfigManagerOption[C] {
+	return func(cm *ConfigManager[C]) error {
 		ext := strings.Split(file, ".")
 		if len(ext) == 1 {
 			return fmt.Errorf("unknown file extension for config file: %s", file)
@@ -50,28 +50,27 @@ func WithFile(file string, forceCreate bool) ConfigManagerOption {
 					return fmt.Errorf("could not write initial config: %v", err)
 				}
 			}
-			return WithFeeder(yml)(cm)
+			return WithFeeder[C](yml)(cm)
 		default:
 			return fmt.Errorf("unsupported file extension: %s", file)
 		}
 	}
 }
 
-func WithDefaultConfigFile() ConfigManagerOption {
-	return func(cm *ConfigManager) error {
-		return WithFile(DefaultConfigFile(), true)(cm)
+func WithDefaultConfigFile[C any]() ConfigManagerOption[C] {
+	return func(cm *ConfigManager[C]) error {
+		return WithFile[C](DefaultConfigFile(), true)(cm)
 	}
 }
 
-func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
-	cm := &ConfigManager{}
-
-	c, err := NewDefaultConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not seed default values for config: %s", err)
+func NewConfigManager[C any](c *C, opts ...ConfigManagerOption[C]) (*ConfigManager[C], error) {
+	if c == nil {
+		return nil, fmt.Errorf("cannot instantiate ConfigManager without Config")
 	}
 
-	cm.Config = c
+	cm := &ConfigManager[C]{
+		Config: c,
+	}
 
 	for _, o := range opts {
 		if err := o(cm); err != nil {
@@ -89,15 +88,19 @@ func NewConfigManager(opts ...ConfigManagerOption) (*ConfigManager, error) {
 }
 
 // AddFeeder adds a feeder that provides configuration data.
-func (cm *ConfigManager) AddFeeder(f Feeder) *ConfigManager {
+func (cm *ConfigManager[C]) AddFeeder(f Feeder) *ConfigManager[C] {
+	if f == nil {
+		return cm
+	}
+
 	cm.Feeders = append(cm.Feeders, f)
 	return cm
 }
 
 // Feed binds configuration data from added feeders to the added structs.
-func (cm *ConfigManager) Feed() error {
+func (cm *ConfigManager[C]) Feed() error {
 	for _, f := range cm.Feeders {
-		if err := cm.feedStruct(f, &cm.Config); err != nil {
+		if err := cm.feedStruct(f, cm.Config); err != nil {
 			return err
 		}
 	}
@@ -105,7 +108,7 @@ func (cm *ConfigManager) Feed() error {
 	return nil
 }
 
-func (cm *ConfigManager) Write(merge bool) error {
+func (cm *ConfigManager[C]) Write(merge bool) error {
 	for _, f := range cm.Feeders {
 		if err := f.Write(cm.Config, merge); err != nil {
 			return err
@@ -118,7 +121,7 @@ func (cm *ConfigManager) Write(merge bool) error {
 // SetupListener adds an OS signal listener to the Config instance. The listener
 // listens to the `SIGHUP` signal and refreshes the Config instance. It would
 // call the provided fallback if the refresh process failed.
-func (cm *ConfigManager) SetupListener(fallback func(err error)) *ConfigManager {
+func (cm *ConfigManager[C]) SetupListener(fallback func(err error)) *ConfigManager[C] {
 	s := make(chan os.Signal, 1)
 
 	signal.Notify(s, syscall.SIGHUP)
@@ -136,7 +139,7 @@ func (cm *ConfigManager) SetupListener(fallback func(err error)) *ConfigManager 
 }
 
 // feedStruct feeds a struct using given feeder.
-func (cm *ConfigManager) feedStruct(f Feeder, s interface{}) error {
+func (cm *ConfigManager[C]) feedStruct(f Feeder, s interface{}) error {
 	if err := f.Feed(s); err != nil {
 		return fmt.Errorf("failed to feed config: %v", err)
 	}
@@ -154,8 +157,8 @@ func AllowedValues(key string) []string {
 	return []string{}
 }
 
-func Default(key string) string {
-	found, _, def, _, err := findConfigDefault(key, "", "", reflect.ValueOf(&Config{}))
+func Default[C any](key string) string {
+	found, _, def, _, err := findConfigDefault[C](key, "", "", reflect.ValueOf(new([0]C)))
 	if err != nil || found != key {
 		return def
 	}
@@ -163,7 +166,7 @@ func Default(key string) string {
 	return ""
 }
 
-func findConfigDefault(needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
+func findConfigDefault[C any](needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
 	if v.Kind() != reflect.Ptr {
 		return needle, offset, def, v, fmt.Errorf("not a pointer value")
 	}
@@ -186,7 +189,7 @@ func findConfigDefault(needle, offset, def string, v reflect.Value) (string, str
 				check = offset + "." + name
 			}
 
-			dNeedle, dOffset, dDef, dv, dErr := findConfigDefault(
+			dNeedle, dOffset, dDef, dv, dErr := findConfigDefault[C](
 				needle,
 				check,
 				v.Type().Field(i).Tag.Get("default"),
