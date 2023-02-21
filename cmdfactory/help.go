@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 
 	"kraftkit.sh/internal/text"
 )
@@ -210,8 +211,17 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		helpEntries = append(helpEntries, helpEntry{"EXAMPLES", cmd.Example})
 	}
 
-	out := iostreams.G(cmd.Context()).Out
-	cs := iostreams.G(cmd.Context()).ColorScheme()
+	ctx := cmd.Context()
+	err := iostreams.G(ctx).StartPager()
+	if err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	} else {
+		defer iostreams.G(ctx).StopPager()
+	}
+
+	out := iostreams.G(ctx).Out
+	cs := iostreams.G(ctx).ColorScheme()
+
 	for _, e := range helpEntries {
 		if e.title != "" && e.body != "" {
 			fmt.Fprintln(out, cs.Bold(e.title))
