@@ -5,12 +5,18 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	kitversion "kraftkit.sh/internal/version"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -84,5 +90,38 @@ func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
-	cmdfactory.Main(signals.SetupSignalContext(), New())
+	cmd := New()
+	ctx := signals.SetupSignalContext()
+	copts := &CliOptions{}
+
+	for _, o := range []CliOption{
+		withDefaultConfigManager(cmd),
+		withDefaultIOStreams(),
+		withDefaultPackageManager(),
+		withDefaultPluginManager(),
+		withDefaultLogger(),
+		withDefaultHTTPClient(),
+	} {
+		if err := o(copts); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	// Set up the config manager in the context if it is available
+	if copts.configManager != nil {
+		ctx = config.WithConfigManager(ctx, copts.configManager)
+	}
+
+	// Set up the logger in the context if it is available
+	if copts.logger != nil {
+		ctx = log.WithLogger(ctx, copts.logger)
+	}
+
+	// Set up the iostreams in the context if it is available
+	if copts.ioStreams != nil {
+		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
+	}
+
+	cmdfactory.Main(ctx, cmd)
 }

@@ -13,14 +13,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	"kraftkit.sh/config"
-	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 var (
@@ -98,54 +95,10 @@ func expandRegisteredFlags(cmd *cobra.Command) {
 	}
 }
 
-// defaultOptions is a cache of previously instantiated default cli options.
-var defaultOptions *CliOptions
-
 // Main executes the given command
-func Main(ctx context.Context, cmd *cobra.Command, opts ...CliOption) {
-	if defaultOptions == nil {
-		defaultOptions = &CliOptions{}
-		for _, o := range []CliOption{
-			WithDefaultConfigManager(cmd),
-			WithDefaultIOStreams(),
-			WithDefaultPackageManager(),
-			WithDefaultPluginManager(),
-			WithDefaultLogger(),
-			WithDefaultHTTPClient(),
-		} {
-			o(defaultOptions)
-		}
-	}
-
-	copts := defaultOptions
-
-	// Apply user-specified options and then defaults.  The default options are
-	// programmed in a way such to prefer exiting values (set initially by any
-	// user-specified options).
-	for _, o := range opts {
-		if err := o(copts); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
-	// Set up the config manager in the context if it is available
-	if copts.configManager != nil {
-		ctx = config.WithConfigManager(ctx, copts.configManager)
-	}
-
+func Main(ctx context.Context, cmd *cobra.Command) {
 	// Expand flag all dynamically registered flag overrides.
 	expandRegisteredFlags(cmd)
-
-	// Set up the logger in the context if it is available
-	if copts.logger != nil {
-		ctx = log.WithLogger(ctx, copts.logger)
-	}
-
-	// Set up the iostreams in the context if it is available
-	if copts.ioStreams != nil {
-		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
-	}
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
@@ -156,7 +109,7 @@ func Main(ctx context.Context, cmd *cobra.Command, opts ...CliOption) {
 // AttributeFlags associates a given struct with public attributes and a set of
 // tags with the provided cobra command so as to enable dynamic population of
 // CLI flags.
-func AttributeFlags(c *cobra.Command, obj any) {
+func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 	var (
 		envs      []func()
 		arrays    = map[string]reflect.Value{}
@@ -182,20 +135,36 @@ func AttributeFlags(c *cobra.Command, obj any) {
 
 		name, alias := name(fieldType.Name, fieldType.Tag.Get("long"), fieldType.Tag.Get("short"))
 		usage := fieldType.Tag.Get("usage")
-		env := strings.Split(fieldType.Tag.Get("env"), ",")
+		envName := fieldType.Tag.Get("env")
 		defValue := fieldType.Tag.Get("default")
-		if len(env) == 1 && env[0] == "" {
-			env = nil
-		}
 		defInt, err := strconv.Atoi(defValue)
 		if err != nil {
 			defInt = 0
 		}
 		strValue := v.String()
 
+		// Set the value from the environmental value, if known, it takes precedent
+		// over the provided value which would otherwise come from a configuration
+		// file.
+		if envName != "" {
+			if envValue := os.Getenv(envName); envValue != "" {
+				strValue = os.Getenv(envValue)
+			}
+		}
+
+		if strValue == "" && defValue != "" {
+			strValue = defValue
+		}
+
 		flags := c.PersistentFlags()
 		if fieldType.Tag.Get("local") == "true" {
 			flags = c.Flags()
+		}
+
+		switch v.Interface().(type) {
+		case time.Duration:
+			flags.DurationVarP((*time.Duration)(unsafe.Pointer(v.Addr().Pointer())), name, alias, time.Duration(defInt), usage)
+			continue
 		}
 
 		switch fieldType.Type.Kind() {
@@ -249,18 +218,11 @@ func AttributeFlags(c *cobra.Command, obj any) {
 			// Unknown kind on field " + fieldType.Name + " on " + objValue.Type().Name()
 			continue
 		}
+	}
 
-		for _, env := range env {
-			envs = append(envs, func() {
-				v := os.Getenv(env)
-				if v != "" {
-					fv, err := flags.GetString(name)
-					if err == nil && (fv == "" || fv == defValue) {
-						_ = flags.Set(name, v)
-					}
-				}
-			})
-		}
+	// If any arguments are passed, parse them immediately
+	if len(args) > 0 {
+		c.ParseFlags(args)
 	}
 
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
