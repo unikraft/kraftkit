@@ -276,7 +276,29 @@ func (app application) IsConfigured(tc target.Target) bool {
 func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	var libraries []string
 
-	for _, library := range app.libraries {
+	// TODO: This is a temporary solution to fix an ordering issue with regard to
+	// syscall availability from a libc (which should be included first).  Long-term
+	// solution is to determine the library order by generating a DAG via KConfig
+	// parsing.
+	unformattedLibraries := lib.Libraries{}
+	for k, v := range app.libraries {
+		unformattedLibraries[k] = v
+	}
+
+	// All supported libCs right now
+	if unformattedLibraries["musl"] != nil {
+		libraries = append(libraries, unformattedLibraries["musl"].Path())
+		delete(unformattedLibraries, "musl")
+	} else if unformattedLibraries["newlib"] != nil {
+		libraries = append(libraries, unformattedLibraries["newlib"].Path())
+		delete(unformattedLibraries, "newlib")
+		if unformattedLibraries["pthread-embedded"] != nil {
+			libraries = append(libraries, unformattedLibraries["pthread-embedded"].Path())
+			delete(unformattedLibraries, "pthread-embedded")
+		}
+	}
+
+	for _, library := range unformattedLibraries {
 		if !library.IsUnpacked() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
