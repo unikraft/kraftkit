@@ -196,12 +196,12 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	flagUsages := cmd.LocalFlags().FlagUsagesWrapped(80)
+	flagUsages := cmd.LocalFlags().FlagUsages()
 	if flagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"FLAGS", dedent(flagUsages)})
 	}
 
-	inheritedFlagUsages := cmd.InheritedFlags().FlagUsagesWrapped(80)
+	inheritedFlagUsages := cmd.InheritedFlags().FlagUsages()
 	if inheritedFlagUsages != "" {
 		helpEntries = append(helpEntries, helpEntry{"INHERITED FLAGS", dedent(inheritedFlagUsages)})
 	}
