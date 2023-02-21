@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package cmdfactory
+package main
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -32,9 +33,9 @@ type CliOptions struct {
 
 type CliOption func(*CliOptions) error
 
-// WithDefaultLogger sets up the built in logger based on provided conifg found
+// withDefaultLogger sets up the built in logger based on provided conifg found
 // from the ConfigManager.
-func WithDefaultLogger() CliOption {
+func withDefaultLogger() CliOption {
 	return func(copts *CliOptions) error {
 		if copts.logger != nil {
 			return nil
@@ -114,28 +115,19 @@ func WithDefaultLogger() CliOption {
 	}
 }
 
-// WithConfigManager sets a previously instantiate ConfigManager to be used as
-// part of the CLI options.
-func WithConfigManager(cfgm *config.ConfigManager) CliOption {
-	return func(copts *CliOptions) error {
-		copts.configManager = cfgm
-		return nil
-	}
-}
-
-// WithDefaultConfigManager instantiates a configuration manager based on
+// withDefaultConfigManager instantiates a configuration manager based on
 // default options.
-func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
+func withDefaultConfigManager(cmd *cobra.Command) CliOption {
 	return func(copts *CliOptions) error {
 		cfgm, err := config.NewConfigManager(
-			config.WithDefaultConfigFile(),
+			config.WithFile(config.ConfigFile(), true),
 		)
 		if err != nil {
 			return err
 		}
 
 		// Attribute all arguments with configuration
-		AttributeFlags(cmd, cfgm.Config)
+		cmdfactory.AttributeFlags(cmd, cfgm.Config)
 		cmd.ParseFlags(os.Args[1:])
 
 		copts.configManager = cfgm
@@ -144,18 +136,9 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 	}
 }
 
-// WithIOStreams sets a previously instantiated iostreams.IOStreams structure to
-// be used within the command.
-func WithIOStreams(io *iostreams.IOStreams) CliOption {
-	return func(copts *CliOptions) error {
-		copts.ioStreams = io
-		return nil
-	}
-}
-
-// WithDefaultIOStreams instantiates ta new IO streams using environmental
+// withDefaultIOStreams instantiates ta new IO streams using environmental
 // variables and host-provided configuration.
-func WithDefaultIOStreams() CliOption {
+func withDefaultIOStreams() CliOption {
 	return func(copts *CliOptions) error {
 		if copts.ioStreams != nil {
 			return nil
@@ -187,18 +170,18 @@ func WithDefaultIOStreams() CliOption {
 	}
 }
 
-// WithHTTPClient sets a previously instantiated http.Client to be used within
+// withHTTPClient sets a previously instantiated http.Client to be used within
 // the command.
-func WithHTTPClient(httpClient *http.Client) CliOption {
+func withHTTPClient(httpClient *http.Client) CliOption {
 	return func(copts *CliOptions) error {
 		copts.httpClient = httpClient
 		return nil
 	}
 }
 
-// WithDefaultHTTPClient initializes a HTTP client using host-provided
+// withDefaultHTTPClient initializes a HTTP client using host-provided
 // configuration.
-func WithDefaultHTTPClient() CliOption {
+func withDefaultHTTPClient() CliOption {
 	return func(copts *CliOptions) error {
 		if copts.httpClient != nil {
 			return nil
@@ -227,18 +210,9 @@ func WithDefaultHTTPClient() CliOption {
 	}
 }
 
-// WithPackageManager sets a previously initialized package manager to be used
-// with the command.
-func WithPackageManager(pm packmanager.PackageManager) CliOption {
-	return func(copts *CliOptions) error {
-		copts.packageManager = pm
-		return nil
-	}
-}
-
-// WithDefaultPackageManager initializes a new package manager based on the
+// withDefaultPackageManager initializes a new package manager based on the
 // umbrella package manager using host-provided configuration.
-func WithDefaultPackageManager() CliOption {
+func withDefaultPackageManager() CliOption {
 	return func(copts *CliOptions) error {
 		if copts.packageManager != nil {
 			return nil
@@ -252,18 +226,9 @@ func WithDefaultPackageManager() CliOption {
 	}
 }
 
-// WithPluginManager sets a previously instantiated plugin manager to be used
-// withthe command.
-func WithPluginManager(pm *plugins.PluginManager) CliOption {
-	return func(copts *CliOptions) error {
-		copts.pluginManager = pm
-		return nil
-	}
-}
-
-// WithDefaultPluginManager returns an initialized plugin manager using the
+// withDefaultPluginManager returns an initialized plugin manager using the
 // host-provided configuration plugin path.
-func WithDefaultPluginManager() CliOption {
+func withDefaultPluginManager() CliOption {
 	return func(copts *CliOptions) error {
 		if copts.pluginManager != nil {
 			return nil

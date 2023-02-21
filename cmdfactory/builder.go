@@ -17,10 +17,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	"kraftkit.sh/config"
-	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 var (
@@ -98,54 +94,10 @@ func expandRegisteredFlags(cmd *cobra.Command) {
 	}
 }
 
-// defaultOptions is a cache of previously instantiated default cli options.
-var defaultOptions *CliOptions
-
 // Main executes the given command
-func Main(ctx context.Context, cmd *cobra.Command, opts ...CliOption) {
-	if defaultOptions == nil {
-		defaultOptions = &CliOptions{}
-		for _, o := range []CliOption{
-			WithDefaultConfigManager(cmd),
-			WithDefaultIOStreams(),
-			WithDefaultPackageManager(),
-			WithDefaultPluginManager(),
-			WithDefaultLogger(),
-			WithDefaultHTTPClient(),
-		} {
-			o(defaultOptions)
-		}
-	}
-
-	copts := defaultOptions
-
-	// Apply user-specified options and then defaults.  The default options are
-	// programmed in a way such to prefer exiting values (set initially by any
-	// user-specified options).
-	for _, o := range opts {
-		if err := o(copts); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
-	// Set up the config manager in the context if it is available
-	if copts.configManager != nil {
-		ctx = config.WithConfigManager(ctx, copts.configManager)
-	}
-
+func Main(ctx context.Context, cmd *cobra.Command) {
 	// Expand flag all dynamically registered flag overrides.
 	expandRegisteredFlags(cmd)
-
-	// Set up the logger in the context if it is available
-	if copts.logger != nil {
-		ctx = log.WithLogger(ctx, copts.logger)
-	}
-
-	// Set up the iostreams in the context if it is available
-	if copts.ioStreams != nil {
-		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
-	}
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
