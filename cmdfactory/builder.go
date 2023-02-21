@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/spf13/cobra"
@@ -158,6 +159,12 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		flags := c.PersistentFlags()
 		if fieldType.Tag.Get("local") == "true" {
 			flags = c.Flags()
+		}
+
+		switch v.Interface().(type) {
+		case time.Duration:
+			flags.DurationVarP((*time.Duration)(unsafe.Pointer(v.Addr().Pointer())), name, alias, time.Duration(defInt), usage)
+			continue
 		}
 
 		switch fieldType.Type.Kind() {
