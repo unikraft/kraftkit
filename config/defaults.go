@@ -17,8 +17,8 @@ const (
 	defaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
-func NewDefaultConfig() (*Config, error) {
-	c := &Config{}
+func NewDefaultKraftKitConfig() (*KraftKit, error) {
+	c := &KraftKit{}
 
 	if err := setDefaults(c); err != nil {
 		return nil, fmt.Errorf("could not set defaults for config: %s", err)

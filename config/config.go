@@ -14,7 +14,7 @@ type AuthConfig struct {
 	VerifySSL bool   `yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" long:"auth-%s-verify-ssl"`
 }
 
-type Config struct {
+type KraftKit struct {
 	NoPrompt       bool   `yaml:"no_prompt" env:"KRAFTKIT_NO_PROMPT" long:"no-prompt" usage:"Do not prompt for user interaction" default:"false"`
 	NoParallel     bool   `yaml:"no_parallel" env:"KRAFTKIT_NO_PARALLEL" long:"no-parallel" usage:"Do not run internal tasks in parallel" default:"true"`
 	NoEmojis       bool   `yaml:"no_emojis" env:"KRAFTKIT_NO_EMOJIS" long:"no-emojis" usage:"Do not use emojis in any console output" default:"true"`

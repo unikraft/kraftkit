@@ -86,7 +86,7 @@ func WithFile(file string, forceCreate bool) ConfigManagerOption {
 
 func WithDefaultConfigFile() ConfigManagerOption {
 	return func(cm *ConfigManager) error {
-		return WithFile(ConfigFile(), true)(cm)
+		return WithFile(DefaultConfigFile(), true)(cm)
 	}
 }
 

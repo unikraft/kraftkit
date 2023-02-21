@@ -120,7 +120,7 @@ func withDefaultLogger() CliOption {
 func withDefaultConfigManager(cmd *cobra.Command) CliOption {
 	return func(copts *CliOptions) error {
 		cfgm, err := config.NewConfigManager(
-			config.WithFile(config.ConfigFile(), true),
+			config.WithFile(config.DefaultConfigFile(), true),
 		)
 		if err != nil {
 			return err

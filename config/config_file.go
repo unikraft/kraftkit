@@ -176,7 +176,7 @@ func fileExists(path string) bool {
 	return err == nil && !f.IsDir()
 }
 
-func ConfigFile() string {
+func DefaultConfigFile() string {
 	return filepath.Join(ConfigDir(), "config.yaml")
 }
 
