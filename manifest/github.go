@@ -7,10 +7,12 @@ package manifest
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v32/github"
@@ -193,27 +195,52 @@ func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 		opts.Page = resp.NextPage
 	}
 
+	return ghp.appendRepositoriesToManifestInParallel(repos)
+}
+
+func (ghp GitHubProvider) appendRepositoriesToManifestInParallel(repos []*github.Repository) ([]*Manifest, error) {
 	var manifests []*Manifest
+	var errs []error
+	var wg sync.WaitGroup
+	var mu sync.RWMutex
+	wg.Add(len(repos))
 
 	for _, repo := range repos {
-		manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.CloneURL, ghp.mopts...)
-		if err != nil {
-			return nil, err
-		}
+		go func(repo *github.Repository) {
+			defer wg.Done()
+			manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.CloneURL, ghp.mopts...)
+			if err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+				return
+			}
 
-		// Populate with GitHub API-centric information
-		if repo.Description != nil {
-			manifest.Description = *repo.Description
-		}
+			// Populate with GitHub API-centric information
+			if repo.Description != nil {
+				manifest.Description = *repo.Description
+			}
 
-		t, _, _, err := unikraft.GuessTypeNameVersion(*repo.Name)
-		if err != nil {
-			return nil, err
-		}
+			t, _, _, err := unikraft.GuessTypeNameVersion(*repo.Name)
+			if err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+				return
+			}
 
-		manifest.Type = t
+			manifest.Type = t
 
-		manifests = append(manifests, manifest)
+			mu.Lock()
+			manifests = append(manifests, manifest)
+			mu.Unlock()
+		}(repo)
+	}
+
+	wg.Wait()
+
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
 	}
 
 	return manifests, nil
