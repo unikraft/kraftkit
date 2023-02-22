@@ -49,6 +49,7 @@ GOFUMPT     ?= gofumpt
 GOCILINT    ?= golangci-lint
 MKDIR       ?= mkdir
 GIT         ?= git
+CURL        ?= curl
 
 # Misc
 Q           ?= @
@@ -131,6 +132,12 @@ fmt:
 .PHONY: cicheck
 cicheck:
 	$(GOCILINT) run
+
+.PHONY: install-golangci-lint
+install-golangci-lint: GOLANGCI_LINT_VERSION     ?= 1.51.2
+install-golangci-lint: GOLANGCI_LINT_INSTALL_DIR ?= $$($(GO) env GOPATH)/bin
+install-golangci-lint: ## Install the Golang CI lint tool
+	$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOLANGCI_LINT_INSTALL_DIR) v$(GOLANGCI_LINT_VERSION)
 
 .PHONY: clean
 clean:
