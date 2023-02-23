@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/cli/cli/v2 v2.23.0
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.10.0
+	github.com/compose-spec/compose-go v1.11.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
