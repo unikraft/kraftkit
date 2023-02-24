@@ -49,6 +49,7 @@ type Unset struct {
 func New() *cobra.Command {
 	return cmdfactory.New(&Unset{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
+		Hidden:  true,
 		Use:     "unset [OPTIONS] [param ...]",
 		Aliases: []string{"u"},
 		Long: heredoc.Doc(`
