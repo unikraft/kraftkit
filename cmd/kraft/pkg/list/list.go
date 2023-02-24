@@ -6,6 +6,7 @@ package list
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -103,6 +104,23 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+
+	// Sort packages by type, name, version, format
+	sort.Slice(packages, func(i, j int) bool {
+		if packages[i].Type() != packages[j].Type() {
+			return packages[i].Type() < packages[j].Type()
+		}
+
+		if packages[i].Name() != packages[j].Name() {
+			return packages[i].Name() < packages[j].Name()
+		}
+
+		if packages[i].Version() != packages[j].Version() {
+			return packages[i].Version() < packages[j].Version()
+		}
+
+		return packages[i].Format() < packages[j].Format()
+	})
 
 	err = iostreams.G(ctx).StartPager()
 	if err != nil {
