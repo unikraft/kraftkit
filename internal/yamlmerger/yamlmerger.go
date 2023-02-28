@@ -54,6 +54,7 @@ func RecursiveMerge(from, into *yaml.Node) error {
 		}
 	case yaml.ScalarNode:
 		// SA4006 these variables represent pointers and are propagated outside of `recursiveMerge`
+		into.Value = from.Value
 		into = from //nolint:staticcheck
 	case yaml.SequenceNode:
 		for _, fromItem := range from.Content {
