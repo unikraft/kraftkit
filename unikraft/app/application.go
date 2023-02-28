@@ -53,8 +53,8 @@ type Application interface {
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
 
-	// Kraftfiles returns the application's kraft configuration files
-	Kraftfiles() []string
+	// Kraftfile returns the application's kraft configuration file
+	Kraftfile() *Kraftfile
 
 	// MergeTemplate merges the application's configuration with the given
 	// configuration
@@ -127,7 +127,7 @@ type application struct {
 	unikraft      core.UnikraftConfig
 	libraries     lib.Libraries
 	targets       []*target.TargetConfig
-	kraftfiles    []string
+	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
 }
@@ -191,8 +191,8 @@ func (app application) Extensions() component.Extensions {
 	return app.extensions
 }
 
-func (app application) Kraftfiles() []string {
-	return app.kraftfiles
+func (app application) Kraftfile() *Kraftfile {
+	return app.kraftfile
 }
 
 func (app application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
@@ -222,7 +222,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 		app.extensions[id] = ext
 	}
 
-	app.kraftfiles = append(app.kraftfiles, merge.Kraftfiles()...)
+	app.kraftfile = merge.Kraftfile()
 
 	for id, val := range merge.KConfig() {
 		app.configuration[id] = val

@@ -72,46 +72,41 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		popts.SetProjectName(filepath.Base(absWorkdir), true)
 	}
 
-	if len(popts.kraftfiles) < 1 {
-		return nil, ErrNoKraftfile
+	if popts.kraftfile == nil {
+		return nil, fmt.Errorf("no Kraft files specified")
 	}
-
-	var all []*application
 
 	name, _ := popts.GetProjectName()
 	outdir := unikraft.BuildDir
 
-	for i, file := range popts.kraftfiles {
-		iface := file.config
-		if iface == nil {
-			dict, err := parseConfig(file.content, popts)
-			if err != nil {
-				return nil, err
-			}
-
-			iface = dict
-			file.config = dict
-			popts.kraftfiles[i] = file
+	iface := popts.kraftfile.config
+	if iface == nil {
+		dict, err := parseConfig(popts.kraftfile.content, popts)
+		if err != nil {
+			return nil, err
 		}
 
-		if !popts.skipValidation {
-			if err := schema.Validate(iface); err != nil {
-				return nil, err
-			}
-		}
-
-		iface = groupXFieldsIntoExtensions(iface)
-
-		if n, ok := iface["name"]; ok {
-			name = n.(string)
-		}
-
-		if n, ok := iface["outdir"]; ok {
-			name = n.(string)
-		}
-
-		popts.kraftfiles[i].config = iface
+		iface = dict
+		popts.kraftfile.config = dict
 	}
+
+	if !popts.skipValidation {
+		if err := schema.Validate(iface); err != nil {
+			return nil, err
+		}
+	}
+
+	iface = groupXFieldsIntoExtensions(iface)
+
+	if n, ok := iface["name"]; ok {
+		name = n.(string)
+	}
+
+	if n, ok := iface["outdir"]; ok {
+		name = n.(string)
+	}
+
+	popts.kraftfile.config = iface
 
 	uk := &unikraft.Context{
 		UK_NAME:   name,
@@ -127,16 +122,13 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	ctx = unikraft.WithContext(ctx, uk)
 
-	for _, file := range popts.kraftfiles {
-		app, err := NewApplicationFromInterface(ctx, file.config, popts)
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, app.(*application))
+	appl, err := NewApplicationFromInterface(ctx, popts.kraftfile.config, popts)
+	if err != nil {
+		return nil, err
 	}
 
-	app, err := mergeApplicationConfigs(all)
+	app := appl.(*application)
+
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +172,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithTargets(app.targets),
 		WithConfiguration(popts.kconfig.Slice()...),
 		WithExtensions(app.extensions),
+		WithKraftfile(popts.kraftfile),
 	)
 	if err != nil {
 		return nil, err
