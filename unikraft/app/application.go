@@ -16,8 +16,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
+	"gopkg.in/yaml.v3"
 
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/yamlmerger"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
@@ -114,6 +116,13 @@ type Application interface {
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
 	Components(context.Context) ([]component.Component, error)
+
+	// WithTarget is a reducer that returns the application with only the provided
+	// target.
+	WithTarget(target.Target) (Application, error)
+
+	// Serialize and save the application to the kraftfile
+	Save() error
 }
 
 type application struct {
@@ -720,4 +729,58 @@ func (app application) MarshalYAML() (interface{}, error) {
 	}
 
 	return ret, nil
+}
+
+func (app application) Save() error {
+	// Marshal the app object to YAML
+	yamlData, err := yaml.Marshal(app)
+	if err != nil {
+		return err
+	}
+
+	// Validate the YAML data against the schema
+	var yamlMap map[string]interface{}
+	err = yaml.Unmarshal(yamlData, &yamlMap)
+	if err != nil {
+		return err
+	}
+	err = schema.Validate(yamlMap)
+	if err != nil {
+		return err
+	}
+
+	yamlFile, err := os.ReadFile(app.kraftfile.path)
+	if err != nil {
+		return err
+	}
+
+	// Parse YAML file to a Node structure
+	var into yaml.Node
+	err = yaml.Unmarshal(yamlFile, &into)
+	if err != nil {
+		return err
+	}
+
+	var from yaml.Node
+	if err := yaml.Unmarshal(yamlData, &from); err != nil {
+		return fmt.Errorf("could not unmarshal YAML: %s", err)
+	}
+
+	if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
+		return fmt.Errorf("could not merge YAML: %s", err)
+	}
+
+	// Marshal the Node structure back to YAML
+	yaml, err := yaml.Marshal(&into)
+	if err != nil {
+		return err
+	}
+
+	// Write the YAML data to the file
+	err = os.WriteFile(app.kraftfile.path, []byte(yaml), 0o644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
