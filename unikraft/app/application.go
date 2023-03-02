@@ -21,6 +21,7 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
+	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
@@ -686,4 +687,37 @@ func (app application) PrintInfo(ctx context.Context) string {
 	}
 
 	return tree.String()
+}
+
+func (app application) WithTarget(targ target.Target) (Application, error) {
+	ret := app
+	ret.targets = []*target.TargetConfig{targ.(*target.TargetConfig)}
+	return ret, nil
+}
+
+// MarshalYAML makes application implement yaml.Marshaller
+func (app application) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{
+		"specification": schema.SchemaVersionLatest,
+		"name":          app.name,
+		"unikraft":      app.unikraft,
+	}
+
+	// We purposefully do not marshal the configuration as this top level
+	// kconfig is redundant with the kconfig files in the libraries and
+	// unikraft.
+	// TODO: Figure out if anything is actually needed at this top level
+	// if app.configuration != nil && len(app.configuration) > 0 {
+	// 	ret["kconfig"] = app.configuration
+	// }
+
+	if app.targets != nil && len(app.targets) > 0 {
+		ret["targets"] = app.targets
+	}
+
+	if app.libraries != nil && len(app.libraries) > 0 {
+		ret["libraries"] = app.libraries
+	}
+
+	return ret, nil
 }

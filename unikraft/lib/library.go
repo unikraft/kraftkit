@@ -483,3 +483,16 @@ func (lib LibraryConfig) ObjCFlags() []*make.ConditionalValue {
 func (lib LibraryConfig) Srcs() []*make.ConditionalValue {
 	return lib.srcs
 }
+
+// MarshalYAML makes LibraryConfig implement yaml.Marshaller
+func (lc LibraryConfig) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{
+		"version": lc.version,
+	}
+
+	if lc.kconfig != nil && len(lc.kconfig) > 0 {
+		ret["kconfig"] = lc.kconfig
+	}
+
+	return ret, nil
+}
