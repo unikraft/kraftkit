@@ -203,6 +203,11 @@ func (kvm KeyValueMap) String() string {
 	return ret.String()
 }
 
+// MarshalYAML makes KeyValueMap implement yaml.Marshaller
+func (kvm KeyValueMap) MarshalYAML() (interface{}, error) {
+	return kvm.Slice(), nil
+}
+
 // DotConfigFile represents a parsed .config file. It should not be modified
 // directly, only by means of calling methods. The only exception is
 // Config.Value which may be modified directly. Note: config names don't include
@@ -256,6 +261,11 @@ func NewKeyValue(line string) (string, *KeyValue) {
 // String implements fmt.Stringer
 func (kv KeyValue) String() string {
 	return fmt.Sprintf("%s=%s", kv.Key, kv.Value)
+}
+
+// MarshalYAML makes KeyValue implement yaml.Marshaller
+func (kv *KeyValue) MarshalYAML() (interface{}, error) {
+	return fmt.Sprint(kv.Key, "=", kv.Value), nil
 }
 
 const (
