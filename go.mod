@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/cli/cli/v2 v2.23.0
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.11.0
+	github.com/compose-spec/compose-go v1.12.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
@@ -37,7 +37,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/oauth2 v0.5.0
