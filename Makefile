@@ -66,9 +66,10 @@ endif
 .PROXY      :=
 ifneq ($(DOCKER_RUN),)
 .PROXY      := docker-proxy-
+$(BIN): ENVIRONMENT ?= myself
 $(BIN):
 	$(info Running target via Docker...)
-	$(Q)$(call DOCKER_RUN,,$(MAKE) -e $@)
+	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) -e $@)
 	$(Q)exit 0
 endif
 
