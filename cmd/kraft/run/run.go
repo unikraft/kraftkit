@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"syscall"
 
 	"github.com/MakeNowJust/heredoc"
@@ -27,6 +28,7 @@ import (
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/utils"
 )
 
@@ -193,12 +195,12 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("unknown target: %s", opts.Target)
 			}
 
-		} else if len(target) == 0 && len(project.TargetNames()) > 1 {
+		} else if target == "" && len(project.Targets()) > 1 {
 			if config.G[config.KraftKit](ctx).NoPrompt {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
 
-			sp := selection.New("select target:", project.TargetNames())
+			sp := selection.New("select target:", selectionTargets(project.Targets()))
 			sp.Filter = nil
 
 			selectedTarget, err := sp.RunPrompt()
@@ -370,4 +372,17 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// selectionTargets returns the given target.Targets in a format suitable for
+// interactive prompts.
+func selectionTargets(tgts target.Targets) []string {
+	tgtStrings := make([]string, 0, len(tgts))
+	for _, tgt := range tgts {
+		tgtStrings = append(tgtStrings, fmt.Sprintf("%s (%s)", tgt.Name(), tgt.ArchPlatString()))
+	}
+
+	sort.Strings(tgtStrings)
+
+	return tgtStrings
 }
