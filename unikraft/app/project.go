@@ -66,7 +66,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if len(popts.kraftfiles) < 1 {
-		return nil, fmt.Errorf("no Kraft files specified")
+		return nil, fmt.Errorf("no Kraftfile specified")
 	}
 
 	var all []*application
