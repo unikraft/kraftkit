@@ -60,8 +60,6 @@ ifeq ($(DOCKER),)
 DOCKER_RUN  :=
 else ifneq ($(wildcard /.dockerenv),)
 DOCKER_RUN  :=
-else ifeq ($(shell grep '3:cpu:/$$' /proc/1/cgroup),)
-DOCKER_RUN  :=
 endif
 .PROXY      :=
 ifneq ($(DOCKER_RUN),)
