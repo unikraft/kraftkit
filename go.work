@@ -4,5 +4,6 @@ use (
   "."
   "./tools/go-generate-qemu-devices"
   "./tools/protoc-gen-go-netconn"
+  "./tools/webinstall"
   "./vendor/github.com/libgit2/git2go/v31"
 )
