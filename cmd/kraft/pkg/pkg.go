@@ -75,7 +75,7 @@ func New() *cobra.Command {
 			# Same as above but also save the resulting CPIO artifact locally
 			$ kraft pkg --initrd ./root-fs:./root-fs.cpio .`),
 		Annotations: map[string]string{
-			"help:group": "pkg",
+			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
 

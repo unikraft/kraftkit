@@ -17,6 +17,9 @@ import (
 	"kraftkit.sh/internal/text"
 )
 
+// AnnotationHelpGroup is used to indicate in which help group a command belongs.
+const AnnotationHelpGroup = "help:group"
+
 func rootUsageFunc(command *cobra.Command) error {
 	command.Printf("Usage:  %s", command.UseLine())
 
@@ -149,7 +152,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-			group, ok := c.Annotations["help:group"]
+			group, ok := c.Annotations[AnnotationHelpGroup]
 			if !ok {
 				continue
 			}

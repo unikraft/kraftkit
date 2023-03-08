@@ -32,7 +32,7 @@ func New() *cobra.Command {
 			# Open configuration editor for a project at a path
 			$ kraft build menu path/to/app`),
 		Annotations: map[string]string{
-			"help:group": "build",
+			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
 }

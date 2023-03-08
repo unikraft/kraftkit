@@ -44,7 +44,7 @@ func New() *cobra.Command {
 		Example: heredoc.Doc(`
 			$ kraft pkg list`),
 		Annotations: map[string]string{
-			"help:group": "pkg",
+			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
 }

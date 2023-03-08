@@ -32,7 +32,7 @@ func New() *cobra.Command {
 			$ kraft pkg update
 		`),
 		Annotations: map[string]string{
-			"help:group": "pkg",
+			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
 }

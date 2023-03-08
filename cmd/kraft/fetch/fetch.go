@@ -34,7 +34,7 @@ func New() *cobra.Command {
 			# Fetch a project at a path
 			$ kraft build fetch path/to/app`),
 		Annotations: map[string]string{
-			"help:group": "build",
+			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
 }

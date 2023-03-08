@@ -23,7 +23,7 @@ func New() *cobra.Command {
 		Aliases: []string{"v"},
 		Args:    cobra.NoArgs,
 		Annotations: map[string]string{
-			"help:group": "misc",
+			cmdfactory.AnnotationHelpGroup: "misc",
 		},
 	})
 }

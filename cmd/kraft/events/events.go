@@ -42,7 +42,7 @@ func New() *cobra.Command {
 		Long: heredoc.Doc(`
 			Follow the events of a unikernel`),
 		Annotations: map[string]string{
-			"help:group": "run",
+			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
 }

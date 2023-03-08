@@ -63,7 +63,7 @@ func New() *cobra.Command {
 			# Build path to a Unikraft project
 			$ kraft build path/to/app`),
 		Annotations: map[string]string{
-			"help:group": "build",
+			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
 }
