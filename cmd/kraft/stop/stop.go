@@ -29,7 +29,7 @@ func New() *cobra.Command {
 		Long: heredoc.Doc(`
 			Stop one or more running unikernels`),
 		Annotations: map[string]string{
-			"help:group": "run",
+			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
 }

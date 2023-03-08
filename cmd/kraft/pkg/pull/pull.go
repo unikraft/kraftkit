@@ -58,7 +58,7 @@ func New() *cobra.Command {
 			# Pull from a manifest
 			$ kraft pkg pull nginx:1.21.6`),
 		Annotations: map[string]string{
-			"help:group": "pkg",
+			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
 }

@@ -61,7 +61,7 @@ func New() *cobra.Command {
 			# Set variables in a project at a path
 			$ kraft build set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096`),
 		Annotations: map[string]string{
-			"help:group": "build",
+			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
 }

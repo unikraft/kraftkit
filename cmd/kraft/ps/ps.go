@@ -38,7 +38,7 @@ func New() *cobra.Command {
 		Args:  cobra.MaximumNArgs(0),
 		Long:  "List running unikernels",
 		Annotations: map[string]string{
-			"help:group": "run",
+			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
 

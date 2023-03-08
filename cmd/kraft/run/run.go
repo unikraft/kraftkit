@@ -60,7 +60,7 @@ func New() *cobra.Command {
 			# Run a project which only has one target
 			kraft run path/to/project`),
 		Annotations: map[string]string{
-			"help:group": "run",
+			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
 

@@ -29,7 +29,7 @@ func New() *cobra.Command {
 		$ kraft pkg unsource https://manifests.kraftkit.sh/index.yaml
 	`),
 		Annotations: map[string]string{
-			"help:group": "pkg",
+			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
 }
