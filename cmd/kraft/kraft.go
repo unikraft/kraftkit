@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -83,6 +84,15 @@ func New() *cobra.Command {
 	cmd.AddCommand(version.New())
 
 	return cmd
+}
+
+func (k *Kraft) PersistentPre(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	if err := kitupdate.CheckForUpdates(ctx); err != nil {
+		log.G(ctx).Debugf("could not check for updates: %v", err)
+	}
+
+	return nil
 }
 
 func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
