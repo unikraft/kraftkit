@@ -5,6 +5,8 @@
 package qemu
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
@@ -24,6 +26,7 @@ import (
 	"kraftkit.sh/machine/qemu/qmp"
 	qmpv1alpha "kraftkit.sh/machine/qemu/qmp/v1alpha"
 
+	"github.com/fsnotify/fsnotify"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 )
 
@@ -31,6 +34,10 @@ const (
 	QemuSystemX86     = "qemu-system-x86_64"
 	QemuSystemArm     = "qemu-system-arm"
 	QemuSystemAarch64 = "qemu-system-aarch64"
+
+	// Log tail buffering
+	DefaultTailBufferSize = 4 * 1024
+	DefaultTailPeekSize   = 1024
 )
 
 type QemuDriver struct {
@@ -66,7 +73,7 @@ func init() {
 	// gob.Register(QemuHostCharDevNull{})
 	// gob.Register(QemuHostCharDevNamed{})
 	// gob.Register(QemuHostCharDevTty{})
-	// gob.Register(QemuHostCharDevFile{})
+	gob.Register(QemuHostCharDevFile{})
 	// gob.Register(QemuHostCharDevStdio{})
 	// gob.Register(QemuHostCharDevPipe{})
 	// gob.Register(QemuHostCharDevUDP{})
@@ -547,11 +554,9 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 			NoWait:    true,
 			Server:    true,
 		}),
-		WithSerial(QemuHostCharDevUnix{
-			SocketDir: qd.dopts.RuntimeDir,
-			Name:      mid.String() + "_serial",
-			NoWait:    true,
-			Server:    true,
+		WithSerial(QemuHostCharDevFile{
+			Monitor:  false,
+			Filename: mcfg.LogFile,
 		}),
 		WithMonitor(QemuHostCharDevUnix{
 			SocketDir: qd.dopts.RuntimeDir,
@@ -968,45 +973,122 @@ func (qd *QemuDriver) Pause(ctx context.Context, mid machine.MachineID) error {
 }
 
 func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, writer io.Writer) error {
-	qcfg, err := qd.Config(ctx, mid)
+	var mcfg machine.MachineConfig
+	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
+		return fmt.Errorf("could not look up machine config: %v", err)
+	}
+
+	f, err := os.Open(mcfg.LogFile)
 	if err != nil {
 		return err
 	}
 
-	if qcfg.Serial == nil {
-		return fmt.Errorf("serial console not available for %s", mid)
-	}
-
-	conn, err := qcfg.Serial[0].Connection()
+	// var offset int64
+	reader := bufio.NewReaderSize(f, DefaultTailBufferSize)
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return fmt.Errorf("could not connect to serial for %s: %v", mid, err)
+		return err
 	}
 
-	defer conn.Close()
+	watcher.Add(mcfg.LogFile)
 
-	buf := make([]byte, 1024)
-
-read:
+	// First read everything that already exists inside of the log file.
 	for {
-		// First check if the context has been cancelled
-		select {
-		case <-ctx.Done():
-			break read
-		default:
-		}
+		// discard leading NUL bytes
+		var discarded int
 
-		n, err := conn.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				return fmt.Errorf("error reading from serial for %s: %v", mid, err)
+		for {
+			b, _ := reader.Peek(DefaultTailPeekSize)
+			i := bytes.LastIndexByte(b, '\x00')
+
+			if i > 0 {
+				n, _ := reader.Discard(i + 1)
+				discarded += n
+			}
+
+			if i+1 < DefaultTailPeekSize {
+				break
 			}
 		}
-		if _, err := writer.Write(buf[:n]); err != nil {
-			return fmt.Errorf("error writing output from serial for %s: %v", mid, err)
+
+		s, err := reader.ReadBytes('\n')
+		if err != nil && err != io.EOF {
+			return err
 		}
+
+		// If we encounter EOF before a line delimiter, ReadBytes() will return the
+		// remaining bytes, so push them back onto the buffer, rewind our seek
+		// position, and wait for further file changes.  We also have to save our
+		// dangling byte count in the event that we want to re-open the file and
+		// seek to the end.
+		if err == io.EOF {
+			l := len(s)
+
+			_, err = f.Seek(-int64(l), io.SeekCurrent)
+			if err != nil {
+				return err
+			}
+
+			reader.Reset(f)
+			break
+		}
+
+		fmt.Fprintf(writer, "%s", s[discarded:])
 	}
 
-	return nil
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return nil
+			}
+
+			switch event.Op {
+			case fsnotify.Write:
+				var discarded int
+
+				for {
+					b, _ := reader.Peek(DefaultTailPeekSize)
+					i := bytes.LastIndexByte(b, '\x00')
+
+					if i > 0 {
+						n, _ := reader.Discard(i + 1)
+						discarded += n
+					}
+
+					if i+1 < DefaultTailPeekSize {
+						break
+					}
+				}
+
+				s, err := reader.ReadBytes('\n')
+				if err != nil && err != io.EOF {
+					return err
+				}
+
+				// If we encounter EOF before a line delimiter, ReadBytes() will return the
+				// remaining bytes, so push them back onto the buffer, rewind our seek
+				// position, and wait for further file changes.  We also have to save our
+				// dangling byte count in the event that we want to re-open the file and
+				// seek to the end.
+				if err == io.EOF {
+					l := len(s)
+
+					_, err = f.Seek(-int64(l), io.SeekCurrent)
+					if err != nil {
+						return err
+					}
+
+					reader.Reset(f)
+					continue
+				}
+
+				fmt.Fprintf(writer, "%s", s[discarded:])
+			}
+		}
+	}
 }
 
 func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state machine.MachineState, err error) {

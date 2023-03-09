@@ -16,6 +16,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-github/v32 v32.1.0
