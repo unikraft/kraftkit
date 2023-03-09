@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
@@ -47,58 +47,8 @@ func New() *cobra.Command {
 	})
 }
 
-type machineWaitGroup struct {
-	lock sync.RWMutex
-	mids []machine.MachineID
-}
-
-func (mwg *machineWaitGroup) Add(mid machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if mwg.Contains(mid) {
-		return
-	}
-
-	mwg.mids = append(mwg.mids, mid)
-}
-
-func (mwg *machineWaitGroup) Done(needle machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if !mwg.Contains(needle) {
-		return
-	}
-
-	for i, mid := range mwg.mids {
-		if mid == needle {
-			mwg.mids = append(mwg.mids[:i], mwg.mids[i+1:]...)
-			return
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Wait() {
-	for {
-		if len(mwg.mids) == 0 {
-			break
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Contains(needle machine.MachineID) bool {
-	for _, mid := range mwg.mids {
-		if mid == needle {
-			return true
-		}
-	}
-
-	return false
-}
-
 var (
-	observations = machineWaitGroup{}
+	observations = waitgroup.WaitGroup[machine.MachineID]{}
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
