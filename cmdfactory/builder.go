@@ -239,6 +239,10 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 		c.Use = fmt.Sprintf("%s [SUBCOMMAND] [FLAGS]", Name(obj))
 	}
 
+	if p, ok := obj.(PersistentPreRunnable); ok {
+		c.PersistentPreRunE = p.PersistentPre
+	}
+
 	if p, ok := obj.(PreRunnable); ok {
 		c.PreRunE = p.Pre
 	}
