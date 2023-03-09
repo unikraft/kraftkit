@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package events
 
 import (
@@ -102,7 +102,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	// TODO: Should we thrown an error here if a process file already exists? We
+	// TODO: Should we throw an error here if a process file already exists?  We
 	// use a pid file for `kraft run` to continuously monitor running machines.
 
 	// Actively seek for machines whose events we wish to monitor.  The thread
