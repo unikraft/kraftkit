@@ -38,6 +38,7 @@ type Run struct {
 	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
 	Hypervisor    string
 	Memory        int    `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
+	Name          string `long:"name" short:"n" usage:"Name of the instance"`
 	NoMonitor     bool   `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
 	Platform      string `long:"plat" short:"p" usage:"Set the platform"`
 	Remove        bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
@@ -183,9 +184,14 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
 		mopts = append(mopts,
 			machine.WithArchitecture(opts.Architecture),
 			machine.WithPlatform(opts.Platform),
+			machine.WithName(machine.MachineName(opts.Name)),
 			machine.WithKernel(entity),
 			machine.WithSource("kernel://"+filepath.Base(entity)),
 		)
@@ -240,10 +246,15 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", t.ArchPlatString(), opts.Platform)
 		}
 
+		name := t.Name()
+		if opts.Name != "" {
+			name = opts.Name
+		}
+
 		mopts = append(mopts,
 			machine.WithArchitecture(t.Architecture().Name()),
 			machine.WithPlatform(t.Platform().Name()),
-			machine.WithName(machine.MachineName(t.Name())),
+			machine.WithName(machine.MachineName(name)),
 			machine.WithAcceleration(!opts.DisableAccel),
 			machine.WithSource("project://"+project.Name()+":"+t.Name()),
 		)
@@ -266,10 +277,14 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
 		mopts = append(mopts,
 			machine.WithArchitecture(opts.Architecture),
 			machine.WithPlatform(opts.Platform),
-			machine.WithName(machine.MachineName(namesgenerator.GetRandomName(0))),
+			machine.WithName(machine.MachineName(opts.Name)),
 			machine.WithKernel(entity),
 			machine.WithSource("kernel://"+filepath.Base(entity)),
 		)
