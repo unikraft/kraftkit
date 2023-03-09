@@ -58,6 +58,9 @@ type MachineConfig struct {
 	// exists
 	DestroyOnExit bool
 
+	// LogFile is the path to use for saving the serial console to file.
+	LogFile string `json:"log_file"`
+
 	// CreatedAt represents when the machine was created with its respected driver
 	// or VMM.
 	CreatedAt time.Time `json:"created_at"`
@@ -190,6 +193,13 @@ func WithMemorySize(memorySize uint64) MachineOption {
 func WithDestroyOnExit(destroyOnExit bool) MachineOption {
 	return func(mo *MachineConfig) error {
 		mo.DestroyOnExit = destroyOnExit
+		return nil
+	}
+}
+
+func WithLogFile(file string) MachineOption {
+	return func(mo *MachineConfig) error {
+		mo.LogFile = file
 		return nil
 	}
 }
