@@ -307,7 +307,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.G(ctx).Infof("created %s instance %s", driverType.String(), mid.ShortString())
+	log.G(ctx).Debugf("created %s instance %s", driverType.String(), mid.ShortString())
 
 	// Start the machine
 	if err := driver.Start(ctx, mid); err != nil {
