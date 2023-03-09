@@ -220,7 +220,7 @@ seek:
 						if mcfg.DestroyOnExit {
 							log.G(ctx).Infof("removing %s...", mid.ShortString())
 							if err := driver.Destroy(ctx, mid); err != nil {
-								log.G(ctx).Errorf("could not remove machine: %v: ", err)
+								log.G(ctx).Errorf("could not remove machine: %v", err)
 							}
 						}
 					case machine.MachineStateRunning:
