@@ -134,17 +134,17 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	//     # or for multiple targets
 	//     $ kraft run -t target-name path/to/project
 	//
-	// b). a target defined within the context of `workdir` (which is either set
+	// b). path to a kernel, e.g.:
+	//
+	//     $ kraft run path/to/kernel
+	//
+	// c). a target defined within the context of `workdir` (which is either set
 	//     via -w or is the current working directory), e.g.:
 	//
 	//     $ cd path/to/project
 	//     $ kraft run target-name
 	//     # or
 	//     $ kraft run -w path/to/project target-name
-	//
-	// c). path to a kernel, e.g.:
-	//
-	//     $ kraft run path/to/kernel
 	//
 	var workdir string
 	var entity string
@@ -177,8 +177,21 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// b). use a defined working directory as a Unikraft project
-	if len(workdir) > 0 {
+	// b). Is the provided first position argument a binary image?
+	if f, err := os.Stat(entity); err == nil && !f.IsDir() {
+		if len(opts.Architecture) == 0 || len(opts.Platform) == 0 {
+			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
+		}
+
+		mopts = append(mopts,
+			machine.WithArchitecture(opts.Architecture),
+			machine.WithPlatform(opts.Platform),
+			machine.WithKernel(entity),
+			machine.WithSource("kernel://"+filepath.Base(entity)),
+		)
+
+		// c). use a defined working directory as a Unikraft project
+	} else if len(workdir) > 0 {
 		target := opts.Target
 		project, err := app.NewProjectFromOptions(
 			ctx,
