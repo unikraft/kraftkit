@@ -135,7 +135,8 @@ seek:
 		}
 
 		if len(mids) == 0 && opts.QuitTogether {
-			break
+			cancel()
+			break seek
 		}
 
 		for _, mid := range mids {
@@ -147,19 +148,30 @@ seek:
 				continue
 			}
 
-			switch state {
-			case machine.MachineStateDead,
-				machine.MachineStateExited,
-				machine.MachineStateUnknown:
-				continue
-			default:
-			}
-
 			if observations.Contains(mid) {
 				continue
 			}
 
-			log.G(ctx).Infof("monitoring %s", mid.ShortString())
+			switch state {
+			case machine.MachineStateDead,
+				machine.MachineStateExited,
+				machine.MachineStateUnknown:
+				if opts.QuitTogether {
+					continue
+				}
+			default:
+			}
+
+			observations.Add(mid)
+		}
+
+		if len(observations.Items()) == 0 && opts.QuitTogether {
+			cancel()
+			break seek
+		}
+
+		for _, mid := range observations.Items() {
+			mid := mid // loop closure
 
 			var mcfg machine.MachineConfig
 			if err := store.LookupMachineConfig(mid, &mcfg); err != nil {
@@ -168,16 +180,9 @@ seek:
 			}
 
 			go func() {
-				observations.Add(mid)
-
-				if opts.QuitTogether {
-					defer observations.Done(mid)
-				}
-
 				mcfg := &machine.MachineConfig{}
 				if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 					log.G(ctx).Errorf("could not look up machine config: %v", err)
-					observations.Done(mid)
 					return
 				}
 
@@ -218,9 +223,12 @@ seek:
 								log.G(ctx).Errorf("could not remove machine: %v: ", err)
 							}
 						}
+					case machine.MachineStateRunning:
+						if err := store.SaveMachineState(mid, machine.MachineStateExited); err != nil {
+							log.G(ctx).Errorf("could not shutdown machine: %v", err)
+						}
 					}
 
-					observations.Done(mid)
 					return
 				}
 
