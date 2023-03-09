@@ -48,7 +48,7 @@ type Run struct {
 func New() *cobra.Command {
 	cmd := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
-		Use:     "run [FLAGS] [PROJECT|KERNEL] [ARGS]",
+		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
 		Aliases: []string{"launch", "r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
