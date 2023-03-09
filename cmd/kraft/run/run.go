@@ -37,13 +37,12 @@ type Run struct {
 	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
 	Hypervisor    string
-	Memory        int      `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
-	NoMonitor     bool     `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
-	Platform      string   `long:"plat" short:"p" usage:"Set the platform"`
-	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	Volumes       []string `long:"" short:"" usage:""`
-	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	Memory        int    `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
+	NoMonitor     bool   `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
+	Platform      string `long:"plat" short:"p" usage:"Set the platform"`
+	Remove        bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Target        string `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	WithKernelDbg bool   `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 }
 
 func New() *cobra.Command {
