@@ -206,7 +206,7 @@ seek:
 
 				events, errs, err := driver.ListenStatusUpdate(ctx, mid)
 				if err != nil {
-					log.G(ctx).Warnf("could not listen for status updates for %s: %v", mid.ShortString(), err)
+					log.G(ctx).Debugf("could not listen for status updates for %s: %v", mid.ShortString(), err)
 
 					// Check the state of the machine using the driver, for a more
 					// accurate read
