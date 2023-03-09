@@ -37,6 +37,7 @@ type Run struct {
 	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
 	Hypervisor    string
+	InitRd        string `long:"initrd" short:"i" usage:"Use the specified initrd"`
 	Memory        int    `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
 	Name          string `long:"name" short:"n" usage:"Name of the instance"`
 	NoMonitor     bool   `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
@@ -194,6 +195,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithName(machine.MachineName(opts.Name)),
 			machine.WithKernel(entity),
 			machine.WithSource("kernel://"+filepath.Base(entity)),
+			machine.WithInitRd(opts.InitRd),
 		)
 
 		// c). use a defined working directory as a Unikraft project
@@ -257,6 +259,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithName(machine.MachineName(name)),
 			machine.WithAcceleration(!opts.DisableAccel),
 			machine.WithSource("project://"+project.Name()+":"+t.Name()),
+			machine.WithInitRd(opts.InitRd),
 		)
 
 		// Use the symbolic debuggable kernel image?
@@ -287,6 +290,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithName(machine.MachineName(opts.Name)),
 			machine.WithKernel(entity),
 			machine.WithSource("kernel://"+filepath.Base(entity)),
+			machine.WithInitRd(opts.InitRd),
 		)
 	} else {
 		return fmt.Errorf("could not determine what to run: %s", entity)
