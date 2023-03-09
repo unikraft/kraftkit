@@ -512,6 +512,12 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 	mcfg.ID = mid
 
 	pidFile := filepath.Join(qd.dopts.RuntimeDir, mid.String()+".pid")
+
+	// Set and create the log file for this machine
+	if mcfg.LogFile == "" {
+		mcfg.LogFile = filepath.Join(qd.dopts.RuntimeDir, mid.String()+".log")
+	}
+
 	qopts := []QemuOption{
 		WithDaemonize(true),
 		WithEnableKVM(true),
