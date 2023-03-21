@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/cmd/kraft/clean"
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/fetch"
+	"kraftkit.sh/cmd/kraft/initialize"
 	"kraftkit.sh/cmd/kraft/login"
 	"kraftkit.sh/cmd/kraft/logs"
 	"kraftkit.sh/cmd/kraft/menu"
@@ -70,6 +71,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(build.New())
 	cmd.AddCommand(clean.New())
 	cmd.AddCommand(fetch.New())
+	cmd.AddCommand(initialize.New())
 	cmd.AddCommand(menu.New())
 	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(properclean.New())
