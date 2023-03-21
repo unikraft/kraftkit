@@ -749,35 +749,43 @@ func (app application) Save() error {
 		return err
 	}
 
+	var outYaml []byte
+
 	yamlFile, err := os.ReadFile(app.kraftfile.path)
 	if err != nil {
 		return err
 	}
 
-	// Parse YAML file to a Node structure
-	var into yaml.Node
-	err = yaml.Unmarshal(yamlFile, &into)
-	if err != nil {
-		return err
-	}
+	// If the yamlFile was empty, just write the yamlData
+	if len(yamlFile) == 0 {
+		outYaml = yamlData
+	} else {
 
-	var from yaml.Node
-	if err := yaml.Unmarshal(yamlData, &from); err != nil {
-		return fmt.Errorf("could not unmarshal YAML: %s", err)
-	}
+		// Parse YAML file to a Node structure
+		var into yaml.Node
+		err = yaml.Unmarshal(yamlFile, &into)
+		if err != nil {
+			return err
+		}
 
-	if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
-		return fmt.Errorf("could not merge YAML: %s", err)
-	}
+		var from yaml.Node
+		if err := yaml.Unmarshal(yamlData, &from); err != nil {
+			return fmt.Errorf("could not unmarshal YAML: %s", err)
+		}
 
-	// Marshal the Node structure back to YAML
-	yaml, err := yaml.Marshal(&into)
-	if err != nil {
-		return err
+		if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
+			return fmt.Errorf("could not merge YAML: %s", err)
+		}
+
+		// Marshal the Node structure back to YAML
+		outYaml, err = yaml.Marshal(&into)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Write the YAML data to the file
-	err = os.WriteFile(app.kraftfile.path, []byte(yaml), 0o644)
+	err = os.WriteFile(app.kraftfile.path, outYaml, 0o644)
 	if err != nil {
 		return err
 	}
