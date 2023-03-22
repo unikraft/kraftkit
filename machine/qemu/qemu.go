@@ -1113,9 +1113,8 @@ func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state m
 
 	// Check if the process is alive, which ultimately indicates to us whether we
 	// able to speak to the exposed QMP socket
-	process, err := processFromPidFile(qcfg.PidFile)
 	activeProcess := false
-	if err == nil {
+	if process, err := processFromPidFile(qcfg.PidFile); err == nil {
 		activeProcess, err = process.IsRunning()
 		if err != nil {
 			state = machine.MachineStateDead
@@ -1150,6 +1149,10 @@ func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state m
 	}()
 
 	if !activeProcess {
+		if savedState == machine.MachineStateRunning {
+			state = machine.MachineStateDead
+			exitStatus = 1
+		}
 		return
 	}
 
