@@ -19,13 +19,15 @@ import (
 	"kraftkit.sh/machine/driveropts"
 )
 
-type Stop struct{}
+type Stop struct {
+	All bool `long:"all" usage:"Remove all machines"`
+}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.MinimumNArgs(0),
 		Long: heredoc.Doc(`
 			Stop one or more running unikernels`),
 		Annotations: map[string]string{
@@ -116,6 +118,13 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 
 		if !found {
 			return fmt.Errorf("could not find machine %s", mid1)
+		}
+	}
+
+	if len(args) == 0 && opts.All {
+		mids = []machine.MachineID{}
+		for _, mcfg := range mcfgs {
+			mids = append(mids, mcfg.ID)
 		}
 	}
 
