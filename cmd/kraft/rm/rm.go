@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package rm
 
 import (
@@ -19,13 +19,15 @@ import (
 	"kraftkit.sh/machine/driveropts"
 )
 
-type Rm struct{}
+type Rm struct {
+	All bool `long:"all" usage:"Remove all machines"`
+}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Rm{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
-		Args:    cobra.MinimumNArgs(1),
+		Args:    cobra.MinimumNArgs(0),
 		Aliases: []string{"remove"},
 		Long: heredoc.Doc(`
 			Remove one or more running unikernels`),
@@ -99,7 +101,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
-	allMids, err := store.ListAllMachineIDs()
+	mcfgs, err := store.ListAllMachineConfigs()
 	if err != nil {
 		return fmt.Errorf("could not list machines: %v", err)
 	}
@@ -108,9 +110,9 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 
 	for _, mid1 := range args {
 		found := false
-		for _, mid2 := range allMids {
-			if mid1 == mid2.ShortString() || mid1 == mid2.String() {
-				mids = append(mids, mid2)
+		for _, mid2 := range mcfgs {
+			if mid1 == mid2.ID.ShortString() || mid1 == mid2.ID.String() || mid1 == string(mid2.Name) {
+				mids = append(mids, mid2.ID)
 				found = true
 			}
 		}
@@ -120,10 +122,17 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if len(args) == 0 && opts.All {
+		mids = []machine.MachineID{}
+		for _, mcfg := range mcfgs {
+			mids = append(mids, mcfg.ID)
+		}
+	}
+
 	for _, mid := range mids {
 		mid := mid // loop closure
 
-		if observations.Contains(mid) {
+		if !opts.All && observations.Contains(mid) {
 			continue
 		}
 

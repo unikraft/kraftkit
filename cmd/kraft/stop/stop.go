@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package stop
 
 import (
@@ -19,13 +19,15 @@ import (
 	"kraftkit.sh/machine/driveropts"
 )
 
-type Stop struct{}
+type Stop struct {
+	All bool `long:"all" usage:"Remove all machines"`
+}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.MinimumNArgs(0),
 		Long: heredoc.Doc(`
 			Stop one or more running unikernels`),
 		Annotations: map[string]string{
@@ -98,7 +100,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
-	allMids, err := store.ListAllMachineIDs()
+	mcfgs, err := store.ListAllMachineConfigs()
 	if err != nil {
 		return fmt.Errorf("could not list machines: %v", err)
 	}
@@ -107,15 +109,22 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 
 	for _, mid1 := range args {
 		found := false
-		for _, mid2 := range allMids {
-			if mid1 == mid2.ShortString() || mid1 == mid2.String() {
-				mids = append(mids, mid2)
+		for _, mid2 := range mcfgs {
+			if mid1 == mid2.ID.ShortString() || mid1 == mid2.ID.String() || mid1 == string(mid2.Name) {
+				mids = append(mids, mid2.ID)
 				found = true
 			}
 		}
 
 		if !found {
 			return fmt.Errorf("could not find machine %s", mid1)
+		}
+	}
+
+	if len(args) == 0 && opts.All {
+		mids = []machine.MachineID{}
+		for _, mcfg := range mcfgs {
+			mids = append(mids, mcfg.ID)
 		}
 	}
 
@@ -132,20 +141,6 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 			observations.Add(mid)
 
 			log.G(ctx).Infof("stopping %s...", mid.ShortString())
-
-			state, err := store.LookupMachineState(mid)
-			if err != nil {
-				log.G(ctx).Errorf("could not look up machine state: %v", err)
-				observations.Done(mid)
-				return
-			}
-
-			switch state {
-			case machine.MachineStateDead, machine.MachineStateExited:
-				log.G(ctx).Errorf("%s has exited", mid.ShortString())
-				observations.Done(mid)
-				return
-			}
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {

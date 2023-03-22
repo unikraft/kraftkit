@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package events
 
 import (
@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
@@ -47,58 +47,8 @@ func New() *cobra.Command {
 	})
 }
 
-type machineWaitGroup struct {
-	lock sync.RWMutex
-	mids []machine.MachineID
-}
-
-func (mwg *machineWaitGroup) Add(mid machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if mwg.Contains(mid) {
-		return
-	}
-
-	mwg.mids = append(mwg.mids, mid)
-}
-
-func (mwg *machineWaitGroup) Done(needle machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if !mwg.Contains(needle) {
-		return
-	}
-
-	for i, mid := range mwg.mids {
-		if mid == needle {
-			mwg.mids = append(mwg.mids[:i], mwg.mids[i+1:]...)
-			return
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Wait() {
-	for {
-		if len(mwg.mids) == 0 {
-			break
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Contains(needle machine.MachineID) bool {
-	for _, mid := range mwg.mids {
-		if mid == needle {
-			return true
-		}
-	}
-
-	return false
-}
-
 var (
-	observations = machineWaitGroup{}
+	observations = waitgroup.WaitGroup[machine.MachineID]{}
 	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
 )
 
@@ -152,7 +102,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	// TODO: Should we thrown an error here if a process file already exists? We
+	// TODO: Should we throw an error here if a process file already exists?  We
 	// use a pid file for `kraft run` to continuously monitor running machines.
 
 	// Actively seek for machines whose events we wish to monitor.  The thread
@@ -185,7 +135,8 @@ seek:
 		}
 
 		if len(mids) == 0 && opts.QuitTogether {
-			break
+			cancel()
+			break seek
 		}
 
 		for _, mid := range mids {
@@ -197,19 +148,30 @@ seek:
 				continue
 			}
 
-			switch state {
-			case machine.MachineStateDead,
-				machine.MachineStateExited,
-				machine.MachineStateUnknown:
-				continue
-			default:
-			}
-
 			if observations.Contains(mid) {
 				continue
 			}
 
-			log.G(ctx).Infof("monitoring %s", mid.ShortString())
+			switch state {
+			case machine.MachineStateDead,
+				machine.MachineStateExited,
+				machine.MachineStateUnknown:
+				if opts.QuitTogether {
+					continue
+				}
+			default:
+			}
+
+			observations.Add(mid)
+		}
+
+		if len(observations.Items()) == 0 && opts.QuitTogether {
+			cancel()
+			break seek
+		}
+
+		for _, mid := range observations.Items() {
+			mid := mid // loop closure
 
 			var mcfg machine.MachineConfig
 			if err := store.LookupMachineConfig(mid, &mcfg); err != nil {
@@ -218,16 +180,9 @@ seek:
 			}
 
 			go func() {
-				observations.Add(mid)
-
-				if opts.QuitTogether {
-					defer observations.Done(mid)
-				}
-
 				mcfg := &machine.MachineConfig{}
 				if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 					log.G(ctx).Errorf("could not look up machine config: %v", err)
-					observations.Done(mid)
 					return
 				}
 
@@ -251,7 +206,7 @@ seek:
 
 				events, errs, err := driver.ListenStatusUpdate(ctx, mid)
 				if err != nil {
-					log.G(ctx).Warnf("could not listen for status updates for %s: %v", mid.ShortString(), err)
+					log.G(ctx).Debugf("could not listen for status updates for %s: %v", mid.ShortString(), err)
 
 					// Check the state of the machine using the driver, for a more
 					// accurate read
@@ -265,12 +220,15 @@ seek:
 						if mcfg.DestroyOnExit {
 							log.G(ctx).Infof("removing %s...", mid.ShortString())
 							if err := driver.Destroy(ctx, mid); err != nil {
-								log.G(ctx).Errorf("could not remove machine: %v: ", err)
+								log.G(ctx).Errorf("could not remove machine: %v", err)
 							}
+						}
+					case machine.MachineStateRunning:
+						if err := store.SaveMachineState(mid, machine.MachineStateExited); err != nil {
+							log.G(ctx).Errorf("could not shutdown machine: %v", err)
 						}
 					}
 
-					observations.Done(mid)
 					return
 				}
 

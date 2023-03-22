@@ -5,17 +5,15 @@
 package run
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
-	"syscall"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/erikgeiser/promptkit/selection"
 	"github.com/moby/moby/pkg/namesgenerator"
+	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -37,19 +35,20 @@ type Run struct {
 	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
 	Hypervisor    string
-	Memory        int      `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
-	NoMonitor     bool     `long:"no-monitor" usage:"Do not spawn a (or attach to an existing) an instance monitor"`
-	Platform      string   `long:"plat" short:"p" usage:"Set the platform"`
-	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	Volumes       []string `long:"" short:"" usage:""`
-	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	InitRd        string `long:"initrd" short:"i" usage:"Use the specified initrd"`
+	Memory        int    `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
+	Name          string `long:"name" short:"n" usage:"Name of the instance"`
+	Platform      string `long:"plat" short:"p" usage:"Set the platform"`
+	Remove        bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Target        string `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	WithKernelDbg bool   `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 }
 
 func New() *cobra.Command {
 	cmd := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
-		Use:     "run [FLAGS] [PROJECT|KERNEL] [ARGS]",
+		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
+		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"launch", "r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
@@ -134,17 +133,17 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	//     # or for multiple targets
 	//     $ kraft run -t target-name path/to/project
 	//
-	// b). a target defined within the context of `workdir` (which is either set
+	// b). path to a kernel, e.g.:
+	//
+	//     $ kraft run path/to/kernel
+	//
+	// c). a target defined within the context of `workdir` (which is either set
 	//     via -w or is the current working directory), e.g.:
 	//
 	//     $ cd path/to/project
 	//     $ kraft run target-name
 	//     # or
 	//     $ kraft run -w path/to/project target-name
-	//
-	// c). path to a kernel, e.g.:
-	//
-	//     $ kraft run path/to/kernel
 	//
 	var workdir string
 	var entity string
@@ -177,8 +176,27 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// b). use a defined working directory as a Unikraft project
-	if len(workdir) > 0 {
+	// b). Is the provided first position argument a binary image?
+	if f, err := os.Stat(entity); err == nil && !f.IsDir() {
+		if len(opts.Architecture) == 0 || len(opts.Platform) == 0 {
+			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
+		}
+
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
+		mopts = append(mopts,
+			machine.WithArchitecture(opts.Architecture),
+			machine.WithPlatform(opts.Platform),
+			machine.WithName(machine.MachineName(opts.Name)),
+			machine.WithKernel(entity),
+			machine.WithSource("kernel://"+filepath.Base(entity)),
+			machine.WithInitRd(opts.InitRd),
+		)
+
+		// c). use a defined working directory as a Unikraft project
+	} else if len(workdir) > 0 {
 		target := opts.Target
 		project, err := app.NewProjectFromOptions(
 			ctx,
@@ -227,12 +245,18 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", t.ArchPlatString(), opts.Platform)
 		}
 
+		name := t.Name()
+		if opts.Name != "" {
+			name = opts.Name
+		}
+
 		mopts = append(mopts,
 			machine.WithArchitecture(t.Architecture().Name()),
 			machine.WithPlatform(t.Platform().Name()),
-			machine.WithName(machine.MachineName(t.Name())),
+			machine.WithName(machine.MachineName(name)),
 			machine.WithAcceleration(!opts.DisableAccel),
 			machine.WithSource("project://"+project.Name()+":"+t.Name()),
+			machine.WithInitRd(opts.InitRd),
 		)
 
 		// Use the symbolic debuggable kernel image?
@@ -253,12 +277,17 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
 		mopts = append(mopts,
 			machine.WithArchitecture(opts.Architecture),
 			machine.WithPlatform(opts.Platform),
-			machine.WithName(machine.MachineName(namesgenerator.GetRandomName(0))),
+			machine.WithName(machine.MachineName(opts.Name)),
 			machine.WithKernel(entity),
 			machine.WithSource("kernel://"+filepath.Base(entity)),
+			machine.WithInitRd(opts.InitRd),
 		)
 	} else {
 		return fmt.Errorf("could not determine what to run: %s", entity)
@@ -275,100 +304,77 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.G(ctx).Infof("created %s instance %s", driverType.String(), mid.ShortString())
-
-	// Start the machine
-	if err := driver.Start(ctx, mid); err != nil {
-		return err
-	}
-
-	if !opts.NoMonitor {
-		// Spawn an event monitor or attach to an existing monitor
-		_, err = os.Stat(config.G[config.KraftKit](ctx).EventsPidFile)
-		if err != nil && os.IsNotExist(err) {
-			log.G(ctx).Debugf("launching event monitor...")
-
-			// Spawn and detach a new events monitor
-			e, err := exec.NewExecutable(os.Args[0], nil, "events", "--quit-together")
-			if err != nil {
-				return err
-			}
-
-			process, err := exec.NewProcessFromExecutable(
-				e,
-				exec.WithDetach(true),
-			)
-			if err != nil {
-				return err
-			}
-
-			if err := process.Start(ctx); err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		}
-
-		// TODO: Failsafe check if a a pidfile for the events monitor exists, let's
-		// check that it is active
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	ctrlc := make(chan os.Signal, 1)
-	signal.Notify(ctrlc, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-ctrlc // wait for Ctrl+C
-		fmt.Printf("\n")
-
-		// Remove the instance on Ctrl+C if the --rm flag is passed
-		if opts.Remove {
-			log.G(ctx).Infof("removing %s...", mid.ShortString())
-			if err := driver.Destroy(ctx, mid); err != nil {
-				log.G(ctx).Errorf("could not remove %s: %v", mid, err)
-			}
-		}
-
-		cancel()
-	}()
+	log.G(ctx).Debugf("created %s instance %s", driverType.String(), mid.ShortString())
 
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
-		log.G(ctx).Infof("starting to tail %s logs...", mid.ShortString())
-
 		go func() {
 			events, errs, err := driver.ListenStatusUpdate(ctx, mid)
 			if err != nil {
 				log.G(ctx).Errorf("could not listen for machine updates: %v", err)
-				ctrlc <- syscall.SIGTERM
-				if !opts.Remove {
-					cancel()
-				}
+				signals.RequestShutdown()
+				return
 			}
 
+			log.G(ctx).Debug("waiting for machine events")
+
+		loop:
 			for {
 				// Wait on either channel
 				select {
 				case status := <-events:
+					store.SaveMachineState(mid, status)
+
 					switch status {
 					case machine.MachineStateExited, machine.MachineStateDead:
-						ctrlc <- syscall.SIGTERM
-						if !opts.Remove {
-							cancel()
-						}
-						return
+						signals.RequestShutdown()
+						break loop
 					}
 
 				case err := <-errs:
 					log.G(ctx).Errorf("received event error: %v", err)
-					return
+					break loop
+
+				case <-ctx.Done():
+					break loop
 				}
 			}
 		}()
+	}
 
+	// Start the machine
+	if err := driver.Start(ctx, mid); err != nil {
+		signals.RequestShutdown()
+		return err
+	}
+
+	if !opts.Detach {
 		driver.TailWriter(ctx, mid, iostreams.G(ctx).Out)
+
+		// Wait for the context to be cancelled, which can occur if a fatal error
+		// occurs or the user has requested a SIGINT (Ctrl+C).
+		<-ctx.Done()
+
+		// Reading the state to determine whether to invoke a stop request but this
+		// also simultaneously updates the state if it has exited.
+		state, stateErr := driver.State(ctx, mid)
+
+		// Remove the instance on Ctrl+C if the --rm flag is passed
+		if opts.Remove {
+			log.G(ctx).Debugf("removing %s", mid.ShortString())
+			if err := driver.Destroy(ctx, mid); stateErr == nil && err != nil {
+				log.G(ctx).
+					WithField("mid", mid).
+					Errorf("could not remove: %v", err)
+			}
+		} else if state == machine.MachineStateRunning {
+			log.G(ctx).Debugf("stopping %s", mid.ShortString())
+			if err := driver.Stop(ctx, mid); stateErr == nil && err != nil {
+				log.G(ctx).
+					WithField("mid", mid).
+					Errorf("could not stop: %v", err)
+			}
+		}
 	}
 
 	return nil
