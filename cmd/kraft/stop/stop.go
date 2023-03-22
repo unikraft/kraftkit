@@ -133,20 +133,6 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 
 			log.G(ctx).Infof("stopping %s...", mid.ShortString())
 
-			state, err := store.LookupMachineState(mid)
-			if err != nil {
-				log.G(ctx).Errorf("could not look up machine state: %v", err)
-				observations.Done(mid)
-				return
-			}
-
-			switch state {
-			case machine.MachineStateDead, machine.MachineStateExited:
-				log.G(ctx).Errorf("%s has exited", mid.ShortString())
-				observations.Done(mid)
-				return
-			}
-
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
 				log.G(ctx).Errorf("could not look up machine config: %v", err)
