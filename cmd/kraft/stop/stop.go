@@ -100,7 +100,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not access machine store: %v", err)
 	}
 
-	allMids, err := store.ListAllMachineIDs()
+	mcfgs, err := store.ListAllMachineConfigs()
 	if err != nil {
 		return fmt.Errorf("could not list machines: %v", err)
 	}
@@ -109,9 +109,9 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 
 	for _, mid1 := range args {
 		found := false
-		for _, mid2 := range allMids {
-			if mid1 == mid2.ShortString() || mid1 == mid2.String() {
-				mids = append(mids, mid2)
+		for _, mid2 := range mcfgs {
+			if mid1 == mid2.ID.ShortString() || mid1 == mid2.ID.String() || mid1 == string(mid2.Name) {
+				mids = append(mids, mid2.ID)
 				found = true
 			}
 		}
