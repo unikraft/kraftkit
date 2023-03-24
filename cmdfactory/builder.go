@@ -148,7 +148,7 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		// file.
 		if envName != "" {
 			if envValue := os.Getenv(envName); envValue != "" {
-				strValue = os.Getenv(envValue)
+				strValue = envValue
 			}
 		}
 
