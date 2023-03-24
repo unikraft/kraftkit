@@ -11,7 +11,7 @@ INSTALLDIR  ?= /usr/local/bin/
 VENDORDIR   ?= $(WORKDIR)/vendor
 
 # Arguments
-REGISTRY    ?= ghcr.io
+REGISTRY    ?= kraftkit.sh
 ORG         ?= unikraft
 REPO        ?= kraftkit
 BIN         ?= kraft
@@ -42,7 +42,7 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
                -e DOCKER= \
                -w /go/src/$(GOMOD) \
                -v $(WORKDIR):/go/src/$(GOMOD) \
-               $(REGISTRY)/$(ORG)/$(REPO)/$(2):$(IMAGE_TAG) \
+               $(REGISTRY)/$(2):$(IMAGE_TAG) \
                  $(3)
 GO          ?= go
 GOFUMPT     ?= gofumpt
@@ -64,7 +64,7 @@ endif
 .PROXY      :=
 ifneq ($(DOCKER_RUN),)
 .PROXY      := docker-proxy-
-$(BIN): ENVIRONMENT ?= myself
+$(BIN): ENVIRONMENT ?= myself-full
 $(BIN):
 	$(info Running target via Docker...)
 	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) -e $@)
@@ -93,22 +93,9 @@ $(addprefix $(.PROXY), $(BIN)):
 		-o $(DISTDIR)/$@ \
 		$(WORKDIR)/cmd/$@
 
-# Create an environment where we can build
-.PHONY: container
-container: GO_VERSION         ?= 1.20
-container: DOCKER_BUILD_EXTRA ?=
-container: ENVIRONMENT        ?= myself
-container: IMAGE              ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TAG)
-container: TARGET             ?= base
-container:
-	$(DOCKER) build \
-		--build-arg ORG=$(ORG) \
-		--build-arg REPO=$(REPO) \
-		--build-arg GO_VERSION=$(GO_VERSION) \
-		--tag $(IMAGE) \
-		--target $(TARGET) \
-		--file $(WORKDIR)/buildenvs/$(ENVIRONMENT).Dockerfile \
-		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
+# Proxy all "build environment" (buildenvs) targets
+buildenv-%:
+		$(MAKE) -C $(WORKDIR)/buildenvs $*
 
 # Run an environment where we can build
 .PHONY: devenv
@@ -117,9 +104,9 @@ devenv: WITH_KVM         ?= n
 devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
 devenv:
 ifeq ($(WITH_KVM),y)
-	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself,bash)
+	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself-full,bash)
 else
-	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself,bash)
+	$(Q)$(call DOCKER_RUN,$(DOCKER_RUN_EXTRA),myself-full,bash)
 endif
 
 .PHONY: tidy
@@ -145,8 +132,8 @@ clean:
 	$(GO) clean -mod=readonly -modcache -cache -i -r
 
 .PHONY: properclean
-properclean: ENVIRONMENT ?= myself
-properclean: IMAGE       ?= $(REGISTRY)/$(ORG)/$(REPO)/$(ENVIRONMENT):$(IMAGE_TAG)
+properclean: ENVIRONMENT ?= myself-full
+properclean: IMAGE       ?= $(REGISTRY)/$(ENVIRONMENT):$(IMAGE_TAG)
 properclean:
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
