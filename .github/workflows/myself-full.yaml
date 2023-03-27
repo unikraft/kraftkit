@@ -1,12 +1,16 @@
 name: Myself build environment
 
+# Build only on changes to the build environment itself
 on:
   push:
     branches:
       - stable
+    paths:
+      - 'buildenvs/myself.Dockerfile'
+      - '.github/workflows/myself-full.yaml'
 
 jobs:
-  myself-push:
+  myself-full-push:
     runs-on: ubuntu-latest
     steps:
       - name: Set up QEMU
@@ -29,5 +33,6 @@ jobs:
           file: ./buildenvs/myself.Dockerfile
           platforms: linux/amd64
           tags: index.unikraft.io/kraftkit.sh/myself:latest
+          target: kraftkit-full
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
