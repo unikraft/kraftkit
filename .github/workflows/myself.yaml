@@ -2,14 +2,9 @@ name: Myself build environment
 
 # Build only on changes to the build environment itself
 on:
-  workflow_dispatch:
   push:
     branches:
-      - staging
-    paths:
-      - '.github/workflows/myself.yaml'
-      - 'buildenvs/myself.Dockefile'
-      - 'Makefile'
+      - stable
 
 jobs:
   myself-full-push:
