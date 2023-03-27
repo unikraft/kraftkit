@@ -73,7 +73,8 @@ endif
 
 # Targets
 .PHONY: all
-$(.PROXY)all: $(BIN)
+.DEFAULT: all
+all: help
 
 ifeq ($(DEBUG),y)
 $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
@@ -102,7 +103,7 @@ buildenv-%:
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
 devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
-devenv:
+devenv: ## Start the development environment container.
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself-full,bash)
 else
@@ -110,15 +111,15 @@ else
 endif
 
 .PHONY: tidy
-tidy:
+tidy: ## Tidy import Go modules.
 	$(GO) mod tidy -compat=$(GO_VERSION)
 
 .PHONY: fmt
-fmt:
+fmt: ## Format all files according to linting preferences.
 	$(GOFUMPT) -e -l -w $(WORKDIR)
 
 .PHONY: cicheck
-cicheck:
+cicheck: ## Run CI checks.
 	$(GOCILINT) run
 
 .PHONY: install-golangci-lint
@@ -134,7 +135,7 @@ clean:
 .PHONY: properclean
 properclean: ENVIRONMENT ?= myself-full
 properclean: IMAGE       ?= $(REGISTRY)/$(ENVIRONMENT):$(IMAGE_TAG)
-properclean:
+properclean: ## Completely clean the repository's build artifacts.
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
 
@@ -149,3 +150,27 @@ $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2: $(VENDORDIR)/github.c
 
 $(VENDORDIR)/github.com/libgit2/git2go:
 	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@/v31
+
+.PHONY: help
+help: ## Show this help menu and exit.
+	@awk 'BEGIN { \
+		FS = ":.*##"; \
+		printf "KraftKit developer build targets.\n\n"; \
+		printf "\033[1mUSAGE\033[0m\n"; \
+		printf "  make [VAR=... [VAR=...]] \033[36mTARGET\033[0m\n\n"; \
+		printf "\033[1mTARGETS\033[0m\n"; \
+	} \
+	/^[a-zA-Z_-]+:.*?##/ { \
+		printf "  \033[36m%-23s\033[0m %s\n", $$1, $$2 \
+	} \
+	/^##@/ { \
+		printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
+	} ' $(MAKEFILE_LIST)
+
+# Additional help entries
+buildenv-base: ## OCI image used for building Unikraft unikernels with kraft.
+buildenv-gcc: ## OCI image containing a Unikraft-centric build of gcc.
+buildenv-myself-full: ## OCI image containing the build environment for KraftKit.
+buildenv-myself: ## OCI image containing KraftKit binaries.
+buildenv-qemu: ## OCI image containing a Unikraft-centric build of QEMU.
+kraft: ## The kraft binary.
