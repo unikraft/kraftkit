@@ -188,6 +188,10 @@ func (lc LibraryConfig) KConfig() kconfig.KeyValueMap {
 	values.OverrideBy(lc.kconfig)
 
 	if menu == nil {
+		// Naively set the KConfig option for this library based on Unikraft
+		// convention.
+		values.Set(kconfig.Prefix+"LIB"+strings.ToUpper(lc.name), kconfig.Yes)
+
 		return values
 	}
 
