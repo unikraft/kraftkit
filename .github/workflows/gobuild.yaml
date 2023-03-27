@@ -25,7 +25,7 @@ jobs:
         run: |
           set -xe
           git config --global --add safe.directory /__w/kraftkit/kraftkit
-          make
+          make kraft
 
       - name: Run Help Message
         run: |
