@@ -30,7 +30,6 @@ RUN set -xe; \
 WORKDIR /go/src/kraftkit.sh
 
 COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.20.2 /usr/bin/goreleaser /usr/bin/
-COPY . .
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go
@@ -39,6 +38,10 @@ ENV KRAFTKIT_LOG_TYPE=basic
 ENV PAGER=cat
 ENV PATH=$PATH:/go/src/kraftkit.sh/dist
 
+FROM kraftkit-full AS kraftkit-build
+
+COPY . .
+
 # Build the binary
 RUN set -xe; \
     make kraft; \
@@ -46,6 +49,6 @@ RUN set -xe; \
 
 FROM scratch AS kraftkit
 
-COPY --from=kraftkit-full /go/src/kraftkit.sh/dist/kraft /kraft
+COPY --from=kraftkit-build /go/src/kraftkit.sh/dist/kraft /kraft
 
 ENTRYPOINT [ "/kraft" ]
