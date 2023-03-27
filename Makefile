@@ -78,7 +78,7 @@ $(.PROXY)all: $(BIN)
 ifeq ($(DEBUG),y)
 $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
 else
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w -extldflags "-static"
 endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
