@@ -51,7 +51,7 @@ func New() *cobra.Command {
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
-			Configure and build Unikraft unikernels.
+			Build a Unikraft unikernel.
 
 			The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
 			arguments, you will be guided through interactive mode.
@@ -112,7 +112,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	if err != nil && project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
-			fmt.Sprintf("finding %s...",
+			fmt.Sprintf("finding %s",
 				unikraft.TypeNameVersion(project.Template()),
 			), "",
 			func(ctx context.Context) error {
@@ -220,7 +220,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		component := component // loop closure
 
 		searches = append(searches, processtree.NewProcessTreeItem(
-			fmt.Sprintf("finding %s...",
+			fmt.Sprintf("finding %s",
 				unikraft.TypeNameVersion(component),
 			), "",
 			func(ctx context.Context) error {
