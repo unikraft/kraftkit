@@ -85,9 +85,9 @@ func (pd *ParaProgress) Start() error {
 
 	go func() {
 		if _, err := tprog.Run(); err != nil {
-			pd.errChan <- pd.err
-		} else {
 			pd.errChan <- err
+		} else {
+			pd.errChan <- pd.err
 		}
 	}()
 

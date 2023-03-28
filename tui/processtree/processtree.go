@@ -158,9 +158,9 @@ func (pt *ProcessTree) Start() error {
 
 	go func() {
 		if _, err := tprog.Run(); err != nil {
-			pt.errChan <- pt.err
-		} else {
 			pt.errChan <- err
+		} else {
+			pt.errChan <- pt.err
 		}
 	}()
 
