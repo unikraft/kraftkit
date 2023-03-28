@@ -50,6 +50,7 @@ type Set struct {
 func New() *cobra.Command {
 	return cmdfactory.New(&Set{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
+		Hidden:  true,
 		Use:     "set [OPTIONS] [param=value ...]",
 		Aliases: []string{"s"},
 		Long: heredoc.Doc(`

@@ -364,7 +364,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
 				func(ctx context.Context, w func(progress float64)) error {
-					return project.DefConfig(
+					return project.Configure(
 						ctx,
 						targ, // Target-specific options
 						nil,  // No extra configuration options
