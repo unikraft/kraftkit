@@ -31,4 +31,3 @@ jobs:
         run: |
           set -xe
           ./dist/kraft -h
-      
