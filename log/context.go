@@ -18,7 +18,7 @@ var (
 	G = FromContext
 
 	// L is the global logger.
-	L = logrus.NewEntry(logrus.StandardLogger())
+	L = logrus.StandardLogger()
 )
 
 // contextKey is used to retrieve the logger from the context.
@@ -26,14 +26,14 @@ type contextKey struct{}
 
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.
-func WithLogger(ctx context.Context, logger *logrus.Entry) context.Context {
+func WithLogger(ctx context.Context, logger *logrus.Logger) context.Context {
 	return context.WithValue(ctx, contextKey{}, logger)
 }
 
 // FromContext returns the logger kraftkit in the context, or an inert logger
 // that will not log anything.
-func FromContext(ctx context.Context) *logrus.Entry {
-	l, ok := ctx.Value(contextKey{}).(*logrus.Entry)
+func FromContext(ctx context.Context) *logrus.Logger {
+	l, ok := ctx.Value(contextKey{}).(*logrus.Logger)
 	if !ok || l == nil {
 		return L
 	}

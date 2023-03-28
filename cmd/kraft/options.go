@@ -24,7 +24,7 @@ import (
 
 type CliOptions struct {
 	ioStreams      *iostreams.IOStreams
-	logger         *logrus.Entry
+	logger         *logrus.Logger
 	configManager  *config.ConfigManager[config.KraftKit]
 	packageManager packmanager.PackageManager
 	pluginManager  *plugins.PluginManager
@@ -109,7 +109,7 @@ func withDefaultLogger() CliOption {
 		}
 
 		// Save the logger
-		copts.logger = logrus.NewEntry(logger)
+		copts.logger = logger
 
 		return nil
 	}

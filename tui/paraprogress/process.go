@@ -128,11 +128,9 @@ func (p *Process) Start() tea.Cmd {
 		} else {
 			// Set the output to the process Writer such that we can hijack logs and
 			// print them in a per-process isolated view.
-			entry := log.G(p.ctx).Dup()
-			logger := *entry.Logger //nolint:govet
+			logger := log.G(p.ctx)
 			logger.SetOutput(p)
-			entry.Logger = &logger
-			p.ctx = log.WithLogger(p.ctx, entry)
+			p.ctx = log.WithLogger(p.ctx, logger)
 
 			// Set the output of the iostreams to the per-process isolated view.
 			io := *iostreams.G(p.ctx)

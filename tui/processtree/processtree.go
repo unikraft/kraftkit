@@ -172,7 +172,7 @@ func (pt *ProcessTree) Init() tea.Cmd {
 		// Clone the logger for this process if we are in fancy render mode
 		if !pt.norender {
 			logger := log.G(pti.ctx)
-			logger.Logger.Out = pti
+			logger.Out = pti
 			pti.ctx = log.WithLogger(pt.ctx, logger)
 		}
 
@@ -268,11 +268,9 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 		} else {
 			// Set the output to the process Writer such that we can hijack logs and
 			// print them in a per-process isolated view.
-			entry := log.G(ctx).Dup()
-			logger := *entry.Logger //nolint:govet
+			logger := log.G(ctx)
 			logger.SetOutput(item)
-			entry.Logger = &logger
-			ctx = log.WithLogger(ctx, entry)
+			ctx = log.WithLogger(ctx, logger)
 
 			// Set the output of the iostreams to the per-process isolated view.
 			io := *iostreams.G(ctx)

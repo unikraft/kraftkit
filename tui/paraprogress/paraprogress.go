@@ -12,8 +12,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
-	"kraftkit.sh/iostreams"
-	// "kraftkit.sh/log"
 )
 
 var tprog *tea.Program
