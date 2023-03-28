@@ -71,10 +71,12 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 }
 
 func (pd *ParaProgress) Start() error {
-	teaOpts := []tea.ProgramOption{}
+	teaOpts := []tea.ProgramOption{
+		tea.WithInput(nil),
+	}
 
 	if pd.norender {
-		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(iostreams.G(pd.ctx).In))
+		teaOpts = append(teaOpts, tea.WithoutRenderer())
 	} else {
 		// Set this super early (even before bubbletea), as fast exiting processes
 		// may not have received the window size update and therefore pd.width is

@@ -132,10 +132,12 @@ func (pti *ProcessTreeItem) Write(p []byte) (int, error) {
 }
 
 func (pt *ProcessTree) Start() error {
-	var teaOpts []tea.ProgramOption
+	teaOpts := []tea.ProgramOption{
+		tea.WithInput(nil),
+	}
 
 	if pt.norender {
-		teaOpts = []tea.ProgramOption{tea.WithoutRenderer(), tea.WithInput(iostreams.G(pt.ctx).In)}
+		teaOpts = append(teaOpts, tea.WithoutRenderer())
 	} else {
 		// Set this super early (even before bubbletea), as fast exiting processes
 		// may not have received the window size update and therefore pt.width is

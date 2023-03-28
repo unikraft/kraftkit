@@ -8,7 +8,7 @@ require (
 	github.com/briandowns/spinner v1.21.0
 	github.com/cavaliergopher/cpio v1.0.1
 	github.com/charmbracelet/bubbles v0.15.0
-	github.com/charmbracelet/bubbletea v0.23.2
+	github.com/charmbracelet/bubbletea v0.23.3-0.20230316100943-248eb83001a7
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/cli/cli/v2 v2.23.0
 	github.com/cli/safeexec v1.0.1
@@ -59,7 +59,7 @@ require (
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/cli/go-gh v1.1.0 // indirect
 	github.com/cloudflare/circl v1.3.2 // indirect
-	github.com/containerd/console v1.0.3 // indirect
+	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
