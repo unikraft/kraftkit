@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
+	"kraftkit.sh/tui"
 )
 
 var tprog *tea.Program
@@ -188,7 +189,7 @@ func (md ParaProgress) View() string {
 	if md.quitting {
 		content = append(content, "")
 	} else {
-		content = append(content, "ctrl+c to cancel")
+		content = append(content, tui.TextLightGray("ctrl+c to cancel"))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, content...)

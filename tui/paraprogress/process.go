@@ -21,6 +21,7 @@ import (
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/tui"
 	"kraftkit.sh/utils"
 )
 
@@ -97,8 +98,10 @@ func NewProcess(name string, processFunc func(context.Context, func(float64)) er
 		processFunc: processFunc,
 	}
 
-	d.progress.Full = '#'
+	d.progress.Full = '•'
 	d.progress.Empty = ' '
+	d.progress.EmptyColor = ""
+	d.progress.FullColor = "245"
 	d.progress.ShowPercentage = true
 	d.progress.PercentFormat = " %3.0f%%"
 
@@ -256,35 +259,32 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 }
 
 func (p Process) View() string {
-	left := "["
+	left := ""
 
 	switch p.Status {
 	case StatusRunning:
-		left += p.spinner.View()
+		left += tui.TextBlue("[" + p.spinner.View() + "]")
 	case StatusSuccess:
-		left += "+"
+		left += tui.TextGreen("[+]")
 	default:
 		if p.Status == StatusFailed || p.err != nil {
-			left += "-"
+			left += tui.TextRed("<!>")
 		} else {
-			left += " "
+			left += "[ ]"
 		}
 	}
 
-	left += "] "
+	left += " "
 	leftWidth := width(left)
 
 	elapsed := utils.HumanizeDuration(p.timer.Elapsed())
 	p.timerWidth = width(elapsed)
-
+	elapsed = "[" + elapsed + "]"
 	if p.timerMax-p.timerWidth < 0 {
 		p.timerMax = p.timerWidth
 	}
 
-	right := " [" +
-		lipgloss.NewStyle().
-			Render(indent.String(elapsed, uint(p.timerMax-p.timerWidth))) +
-		"]"
+	right := " " + tui.TextLightGray(indent.String(elapsed, uint(p.timerMax-p.timerWidth)))
 	rightWidth := width(right)
 
 	middle := ""
