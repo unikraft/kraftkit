@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mgutz/ansi"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
 )
@@ -24,26 +24,27 @@ const defaultTimestampFormat = time.RFC3339
 var (
 	baseTimestamp      time.Time    = time.Now()
 	defaultColorScheme *ColorScheme = &ColorScheme{
-		InfoLevelStyle:  "black:white",
-		WarnLevelStyle:  "black:yellow",
-		ErrorLevelStyle: "black:red",
-		FatalLevelStyle: "black:red",
-		PanicLevelStyle: "black:red",
-		DebugLevelStyle: "black:blue",
-		PrefixStyle:     "black:cyan",
-		TimestampStyle:  "black:black+h",
+		InfoLevel:  lipgloss.NewStyle().Background(lipgloss.Color("8")).Foreground(lipgloss.Color("15")).Render,
+		WarnLevel:  lipgloss.NewStyle().Background(lipgloss.Color("11")).Foreground(lipgloss.Color("15")).Render,
+		ErrorLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.Color("15")).Render,
+		FatalLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.Color("15")).Render,
+		PanicLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.Color("15")).Render,
+		DebugLevel: lipgloss.NewStyle().Background(lipgloss.Color("12")).Foreground(lipgloss.Color("15")).Render,
+		TraceLevel: lipgloss.NewStyle().Background(lipgloss.Color("0")).Foreground(lipgloss.Color("15")).Render,
+		Prefix:     lipgloss.NewStyle().Background(lipgloss.Color("8")).Foreground(lipgloss.Color("15")).Render,
+		Timestamp:  lipgloss.NewStyle().Render,
 	}
-	noColorsColorScheme *compiledColorScheme = &compiledColorScheme{
-		InfoLevelColor:  ansi.ColorFunc(""),
-		WarnLevelColor:  ansi.ColorFunc(""),
-		ErrorLevelColor: ansi.ColorFunc(""),
-		FatalLevelColor: ansi.ColorFunc(""),
-		PanicLevelColor: ansi.ColorFunc(""),
-		DebugLevelColor: ansi.ColorFunc(""),
-		PrefixColor:     ansi.ColorFunc(""),
-		TimestampColor:  ansi.ColorFunc(""),
+	noColorsColorScheme *ColorScheme = &ColorScheme{
+		InfoLevel:  lipgloss.NewStyle().Render,
+		WarnLevel:  lipgloss.NewStyle().Render,
+		ErrorLevel: lipgloss.NewStyle().Render,
+		FatalLevel: lipgloss.NewStyle().Render,
+		PanicLevel: lipgloss.NewStyle().Render,
+		DebugLevel: lipgloss.NewStyle().Render,
+		TraceLevel: lipgloss.NewStyle().Render,
+		Prefix:     lipgloss.NewStyle().Render,
+		Timestamp:  lipgloss.NewStyle().Render,
 	}
-	defaultCompiledColorScheme *compiledColorScheme = compileColorScheme(defaultColorScheme)
 )
 
 func miniTS() int {
@@ -51,25 +52,15 @@ func miniTS() int {
 }
 
 type ColorScheme struct {
-	InfoLevelStyle  string
-	WarnLevelStyle  string
-	ErrorLevelStyle string
-	FatalLevelStyle string
-	PanicLevelStyle string
-	DebugLevelStyle string
-	PrefixStyle     string
-	TimestampStyle  string
-}
-
-type compiledColorScheme struct {
-	InfoLevelColor  func(string) string
-	WarnLevelColor  func(string) string
-	ErrorLevelColor func(string) string
-	FatalLevelColor func(string) string
-	PanicLevelColor func(string) string
-	DebugLevelColor func(string) string
-	PrefixColor     func(string) string
-	TimestampColor  func(string) string
+	InfoLevel  func(string) string
+	WarnLevel  func(string) string
+	ErrorLevel func(string) string
+	FatalLevel func(string) string
+	PanicLevel func(string) string
+	DebugLevel func(string) string
+	TraceLevel func(string) string
+	Prefix     func(string) string
+	Timestamp  func(string) string
 }
 
 type TextFormatter struct {
@@ -111,35 +102,12 @@ type TextFormatter struct {
 	SpacePadding int
 
 	// Color scheme to use.
-	colorScheme *compiledColorScheme
+	colorScheme *ColorScheme
 
 	// Whether the logger's out is to a terminal.
 	isTerminal bool
 
 	sync.Once
-}
-
-func getCompiledColor(main string, fallback string) func(string) string {
-	var style string
-	if main != "" {
-		style = main
-	} else {
-		style = fallback
-	}
-	return ansi.ColorFunc(style)
-}
-
-func compileColorScheme(s *ColorScheme) *compiledColorScheme {
-	return &compiledColorScheme{
-		InfoLevelColor:  getCompiledColor(s.InfoLevelStyle, defaultColorScheme.InfoLevelStyle),
-		WarnLevelColor:  getCompiledColor(s.WarnLevelStyle, defaultColorScheme.WarnLevelStyle),
-		ErrorLevelColor: getCompiledColor(s.ErrorLevelStyle, defaultColorScheme.ErrorLevelStyle),
-		FatalLevelColor: getCompiledColor(s.FatalLevelStyle, defaultColorScheme.FatalLevelStyle),
-		PanicLevelColor: getCompiledColor(s.PanicLevelStyle, defaultColorScheme.PanicLevelStyle),
-		DebugLevelColor: getCompiledColor(s.DebugLevelStyle, defaultColorScheme.DebugLevelStyle),
-		PrefixColor:     getCompiledColor(s.PrefixStyle, defaultColorScheme.PrefixStyle),
-		TimestampColor:  getCompiledColor(s.TimestampStyle, defaultColorScheme.TimestampStyle),
-	}
 }
 
 func (f *TextFormatter) init(entry *logrus.Entry) {
@@ -161,7 +129,7 @@ func (f *TextFormatter) checkIfTerminal(w io.Writer) bool {
 }
 
 func (f *TextFormatter) SetColorScheme(colorScheme *ColorScheme) {
-	f.colorScheme = compileColorScheme(colorScheme)
+	f.colorScheme = colorScheme
 }
 
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
@@ -193,10 +161,10 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	if isFormatted {
 		isColored := (f.ForceColors || f.isTerminal) && !f.DisableColors
-		var colorScheme *compiledColorScheme
+		var colorScheme *ColorScheme
 		if isColored {
 			if f.colorScheme == nil {
-				colorScheme = defaultCompiledColorScheme
+				colorScheme = defaultColorScheme
 			} else {
 				colorScheme = f.colorScheme
 			}
@@ -221,31 +189,31 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string, timestampFormat string, colorScheme *compiledColorScheme) {
+func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string, timestampFormat string, colorScheme *ColorScheme) {
 	var levelColor func(string) string
 	var levelText string
 	switch entry.Level {
 	case logrus.InfoLevel:
 		levelText = "i"
-		levelColor = colorScheme.InfoLevelColor
+		levelColor = colorScheme.InfoLevel
 	case logrus.WarnLevel:
 		levelText = "W"
-		levelColor = colorScheme.WarnLevelColor
+		levelColor = colorScheme.WarnLevel
 	case logrus.ErrorLevel:
 		levelText = "E"
-		levelColor = colorScheme.ErrorLevelColor
+		levelColor = colorScheme.ErrorLevel
 	case logrus.FatalLevel:
 		levelText = "!"
-		levelColor = colorScheme.FatalLevelColor
+		levelColor = colorScheme.FatalLevel
 	case logrus.PanicLevel:
 		levelText = "X"
-		levelColor = colorScheme.PanicLevelColor
+		levelColor = colorScheme.PanicLevel
 	case logrus.TraceLevel:
 		levelText = "T"
-		levelColor = colorScheme.DebugLevelColor
+		levelColor = colorScheme.TraceLevel
 	default:
 		levelText = "D"
-		levelColor = colorScheme.DebugLevelColor
+		levelColor = colorScheme.DebugLevel
 	}
 
 	level := levelColor(fmt.Sprintf(" %1s ", levelText))
@@ -253,11 +221,11 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	message := entry.Message
 
 	if prefixValue, ok := entry.Data["prefix"]; ok {
-		prefix = colorScheme.PrefixColor(" " + prefixValue.(string) + ":")
+		prefix = colorScheme.Prefix(" " + prefixValue.(string) + ":")
 	} else {
 		prefixValue, trimmedMsg := extractPrefix(entry.Message)
 		if len(prefixValue) > 0 {
-			prefix = colorScheme.PrefixColor(" " + prefixValue + ":")
+			prefix = colorScheme.Prefix(" " + prefixValue + ":")
 			message = trimmedMsg
 		}
 	}
@@ -276,7 +244,7 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 		} else {
 			timestamp = entry.Time.Format(timestampFormat)
 		}
-		fmt.Fprintf(b, " %s %s%s "+messageFormat, colorScheme.TimestampColor(timestamp), level, prefix, message)
+		fmt.Fprintf(b, "%s %s%s "+messageFormat, level, colorScheme.Timestamp(timestamp), prefix, message)
 	}
 	for _, k := range keys {
 		if k != "prefix" {
