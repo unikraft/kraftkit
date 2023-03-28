@@ -147,7 +147,7 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	}
 	if pti.status != StatusSuccess {
 		for _, line := range pti.logs[truncate:] {
-			s += indent.String(line, INDENTS) + "\n"
+			s += line + "\n"
 		}
 	}
 

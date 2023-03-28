@@ -315,7 +315,7 @@ func (p Process) View() string {
 		}
 
 		for _, line := range p.logs[truncate:] {
-			s += indent.String(line, INDENTS) + "\n"
+			s += line + "\n"
 		}
 	}
 
