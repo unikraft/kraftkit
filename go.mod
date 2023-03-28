@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.23.3-0.20230316100943-248eb83001a7
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/cli/cli/v2 v2.23.0
+	github.com/cli/go-gh v1.1.0
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.11.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
@@ -31,7 +32,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/moby v23.0.1+incompatible
 	github.com/muesli/reflow v0.3.0
-	github.com/muesli/termenv v0.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.0.2
 	github.com/shirou/gopsutil/v3 v3.23.1
@@ -57,7 +57,6 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
-	github.com/cli/go-gh v1.1.0 // indirect
 	github.com/cloudflare/circl v1.3.2 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -84,6 +83,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/muesli/ansi v0.0.0-20221106050444-61f0cd9a192a // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/muesli/termenv v0.14.0 // indirect
 	github.com/pjbgf/sha1cd v0.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect

@@ -55,15 +55,9 @@ func NewTablePrinter(ctx context.Context) TablePrinter {
 func NewTablePrinterWithOptions(ctx context.Context, opts TablePrinterOptions) TablePrinter {
 	io := iostreams.G(ctx)
 	if opts.IsTTY {
-		var maxWidth int
-		if io.IsStdoutTTY() {
-			maxWidth = io.TerminalWidth()
-		} else {
-			maxWidth = io.ProcessTerminalWidth()
-		}
 		return &ttyTablePrinter{
 			out:      io.Out,
-			maxWidth: maxWidth,
+			maxWidth: io.TerminalWidth(),
 		}
 	}
 	return &tsvTablePrinter{
