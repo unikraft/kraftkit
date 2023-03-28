@@ -108,13 +108,14 @@ func NewProcess(name string, processFunc func(context.Context, func(float64)) er
 }
 
 func (p *Process) Init() tea.Cmd {
-	return p.timer.Init()
+	return nil
 }
 
 func (p *Process) Start() tea.Cmd {
 	//nolint:staticcheck
 	cmds := []tea.Cmd{
-		spinner.Tick,
+		p.timer.Init(),
+		p.spinner.Tick,
 		func() tea.Msg {
 			return StatusMsg{
 				ID:     p.id,
