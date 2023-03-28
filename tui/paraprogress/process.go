@@ -6,7 +6,6 @@ package paraprogress
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -287,26 +286,12 @@ func (p Process) View() string {
 	right := " " + tui.TextLightGray(indent.String(elapsed, uint(p.timerMax-p.timerWidth)))
 	rightWidth := width(right)
 
-	middle := ""
+	middle := lipgloss.NewStyle().
+		Width(p.NameWidth + 1).
+		Render(p.Name)
 
-	if p.err != nil {
-		middle = fmt.Sprintf(
-			"error %s: %s",
-			p.Name,
-			p.err.Error(),
-		)
-		pad := p.width - width(middle) - leftWidth - rightWidth
-		if pad > 0 {
-			middle += strings.Repeat(" ", pad)
-		}
-	} else {
-		middle = lipgloss.NewStyle().
-			Width(p.NameWidth + 1).
-			Render(p.Name)
-
-		p.progress.Width = p.width - width(middle) - leftWidth - rightWidth
-		middle += p.progress.ViewAs(p.percent)
-	}
+	p.progress.Width = p.width - width(middle) - leftWidth - rightWidth
+	middle += p.progress.ViewAs(p.percent)
 
 	s := lipgloss.JoinHorizontal(lipgloss.Top,
 		left,
