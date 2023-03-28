@@ -51,7 +51,7 @@ func New() *cobra.Command {
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
-			Configure and build Unikraft unikernels.
+			Build a Unikraft unikernel.
 
 			The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
 			arguments, you will be guided through interactive mode.
