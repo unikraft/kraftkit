@@ -49,7 +49,7 @@ func New() *cobra.Command {
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
 		Args:    cobra.MaximumNArgs(1),
-		Aliases: []string{"launch", "r"},
+		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
 		Example: heredoc.Doc(`
