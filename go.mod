@@ -35,6 +35,7 @@ require (
 	github.com/muesli/termenv v0.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.0.2
+	github.com/sanity-io/litter v1.5.5
 	github.com/shirou/gopsutil/v3 v3.23.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
