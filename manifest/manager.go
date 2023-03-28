@@ -199,7 +199,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 		"cache":   !query.NoCache,
 	}).Debug("querying manifest catalog")
 
-	if len(query.Source) > 0 && query.NoCache {
+	if len(query.Source) > 0 {
 		provider, err := NewProvider(ctx, query.Source, mopts...)
 		if err != nil {
 			return nil, err
