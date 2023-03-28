@@ -80,11 +80,8 @@ type Application interface {
 	// SyncConfig updates the configuration
 	SyncConfig(context.Context, target.Target, ...make.MakeOption) error
 
-	// Defconfig updates the configuration
-	DefConfig(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
-
-	// Configure the application
-	Configure(context.Context, target.Target, ...make.MakeOption) error
+	// Configure updates the configuration
+	Configure(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
 
 	// Prepare the application
 	Prepare(context.Context, target.Target, ...make.MakeOption) error
@@ -360,7 +357,7 @@ func (app application) SyncConfig(ctx context.Context, tc target.Target, mopts .
 	)
 }
 
-func (app application) DefConfig(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+func (app application) Configure(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(app.KConfig())
 
@@ -410,16 +407,6 @@ func (app application) DefConfig(ctx context.Context, tc target.Target, extra kc
 		append(mopts,
 			make.WithTarget("defconfig"),
 			make.WithVar("UK_DEFCONFIG", tmpfile.Name()),
-		)...,
-	)
-}
-
-func (app application) Configure(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
-	return app.Make(
-		ctx,
-		tc,
-		append(mopts,
-			make.WithTarget("configure"),
 		)...,
 	)
 }
@@ -484,7 +471,7 @@ func (app application) Set(ctx context.Context, tc target.Target, mopts ...make.
 	// 	),
 	// )
 
-	// return app.DefConfig(mopts...)
+	// return app.Configure(mopts...)
 
 	return nil
 }
@@ -509,7 +496,7 @@ func (app application) Unset(ctx context.Context, tc target.Target, mopts ...mak
 	// 	),
 	// )
 
-	// return app.DefConfig(mopts...)
+	// return app.Configure(mopts...)
 
 	return nil
 }
