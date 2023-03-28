@@ -1,0 +1,35 @@
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: staging
+    paths:
+      - 'tools/go-generate-qemu-devices/**'
+
+name: Go Build
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    container: kraftkit.sh/myself-full:latest
+    name: Build Check
+    env:
+      RUNGOGENERATE: false
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "1.20.2"
+
+      - name: Build go-generate-qemu-devices
+        run: |
+          set -xe
+          git config --global --add safe.directory /__w/kraftkit/kraftkit
+          go build -o /dist ./tools/go-generate-qemu-devices/...
+
+      - name: Run Help Message
+        run: |
+          set -xe
+          ./dist/go-generate-qemu-devices -h
