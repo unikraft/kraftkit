@@ -230,6 +230,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						component.Type(),
 					},
 					Version: component.Version(),
+					Source:  component.Source(),
 					NoCache: opts.NoCache,
 				})
 				if err != nil {
