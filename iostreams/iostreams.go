@@ -497,3 +497,11 @@ type fdReader struct {
 func (r *fdReader) Fd() uintptr {
 	return r.fd
 }
+
+func NewNoTTYWriter(w io.WriteCloser) *fdWriter {
+	return &fdWriter{w, 0}
+}
+
+func NewNoTTYReader(r io.ReadCloser) *fdReader {
+	return &fdReader{r, 0}
+}
