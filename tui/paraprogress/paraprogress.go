@@ -60,11 +60,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 	for i := range processes {
 		processes[i].norender = md.norender
 		processes[i].NameWidth = maxNameLen
-		pctx := ctx
-		// logger := log.G(ctx)
-		// logger.Logger.Out = md.processes[i]
-		// log.WithLogger(ctx, logger)
-		md.processes[i].ctx = pctx
+		processes[i].ctx = ctx
 	}
 
 	return md, nil

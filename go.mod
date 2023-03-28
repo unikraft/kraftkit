@@ -32,6 +32,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/moby v23.0.1+incompatible
 	github.com/muesli/reflow v0.3.0
+	github.com/muesli/termenv v0.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.0.2
 	github.com/shirou/gopsutil/v3 v3.23.1
@@ -83,7 +84,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/muesli/ansi v0.0.0-20221106050444-61f0cd9a192a // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/termenv v0.14.0 // indirect
 	github.com/pjbgf/sha1cd v0.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
