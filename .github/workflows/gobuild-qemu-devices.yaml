@@ -2,6 +2,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: staging
+    paths:
+      - 'tools/go-generate-qemu-devices/**'
 
 name: Go Build
 
@@ -21,13 +23,13 @@ jobs:
         with:
           go-version: "1.20.2"
 
-      - name: Build KraftKit
+      - name: Build go-generate-qemu-devices
         run: |
           set -xe
           git config --global --add safe.directory /__w/kraftkit/kraftkit
-          make kraft
+          go build -o /dist ./tools/go-generate-qemu-devices/...
 
       - name: Run Help Message
         run: |
           set -xe
-          ./dist/kraft -h
+          ./dist/go-generate-qemu-devices -h

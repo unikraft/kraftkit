@@ -2,6 +2,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: staging
+    paths:
+      - 'tools/protoc-gen-go-netconn/**'
 
 name: Go Build
 
@@ -21,13 +23,13 @@ jobs:
         with:
           go-version: "1.20.2"
 
-      - name: Build KraftKit
+      - name: Build protoc-gen-go-netconn
         run: |
           set -xe
           git config --global --add safe.directory /__w/kraftkit/kraftkit
-          make kraft
+          go build -o dist/ ./tools/protoc-gen-go-netconn/...
 
       - name: Run Help Message
         run: |
           set -xe
-          ./dist/kraft -h
+          ./dist/protoc-gen-go-netconn -h
