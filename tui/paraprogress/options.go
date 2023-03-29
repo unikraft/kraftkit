@@ -26,3 +26,10 @@ func WithFailFast(failFast bool) ParaProgressOption {
 		return nil
 	}
 }
+
+func WithNameWidth(width int) ParaProgressOption {
+	return func(pp *ParaProgress) error {
+		pp.nameWidth = width
+		return nil
+	}
+}

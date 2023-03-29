@@ -30,6 +30,7 @@ type ParaProgress struct {
 	err           error
 	errChan       chan error
 	failFast      bool
+	nameWidth     int
 }
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -42,6 +43,10 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		errChan:   make(chan error),
 		curr:      0,
 		ctx:       ctx,
+		// -1 represents the default mode where ecah individual
+		// process's name's width is checked and the maximum of all
+		// is used.
+		nameWidth: -1,
 	}
 
 	for _, opt := range opts {
@@ -50,11 +55,13 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		}
 	}
 
-	maxNameLen := len(processes[0].Name)
-
-	for _, download := range processes {
-		if nameLen := len(download.Name); nameLen > maxNameLen {
-			maxNameLen = nameLen
+	maxNameLen := md.nameWidth
+	if maxNameLen <= 0 {
+		maxNameLen = len(processes[0].Name)
+		for _, download := range processes {
+			if nameLen := len(download.Name); nameLen > maxNameLen {
+				maxNameLen = nameLen
+			}
 		}
 	}
 
