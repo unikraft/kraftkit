@@ -184,7 +184,7 @@ func (p *parser) TryQuotedString() (string, bool) {
 	return "", false
 }
 
-func (p *parser) Ident() string {
+func (p *parser) TryIdent() string {
 	var str []byte
 	for !p.eol() {
 		ch := p.peek()
@@ -199,32 +199,19 @@ func (p *parser) Ident() string {
 		break
 	}
 
-	if len(str) == 0 {
-		p.failf("expected an identifier")
-	}
-
 	p.skipSpaces()
 	return string(str)
 }
 
+func (p *parser) Ident() string {
+	str := p.TryIdent()
+	if len(str) == 0 {
+		p.failf("expected an identifier")
+	}
+	return str
+}
+
 func (p *parser) Shell() string {
-	start := p.col
-	p.MustConsume("(")
-	for !p.eol() && p.peek() != ')' {
-		if p.peek() == '"' {
-			p.QuotedString()
-		} else if p.peek() == '(' {
-			p.Shell()
-		} else {
-			p.col++
-		}
-	}
-
-	if ch := p.char(); ch != ')' {
-		p.failf("shell expression is not terminated")
-	}
-
-	res := p.current[start:p.col]
-	p.skipSpaces()
-	return res
+	p.failf("Substitution should have been expanded before parsing")
+	return ""
 }

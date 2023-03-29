@@ -131,6 +131,14 @@ func ParseData(data []byte, file string, extra ...*KeyValue) (*KConfigFile, erro
 	for _, kcv := range extra {
 		env[kcv.Key] = kcv
 	}
+	env = preambleEnv(env)
+
+	preprocessor := newPreprocessor(data, file, env)
+	data, err := preprocessor.process()
+	if err != nil {
+		return nil, err
+	}
+
 	kp := &kconfigParser{
 		parser:  newParser(data, file, env),
 		baseDir: filepath.Dir(file),
@@ -256,6 +264,7 @@ func (kp *kconfigParser) parseMenu(cmd string) {
 	case "choice":
 		kp.pushCurrent(&KConfigMenu{
 			Kind: MenuChoice,
+			Name: kp.TryIdent(),
 		})
 
 	case "endmenu", "endif", "endchoice":
@@ -377,8 +386,14 @@ func (kp *kconfigParser) parseProperty(prop string) {
 }
 
 func (kp *kconfigParser) includeSource(file string) {
+	// ignore blank files
+	if file == "" {
+		return
+	}
+
 	kp.newCurrent(nil)
-	file = filepath.Join(kp.baseDir, file)
+	// TODO: RSource vs Source
+	// file = filepath.Join(kp.baseDir, file)
 	data, err := os.ReadFile(file)
 	if err != nil {
 		kp.failf("%v", err)
@@ -386,6 +401,14 @@ func (kp *kconfigParser) includeSource(file string) {
 	}
 
 	kp.includes = append(kp.includes, kp.parser)
+
+	preprocessor := newPreprocessor(data, file, kp.env)
+	data, err = preprocessor.process()
+	if err != nil {
+		kp.failf("During Preprocessing: %v", err)
+		return
+	}
+
 	kp.parser = newParser(data, file, kp.env)
 	kp.parseFile()
 	err = kp.err
