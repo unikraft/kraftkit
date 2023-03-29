@@ -24,6 +24,10 @@ import (
 const KraftKitLatestPath = "https://get.kraftkit.sh/latest.txt"
 
 func CheckForUpdates(ctx context.Context) error {
+	if kitversion.Version() == "" {
+		return nil
+	}
+
 	if config.G[config.KraftKit](ctx).NoCheckUpdates {
 		return nil
 	}
