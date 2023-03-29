@@ -182,7 +182,23 @@ func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigF
 }
 
 func (lc LibraryConfig) KConfig() kconfig.KeyValueMap {
-	menu, _ := lc.KConfigTree()
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+
+	// Assumes the project is called test
+	// unikraft + deps are placed within the .unikraft folder inside the working directory
+	// blatantly ignores the face that the wd might have been overwritten
+	// No external libs + plats
+	menu, _ := lc.KConfigTree(
+		&kconfig.KeyValue{Key: "UK_BASE", Value: filepath.Join(wd, ".unikraft/unikraft")},
+		&kconfig.KeyValue{Key: "BUILD_DIR", Value: filepath.Join(wd, "build")},
+		&kconfig.KeyValue{Key: "UK_NAME", Value: "test"},
+		&kconfig.KeyValue{Key: "CONFIG_UK_APP", Value: wd},
+		&kconfig.KeyValue{Key: "ELIB_DIR", Value: ""},
+		&kconfig.KeyValue{Key: "EPLAT_DIR", Value: ""},
+	)
 
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(lc.kconfig)
