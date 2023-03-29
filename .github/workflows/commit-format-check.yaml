@@ -1,0 +1,75 @@
+name: Commits Formatting Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: staging
+
+jobs:
+  commit:
+    name: Commit and PR Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Commit Format Check
+        if: always()
+        uses: taskmedia/action-conventional-commits@v1.1.0
+        with:
+          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert"
+
+      - name: Commit Lines Length Check
+        if: always()
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^(?!(?:.|\n)*(?:^|\n).{72,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
+          flags: ''
+          error: 'The maximum line length of 72 characters is exceeded.'
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Signed-off-by Check
+        if: always()
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^Signed-off-by: .+ \<.+\@.+\..+\>$'
+          error: 'Signed-off-by line is missing.'
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: PR Title Check
+        if: always()
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert)(\(\w+\))?: '
+          error: 'The PR title must follow the conventional commits format.'
+          excludeDescription: 'true'
+          excludeTitle: 'false'
+          checkAllCommitMessages: 'false'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: PR Title Check Length
+        if: always()
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^(?!.{51,}).*'
+          flags: ''
+          error: 'The maximum line length of 50 characters is exceeded.'
+          excludeDescription: 'true'
+          excludeTitle: 'false'
+          checkAllCommitMessages: 'false'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: PR Description Check
+        if: always()
+        uses: gsactions/commit-message-checker@v2
+        with:
+          pattern: '^\S+( \S+)*$'
+          error: 'The PR description must not be empty.'
+          flags: 'gm'
+          excludeDescription: 'false'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'false'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
