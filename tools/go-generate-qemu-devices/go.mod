@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/golang/glog v1.0.0
 	github.com/iancoleman/strcase v0.2.0
-	kraftkit.sh v0.4.0
+	kraftkit.sh v0.4.1
 	mvdan.cc/gofumpt v0.4.0
 )
 
@@ -40,5 +40,3 @@ require (
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 )
-
-replace kraftkit.sh => ../..
