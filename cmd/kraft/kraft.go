@@ -86,15 +86,6 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (k *Kraft) PersistentPre(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	if err := kitupdate.CheckForUpdates(ctx); err != nil {
-		log.G(ctx).Debugf("could not check for updates: %v", err)
-	}
-
-	return nil
-}
-
 func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
@@ -131,6 +122,10 @@ func main() {
 	// Set up the iostreams in the context if it is available
 	if copts.ioStreams != nil {
 		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
+	}
+
+	if err := kitupdate.CheckForUpdates(ctx); err != nil {
+		log.G(ctx).Debugf("could not check for updates: %v", err)
 	}
 
 	cmdfactory.Main(ctx, cmd)
