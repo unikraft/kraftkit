@@ -120,7 +120,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			// Pull the template from the package manager
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
-				fmt.Sprintf("finding %s...",
+				fmt.Sprintf("finding %s",
 					unikraft.TypeNameVersion(project.Template()),
 				), "",
 				func(ctx context.Context) error {
@@ -161,7 +161,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			proc := paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s...",
+				fmt.Sprintf("pulling %s",
 					unikraft.TypeNameVersion(packages[0]),
 				),
 				func(ctx context.Context, w func(progress float64)) error {
@@ -266,7 +266,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		for _, p := range next {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s...",
+				fmt.Sprintf("pulling %s",
 					unikraft.TypeNameVersion(p),
 				),
 				func(ctx context.Context, w func(progress float64)) error {
