@@ -140,7 +140,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 		go func() {
 			observations.Add(mid)
 
-			log.G(ctx).Infof("stopping %s...", mid.ShortString())
+			log.G(ctx).Infof("stopping %s", mid.ShortString())
 
 			mcfg := &machine.MachineConfig{}
 			if err := store.LookupMachineConfig(mid, mcfg); err != nil {

@@ -218,7 +218,7 @@ seek:
 					switch state {
 					case machine.MachineStateExited, machine.MachineStateDead:
 						if mcfg.DestroyOnExit {
-							log.G(ctx).Infof("removing %s...", mid.ShortString())
+							log.G(ctx).Infof("removing %s", mid.ShortString())
 							if err := driver.Destroy(ctx, mid); err != nil {
 								log.G(ctx).Errorf("could not remove machine: %v", err)
 							}
@@ -240,7 +240,7 @@ seek:
 						switch state {
 						case machine.MachineStateExited, machine.MachineStateDead:
 							if mcfg.DestroyOnExit {
-								log.G(ctx).Infof("removing %s...", mid.ShortString())
+								log.G(ctx).Infof("removing %s", mid.ShortString())
 								if err := driver.Destroy(ctx, mid); err != nil {
 									log.G(ctx).Errorf("could not remove machine: %v: ", err)
 								}
