@@ -5,6 +5,9 @@ dist/
 .vscode/
 !.vscode/settings.json
 
+# Ignore idea (GoLand) folder
+.idea/
+
 # Ignore tool binaries
 tools/go-generate-qemu-devices/go-generate-qemu-devices
 tools/protoc-gen-go-netconn/protoc-gen-go-netconn
