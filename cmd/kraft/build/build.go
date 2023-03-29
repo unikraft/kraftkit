@@ -103,6 +103,22 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	nameWidth := -1
+
+	// Calculate the width of the longest process name so that we can align the
+	// two independent processtrees if we are using "render" mode (aka the fancy
+	// mode is enabled).
+	if !norender {
+		// The longest word is "configuring" (which is 11 characters long), plus
+		// additional space characters (2 characters), brackets (2 characters) the
+		// name of the project and the target/plat string (which is variable in
+		// length).
+		for _, targ := range project.Targets() {
+			if newLen := len(targ.Name()) + len(targ.ArchPlatString()) + 15; newLen > nameWidth {
+				nameWidth = newLen
+			}
+		}
+	}
 
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
@@ -180,6 +196,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			paraprogress.IsParallel(parallel),
 			paraprogress.WithRenderer(norender),
 			paraprogress.WithFailFast(true),
+			paraprogress.WithNameWidth(nameWidth),
 		)
 		if err != nil {
 			return err
@@ -297,6 +314,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			paraprogress.IsParallel(parallel),
 			paraprogress.WithRenderer(norender),
 			paraprogress.WithFailFast(true),
+			paraprogress.WithNameWidth(nameWidth),
 		)
 		if err != nil {
 			return err

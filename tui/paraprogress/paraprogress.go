@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package paraprogress
 
 import (
@@ -12,8 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
-	"kraftkit.sh/iostreams"
-	// "kraftkit.sh/log"
+	"kraftkit.sh/tui"
 )
 
 var tprog *tea.Program
@@ -31,6 +30,7 @@ type ParaProgress struct {
 	err           error
 	errChan       chan error
 	failFast      bool
+	nameWidth     int
 }
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -43,6 +43,10 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		errChan:   make(chan error),
 		curr:      0,
 		ctx:       ctx,
+		// -1 represents the default mode where ecah individual
+		// process's name's width is checked and the maximum of all
+		// is used.
+		nameWidth: -1,
 	}
 
 	for _, opt := range opts {
@@ -51,32 +55,32 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		}
 	}
 
-	maxNameLen := len(processes[0].Name)
-
-	for _, download := range processes {
-		if nameLen := len(download.Name); nameLen > maxNameLen {
-			maxNameLen = nameLen
+	maxNameLen := md.nameWidth
+	if maxNameLen <= 0 {
+		maxNameLen = len(processes[0].Name)
+		for _, download := range processes {
+			if nameLen := len(download.Name); nameLen > maxNameLen {
+				maxNameLen = nameLen
+			}
 		}
 	}
 
 	for i := range processes {
 		processes[i].norender = md.norender
 		processes[i].NameWidth = maxNameLen
-		pctx := ctx
-		// logger := log.G(ctx)
-		// logger.Logger.Out = md.processes[i]
-		// log.WithLogger(ctx, logger)
-		md.processes[i].ctx = pctx
+		processes[i].ctx = ctx
 	}
 
 	return md, nil
 }
 
 func (pd *ParaProgress) Start() error {
-	teaOpts := []tea.ProgramOption{}
+	teaOpts := []tea.ProgramOption{
+		tea.WithInput(nil),
+	}
 
 	if pd.norender {
-		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(iostreams.G(pd.ctx).In))
+		teaOpts = append(teaOpts, tea.WithoutRenderer())
 	} else {
 		// Set this super early (even before bubbletea), as fast exiting processes
 		// may not have received the window size update and therefore pd.width is
@@ -88,9 +92,9 @@ func (pd *ParaProgress) Start() error {
 
 	go func() {
 		if _, err := tprog.Run(); err != nil {
-			pd.errChan <- pd.err
-		} else {
 			pd.errChan <- err
+		} else {
+			pd.errChan <- pd.err
 		}
 	}()
 
@@ -192,7 +196,7 @@ func (md ParaProgress) View() string {
 	if md.quitting {
 		content = append(content, "")
 	} else {
-		content = append(content, "ctrl+c to cancel")
+		content = append(content, tui.TextLightGray("ctrl+c to cancel"))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, content...)

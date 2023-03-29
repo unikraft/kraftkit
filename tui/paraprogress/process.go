@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package paraprogress
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -17,9 +16,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
+	"github.com/muesli/termenv"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/tui"
 	"kraftkit.sh/utils"
 )
 
@@ -96,8 +97,10 @@ func NewProcess(name string, processFunc func(context.Context, func(float64)) er
 		processFunc: processFunc,
 	}
 
-	d.progress.Full = '#'
+	d.progress.Full = '•'
 	d.progress.Empty = ' '
+	d.progress.EmptyColor = ""
+	d.progress.FullColor = "245"
 	d.progress.ShowPercentage = true
 	d.progress.PercentFormat = " %3.0f%%"
 
@@ -105,13 +108,14 @@ func NewProcess(name string, processFunc func(context.Context, func(float64)) er
 }
 
 func (p *Process) Init() tea.Cmd {
-	return p.timer.Init()
+	return nil
 }
 
 func (p *Process) Start() tea.Cmd {
 	//nolint:staticcheck
 	cmds := []tea.Cmd{
-		spinner.Tick,
+		p.timer.Init(),
+		p.spinner.Tick,
 		func() tea.Msg {
 			return StatusMsg{
 				ID:     p.id,
@@ -123,24 +127,29 @@ func (p *Process) Start() tea.Cmd {
 	cmds = append(cmds, func() tea.Msg {
 		p := p // golang closures
 
+		// Clone the context to be used individually by each process.
+		ctx := new(context.Context)
+		*ctx = p.ctx
+		p.ctx = *ctx
+
 		if p.norender {
 			log.G(p.ctx).Info(p.Name)
 		} else {
 			// Set the output to the process Writer such that we can hijack logs and
 			// print them in a per-process isolated view.
-			entry := log.G(p.ctx).Dup()
-			logger := *entry.Logger //nolint:govet
-			logger.SetOutput(p)
-			entry.Logger = &logger
-			p.ctx = log.WithLogger(p.ctx, entry)
+			iostreams.G(p.ctx).Out = iostreams.NewNoTTYWriter(p)
+			log.G(p.ctx).Out = p
 
-			// Set the output of the iostreams to the per-process isolated view.
-			io := *iostreams.G(p.ctx)
-			io.Out = p
-			io.SetStdoutTTY(false)
-			io.SetStderrTTY(false)
-			io.SetStdinTTY(false)
-			p.ctx = iostreams.WithIOStreams(p.ctx, &io)
+			// Update formatter when using KraftKit's TextFormatter.  The
+			// TextFormatter recognises that this is a non-standard terminal and
+			// changes the output to a more machine readable format.  Instead we want
+			// to force the formatting so that the output looks seamless with the
+			// style of the TUI.
+			if formatter, ok := log.G(p.ctx).Formatter.(*log.TextFormatter); ok {
+				formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
+				formatter.ForceFormatting = true
+				log.G(p.ctx).Formatter = formatter
+			}
 		}
 
 		err := p.processFunc(p.ctx, p.onProgress)
@@ -190,6 +199,14 @@ func (p *Process) Write(b []byte) (int, error) {
 	p.logs = append(p.logs, lines...)
 
 	return len(b), nil
+}
+
+func (p *Process) Close() error {
+	return nil
+}
+
+func (p *Process) Fd() uintptr {
+	return 0
 }
 
 func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
@@ -242,57 +259,40 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 }
 
 func (p Process) View() string {
-	left := "["
+	left := ""
 
 	switch p.Status {
 	case StatusRunning:
-		left += p.spinner.View()
+		left += tui.TextBlue("[" + p.spinner.View() + "]")
 	case StatusSuccess:
-		left += "+"
+		left += tui.TextGreen("[+]")
 	default:
 		if p.Status == StatusFailed || p.err != nil {
-			left += "-"
+			left += tui.TextRed("<!>")
 		} else {
-			left += " "
+			left += "[ ]"
 		}
 	}
 
-	left += "] "
+	left += " "
 	leftWidth := width(left)
 
 	elapsed := utils.HumanizeDuration(p.timer.Elapsed())
 	p.timerWidth = width(elapsed)
-
+	elapsed = "[" + elapsed + "]"
 	if p.timerMax-p.timerWidth < 0 {
 		p.timerMax = p.timerWidth
 	}
 
-	right := " [" +
-		lipgloss.NewStyle().
-			Render(indent.String(elapsed, uint(p.timerMax-p.timerWidth))) +
-		"]"
+	right := " " + tui.TextLightGray(indent.String(elapsed, uint(p.timerMax-p.timerWidth)))
 	rightWidth := width(right)
 
-	middle := ""
+	middle := lipgloss.NewStyle().
+		Width(p.NameWidth + 1).
+		Render(p.Name)
 
-	if p.err != nil {
-		middle = fmt.Sprintf(
-			"error %s: %s",
-			p.Name,
-			p.err.Error(),
-		)
-		pad := p.width - width(middle) - leftWidth - rightWidth
-		if pad > 0 {
-			middle += strings.Repeat(" ", pad)
-		}
-	} else {
-		middle = lipgloss.NewStyle().
-			Width(p.NameWidth + 1).
-			Render(p.Name)
-
-		p.progress.Width = p.width - width(middle) - leftWidth - rightWidth
-		middle += p.progress.ViewAs(p.percent)
-	}
+	p.progress.Width = p.width - width(middle) - leftWidth - rightWidth
+	middle += p.progress.ViewAs(p.percent)
 
 	s := lipgloss.JoinHorizontal(lipgloss.Top,
 		left,
@@ -315,7 +315,7 @@ func (p Process) View() string {
 		}
 
 		for _, line := range p.logs[truncate:] {
-			s += indent.String(line, INDENTS) + "\n"
+			s += line + "\n"
 		}
 	}
 

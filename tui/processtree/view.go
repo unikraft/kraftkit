@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
-// You may not use this file expect in compliance with the License.
+// You may not use this file except in compliance with the License.
 package processtree
 
 import (
@@ -9,16 +9,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
+	"kraftkit.sh/tui"
 	"kraftkit.sh/utils"
-)
-
-var (
-	titleStyle = lipgloss.NewStyle().Bold(true).Render
-	red        = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render
-	blue       = lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Render
-	green      = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render
-	logStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("254")).Render
-	lightGrey  = lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Render
 )
 
 func (pt ProcessTree) View() string {
@@ -46,7 +38,7 @@ func (pt ProcessTree) View() string {
 	}
 
 	if len(pt.verb) > 0 {
-		title := titleStyle(
+		title := tui.TextTitle(
 			pt.verb + " " + utils.HumanizeDuration(pt.timer.Elapsed()) +
 				" (" + strconv.Itoa(finished) + "/" + strconv.Itoa(pt.total) + ")",
 		)
@@ -58,7 +50,7 @@ func (pt ProcessTree) View() string {
 	}
 
 	if !pt.quitting {
-		s += lightGrey("ctrl+c to cancel\n")
+		s += tui.TextLightGray("ctrl+c to cancel\n")
 	}
 
 	return s
@@ -98,11 +90,11 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	textLeft := ""
 	switch pti.status {
 	case StatusSuccess:
-		textLeft += green("[+]")
+		textLeft += tui.TextGreen("[+]")
 	case StatusFailed, StatusFailedChild:
-		textLeft += red("<!>")
+		textLeft += tui.TextRed("<!>")
 	case StatusRunning, StatusRunningChild, StatusRunningButAChildHasFailed:
-		textLeft += "(" + pti.spinner.View() + ")"
+		textLeft += tui.TextBlue("[" + pti.spinner.View() + "]")
 	default:
 		textLeft += "[ ]"
 	}
@@ -119,20 +111,18 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	if len(pti.textRight) > 0 {
 		switch pti.status {
 		case StatusSuccess:
-			textRight += green(pti.textRight)
+			textRight += tui.TextGreen(pti.textRight)
 		case StatusFailed, StatusFailedChild:
-			textRight += red(pti.textRight)
+			textRight += tui.TextRed(pti.textRight)
 		case StatusRunning, StatusRunningChild, StatusRunningButAChildHasFailed:
-			textRight += blue(pti.textRight)
+			textRight += tui.TextBlue(pti.textRight)
 		default:
 			textRight += pti.textRight
 		}
 	}
 
-	textRight += lightGrey(" [" +
-		lipgloss.NewStyle().
-			Render(indent.String(elapsed, uint(stm.rightPad-rightTimerWidth))) +
-		"]")
+	elapsed = "[" + elapsed + "]"
+	textRight += " " + tui.TextLightGray(indent.String(elapsed, uint(stm.rightPad-rightTimerWidth)))
 
 	left := lipgloss.NewStyle().
 		Width(stm.width - width(textRight) - int(offset*INDENTS)).
@@ -157,7 +147,7 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	}
 	if pti.status != StatusSuccess {
 		for _, line := range pti.logs[truncate:] {
-			s += indent.String(logStyle(line), INDENTS) + "\n"
+			s += line + "\n"
 		}
 	}
 
