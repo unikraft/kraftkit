@@ -17,7 +17,7 @@ With KraftKit, you can easily leverage Unikraft and manage specialized, high-per
 
 There are many benefits in running your application as a unikernel: for more information about [the performance of unikernels 🚀](https://unikraft.org/docs/features/performance/), [the added security 🔒](https://unikraft.org/docs/features/security/) and [a positive impact on the environment 🌱](https://unikraft.org/docs/features/green/) please [check out Unikraft's documentation][unikraft-docs] and the introductory chapters on these impacts.
 
-## Quickstart
+## Installation
 
 You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
 
@@ -27,7 +27,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
 
-## Quick-start
+## Quickstart
 
 Building a unikernel with KraftKit is designed to be simple. 
 
