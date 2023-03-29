@@ -5,8 +5,19 @@
 [![](https://img.shields.io/discord/762976922531528725.svg?label=discord&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)][unikraft-discord]
 [![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
 
-Kraftkit is a suite of tools and framework for building custom, minimal, immutable lightweight virtual machines based on [Unikraft](https://unikraft.org).
-With KraftKit, you can use unikernels at every stage of their lifecycle: from construction to production.
+KraftKit provides a suite of tools and Go-based framework for building custom, minimal, immutable lightweight unikernel virtual machines based on [Unikraft](https://unikraft.org): a fast, secure and open-source library operating system.
+
+![](docs/demo.gif)
+
+With KraftKit, you can easily leverage Unikraft and manage specialized, high-performance applications at every stage of their lifecycle: from construction to production.
+
+ * [Getting started guide][kraftkit-getting-started] 📖
+ * [Key differences between containers and unikernels](https://unikraft.org/docs/concepts/virtualization/) 🤔
+ * [Join `#kraftkit` on Unikraft's Community Discord](https://bit.ly/UnikraftDiscord) 👾
+
+There are many benefits in running your application as a unikernel: for more information about [the performance of unikernels 🚀](https://unikraft.org/docs/features/performance/), [the added security 🔒](https://unikraft.org/docs/features/security/) and [a positive impact on the environment 🌱](https://unikraft.org/docs/features/green/) please [check out Unikraft's documentation][unikraft-docs] and the introductory chapters on these impacts.
+
+## Quickstart
 
 You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
 
@@ -59,6 +70,13 @@ You can run your unikernel using:
 kraft run
 ```
 
+## Support, Community & Meetings
+
+If you have any further questions or need more information about KraftKit or Unikraft, please refer to [the official Unikraft documentation][unikraft-docs] or ask for help on the Unikraft community forum.
+
+A KraftKit Working Group (WG) meets every Wednesday at 12:30 PM (CET) on [Discord][unikraft-discord].
+Invites and additional details are available on the [Unikraft OSS Public calendar][unikraft-calendar].
+
 ## License
 
 KraftKit is part of the [Unikraft OSS Project][unikraft-website] and licensed under `BSD-3-Clause`.
@@ -66,3 +84,5 @@ KraftKit is part of the [Unikraft OSS Project][unikraft-website] and licensed un
 [unikraft-website]: https://unikraft.org
 [unikraft-docs]: https://unikraft.org/docs
 [unikraft-discord]: https://bit.ly/UnikraftDiscord
+[unikraft-calendar]: https://unikraft.org/community/events/
+[kraftkit-getting-started]: https://unikraft.org/docs/getting-started/
