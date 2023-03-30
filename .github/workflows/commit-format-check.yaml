@@ -20,9 +20,9 @@ jobs:
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(?!(?:.|\n)*(?:^|\n).{72,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
+          pattern: '^(?!(?:.|\n)*(?:^|\n).{74,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
           flags: ''
-          error: 'The maximum line length of 72 characters is exceeded.'
+          error: 'The maximum line length of 74 characters is exceeded.'
           excludeDescription: 'true'
           excludeTitle: 'true'
           checkAllCommitMessages: 'true'
@@ -54,9 +54,9 @@ jobs:
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(?!.{51,}).*'
+          pattern: '^(?!.{75,}).*'
           flags: ''
-          error: 'The maximum line length of 50 characters is exceeded.'
+          error: 'The maximum line length of 75 characters is exceeded.'
           excludeDescription: 'true'
           excludeTitle: 'false'
           checkAllCommitMessages: 'false'
