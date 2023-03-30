@@ -5,18 +5,20 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/log"
 )
 
 //go:embed install.sh
@@ -30,9 +32,10 @@ const (
 )
 
 type Webinstall struct {
-	Freq  time.Duration `long:"freq"  short:"F" usage:"The frequency (in hours) to check for updates" env:"WEBINSTALL_FREQ" default:"24h"`
-	Port  int           `long:"port"  short:"P" usage:"The port to serve the script" env:"WEBINSTALL_PORT" default:"8080"`
-	Token string        `long:"token" short:"T" usage:"The GitHub token for querying tags" env:"WEBINSTALL_TOKEN" default:""`
+	Freq     time.Duration `long:"freq" short:"F" usage:"The frequency (in hours) to check for updates" env:"WEBINSTALL_FREQ" default:"24h"`
+	Port     int           `long:"port" short:"P" usage:"The port to serve the script" env:"WEBINSTALL_PORT" default:"8080"`
+	Token    string        `long:"token" short:"T" usage:"The GitHub token for querying tags" env:"WEBINSTALL_TOKEN" default:""`
+	LogLevel string        `long:"log-level" usage:"Set the log level verbosity" env:"WEBINSTALL_LOG_LEVEL" default:"info"`
 }
 
 func New() *cobra.Command {
@@ -45,7 +48,9 @@ func New() *cobra.Command {
 	})
 }
 
-func (opts *Webinstall) getKraftkitVersion() (string, error) {
+func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) {
+	log.G(ctx).Debug("checking for latest kraftkit version")
+
 	// Create a request to github to get the latest release
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/unikraft/kraftkit/releases/latest", nil)
 	if err != nil {
@@ -92,11 +97,26 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 		opts.Port = DefaultPort
 	}
 
+	ctx := cmd.Context()
+
+	// Configure the log level
+	logger := logrus.New()
+	switch opts.LogLevel {
+	case "error":
+		logger.SetLevel(logrus.ErrorLevel)
+	case "info":
+		logger.SetLevel(logrus.InfoLevel)
+	case "debug":
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	ctx = log.WithLogger(ctx, logger)
+
 	// Create a reader for the installScript
 	scriptReader := strings.NewReader(installScript)
 
 	// Create a reader for the kraftkit version
-	version, err := opts.getKraftkitVersion()
+	version, err := opts.getKraftkitVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -111,7 +131,7 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 	go func() {
 		for {
 			time.Sleep(opts.Freq)
-			version, err := opts.getKraftkitVersion()
+			version, err := opts.getKraftkitVersion(ctx)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -131,7 +151,7 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 		http.ServeContent(w, r, "latest.txt", nowVersion, versionReader)
 	})
 
-	fmt.Printf("Listening on :%d...\n", opts.Port)
+	log.G(ctx).Infof("Listening on :%d...\n", opts.Port)
 
 	// Start listening and serve the data
 	http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), nil)
