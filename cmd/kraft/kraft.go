@@ -125,7 +125,7 @@ func main() {
 	}
 
 	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
-		if err := kitupdate.CheckForUpdates(ctx); err != nil {
+		if err := kitupdate.Check(ctx); err != nil {
 			log.G(ctx).Debugf("could not check for updates: %v", err)
 		}
 	}

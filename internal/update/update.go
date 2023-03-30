@@ -22,7 +22,7 @@ import (
 
 const KraftKitLatestPath = "https://get.kraftkit.sh/latest.txt"
 
-func CheckForUpdates(ctx context.Context) error {
+func Check(ctx context.Context) error {
 	if kitversion.Version() == "" {
 		return nil
 	}
