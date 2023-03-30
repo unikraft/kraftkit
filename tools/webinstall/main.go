@@ -91,7 +91,7 @@ func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) 
 	}
 
 	// Get the tag name from the map and remove the prepended 'v'
-	return result["tag_name"].(string)[1:], err
+	return strings.TrimPrefix(result["tag_name"].(string), "v"), nil
 }
 
 // doRootCmd starts the main system
