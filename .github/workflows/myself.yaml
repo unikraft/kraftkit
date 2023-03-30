@@ -1,4 +1,4 @@
-name: Myself build environment
+name: buildenvs/myself
 
 on:
   push:

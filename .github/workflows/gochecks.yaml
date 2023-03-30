@@ -1,3 +1,5 @@
+name: golangci-lint
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -5,8 +7,6 @@ on:
     paths:
       - '**'
       - '!.github/**'
-
-name: Go Checks
 
 jobs:
   unit:

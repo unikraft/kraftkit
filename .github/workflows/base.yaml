@@ -1,6 +1,5 @@
-name: Build environment
+name: buildenvs/base
 
-# Build only on changes to the build environment itself
 on:
   push:
     branches:

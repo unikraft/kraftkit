@@ -1,4 +1,4 @@
-name: Myself build environment
+name: buildenvs/myself-full
 
 # Build only on changes to the build environment itself
 on:
