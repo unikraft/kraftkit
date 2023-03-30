@@ -138,7 +138,13 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 
 	go func() {
 		for {
-			time.Sleep(opts.Freq)
+			select {
+			case <-ctx.Done():
+				log.G(ctx).Debug("context cancelled")
+				return
+			case <-time.After(opts.Freq):
+			}
+
 			version, err := opts.getKraftkitVersion(ctx)
 			if err != nil {
 				fmt.Println(err)
@@ -162,7 +168,13 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 	log.G(ctx).Infof("Listening on :%d...\n", opts.Port)
 
 	// Start listening and serve the data
-	http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), nil)
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), nil); err != nil {
+			log.G(ctx).Error(err)
+		}
+	}()
+
+	<-ctx.Done()
 
 	return nil
 }
