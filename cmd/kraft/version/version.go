@@ -18,7 +18,7 @@ type Version struct{}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Version{}, cobra.Command{
-		Short:   "Show KraftKit version information",
+		Short:   "Show kraft version information",
 		Use:     "version",
 		Aliases: []string{"v"},
 		Args:    cobra.NoArgs,
@@ -29,6 +29,6 @@ func New() *cobra.Command {
 }
 
 func (opts *Version) Run(cmd *cobra.Command, args []string) error {
-	fmt.Fprint(iostreams.G(cmd.Context()).Out, version.String())
+	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
 	return nil
 }
