@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package main
+package cli
 
 import (
 	"fmt"
@@ -23,39 +23,35 @@ import (
 )
 
 type CliOptions struct {
-	ioStreams      *iostreams.IOStreams
-	logger         *logrus.Logger
-	configManager  *config.ConfigManager[config.KraftKit]
-	packageManager packmanager.PackageManager
-	pluginManager  *plugins.PluginManager
-	httpClient     *http.Client
+	IOStreams      *iostreams.IOStreams
+	Logger         *logrus.Logger
+	ConfigManager  *config.ConfigManager[config.KraftKit]
+	PackageManager packmanager.PackageManager
+	PluginManager  *plugins.PluginManager
+	HTTPClient     *http.Client
 }
 
 type CliOption func(*CliOptions) error
 
-// withDefaultLogger sets up the built in logger based on provided conifg found
+// WithDefaultLogger sets up the built in logger based on provided conifg found
 // from the ConfigManager.
-func withDefaultLogger() CliOption {
+func WithDefaultLogger() CliOption {
 	return func(copts *CliOptions) error {
-		if copts.logger != nil {
+		if copts.Logger != nil {
 			return nil
 		}
 
-		if copts.configManager == nil {
-			copts.logger = log.L
+		// Configure the logger based on parameters set by in KraftKit's
+		// configuration
+		if copts.ConfigManager == nil {
+			copts.Logger = log.L
 			return nil
 		}
 
 		// Set up a default logger based on the internal TextFormatter
 		logger := logrus.New()
 
-		// Configure the logger based on parameters set by in KraftKit's
-		// configuration
-		if copts.configManager == nil {
-			copts.logger = log.L
-		}
-
-		switch log.LoggerTypeFromString(copts.configManager.Config.Log.Type) {
+		switch log.LoggerTypeFromString(copts.ConfigManager.Config.Log.Type) {
 		case log.QUIET:
 			formatter := new(logrus.TextFormatter)
 			logger.Formatter = formatter
@@ -65,7 +61,7 @@ func withDefaultLogger() CliOption {
 			formatter.FullTimestamp = true
 			formatter.DisableTimestamp = true
 
-			if copts.configManager.Config.Log.Timestamps {
+			if copts.ConfigManager.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			} else {
 				formatter.TimestampFormat = ">"
@@ -78,7 +74,7 @@ func withDefaultLogger() CliOption {
 			formatter.FullTimestamp = true
 			formatter.DisableTimestamp = true
 
-			if copts.configManager.Config.Log.Timestamps {
+			if copts.ConfigManager.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			} else {
 				formatter.TimestampFormat = ">"
@@ -90,34 +86,34 @@ func withDefaultLogger() CliOption {
 			formatter := new(logrus.JSONFormatter)
 			formatter.DisableTimestamp = true
 
-			if copts.configManager.Config.Log.Timestamps {
+			if copts.ConfigManager.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			}
 
 			logger.Formatter = formatter
 		}
 
-		level, ok := log.Levels()[copts.configManager.Config.Log.Level]
+		level, ok := log.Levels()[copts.ConfigManager.Config.Log.Level]
 		if !ok {
 			logger.Level = logrus.InfoLevel
 		} else {
 			logger.Level = level
 		}
 
-		if copts.ioStreams != nil {
-			logger.SetOutput(copts.ioStreams.Out)
+		if copts.IOStreams != nil {
+			logger.SetOutput(copts.IOStreams.Out)
 		}
 
 		// Save the logger
-		copts.logger = logger
+		copts.Logger = logger
 
 		return nil
 	}
 }
 
-// withDefaultConfigManager instantiates a configuration manager based on
+// WithDefaultConfigManager instantiates a configuration manager based on
 // default options.
-func withDefaultConfigManager(cmd *cobra.Command) CliOption {
+func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 	return func(copts *CliOptions) error {
 		cfg, err := config.NewDefaultKraftKitConfig()
 		if err != nil {
@@ -134,28 +130,28 @@ func withDefaultConfigManager(cmd *cobra.Command) CliOption {
 		// Attribute all configuration flags and command-line argument values
 		cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...)
 
-		copts.configManager = cfgm
+		copts.ConfigManager = cfgm
 
 		return nil
 	}
 }
 
-// withDefaultIOStreams instantiates ta new IO streams using environmental
+// WithDefaultIOStreams instantiates ta new IO streams using environmental
 // variables and host-provided configuration.
-func withDefaultIOStreams() CliOption {
+func WithDefaultIOStreams() CliOption {
 	return func(copts *CliOptions) error {
-		if copts.ioStreams != nil {
+		if copts.IOStreams != nil {
 			return nil
 		}
 
 		io := iostreams.System()
 
-		if copts.configManager != nil {
-			if copts.configManager.Config.NoPrompt {
+		if copts.ConfigManager != nil {
+			if copts.ConfigManager.Config.NoPrompt {
 				io.SetNeverPrompt(true)
 			}
 
-			if pager := copts.configManager.Config.Pager; pager != "" {
+			if pager := copts.ConfigManager.Config.Pager; pager != "" {
 				io.SetPager(pager)
 			}
 		}
@@ -168,81 +164,81 @@ func withDefaultIOStreams() CliOption {
 			io.SetPager(kkPager)
 		}
 
-		copts.ioStreams = io
+		copts.IOStreams = io
 
 		return nil
 	}
 }
 
-// withHTTPClient sets a previously instantiated http.Client to be used within
+// WithHTTPClient sets a previously instantiated http.Client to be used within
 // the command.
-func withHTTPClient(httpClient *http.Client) CliOption {
+func WithHTTPClient(httpClient *http.Client) CliOption {
 	return func(copts *CliOptions) error {
-		copts.httpClient = httpClient
+		copts.HTTPClient = httpClient
 		return nil
 	}
 }
 
-// withDefaultHTTPClient initializes a HTTP client using host-provided
+// WithDefaultHTTPClient initializes a HTTP client using host-provided
 // configuration.
-func withDefaultHTTPClient() CliOption {
+func WithDefaultHTTPClient() CliOption {
 	return func(copts *CliOptions) error {
-		if copts.httpClient != nil {
+		if copts.HTTPClient != nil {
 			return nil
 		}
 
-		if copts.configManager == nil {
+		if copts.ConfigManager == nil {
 			return fmt.Errorf("cannot access config manager")
 		}
 
-		if copts.ioStreams == nil {
+		if copts.IOStreams == nil {
 			return fmt.Errorf("cannot access IO streams")
 		}
 
 		httpClient, err := httpclient.NewHTTPClient(
-			copts.ioStreams,
-			copts.configManager.Config.HTTPUnixSocket,
+			copts.IOStreams,
+			copts.ConfigManager.Config.HTTPUnixSocket,
 			true,
 		)
 		if err != nil {
 			return err
 		}
 
-		copts.httpClient = httpClient
+		copts.HTTPClient = httpClient
 
 		return nil
 	}
 }
 
-// withDefaultPackageManager initializes a new package manager based on the
+// WithDefaultPackageManager initializes a new package manager based on the
 // umbrella package manager using host-provided configuration.
-func withDefaultPackageManager() CliOption {
+func WithDefaultPackageManager() CliOption {
 	return func(copts *CliOptions) error {
-		if copts.packageManager != nil {
+		if copts.PackageManager != nil {
 			return nil
 		}
 
 		// TODO: Add configuration option that allows us to statically set a
 		// preferred package manager.
-		copts.packageManager = packmanager.NewUmbrellaManager()
+		copts.PackageManager = packmanager.NewUmbrellaManager()
 
 		return nil
 	}
 }
 
-// withDefaultPluginManager returns an initialized plugin manager using the
+// WithDefaultPluginManager returns an initialized plugin manager using the
 // host-provided configuration plugin path.
-func withDefaultPluginManager() CliOption {
+func WithDefaultPluginManager() CliOption {
 	return func(copts *CliOptions) error {
-		if copts.pluginManager != nil {
+		if copts.PluginManager != nil {
 			return nil
 		}
 
-		if copts.configManager == nil {
+		if copts.ConfigManager == nil {
 			return fmt.Errorf("cannot access config manager")
 		}
 
-		copts.pluginManager = plugins.NewPluginManager(copts.configManager.Config.Paths.Plugins, nil)
+		copts.PluginManager = plugins.NewPluginManager(copts.ConfigManager.Config.Paths.Plugins, nil)
 
 		return nil
 	}
