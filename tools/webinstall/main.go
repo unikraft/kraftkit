@@ -25,6 +25,8 @@ var installScript string
 const (
 	DefaultScriptPath = "/"
 	DefaultLatestPath = "/latest.txt"
+	DefaultPort       = 8080
+	DefaultFreq       = 24 * time.Hour
 )
 
 type Webinstall struct {
@@ -83,11 +85,11 @@ func (opts *Webinstall) getKraftkitVersion() (string, error) {
 func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 	// Set the defaults if empty
 	if opts.Freq == 0 {
-		opts.Freq = 24 * time.Hour
+		opts.Freq = DefaultFreq
 	}
 
 	if opts.Port == 0 {
-		opts.Port = 8080
+		opts.Port = DefaultPort
 	}
 
 	// Create a reader for the installScript
