@@ -2,6 +2,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: staging
+    paths:
+      - '!.github/**'
 
 name: Go Build
 
