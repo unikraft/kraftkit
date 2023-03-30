@@ -61,7 +61,7 @@ func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) 
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	if opts.Token != "" {
-		req.Header.Set("Authorization", opts.Token)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", opts.Token))
 	}
 
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
