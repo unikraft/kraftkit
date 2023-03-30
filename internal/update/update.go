@@ -60,7 +60,7 @@ func Check(ctx context.Context) error {
 		return err
 	}
 
-	currentVer, err := semver.NewVersion(strings.Split(kitversion.Version()[1:], "-")[0])
+	currentVer, err := semver.NewVersion(strings.Split(kitversion.Version(), "-")[0])
 	if err != nil {
 		return err
 	}
