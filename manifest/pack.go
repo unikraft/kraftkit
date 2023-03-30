@@ -18,9 +18,7 @@ type mpack struct {
 	version  string
 }
 
-const (
-	ManifestContext pack.ContextKey = "manifest"
-)
+const ManifestFormat pack.PackageFormat = "manifest"
 
 // NewPackageFromManifestWithVersion generates a new package based on an input
 // manifest which in itself may contain various versions and channels.  With the
@@ -129,6 +127,6 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	return resource, cache, checksum, err
 }
 
-func (mp mpack) Format() string {
-	return string(ManifestContext)
+func (mp mpack) Format() pack.PackageFormat {
+	return ManifestFormat
 }

@@ -33,7 +33,7 @@ var useGit = false
 
 func init() {
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestContext, NewManifestManager())
+	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager())
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
@@ -177,7 +177,7 @@ func (m manager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager
 	return nil, fmt.Errorf("not implemented manifest.manager.Unpack")
 }
 
-func (m manager) From(sub string) (packmanager.PackageManager, error) {
+func (m manager) From(sub pack.PackageFormat) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
@@ -384,6 +384,6 @@ func (m manager) LocalManifestIndex(ctx context.Context) string {
 	return filepath.Join(m.LocalManifestsDir(ctx), "index.yaml")
 }
 
-func (m manager) Format() string {
-	return string(ManifestContext)
+func (m manager) Format() pack.PackageFormat {
+	return ManifestFormat
 }

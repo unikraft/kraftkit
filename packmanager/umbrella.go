@@ -13,17 +13,17 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
-var packageManagers = make(map[pack.ContextKey]PackageManager)
+var packageManagers = make(map[pack.PackageFormat]PackageManager)
 
-const UmbrellaContext pack.ContextKey = "umbrella"
+const UmbrellaFormat pack.PackageFormat = "umbrella"
 
-func PackageManagers() map[pack.ContextKey]PackageManager {
+func PackageManagers() map[pack.PackageFormat]PackageManager {
 	return packageManagers
 }
 
-func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error {
+func RegisterPackageManager(ctxk pack.PackageFormat, manager PackageManager) error {
 	if _, ok := packageManagers[ctxk]; ok {
-		return fmt.Errorf("package manager already registered: %s", manager.Format())
+		return fmt.Errorf("package manager already registered: %s", ctxk)
 	}
 
 	packageManagers[ctxk] = manager
@@ -42,7 +42,7 @@ func NewUmbrellaManager() PackageManager {
 	return umbrella{}
 }
 
-func (u umbrella) From(sub string) (PackageManager, error) {
+func (u umbrella) From(sub pack.PackageFormat) (PackageManager, error) {
 	for _, manager := range packageManagers {
 		if manager.Format() == sub {
 			return manager, nil
@@ -146,6 +146,6 @@ func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManag
 	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
-func (u umbrella) Format() string {
-	return string(UmbrellaContext)
+func (u umbrella) Format() pack.PackageFormat {
+	return UmbrellaFormat
 }

@@ -97,7 +97,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
-		pm, err = pm.From(opts.Manager)
+		pm, err = pm.From(pack.PackageFormat(opts.Manager))
 		if err != nil {
 			return err
 		}

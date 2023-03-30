@@ -41,8 +41,8 @@ type PackageManager interface {
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.
-	From(string) (PackageManager, error)
+	From(pack.PackageFormat) (PackageManager, error)
 
 	// Format returns the name of the implementation.
-	Format() string
+	Format() pack.PackageFormat
 }

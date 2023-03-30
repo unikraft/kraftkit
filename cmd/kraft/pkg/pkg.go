@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/pack"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
@@ -178,7 +179,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 					// Switch the package manager the desired format for this target
 					if format != "auto" {
-						pm, err = pm.From(format)
+						pm, err = pm.From(pack.PackageFormat(format))
 						if err != nil {
 							return err
 						}
