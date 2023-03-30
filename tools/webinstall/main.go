@@ -82,6 +82,14 @@ func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) 
 	var result map[string]interface{}
 	json.Unmarshal([]byte(body), &result)
 
+	if message, ok := result["message"]; ok {
+		return "", fmt.Errorf("error from GitHub API: %s", message)
+	}
+
+	if _, ok := result["tag_name"]; !ok {
+		return "", fmt.Errorf("malformed GitHub API response, could not determine latest KraftKit version")
+	}
+
 	// Get the tag name from the map and remove the prepended 'v'
 	return result["tag_name"].(string)[1:], err
 }
