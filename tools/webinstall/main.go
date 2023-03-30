@@ -147,8 +147,8 @@ func (opts *Webinstall) Run(cmd *cobra.Command, args []string) error {
 
 			version, err := opts.getKraftkitVersion(ctx)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				log.G(ctx).Errorf("could not retrieve latest version: %v", err)
+				continue
 			}
 			versionReader = strings.NewReader(version)
 			nowVersion = time.Now()
