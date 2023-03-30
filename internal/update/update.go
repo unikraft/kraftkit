@@ -17,7 +17,6 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/Masterminds/semver/v3"
 	"github.com/sirupsen/logrus"
-	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 )
 
@@ -25,10 +24,6 @@ const KraftKitLatestPath = "https://get.kraftkit.sh/latest.txt"
 
 func CheckForUpdates(ctx context.Context) error {
 	if kitversion.Version() == "" {
-		return nil
-	}
-
-	if config.G[config.KraftKit](ctx).NoCheckUpdates {
 		return nil
 	}
 

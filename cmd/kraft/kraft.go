@@ -124,8 +124,10 @@ func main() {
 		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
 	}
 
-	if err := kitupdate.CheckForUpdates(ctx); err != nil {
-		log.G(ctx).Debugf("could not check for updates: %v", err)
+	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
+		if err := kitupdate.CheckForUpdates(ctx); err != nil {
+			log.G(ctx).Debugf("could not check for updates: %v", err)
+		}
 	}
 
 	cmdfactory.Main(ctx, cmd)
