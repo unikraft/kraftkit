@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli"
 	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
@@ -93,15 +94,15 @@ func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 func main() {
 	cmd := New()
 	ctx := signals.SetupSignalContext()
-	copts := &CliOptions{}
+	copts := &cli.CliOptions{}
 
-	for _, o := range []CliOption{
-		withDefaultConfigManager(cmd),
-		withDefaultIOStreams(),
-		withDefaultPackageManager(),
-		withDefaultPluginManager(),
-		withDefaultLogger(),
-		withDefaultHTTPClient(),
+	for _, o := range []cli.CliOption{
+		cli.WithDefaultConfigManager(cmd),
+		cli.WithDefaultIOStreams(),
+		cli.WithDefaultPackageManager(),
+		cli.WithDefaultPluginManager(),
+		cli.WithDefaultLogger(),
+		cli.WithDefaultHTTPClient(),
 	} {
 		if err := o(copts); err != nil {
 			fmt.Println(err)
@@ -110,18 +111,18 @@ func main() {
 	}
 
 	// Set up the config manager in the context if it is available
-	if copts.configManager != nil {
-		ctx = config.WithConfigManager(ctx, copts.configManager)
+	if copts.ConfigManager != nil {
+		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
 	}
 
 	// Set up the logger in the context if it is available
-	if copts.logger != nil {
-		ctx = log.WithLogger(ctx, copts.logger)
+	if copts.Logger != nil {
+		ctx = log.WithLogger(ctx, copts.Logger)
 	}
 
 	// Set up the iostreams in the context if it is available
-	if copts.ioStreams != nil {
-		ctx = iostreams.WithIOStreams(ctx, copts.ioStreams)
+	if copts.IOStreams != nil {
+		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
 	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
