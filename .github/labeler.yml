@@ -1,0 +1,204 @@
+# Area labels based on the path of the file
+'area/.github':
+- .github/*
+- .github/**/*
+
+'area/.github/workflows':
+- .github/workflows/*
+
+
+'area/environment':
+- .gitignore
+- .dockerignore
+- .vscode
+- .idea
+- .editorconfig
+- .gitmodules
+
+'area/archive':
+- archive/*
+- archive/**/*
+
+'area/buildenvs':
+- buildenvs/*
+- buildenvs/**/*
+
+'area/cmd':
+- cmd/*
+- cmd/**/*
+
+'area/cmdfactory':
+- cmdfactory/*
+- cmdfactory/**/*
+
+'area/config':
+- config/*
+- config/**/*
+
+'area/docs':
+- docs/*
+- docs/**/*
+
+'area/exec':
+- exec/*
+- exec/**/*
+
+'area/initrd':
+- initrd/*
+- initrd/**/*
+
+'area/internal':
+- internal/*
+- internal/**/*
+
+'area/internal/cli':
+- internal/cli/*
+- internal/cli/**/*
+
+'area/internal/errs':
+- internal/errs/*
+- internal/errs/**/*
+
+'area/internal/findsh':
+- internal/findsh/*
+- internal/findsh/**/*
+
+'area/internal/ghrepo':
+- internal/ghrepo/*
+- internal/ghrepo/**/*
+
+'area/internal/httpclient':
+- internal/httpclient/*
+- internal/httpclient/**/*
+
+'area/internal/httpunix':
+- internal/httpunix/*
+- internal/httpunix/**/*
+
+'area/internal/retrytimeout':
+- internal/retrytimeout/*
+- internal/retrytimeout/**/*
+
+'area/internal/run':
+- internal/run/*
+- internal/run/**/*
+
+'area/internal/set':
+- internal/set/*
+- internal/set/**/*
+
+'area/internal/text':
+- internal/text/*
+- internal/text/**/*
+
+'area/internal/update':
+- internal/update/*
+- internal/update/**/*
+
+'area/internal/version':
+- internal/version/*
+- internal/version/**/*
+
+'area/internal/waitgroup':
+- internal/waitgroup/*
+- internal/waitgroup/**/*
+
+'area/iostreams':
+- iostreams/*
+- iostreams/**/*
+
+'area/kconfig':
+- kconfig/*
+- kconfig/**/*
+
+'area/log':
+- log/*
+- log/**/*
+
+'area/machine':
+- machine/*
+- machine/**/*
+
+'area/make':
+- make/*
+- make/**/*
+
+'area/manifest':
+- manifest/*
+- manifest/**/*
+
+'area/pack':
+- pack/*
+- pack/**/*
+
+'area/plugins':
+- plugins/*
+- plugins/**/*
+
+'area/schema':
+- schema/*
+- schema/**/*
+
+'area/support':
+- support/*
+- support/**/*
+
+'area/tui':
+- tui/*
+- tui/**/*
+
+'area/utils':
+- utils/*
+- utils/**/*
+
+'area/tools':
+- tools/*
+- tools/**/*
+
+'area/tools/go-generate-qemu-devices':
+- tools/go-generate-qemu-devices/*
+- tools/go-generate-qemu-devices/**/*
+
+'area/tools/protoc-gen-go-netconn':
+- tools/protoc-gen-go-netconn/*
+- tools/protoc-gen-go-netconn/**/*
+
+'area/tools/webinstall':
+- tools/webinstall/*
+- tools/webinstall/**/*
+
+'area/unikraft':
+- unikraft/*
+- unikraft/**/*
+
+'area/unikraft/app':
+- unikraft/app/*
+- unikraft/app/**/*
+
+'area/unikraft/arch':
+- unikraft/arch/*
+- unikraft/arch/**/*
+
+'area/unikraft/component':
+- unikraft/component/*
+- unikraft/component/**/*
+
+'area/unikraft/core':
+- unikraft/core/*
+- unikraft/core/**/*
+
+'area/unikraft/lib':
+- unikraft/lib/*
+- unikraft/lib/**/*
+
+'area/unikraft/plat':
+- unikraft/plat/*
+- unikraft/plat/**/*
+
+'area/unikraft/target':
+- unikraft/target/*
+- unikraft/target/**/*
+
+'area/unikraft/template':
+- unikraft/template/*
+- unikraft/template/**/*
