@@ -115,3 +115,9 @@ func (pc PlatformConfig) MarshalYAML() (interface{}, error) {
 func (pc PlatformConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.PlatformConfig.PrintInfo"
 }
+
+func PlatformWithName(name string) PlatformConfig {
+	return PlatformConfig{
+		name: name,
+	}
+}

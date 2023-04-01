@@ -114,3 +114,7 @@ func (ac ArchitectureConfig) MarshalYAML() (interface{}, error) {
 func (ac ArchitectureConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo"
 }
+
+func ArchitectureWithName(name string) ArchitectureConfig {
+	return ArchitectureConfig{name: name}
+}

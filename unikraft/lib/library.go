@@ -505,3 +505,10 @@ func (lc LibraryConfig) MarshalYAML() (interface{}, error) {
 
 	return ret, nil
 }
+
+func LibraryWithVersion(name string, version string) LibraryConfig {
+	return LibraryConfig{
+		name:    name,
+		version: version,
+	}
+}

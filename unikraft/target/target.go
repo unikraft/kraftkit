@@ -208,3 +208,10 @@ func (tc TargetConfig) MarshalYAML() (interface{}, error) {
 		"platform":     tc.platform.Name(),
 	}, nil
 }
+
+func TargetWithNames(archName, platName string) TargetConfig {
+	return TargetConfig{
+		architecture: arch.ArchitectureWithName(archName),
+		platform:     plat.PlatformWithName(platName),
+	}
+}

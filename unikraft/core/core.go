@@ -210,3 +210,9 @@ func (uc UnikraftConfig) MarshalYAML() (interface{}, error) {
 
 	return ret, nil
 }
+
+func UnikraftWithVersion(version string) UnikraftConfig {
+	return UnikraftConfig{
+		version: version,
+	}
+}
