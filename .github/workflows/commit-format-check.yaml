@@ -14,7 +14,7 @@ jobs:
         if: always()
         uses: taskmedia/action-conventional-commits@v1.1.0
         with:
-          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert"
+          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
 
       - name: Commit Lines Length Check
         if: always()
@@ -43,7 +43,7 @@ jobs:
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert)(\(\w+\))?!?: '
+          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod)(\(\w+\))?!?: '
           error: 'The PR title must follow the conventional commits format.'
           excludeDescription: 'true'
           excludeTitle: 'false'
