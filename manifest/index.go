@@ -147,7 +147,7 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 		return nil, err
 	}
 
-	head.Header.Set("User-Agent", "kraftkit/"+version.Version())
+	head.Header.Set("User-Agent", version.UserAgent())
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"url":    path,
@@ -168,7 +168,7 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 		return nil, err
 	}
 
-	get.Header.Set("User-Agent", "kraftkit/"+version.Version())
+	get.Header.Set("User-Agent", version.UserAgent())
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"url":    path,

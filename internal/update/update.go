@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	kitversion "kraftkit.sh/internal/version"
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
 
 	"github.com/MakeNowJust/heredoc"
@@ -23,7 +23,7 @@ import (
 const KraftKitLatestPath = "https://get.kraftkit.sh/latest.txt"
 
 func Check(ctx context.Context) error {
-	if kitversion.Version() == "" {
+	if version.Version() == "" {
 		return nil
 	}
 
@@ -34,7 +34,7 @@ func Check(ctx context.Context) error {
 		return err
 	}
 
-	get.Header.Set("User-Agent", "kraftkit/"+kitversion.Version())
+	get.Header.Set("User-Agent", version.Version())
 	log.G(ctx).WithFields(logrus.Fields{
 		"url":    KraftKitLatestPath,
 		"method": "GET",
@@ -60,7 +60,7 @@ func Check(ctx context.Context) error {
 		return err
 	}
 
-	currentVer, err := semver.NewVersion(strings.Split(kitversion.Version(), "-")[0])
+	currentVer, err := semver.NewVersion(strings.Split(version.Version(), "-")[0])
 	if err != nil {
 		return err
 	}

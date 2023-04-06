@@ -24,7 +24,6 @@
 package httpclient
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -109,7 +108,7 @@ func NewHTTPClient(io *iostreams.IOStreams, unixSocket string, setAccept bool) (
 	}
 
 	opts = append(opts,
-		AddHeader("User-Agent", fmt.Sprintf("KraftKit CLI %s", version.Version())),
+		AddHeader("User-Agent", version.UserAgent()),
 		AddHeaderFunc("Time-Zone", func(req *http.Request) (string, error) {
 			if req.Method != "GET" && req.Method != "HEAD" {
 				if time.Local.String() != "Local" {
