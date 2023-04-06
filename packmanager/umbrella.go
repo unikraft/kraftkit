@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/component"
@@ -54,6 +56,9 @@ func (u umbrella) From(sub pack.PackageFormat) (PackageManager, error) {
 
 func (u umbrella) Update(ctx context.Context) error {
 	for _, manager := range packageManagers {
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+		}).Tracef("updating")
 		err := manager.Update(ctx)
 		if err != nil {
 			return err
@@ -65,7 +70,10 @@ func (u umbrella) Update(ctx context.Context) error {
 
 func (u umbrella) AddSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Adding source %s via %s...", source, manager.Format())
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("adding")
 		err := manager.AddSource(ctx, source)
 		if err != nil {
 			return err
@@ -77,7 +85,10 @@ func (u umbrella) AddSource(ctx context.Context, source string) error {
 
 func (u umbrella) RemoveSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Removing source %s via %s...", source, manager.Format())
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("removing")
 		err := manager.RemoveSource(ctx, source)
 		if err != nil {
 			return err
@@ -87,12 +98,15 @@ func (u umbrella) RemoveSource(ctx context.Context, source string) error {
 	return nil
 }
 
-func (u umbrella) Pack(ctx context.Context, entity component.Component, opts ...PackOption) ([]pack.Package, error) {
+func (u umbrella) Pack(ctx context.Context, source component.Component, opts ...PackOption) ([]pack.Package, error) {
 	var ret []pack.Package
 
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Packing %s via %s...", entity.Name(), manager.Format())
-		more, err := manager.Pack(ctx, entity, opts...)
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source.Name(),
+		}).Tracef("packing")
+		more, err := manager.Pack(ctx, source, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -103,12 +117,15 @@ func (u umbrella) Pack(ctx context.Context, entity component.Component, opts ...
 	return ret, nil
 }
 
-func (u umbrella) Unpack(ctx context.Context, entity pack.Package, opts ...UnpackOption) ([]component.Component, error) {
+func (u umbrella) Unpack(ctx context.Context, source pack.Package, opts ...UnpackOption) ([]component.Component, error) {
 	var ret []component.Component
 
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Unpacking %s via %s...", entity.Name(), manager.Format())
-		more, err := manager.Unpack(ctx, entity, opts...)
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source.Name(),
+		}).Tracef("unpacking")
+		more, err := manager.Unpack(ctx, source, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -137,9 +154,18 @@ func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManag
 	var err error
 	var pm PackageManager
 	for _, manager := range packageManagers {
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("checking compatibility")
+
 		pm, err = manager.IsCompatible(ctx, source)
 		if err == nil {
 			return pm, nil
+		} else if err != nil {
+			log.G(ctx).
+				WithField("format", manager.Format()).
+				Tracef("package manager is not compatible because: %v", err)
 		}
 	}
 
