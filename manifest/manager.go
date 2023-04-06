@@ -359,15 +359,15 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 	return packages, nil
 }
 
-func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, error) {
+func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
 	if _, err := NewProvider(ctx, source); err != nil {
-		return nil, fmt.Errorf("incompatible source")
+		return nil, false, fmt.Errorf("incompatible source")
 	}
 
-	return m, nil
+	return m, true, nil
 }
 
 // LocalManifestDir returns the user configured path to all the manifests

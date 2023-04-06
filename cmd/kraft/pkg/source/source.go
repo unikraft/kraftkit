@@ -5,6 +5,8 @@
 package source
 
 import (
+	"errors"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -33,6 +35,7 @@ func New() *cobra.Command {
 
 func (opts *Source) Run(cmd *cobra.Command, args []string) error {
 	var err error
+	var compatible bool
 
 	source := ""
 	if len(args) > 0 {
@@ -42,9 +45,11 @@ func (opts *Source) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
-	pm, err = pm.IsCompatible(ctx, source)
+	pm, compatible, err = pm.IsCompatible(ctx, source)
 	if err != nil {
 		return err
+	} else if !compatible {
+		return errors.New("incompatible package manager")
 	}
 
 	return pm.AddSource(ctx, source)

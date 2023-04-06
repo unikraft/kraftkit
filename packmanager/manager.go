@@ -37,7 +37,7 @@ type PackageManager interface {
 
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
-	IsCompatible(context.Context, string) (PackageManager, error)
+	IsCompatible(context.Context, string) (PackageManager, bool, error)
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.

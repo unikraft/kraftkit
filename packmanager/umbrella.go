@@ -150,18 +150,20 @@ func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Packa
 	return packages, nil
 }
 
-func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, error) {
-	var err error
-	var pm PackageManager
+func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, bool, error) {
+	if source == "" {
+		return nil, false, fmt.Errorf("cannot determine compatibility of empty source")
+	}
+
 	for _, manager := range packageManagers {
 		log.G(ctx).WithFields(logrus.Fields{
 			"format": manager.Format(),
 			"source": source,
 		}).Tracef("checking compatibility")
 
-		pm, err = manager.IsCompatible(ctx, source)
-		if err == nil {
-			return pm, nil
+		pm, compatible, err := manager.IsCompatible(ctx, source)
+		if err == nil && compatible {
+			return pm, true, nil
 		} else if err != nil {
 			log.G(ctx).
 				WithField("format", manager.Format()).
@@ -169,7 +171,7 @@ func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManag
 		}
 	}
 
-	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
+	return nil, false, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
 func (u umbrella) Format() pack.PackageFormat {
