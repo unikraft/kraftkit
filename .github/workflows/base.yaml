@@ -13,13 +13,15 @@ jobs:
         include:
           - GCC_ARCH: x86_64
             GCC_VERSION: 12.2.0
+            GCC_SUFFIX:
           # - GCC_ARCH: arm
           #   GCC_VERSION: 12.2.0
+          #   GCC_SUFFIX:
           # - GCC_ARCH: arm64
           #   GCC_VERSION: 12.2.0
+          #   GCC_SUFFIX:
     runs-on: ubuntu-latest
     env:
-      GCC_SUFFIX:
 
     steps:
       - name: Set up QEMU
@@ -32,7 +34,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           file: ./buildenvs/gcc.Dockerfile
-          tags: index.unikraft.io/kraftkit.sh/gcc:${{ matrix.GCC_VERSION }}-${{ matrix.GCC_ARCH }}${{ env.GCC_SUFFIX }}
+          tags: index.unikraft.io/kraftkit.sh/gcc:${{ matrix.GCC_VERSION }}-${{ matrix.GCC_ARCH }}${{ matrix.GCC_SUFFIX }}
           platforms: linux/amd64
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
@@ -55,7 +57,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           file: ./buildenvs/qemu.Dockerfile
-          tags: index.unikraft.io/kraftkit.sh/qemu:${{ QEMU_VERSION }}
+          tags: index.unikraft.io/kraftkit.sh/qemu:${{ env.QEMU_VERSION }}
           platforms: linux/amd64
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
