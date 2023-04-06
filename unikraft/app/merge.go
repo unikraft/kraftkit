@@ -72,7 +72,7 @@ func mergeLibraries(base, override lib.Libraries) (lib.Libraries, error) {
 	return base, err
 }
 
-func mergeTargets(base, override []target.TargetConfig) ([]target.TargetConfig, error) {
+func mergeTargets(base, override []*target.TargetConfig) ([]*target.TargetConfig, error) {
 	err := mergo.Merge(&base, &override, mergo.WithOverride)
 	return base, err
 }

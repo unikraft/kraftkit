@@ -642,6 +642,6 @@ func (app application) PrintInfo(ctx context.Context) string {
 
 func (app application) WithTarget(targ target.Target) (Application, error) {
 	ret := app
-	ret.targets = target.Targets{targ.(target.TargetConfig)}
+	ret.targets = target.Targets{targ.(*target.TargetConfig)}
 	return ret, nil
 }

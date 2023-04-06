@@ -75,78 +75,79 @@ type TargetConfig struct {
 	command []string
 }
 
-type Targets []TargetConfig
+type Targets []*TargetConfig
 
-func (tc TargetConfig) Name() string {
+func (tc *TargetConfig) Name() string {
 	return tc.name
 }
 
-func (tc TargetConfig) Source() string {
+func (tc *TargetConfig) Source() string {
 	return ""
 }
 
-func (tc TargetConfig) Version() string {
+func (tc *TargetConfig) Version() string {
 	return ""
 }
 
-func (tc TargetConfig) Architecture() arch.Architecture {
+func (tc *TargetConfig) Architecture() arch.Architecture {
 	return tc.architecture
 }
 
-func (tc TargetConfig) Platform() plat.Platform {
+func (tc *TargetConfig) Platform() plat.Platform {
 	return tc.platform
 }
 
-func (tc TargetConfig) Kernel() string {
+func (tc *TargetConfig) Kernel() string {
 	return tc.kernel
 }
 
-func (tc TargetConfig) KernelDbg() string {
+func (tc *TargetConfig) KernelDbg() string {
 	return tc.kernelDbg
 }
 
-func (tc TargetConfig) Initrd() *initrd.InitrdConfig {
+func (tc *TargetConfig) Initrd() *initrd.InitrdConfig {
 	return tc.initrd
 }
 
-func (tc TargetConfig) Format() pack.PackageFormat {
+func (tc *TargetConfig) Format() pack.PackageFormat {
 	return tc.format
 }
 
-func (tc TargetConfig) Type() unikraft.ComponentType {
+func (tc *TargetConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeUnknown
 }
 
-func (tc TargetConfig) Path() string {
+func (tc *TargetConfig) Path() string {
 	return ""
 }
 
-func (tc TargetConfig) Command() []string {
+func (tc *TargetConfig) Command() []string {
 	return tc.command
 }
 
-func (tc TargetConfig) IsUnpacked() bool {
+func (tc *TargetConfig) IsUnpacked() bool {
 	return false
 }
 
-func (tc TargetConfig) KConfig() kconfig.KeyValueMap {
-	values := kconfig.KeyValueMap{}
-	values.OverrideBy(tc.kconfig)
-	values.OverrideBy(tc.architecture.KConfig())
-	values.OverrideBy(tc.platform.KConfig())
+func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
+	if tc.kconfig == nil {
+		tc.kconfig = kconfig.KeyValueMap{}
+		tc.kconfig.OverrideBy(tc.architecture.KConfig())
+		tc.kconfig.OverrideBy(tc.platform.KConfig())
+	}
 
-	return values
+	return tc.kconfig
 }
 
-func (tc TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (tc *TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 
-func (tc TargetConfig) ArchPlatString() string {
+func (tc *TargetConfig) ArchPlatString() string {
 	return tc.platform.Name() + "-" + tc.architecture.Name()
 }
 
-func (tc TargetConfig) PrintInfo(ctx context.Context) string {
+func (tc *TargetConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }
 
