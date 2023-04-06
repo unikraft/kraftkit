@@ -33,7 +33,7 @@ type Application interface {
 	WorkingDir() string
 
 	// Unikraft returns the application's unikraft configuration
-	Unikraft() core.Unikraft
+	Unikraft(context.Context) core.Unikraft
 
 	// OutDir returns the path to the application's output directory
 	OutDir() string
@@ -112,7 +112,7 @@ type Application interface {
 
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
-	Components() ([]component.Component, error)
+	Components(context.Context) ([]component.Component, error)
 
 	// WithTarget is a reducer that returns the application with only the provided
 	// target.
@@ -164,12 +164,12 @@ func (app application) Template() template.Template {
 	return app.template
 }
 
-func (app application) Unikraft() core.Unikraft {
+func (app application) Unikraft(ctx context.Context) core.Unikraft {
 	return app.unikraft
 }
 
 func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
-	uklibs, err := app.unikraft.Libraries(ctx)
+	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 	}
 
 	// Need to first merge the app configuration over the template
-	uk := merge.Unikraft()
+	uk := merge.Unikraft(ctx)
 	uk.KConfig().OverrideBy(app.unikraft.KConfig())
 	app.unikraft = uk.(core.UnikraftConfig)
 
@@ -564,9 +564,9 @@ func (app application) TargetByName(name string) (target.Target, error) {
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (app application) Components() ([]component.Component, error) {
+func (app application) Components(ctx context.Context) ([]component.Component, error) {
 	components := []component.Component{
-		app.unikraft,
+		app.Unikraft(ctx),
 	}
 
 	if app.template.Name() != "" {

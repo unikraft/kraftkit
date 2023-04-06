@@ -124,7 +124,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
 
-	_, err = project.Components()
+	_, err = project.Components(ctx)
 	if err != nil && project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
@@ -229,7 +229,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Overwrite template with user options
-	components, err := project.Components()
+	components, err := project.Components(ctx)
 	if err != nil {
 		return err
 	}
