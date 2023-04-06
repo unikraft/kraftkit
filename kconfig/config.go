@@ -140,6 +140,21 @@ func (kvm KeyValueMap) RemoveEmpty() KeyValueMap {
 	return kvm
 }
 
+// Get returns a KeyValue based on a key and a boolean result value if the
+// entries was resolvable.
+func (kvm KeyValueMap) Get(key string) (*KeyValue, bool) {
+	if val, ok := kvm[key]; ok {
+		return val, true
+	}
+
+	// Attempt with a `CONFIG_` prefix
+	if val, ok := kvm[fmt.Sprintf("%s%s", Prefix, key)]; ok {
+		return val, true
+	}
+
+	return nil, false
+}
+
 // String returns the serialized string representing a .config file
 func (kvm KeyValueMap) String() string {
 	var ret strings.Builder
