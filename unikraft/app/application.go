@@ -241,11 +241,14 @@ func (app application) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFi
 }
 
 func (app application) KConfig() kconfig.KeyValueMap {
-	all := kconfig.KeyValueMap{}
-	all.OverrideBy(app.unikraft.KConfig())
+	if app.configuration == nil {
+		app.configuration = kconfig.KeyValueMap{}
+	}
+
+	all := app.configuration.OverrideBy(app.unikraft.KConfig())
 
 	for _, library := range app.libraries {
-		all.OverrideBy(library.KConfig())
+		all = all.OverrideBy(library.KConfig())
 	}
 
 	return all
