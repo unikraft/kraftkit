@@ -7,6 +7,7 @@ package target
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
@@ -44,6 +45,11 @@ type Target interface {
 
 	// Command is the command-line arguments set for this target.
 	Command() []string
+
+	// ConfigFilename returns the target-specific `.config` file which contains
+	// all the porclained KConfig key values which is formatted
+	// `.config.<TARGET-NAME>`
+	ConfigFilename() string
 }
 
 type TargetConfig struct {
@@ -137,6 +143,10 @@ func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
 	}
 
 	return tc.kconfig
+}
+
+func (tc *TargetConfig) ConfigFilename() string {
+	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, filepath.Base(tc.kernel))
 }
 
 func (tc *TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
