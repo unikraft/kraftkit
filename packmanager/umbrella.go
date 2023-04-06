@@ -8,25 +8,30 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/component"
 )
 
-var packageManagers = make(map[pack.ContextKey]PackageManager)
+var (
+	packageManagers            = make(map[pack.PackageFormat]PackageManager)
+	packageManagerConstructors = make(map[pack.PackageFormat]NewManagerConstructor)
+)
 
-const UmbrellaContext pack.ContextKey = "umbrella"
+const UmbrellaFormat pack.PackageFormat = "umbrella"
 
-func PackageManagers() map[pack.ContextKey]PackageManager {
+func PackageManagers() map[pack.PackageFormat]PackageManager {
 	return packageManagers
 }
 
-func RegisterPackageManager(ctxk pack.ContextKey, manager PackageManager) error {
-	if _, ok := packageManagers[ctxk]; ok {
-		return fmt.Errorf("package manager already registered: %s", manager.Format())
+func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConstructor) error {
+	if _, ok := packageManagerConstructors[ctxk]; ok {
+		return fmt.Errorf("package manager already registered: %s", ctxk)
 	}
 
-	packageManagers[ctxk] = manager
+	packageManagerConstructors[ctxk] = constructor
 
 	return nil
 }
@@ -38,11 +43,26 @@ type umbrella struct{}
 // NewUmbrellaManager returns a `PackageManager` which can be used to manipulate
 // multiple `PackageManager`s.  The purpose is to be able to package, unpackage,
 // search and generally manipulate packages of multiple types simultaneously.
-func NewUmbrellaManager() PackageManager {
-	return umbrella{}
+func NewUmbrellaManager(ctx context.Context) (PackageManager, error) {
+	for format, constructor := range packageManagerConstructors {
+		log.G(ctx).WithField("format", format).Trace("initializing package manager")
+
+		manager, err := constructor(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if format, ok := packageManagers[manager.Format()]; ok {
+			return nil, fmt.Errorf("package manager already registered: %s", format)
+		}
+
+		packageManagers[manager.Format()] = manager
+	}
+
+	return umbrella{}, nil
 }
 
-func (u umbrella) From(sub string) (PackageManager, error) {
+func (u umbrella) From(sub pack.PackageFormat) (PackageManager, error) {
 	for _, manager := range packageManagers {
 		if manager.Format() == sub {
 			return manager, nil
@@ -54,6 +74,9 @@ func (u umbrella) From(sub string) (PackageManager, error) {
 
 func (u umbrella) Update(ctx context.Context) error {
 	for _, manager := range packageManagers {
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+		}).Tracef("updating")
 		err := manager.Update(ctx)
 		if err != nil {
 			return err
@@ -65,7 +88,10 @@ func (u umbrella) Update(ctx context.Context) error {
 
 func (u umbrella) AddSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Adding source %s via %s...", source, manager.Format())
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("adding")
 		err := manager.AddSource(ctx, source)
 		if err != nil {
 			return err
@@ -77,7 +103,10 @@ func (u umbrella) AddSource(ctx context.Context, source string) error {
 
 func (u umbrella) RemoveSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Removing source %s via %s...", source, manager.Format())
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("removing")
 		err := manager.RemoveSource(ctx, source)
 		if err != nil {
 			return err
@@ -87,12 +116,15 @@ func (u umbrella) RemoveSource(ctx context.Context, source string) error {
 	return nil
 }
 
-func (u umbrella) Pack(ctx context.Context, entity component.Component, opts ...PackOption) ([]pack.Package, error) {
+func (u umbrella) Pack(ctx context.Context, source component.Component, opts ...PackOption) ([]pack.Package, error) {
 	var ret []pack.Package
 
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Packing %s via %s...", entity.Name(), manager.Format())
-		more, err := manager.Pack(ctx, entity, opts...)
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source.Name(),
+		}).Tracef("packing")
+		more, err := manager.Pack(ctx, source, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -103,12 +135,15 @@ func (u umbrella) Pack(ctx context.Context, entity component.Component, opts ...
 	return ret, nil
 }
 
-func (u umbrella) Unpack(ctx context.Context, entity pack.Package, opts ...UnpackOption) ([]component.Component, error) {
+func (u umbrella) Unpack(ctx context.Context, source pack.Package, opts ...UnpackOption) ([]component.Component, error) {
 	var ret []component.Component
 
 	for _, manager := range packageManagers {
-		log.G(ctx).Tracef("Unpacking %s via %s...", entity.Name(), manager.Format())
-		more, err := manager.Unpack(ctx, entity, opts...)
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source.Name(),
+		}).Tracef("unpacking")
+		more, err := manager.Unpack(ctx, source, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -133,19 +168,30 @@ func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Packa
 	return packages, nil
 }
 
-func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, error) {
-	var err error
-	var pm PackageManager
+func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, bool, error) {
+	if source == "" {
+		return nil, false, fmt.Errorf("cannot determine compatibility of empty source")
+	}
+
 	for _, manager := range packageManagers {
-		pm, err = manager.IsCompatible(ctx, source)
-		if err == nil {
-			return pm, nil
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+			"source": source,
+		}).Tracef("checking compatibility")
+
+		pm, compatible, err := manager.IsCompatible(ctx, source)
+		if err == nil && compatible {
+			return pm, true, nil
+		} else if err != nil {
+			log.G(ctx).
+				WithField("format", manager.Format()).
+				Tracef("package manager is not compatible because: %v", err)
 		}
 	}
 
-	return nil, fmt.Errorf("cannot find compatible package manager for source: %s", source)
+	return nil, false, fmt.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
-func (u umbrella) Format() string {
-	return string(UmbrellaContext)
+func (u umbrella) Format() pack.PackageFormat {
+	return UmbrellaFormat
 }

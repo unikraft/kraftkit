@@ -33,7 +33,7 @@ var useGit = false
 
 func init() {
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestContext, NewManifestManager())
+	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
@@ -49,8 +49,8 @@ func init() {
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
 // Unikraft manifests.
-func NewManifestManager() packmanager.PackageManager {
-	return manager{}
+func NewManifestManager(ctx context.Context) (packmanager.PackageManager, error) {
+	return manager{}, nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
@@ -177,7 +177,7 @@ func (m manager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager
 	return nil, fmt.Errorf("not implemented manifest.manager.Unpack")
 }
 
-func (m manager) From(sub string) (packmanager.PackageManager, error) {
+func (m manager) From(sub pack.PackageFormat) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
@@ -303,7 +303,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 			for _, version := range versions {
 				p, err := NewPackageFromManifestWithVersion(ctx, manifest, version, mopts...)
 				if err != nil {
-					log.G(ctx).Warnf("%v", err)
+					log.G(ctx).Warn(err)
 					continue
 					// TODO: Config option for fast-fail?
 					// return nil, err
@@ -314,7 +314,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 		} else {
 			more, err := NewPackageFromManifest(ctx, manifest, mopts...)
 			if err != nil {
-				log.G(ctx).Warnf("%v", err)
+				log.G(ctx).Warn(err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
@@ -359,15 +359,15 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 	return packages, nil
 }
 
-func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, error) {
+func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
 	if _, err := NewProvider(ctx, source); err != nil {
-		return nil, fmt.Errorf("incompatible source")
+		return nil, false, fmt.Errorf("incompatible source")
 	}
 
-	return m, nil
+	return m, true, nil
 }
 
 // LocalManifestDir returns the user configured path to all the manifests
@@ -384,6 +384,6 @@ func (m manager) LocalManifestIndex(ctx context.Context) string {
 	return filepath.Join(m.LocalManifestsDir(ctx), "index.yaml")
 }
 
-func (m manager) Format() string {
-	return string(ManifestContext)
+func (m manager) Format() pack.PackageFormat {
+	return ManifestFormat
 }

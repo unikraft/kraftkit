@@ -13,6 +13,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
 )
@@ -45,7 +46,7 @@ func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
-		pm, err = pm.From(opts.Manager)
+		pm, err = pm.From(pack.PackageFormat(opts.Manager))
 		if err != nil {
 			return err
 		}

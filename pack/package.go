@@ -6,9 +6,18 @@ package pack
 
 import (
 	"context"
+	"fmt"
 
 	"kraftkit.sh/unikraft"
 )
+
+type PackageFormat string
+
+var _ fmt.Stringer = (*PackageFormat)(nil)
+
+func (pf PackageFormat) String() string {
+	return string(pf)
+}
 
 type Package interface {
 	unikraft.Nameable
@@ -23,5 +32,5 @@ type Package interface {
 	Pull(context.Context, ...PullOption) error
 
 	// Format returns the name of the implementation.
-	Format() string
+	Format() PackageFormat
 }

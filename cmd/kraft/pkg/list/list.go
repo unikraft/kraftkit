@@ -143,7 +143,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		table.AddField(string(pack.Type()), nil, nil)
 		table.AddField(pack.Name(), nil, nil)
 		table.AddField(pack.Version(), nil, nil)
-		table.AddField(pack.Format(), nil, nil)
+		table.AddField(pack.Format().String(), nil, nil)
 		table.EndRow()
 	}
 

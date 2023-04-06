@@ -18,9 +18,7 @@ type mpack struct {
 	version  string
 }
 
-const (
-	ManifestContext pack.ContextKey = "manifest"
-)
+const ManifestFormat pack.PackageFormat = "manifest"
 
 // NewPackageFromManifestWithVersion generates a new package based on an input
 // manifest which in itself may contain various versions and channels.  With the
@@ -93,7 +91,7 @@ func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
 }
 
 func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
-	log.G(ctx).Infof("pulling manifest package %s", mp.Name())
+	log.G(ctx).Debugf("pulling manifest package %s", mp.Name())
 
 	if mp.manifest.Provider == nil {
 		return fmt.Errorf("uninitialized manifest provider")
@@ -129,6 +127,6 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	return resource, cache, checksum, err
 }
 
-func (mp mpack) Format() string {
-	return string(ManifestContext)
+func (mp mpack) Format() pack.PackageFormat {
+	return ManifestFormat
 }

@@ -13,6 +13,7 @@ type PackOptions struct {
 	kernelLibraryIntermediateObjects bool
 	kernelLibraryObjects             bool
 	kernelSourceFiles                bool
+	kernelVersion                    string
 	output                           string
 }
 
@@ -46,6 +47,11 @@ func (popts *PackOptions) PackKernelLibraryObjects() bool {
 // PackKernelSourceFiles returns the whether to package kernel source files.
 func (popts *PackOptions) PackKernelSourceFiles() bool {
 	return popts.kernelSourceFiles
+}
+
+// KernelVersion returns the version of the kernel
+func (popts *PackOptions) KernelVersion() string {
+	return popts.kernelVersion
 }
 
 // Output returns the location of the package.
@@ -98,6 +104,13 @@ func PackKernelLibraryObjects(pack bool) PackOption {
 func PackKernelSourceFiles(pack bool) PackOption {
 	return func(popts *PackOptions) {
 		popts.kernelSourceFiles = pack
+	}
+}
+
+// PackWithKernelVersion sets the version of the Unikraft core.
+func PackWithKernelVersion(version string) PackOption {
+	return func(popts *PackOptions) {
+		popts.kernelVersion = version
 	}
 }
 

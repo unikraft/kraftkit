@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/pack"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
@@ -158,15 +159,15 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				targ.Architecture().Name() == opts.Architecture &&
 				targ.Platform().Name() == opts.Platform:
 
-			format := opts.Format
-			name := "Packaging " + targ.Name()
+			var format pack.PackageFormat
+			name := "packaging " + targ.Name()
 			if opts.Format != "auto" {
-				format = opts.Format
-			} else if targ.Format() != "" {
+				format = pack.PackageFormat(opts.Format)
+			} else if targ.Format().String() != "" {
 				format = targ.Format()
 			}
-			if format != "auto" {
-				name += " (" + format + ")"
+			if format.String() != "auto" {
+				name += " (" + format.String() + ")"
 			}
 
 			tree = append(tree, processtree.NewProcessTreeItem(
