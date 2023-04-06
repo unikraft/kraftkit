@@ -82,6 +82,34 @@ func (kvm KeyValueMap) OverrideBy(other KeyValueMap) KeyValueMap {
 	return kvm
 }
 
+// NewKConfigValuesFromFile build a KConfigValues from a provided file path
+func NewKeyValueMapFromFile(file string) (KeyValueMap, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer f.Close()
+
+	ret := KeyValueMap{}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		k, v := NewKeyValue(scanner.Text())
+		if v == nil {
+			continue
+		}
+
+		ret[k] = v
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
 // Slice returns the map as a slice
 func (kvm KeyValueMap) Slice() []*KeyValue {
 	var slice []*KeyValue
