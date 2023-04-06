@@ -111,13 +111,18 @@ func (kvm KeyValueMap) Unset(key string) KeyValueMap {
 // Resolve update a KConfig for keys without value (`key`, but not `key=`)
 func (kvm KeyValueMap) Resolve(lookupFn func(string) (string, bool)) KeyValueMap {
 	for k, v := range kvm {
-		if v == nil {
-			if value, ok := lookupFn(k); ok {
-				kvm[k] = &KeyValue{
-					Key:   k,
-					Value: value,
-				}
-			}
+		if v != nil {
+			continue
+		}
+
+		value, ok := lookupFn(k)
+		if !ok {
+			continue
+		}
+
+		kvm[k] = &KeyValue{
+			Key:   k,
+			Value: value,
 		}
 	}
 
