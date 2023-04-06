@@ -194,6 +194,37 @@ type KeyValue struct {
 	comments []string
 }
 
+// NewKeyValue returns a populated KeyValue by parsing the input line
+func NewKeyValue(line string) (string, *KeyValue) {
+	line = strings.TrimSpace(line)
+
+	// Skip blank lines
+	if line == "" {
+		return "", nil
+	}
+
+	// Skip commented-out lines
+	if strings.HasPrefix(line, "#") {
+		return "", nil
+	}
+
+	tokens := strings.SplitN(line, "=", 2)
+	if len(tokens) <= 1 {
+		return "", nil
+	}
+
+	k := tokens[0]
+	v := strings.Join(tokens[1:], "=")
+	if strings.HasPrefix(v, "\"") && strings.HasSuffix(v, "\"") {
+		v = strings.TrimSuffix(v[1:], "\"")
+	}
+
+	return k, &KeyValue{
+		Key:   k,
+		Value: v,
+	}
+}
+
 const (
 	Yes    = "y"
 	Mod    = "m"
