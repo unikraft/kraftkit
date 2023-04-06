@@ -6,6 +6,7 @@ package version
 
 import (
 	"fmt"
+	"runtime"
 )
 
 var (
@@ -31,9 +32,10 @@ func BuildTime() string {
 
 // String returns all version information.
 func String() string {
-	return fmt.Sprintf("%s (%s) built %s\n",
+	return fmt.Sprintf("%s (%s) %s %s\n",
 		version,
 		commit,
+		runtime.Version(),
 		buildTime,
 	)
 }
