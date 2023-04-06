@@ -303,7 +303,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 			for _, version := range versions {
 				p, err := NewPackageFromManifestWithVersion(ctx, manifest, version, mopts...)
 				if err != nil {
-					log.G(ctx).Warnf("%v", err)
+					log.G(ctx).Warn(err)
 					continue
 					// TODO: Config option for fast-fail?
 					// return nil, err
@@ -314,7 +314,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 		} else {
 			more, err := NewPackageFromManifest(ctx, manifest, mopts...)
 			if err != nil {
-				log.G(ctx).Warnf("%v", err)
+				log.G(ctx).Warn(err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
