@@ -91,7 +91,7 @@ func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
 }
 
 func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
-	log.G(ctx).Infof("pulling manifest package %s", mp.Name())
+	log.G(ctx).Debugf("pulling manifest package %s", mp.Name())
 
 	if mp.manifest.Provider == nil {
 		return fmt.Errorf("uninitialized manifest provider")
