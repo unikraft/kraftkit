@@ -13,6 +13,7 @@ var (
 	version   = "No version provided"
 	commit    = "No commit provided"
 	buildTime = "No build timestamp provided"
+	agentName = "kraftkit"
 )
 
 // Version returns KraftKit's version string.
@@ -38,4 +39,14 @@ func String() string {
 		runtime.Version(),
 		buildTime,
 	)
+}
+
+// UserAgent returns KraftKit's agent name and the version to be used when
+// making HTTP requests.
+func UserAgent() string {
+	if version != "No version provided" {
+		return fmt.Sprintf("%s/%s", agentName, version)
+	}
+
+	return agentName
 }
