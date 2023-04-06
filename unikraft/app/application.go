@@ -57,10 +57,6 @@ type Application interface {
 	// configuration
 	MergeTemplate(context.Context, Application) (Application, error)
 
-	// KConfigFile returns the path to the application's .config file or the
-	// target-specific `.config` file which is formatted `.config.<TARGET-NAME>`
-	KConfigFile(target.Target) string
-
 	// IsConfigured returns a boolean to indicate whether the application has been
 	// previously configured.  This is deteremined by finding a non-empty
 	// `.config` file within the application's source directory
@@ -255,18 +251,8 @@ func (app application) KConfig() kconfig.KeyValueMap {
 	return all
 }
 
-func (app application) KConfigFile(tc target.Target) string {
-	k := filepath.Join(app.workingDir, kconfig.DotConfigFileName)
-
-	if tc != nil {
-		k += "." + filepath.Base(tc.Kernel())
-	}
-
-	return k
-}
-
 func (app application) IsConfigured(tc target.Target) bool {
-	f, err := os.Stat(app.KConfigFile(tc))
+	f, err := os.Stat(filepath.Join(app.workingDir, tc.ConfigFilename()))
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
@@ -309,7 +295,7 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 		OutputDir:      app.outDir,
 		ApplicationDir: app.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
-		ConfigPath:     app.KConfigFile(tc),
+		ConfigPath:     filepath.Join(app.workingDir, tc.ConfigFilename()),
 	}
 
 	if tc != nil {
