@@ -225,6 +225,11 @@ func NewKeyValue(line string) (string, *KeyValue) {
 	}
 }
 
+// String implements fmt.Stringer
+func (kv KeyValue) String() string {
+	return fmt.Sprintf("%s=%s", kv.Key, kv.Value)
+}
+
 const (
 	Yes    = "y"
 	Mod    = "m"
