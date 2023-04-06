@@ -210,22 +210,6 @@ func WithDefaultHTTPClient() CliOption {
 	}
 }
 
-// WithDefaultPackageManager initializes a new package manager based on the
-// umbrella package manager using host-provided configuration.
-func WithDefaultPackageManager() CliOption {
-	return func(copts *CliOptions) error {
-		if copts.PackageManager != nil {
-			return nil
-		}
-
-		// TODO: Add configuration option that allows us to statically set a
-		// preferred package manager.
-		copts.PackageManager = packmanager.NewUmbrellaManager()
-
-		return nil
-	}
-}
-
 // WithDefaultPluginManager returns an initialized plugin manager using the
 // host-provided configuration plugin path.
 func WithDefaultPluginManager() CliOption {

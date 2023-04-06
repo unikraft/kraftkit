@@ -11,6 +11,13 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
+// NewManagerConstructor represents the prototype that all implementing package
+// managers must use during their instantiation.  This standardizes their input
+// and output during "construction", particularly providing access to a
+// referencable context with which they can access (within the context of
+// KraftKit) the logging, IOStreams and Config subsystems.
+type NewManagerConstructor func(context.Context) (PackageManager, error)
+
 type PackageManager interface {
 	// Update retrieves and stores locally a cache of the upstream registry.
 	Update(context.Context) error

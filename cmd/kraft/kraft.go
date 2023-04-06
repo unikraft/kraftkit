@@ -19,6 +19,7 @@ import (
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/packmanager"
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
@@ -99,7 +100,6 @@ func main() {
 	for _, o := range []cli.CliOption{
 		cli.WithDefaultConfigManager(cmd),
 		cli.WithDefaultIOStreams(),
-		cli.WithDefaultPackageManager(),
 		cli.WithDefaultPluginManager(),
 		cli.WithDefaultLogger(),
 		cli.WithDefaultHTTPClient(),
@@ -124,6 +124,13 @@ func main() {
 	if copts.IOStreams != nil {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
+
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		log.G(ctx).Fatal(err)
+	}
+
+	ctx = packmanager.WithPackageManager(ctx, pm)
 
 	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
 		if err := kitupdate.Check(ctx); err != nil {

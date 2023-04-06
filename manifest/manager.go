@@ -33,7 +33,7 @@ var useGit = false
 
 func init() {
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager())
+	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
@@ -49,8 +49,8 @@ func init() {
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
 // Unikraft manifests.
-func NewManifestManager() packmanager.PackageManager {
-	return manager{}
+func NewManifestManager(ctx context.Context) (packmanager.PackageManager, error) {
+	return manager{}, nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry

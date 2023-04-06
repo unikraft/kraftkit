@@ -15,7 +15,10 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
-var packageManagers = make(map[pack.PackageFormat]PackageManager)
+var (
+	packageManagers            = make(map[pack.PackageFormat]PackageManager)
+	packageManagerConstructors = make(map[pack.PackageFormat]NewManagerConstructor)
+)
 
 const UmbrellaFormat pack.PackageFormat = "umbrella"
 
@@ -23,12 +26,12 @@ func PackageManagers() map[pack.PackageFormat]PackageManager {
 	return packageManagers
 }
 
-func RegisterPackageManager(ctxk pack.PackageFormat, manager PackageManager) error {
-	if _, ok := packageManagers[ctxk]; ok {
+func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConstructor) error {
+	if _, ok := packageManagerConstructors[ctxk]; ok {
 		return fmt.Errorf("package manager already registered: %s", ctxk)
 	}
 
-	packageManagers[ctxk] = manager
+	packageManagerConstructors[ctxk] = constructor
 
 	return nil
 }
@@ -40,8 +43,23 @@ type umbrella struct{}
 // NewUmbrellaManager returns a `PackageManager` which can be used to manipulate
 // multiple `PackageManager`s.  The purpose is to be able to package, unpackage,
 // search and generally manipulate packages of multiple types simultaneously.
-func NewUmbrellaManager() PackageManager {
-	return umbrella{}
+func NewUmbrellaManager(ctx context.Context) (PackageManager, error) {
+	for format, constructor := range packageManagerConstructors {
+		log.G(ctx).WithField("format", format).Trace("initializing package manager")
+
+		manager, err := constructor(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if format, ok := packageManagers[manager.Format()]; ok {
+			return nil, fmt.Errorf("package manager already registered: %s", format)
+		}
+
+		packageManagers[manager.Format()] = manager
+	}
+
+	return umbrella{}, nil
 }
 
 func (u umbrella) From(sub pack.PackageFormat) (PackageManager, error) {
