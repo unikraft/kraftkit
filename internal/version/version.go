@@ -14,22 +14,22 @@ var (
 	buildTime = "No build timestamp provided"
 )
 
-// Version ...
+// Version returns KraftKit's version string.
 func Version() string {
 	return version
 }
 
-// Commit ...
+// Commit return KraftKit's HEAD Git commit SHA.
 func Commit() string {
 	return commit
 }
 
-// BuildTime ...
+// BuildTime returns the time in which the package or binary was built.
 func BuildTime() string {
 	return buildTime
 }
 
-// String ...
+// String returns all version information.
 func String() string {
 	return fmt.Sprintf("%s (%s) built %s\n",
 		version,
