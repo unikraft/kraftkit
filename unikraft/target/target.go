@@ -21,10 +21,6 @@ import (
 type Target interface {
 	component.Component
 
-	// ArchPlatString returns the canonical name for platform architecture string
-	// combination
-	ArchPlatString() string
-
 	// Architecture is the component architecture for this target.
 	Architecture() arch.Architecture
 
@@ -153,10 +149,6 @@ func (tc *TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigF
 	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 
-func (tc *TargetConfig) ArchPlatString() string {
-	return tc.platform.Name() + "-" + tc.architecture.Name()
-}
-
 func (tc *TargetConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }
@@ -186,4 +178,14 @@ func KernelDbgName(target TargetConfig) (string, error) {
 	}
 
 	return fmt.Sprintf("%s.dbg", name), nil
+}
+
+// TargetPlatArchName returns the canonical name for the platform and
+// architecture combination.
+func TargetPlatArchName(target Target) string {
+	return fmt.Sprintf(
+		"%s-%s",
+		target.Platform().Name(),
+		target.Architecture().Name(),
+	)
 }

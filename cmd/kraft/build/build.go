@@ -114,7 +114,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		// name of the project and the target/plat string (which is variable in
 		// length).
 		for _, targ := range project.Targets() {
-			if newLen := len(targ.Name()) + len(targ.ArchPlatString()) + 15; newLen > nameWidth {
+			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
 				nameWidth = newLen
 			}
 		}
@@ -381,7 +381,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		targ := targ
 		if !opts.NoConfigure {
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
+				fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Configure(
 						ctx,
@@ -401,7 +401,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 		if !opts.NoPrepare {
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("preparing %s (%s)", targ.Name(), targ.ArchPlatString()),
+				fmt.Sprintf("preparing %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Prepare(
 						ctx,
@@ -420,7 +420,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		processes = append(processes, paraprogress.NewProcess(
-			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
+			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
 					ctx,
