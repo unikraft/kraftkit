@@ -5,6 +5,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +26,10 @@ import (
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/utils"
@@ -137,7 +142,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	//
 	//     $ kraft run path/to/kernel
 	//
-	// c). a target defined within the context of `workdir` (which is either set
+	// c). A package manager image reference containing a unikernel;
+	//
+	// d). a target defined within the context of `workdir` (which is either set
 	//     via -w or is the current working directory), e.g.:
 	//
 	//     $ cd path/to/project
@@ -195,7 +202,81 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithInitRd(opts.InitRd),
 		)
 
-		// c). use a defined working directory as a Unikraft project
+		// c). use the provided package manager
+	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
+		packs, err := pm.Catalog(ctx, packmanager.CatalogQuery{
+			Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
+			Name:    entity,
+			NoCache: true,
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(packs) > 1 {
+			return fmt.Errorf("could not determine what to run, too many options")
+		} else if len(packs) == 0 {
+			return fmt.Errorf("not found: %s", entity)
+		}
+
+		// Create a temporary directory where the image can be stored
+		dir, err := os.MkdirTemp("", "")
+		if err != nil {
+			return err
+		}
+
+		// TODO(nderjung): Somehow this needs to be garbage collected if in
+		// detach-mode.
+		if !opts.Detach {
+			defer os.RemoveAll(dir)
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", entity),
+				func(ctx context.Context, w func(progress float64)) error {
+					return packs[0].Pull(
+						ctx,
+						pack.WithPullProgressFunc(w),
+						pack.WithPullWorkdir(dir),
+					)
+				},
+			)},
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return err
+		}
+
+		// Crucially, the catalog should return an interface that also implements
+		// target.Target.  This demonstrates that the implementing package can
+		// resolve application kernels.
+		targ, ok := packs[0].(target.Target)
+		if !ok {
+			return fmt.Errorf("package does not convert to target")
+		}
+
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
+		mopts = append(mopts,
+			machine.WithArchitecture(targ.Architecture().Name()),
+			machine.WithPlatform(targ.Platform().Name()),
+			machine.WithName(machine.MachineName(opts.Name)),
+			machine.WithKernel(targ.Kernel()),
+			machine.WithSource(fmt.Sprintf("%s://%s", pm.Format(), entity)),
+		)
+		// d). use a defined working directory as a Unikraft project
 	} else if len(workdir) > 0 {
 		targetName := opts.Target
 		project, err := app.NewProjectFromOptions(
