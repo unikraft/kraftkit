@@ -136,17 +136,15 @@ func (p *Process) Start() tea.Cmd {
 		}
 
 		err := p.processFunc(p.ctx, p.onProgress)
-		status := StatusSuccess
+		p.Status = StatusSuccess
 		if err != nil {
-			status = StatusFailed
+			p.Status = StatusFailed
 		}
-
-		p.Status = status
 
 		if tprog != nil {
 			tprog.Send(StatusMsg{
 				ID:     p.id,
-				status: status,
+				status: p.Status,
 				err:    err,
 			})
 		}
