@@ -16,7 +16,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
-	"github.com/muesli/termenv"
 
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -127,11 +126,6 @@ func (p *Process) Start() tea.Cmd {
 	cmds = append(cmds, func() tea.Msg {
 		p := p // golang closures
 
-		// Clone the context to be used individually by each process.
-		ctx := new(context.Context)
-		*ctx = p.ctx
-		p.ctx = *ctx
-
 		if p.norender {
 			log.G(p.ctx).Info(p.Name)
 		} else {
@@ -139,17 +133,6 @@ func (p *Process) Start() tea.Cmd {
 			// print them in a per-process isolated view.
 			iostreams.G(p.ctx).Out = iostreams.NewNoTTYWriter(p)
 			log.G(p.ctx).Out = p
-
-			// Update formatter when using KraftKit's TextFormatter.  The
-			// TextFormatter recognises that this is a non-standard terminal and
-			// changes the output to a more machine readable format.  Instead we want
-			// to force the formatting so that the output looks seamless with the
-			// style of the TUI.
-			if formatter, ok := log.G(p.ctx).Formatter.(*log.TextFormatter); ok {
-				formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
-				formatter.ForceFormatting = true
-				log.G(p.ctx).Formatter = formatter
-			}
 		}
 
 		err := p.processFunc(p.ctx, p.onProgress)
