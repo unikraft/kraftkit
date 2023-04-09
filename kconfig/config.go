@@ -82,6 +82,34 @@ func (kvm KeyValueMap) OverrideBy(other KeyValueMap) KeyValueMap {
 	return kvm
 }
 
+// NewKConfigValuesFromFile build a KConfigValues from a provided file path
+func NewKeyValueMapFromFile(file string) (KeyValueMap, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %v", err)
+	}
+
+	defer f.Close()
+
+	ret := KeyValueMap{}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		k, v := NewKeyValue(scanner.Text())
+		if v == nil {
+			continue
+		}
+
+		ret[k] = v
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
 // Slice returns the map as a slice
 func (kvm KeyValueMap) Slice() []*KeyValue {
 	var slice []*KeyValue
@@ -111,13 +139,18 @@ func (kvm KeyValueMap) Unset(key string) KeyValueMap {
 // Resolve update a KConfig for keys without value (`key`, but not `key=`)
 func (kvm KeyValueMap) Resolve(lookupFn func(string) (string, bool)) KeyValueMap {
 	for k, v := range kvm {
-		if v == nil {
-			if value, ok := lookupFn(k); ok {
-				kvm[k] = &KeyValue{
-					Key:   k,
-					Value: value,
-				}
-			}
+		if v != nil {
+			continue
+		}
+
+		value, ok := lookupFn(k)
+		if !ok {
+			continue
+		}
+
+		kvm[k] = &KeyValue{
+			Key:   k,
+			Value: value,
 		}
 	}
 
@@ -133,6 +166,21 @@ func (kvm KeyValueMap) RemoveEmpty() KeyValueMap {
 	}
 
 	return kvm
+}
+
+// Get returns a KeyValue based on a key and a boolean result value if the
+// entries was resolvable.
+func (kvm KeyValueMap) Get(key string) (*KeyValue, bool) {
+	if val, ok := kvm[key]; ok {
+		return val, true
+	}
+
+	// Attempt with a `CONFIG_` prefix
+	if val, ok := kvm[fmt.Sprintf("%s%s", Prefix, key)]; ok {
+		return val, true
+	}
+
+	return nil, false
 }
 
 // String returns the serialized string representing a .config file
@@ -172,6 +220,42 @@ type KeyValue struct {
 	Key      string
 	Value    string
 	comments []string
+}
+
+// NewKeyValue returns a populated KeyValue by parsing the input line
+func NewKeyValue(line string) (string, *KeyValue) {
+	line = strings.TrimSpace(line)
+
+	// Skip blank lines
+	if line == "" {
+		return "", nil
+	}
+
+	// Skip commented-out lines
+	if strings.HasPrefix(line, "#") {
+		return "", nil
+	}
+
+	tokens := strings.SplitN(line, "=", 2)
+	if len(tokens) <= 1 {
+		return "", nil
+	}
+
+	k := tokens[0]
+	v := strings.Join(tokens[1:], "=")
+	if strings.HasPrefix(v, "\"") && strings.HasSuffix(v, "\"") {
+		v = strings.TrimSuffix(v[1:], "\"")
+	}
+
+	return k, &KeyValue{
+		Key:   k,
+		Value: v,
+	}
+}
+
+// String implements fmt.Stringer
+func (kv KeyValue) String() string {
+	return fmt.Sprintf("%s=%s", kv.Key, kv.Value)
 }
 
 const (

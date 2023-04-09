@@ -197,7 +197,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// c). use a defined working directory as a Unikraft project
 	} else if len(workdir) > 0 {
-		target := opts.Target
+		targetName := opts.Target
 		project, err := app.NewProjectFromOptions(
 			ctx,
 			app.WithProjectWorkdir(workdir),
@@ -208,12 +208,12 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if len(project.TargetNames()) == 1 {
-			target = project.TargetNames()[0]
-			if len(opts.Target) > 0 && opts.Target != target {
+			targetName = project.TargetNames()[0]
+			if len(opts.Target) > 0 && opts.Target != targetName {
 				return fmt.Errorf("unknown target: %s", opts.Target)
 			}
 
-		} else if target == "" && len(project.Targets()) > 1 {
+		} else if targetName == "" && len(project.Targets()) > 1 {
 			if config.G[config.KraftKit](ctx).NoPrompt {
 				return fmt.Errorf("with 'no prompt' enabled please select a target")
 			}
@@ -226,23 +226,23 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			target = selectedTarget
+			targetName = selectedTarget
 
-		} else if target != "" && utils.Contains(project.TargetNames(), target) {
-			return fmt.Errorf("unknown target: %s", target)
+		} else if targetName != "" && utils.Contains(project.TargetNames(), targetName) {
+			return fmt.Errorf("unknown target: %s", targetName)
 		}
 
-		t, err := project.TargetByName(target)
+		t, err := project.TargetByName(targetName)
 		if err != nil {
 			return err
 		}
 
 		// Validate selection of target
 		if len(opts.Architecture) > 0 && (opts.Architecture != t.Architecture().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified architecture (%s)", t.ArchPlatString(), opts.Architecture)
+			return fmt.Errorf("selected target (%s) does not match specified architecture (%s)", target.TargetPlatArchName(t), opts.Architecture)
 		}
 		if len(opts.Platform) > 0 && (opts.Platform != t.Platform().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", t.ArchPlatString(), opts.Platform)
+			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", target.TargetPlatArchName(t), opts.Platform)
 		}
 
 		name := t.Name()
@@ -385,7 +385,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 func selectionTargets(tgts target.Targets) []string {
 	tgtStrings := make([]string, 0, len(tgts))
 	for _, tgt := range tgts {
-		tgtStrings = append(tgtStrings, fmt.Sprintf("%s (%s)", tgt.Name(), tgt.ArchPlatString()))
+		tgtStrings = append(tgtStrings, fmt.Sprintf("%s (%s)", tgt.Name(), target.TargetPlatArchName(tgt)))
 	}
 
 	sort.Strings(tgtStrings)
