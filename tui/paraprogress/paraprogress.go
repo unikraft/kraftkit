@@ -90,16 +90,11 @@ func (pd *ParaProgress) Start() error {
 
 	tprog = tea.NewProgram(pd, teaOpts...)
 
-	go func() {
-		if _, err := tprog.Run(); err != nil {
-			pd.errChan <- err
-		} else {
-			pd.errChan <- pd.err
-		}
-	}()
+	if _, err := tprog.Run(); err != nil {
+		return err
+	}
 
-	err := <-pd.errChan
-	return err
+	return pd.err
 }
 
 func (md ParaProgress) Init() tea.Cmd {
