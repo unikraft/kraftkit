@@ -152,6 +152,10 @@ func (app application) Version() string {
 	return app.version
 }
 
+func (app application) String() string {
+	return unikraft.TypeNameVersion(app)
+}
+
 func (app application) WorkingDir() string {
 	return app.workingDir
 }

@@ -75,6 +75,10 @@ func (tc TemplateConfig) Version() string {
 	return tc.version
 }
 
+func (tc TemplateConfig) String() string {
+	return unikraft.TypeNameVersion(tc)
+}
+
 // Type returns the type of the template
 func (tc TemplateConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp

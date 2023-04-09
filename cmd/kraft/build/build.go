@@ -129,7 +129,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
-				unikraft.TypeNameVersion(project.Template()),
+				project.Template().String(),
 			), "",
 			func(ctx context.Context) error {
 				packages, err = packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
@@ -144,11 +144,11 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 				if len(packages) == 0 {
 					return fmt.Errorf("could not find: %s",
-						unikraft.TypeNameVersion(project.Template()),
+						project.Template().String(),
 					)
 				} else if len(packages) > 1 {
 					return fmt.Errorf("too many options for %s",
-						unikraft.TypeNameVersion(project.Template()),
+						project.Template().String(),
 					)
 				}
 
@@ -175,7 +175,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 		proc := paraprogress.NewProcess(
 			fmt.Sprintf("pulling %s",
-				unikraft.TypeNameVersion(packages[0]),
+				packages[0].String(),
 			),
 			func(ctx context.Context, w func(progress float64)) error {
 				return packages[0].Pull(
@@ -238,7 +238,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 		searches = append(searches, processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
-				unikraft.TypeNameVersion(component),
+				component.String(),
 			), "",
 			func(ctx context.Context) error {
 				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
@@ -256,11 +256,11 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 				if len(p) == 0 {
 					return fmt.Errorf("could not find: %s",
-						unikraft.TypeNameVersion(component),
+						component.String(),
 					)
 				} else if len(p) > 1 {
 					return fmt.Errorf("too many options for %s",
-						unikraft.TypeNameVersion(component),
+						component.String(),
 					)
 				}
 
@@ -294,7 +294,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			p := p // loop closure
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s",
-					unikraft.TypeNameVersion(p),
+					p.String(),
 				),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(

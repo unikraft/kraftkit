@@ -56,6 +56,10 @@ func (pc PlatformConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypePlat
 }
 
+func (pc PlatformConfig) String() string {
+	return unikraft.TypeNameVersion(pc)
+}
+
 func (pc PlatformConfig) Path() string {
 	return pc.path
 }

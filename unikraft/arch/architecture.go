@@ -66,6 +66,10 @@ func (ac ArchitectureConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeArch
 }
 
+func (ac ArchitectureConfig) String() string {
+	return unikraft.TypeNameVersion(ac)
+}
+
 func (ac ArchitectureConfig) Path() string {
 	return ac.path
 }

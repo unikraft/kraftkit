@@ -57,6 +57,9 @@ type Nameable interface {
 
 	// Version returns the entity version.
 	Version() string
+
+	// String() returns the canonical string representation of the object
+	fmt.Stringer
 }
 
 // GuessNameAndType attempts to parse the input string, which could be formatted
@@ -106,9 +109,9 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 	return "", fmt.Errorf("cannot place component of unknown type")
 }
 
-// TypeNameVersion returns the canonical name of the component using the format
-// <TYPE>/<NAME>:<VERSION>
-func TypeNameVersion(entity Nameable) string {
+// String implements fmt.Stringer and returns the canonical string
+// representation of the nameable object
+func TypeNameVersion(entity fmt.Stringer) string {
 	var ret strings.Builder
 	if entity.Type() != ComponentTypeUnknown {
 		ret.WriteString(string(entity.Type()))

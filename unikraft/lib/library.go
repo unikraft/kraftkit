@@ -168,6 +168,10 @@ func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
 }
 
+func (lc LibraryConfig) String() string {
+	return unikraft.TypeNameVersion(lc)
+}
+
 func (lc LibraryConfig) Path() string {
 	return lc.path
 }

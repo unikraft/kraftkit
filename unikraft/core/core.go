@@ -65,6 +65,10 @@ func (uc UnikraftConfig) Path() string {
 	return uc.path
 }
 
+func (uc UnikraftConfig) String() string {
+	return unikraft.TypeNameVersion(uc)
+}
+
 func (uc UnikraftConfig) IsUnpacked() bool {
 	if f, err := os.Stat(uc.Path()); err == nil && f.IsDir() {
 		return true

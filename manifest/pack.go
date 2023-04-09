@@ -82,6 +82,10 @@ func (mp mpack) Version() string {
 	return mp.version
 }
 
+func (mp mpack) String() string {
+	return mp.TypeNameVersion(mp)
+}
+
 func (mp mpack) Metadata() any {
 	return mp.manifest
 }
