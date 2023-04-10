@@ -26,13 +26,6 @@ func Unarchive(src, dst string, opts ...UnarchiveOption) error {
 
 // UntarGz unarchives a tarball which has been gzip compressed
 func UntarGz(src, dst string, opts ...UnarchiveOption) error {
-	uc := &UnarchiveOptions{}
-	for _, opt := range opts {
-		if err := opt(uc); err != nil {
-			return err
-		}
-	}
-
 	f, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("could not open file: %v", err)
@@ -45,11 +38,22 @@ func UntarGz(src, dst string, opts ...UnarchiveOption) error {
 		return fmt.Errorf("could not open gzip reader: %v", err)
 	}
 
-	tarReader := tar.NewReader(gzipReader)
+	return Untar(gzipReader, dst, opts...)
+}
+
+// Untar unarchives a tarball which has been gzip compressed
+func Untar(src io.Reader, dst string, opts ...UnarchiveOption) error {
+	uc := &UnarchiveOptions{}
+	for _, opt := range opts {
+		if err := opt(uc); err != nil {
+			return err
+		}
+	}
+
+	tr := tar.NewReader(src)
 
 	for {
-		header, err := tarReader.Next()
-
+		header, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
@@ -83,7 +87,7 @@ func UntarGz(src, dst string, opts ...UnarchiveOption) error {
 				return fmt.Errorf("could not create file: %v", err)
 			}
 
-			if _, err := io.Copy(newFile, tarReader); err != nil {
+			if _, err := io.Copy(newFile, tr); err != nil {
 				newFile.Close()
 				return fmt.Errorf("could not copy file: %v", err)
 			}
