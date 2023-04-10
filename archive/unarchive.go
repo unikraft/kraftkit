@@ -103,6 +103,9 @@ func Untar(src io.Reader, dst string, opts ...UnarchiveOption) error {
 			// default:
 			// 	return fmt.Errorf("unknown type: %s in %s", string(header.Typeflag), path)
 		}
+
+		// Change access time and modification time if possible (error ignored)
+		os.Chtimes(path, header.AccessTime, header.ModTime)
 	}
 
 	return nil
