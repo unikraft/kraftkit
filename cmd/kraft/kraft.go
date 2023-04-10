@@ -40,6 +40,7 @@ import (
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
+	_ "kraftkit.sh/oci"
 )
 
 type Kraft struct{}
