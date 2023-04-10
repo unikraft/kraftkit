@@ -63,11 +63,11 @@ func Untar(src io.Reader, dst string, opts ...UnarchiveOption) error {
 		}
 
 		var path string
-		if uc.StripComponents > 0 {
+		if uc.stripComponents > 0 {
 			// We don't use the context-(host-)specific filepath.SplitList because
 			// this is a UNIX tarball
 			parts := strings.Split(header.Name, "/")
-			path = strings.Join(parts[uc.StripComponents:], "/")
+			path = strings.Join(parts[uc.stripComponents:], "/")
 			path = filepath.Join(dst, path)
 		} else {
 			path = filepath.Join(dst, header.Name)

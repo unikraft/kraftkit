@@ -5,7 +5,7 @@
 package archive
 
 type UnarchiveOptions struct {
-	StripComponents int
+	stripComponents int
 }
 
 type UnarchiveOption func(uo *UnarchiveOptions) error
@@ -16,7 +16,7 @@ func StripComponents(sc int) UnarchiveOption {
 			sc = 0
 		}
 
-		uo.StripComponents = sc
+		uo.stripComponents = sc
 		return nil
 	}
 }
