@@ -82,6 +82,11 @@ func Untar(src io.Reader, dst string, opts ...UnarchiveOption) error {
 			}
 
 		case tar.TypeReg:
+			// Create parent path if it does not exist
+			if err := os.MkdirAll(filepath.Dir(path), info.Mode()); err != nil {
+				return fmt.Errorf("could not create directory: %v", err)
+			}
+
 			newFile, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
 			if err != nil {
 				return fmt.Errorf("could not create file: %v", err)
