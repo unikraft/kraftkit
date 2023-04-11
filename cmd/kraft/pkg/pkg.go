@@ -185,15 +185,12 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						}
 					}
 
-					single, err := project.WithTarget(targ)
-					if err != nil {
-						return err
-					}
-
-					if _, err := pm.Pack(ctx, single,
+					popts := []packmanager.PackOption{
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
-					); err != nil {
+					}
+
+					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
 						return err
 					}
 
