@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
@@ -190,6 +191,12 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
+					}
+
+					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
+						popts = append(popts,
+							packmanager.PackWithKernelVersion(ukversion.Value),
+						)
 					}
 
 					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
