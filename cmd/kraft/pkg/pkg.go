@@ -208,7 +208,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
-			processtree.WithVerb("Packaging..."),
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
 		},
