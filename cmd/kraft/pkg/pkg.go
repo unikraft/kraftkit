@@ -40,6 +40,7 @@ type Pkg struct {
 	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	Volumes      []string `local:"true" long:"volume" short:"v" usage:"Additional volumes to bundle within the package"`
+	WithKConfig  bool     `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
 func New() *cobra.Command {
@@ -186,6 +187,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 					}
 
 					popts := []packmanager.PackOption{
+						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
 					}
