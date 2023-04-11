@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
@@ -40,6 +41,7 @@ type Pkg struct {
 	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	Volumes      []string `local:"true" long:"volume" short:"v" usage:"Additional volumes to bundle within the package"`
+	WithKConfig  bool     `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
 func New() *cobra.Command {
@@ -185,15 +187,19 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						}
 					}
 
-					single, err := project.WithTarget(targ)
-					if err != nil {
-						return err
-					}
-
-					if _, err := pm.Pack(ctx, single,
+					popts := []packmanager.PackOption{
+						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
-					); err != nil {
+					}
+
+					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
+						popts = append(popts,
+							packmanager.PackWithKernelVersion(ukversion.Value),
+						)
+					}
+
+					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
 						return err
 					}
 
@@ -209,7 +215,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
-			processtree.WithVerb("Packaging..."),
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
 		},
