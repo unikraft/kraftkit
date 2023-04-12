@@ -63,7 +63,9 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		opts.Limit = -1
 	}
 
-	query := packmanager.CatalogQuery{}
+	query := packmanager.CatalogQuery{
+		NoCache: opts.Update,
+	}
 	if opts.ShowCore {
 		query.Types = append(query.Types, unikraft.ComponentTypeCore)
 	}
