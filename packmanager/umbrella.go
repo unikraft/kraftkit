@@ -162,7 +162,10 @@ func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Packa
 	for _, manager := range packageManagers {
 		pack, err := manager.Catalog(ctx, query)
 		if err != nil {
-			return nil, err
+			log.G(ctx).
+				WithField("format", manager.Format()).
+				Debugf("could not query catalog: %v", err)
+			continue
 		}
 
 		packages = append(packages, pack...)
