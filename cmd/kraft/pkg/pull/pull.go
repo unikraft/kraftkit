@@ -28,8 +28,8 @@ import (
 type Pull struct {
 	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
 	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
 	Manager      string `long:"manager" short:"M" usage:"Force the handler type (Omittion will attempt auto-detect)" default:"auto"`
-	NoCache      bool   `long:"no-cache" short:"Z" usage:"Do not use cache and pull directly from source"`
 	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
@@ -128,7 +128,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						Name:    project.Template().Name(),
 						Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 						Version: project.Template().Version(),
-						NoCache: opts.NoCache,
+						NoCache: !opts.ForceCache,
 					})
 					if err != nil {
 						return err
@@ -223,14 +223,16 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 				Version: c.Version(),
 				Source:  c.Source(),
 				Types:   []unikraft.ComponentType{c.Type()},
-				NoCache: opts.NoCache,
+				NoCache: !opts.ForceCache,
 			})
 		}
 
 		// Is this a list (space delimetered) of packages to pull?
 	} else {
 		for _, c := range strings.Split(query, " ") {
-			query := packmanager.CatalogQuery{NoCache: opts.NoCache}
+			query := packmanager.CatalogQuery{
+				NoCache: !opts.ForceCache,
+			}
 
 			if t, n, v, err := unikraft.GuessTypeNameVersion(c); err == nil {
 				if t != unikraft.ComponentTypeUnknown {
@@ -275,7 +277,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
 						pack.WithPullChecksum(!opts.NoChecksum),
-						pack.WithPullCache(!opts.NoCache),
+						pack.WithPullCache(opts.ForceCache),
 					)
 				},
 			))
