@@ -28,6 +28,19 @@ curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
 
+### Container build environment
+
+KraftKit ships a container build environment which you can use instead of installing any dependencies directly on your host.
+It includes the `kraft` binary as well as all the additional tools and libraries for building Unikraft unikernels.
+Simply attach a working directory on your host as a mount path volume mapped to `/workspace`, e.g.:
+
+```shell
+docker run -it --rm -v $(pwd):/workspace --entrypoint bash kraftkit.sh/base:latest
+```
+
+The above command will drop you into a container shell.
+Simply type `exit` or Ctrl+D to quit.
+
 ## Quickstart
 
 Building a unikernel with KraftKit is designed to be simple. 
