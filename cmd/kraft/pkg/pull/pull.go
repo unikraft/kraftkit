@@ -75,21 +75,19 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var project app.Application
 	var processes []*paraprogress.Process
-	var queries []packmanager.CatalogQuery
 
-	query := ""
-	if len(args) > 0 {
-		query = strings.Join(args, " ")
-	}
-
-	if len(query) == 0 {
-		query, err = os.Getwd()
+	workdir := opts.Workdir
+	if len(workdir) == 0 {
+		workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
 	}
 
-	workdir := opts.Workdir
+	if len(args[0]) == 0 {
+		args[0] = workdir
+	}
+
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
@@ -103,10 +101,17 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	type pmQuery struct {
+		pm    packmanager.PackageManager
+		query packmanager.CatalogQuery
+	}
+
+	var queries []pmQuery
+
 	// Are we pulling an application directory?  If so, interpret the application
 	// so we can get a list of components
-	if f, err := os.Stat(query); err == nil && f.IsDir() {
-		workdir = query
+	if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
+		workdir = args[0]
 		project, err := app.NewProjectFromOptions(
 			ctx,
 			app.WithProjectWorkdir(workdir),
@@ -218,50 +223,44 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		for _, c := range components {
-			queries = append(queries, packmanager.CatalogQuery{
-				Name:    c.Name(),
-				Version: c.Version(),
-				Source:  c.Source(),
-				Types:   []unikraft.ComponentType{c.Type()},
-				NoCache: !opts.ForceCache,
+			queries = append(queries, pmQuery{
+				pm: pm,
+				query: packmanager.CatalogQuery{
+					Name:    c.Name(),
+					Version: c.Version(),
+					Source:  c.Source(),
+					Types:   []unikraft.ComponentType{c.Type()},
+					NoCache: !opts.ForceCache,
+				},
 			})
 		}
 
 		// Is this a list (space delimetered) of packages to pull?
-	} else {
-		for _, c := range strings.Split(query, " ") {
-			query := packmanager.CatalogQuery{
-				NoCache: !opts.ForceCache,
+	} else if len(args) > 0 {
+		for _, arg := range args {
+			pm, compatible, err := pm.IsCompatible(ctx, arg)
+			if err != nil || !compatible {
+				continue
 			}
 
-			if t, n, v, err := unikraft.GuessTypeNameVersion(c); err == nil {
-				if t != unikraft.ComponentTypeUnknown {
-					query.Types = append(query.Types, t)
-				}
-
-				if len(n) > 0 {
-					query.Name = n
-				}
-
-				if len(v) > 0 {
-					query.Version = v
-				}
-			} else {
-				query.Source = c
-			}
-
-			queries = append(queries, query)
+			queries = append(queries, pmQuery{
+				pm: pm,
+				query: packmanager.CatalogQuery{
+					NoCache: !opts.ForceCache,
+					Name:    arg,
+				},
+			})
 		}
 	}
 
 	for _, c := range queries {
-		next, err := pm.Catalog(ctx, c)
+		next, err := c.pm.Catalog(ctx, c.query)
 		if err != nil {
 			return err
 		}
 
 		if len(next) == 0 {
-			log.G(ctx).Warnf("could not find %s", c.String())
+			log.G(ctx).Warnf("could not find %s", c.query.String())
 			continue
 		}
 
@@ -269,7 +268,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s",
-					unikraft.TypeNameVersion(p),
+					c.query.String(),
 				),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
