@@ -191,7 +191,7 @@ func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManag
 		} else if err != nil {
 			log.G(ctx).
 				WithField("format", manager.Format()).
-				Tracef("package manager is not compatible because: %v", err)
+				Debugf("package manager is not compatible because: %v", err)
 		}
 	}
 
