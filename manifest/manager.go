@@ -363,6 +363,11 @@ func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.P
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
+
+	if _, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil {
+		return m, true, nil
+	}
+
 	if _, err := NewProvider(ctx, source); err != nil {
 		return nil, false, fmt.Errorf("incompatible source")
 	}
