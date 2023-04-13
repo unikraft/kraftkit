@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -256,7 +255,11 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	for _, c := range queries {
 		next, err := c.pm.Catalog(ctx, c.query)
 		if err != nil {
-			return err
+			log.G(ctx).
+				WithField("format", pm.Format().String()).
+				WithField("name", c.query.Name).
+				Warn(err)
+			continue
 		}
 
 		if len(next) == 0 {
