@@ -291,7 +291,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		processes,
 		paraprogress.IsParallel(parallel),
 		paraprogress.WithRenderer(norender),
-		paraprogress.WithFailFast(true),
+		paraprogress.WithFailFast(false),
 	)
 	if err != nil {
 		return err
