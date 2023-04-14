@@ -204,10 +204,11 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// c). use the provided package manager
 	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
+		// First try the local cache of the catalog
 		packs, err := pm.Catalog(ctx, packmanager.CatalogQuery{
 			Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 			Name:    entity,
-			NoCache: true,
+			NoCache: false,
 		})
 		if err != nil {
 			return err
@@ -216,7 +217,21 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		if len(packs) > 1 {
 			return fmt.Errorf("could not determine what to run, too many options")
 		} else if len(packs) == 0 {
-			return fmt.Errorf("not found: %s", entity)
+			// Second, try accessing the remote catalog
+			packs, err = pm.Catalog(ctx, packmanager.CatalogQuery{
+				Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
+				Name:    entity,
+				NoCache: true,
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(packs) > 1 {
+				return fmt.Errorf("could not determine what to run, too many options")
+			} else if len(packs) == 0 {
+				return fmt.Errorf("not found: %s", entity)
+			}
 		}
 
 		// Create a temporary directory where the image can be stored
