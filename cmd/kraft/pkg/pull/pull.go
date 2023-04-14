@@ -83,8 +83,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(args[0]) == 0 {
-		args[0] = workdir
+	if len(args) == 0 {
+		args = []string{workdir}
 	}
 
 	ctx := cmd.Context()
