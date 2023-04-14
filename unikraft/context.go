@@ -24,5 +24,10 @@ func WithContext(ctx context.Context, val *Context) context.Context {
 }
 
 func FromContext(ctx context.Context) *Context {
-	return ctx.Value(contextKey{}).(*Context)
+	uk, ok := ctx.Value(contextKey{}).(*Context)
+	if !ok {
+		return nil
+	}
+
+	return uk
 }
