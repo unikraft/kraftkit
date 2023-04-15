@@ -73,7 +73,7 @@ jobs:
         with:
           push: true
           file: ./buildenvs/qemu.Dockerfile
-          tags: index.unikraft.io/kraftkit.sh/qemu:${{ env.QEMU_VERSION }}
+          tags: index.unikraft.io/kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
           platforms: linux/amd64
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
