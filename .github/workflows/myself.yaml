@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - stable
+    paths:
+      - 'buildenvs/myself.Dockerfile'
+      - '.github/workflows/myself.yaml'
 
 jobs:
   myself-push:
