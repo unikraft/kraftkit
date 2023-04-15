@@ -31,6 +31,7 @@ jobs:
       - name: Login to OCI registry
         uses: docker/login-action@v2
         with:
+          registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
@@ -63,6 +64,7 @@ jobs:
       - name: Login to OCI registry
         uses: docker/login-action@v2
         with:
+          registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
@@ -88,6 +90,7 @@ jobs:
       - name: Login to OCI registry
         uses: docker/login-action@v2
         with:
+          registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
@@ -115,6 +118,7 @@ jobs:
       - name: Login to OCI registry
         uses: docker/login-action@v2
         with:
+          registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
