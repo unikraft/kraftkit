@@ -1,11 +1,11 @@
+name: tools/go-generate-qemu-device
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: staging
     paths:
       - 'tools/go-generate-qemu-devices/**'
-
-name: Go Build
 
 jobs:
   unit:
