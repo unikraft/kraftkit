@@ -28,9 +28,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build
+      - name: Login to OCI registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build and push
         uses: docker/build-push-action@v3
         with:
+          push: true
           file: ./buildenvs/gcc.Dockerfile
           tags: index.unikraft.io/kraftkit.sh/gcc:${{ matrix.GCC_VERSION }}-${{ matrix.GCC_ARCH }}${{ matrix.GCC_SUFFIX }}
           platforms: linux/amd64
@@ -53,9 +60,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build
+      - name: Login to OCI registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build and push
         uses: docker/build-push-action@v3
         with:
+          push: true
           file: ./buildenvs/qemu.Dockerfile
           tags: index.unikraft.io/kraftkit.sh/qemu:${{ env.QEMU_VERSION }}
           platforms: linux/amd64
@@ -71,9 +85,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Login to OCI registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
+          push: true
           file: ./buildenvs/myself.Dockerfile
           tags: index.unikraft.io/kraftkit.sh/myself:latest
           platforms: linux/amd64
@@ -94,7 +115,7 @@ jobs:
       - name: Login to OCI registry
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.REG_USER }}
+          username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build and push
@@ -102,3 +123,6 @@ jobs:
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/base:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
