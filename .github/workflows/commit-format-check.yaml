@@ -17,7 +17,7 @@ jobs:
           types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
 
       - name: Commit Lines Length Check
-        if: ${{ github.actor != 'dependabot' }}
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^(?!(?:.|\n)*(?:^|\n).{74,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
@@ -51,7 +51,7 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: PR Title Check Length
-        if: ${{ github.actor != 'dependabot' }}
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^(?!.{75,}).*'
@@ -63,7 +63,7 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: PR Description Check
-        if: ${{ github.actor != 'dependabot' }}
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^\S+( \S+)*$'
