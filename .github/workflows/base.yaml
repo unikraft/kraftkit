@@ -6,7 +6,7 @@ on:
       - stable
 
 jobs:
-  archs:
+  gcc:
     strategy:
       matrix:
         include:
@@ -80,7 +80,7 @@ jobs:
   
   base:
     runs-on: ubuntu-latest
-    needs: [archs, qemu, myself]
+    needs: [gcc, qemu, myself]
 
     steps:
       - name: Set up QEMU
