@@ -62,8 +62,8 @@ github.com/checkpoint-restore/go-criu/v5 v5.3.0/go.mod h1:E/eQpaFtUKGOOSEBZgmKAc
 github.com/cilium/ebpf v0.7.0/go.mod h1:/oI2+1shJiTGAMgl6/RgJr36Eo1jzrRcAWbcXO2usCA=
 github.com/cli/cli/v2 v2.23.0 h1:WT5llLrvm16Kc8xiPILX6HAXSe3gi+zoDnxGf5yUZr0=
 github.com/cli/cli/v2 v2.23.0/go.mod h1:d0dht8Zlv6k2YYjYosOvs1NCB+pbor7kxmf07V5ODtQ=
-github.com/cli/go-gh v1.1.0 h1:E6uVflEDYz+m/UDxMbkx0jaIdKbrTXC+m1MfnkygiYU=
-github.com/cli/go-gh v1.1.0/go.mod h1:2TxNyy9B/tD1rpL5xqHyHRdy0+jg86zaJePEekkxEZc=
+github.com/cli/go-gh v1.2.1 h1:xFrjejSsgPiwXFP6VYynKWwxLQcNJy3Twbu82ZDlR/o=
+github.com/cli/go-gh v1.2.1/go.mod h1:Jxk8X+TCO4Ui/GarwY9tByWm/8zp4jJktzVZNlTW5VM=
 github.com/cli/safeexec v1.0.1 h1:e/C79PbXF4yYTN/wauC4tviMxEV13BwljGj0N9j+N00=
 github.com/cli/safeexec v1.0.1/go.mod h1:Z/D4tTN8Vs5gXYHDCbaM1S/anmEDnJb1iW0+EJ5zx3Q=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
