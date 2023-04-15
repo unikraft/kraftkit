@@ -32,7 +32,7 @@ jobs:
           push: true
           file: ./buildenvs/myself.Dockerfile
           platforms: linux/amd64
-          tags: index.unikraft.io/kraftkit.sh/myself:latest
+          tags: index.unikraft.io/kraftkit.sh/myself-full:latest
           target: kraftkit-full
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
