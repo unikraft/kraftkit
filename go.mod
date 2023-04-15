@@ -13,7 +13,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.23.3-0.20230316100943-248eb83001a7
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/cli/cli/v2 v2.23.0
-	github.com/cli/go-gh v1.1.0
+	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.11.0
 	github.com/containerd/containerd v1.7.0
