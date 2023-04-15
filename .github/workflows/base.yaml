@@ -41,8 +41,10 @@ jobs:
 
   qemu:
     runs-on: ubuntu-latest
-    env:
-      QEMU_VERSION: 7.1.0
+    strategy:
+      matrix:
+        include:
+          - QEMU_VERSION: 7.1.0
 
     steps:
       - name: Set up QEMU
