@@ -20,7 +20,6 @@ jobs:
           #   GCC_VERSION: 12.2.0
           #   GCC_SUFFIX:
     runs-on: ubuntu-latest
-    env:
 
     steps:
       - name: Set up QEMU
