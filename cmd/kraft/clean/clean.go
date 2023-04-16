@@ -52,10 +52,10 @@ func New() *cobra.Command {
 			Remove the build object files of a Unikraft project`),
 		Example: heredoc.Doc(`
 			# Clean the cwd build directory
-			$ kraft build clean
+			$ kraft clean
 
 			# clean a project at a path
-			$ kraft build clean path/to/app`),
+			$ kraft clean path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

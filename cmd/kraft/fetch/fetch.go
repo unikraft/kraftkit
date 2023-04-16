@@ -29,10 +29,10 @@ func New() *cobra.Command {
 			Fetch a Unikraft unikernel's dependencies`),
 		Example: heredoc.Doc(`
 			# Fetch the cwd project
-			$ kraft build fetch
+			$ kraft fetch
 
 			# Fetch a project at a path
-			$ kraft build fetch path/to/app`),
+			$ kraft fetch path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

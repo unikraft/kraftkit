@@ -26,10 +26,10 @@ func New() *cobra.Command {
 			prepare a Unikraft unikernel`),
 		Example: heredoc.Doc(`
 			# Prepare the cwd project
-			$ kraft build prepare
+			$ kraft prepare
 
 			# Prepare a project at a path
-			$ kraft build prepare path/to/app`),
+			$ kraft prepare path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

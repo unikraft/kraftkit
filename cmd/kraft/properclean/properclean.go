@@ -53,10 +53,10 @@ func New() *cobra.Command {
 			Remove the Unikraft project build folder containing all build artifacts`),
 		Example: heredoc.Doc(`
 			# Properclean the cwd build directory
-			$ kraft build properclean
+			$ kraft properclean
 
 			# Properclean a project at a path
-			$ kraft build properclean path/to/app`),
+			$ kraft properclean path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

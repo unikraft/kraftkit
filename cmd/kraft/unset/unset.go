@@ -56,10 +56,10 @@ func New() *cobra.Command {
 			unset a variable for a Unikraft project`),
 		Example: heredoc.Doc(`
 			# Unset variables in the cwd project
-			$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+			$ kraft unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
 			# Unset variables in a project at a path
-			$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
+			$ kraft unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
