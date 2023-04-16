@@ -91,10 +91,18 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
+
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
 
 	return nil
 }

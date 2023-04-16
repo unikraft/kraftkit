@@ -78,8 +78,17 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Run) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
 	return nil
 }
 

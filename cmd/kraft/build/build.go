@@ -68,6 +68,18 @@ func New() *cobra.Command {
 	})
 }
 
+func (*Build) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
+}
+
 func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var workdir string
