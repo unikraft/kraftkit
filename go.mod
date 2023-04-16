@@ -15,7 +15,7 @@ require (
 	github.com/cli/cli/v2 v2.23.0
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.11.0
+	github.com/compose-spec/compose-go v1.13.2
 	github.com/containerd/containerd v1.7.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/docker v23.0.3+incompatible
@@ -29,7 +29,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.1.0
-	github.com/imdario/mergo v0.3.13
+	github.com/imdario/mergo v0.3.14
 	github.com/libgit2/git2go/v31 v31.7.9
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.17
