@@ -9,10 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/erikgeiser/promptkit/selection"
 	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
@@ -21,6 +19,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
@@ -32,7 +31,6 @@ import (
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
-	"kraftkit.sh/utils"
 )
 
 type Run struct {
@@ -302,7 +300,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		)
 		// d). use a defined working directory as a Unikraft project
 	} else if len(workdir) > 0 {
-		targetName := opts.Target
 		project, err := app.NewProjectFromOptions(
 			ctx,
 			app.WithProjectWorkdir(workdir),
@@ -312,42 +309,31 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		if len(project.TargetNames()) == 1 {
-			targetName = project.TargetNames()[0]
-			if len(opts.Target) > 0 && opts.Target != targetName {
-				return fmt.Errorf("unknown target: %s", opts.Target)
-			}
+		// Filter project targets by any provided CLI options
+		targets := cli.FilterTargets(
+			project.Targets(),
+			opts.Architecture,
+			opts.Platform,
+			opts.Target,
+		)
 
-		} else if targetName == "" && len(project.Targets()) > 1 {
-			if config.G[config.KraftKit](ctx).NoPrompt {
-				return fmt.Errorf("with 'no prompt' enabled please select a target")
-			}
+		var t target.Target
 
-			sp := selection.New("select target:", selectionTargets(project.Targets()))
-			sp.Filter = nil
+		switch {
+		case len(targets) == 1:
+			t = targets[0]
 
-			selectedTarget, err := sp.RunPrompt()
+		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
+			return fmt.Errorf("could not determine what to run based on provided CLI arguments")
+
+		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) == 0:
+			return fmt.Errorf("could not match any target")
+
+		default:
+			t, err = cli.SelectTarget(targets)
 			if err != nil {
 				return err
 			}
-
-			targetName = selectedTarget
-
-		} else if targetName != "" && utils.Contains(project.TargetNames(), targetName) {
-			return fmt.Errorf("unknown target: %s", targetName)
-		}
-
-		t, err := project.TargetByName(targetName)
-		if err != nil {
-			return err
-		}
-
-		// Validate selection of target
-		if len(opts.Architecture) > 0 && (opts.Architecture != t.Architecture().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified architecture (%s)", target.TargetPlatArchName(t), opts.Architecture)
-		}
-		if len(opts.Platform) > 0 && (opts.Platform != t.Platform().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", target.TargetPlatArchName(t), opts.Platform)
 		}
 
 		name := t.Name()
@@ -483,17 +469,4 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// selectionTargets returns the given target.Targets in a format suitable for
-// interactive prompts.
-func selectionTargets(tgts target.Targets) []string {
-	tgtStrings := make([]string, 0, len(tgts))
-	for _, tgt := range tgts {
-		tgtStrings = append(tgtStrings, fmt.Sprintf("%s (%s)", tgt.Name(), target.TargetPlatArchName(tgt)))
-	}
-
-	sort.Strings(tgtStrings)
-
-	return tgtStrings
 }

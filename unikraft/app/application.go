@@ -298,7 +298,11 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 		OutputDir:      app.outDir,
 		ApplicationDir: app.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
-		ConfigPath:     filepath.Join(app.workingDir, tc.ConfigFilename()),
+	}
+
+	// Set the relevant Unikraft `.config` file when a target is set
+	if tc != nil {
+		args.ConfigPath = filepath.Join(app.workingDir, tc.ConfigFilename())
 	}
 
 	if tc != nil {

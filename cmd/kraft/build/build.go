@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
@@ -339,43 +340,13 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	processes = []*paraprogress.Process{} // reset
 
-	var selected target.Targets
-
-	// Filter the targets by CLI selection
-	for _, targ := range project.Targets() {
-		switch true {
-		case
-			// If no arguments are supplied
-			len(opts.Target) == 0 &&
-				len(opts.Architecture) == 0 &&
-				len(opts.Platform) == 0,
-
-			// If the --target flag is supplied and the target name match
-			len(opts.Target) > 0 &&
-				targ.Name() == opts.Target,
-
-			// If only the --arch flag is supplied and the target's arch matches
-			len(opts.Architecture) > 0 &&
-				len(opts.Platform) == 0 &&
-				targ.Architecture().Name() == opts.Architecture,
-
-			// If only the --plat flag is supplied and the target's platform matches
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) == 0 &&
-				targ.Platform().Name() == opts.Platform,
-
-			// If both the --arch and --plat flag are supplied and match the target
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) > 0 &&
-				targ.Architecture().Name() == opts.Architecture &&
-				targ.Platform().Name() == opts.Platform:
-
-			selected = append(selected, targ)
-
-		default:
-			continue
-		}
-	}
+	// Filter project targets by any provided CLI options
+	selected := cli.FilterTargets(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
 
 	if len(selected) == 0 {
 		return fmt.Errorf("no targets selected to build")
