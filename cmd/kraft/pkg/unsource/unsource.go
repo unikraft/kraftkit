@@ -36,6 +36,18 @@ func New() *cobra.Command {
 	})
 }
 
+func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
+}
+
 // Run executes the unsource command
 func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
 	var err error

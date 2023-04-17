@@ -62,7 +62,15 @@ func New() *cobra.Command {
 	})
 }
 
-func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
 	return cmdfactory.MutuallyExclusive(
 		"the `--with-deps` option is not supported with `--no-deps`",
 		opts.WithDeps,
