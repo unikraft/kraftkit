@@ -26,7 +26,7 @@ jobs:
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: ./buildenvs/myself.Dockerfile
