@@ -154,4 +154,4 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
 
-replace github.com/libgit2/git2go/v31 => ./vendor/github.com/libgit2/git2go/v31
+replace github.com/libgit2/git2go/v31 => ./third_party/github.com/libgit2/git2go/v31

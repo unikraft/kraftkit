@@ -8,7 +8,7 @@ WORKDIR     ?= $(CURDIR)
 TESTDIR     ?= $(WORKDIR)/tests
 DISTDIR     ?= $(WORKDIR)/dist
 INSTALLDIR  ?= /usr/local/bin/
-VENDORDIR   ?= $(WORKDIR)/vendor
+VENDORDIR   ?= $(WORKDIR)/third_party
 
 # Arguments
 REGISTRY    ?= kraftkit.sh
@@ -88,7 +88,6 @@ $(addprefix $(.PROXY), $(BIN)): git2go tidy
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
 		-tags static \
-		-mod=readonly \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
@@ -130,7 +129,7 @@ install-golangci-lint: ## Install the Golang CI lint tool
 
 .PHONY: clean
 clean:
-	$(GO) clean -mod=readonly -modcache -cache -i -r
+	$(GO) clean -modcache -cache -i -r
 
 .PHONY: properclean
 properclean: ENVIRONMENT ?= myself-full
