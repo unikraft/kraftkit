@@ -11,11 +11,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
-type Prepare struct{}
+type Prepare struct {
+	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
+	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
+	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
+}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Prepare{}, cobra.Command{
@@ -72,6 +77,18 @@ func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	// Filter project targets by any provided CLI options
+	selected := cli.FilterTargets(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
+
+	if len(selected) == 1 {
+		return project.Prepare(ctx, selected[0])
 	}
 
 	return project.Prepare(ctx, nil)
