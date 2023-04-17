@@ -1,5 +1,7 @@
 version: 2
+
 updates:
+
   - package-ecosystem: "gomod"
     directory: "/"
     target-branch: "staging"
@@ -45,3 +47,10 @@ updates:
       - "craciunoiuc"
     assignees:
       - "nderjung"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      time: 09:00
