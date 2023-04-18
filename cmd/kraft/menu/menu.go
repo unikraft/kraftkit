@@ -5,18 +5,26 @@
 package menu
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 )
 
-type Menu struct{}
+type Menu struct {
+	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
+	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
+	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
+}
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Menu{}, cobra.Command{
@@ -75,9 +83,33 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Filter project targets by any provided CLI options
+	targets := cli.FilterTargets(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
+
+	var t target.Target
+
+	switch {
+	case len(targets) == 1:
+		t = targets[0]
+
+	case config.G[config.KraftKit](ctx).NoPrompt:
+		return fmt.Errorf("could not determine which target to prepare")
+
+	default:
+		t, err = cli.SelectTarget(targets)
+		if err != nil {
+			return err
+		}
+	}
+
 	return project.Make(
 		ctx,
-		nil,
+		t,
 		make.WithTarget("menuconfig"),
 	)
 }
