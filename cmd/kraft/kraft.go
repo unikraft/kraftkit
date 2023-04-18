@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/cmd/kraft/clean"
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/fetch"
+	"kraftkit.sh/cmd/kraft/login"
 	"kraftkit.sh/cmd/kraft/logs"
 	"kraftkit.sh/cmd/kraft/menu"
 	"kraftkit.sh/cmd/kraft/pkg"
@@ -83,6 +84,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(stop.New())
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
+	cmd.AddCommand(login.New())
 	cmd.AddCommand(version.New())
 
 	return cmd
