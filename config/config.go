@@ -31,7 +31,7 @@ type KraftKit struct {
 
 	Paths struct {
 		Plugins   string `yaml:"plugins,omitempty" env:"KRAFTKIT_PATHS_PLUGINS" long:"plugins-dir" usage:"Path to KraftKit plugin directory"`
-		Config    string `yaml:"config,omitempty" env:"KRAFTKIT_PATHS_CONFIG" long:"config-dir" usage:"Path to KraftKit config file"`
+		Config    string `yaml:"config,omitempty" env:"KRAFTKIT_PATHS_CONFIG" long:"config-dir" usage:"Path to KraftKit config directory"`
 		Manifests string `yaml:"manifests,omitempty" env:"KRAFTKIT_PATHS_MANIFESTS" long:"manifests-dir" usage:"Path to Unikraft manifest cache"`
 		Sources   string `yaml:"sources,omitempty" env:"KRAFTKIT_PATHS_SOURCES" long:"sources-dir" usage:"Path to Unikraft component cache"`
 	} `yaml:"paths,omitempty"`
