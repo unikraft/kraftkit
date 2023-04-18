@@ -78,6 +78,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		}
 
 		processes[i].ctx = pctx.(context.Context)
+		log.G(processes[i].ctx).Level = log.G(ctx).Level
 
 		// Update formatter when using KraftKit's TextFormatter.  The
 		// TextFormatter recognises that this is a non-standard terminal and
