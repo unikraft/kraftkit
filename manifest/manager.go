@@ -279,6 +279,10 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		var versions []string
 		if len(query.Version) > 0 {
+			if len(manifest.Versions) == 1 && len(manifest.Versions[0].Version) == 0 {
+				log.G(ctx).Warn("manifest does not supply version")
+			}
+
 			for _, version := range manifest.Versions {
 				if version.Version == query.Version {
 					versions = append(versions, version.Version)
