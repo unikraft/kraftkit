@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
@@ -122,7 +123,8 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 			return err
 		}
 	} else if err == nil && f.IsDir() {
-		return fmt.Errorf("local directory already exists: %s", local)
+		log.G(ctx).Warnf("local directory already exists: %s", local)
+		return nil
 	} else if err == nil && f.Mode()&os.ModeSymlink == os.ModeSymlink {
 		if err := os.Remove(local); err != nil {
 			return fmt.Errorf("could not remove symlink: %v", err)
