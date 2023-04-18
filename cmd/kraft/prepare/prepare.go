@@ -5,15 +5,18 @@
 package prepare
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 )
 
 type Prepare struct {
@@ -80,16 +83,28 @@ func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter project targets by any provided CLI options
-	selected := cli.FilterTargets(
+	targets := cli.FilterTargets(
 		project.Targets(),
 		opts.Architecture,
 		opts.Platform,
 		opts.Target,
 	)
 
-	if len(selected) == 1 {
-		return project.Prepare(ctx, selected[0])
+	var t target.Target
+
+	switch {
+	case len(targets) == 1:
+		t = targets[0]
+
+	case config.G[config.KraftKit](ctx).NoPrompt:
+		return fmt.Errorf("could not determine which target to prepare")
+
+	default:
+		t, err = cli.SelectTarget(targets)
+		if err != nil {
+			return err
+		}
 	}
 
-	return project.Prepare(ctx, nil)
+	return project.Prepare(ctx, t)
 }
