@@ -56,6 +56,17 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"path": path,
+	}).Trace("trying directory provider")
+	provider, err = NewDirectoryProvider(ctx, path, mopts...)
+	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using directory provider")
+		return provider, nil
+	}
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"path": path,
 	}).Trace("trying github provider")
 	provider, err = NewGitHubProvider(ctx, path, mopts...)
 	if err == nil {
@@ -73,17 +84,6 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("using git provider")
-		return provider, nil
-	}
-
-	log.G(ctx).WithFields(logrus.Fields{
-		"path": path,
-	}).Trace("trying directory provider")
-	provider, err = NewDirectoryProvider(ctx, path, mopts...)
-	if err == nil {
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("using directory provider")
 		return provider, nil
 	}
 
