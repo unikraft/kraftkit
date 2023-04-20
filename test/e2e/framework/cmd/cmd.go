@@ -10,14 +10,20 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"path/filepath"
 
 	gomegafmt "github.com/onsi/gomega/format"
 )
 
 // NewKraft returns a kraft OS command that uses the given IO streams and has
 // pre-set flags to use the given paths.
-func NewKraft(stdout, stderr *IOStream) *exec.Cmd {
-	cmd := exec.Command("kraft")
+func NewKraft(stdout, stderr *IOStream, cfgPath string) *exec.Cmd {
+	var args []string
+	if cfgPath != "" {
+		args = append(args, "--config-dir="+filepath.Dir(cfgPath))
+	}
+
+	cmd := exec.Command("kraft", args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
