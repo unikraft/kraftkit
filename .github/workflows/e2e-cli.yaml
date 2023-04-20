@@ -1,0 +1,54 @@
+name: kraft CLI Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - '**'
+      - '!.github/**'
+
+jobs:
+
+  e2e-cli:
+    name: Test kraft CLI commands
+    runs-on: ubuntu-latest
+
+    env:
+      KRAFTKIT_NO_CHECK_UPDATES: 'true'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.2'
+          cache: false
+
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Install libgit2/git2go
+        run: make git2go
+
+      - name: Install Ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo
+
+      - name: Install kraft
+        run: |
+          go install \
+            -tags static \
+            -gcflags=all='' \
+            -ldflags='-s -w -X "kraftkit.sh/internal/version.version=v0.0.0-ci-e2e" -X "kraftkit.sh/internal/version.commit=0000000" -X "kraftkit.sh/internal/version.buildTime=Thu Jan  1 00:00:00 UTC 1970"' \
+            ./cmd/kraft
+
+      - name: Run e2e tests
+        run: ginkgo -v -p -randomize-all ./test/e2e/cli/
