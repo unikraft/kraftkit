@@ -60,6 +60,19 @@ type TemplateConfig struct {
 	source string
 }
 
+// NewTemplateFromOptions creates a new template configuration
+func NewTemplateFromOptions(opts ...TemplateOption) (Template, error) {
+	tc := TemplateConfig{}
+
+	for _, opt := range opts {
+		if err := opt(&tc); err != nil {
+			return nil, err
+		}
+	}
+
+	return &tc, nil
+}
+
 // Name returns the name of the template
 func (tc TemplateConfig) Name() string {
 	return tc.name
