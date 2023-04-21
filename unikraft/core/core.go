@@ -45,6 +45,19 @@ type UnikraftConfig struct {
 	kconfig kconfig.KeyValueMap
 }
 
+// NewUnikraftFromOptions is a constructor that configures a core configuration.
+func NewUnikraftFromOptions(opts ...UnikraftOption) (Unikraft, error) {
+	uc := UnikraftConfig{}
+
+	for _, opt := range opts {
+		if err := opt(&uc); err != nil {
+			return nil, err
+		}
+	}
+
+	return &uc, nil
+}
+
 func (uc UnikraftConfig) Name() string {
 	return "unikraft"
 }
