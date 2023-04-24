@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
 	fcmd "kraftkit.sh/test/e2e/framework/cmd"
+	fcfg "kraftkit.sh/test/e2e/framework/config"
 )
 
 var _ = Describe("kraft version", func() {
@@ -20,11 +21,15 @@ var _ = Describe("kraft version", func() {
 	var stdout *fcmd.IOStream
 	var stderr *fcmd.IOStream
 
+	var cfg *fcfg.Config
+
 	BeforeEach(func() {
 		stdout = fcmd.NewIOStream()
 		stderr = fcmd.NewIOStream()
 
-		cmd = fcmd.NewKraft(stdout, stderr)
+		cfg = fcfg.NewTempConfig()
+
+		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 		cmd.Args = append(cmd.Args, "version")
 	})
 
@@ -34,7 +39,7 @@ var _ = Describe("kraft version", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout).To(MatchRegexp(`^kraft [\w\.-]+ \([\w]+\) [\w\.-]+ .+\n$`))
+			Expect(stdout).To(MatchRegexp(`^kraft [\w\.-]+ \(\w+\) [\w\.-]+ .+\n$`))
 		})
 	})
 
