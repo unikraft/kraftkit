@@ -9,7 +9,7 @@ on:
       - '.github/workflows/gobuild-qemu-devices.yaml'
 
 jobs:
-  unit:
+  build-qemu-devices:
     runs-on: ubuntu-latest
     container: kraftkit.sh/myself-full:latest
     name: Build Check
@@ -22,15 +22,26 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.20.2"
+          go-version: 1.20.2
+          cache: false
+
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Build go-generate-qemu-devices
         run: |
-          set -xe
+          set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
           go build -o dist/ ./tools/go-generate-qemu-devices/...
 
       - name: Run Help Message
         run: |
-          set -xe
+          set -x
           ./dist/go-generate-qemu-devices -h
