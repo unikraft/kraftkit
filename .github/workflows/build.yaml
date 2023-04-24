@@ -3,7 +3,7 @@ name: build
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: staging
+    branches: [staging]
     paths:
       - '**'
       - '!.github/**'

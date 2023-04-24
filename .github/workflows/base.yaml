@@ -12,13 +12,13 @@ jobs:
         include:
           - GCC_ARCH: x86_64
             GCC_VERSION: 12.2.0
-            GCC_SUFFIX:
+            GCC_SUFFIX: ""
           # - GCC_ARCH: arm
           #   GCC_VERSION: 12.2.0
-          #   GCC_SUFFIX:
+          #   GCC_SUFFIX: ""
           # - GCC_ARCH: arm64
           #   GCC_VERSION: 12.2.0
-          #   GCC_SUFFIX:
+          #   GCC_SUFFIX: ""
     runs-on: ubuntu-latest
 
     steps:
