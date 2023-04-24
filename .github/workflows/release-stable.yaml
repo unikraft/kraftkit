@@ -45,10 +45,10 @@ jobs:
             --config goreleaser-stable.yaml \
             --rm-dist \
             --skip-validate
-          fury push $(ls ./dist/kraftkit_*.deb) --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
-          fury push $(ls ./dist/kraftkit_*.rpm) --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          fury push "$(ls ./dist/kraftkit_*.deb)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          fury push "$(ls ./dist/kraftkit_*.rpm)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
           # Enable this back when the archive format is no longer malformed
-          # fury push $(ls ./dist/kraftkit_*.apk) --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          # fury push "$(ls ./dist/kraftkit_*.apk)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
