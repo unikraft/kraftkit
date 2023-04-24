@@ -3,10 +3,11 @@ name: golangci-lint
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: staging
+    branches: [staging]
     paths:
       - '**'
       - '!.github/**'
+      - '.github/workflows/gochecks.yaml'
 
 jobs:
   unit:

@@ -3,9 +3,10 @@ name: tools/protoc-gen-go-netconn
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: staging
+    branches: [staging]
     paths:
       - 'tools/protoc-gen-go-netconn/**'
+      - '.github/workflows/gobuild-protoc.yaml'
 
 jobs:
   unit:
