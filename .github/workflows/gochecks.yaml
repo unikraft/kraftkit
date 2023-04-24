@@ -61,11 +61,13 @@ jobs:
         with:
           version: v1.52.2
           args: --disable-all --enable=gofumpt
+          skip-cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.52.2
+          skip-cache: true
 
       - name: go generate
         uses: protocol/multiple-go-modules@v1.2
