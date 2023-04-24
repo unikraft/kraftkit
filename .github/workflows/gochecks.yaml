@@ -10,7 +10,7 @@ on:
       - '.github/workflows/gochecks.yaml'
 
 jobs:
-  unit:
+  gochecks:
     runs-on: ubuntu-latest
     container: golang:1.20.2-bullseye
     name: All
@@ -21,9 +21,20 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v4
         with:
-          go-version: "1.20.2"
+          go-version: 1.20.2
+          cache: false
+
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
 
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install build dependencies
