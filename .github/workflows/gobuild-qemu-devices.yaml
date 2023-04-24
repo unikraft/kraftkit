@@ -6,6 +6,7 @@ on:
     branches: staging
     paths:
       - 'tools/go-generate-qemu-devices/**'
+      - '.github/workflows/gobuild-qemu-devices.yaml'
 
 jobs:
   unit:
