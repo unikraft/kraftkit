@@ -44,7 +44,7 @@ jobs:
             cmake;
 
       - name: Check that go.mod is tidy
-        uses: protocol/multiple-go-modules@v1.2
+        uses: protocol/multiple-go-modules@v1.3
         with:
           run: |
             git config --global --add safe.directory '*'
@@ -70,7 +70,7 @@ jobs:
           skip-cache: true
 
       - name: go generate
-        uses: protocol/multiple-go-modules@v1.2
+        uses: protocol/multiple-go-modules@v1.3
         if: (success() || failure()) && env.RUNGOGENERATE == 'true'
         with:
           run: |
