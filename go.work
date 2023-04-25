@@ -1,9 +1,0 @@
-go 1.20
-
-use (
-  "."
-  "./tools/go-generate-qemu-devices"
-  "./tools/protoc-gen-go-netconn"
-  "./tools/webinstall"
-  "./third_party/github.com/libgit2/git2go/v31"
-)
