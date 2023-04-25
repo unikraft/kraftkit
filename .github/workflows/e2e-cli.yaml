@@ -15,9 +15,6 @@ jobs:
     name: Test kraft CLI commands
     runs-on: ubuntu-latest
 
-    env:
-      KRAFTKIT_NO_CHECK_UPDATES: 'true'
-
     steps:
       - uses: actions/checkout@v3
 
@@ -44,12 +41,9 @@ jobs:
         run: go install github.com/onsi/ginkgo/v2/ginkgo
 
       - name: Install kraft
-        run: |
-          go install \
-            -tags static \
-            -gcflags=all='' \
-            -ldflags='-s -w -X "kraftkit.sh/internal/version.version=v0.0.0-ci-e2e" -X "kraftkit.sh/internal/version.commit=0000000" -X "kraftkit.sh/internal/version.buildTime=Thu Jan  1 00:00:00 UTC 1970"' \
-            ./cmd/kraft
+        env:
+          DOCKER: ''
+        run: make kraft DISTDIR="$(go env GOPATH)"/bin
 
       - name: Run e2e tests
         run: ginkgo -v -p -randomize-all ./test/e2e/cli/
