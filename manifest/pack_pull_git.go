@@ -6,9 +6,12 @@ package manifest
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"net/url"
+	"strings"
 
-	"github.com/libgit2/git2go/v31"
+	libgit "github.com/libgit2/git2go/v31"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -27,42 +30,79 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		return fmt.Errorf("cannot Git clone manifest package without working directory")
 	}
 
-	log.G(ctx).Infof("using git to pull manifest package %s", manifest.Name)
+	log.G(ctx).Debugf("using git to pull manifest package %s", manifest.Name)
 
 	if len(manifest.Origin) == 0 {
 		return fmt.Errorf("requesting Git with empty repository in manifest")
 	}
 
-	copts := &git.CloneOptions{
-		FetchOptions: &git.FetchOptions{
-			RemoteCallbacks: git.RemoteCallbacks{
-				TransferProgressCallback: func(stats git.TransferProgress) git.ErrorCode {
-					popts.OnProgress(float64(stats.IndexedObjects) / float64(stats.TotalObjects))
-					return 0
+	copts := &libgit.CloneOptions{
+		FetchOptions: &libgit.FetchOptions{
+			RemoteCallbacks: libgit.RemoteCallbacks{
+				TransferProgressCallback: func(stats libgit.TransferProgress) libgit.ErrorCode {
+					popts.OnProgress((float64(stats.IndexedObjects) / float64(stats.TotalObjects)) / 2)
+					return libgit.ErrorCodeOK
+				},
+				PackProgressCallback: func(stage int32, current, total uint32) libgit.ErrorCode {
+					popts.OnProgress(0.5 + (float64(current)/float64(total))/2)
+					return libgit.ErrorCodeOK
+				},
+				// Warning: Returning "error OK" here prevents hostkey look ups
+				CertificateCheckCallback: func(cert *libgit.Certificate, valid bool, hostname string) libgit.ErrorCode {
+					if cert != nil && len(cert.Hostkey.Hostkey) > 0 {
+						log.G(ctx).
+							WithField("hostname", hostname).
+							WithField("sha256", hex.EncodeToString(cert.Hostkey.HashSHA256[:])).
+							Warn("hostkey look up disabled")
+					}
+					return libgit.ErrorCodeOK
 				},
 			},
 		},
-		CheckoutOpts: &git.CheckoutOptions{
-			Strategy: git.CheckoutSafe,
+		CheckoutOpts: &libgit.CheckoutOptions{
+			Strategy: libgit.CheckoutForce, // .CheckoutSafe,
 		},
 		Bare: false,
+	}
+
+	path := manifest.Origin
+
+	// Is this an SSH URL?
+	if isSSHURL(path) {
+		// This is a quirk of git2go, if we have determined it was an SSH path and
+		// it does not contain the prefix, we should include it so it can be
+		// recognised internally by the module.
+		if strings.HasPrefix(path, "git@") {
+			path = "ssh://" + path
+		}
+
+		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl string, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
+			if allowedTypes == libgit.CredentialTypeUsername && len(usernameFromUrl) == 0 {
+				return nil, fmt.Errorf("username required in SSH URL")
+			}
+
+			return libgit.NewCredentialSSHKeyFromAgent(usernameFromUrl)
+		}
+	} else {
+		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl string, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
+			u, err := url.Parse(fullUrl)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse git repository: %v", err)
+			}
+
+			if auth, ok := manifest.Auths()[u.Host]; ok {
+				if len(auth.User) > 0 && len(auth.Token) > 0 {
+					return libgit.NewCredentialUserpassPlaintext(auth.User, auth.Token)
+				}
+			}
+
+			return libgit.NewCredentialDefault()
+		}
 	}
 
 	if popts.Version() != "" {
 		copts.CheckoutBranch = popts.Version()
 	}
-
-	// TODO: Authetication.  This needs to be handled via the authentication
-	// callback provided by CloneOptions.
-	// Attribute any supplied authentication, supplied with hostname as key
-	// u, err := url.Parse(manifest.Origin)
-	// if err != nil {
-	// 	return fmt.Errorf("could not parse Git repository: %v", err)
-	// }
-
-	// if auth, ok := manifest.auths[u.Host]; ok {
-	// 	...
-	// }
 
 	local, err := unikraft.PlaceComponent(
 		popts.Workdir(),
@@ -73,14 +113,17 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		return fmt.Errorf("could not place component package: %s", err)
 	}
 
-	log.G(ctx).Infof("cloning %s into %s", manifest.Origin, local)
+	log.G(ctx).
+		WithField("from", path).
+		WithField("to", local).
+		WithField("branch", popts.Version()).
+		Infof("git clone")
 
-	_, err = git.Clone(manifest.Origin, local, copts)
-	if err != nil {
+	if _, err = libgit.Clone(path, local, copts); err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)
 	}
 
-	log.G(ctx).Infof("successfulyl cloned %s into %s", manifest.Origin, local)
+	log.G(ctx).Infof("successfully cloned %s into %s", path, local)
 
 	return nil
 }

@@ -13,6 +13,9 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	giturl "github.com/kubescape/go-git-url"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -30,28 +33,67 @@ type GitProvider struct {
 
 // NewGitProvider attempts to parse a provided path as a Git repository
 func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
-	var branch string
-	if strings.Contains(path, "@") {
-		split := strings.Split(path, "@")
-		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed git repository URI: %s", path)
-		}
+	isSSH := false
+	fullpath := path
+	if isSSHURL(path) {
+		isSSH = true
 
-		path = split[0]
-		branch = split[1]
+		// This is a quirk of go-git, if we have determined it was an SSH path and
+		// it does not contain the prefix, we should include it so it can be
+		// recognised internally by the module.
+		if strings.HasPrefix(path, "git@") {
+			fullpath = "ssh://" + path
+		}
+	}
+
+	gitURL, err := giturl.NewGitURL(fullpath) // initialize and parse the URL
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if the remote URL is a Git repository
 	remote := git.NewRemote(nil, &gitconfig.RemoteConfig{
 		Name: "origin",
-		URLs: []string{path},
+		URLs: []string{fullpath},
 	})
+
+	lopts := &git.ListOptions{}
+	tempm := &Manifest{}
+
+	for _, opt := range mopts {
+		if err := opt(tempm); err != nil {
+			return nil, fmt.Errorf("could not apply option: %v", err)
+		}
+	}
+
+	if isSSH {
+		user := gitURL.GetURL().User.Username()
+		if user == "" {
+			user = "git"
+		}
+
+		lopts.Auth, err = gitssh.DefaultAuthBuilder(user)
+		if err != nil {
+			return nil, err
+		}
+	} else if auth, ok := tempm.auths[gitURL.GetHostName()]; ok {
+		if len(auth.User) > 0 {
+			lopts.Auth = &githttp.BasicAuth{
+				Username: auth.User,
+				Password: auth.Token,
+			}
+		} else if len(auth.Token) > 0 {
+			lopts.Auth = &githttp.TokenAuth{
+				Token: auth.Token,
+			}
+		}
+	}
 
 	// If this is a valid Git repository then let's generate a Manifest based on
 	// what we can read from the remote
-	refs, err := remote.List(&git.ListOptions{})
+	refs, err := remote.ListContext(ctx, lopts)
 	if err != nil {
-		return nil, fmt.Errorf("could not access access path as Git repository: %s", path)
+		return nil, fmt.Errorf("could not list remote git repository: %v", err)
 	}
 
 	return GitProvider{
@@ -59,7 +101,7 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 		remote: remote,
 		refs:   refs,
 		mopts:  mopts,
-		branch: branch,
+		branch: gitURL.GetBranchName(),
 		ctx:    ctx,
 	}, nil
 }
@@ -214,4 +256,20 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 
 func (gp GitProvider) String() string {
 	return "git"
+}
+
+// isSSHURL determines if the provided URL forms an SSH connection
+func isSSHURL(path string) bool {
+	for _, prefix := range []string{
+		"ssh://",
+		"ssh+git://",
+		"git+ssh://",
+		"git@",
+	} {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
