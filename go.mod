@@ -62,6 +62,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.1
 )
 
+replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/github.com/libgit2/git2go/v31
+
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20221215162035-5330a85ea652 // indirect

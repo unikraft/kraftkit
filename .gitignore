@@ -17,3 +17,7 @@ tools/protoc-gen-go-netconn/protoc-gen-go-netconn
 *.swo
 *~
 .*~
+
+# Go workspace
+go.work
+go.work.sum
