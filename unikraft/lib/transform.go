@@ -7,12 +7,10 @@ package lib
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
-	"strings"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/component"
 )
 
 // TransformFromSchema parses an input schema and returns an instantiated
@@ -33,49 +31,21 @@ func TransformFromSchema(ctx context.Context, name string, props interface{}) (L
 		)
 	}
 
-	switch entry := props.(type) {
-	case string:
-		if strings.Contains(entry, "@") {
-			split := strings.Split(entry, "@")
-			if len(split) == 2 {
-				lib.source = split[0]
-				lib.version = split[1]
-			}
-		} else if f, err := os.Stat(entry); err == nil && f.IsDir() {
-			lib.source = entry
-		} else if u, err := url.Parse(entry); err == nil && u.Scheme != "" && u.Host != "" {
-			lib.source = u.Path
-		} else {
-			lib.version = entry
-		}
+	c, err := component.TranslateFromSchema(props)
+	if err != nil {
+		return lib, err
+	}
 
-	case map[string]interface{}:
-		for key, prop := range entry {
-			switch key {
-			case "version":
-				lib.version = prop.(string)
+	if source, ok := c["source"]; ok {
+		lib.source = source.(string)
+	}
 
-			case "source":
-				prop := prop.(string)
-				if strings.Contains(prop, "@") {
-					split := strings.Split(prop, "@")
-					if len(split) == 2 {
-						lib.version = split[1]
-						prop = split[0]
-					}
-				}
+	if version, ok := c["version"]; ok {
+		lib.version = version.(string)
+	}
 
-				lib.source = prop
-
-			case "kconfig":
-				switch tprop := prop.(type) {
-				case map[string]interface{}:
-					lib.kconfig = kconfig.NewKeyValueMapFromMap(tprop)
-				case []interface{}:
-					lib.kconfig = kconfig.NewKeyValueMapFromSlice(tprop...)
-				}
-			}
-		}
+	if kconf, ok := c["kconfig"]; ok {
+		lib.kconfig = kconf.(kconfig.KeyValueMap)
 	}
 
 	return lib, nil
