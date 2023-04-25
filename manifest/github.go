@@ -42,15 +42,6 @@ type GitHubProvider struct {
 // format.
 func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
 	var branch string
-	if strings.Contains(path, "@") {
-		split := strings.Split(path, "@")
-		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed github repository URI: %s", path)
-		}
-
-		path = split[0]
-		branch = split[1]
-	}
 
 	repo, err := ghrepo.NewFromURL(path)
 	if err != nil {
@@ -271,16 +262,6 @@ func gitProviderFromGitHub(ctx context.Context, repo string, mopts ...ManifestOp
 
 	// Here's the "hack"
 	manifest := manifests[0]
-
-	// If the repo string originally contains @-notation, remove it
-	if strings.Contains(repo, "@") {
-		split := strings.Split(repo, "@")
-		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed github repository URI: %s", repo)
-		}
-
-		repo = split[0]
-	}
 
 	ghr, err := ghrepo.NewFromURL(repo)
 	if err != nil {
