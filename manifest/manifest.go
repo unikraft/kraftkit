@@ -426,5 +426,9 @@ func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
 // Auths returns the map of provided authentication configuration passed as an
 // option to the Manifest
 func (m Manifest) Auths() map[string]config.AuthConfig {
+	if m.auths == nil {
+		m.auths = make(map[string]config.AuthConfig)
+	}
+
 	return m.auths
 }
