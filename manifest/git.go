@@ -148,6 +148,8 @@ func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
 				channels[i] = channel
 			}
 		}
+	} else if len(gp.branch) > 0 && len(channels) == 1 {
+		channels[0].Default = true
 	}
 
 	return channels, nil
