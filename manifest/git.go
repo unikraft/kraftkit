@@ -251,7 +251,12 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 		return pullGit(ctx, manifest, popts...)
 	}
 
-	return pullArchive(ctx, manifest, popts...)
+	if err := pullArchive(ctx, manifest, popts...); err != nil {
+		log.G(ctx).Trace(err)
+		return pullGit(ctx, manifest, popts...)
+	}
+
+	return nil
 }
 
 func (gp GitProvider) String() string {
