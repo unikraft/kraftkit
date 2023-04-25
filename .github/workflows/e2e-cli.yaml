@@ -41,9 +41,9 @@ jobs:
         run: go install github.com/onsi/ginkgo/v2/ginkgo
 
       - name: Install kraft
-        env:
-          DOCKER: ''
-        run: make kraft DISTDIR="$(go env GOPATH)"/bin
+        run: make kraft DOCKER= VERSION=v0.0.0-ci-e2e DISTDIR="$(go env GOPATH)"/bin
 
       - name: Run e2e tests
+        env:
+          KRAFTKIT_NO_CHECK_UPDATES: true
         run: ginkgo -v -p -randomize-all ./test/e2e/cli/
