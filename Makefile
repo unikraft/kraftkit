@@ -50,6 +50,7 @@ GOCILINT    ?= golangci-lint
 MKDIR       ?= mkdir
 GIT         ?= git
 CURL        ?= curl
+CMAKE       ?= cmake
 
 # Misc
 Q           ?= @
@@ -140,9 +141,26 @@ properclean: ## Completely clean the repository's build artifacts.
 
 .PHONY: git2go
 git2go: $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
+	$(GO) install -tags static github.com/libgit2/git2go/v31/...
 
 $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
-	$(MAKE) -C $(VENDORDIR)/libgit2/git2go install-static
+	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/build
+	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/install
+	(cd $(VENDORDIR)/libgit2/git2go/static-build/build && $(CMAKE) \
+		-DTHREADSAFE=ON \
+		-DBUILD_CLAR=OFF \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DREGEX_BACKEND=builtin \
+		-DUSE_BUNDLED_ZLIB=ON \
+		-DUSE_HTTPS=ON \
+		-DUSE_SSH=ON \
+		-DCMAKE_C_FLAGS=-fPIC \
+		-DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+		-DCMAKE_INSTALL_PREFIX=$(VENDORDIR)/libgit2/git2go/static-build/install \
+		-DCMAKE_INSTALL_LIBDIR="lib" \
+		-DDEPRECATE_HARD="${BUILD_DEPRECATE_HARD}" \
+		$(VENDORDIR)/libgit2/git2go/vendor/libgit2)
+	$(MAKE) -C $(VENDORDIR)/libgit2/git2go/static-build/build install
 
 $(VENDORDIR)/libgit2/git2go/vendor/libgit2: $(VENDORDIR)/libgit2/git2go
 	$(GIT) -C $(VENDORDIR)/libgit2/git2go submodule update --init --recursive
