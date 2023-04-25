@@ -167,5 +167,3 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20230109183929-3758b55a6596 // indirect
 )
-
-replace github.com/libgit2/git2go/v31 => ./third_party/github.com/libgit2/git2go/v31
