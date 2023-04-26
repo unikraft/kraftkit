@@ -12,7 +12,6 @@ on:
 jobs:
   gochecks:
     runs-on: ubuntu-latest
-    container: golang:1.20.2-bullseye
     name: All
     env:
       RUNGOGENERATE: false
@@ -39,9 +38,9 @@ jobs:
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install build dependencies
         run: |
-          apt-get update;
-          apt-get install -y --no-install-recommends \
-            cmake;
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake
 
       - name: Check that go.mod is tidy
         uses: protocol/multiple-go-modules@v1.2
@@ -78,7 +77,7 @@ jobs:
             go generate ./...
             # check if go generate modified or added any files
             if ! $(git add . && git diff-index HEAD --exit-code --quiet); then
-              echo "go generated caused changes to the repository:"
+              echo "go generate caused changes to the repository:"
               git status --short
               exit 1
             fi

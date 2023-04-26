@@ -13,15 +13,11 @@ jobs:
     name: Action Lint
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Install action linter
         run: |
-          mkdir -p ~/bin
-          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest ~/bin
+          mkdir -p "$HOME"/.local/bin
+          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest "$HOME"/.local/bin
 
       - name: Check that all workflows are valid
-        run: |
-          set -xe
-          find .github/workflows -type f -name '*.yaml' -print0 | xargs --null ~/bin/actionlint
+        run: actionlint -verbose
