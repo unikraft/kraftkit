@@ -26,7 +26,7 @@ type Fetch struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Fetch{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Fetch{}, cobra.Command{
 		Short:   "Fetch a Unikraft unikernel's dependencies",
 		Use:     "fetch [DIR]",
 		Aliases: []string{"f"},
@@ -43,6 +43,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Fetch) Pre(cmd *cobra.Command, _ []string) error {

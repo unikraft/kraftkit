@@ -51,9 +51,8 @@ func normalize(project *application, resolvePaths bool) error {
 	if err != nil {
 		return err
 	}
-	WithKraftfiles(absKraftfiles)(project)
 
-	return nil
+	return WithKraftfiles(absKraftfiles)(project)
 }
 
 func absKraftfiles(kraftfiles []string) ([]string, error) {

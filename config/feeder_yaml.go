@@ -166,7 +166,9 @@ func recursiveMerge(from, into *yaml.Node) error {
 			}
 		}
 	case yaml.DocumentNode:
-		recursiveMerge(from.Content[0], into.Content[0])
+		if err := recursiveMerge(from.Content[0], into.Content[0]); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("can only merge mapping, sequence and scalar nodes")
 	}

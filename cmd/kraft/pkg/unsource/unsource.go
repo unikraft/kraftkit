@@ -21,7 +21,7 @@ type Unsource struct{}
 
 // New returns a new unsource command
 func New() *cobra.Command {
-	return cmdfactory.New(&Unsource{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Unsource{}, cobra.Command{
 		Short: "Remove Unikraft component manifests",
 		Use:   "unsource [FLAGS] [SOURCE]",
 		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
@@ -34,6 +34,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {

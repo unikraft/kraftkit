@@ -94,7 +94,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 
 	total := 0
 
-	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
+	_ = pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
 		total++
 		item.norender = pt.norender
 		return nil

@@ -47,7 +47,7 @@ type Build struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Build{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Build{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -67,6 +67,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Build) Pre(cmd *cobra.Command, _ []string) error {

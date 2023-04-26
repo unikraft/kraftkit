@@ -129,7 +129,9 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		}
 
 		// Attribute all configuration flags and command-line argument values
-		cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...)
+		if err := cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...); err != nil {
+			return err
+		}
 
 		// Did the user specify a non-standard config directory?  The following
 		// check is possible thanks to the attribution of flags to the config file.

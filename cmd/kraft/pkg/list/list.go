@@ -34,7 +34,7 @@ type List struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&List{}, cobra.Command{
+	cmd, err := cmdfactory.New(&List{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "list [FLAGS] [DIR]",
 		Aliases: []string{"l", "ls"},
@@ -48,6 +48,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*List) Pre(cmd *cobra.Command, _ []string) error {

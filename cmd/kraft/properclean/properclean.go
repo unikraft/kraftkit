@@ -45,7 +45,7 @@ import (
 type ProperClean struct{}
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&ProperClean{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ProperClean{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
 		Aliases: []string{"pc"},
@@ -62,6 +62,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }

@@ -23,7 +23,7 @@ type Login struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Login{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Login{}, cobra.Command{
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",
 		Args:  cobra.ExactArgs(1),
@@ -31,6 +31,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (opts *Login) Run(cmd *cobra.Command, args []string) error {

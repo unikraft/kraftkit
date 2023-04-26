@@ -48,7 +48,7 @@ type Run struct {
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Run{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
 		Args:    cobra.MaximumNArgs(1),
@@ -65,6 +65,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
@@ -414,7 +417,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				// Wait on either channel
 				select {
 				case status := <-events:
-					store.SaveMachineState(mid, status)
+					if err := store.SaveMachineState(mid, status); err != nil {
+						log.G(ctx).Errorf("could not save machine state: %v", err)
+						return
+					}
 
 					switch status {
 					case machine.MachineStateExited, machine.MachineStateDead:
@@ -440,7 +446,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !opts.Detach {
-		driver.TailWriter(ctx, mid, iostreams.G(ctx).Out)
+		if err := driver.TailWriter(ctx, mid, iostreams.G(ctx).Out); err != nil {
+			return err
+		}
 
 		// Wait for the context to be cancelled, which can occur if a fatal error
 		// occurs or the user has requested a SIGINT (Ctrl+C).

@@ -26,7 +26,7 @@ type Prepare struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Prepare{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Prepare{}, cobra.Command{
 		Short:   "Prepare a Unikraft unikernel",
 		Use:     "prepare [DIR]",
 		Aliases: []string{"p"},
@@ -43,6 +43,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Prepare) Pre(cmd *cobra.Command, _ []string) error {

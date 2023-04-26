@@ -37,7 +37,7 @@ type Pull struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Pull{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Pull{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
 		Aliases: []string{"p"},
@@ -60,6 +60,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {

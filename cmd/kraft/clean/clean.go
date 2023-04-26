@@ -45,7 +45,7 @@ import (
 type Clean struct{}
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Clean{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Clean{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -61,6 +61,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Clean) Pre(cmd *cobra.Command, _ []string) error {

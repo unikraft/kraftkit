@@ -505,14 +505,13 @@ func NewQemuDriver(opts ...driveropts.DriverOption) (*QemuDriver, error) {
 	return &driver, nil
 }
 
-func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (machine.MachineID, error) {
+func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (mid machine.MachineID, err error) {
 	mcfg, err := machine.NewMachineConfig(opts...)
 	if err != nil {
 		return machine.NullMachineID, fmt.Errorf("could build machine config: %v", err)
 	}
 
-	mid, err := machine.NewRandomMachineID()
-	if err != nil {
+	if mid, err = machine.NewRandomMachineID(); err != nil {
 		return machine.NullMachineID, fmt.Errorf("could not generate new machine ID: %v", err)
 	}
 
@@ -660,7 +659,9 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 
 	defer func() {
 		if err != nil {
-			qd.Destroy(ctx, mid)
+			if dErr := qd.Destroy(ctx, mid); dErr != nil {
+				err = fmt.Errorf("%w. Additionally, while destroying machine: %w", err, dErr)
+			}
 		}
 	}()
 
@@ -990,7 +991,9 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 		return err
 	}
 
-	watcher.Add(mcfg.LogFile)
+	if err := watcher.Add(mcfg.LogFile); err != nil {
+		return err
+	}
 
 	// First read everything that already exists inside of the log file.
 	for {
@@ -1268,7 +1271,9 @@ func (qd *QemuDriver) Destroy(ctx context.Context, mid machine.MachineID) error 
 		machine.MachineStateExited,
 		machine.MachineStateDead:
 	default:
-		qd.Stop(ctx, mid)
+		if err := qd.Stop(ctx, mid); err != nil {
+			return err
+		}
 	}
 
 	return qd.dopts.Store.Purge(mid)

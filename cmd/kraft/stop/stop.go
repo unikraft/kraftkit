@@ -24,7 +24,7 @@ type Stop struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Stop{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
 		Args:  cobra.MinimumNArgs(0),
@@ -34,6 +34,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 type machineWaitGroup struct {

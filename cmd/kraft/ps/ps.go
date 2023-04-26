@@ -32,7 +32,7 @@ type Ps struct {
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Ps{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",
 		Args:  cobra.MaximumNArgs(0),
@@ -41,6 +41,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "all"),
