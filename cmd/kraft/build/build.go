@@ -34,7 +34,7 @@ import (
 type Build struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Fast         bool   `long:"fast" usage:"Use maximum parallization when performing the build"`
+	Fast         bool   `long:"fast" usage:"Use maximum parallelization when performing the build"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
@@ -48,7 +48,7 @@ type Build struct {
 
 func New() *cobra.Command {
 	return cmdfactory.New(&Build{}, cobra.Command{
-		Short: "Configure and build Unikraft unikernels ",
+		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
