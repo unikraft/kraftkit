@@ -101,7 +101,7 @@ buildenv-%:
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
-devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
+devenv: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
 devenv: ## Start the development environment container.
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself-full,bash)
@@ -139,16 +139,16 @@ properclean: ## Completely clean the repository's build artifacts.
 	$(DOCKER) rmi $(IMAGE)
 
 .PHONY: git2go
-git2go: $(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc
+git2go: $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
-$(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
-	$(MAKE) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 install-static
+$(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
+	$(MAKE) -C $(VENDORDIR)/libgit2/git2go install-static
 
-$(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2: $(VENDORDIR)/github.com/libgit2/git2go
-	$(GIT) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 submodule update --init --recursive
+$(VENDORDIR)/libgit2/git2go/vendor/libgit2: $(VENDORDIR)/libgit2/git2go
+	$(GIT) -C $(VENDORDIR)/libgit2/git2go submodule update --init --recursive
 
-$(VENDORDIR)/github.com/libgit2/git2go:
-	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@/v31
+$(VENDORDIR)/libgit2/git2go:
+	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@
 
 .PHONY: help
 help: ## Show this help menu and exit.
