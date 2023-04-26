@@ -6,8 +6,6 @@
 package cli_test
 
 import (
-	"os/exec"
-
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -16,7 +14,7 @@ import (
 )
 
 var _ = Describe("kraft version", func() {
-	var cmd *exec.Cmd
+	var cmd *fcmd.Cmd
 
 	var stdout *fcmd.IOStream
 	var stderr *fcmd.IOStream
@@ -68,10 +66,7 @@ var _ = Describe("kraft version", func() {
 		It("should print an error and exit", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf((*exec.ExitError)(nil)))
-
-			eErr := err.(*exec.ExitError)
-			Expect(eErr.ProcessState.ExitCode()).To(Equal(1))
+			Expect(err).To(MatchError("exit status 1"))
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout).To(MatchRegexp(`^unknown command "some-arg" for "kraft version"\n$`))

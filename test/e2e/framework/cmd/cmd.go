@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -17,7 +18,7 @@ import (
 
 // NewKraft returns a kraft OS command that uses the given IO streams and has
 // pre-set flags to use the given paths.
-func NewKraft(stdout, stderr *IOStream, cfgPath string) *exec.Cmd {
+func NewKraft(stdout, stderr *IOStream, cfgPath string) *Cmd {
 	var args []string
 	if cfgPath != "" {
 		args = append(args, "--config-dir="+filepath.Dir(cfgPath))
@@ -27,7 +28,34 @@ func NewKraft(stdout, stderr *IOStream, cfgPath string) *exec.Cmd {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	return cmd
+	return &Cmd{Cmd: cmd}
+}
+
+// Cmd is a wrapper around exec.Cmd with sensible handling of stderr in error
+// reports.
+type Cmd struct {
+	*exec.Cmd
+}
+
+// Run runs the command, and automatically injects the output to stderr in the
+// returned ExitError, in case such an error occurs.
+// It is similar to (*exec.Cmd).Output, but allows the command to have stdout
+// explicitly set.
+func (c *Cmd) Run() error {
+	if err := c.Cmd.Run(); err != nil {
+		if ee := (&exec.ExitError{}); errors.As(err, &ee) {
+			if r, ok := c.Cmd.Stderr.(io.Reader); ok {
+				b, re := io.ReadAll(r)
+				if re != nil {
+					return fmt.Errorf("%w. Additionally, while reading stderr: %w", err, re)
+				}
+				ee.Stderr = b
+				return &ExitError{ExitError: ee}
+			}
+		}
+	}
+
+	return nil
 }
 
 // IOStream represents an IO stream to be used by OS commands and suitable
@@ -63,4 +91,22 @@ func (s *IOStream) String() string {
 
 func (s *IOStream) GomegaString() string {
 	return s.String()
+}
+
+// ExitError is a wrapper around exec.ExitError that can be pretty-printed
+// through a gomega matcher.
+type ExitError struct {
+	*exec.ExitError
+}
+
+var (
+	_ error                    = (*ExitError)(nil)
+	_ gomegafmt.GomegaStringer = (*IOStream)(nil)
+)
+
+func (e *ExitError) GomegaString() string {
+	if len(e.ExitError.Stderr) > 0 {
+		return string(e.ExitError.Stderr)
+	}
+	return ""
 }
