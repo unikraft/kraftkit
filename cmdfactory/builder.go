@@ -7,6 +7,7 @@ package cmdfactory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -234,7 +235,7 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 
 	// If any arguments are passed, parse them immediately
 	if len(args) > 0 {
-		if err := c.ParseFlags(args); err != nil {
+		if err := c.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
 			return err
 		}
 	}
