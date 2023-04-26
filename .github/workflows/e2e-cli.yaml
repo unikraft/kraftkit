@@ -17,6 +17,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -41,7 +44,7 @@ jobs:
         run: go install github.com/onsi/ginkgo/v2/ginkgo
 
       - name: Install kraft
-        run: make kraft DOCKER= VERSION=v0.0.0-ci-e2e DISTDIR="$(go env GOPATH)"/bin
+        run: make kraft DOCKER= DISTDIR="$(go env GOPATH)"/bin
 
       - name: Run e2e tests
         env:

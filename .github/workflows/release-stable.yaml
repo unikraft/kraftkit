@@ -27,10 +27,10 @@ jobs:
       
       - name: Install release tools
         run: |
-          echo "deb [trusted=yes] https://apt.fury.io/cli/ * *" > /etc/apt/sources.list.d/fury-cli.list;
-          apt-get update;
+          echo "deb [trusted=yes] https://apt.fury.io/cli/ * *" > /etc/apt/sources.list.d/fury-cli.list
+          apt-get update
           apt-get install -y --no-install-recommends \
-            fury-cli;
+            fury-cli
       
       - name: Generate GoReleaser configuration
         run: |
