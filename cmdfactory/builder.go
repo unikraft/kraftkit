@@ -168,14 +168,14 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		}
 
 		switch fieldType.Type.Kind() {
-		case reflect.Int:
-			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
-			flags.Set(name, strValue)
-		case reflect.Int64:
+		case reflect.Int, reflect.Int64:
 			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
 			flags.Set(name, strValue)
 		case reflect.String:
 			flags.StringVarP((*string)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defValue, usage)
+			flags.Set(name, strValue)
+		case reflect.Bool:
+			flags.BoolVarP((*bool)(unsafe.Pointer(v.Addr().Pointer())), name, alias, false, usage)
 			flags.Set(name, strValue)
 		case reflect.Slice:
 			switch fieldType.Tag.Get("split") {
@@ -189,12 +189,9 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		case reflect.Map:
 			maps[name] = v
 			flags.StringSliceP(name, alias, nil, usage)
-		case reflect.Bool:
-			flags.BoolVarP((*bool)(unsafe.Pointer(v.Addr().Pointer())), name, alias, false, usage)
-			flags.Set(name, strValue)
 		case reflect.Pointer:
 			switch fieldType.Type.Elem().Kind() {
-			case reflect.Int:
+			case reflect.Int, reflect.Int64:
 				optInt[name] = v
 				flags.IntP(name, alias, defInt, usage)
 				flags.Set(name, strValue)
