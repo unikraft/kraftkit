@@ -141,7 +141,8 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		if err != nil {
 			defInt = 0
 		}
-		strValue := v.String()
+		// https://cs.opensource.google/go/go/+/refs/tags/go1.20.3:src/fmt/fmt_test.go;l=1046-1050
+		strValue := fmt.Sprint(v)
 
 		// Set the value from the environmental value, if known, it takes precedent
 		// over the provided value which would otherwise come from a configuration
