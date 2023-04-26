@@ -50,6 +50,7 @@ GOCILINT    ?= golangci-lint
 MKDIR       ?= mkdir
 GIT         ?= git
 CURL        ?= curl
+CMAKE       ?= cmake
 
 # Misc
 Q           ?= @
@@ -101,7 +102,7 @@ buildenv-%:
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
-devenv: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
+devenv: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
 devenv: ## Start the development environment container.
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself-full,bash)
@@ -139,16 +140,33 @@ properclean: ## Completely clean the repository's build artifacts.
 	$(DOCKER) rmi $(IMAGE)
 
 .PHONY: git2go
-git2go: $(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc
+git2go: $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
+	$(GO) install -tags static github.com/libgit2/git2go/v31/...
 
-$(VENDORDIR)/github.com/libgit2/git2go/v31/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2
-	$(MAKE) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 install-static
+$(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
+	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/build
+	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/install
+	(cd $(VENDORDIR)/libgit2/git2go/static-build/build && $(CMAKE) \
+		-DTHREADSAFE=ON \
+		-DBUILD_CLAR=OFF \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DREGEX_BACKEND=builtin \
+		-DUSE_BUNDLED_ZLIB=ON \
+		-DUSE_HTTPS=ON \
+		-DUSE_SSH=ON \
+		-DCMAKE_C_FLAGS=-fPIC \
+		-DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+		-DCMAKE_INSTALL_PREFIX=$(VENDORDIR)/libgit2/git2go/static-build/install \
+		-DCMAKE_INSTALL_LIBDIR="lib" \
+		-DDEPRECATE_HARD="${BUILD_DEPRECATE_HARD}" \
+		$(VENDORDIR)/libgit2/git2go/vendor/libgit2)
+	$(MAKE) -C $(VENDORDIR)/libgit2/git2go/static-build/build install
 
-$(VENDORDIR)/github.com/libgit2/git2go/v31/vendor/libgit2: $(VENDORDIR)/github.com/libgit2/git2go
-	$(GIT) -C $(VENDORDIR)/github.com/libgit2/git2go/v31 submodule update --init --recursive
+$(VENDORDIR)/libgit2/git2go/vendor/libgit2: $(VENDORDIR)/libgit2/git2go
+	$(GIT) -C $(VENDORDIR)/libgit2/git2go submodule update --init --recursive
 
-$(VENDORDIR)/github.com/libgit2/git2go:
-	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@/v31
+$(VENDORDIR)/libgit2/git2go:
+	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@
 
 .PHONY: help
 help: ## Show this help menu and exit.

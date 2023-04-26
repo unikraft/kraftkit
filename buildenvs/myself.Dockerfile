@@ -13,6 +13,8 @@ RUN set -xe; \
     apt-get install -y --no-install-recommends \
       build-essential=12.9 \
       cmake=3.18.4-2+deb11u1 \
+      libssh2-1-dev=1.9.0-2 \
+      libssl-dev=1.1.1n-0+deb11u4 \
       make=4.3-4.1 \
       pkg-config=0.29.2-1 \
       git=1:2.30.2-1+deb11u2; \

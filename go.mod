@@ -30,6 +30,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.1.0
 	github.com/imdario/mergo v0.3.15
+	github.com/kubescape/go-git-url v0.0.24
 	github.com/libgit2/git2go/v31 v31.7.9
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.18
@@ -62,7 +63,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.1
 )
 
-replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/github.com/libgit2/git2go/v31
+replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/libgit2/git2go
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
@@ -150,6 +151,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
+	github.com/whilp/git-urls v1.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -168,4 +170,5 @@ require (
 	google.golang.org/protobuf v1.29.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20230109183929-3758b55a6596 // indirect
+	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2 // indirect
 )
