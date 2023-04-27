@@ -60,13 +60,9 @@ func NewContainerdHandler(ctx context.Context, address, namespace string, opts .
 
 // NewContainerdWithClient create a containerd Resolver-compatible with an
 // existing containerd client connection.
-func NewContainerdWithClient(ctx context.Context, namespace string, client *containerd.Client) (context.Context, *ContainerdHandler, error) {
+func NewContainerdWithClient(ctx context.Context, client *containerd.Client) (context.Context, *ContainerdHandler, error) {
 	if client == nil {
 		return nil, nil, fmt.Errorf("no containerd client provided")
-	}
-
-	if namespace == "" {
-		namespace = "default"
 	}
 
 	return ctx, &ContainerdHandler{client: client}, nil

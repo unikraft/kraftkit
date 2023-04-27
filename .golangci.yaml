@@ -12,8 +12,6 @@ run:
     - static
 
 linters:
-  disable-all: true
   enable:
-    - errcheck
     - misspell
     - gofumpt

@@ -126,20 +126,15 @@ func Contains(haystack []string, needle string) bool {
 
 // HumanizeDuration returns a relative time string based on an input duration
 func HumanizeDuration(dur time.Duration) string {
-	ns := dur.Nanoseconds()
-	ms := ns / 1000000
+	ms := dur.Nanoseconds() / 1000000
 	sec := ms / 1000
 	min := sec / 60
 	hr := min / 60
 
 	// Get only the excess amt of each component
-	ns %= 1000000
 	ms %= 1000
 	sec %= 60
 	hr %= 60
-
-	// Express ns as ms to 3 significant digits
-	ns /= 1000
 
 	// Express ms to 1 significant digit
 	ms /= 100
