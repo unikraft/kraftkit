@@ -414,7 +414,7 @@ func (ms *MachineStore) ListAllMachineConfigs() (map[MachineID]MachineConfig, er
 				b := bytes.Buffer{}
 				b.Write(val)
 
-				if gob.NewDecoder(&b).Decode(&option); err != nil {
+				if err := gob.NewDecoder(&b).Decode(&option); err != nil {
 					return err
 				}
 

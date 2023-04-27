@@ -217,8 +217,7 @@ func WithProjectConfig(config []string) ProjectOption {
 // WithProjectKraftfile adds a kraft file to the project
 func WithProjectKraftfile(file string) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.AddKraftfile(file)
-		return nil
+		return popts.AddKraftfile(file)
 	}
 }
 
@@ -297,9 +296,7 @@ func WithProjectDefaultKraftfiles() ProjectOption {
 					return fmt.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
 				}
 
-				popts.AddKraftfile(candidates[0])
-
-				return nil
+				return popts.AddKraftfile(candidates[0])
 			}
 
 			parent := filepath.Dir(pwd)

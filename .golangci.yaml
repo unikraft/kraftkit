@@ -1,7 +1,6 @@
 run:
   timeout: 5m
   issues-exit-code: 2
-  tests: false
   skip-dirs:
     - tmp/
     - dist/
@@ -13,5 +12,6 @@ run:
 linters:
   disable-all: true
   enable:
+    - errcheck
     - misspell
     - gofumpt

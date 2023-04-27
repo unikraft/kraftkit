@@ -27,7 +27,7 @@ type Menu struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Menu{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Menu{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [DIR]",
 		Aliases: []string{"m", "menuconfig"},
@@ -44,6 +44,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Menu) Pre(cmd *cobra.Command, _ []string) error {

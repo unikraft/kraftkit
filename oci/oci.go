@@ -19,9 +19,10 @@ const (
 	defaultNamespace = "default"
 )
 
+// FIXME(antoineco): avoid init, initialize things where needed
 func init() {
 	// Register a new pkg.Package type
-	packmanager.RegisterPackageManager(OCIFormat, NewOCIManager)
+	_ = packmanager.RegisterPackageManager(OCIFormat, NewOCIManager)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(

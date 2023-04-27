@@ -83,17 +83,19 @@ func (handle *ContainerdHandler) lease(ctx context.Context) (context.Context, fu
 	// Swap containerd's internal logger with KraftKit's
 	ctx = clog.WithLogger(ctx, log.G(ctx).WithContext(ctx))
 
-	return ctx, done, err
+	return ctx, done, nil
 }
 
 // DigestExists implements DigestResolver.
-func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.Digest) (bool, error) {
+func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.Digest) (exists bool, err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	if _, err := handle.client.ContentStore().Info(ctx, dgst); err != nil {
 		return false, err
@@ -103,20 +105,20 @@ func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.D
 }
 
 // ListManifests implements DigestResolver.
-func (handle *ContainerdHandler) ListManifests(ctx context.Context) ([]ocispec.Manifest, error) {
+func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	all, err := handle.client.ImageService().List(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	manifests := make([]ocispec.Manifest, 0)
 
 	for _, image := range all {
 		found, err := handle.client.GetImage(ctx, image.Name)
@@ -136,13 +138,15 @@ func (handle *ContainerdHandler) ListManifests(ctx context.Context) ([]ocispec.M
 }
 
 // PushDigest implements DigestPusher.
-func (handle *ContainerdHandler) PushDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
+func (handle *ContainerdHandler) PushDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	writer, err := content.OpenWriter(
 		ctx,
@@ -190,7 +194,7 @@ func (handle *ContainerdHandler) PushDigest(ctx context.Context, ref string, des
 		}).Trace("oci: indexing")
 
 		manifest := ocispec.Manifest{}
-		if json.NewDecoder(&cache).Decode(&manifest); err != nil {
+		if err := json.NewDecoder(&cache).Decode(&manifest); err != nil {
 			return err
 		}
 
@@ -252,13 +256,15 @@ func (handle *ContainerdHandler) PushDigest(ctx context.Context, ref string, des
 }
 
 // ResolveImage implements ImageResolver.
-func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (ocispec.Image, error) {
+func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (imgspec ocispec.Image, err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return ocispec.Image{}, err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	image, err := handle.client.GetImage(ctx, fullref)
 	if err != nil {
@@ -269,13 +275,15 @@ func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref strin
 }
 
 // FetchImage implements ImageFetcher.
-func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, onProgress func(float64)) error {
+func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, onProgress func(float64)) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	ctx, stopProgress := context.WithCancel(ctx)
 	progress := make(chan struct{})
@@ -467,13 +475,15 @@ func (handle *ContainerdHandler) PushImage(ctx context.Context, image ocispec.Im
 }
 
 // UnpackImage implements ImageUnpacker.
-func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dest string) error {
+func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dest string) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer done(ctx)
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
 
 	img, err := handle.client.ImageService().Get(ctx, ref)
 	if err != nil {
@@ -534,4 +544,17 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 // FinalizeImage implements ImageFinalizer.
 func (handle *ContainerdHandler) FinalizeImage(ctx context.Context, image ocispec.Image) error {
 	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.FinalizeImage")
+}
+
+// combineErrors is a helper for handling multiple potential errors, combining
+// them as necessary. It is meant to be used in a deferred function.
+func combineErrors(original, additional error) error {
+	switch {
+	case additional == nil:
+		return original
+	case original != nil:
+		return fmt.Errorf("%w. Additionally: %w", original, additional)
+	default:
+		return additional
+	}
 }

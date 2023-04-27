@@ -378,8 +378,12 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 	defer os.Remove(tmpfile.Name())
 
 	// Save and sync the file to the temporary file
-	tmpfile.Write([]byte(values.String()))
-	tmpfile.Sync()
+	if _, err := tmpfile.Write([]byte(values.String())); err != nil {
+		return err
+	}
+	if err := tmpfile.Sync(); err != nil {
+		return err
+	}
 
 	// TODO: This make dependency should be upstreamed into the Unikraft core as a
 	// dependency of `make defconfig`

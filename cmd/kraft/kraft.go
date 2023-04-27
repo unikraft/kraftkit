@@ -46,7 +46,7 @@ import (
 type Kraft struct{}
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Kraft{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Kraft{}, cobra.Command{
 		Short: "Build and use highly customized and ultra-lightweight unikernels",
 		Long: heredoc.Docf(`
         .
@@ -61,6 +61,9 @@ func New() *cobra.Command {
 			HiddenDefaultCmd: true,
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.AddGroup(&cobra.Group{ID: "build", Title: "BUILD COMMANDS"})
 	cmd.AddCommand(build.New())

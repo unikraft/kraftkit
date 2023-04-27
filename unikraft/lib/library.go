@@ -286,7 +286,9 @@ func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (Librari
 
 	// Reset the scanner and search line-by-line so we can contextualize how many
 	// libraries we are about to parse.
-	fm.Seek(0, io.SeekStart)
+	if _, err = fm.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
 	scanner = bufio.NewScanner(fm)
 	for scanner.Scan() {
 		match, plat, libname, _ := MatchRegistrationLine(scanner.Text())

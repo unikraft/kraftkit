@@ -49,7 +49,7 @@ type Set struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Set{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Set{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Hidden:  true,
 		Use:     "set [OPTIONS] [param=value ...]",
@@ -66,6 +66,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Set) Pre(cmd *cobra.Command, _ []string) error {

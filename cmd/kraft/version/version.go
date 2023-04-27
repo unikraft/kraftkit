@@ -17,7 +17,7 @@ import (
 type Version struct{}
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Version{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Version{}, cobra.Command{
 		Short:   "Show kraft version information",
 		Use:     "version",
 		Aliases: []string{"v"},
@@ -26,6 +26,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (opts *Version) Run(cmd *cobra.Command, args []string) error {

@@ -45,7 +45,7 @@ type Pkg struct {
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Pkg{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Pkg{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -81,6 +81,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.AddCommand(list.New())
 	cmd.AddCommand(pull.New())

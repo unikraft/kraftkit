@@ -48,7 +48,7 @@ type Unset struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Unset{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Unset{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
 		Hidden:  true,
 		Use:     "unset [OPTIONS] [param ...]",
@@ -65,6 +65,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (*Unset) Pre(cmd *cobra.Command, _ []string) error {

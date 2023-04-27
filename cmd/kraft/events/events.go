@@ -33,7 +33,7 @@ type Events struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Events{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Events{}, cobra.Command{
 		Short:   "Follow the events of a unikernel",
 		Hidden:  true,
 		Use:     "events [FLAGS] [MACHINE ID]",
@@ -45,6 +45,11 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 var (
@@ -78,7 +83,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		defer func() {
-			pidfile.Close()
+			_ = pidfile.Close()
 
 			log.G(ctx).Info("removing pid file")
 			if err := os.Remove(config.G[config.KraftKit](ctx).EventsPidFile); err != nil {
@@ -86,7 +91,10 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		pidfile.Write([]byte(fmt.Sprintf("%d", os.Getpid())))
+		if _, err := pidfile.Write([]byte(fmt.Sprintf("%d", os.Getpid()))); err != nil {
+			cancel()
+			return fmt.Errorf("failed to write PID file: %w", err)
+		}
 
 		if err := pidfile.Sync(); err != nil {
 			cancel()
