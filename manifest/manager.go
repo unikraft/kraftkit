@@ -31,9 +31,10 @@ type manager struct{}
 // and is dynamically injected as a CLI option.
 var useGit = false
 
+// FIXME(antoineco): avoid init, initialize things where needed
 func init() {
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
+	_ = packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(

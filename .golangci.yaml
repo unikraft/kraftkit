@@ -8,10 +8,10 @@ run:
     # Temporarily ignore the file which uses libgit2 dependency since this will 
     # fail on the static check.
     - manifest/pack_pull_git.go
+  build-tags:
+    - static
 
 linters:
-  disable-all: true
   enable:
-    - errcheck
     - misspell
     - gofumpt

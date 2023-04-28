@@ -79,9 +79,11 @@ type LibraryConfig struct {
 	// ultimately handled by the packmanager).
 	source string
 
+	// TODO(nderjung): future implementation
 	// origin contains the URL of the remote source code if this library wraps an
 	// existing library.
-	origin string
+	//nolint:gofumpt
+	//origin string
 
 	// list of kconfig values specific to this library.
 	kconfig kconfig.KeyValueMap
@@ -89,15 +91,19 @@ type LibraryConfig struct {
 	// kname the kconfig name which enables this library.
 	kname string
 
+	// TODO(nderjung): future implementation
 	// projectdir is the root location of the project that this library is a
 	// member of.
-	projectdir string
+	//nolint:gofumpt
+	//projectdir string
 
 	// path is the location to this library within the context of a project.
 	path string
 
+	// TODO(nderjung): future implementation
 	// patchdir is the directory where patches to the origin library are kept.
-	patchdir string
+	//nolint:gofumpt
+	//patchdir string
 
 	// exportsyms contains the list of exported symbols the library makes
 	// available via the standard `exportsyms.uk` file.
