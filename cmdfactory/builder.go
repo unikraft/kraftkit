@@ -96,6 +96,80 @@ func expandRegisteredFlags(cmd *cobra.Command) {
 	}
 }
 
+// filter out registered flags from the given command's args.
+func filterRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs []string) {
+	for cmdline, flags := range flagOverrides {
+		if !isSameCommand(cmd, cmdline) {
+			continue
+		}
+
+		registeredFlagsNames := make(map[string]struct{}, len(flags))
+		for _, flag := range flags {
+			registeredFlagsNames[flag.Name] = struct{}{}
+		}
+
+		for len(args) > 0 {
+			arg := args[0]
+			args = args[1:]
+
+			switch {
+			// not a flag
+			case arg[0] != '-' || len(arg) == 1:
+				filteredArgs = append(filteredArgs, arg)
+
+			// long flag
+			case arg[1] == '-' && len(arg) > 2:
+				subs := strings.SplitN(arg, "=", 2)
+
+				flagName := strings.TrimPrefix(subs[0], "--")
+				if _, isRegistered := registeredFlagsNames[flagName]; isRegistered {
+					if len(subs) == 1 {
+						args = args[1:]
+					}
+					continue
+				}
+
+				filteredArgs = append(filteredArgs, arg)
+
+			// short flag
+			default:
+				subs := strings.SplitN(arg, "=", 2)
+
+				flagName := strings.TrimPrefix(subs[0], "-")
+				if _, isRegistered := registeredFlagsNames[flagName]; isRegistered {
+					if len(subs) == 1 {
+						args = args[1:]
+					}
+					continue
+				}
+
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
+
+		return filteredArgs
+	}
+
+	return args
+}
+
+// returns whether the given cmd is the same as described by the command line string.
+// cmdline is expected to be "kraft cmd subcmd ..."
+func isSameCommand(cmd *cobra.Command, cmdline string) bool {
+	cmdFields := strings.Fields(cmdline)
+
+	if len(cmdFields) == 1 {
+		return cmd.Name() == cmdFields[0]
+	}
+
+	// checking only the name of the direct parent should be sufficient
+	par := cmd.Parent()
+	if par == nil {
+		return false
+	}
+	return par.Name() == cmdFields[len(cmdFields)-2] && cmd.Name() == cmdFields[len(cmdFields)-1]
+}
+
 // Main executes the given command
 func Main(ctx context.Context, cmd *cobra.Command) {
 	// Expand flag all dynamically registered flag overrides.
@@ -239,6 +313,10 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 		return err
 	}
 	if len(args) > 0 {
+		// Some kraft commands accept flags which registration is delayed using
+		// RegisterFlag. Parsing these here would result in a failure.
+		args = filterRegisteredFlags(subC, args)
+
 		if err := subC.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
 			return err
 		}
