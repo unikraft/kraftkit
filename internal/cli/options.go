@@ -129,7 +129,7 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		}
 
 		// Attribute all configuration flags and command-line argument values
-		if err := cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...); err != nil {
+		if err := cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args[1:]...); err != nil {
 			return err
 		}
 

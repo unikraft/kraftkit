@@ -234,8 +234,12 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 	}
 
 	// If any arguments are passed, parse them immediately
+	subC, args, err := c.Find(args)
+	if err != nil {
+		return err
+	}
 	if len(args) > 0 {
-		if err := c.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
+		if err := subC.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
 			return err
 		}
 	}
