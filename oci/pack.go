@@ -38,7 +38,6 @@ type ociPackage struct {
 	image  *Image
 
 	// Embedded attributes which represent target.Target
-	name    string
 	arch    arch.Architecture
 	plat    plat.Platform
 	kconfig kconfig.KeyValueMap
@@ -59,7 +58,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	// Initialize the ociPackage by copying over target.Target attributes
 	ocipack := ociPackage{
-		name:    targ.Name(),
 		arch:    targ.Architecture(),
 		plat:    targ.Platform(),
 		kconfig: targ.KConfig(),
