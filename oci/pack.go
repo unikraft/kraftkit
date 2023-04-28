@@ -80,7 +80,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		//     plat: kvm
 		// ```
 		ocipack.ref, err = name.ParseReference(
-			ocipack.Name(),
+			targ.Name(),
 			name.WithDefaultRegistry(defaultRegistry),
 		)
 	}
