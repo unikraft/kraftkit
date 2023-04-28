@@ -19,6 +19,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"kraftkit.sh/internal/set"
 )
 
 var (
@@ -103,9 +105,9 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 			continue
 		}
 
-		registeredFlagsNames := make(map[string]struct{}, len(flags))
+		registeredFlagsNames := set.NewStringSet()
 		for _, flag := range flags {
-			registeredFlagsNames[flag.Name] = struct{}{}
+			registeredFlagsNames.Add(flag.Name)
 		}
 
 		for len(args) > 0 {
@@ -122,7 +124,7 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 				subs := strings.SplitN(arg, "=", 2)
 
 				flagName := strings.TrimPrefix(subs[0], "--")
-				if _, isRegistered := registeredFlagsNames[flagName]; isRegistered {
+				if registeredFlagsNames.Contains(flagName) {
 					if len(subs) == 1 {
 						args = args[1:]
 					}
@@ -136,7 +138,7 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 				subs := strings.SplitN(arg, "=", 2)
 
 				flagName := strings.TrimPrefix(subs[0], "-")
-				if _, isRegistered := registeredFlagsNames[flagName]; isRegistered {
+				if registeredFlagsNames.Contains(flagName) {
 					if len(subs) == 1 {
 						args = args[1:]
 					}
