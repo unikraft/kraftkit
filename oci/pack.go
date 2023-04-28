@@ -232,7 +232,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		"tag": ocipack.Name(),
 	}).Debug("oci: saving image")
 
-	_, err = image.Save(ctx, ocipack.Name(), nil)
+	_, err = image.Save(ctx, ocipack.imageRef(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -370,6 +370,11 @@ func (ocipack *ociPackage) Version() string {
 	return ocipack.ref.Identifier()
 }
 
+// imageRef returns the OCI-standard image name in the format `name:tag`
+func (ocipack *ociPackage) imageRef() string {
+	return fmt.Sprintf("%s:%s", ocipack.Name(), ocipack.Version())
+}
+
 // Metadata implements pack.Package
 func (ocipack *ociPackage) Metadata() any {
 	return nil
@@ -387,20 +392,16 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
-	fullref := ocipack.Name()
-
 	// If it's possible to resolve the image reference, the image has already been
 	// pulled to the local image store
-	_, err = ocipack.handle.ResolveImage(ctx, fullref)
+	_, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
 	if err == nil {
 		goto unpack
 	}
 
-	fullref = fmt.Sprintf("%s:%s", ocipack.Name(), ocipack.Version())
-
 	if err := ocipack.image.handle.FetchImage(
 		ctx,
-		fullref,
+		ocipack.imageRef(),
 		popts.OnProgress,
 	); err != nil {
 		return err
@@ -411,7 +412,7 @@ unpack:
 	if len(popts.Workdir()) > 0 {
 		if err := ocipack.image.handle.UnpackImage(
 			ctx,
-			fullref,
+			ocipack.imageRef(),
 			popts.Workdir(),
 		); err != nil {
 			return err
