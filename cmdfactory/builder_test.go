@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func TestFilterRegisteredFlags(t *testing.T) {
+func TestFilterOutRegisteredFlags(t *testing.T) {
 	flagOverridesOrig := copyFlagOverrides()
 	t.Cleanup(func() { flagOverrides = flagOverridesOrig })
 
@@ -44,7 +44,7 @@ func TestFilterRegisteredFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			args := filterRegisteredFlags(cmd, tc.args)
+			args := filterOutRegisteredFlags(cmd, tc.args)
 
 			if !equalArgs(args, tc.expect) {
 				t.Errorf("Expected filtered args\n%q\ngot\n%q", tc.expect, args)
