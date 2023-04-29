@@ -30,10 +30,16 @@ type stringSet struct {
 	m map[string]struct{}
 }
 
-func NewStringSet() *stringSet {
-	s := &stringSet{}
-	s.m = make(map[string]struct{})
-	s.v = []string{}
+// NewStringSet returns a new stringSet instance initialized with the given
+// values, if any are provided.
+func NewStringSet(values ...string) *stringSet {
+	s := &stringSet{
+		m: make(map[string]struct{}, len(values)),
+		v: make([]string, 0, len(values)),
+	}
+
+	s.Add(values...)
+
 	return s
 }
 
