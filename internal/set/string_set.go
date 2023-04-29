@@ -78,8 +78,16 @@ func sliceWithout(s []string, v string) []string {
 }
 
 func (s *stringSet) Contains(value string) bool {
-	_, c := s.m[value]
-	return c
+	return s.ContainsAnyOf(value)
+}
+
+func (s *stringSet) ContainsAnyOf(values ...string) bool {
+	for _, value := range values {
+		if _, c := s.m[value]; c {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *stringSet) Len() int {
