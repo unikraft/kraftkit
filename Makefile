@@ -122,6 +122,12 @@ fmt: ## Format all files according to linting preferences.
 cicheck: ## Run CI checks.
 	$(GOCILINT) run
 
+.PHONY: test
+test: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
+test: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
+test: ## Run unit tests.
+	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all --tags static $(GOTEST_PKGS)
+
 .PHONY: install-golangci-lint
 install-golangci-lint: GOLANGCI_LINT_VERSION     ?= 1.51.2
 install-golangci-lint: GOLANGCI_LINT_INSTALL_DIR ?= $$($(GO) env GOPATH)/bin
