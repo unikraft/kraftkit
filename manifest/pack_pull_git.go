@@ -43,12 +43,12 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 					popts.OnProgress((float64(stats.IndexedObjects) / float64(stats.TotalObjects)) / 2)
 					return libgit.ErrorCodeOK
 				},
-				PackProgressCallback: func(stage int32, current, total uint32) libgit.ErrorCode {
+				PackProgressCallback: func(_ int32, current, total uint32) libgit.ErrorCode {
 					popts.OnProgress(0.5 + (float64(current)/float64(total))/2)
 					return libgit.ErrorCodeOK
 				},
 				// Warning: Returning "error OK" here prevents hostkey look ups
-				CertificateCheckCallback: func(cert *libgit.Certificate, valid bool, hostname string) libgit.ErrorCode {
+				CertificateCheckCallback: func(cert *libgit.Certificate, _ bool, hostname string) libgit.ErrorCode {
 					if cert != nil && len(cert.Hostkey.Hostkey) > 0 {
 						log.G(ctx).
 							WithField("hostname", hostname).
@@ -76,7 +76,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 			path = "ssh://" + path
 		}
 
-		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl string, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
+		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(_, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
 			if allowedTypes == libgit.CredentialTypeUsername && len(usernameFromUrl) == 0 {
 				return nil, fmt.Errorf("username required in SSH URL")
 			}
@@ -84,7 +84,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 			return libgit.NewCredentialSSHKeyFromAgent(usernameFromUrl)
 		}
 	} else {
-		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl string, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
+		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl, _ string, _ libgit.CredentialType) (*libgit.Credential, error) {
 			u, err := url.Parse(fullUrl)
 			if err != nil {
 				return nil, fmt.Errorf("could not parse git repository: %v", err)

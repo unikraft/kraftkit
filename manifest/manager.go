@@ -220,7 +220,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		allManifests = append(allManifests, index.Manifests...)
 	} else {
-		index, err = NewManifestIndexFromFile(ctx, m.LocalManifestIndex(ctx))
+		index, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageFromManifestWithVersion(ctx, manifest, version, mopts...)
+				p, err := NewPackageFromManifestWithVersion(manifest, version, mopts...)
 				if err != nil {
 					log.G(ctx).Warn(err)
 					continue
@@ -317,7 +317,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 				packages = append(packages, p)
 			}
 		} else {
-			more, err := NewPackageFromManifest(ctx, manifest, mopts...)
+			more, err := NewPackageFromManifest(manifest, mopts...)
 			if err != nil {
 				log.G(ctx).Warn(err)
 				continue

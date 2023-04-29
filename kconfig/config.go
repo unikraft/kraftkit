@@ -346,10 +346,10 @@ func ParseConfig(file string) (*DotConfigFile, error) {
 		return nil, fmt.Errorf("failed to open .config file %v: %v", file, err)
 	}
 
-	return ParseConfigData(data, file)
+	return ParseConfigData(data)
 }
 
-func ParseConfigData(data []byte, file string) (*DotConfigFile, error) {
+func ParseConfigData(data []byte) (*DotConfigFile, error) {
 	cf := &DotConfigFile{
 		Map: make(map[string]*KeyValue),
 	}

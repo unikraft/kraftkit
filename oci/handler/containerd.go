@@ -287,13 +287,13 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 
 	go func() {
 		if onProgress != nil {
-			handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), log.G(ctx).Out, onProgress)
+			handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), onProgress)
 		}
 
 		close(progress)
 	}()
 
-	h := images.HandlerFunc(func(ctx context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	h := images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 		if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
 			ongoing.Add(desc)
 		}
@@ -333,7 +333,7 @@ type statusInfo struct {
 // in order to determine the overall progress of downloading multiple layers for
 // a singlely specified OCI image which reports progress by invoking the
 // `onProgress` callback method.
-func (handle *ContainerdHandler) reportProgress(ctx context.Context, ongoing *jobs, cs content.Store, out io.Writer, onProgress func(progress float64)) {
+func (handle *ContainerdHandler) reportProgress(ctx context.Context, ongoing *jobs, cs content.Store, onProgress func(progress float64)) {
 	// TODO: This implementation is based on containerd's `ctr content fetch`
 	// implementation which can be found at:
 	//

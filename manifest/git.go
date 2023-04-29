@@ -108,7 +108,7 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 
 // probeChannels is an internal method which matches Git branches for the
 // repository and uses this as a ManifestChannel
-func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
+func (gp GitProvider) probeChannels() []ManifestChannel {
 	var channels []ManifestChannel
 
 	// This is unikraft-centric ettiquette where there exists two branches:
@@ -152,12 +152,12 @@ func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
 		channels[0].Default = true
 	}
 
-	return channels, nil
+	return channels
 }
 
 // probeVersions is an internal method which matches Git tags for the repository
 // and uses this as a ManifestVersion
-func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
+func (gp GitProvider) probeVersions() []ManifestVersion {
 	var versions []ManifestVersion
 
 	for _, ref := range gp.refs {
@@ -187,7 +187,7 @@ func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
 		}
 	}
 
-	return versions, nil
+	return versions
 }
 
 func (gp GitProvider) Manifests() ([]*Manifest, error) {
@@ -215,21 +215,11 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 		}
 	}
 
-	channels, err := gp.probeChannels()
-	if err != nil {
-		return nil, err
-	}
-
 	log.G(gp.ctx).Infof("probing %s", gp.repo)
 
-	manifest.Channels = append(manifest.Channels, channels...)
+	manifest.Channels = append(manifest.Channels, gp.probeChannels()...)
 
-	versions, err := gp.probeVersions()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest.Versions = append(manifest.Versions, versions...)
+	manifest.Versions = append(manifest.Versions, gp.probeVersions()...)
 
 	// TODO: This is the correct place to apply the options.  We do it earlier to
 	// access the logger.  The same issue appears in github.go.  The logger

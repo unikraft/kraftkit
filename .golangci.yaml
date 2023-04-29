@@ -13,5 +13,6 @@ run:
 
 linters:
   enable:
+    - unparam
     - misspell
     - gofumpt

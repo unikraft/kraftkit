@@ -81,7 +81,7 @@ var timezoneNames = map[int]string{
 }
 
 // generic authenticated HTTP client for commands
-func NewHTTPClient(io *iostreams.IOStreams, unixSocket string, setAccept bool) (*http.Client, error) {
+func NewHTTPClient(io *iostreams.IOStreams, unixSocket string) (*http.Client, error) {
 	var opts []ClientOption
 
 	// We need to check and potentially add the unix socket roundtripper option

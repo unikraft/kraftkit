@@ -175,7 +175,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if !popts.skipNormalization {
-		err = normalize(project.(*application), popts.resolvePaths)
+		err = normalize(project.(*application))
 		if err != nil {
 			return nil, err
 		}

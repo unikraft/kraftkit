@@ -126,7 +126,7 @@ func toMapStringString(value map[string]interface{}, allowNil bool) map[string]i
 	return output
 }
 
-var transformMapStringString TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
+var transformMapStringString TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
 	switch value := data.(type) {
 	case map[string]interface{}:
 		return toMapStringString(value, false), nil
@@ -137,7 +137,7 @@ var transformMapStringString TransformerFunc = func(ctx context.Context, data in
 	}
 }
 
-var transformInitrd TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
+var transformInitrd TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
 	switch value := data.(type) {
 	case map[string]interface{}:
 		if format, ok := value["format"]; ok {
@@ -182,14 +182,14 @@ func transformValueToMapEntry(value string, separator string, allowNil bool) (st
 	}
 }
 
-var transformCommand TransformerFunc = func(ctx context.Context, value interface{}) (interface{}, error) {
+var transformCommand TransformerFunc = func(_ context.Context, value interface{}) (interface{}, error) {
 	if str, ok := value.(string); ok {
 		return shellwords.Parse(str)
 	}
 	return value, nil
 }
 
-var transformKConfig TransformerFunc = func(ctx context.Context, data interface{}) (interface{}, error) {
+var transformKConfig TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
 	config, err := transformMappingOrList(data, "=", true)
 	if err != nil {
 		return nil, err

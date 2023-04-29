@@ -24,7 +24,7 @@ const ManifestFormat pack.PackageFormat = "manifest"
 // manifest which in itself may contain various versions and channels.  With the
 // provided version as a positional parameter, the manifest can be reduced to
 // represent a specific version.
-func NewPackageFromManifestWithVersion(ctx context.Context, manifest *Manifest, version string, opts ...ManifestOption) (pack.Package, error) {
+func NewPackageFromManifestWithVersion(manifest *Manifest, version string, opts ...ManifestOption) (pack.Package, error) {
 	// Apply the options to this manifest
 	for _, opt := range opts {
 		if err := opt(manifest); err != nil {
@@ -61,13 +61,13 @@ func NewPackageFromManifestWithVersion(ctx context.Context, manifest *Manifest, 
 
 // NewPackageFromManifest generates a manifest implementation of the
 // pack.Package construct based on the input Manifest using its default channel
-func NewPackageFromManifest(ctx context.Context, manifest *Manifest, opts ...ManifestOption) (pack.Package, error) {
+func NewPackageFromManifest(manifest *Manifest, opts ...ManifestOption) (pack.Package, error) {
 	channel, err := manifest.DefaultChannel()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPackageFromManifestWithVersion(ctx, manifest, channel.Name, opts...)
+	return NewPackageFromManifestWithVersion(manifest, channel.Name, opts...)
 }
 
 func (mp mpack) Type() unikraft.ComponentType {
