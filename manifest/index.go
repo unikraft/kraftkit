@@ -42,7 +42,7 @@ type ManifestIndexProvider struct {
 // the Provider is instantiated since the path does indeed represent a
 // ManifestIndex.
 func NewManifestIndexProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
-	index, err := NewManifestIndexFromFile(ctx, path, mopts...)
+	index, err := NewManifestIndexFromFile(path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
@@ -85,7 +85,7 @@ func (mip ManifestIndexProvider) String() string {
 
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
-func NewManifestIndexFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {
+func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {
 	index := &ManifestIndex{}
 
 	if err := yaml.Unmarshal(raw, index); err != nil {
@@ -109,7 +109,7 @@ func NewManifestIndexFromBytes(ctx context.Context, raw []byte, mopts ...Manifes
 	return index, nil
 }
 
-func NewManifestIndexFromFile(ctx context.Context, path string, mopts ...ManifestOption) (*ManifestIndex, error) {
+func NewManifestIndexFromFile(path string, mopts ...ManifestOption) (*ManifestIndex, error) {
 	f, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func NewManifestIndexFromFile(ctx context.Context, path string, mopts ...Manifes
 		return nil, err
 	}
 
-	index, err := NewManifestIndexFromBytes(ctx, contents, mopts...)
+	index, err := NewManifestIndexFromBytes(contents, mopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 		return nil, err
 	}
 
-	index, err := NewManifestIndexFromBytes(ctx, contents, mopts...)
+	index, err := NewManifestIndexFromBytes(contents, mopts...)
 	if err != nil {
 		return nil, err
 	}

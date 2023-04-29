@@ -894,7 +894,7 @@ func (qd *QemuDriver) Start(ctx context.Context, mid machine.MachineID) error {
 	return err
 }
 
-func (qd *QemuDriver) exitStatusAndAtFromConfig(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
+func (qd *QemuDriver) exitStatusAndAtFromConfig(mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
 	exitStatus = -1 // return -1 if the process hasn't started
 	exitedAt = time.Time{}
 
@@ -910,7 +910,7 @@ func (qd *QemuDriver) exitStatusAndAtFromConfig(ctx context.Context, mid machine
 }
 
 func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
-	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 	if err != nil {
 		return
 	}
@@ -923,7 +923,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 	for {
 		select {
 		case state := <-events:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			switch state {
 			case machine.MachineStateExited, machine.MachineStateDead:
@@ -931,7 +931,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 			}
 
 		case err2 := <-errs:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			if errors.Is(err2, qmp.ErrAcceptedNonEvent) {
 				continue
@@ -940,7 +940,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 			return
 
 		case <-ctx.Done():
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			// TODO: Should we return an error if the context is cancelled?
 			return

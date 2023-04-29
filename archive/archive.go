@@ -201,7 +201,7 @@ func TarDir(ctx context.Context, root, prefix, out string, opts ...ArchiveOption
 // TarDirWriter makes a tarball of a given `root` directory into the provided
 // tarball writer `tw`.
 func TarDirWriter(ctx context.Context, root, prefix string, tw *tar.Writer, opts ...ArchiveOption) error {
-	return filepath.Walk(root, func(path string, info os.FileInfo, err error) (returnErr error) {
+	return filepath.Walk(root, func(path string, _ os.FileInfo, err error) (returnErr error) {
 		if err != nil {
 			return err
 		}

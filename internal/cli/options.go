@@ -216,7 +216,6 @@ func WithDefaultHTTPClient() CliOption {
 		httpClient, err := httpclient.NewHTTPClient(
 			copts.IOStreams,
 			copts.ConfigManager.Config.HTTPUnixSocket,
-			true,
 		)
 		if err != nil {
 			return err

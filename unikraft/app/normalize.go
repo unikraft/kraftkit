@@ -39,14 +39,13 @@ import (
 
 // normalize a kraft project by moving deprecated attributes to their canonical
 // position and injecting implicit defaults
-func normalize(project *application, resolvePaths bool) error {
+func normalize(project *application) error {
 	absWorkingDir, err := filepath.Abs(project.WorkingDir())
 	if err != nil {
 		return err
 	}
 	project.workingDir = absWorkingDir
 
-	// Ignore the error here, as it's a false positive
 	absKraftfiles, err := absKraftfiles(project.Kraftfiles())
 	if err != nil {
 		return err
