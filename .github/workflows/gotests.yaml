@@ -13,6 +13,7 @@ on:
 
 jobs:
   gounit:
+    name: Go unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -55,11 +56,8 @@ jobs:
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
         run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
-      - name: Install libgit2/git2go
-        run: make git2go
-
       - name: Run tests
-        run: make test
+        run: make test-unit
 
   e2e-cli:
     name: kraft CLI end-to-end

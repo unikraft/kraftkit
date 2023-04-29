@@ -58,13 +58,6 @@ jobs:
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
         run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
-      # Temporary workaround until this pipeline uses the 'myself' buildenv
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cmake
-
       - name: Install libgit2/git2go
         run: make git2go
 

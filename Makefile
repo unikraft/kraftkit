@@ -123,9 +123,12 @@ cicheck: ## Run CI checks.
 	$(GOCILINT) run
 
 .PHONY: test
-test: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
-test: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
-test: ## Run unit tests.
+test: test-unit test-e2e ## Run all tests.
+
+.PHONY: test-unit
+test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
+test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
+test-unit: git2go ## Run unit tests.
 	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all --tags static $(GOTEST_PKGS)
 
 
