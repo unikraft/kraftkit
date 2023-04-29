@@ -35,6 +35,18 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
+      - name: libgit2 cache
+        id: libgit2-cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install
+          key: libgit2-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Reset libgit2 pkg-config mtime
+        if: steps.libgit2-cache.outputs.cache-hit == 'true'
+        run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
+
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install build dependencies
         run: |
