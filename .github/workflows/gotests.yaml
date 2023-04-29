@@ -62,7 +62,7 @@ jobs:
         run: make test
 
   e2e-cli:
-    name: Test kraft CLI commands
+    name: kraft CLI end-to-end
     runs-on: ubuntu-latest
 
     steps:
@@ -108,19 +108,11 @@ jobs:
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
         run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
-      - name: Install libgit2/git2go
-        run: make git2go
-
-      - name: Install Ginkgo
-        run: go install github.com/onsi/ginkgo/v2/ginkgo
-
-      - name: Install kraft
-        run: make kraft DOCKER= DISTDIR="$(go env GOPATH)"/bin
-
-      - name: Run unit tests
-        run: ginkgo -v -p -randomize-all ./test/e2e/framework/...
+      - name: Run framework unit tests
+        run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
 
       - name: Run e2e tests
         env:
           KRAFTKIT_NO_CHECK_UPDATES: true
-        run: ginkgo -v -p -randomize-all ./test/e2e/cli/
+          DOCKER: ''
+        run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
