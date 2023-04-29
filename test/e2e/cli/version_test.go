@@ -43,9 +43,8 @@ var _ = Describe("kraft version", func() {
 
 	When("invoked with the --help flag", func() {
 		BeforeEach(func() {
-			// The help subsystem is managed by cobra and fails when top-level flags
-			// are passed, so we ensure to keep only the command name and subcommand
-			// from the original cmd.
+			// FIXME(antoineco): Sub-commands of the root command handle help flags
+			// improperly when top-level flags exist in the arguments.
 			// Ref. unikraft/kraftkit#430
 			cmd.Args = []string{cmd.Args[0], cmd.Args[len(cmd.Args)-1], "--help"}
 		})
