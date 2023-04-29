@@ -97,7 +97,7 @@ func expandRegisteredFlags(cmd *cobra.Command) {
 }
 
 // filter out registered flags from the given command's args.
-func filterRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs []string) {
+func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs []string) {
 	for cmdline, flags := range flagOverrides {
 		if !isSameCommand(cmd, cmdline) {
 			continue
@@ -315,7 +315,7 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 	if len(args) > 0 {
 		// Some kraft commands accept flags which registration is delayed using
 		// RegisterFlag. Parsing these here would result in a failure.
-		args = filterRegisteredFlags(subC, args)
+		args = filterOutRegisteredFlags(subC, args)
 
 		if err := subC.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
 			return err
