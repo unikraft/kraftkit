@@ -46,6 +46,7 @@ var _ = Describe("kraft version", func() {
 			// The help subsystem is managed by cobra and fails when top-level flags
 			// are passed, so we ensure to keep only the command name and subcommand
 			// from the original cmd.
+			// Ref. unikraft/kraftkit#430
 			cmd.Args = []string{cmd.Args[0], cmd.Args[len(cmd.Args)-1], "--help"}
 		})
 
