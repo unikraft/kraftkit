@@ -28,6 +28,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"kraftkit.sh/internal/set"
 )
 
 func Pluralize(num int, thing string) string {
@@ -115,13 +117,7 @@ func ListJoinStr(items []string, delim string) string {
 }
 
 func Contains(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-
-	return false
+	return set.NewStringSet(haystack...).Contains(needle)
 }
 
 // HumanizeDuration returns a relative time string based on an input duration

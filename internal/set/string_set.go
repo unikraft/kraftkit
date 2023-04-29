@@ -30,33 +30,37 @@ type stringSet struct {
 	m map[string]struct{}
 }
 
-func NewStringSet() *stringSet {
-	s := &stringSet{}
-	s.m = make(map[string]struct{})
-	s.v = []string{}
+// NewStringSet returns a new stringSet instance initialized with the given
+// values, if any are provided.
+func NewStringSet(values ...string) *stringSet {
+	s := &stringSet{
+		m: make(map[string]struct{}, len(values)),
+		v: make([]string, 0, len(values)),
+	}
+
+	s.Add(values...)
+
 	return s
 }
 
-func (s *stringSet) Add(value string) {
-	if s.Contains(value) {
-		return
-	}
-	s.m[value] = exists
-	s.v = append(s.v, value)
-}
-
-func (s *stringSet) AddValues(values []string) {
-	for _, v := range values {
-		s.Add(v)
+func (s *stringSet) Add(values ...string) {
+	for _, value := range values {
+		if s.Contains(value) {
+			continue
+		}
+		s.m[value] = exists
+		s.v = append(s.v, value)
 	}
 }
 
-func (s *stringSet) Remove(value string) {
-	if !s.Contains(value) {
-		return
+func (s *stringSet) Remove(values ...string) {
+	for _, value := range values {
+		if !s.Contains(value) {
+			continue
+		}
+		delete(s.m, value)
+		s.v = sliceWithout(s.v, value)
 	}
-	delete(s.m, value)
-	s.v = sliceWithout(s.v, value)
 }
 
 func sliceWithout(s []string, v string) []string {
@@ -73,15 +77,17 @@ func sliceWithout(s []string, v string) []string {
 	return append(s[:idx], s[idx+1:]...)
 }
 
-func (s *stringSet) RemoveValues(values []string) {
-	for _, v := range values {
-		s.Remove(v)
-	}
+func (s *stringSet) Contains(value string) bool {
+	return s.ContainsAnyOf(value)
 }
 
-func (s *stringSet) Contains(value string) bool {
-	_, c := s.m[value]
-	return c
+func (s *stringSet) ContainsAnyOf(values ...string) bool {
+	for _, value := range values {
+		if _, c := s.m[value]; c {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *stringSet) Len() int {
