@@ -1,47 +1,56 @@
 version: 2
+
 updates:
-  - package-ecosystem: "gomod"
-    directory: "/"
-    target-branch: "staging"
+
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: staging
     schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "09:00"
+      interval: weekly
+      day: sunday
+      time: '09:00'
     commit-message:
-      prefix: "gomod" # Prefix messages with
-      include: "scope" # List all updated dependencies
+      prefix: gomod # Prefix messages with
+      include: scope # List all updated dependencies
     reviewers:
-      - "nderjung"
-      - "craciunoiuc"
+      - nderjung
+      - craciunoiuc
     assignees:
-      - "nderjung"
-  - package-ecosystem: "gomod"
-    directory: "/tools/go-generate-qemu-devices"
-    target-branch: "staging"
+      - nderjung
+  - package-ecosystem: gomod
+    directory: /tools/go-generate-qemu-devices
+    target-branch: staging
     schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "09:00"
+      interval: weekly
+      day: sunday
+      time: '09:00'
     commit-message:
-      prefix: "gomod" # Prefix messages with
-      include: "scope" # List all updated dependencies
+      prefix: gomod # Prefix messages with
+      include: scope # List all updated dependencies
     reviewers:
-      - "nderjung"
-      - "craciunoiuc"
+      - nderjung
+      - craciunoiuc
     assignees:
-      - "nderjung"
-  - package-ecosystem: "gomod"
-    directory: "/tools/protoc-gen-go-netconn"
-    target-branch: "staging"
+      - nderjung
+  - package-ecosystem: gomod
+    directory: /tools/protoc-gen-go-netconn
+    target-branch: staging
     schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "09:00"
+      interval: weekly
+      day: sunday
+      time: '09:00'
     commit-message:
-      prefix: "gomod" # Prefix messages with
-      include: "scope" # List all updated dependencies
+      prefix: gomod # Prefix messages with
+      include: scope # List all updated dependencies
     reviewers:
-      - "nderjung"
-      - "craciunoiuc"
+      - nderjung
+      - craciunoiuc
     assignees:
-      - "nderjung"
+      - nderjung
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      time: '09:00'

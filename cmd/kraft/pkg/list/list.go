@@ -34,7 +34,7 @@ type List struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&List{}, cobra.Command{
+	cmd, err := cmdfactory.New(&List{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "list [FLAGS] [DIR]",
 		Aliases: []string{"l", "ls"},
@@ -48,6 +48,23 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*List) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *List) Run(cmd *cobra.Command, args []string) error {
@@ -63,7 +80,9 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		opts.Limit = -1
 	}
 
-	query := packmanager.CatalogQuery{}
+	query := packmanager.CatalogQuery{
+		NoCache: opts.Update,
+	}
 	if opts.ShowCore {
 		query.Types = append(query.Types, unikraft.ComponentTypeCore)
 	}

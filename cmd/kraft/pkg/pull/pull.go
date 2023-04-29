@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -28,8 +27,8 @@ import (
 type Pull struct {
 	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
 	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
 	Manager      string `long:"manager" short:"M" usage:"Force the handler type (Omittion will attempt auto-detect)" default:"auto"`
-	NoCache      bool   `long:"no-cache" short:"Z" usage:"Do not use cache and pull directly from source"`
 	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
@@ -38,7 +37,7 @@ type Pull struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Pull{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Pull{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
 		Aliases: []string{"p"},
@@ -61,9 +60,22 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
-func (opts *Pull) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
 	return cmdfactory.MutuallyExclusive(
 		"the `--with-deps` option is not supported with `--no-deps`",
 		opts.WithDeps,
@@ -75,21 +87,19 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var project app.Application
 	var processes []*paraprogress.Process
-	var queries []packmanager.CatalogQuery
 
-	query := ""
-	if len(args) > 0 {
-		query = strings.Join(args, " ")
-	}
-
-	if len(query) == 0 {
-		query, err = os.Getwd()
+	workdir := opts.Workdir
+	if len(workdir) == 0 {
+		workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
 	}
 
-	workdir := opts.Workdir
+	if len(args) == 0 {
+		args = []string{workdir}
+	}
+
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
@@ -103,10 +113,17 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	type pmQuery struct {
+		pm    packmanager.PackageManager
+		query packmanager.CatalogQuery
+	}
+
+	var queries []pmQuery
+
 	// Are we pulling an application directory?  If so, interpret the application
 	// so we can get a list of components
-	if f, err := os.Stat(query); err == nil && f.IsDir() {
-		workdir = query
+	if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
+		workdir = args[0]
 		project, err := app.NewProjectFromOptions(
 			ctx,
 			app.WithProjectWorkdir(workdir),
@@ -116,7 +133,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		if _, err = project.Components(); err != nil {
+		if _, err = project.Components(ctx); err != nil {
 			// Pull the template from the package manager
 			var packages []pack.Package
 			search := processtree.NewProcessTreeItem(
@@ -128,7 +145,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						Name:    project.Template().Name(),
 						Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
 						Version: project.Template().Version(),
-						NoCache: opts.NoCache,
+						NoCache: !opts.ForceCache,
 					})
 					if err != nil {
 						return err
@@ -213,53 +230,53 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		// List the components
-		components, err := project.Components()
+		components, err := project.Components(ctx)
 		if err != nil {
 			return err
 		}
 		for _, c := range components {
-			queries = append(queries, packmanager.CatalogQuery{
-				Name:    c.Name(),
-				Version: c.Version(),
-				Source:  c.Source(),
-				Types:   []unikraft.ComponentType{c.Type()},
-				NoCache: opts.NoCache,
+			queries = append(queries, pmQuery{
+				pm: pm,
+				query: packmanager.CatalogQuery{
+					Name:    c.Name(),
+					Version: c.Version(),
+					Source:  c.Source(),
+					Types:   []unikraft.ComponentType{c.Type()},
+					NoCache: !opts.ForceCache,
+				},
 			})
 		}
 
 		// Is this a list (space delimetered) of packages to pull?
-	} else {
-		for _, c := range strings.Split(query, " ") {
-			query := packmanager.CatalogQuery{NoCache: opts.NoCache}
-
-			if t, n, v, err := unikraft.GuessTypeNameVersion(c); err == nil {
-				if t != unikraft.ComponentTypeUnknown {
-					query.Types = append(query.Types, t)
-				}
-
-				if len(n) > 0 {
-					query.Name = n
-				}
-
-				if len(v) > 0 {
-					query.Version = v
-				}
-			} else {
-				query.Source = c
+	} else if len(args) > 0 {
+		for _, arg := range args {
+			pm, compatible, err := pm.IsCompatible(ctx, arg)
+			if err != nil || !compatible {
+				continue
 			}
 
-			queries = append(queries, query)
+			queries = append(queries, pmQuery{
+				pm: pm,
+				query: packmanager.CatalogQuery{
+					NoCache: !opts.ForceCache,
+					Name:    arg,
+				},
+			})
 		}
 	}
 
 	for _, c := range queries {
-		next, err := pm.Catalog(ctx, c)
+		next, err := c.pm.Catalog(ctx, c.query)
 		if err != nil {
-			return err
+			log.G(ctx).
+				WithField("format", pm.Format().String()).
+				WithField("name", c.query.Name).
+				Warn(err)
+			continue
 		}
 
 		if len(next) == 0 {
-			log.G(ctx).Warnf("could not find %s", c.String())
+			log.G(ctx).Warnf("could not find %s", c.query.String())
 			continue
 		}
 
@@ -275,7 +292,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullProgressFunc(w),
 						pack.WithPullWorkdir(workdir),
 						pack.WithPullChecksum(!opts.NoChecksum),
-						pack.WithPullCache(!opts.NoCache),
+						pack.WithPullCache(opts.ForceCache),
 					)
 				},
 			))
@@ -287,7 +304,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		processes,
 		paraprogress.IsParallel(parallel),
 		paraprogress.WithRenderer(norender),
-		paraprogress.WithFailFast(true),
+		paraprogress.WithFailFast(false),
 	)
 	if err != nil {
 		return err

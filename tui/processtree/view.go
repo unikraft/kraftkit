@@ -23,7 +23,7 @@ func (pt ProcessTree) View() string {
 	finished := 0
 
 	// Update timers on all active items and their parents
-	pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
+	_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
 		if pti.status == StatusSuccess ||
 			pti.status == StatusFailed ||
 			pti.status == StatusFailedChild {

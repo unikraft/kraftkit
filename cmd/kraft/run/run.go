@@ -5,13 +5,12 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/erikgeiser/promptkit/selection"
 	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
@@ -20,14 +19,18 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
 	machinedriver "kraftkit.sh/machine/driver"
 	machinedriveropts "kraftkit.sh/machine/driveropts"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
-	"kraftkit.sh/utils"
 )
 
 type Run struct {
@@ -45,7 +48,7 @@ type Run struct {
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Run{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
 		Args:    cobra.MaximumNArgs(1),
@@ -62,6 +65,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
@@ -73,8 +79,17 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Run) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
 	return nil
 }
 
@@ -137,7 +152,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	//
 	//     $ kraft run path/to/kernel
 	//
-	// c). a target defined within the context of `workdir` (which is either set
+	// c). A package manager image reference containing a unikernel;
+	//
+	// d). a target defined within the context of `workdir` (which is either set
 	//     via -w or is the current working directory), e.g.:
 	//
 	//     $ cd path/to/project
@@ -195,9 +212,97 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.WithInitRd(opts.InitRd),
 		)
 
-		// c). use a defined working directory as a Unikraft project
+		// c). use the provided package manager
+	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
+		// First try the local cache of the catalog
+		packs, err := pm.Catalog(ctx, packmanager.CatalogQuery{
+			Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
+			Name:    entity,
+			NoCache: false,
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(packs) > 1 {
+			return fmt.Errorf("could not determine what to run, too many options")
+		} else if len(packs) == 0 {
+			// Second, try accessing the remote catalog
+			packs, err = pm.Catalog(ctx, packmanager.CatalogQuery{
+				Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
+				Name:    entity,
+				NoCache: true,
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(packs) > 1 {
+				return fmt.Errorf("could not determine what to run, too many options")
+			} else if len(packs) == 0 {
+				return fmt.Errorf("not found: %s", entity)
+			}
+		}
+
+		// Create a temporary directory where the image can be stored
+		dir, err := os.MkdirTemp("", "")
+		if err != nil {
+			return err
+		}
+
+		// TODO(nderjung): Somehow this needs to be garbage collected if in
+		// detach-mode.
+		if !opts.Detach {
+			defer os.RemoveAll(dir)
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", entity),
+				func(ctx context.Context, w func(progress float64)) error {
+					return packs[0].Pull(
+						ctx,
+						pack.WithPullProgressFunc(w),
+						pack.WithPullWorkdir(dir),
+					)
+				},
+			)},
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return err
+		}
+
+		// Crucially, the catalog should return an interface that also implements
+		// target.Target.  This demonstrates that the implementing package can
+		// resolve application kernels.
+		targ, ok := packs[0].(target.Target)
+		if !ok {
+			return fmt.Errorf("package does not convert to target")
+		}
+
+		if opts.Name == "" {
+			opts.Name = namesgenerator.GetRandomName(0)
+		}
+
+		mopts = append(mopts,
+			machine.WithArchitecture(targ.Architecture().Name()),
+			machine.WithPlatform(targ.Platform().Name()),
+			machine.WithName(machine.MachineName(opts.Name)),
+			machine.WithKernel(targ.Kernel()),
+			machine.WithSource(fmt.Sprintf("%s://%s", pm.Format(), entity)),
+		)
+		// d). use a defined working directory as a Unikraft project
 	} else if len(workdir) > 0 {
-		target := opts.Target
 		project, err := app.NewProjectFromOptions(
 			ctx,
 			app.WithProjectWorkdir(workdir),
@@ -207,42 +312,31 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		if len(project.TargetNames()) == 1 {
-			target = project.TargetNames()[0]
-			if len(opts.Target) > 0 && opts.Target != target {
-				return fmt.Errorf("unknown target: %s", opts.Target)
-			}
+		// Filter project targets by any provided CLI options
+		targets := cli.FilterTargets(
+			project.Targets(),
+			opts.Architecture,
+			opts.Platform,
+			opts.Target,
+		)
 
-		} else if target == "" && len(project.Targets()) > 1 {
-			if config.G[config.KraftKit](ctx).NoPrompt {
-				return fmt.Errorf("with 'no prompt' enabled please select a target")
-			}
+		var t target.Target
 
-			sp := selection.New("select target:", selectionTargets(project.Targets()))
-			sp.Filter = nil
+		switch {
+		case len(targets) == 1:
+			t = targets[0]
 
-			selectedTarget, err := sp.RunPrompt()
+		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
+			return fmt.Errorf("could not determine what to run based on provided CLI arguments")
+
+		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) == 0:
+			return fmt.Errorf("could not match any target")
+
+		default:
+			t, err = cli.SelectTarget(targets)
 			if err != nil {
 				return err
 			}
-
-			target = selectedTarget
-
-		} else if target != "" && utils.Contains(project.TargetNames(), target) {
-			return fmt.Errorf("unknown target: %s", target)
-		}
-
-		t, err := project.TargetByName(target)
-		if err != nil {
-			return err
-		}
-
-		// Validate selection of target
-		if len(opts.Architecture) > 0 && (opts.Architecture != t.Architecture().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified architecture (%s)", t.ArchPlatString(), opts.Architecture)
-		}
-		if len(opts.Platform) > 0 && (opts.Platform != t.Platform().Name()) {
-			return fmt.Errorf("selected target (%s) does not match specified platform (%s)", t.ArchPlatString(), opts.Platform)
 		}
 
 		name := t.Name()
@@ -323,7 +417,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				// Wait on either channel
 				select {
 				case status := <-events:
-					store.SaveMachineState(mid, status)
+					if err := store.SaveMachineState(mid, status); err != nil {
+						log.G(ctx).Errorf("could not save machine state: %v", err)
+						return
+					}
 
 					switch status {
 					case machine.MachineStateExited, machine.MachineStateDead:
@@ -349,7 +446,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !opts.Detach {
-		driver.TailWriter(ctx, mid, iostreams.G(ctx).Out)
+		if err := driver.TailWriter(ctx, mid, iostreams.G(ctx).Out); err != nil {
+			return err
+		}
 
 		// Wait for the context to be cancelled, which can occur if a fatal error
 		// occurs or the user has requested a SIGINT (Ctrl+C).
@@ -378,17 +477,4 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// selectionTargets returns the given target.Targets in a format suitable for
-// interactive prompts.
-func selectionTargets(tgts target.Targets) []string {
-	tgtStrings := make([]string, 0, len(tgts))
-	for _, tgt := range tgts {
-		tgtStrings = append(tgtStrings, fmt.Sprintf("%s (%s)", tgt.Name(), tgt.ArchPlatString()))
-	}
-
-	sort.Strings(tgtStrings)
-
-	return tgtStrings
 }

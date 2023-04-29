@@ -23,10 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/compose-spec/compose-go/dotenv"
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/compose-spec/compose-go/template"
-	"github.com/pkg/errors"
 
 	"kraftkit.sh/kconfig"
 )
@@ -51,7 +49,6 @@ type ProjectOptions struct {
 	workdir           string
 	kraftfiles        []kraftfile
 	kconfig           kconfig.KeyValueMap
-	dotConfigFile     string
 	skipValidation    bool
 	skipInterpolation bool
 	skipNormalization bool
@@ -220,101 +217,7 @@ func WithProjectConfig(config []string) ProjectOption {
 // WithProjectKraftfile adds a kraft file to the project
 func WithProjectKraftfile(file string) ProjectOption {
 	return func(popts *ProjectOptions) error {
-		popts.AddKraftfile(file)
-		return nil
-	}
-}
-
-// WithProjectDotConfigFile set an alternate config file
-func WithProjectDotConfigFile(file string) ProjectOption {
-	return func(popts *ProjectOptions) error {
-		popts.dotConfigFile = file
-		return nil
-	}
-}
-
-func withProjectDotConfig(popts *ProjectOptions) error {
-	if popts.dotConfigFile == "" {
-		wd, err := popts.Workdir()
-		if err != nil {
-			return err
-		}
-
-		popts.dotConfigFile = filepath.Join(wd, kconfig.DotConfigFileName)
-	}
-
-	dotConfigFile := popts.dotConfigFile
-
-	abs, err := filepath.Abs(dotConfigFile)
-	if err != nil {
-		return err
-	}
-
-	dotConfigFile = abs
-
-	s, err := os.Stat(dotConfigFile)
-	if os.IsNotExist(err) {
-		if popts.dotConfigFile != "" {
-			return errors.Errorf("couldn't find config file: %s", popts.dotConfigFile)
-		}
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if s.IsDir() {
-		if popts.dotConfigFile == "" {
-			return nil
-		}
-		return errors.Errorf("%s is a directory", dotConfigFile)
-	}
-
-	file, err := os.Open(dotConfigFile)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	config := kconfig.KeyValueMap{}
-
-	notInConfigSet := make(map[string]interface{})
-	env, err := dotenv.ParseWithLookup(file, func(k string) (string, bool) {
-		v, ok := os.LookupEnv(k)
-		if !ok {
-			config.Unset(k)
-			return "", true
-		}
-
-		return v, true
-	})
-	if err != nil {
-		return err
-	}
-
-	for k, v := range env {
-		if _, ok := notInConfigSet[k]; ok {
-			continue
-		}
-
-		config.Set(k, v)
-	}
-
-	popts.kconfig = config
-
-	return nil
-}
-
-// WithProjectDotConfig imports configuration variables from .config file
-func WithProjectDotConfig(enforce bool) ProjectOption {
-	return func(popts *ProjectOptions) error {
-		if err := withProjectDotConfig(popts); err != nil && enforce {
-			return err
-		}
-
-		return nil
+		return popts.AddKraftfile(file)
 	}
 }
 
@@ -393,9 +296,7 @@ func WithProjectDefaultKraftfiles() ProjectOption {
 					return fmt.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
 				}
 
-				popts.AddKraftfile(candidates[0])
-
-				return nil
+				return popts.AddKraftfile(candidates[0])
 			}
 
 			parent := filepath.Dir(pwd)

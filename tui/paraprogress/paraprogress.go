@@ -9,9 +9,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/barkimedes/go-deepcopy"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"golang.org/x/term"
+	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 )
 
@@ -68,7 +71,25 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 	for i := range processes {
 		processes[i].norender = md.norender
 		processes[i].NameWidth = maxNameLen
-		processes[i].ctx = ctx
+
+		pctx, err := deepcopy.Anything(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		processes[i].ctx = pctx.(context.Context)
+		log.G(processes[i].ctx).Level = log.G(ctx).Level
+
+		// Update formatter when using KraftKit's TextFormatter.  The
+		// TextFormatter recognises that this is a non-standard terminal and
+		// changes the output to a more machine readable format.  Instead we want
+		// to force the formatting so that the output looks seamless with the
+		// style of the TUI.
+		if formatter, ok := log.G(ctx).Formatter.(*log.TextFormatter); ok {
+			formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
+			formatter.ForceFormatting = true
+			log.G(processes[i].ctx).Formatter = formatter
+		}
 	}
 
 	return md, nil
@@ -90,16 +111,11 @@ func (pd *ParaProgress) Start() error {
 
 	tprog = tea.NewProgram(pd, teaOpts...)
 
-	go func() {
-		if _, err := tprog.Run(); err != nil {
-			pd.errChan <- err
-		} else {
-			pd.errChan <- pd.err
-		}
-	}()
+	if _, err := tprog.Run(); err != nil {
+		return err
+	}
 
-	err := <-pd.errChan
-	return err
+	return pd.err
 }
 
 func (md ParaProgress) Init() tea.Cmd {

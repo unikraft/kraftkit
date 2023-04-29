@@ -39,6 +39,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
@@ -47,7 +48,7 @@ type Unset struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Unset{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Unset{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
 		Hidden:  true,
 		Use:     "unset [OPTIONS] [param ...]",
@@ -56,14 +57,31 @@ func New() *cobra.Command {
 			unset a variable for a Unikraft project`),
 		Example: heredoc.Doc(`
 			# Unset variables in the cwd project
-			$ kraft build unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+			$ kraft unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
 			# Unset variables in a project at a path
-			$ kraft build unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
+			$ kraft unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*Unset) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *Unset) Run(cmd *cobra.Command, args []string) error {

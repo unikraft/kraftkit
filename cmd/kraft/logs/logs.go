@@ -28,12 +28,15 @@ type Logs struct {
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Logs{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Logs{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
 		Args:    cobra.MaximumNArgs(1),
 		GroupID: "run",
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
@@ -114,7 +117,10 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 				// Wait on either channel
 				select {
 				case status := <-events:
-					store.SaveMachineState(mid, status)
+					if err := store.SaveMachineState(mid, status); err != nil {
+						log.G(ctx).Errorf("could not save machine state: %v", err)
+						return
+					}
 
 					switch status {
 					case machine.MachineStateExited, machine.MachineStateDead:
@@ -131,7 +137,9 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		driver.TailWriter(ctx, mid, iostreams.G(ctx).Out)
+		if tErr := driver.TailWriter(ctx, mid, iostreams.G(ctx).Out); tErr != nil {
+			err = fmt.Errorf("%w. Additionally, while tailing writer: %w", err, tErr)
+		}
 		cancel()
 		return err
 	} else {
@@ -140,7 +148,9 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		io.Copy(iostreams.G(ctx).Out, fd)
+		if _, err := io.Copy(iostreams.G(ctx).Out, fd); err != nil {
+			return err
+		}
 	}
 
 	return nil

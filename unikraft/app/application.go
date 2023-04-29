@@ -33,7 +33,7 @@ type Application interface {
 	WorkingDir() string
 
 	// Unikraft returns the application's unikraft configuration
-	Unikraft() core.Unikraft
+	Unikraft(context.Context) core.Unikraft
 
 	// OutDir returns the path to the application's output directory
 	OutDir() string
@@ -56,10 +56,6 @@ type Application interface {
 	// MergeTemplate merges the application's configuration with the given
 	// configuration
 	MergeTemplate(context.Context, Application) (Application, error)
-
-	// KConfigFile returns the path to the application's .config file or the
-	// target-specific `.config` file which is formatted `.config.<TARGET-NAME>`
-	KConfigFile(target.Target) string
 
 	// IsConfigured returns a boolean to indicate whether the application has been
 	// previously configured.  This is deteremined by finding a non-empty
@@ -116,7 +112,7 @@ type Application interface {
 
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
-	Components() ([]component.Component, error)
+	Components(context.Context) ([]component.Component, error)
 
 	// WithTarget is a reducer that returns the application with only the provided
 	// target.
@@ -172,12 +168,12 @@ func (app application) Template() template.Template {
 	return app.template
 }
 
-func (app application) Unikraft() core.Unikraft {
+func (app application) Unikraft(ctx context.Context) core.Unikraft {
 	return app.unikraft
 }
 
 func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
-	uklibs, err := app.unikraft.Libraries(ctx)
+	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +228,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 	}
 
 	// Need to first merge the app configuration over the template
-	uk := merge.Unikraft()
+	uk := merge.Unikraft(ctx)
 	uk.KConfig().OverrideBy(app.unikraft.KConfig())
 	app.unikraft = uk.(core.UnikraftConfig)
 
@@ -249,28 +245,21 @@ func (app application) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFi
 }
 
 func (app application) KConfig() kconfig.KeyValueMap {
-	all := kconfig.KeyValueMap{}
-	all.OverrideBy(app.unikraft.KConfig())
+	if app.configuration == nil {
+		app.configuration = kconfig.KeyValueMap{}
+	}
+
+	all := app.configuration.OverrideBy(app.unikraft.KConfig())
 
 	for _, library := range app.libraries {
-		all.OverrideBy(library.KConfig())
+		all = all.OverrideBy(library.KConfig())
 	}
 
 	return all
 }
 
-func (app application) KConfigFile(tc target.Target) string {
-	k := filepath.Join(app.workingDir, kconfig.DotConfigFileName)
-
-	if tc != nil {
-		k += "." + filepath.Base(tc.Kernel())
-	}
-
-	return k
-}
-
 func (app application) IsConfigured(tc target.Target) bool {
-	f, err := os.Stat(app.KConfigFile(tc))
+	f, err := os.Stat(filepath.Join(app.workingDir, tc.ConfigFilename()))
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
@@ -313,7 +302,11 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 		OutputDir:      app.outDir,
 		ApplicationDir: app.workingDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
-		ConfigPath:     app.KConfigFile(tc),
+	}
+
+	// Set the relevant Unikraft `.config` file when a target is set
+	if tc != nil {
+		args.ConfigPath = filepath.Join(app.workingDir, tc.ConfigFilename())
 	}
 
 	if tc != nil {
@@ -389,8 +382,12 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 	defer os.Remove(tmpfile.Name())
 
 	// Save and sync the file to the temporary file
-	tmpfile.Write([]byte(values.String()))
-	tmpfile.Sync()
+	if _, err := tmpfile.Write([]byte(values.String())); err != nil {
+		return err
+	}
+	if err := tmpfile.Sync(); err != nil {
+		return err
+	}
 
 	// TODO: This make dependency should be upstreamed into the Unikraft core as a
 	// dependency of `make defconfig`
@@ -582,9 +579,9 @@ func (app application) TargetByName(name string) (target.Target, error) {
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (app application) Components() ([]component.Component, error) {
+func (app application) Components(ctx context.Context) ([]component.Component, error) {
 	components := []component.Component{
-		app.unikraft,
+		app.Unikraft(ctx),
 	}
 
 	if app.template.Name() != "" {
@@ -646,6 +643,6 @@ func (app application) PrintInfo(ctx context.Context) string {
 
 func (app application) WithTarget(targ target.Target) (Application, error) {
 	ret := app
-	ret.targets = target.Targets{targ.(target.TargetConfig)}
+	ret.targets = target.Targets{targ.(*target.TargetConfig)}
 	return ret, nil
 }

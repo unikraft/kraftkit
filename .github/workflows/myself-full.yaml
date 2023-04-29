@@ -1,10 +1,11 @@
-name: Myself build environment
+name: buildenvs/myself-full
 
 # Build only on changes to the build environment itself
 on:
   push:
     branches:
       - stable
+      - staging
     paths:
       - 'buildenvs/myself.Dockerfile'
       - '.github/workflows/myself-full.yaml'
@@ -27,12 +28,12 @@ jobs:
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: ./buildenvs/myself.Dockerfile
           platforms: linux/amd64
-          tags: index.unikraft.io/kraftkit.sh/myself:latest
+          tags: index.unikraft.io/kraftkit.sh/myself-full:latest
           target: kraftkit-full
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}

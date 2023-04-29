@@ -31,9 +31,10 @@ type manager struct{}
 // and is dynamically injected as a CLI option.
 var useGit = false
 
+// FIXME(antoineco): avoid init, initialize things where needed
 func init() {
 	// Register a new pack.Package type
-	packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
+	_ = packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
@@ -219,7 +220,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		allManifests = append(allManifests, index.Manifests...)
 	} else {
-		index, err = NewManifestIndexFromFile(ctx, m.LocalManifestIndex(ctx))
+		index, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -279,6 +280,10 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		var versions []string
 		if len(query.Version) > 0 {
+			if len(manifest.Versions) == 1 && len(manifest.Versions[0].Version) == 0 {
+				log.G(ctx).Warn("manifest does not supply version")
+			}
+
 			for _, version := range manifest.Versions {
 				if version.Version == query.Version {
 					versions = append(versions, version.Version)
@@ -301,7 +306,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 
 		if len(versions) > 0 {
 			for _, version := range versions {
-				p, err := NewPackageFromManifestWithVersion(ctx, manifest, version, mopts...)
+				p, err := NewPackageFromManifestWithVersion(manifest, version, mopts...)
 				if err != nil {
 					log.G(ctx).Warn(err)
 					continue
@@ -312,7 +317,7 @@ func (m manager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([
 				packages = append(packages, p)
 			}
 		} else {
-			more, err := NewPackageFromManifest(ctx, manifest, mopts...)
+			more, err := NewPackageFromManifest(manifest, mopts...)
 			if err != nil {
 				log.G(ctx).Warn(err)
 				continue
@@ -363,6 +368,11 @@ func (m manager) IsCompatible(ctx context.Context, source string) (packmanager.P
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
+
+	if _, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil {
+		return m, true, nil
+	}
+
 	if _, err := NewProvider(ctx, source); err != nil {
 		return nil, false, fmt.Errorf("incompatible source")
 	}

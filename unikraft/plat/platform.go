@@ -40,6 +40,19 @@ type PlatformConfig struct {
 	kconfig kconfig.KeyValueMap
 }
 
+// NewPlatformFromOptions is a constructor that configures a platform configuration.
+func NewPlatformFromOptions(opts ...PlatformOption) (Platform, error) {
+	pc := PlatformConfig{}
+
+	for _, opt := range opts {
+		if err := opt(&pc); err != nil {
+			return nil, err
+		}
+	}
+
+	return &pc, nil
+}
+
 func (pc PlatformConfig) Name() string {
 	return pc.name
 }

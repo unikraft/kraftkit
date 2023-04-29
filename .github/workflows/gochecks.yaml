@@ -1,38 +1,49 @@
+name: Go static checks
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: staging
+    branches: [staging]
     paths:
       - '**'
       - '!.github/**'
-
-name: Go Checks
+      - '.github/workflows/gochecks.yaml'
 
 jobs:
-  unit:
+  gochecks:
     runs-on: ubuntu-latest
-    container: golang:1.20.2-bullseye
     name: All
     env:
       RUNGOGENERATE: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v4
         with:
-          go-version: "1.20.2"
+          go-version: 1.20.2
+          cache: false
 
-      - name: Install gofumpt
-        run: go install mvdan.cc/gofumpt@v0.4.0
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
 
       # Temporary workaround until this pipeline uses the 'myself' buildenv
       - name: Install build dependencies
         run: |
-          apt-get update;
-          apt-get install -y --no-install-recommends \
-            cmake;
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake
+
+      - name: Install libgit2/git2go
+        run: make git2go
 
       - name: Check that go.mod is tidy
         uses: protocol/multiple-go-modules@v1.2
@@ -47,14 +58,18 @@ jobs:
             git diff --exit-code -- go.sum go.mod
 
       - name: gofumpt
-        if: ${{ success() || failure() }} # run this step even if the previous one failed
-        run: |
-          test -z $(gofumpt -d -l -e . | tee /dev/stderr) 
+        if: success() || failure()  # run this step even if the previous one failed
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+          args: --disable-all --enable=gofumpt
+          skip-cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.51.1
+          version: v1.52.2
+          skip-cache: true
 
       - name: go generate
         uses: protocol/multiple-go-modules@v1.2
@@ -65,7 +80,7 @@ jobs:
             go generate ./...
             # check if go generate modified or added any files
             if ! $(git add . && git diff-index HEAD --exit-code --quiet); then
-              echo "go generated caused changes to the repository:"
+              echo "go generate caused changes to the repository:"
               git status --short
               exit 1
             fi

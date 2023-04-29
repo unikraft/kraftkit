@@ -13,6 +13,9 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	giturl "github.com/kubescape/go-git-url"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -30,28 +33,67 @@ type GitProvider struct {
 
 // NewGitProvider attempts to parse a provided path as a Git repository
 func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
-	var branch string
-	if strings.Contains(path, "@") {
-		split := strings.Split(path, "@")
-		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed git repository URI: %s", path)
-		}
+	isSSH := false
+	fullpath := path
+	if isSSHURL(path) {
+		isSSH = true
 
-		path = split[0]
-		branch = split[1]
+		// This is a quirk of go-git, if we have determined it was an SSH path and
+		// it does not contain the prefix, we should include it so it can be
+		// recognised internally by the module.
+		if strings.HasPrefix(path, "git@") {
+			fullpath = "ssh://" + path
+		}
+	}
+
+	gitURL, err := giturl.NewGitURL(fullpath) // initialize and parse the URL
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if the remote URL is a Git repository
 	remote := git.NewRemote(nil, &gitconfig.RemoteConfig{
 		Name: "origin",
-		URLs: []string{path},
+		URLs: []string{fullpath},
 	})
+
+	lopts := &git.ListOptions{}
+	tempm := &Manifest{}
+
+	for _, opt := range mopts {
+		if err := opt(tempm); err != nil {
+			return nil, fmt.Errorf("could not apply option: %v", err)
+		}
+	}
+
+	if isSSH {
+		user := gitURL.GetURL().User.Username()
+		if user == "" {
+			user = "git"
+		}
+
+		lopts.Auth, err = gitssh.DefaultAuthBuilder(user)
+		if err != nil {
+			return nil, err
+		}
+	} else if auth, ok := tempm.auths[gitURL.GetHostName()]; ok {
+		if len(auth.User) > 0 {
+			lopts.Auth = &githttp.BasicAuth{
+				Username: auth.User,
+				Password: auth.Token,
+			}
+		} else if len(auth.Token) > 0 {
+			lopts.Auth = &githttp.TokenAuth{
+				Token: auth.Token,
+			}
+		}
+	}
 
 	// If this is a valid Git repository then let's generate a Manifest based on
 	// what we can read from the remote
-	refs, err := remote.List(&git.ListOptions{})
+	refs, err := remote.ListContext(ctx, lopts)
 	if err != nil {
-		return nil, fmt.Errorf("could not access access path as Git repository: %s", path)
+		return nil, fmt.Errorf("could not list remote git repository: %v", err)
 	}
 
 	return GitProvider{
@@ -59,14 +101,14 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 		remote: remote,
 		refs:   refs,
 		mopts:  mopts,
-		branch: branch,
+		branch: gitURL.GetBranchName(),
 		ctx:    ctx,
 	}, nil
 }
 
 // probeChannels is an internal method which matches Git branches for the
 // repository and uses this as a ManifestChannel
-func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
+func (gp GitProvider) probeChannels() []ManifestChannel {
 	var channels []ManifestChannel
 
 	// This is unikraft-centric ettiquette where there exists two branches:
@@ -106,14 +148,16 @@ func (gp GitProvider) probeChannels() ([]ManifestChannel, error) {
 				channels[i] = channel
 			}
 		}
+	} else if len(gp.branch) > 0 && len(channels) == 1 {
+		channels[0].Default = true
 	}
 
-	return channels, nil
+	return channels
 }
 
 // probeVersions is an internal method which matches Git tags for the repository
 // and uses this as a ManifestVersion
-func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
+func (gp GitProvider) probeVersions() []ManifestVersion {
 	var versions []ManifestVersion
 
 	for _, ref := range gp.refs {
@@ -143,7 +187,7 @@ func (gp GitProvider) probeVersions() ([]ManifestVersion, error) {
 		}
 	}
 
-	return versions, nil
+	return versions
 }
 
 func (gp GitProvider) Manifests() ([]*Manifest, error) {
@@ -171,21 +215,11 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 		}
 	}
 
-	channels, err := gp.probeChannels()
-	if err != nil {
-		return nil, err
-	}
-
 	log.G(gp.ctx).Infof("probing %s", gp.repo)
 
-	manifest.Channels = append(manifest.Channels, channels...)
+	manifest.Channels = append(manifest.Channels, gp.probeChannels()...)
 
-	versions, err := gp.probeVersions()
-	if err != nil {
-		return nil, err
-	}
-
-	manifest.Versions = append(manifest.Versions, versions...)
+	manifest.Versions = append(manifest.Versions, gp.probeVersions()...)
 
 	// TODO: This is the correct place to apply the options.  We do it earlier to
 	// access the logger.  The same issue appears in github.go.  The logger
@@ -209,9 +243,30 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 		return pullGit(ctx, manifest, popts...)
 	}
 
-	return pullArchive(ctx, manifest, popts...)
+	if err := pullArchive(ctx, manifest, popts...); err != nil {
+		log.G(ctx).Trace(err)
+		return pullGit(ctx, manifest, popts...)
+	}
+
+	return nil
 }
 
 func (gp GitProvider) String() string {
 	return "git"
+}
+
+// isSSHURL determines if the provided URL forms an SSH connection
+func isSSHURL(path string) bool {
+	for _, prefix := range []string{
+		"ssh://",
+		"ssh+git://",
+		"git+ssh://",
+		"git@",
+	} {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
 }

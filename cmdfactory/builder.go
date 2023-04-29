@@ -7,6 +7,7 @@ package cmdfactory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -18,6 +19,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"kraftkit.sh/internal/set"
 )
 
 var (
@@ -95,6 +98,80 @@ func expandRegisteredFlags(cmd *cobra.Command) {
 	}
 }
 
+// filter out registered flags from the given command's args.
+func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs []string) {
+	for cmdline, flags := range flagOverrides {
+		if !isSameCommand(cmd, cmdline) {
+			continue
+		}
+
+		registeredFlagsNames := set.NewStringSet()
+		for _, flag := range flags {
+			registeredFlagsNames.Add(flag.Name)
+		}
+
+		for len(args) > 0 {
+			arg := args[0]
+			args = args[1:]
+
+			switch {
+			// not a flag
+			case arg[0] != '-' || len(arg) == 1:
+				filteredArgs = append(filteredArgs, arg)
+
+			// long flag
+			case arg[1] == '-' && len(arg) > 2:
+				subs := strings.SplitN(arg, "=", 2)
+
+				flagName := strings.TrimPrefix(subs[0], "--")
+				if registeredFlagsNames.Contains(flagName) {
+					if len(subs) == 1 {
+						args = args[1:]
+					}
+					continue
+				}
+
+				filteredArgs = append(filteredArgs, arg)
+
+			// short flag
+			default:
+				subs := strings.SplitN(arg, "=", 2)
+
+				flagName := strings.TrimPrefix(subs[0], "-")
+				if registeredFlagsNames.Contains(flagName) {
+					if len(subs) == 1 {
+						args = args[1:]
+					}
+					continue
+				}
+
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
+
+		return filteredArgs
+	}
+
+	return args
+}
+
+// returns whether the given cmd is the same as described by the command line string.
+// cmdline is expected to be "kraft cmd subcmd ..."
+func isSameCommand(cmd *cobra.Command, cmdline string) bool {
+	cmdFields := strings.Fields(cmdline)
+
+	if len(cmdFields) == 1 {
+		return cmd.Name() == cmdFields[0]
+	}
+
+	// checking only the name of the direct parent should be sufficient
+	par := cmd.Parent()
+	if par == nil {
+		return false
+	}
+	return par.Name() == cmdFields[len(cmdFields)-2] && cmd.Name() == cmdFields[len(cmdFields)-1]
+}
+
 // Main executes the given command
 func Main(ctx context.Context, cmd *cobra.Command) {
 	// Expand flag all dynamically registered flag overrides.
@@ -109,7 +186,7 @@ func Main(ctx context.Context, cmd *cobra.Command) {
 // AttributeFlags associates a given struct with public attributes and a set of
 // tags with the provided cobra command so as to enable dynamic population of
 // CLI flags.
-func AttributeFlags(c *cobra.Command, obj any, args ...string) {
+func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 	var (
 		envs      []func()
 		arrays    = map[string]reflect.Value{}
@@ -141,7 +218,8 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		if err != nil {
 			defInt = 0
 		}
-		strValue := v.String()
+		// https://cs.opensource.google/go/go/+/refs/tags/go1.20.3:src/fmt/fmt_test.go;l=1046-1050
+		strValue := fmt.Sprint(v)
 
 		// Set the value from the environmental value, if known, it takes precedent
 		// over the provided value which would otherwise come from a configuration
@@ -168,15 +246,21 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		}
 
 		switch fieldType.Type.Kind() {
-		case reflect.Int:
+		case reflect.Int, reflect.Int64:
 			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
-			flags.Set(name, strValue)
-		case reflect.Int64:
-			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
-			flags.Set(name, strValue)
+			if err := flags.Set(name, strValue); err != nil {
+				return err
+			}
 		case reflect.String:
 			flags.StringVarP((*string)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defValue, usage)
-			flags.Set(name, strValue)
+			if err := flags.Set(name, strValue); err != nil {
+				return err
+			}
+		case reflect.Bool:
+			flags.BoolVarP((*bool)(unsafe.Pointer(v.Addr().Pointer())), name, alias, false, usage)
+			if err := flags.Set(name, strValue); err != nil {
+				return err
+			}
 		case reflect.Slice:
 			switch fieldType.Tag.Get("split") {
 			case "false":
@@ -189,23 +273,26 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 		case reflect.Map:
 			maps[name] = v
 			flags.StringSliceP(name, alias, nil, usage)
-		case reflect.Bool:
-			flags.BoolVarP((*bool)(unsafe.Pointer(v.Addr().Pointer())), name, alias, false, usage)
-			flags.Set(name, strValue)
 		case reflect.Pointer:
 			switch fieldType.Type.Elem().Kind() {
-			case reflect.Int:
+			case reflect.Int, reflect.Int64:
 				optInt[name] = v
 				flags.IntP(name, alias, defInt, usage)
-				flags.Set(name, strValue)
+				if err := flags.Set(name, strValue); err != nil {
+					return err
+				}
 			case reflect.String:
 				optString[name] = v
 				flags.StringP(name, alias, defValue, usage)
-				flags.Set(name, strValue)
+				if err := flags.Set(name, strValue); err != nil {
+					return err
+				}
 			case reflect.Bool:
 				optBool[name] = v
 				flags.BoolP(name, alias, false, usage)
-				flags.Set(name, strValue)
+				if err := flags.Set(name, strValue); err != nil {
+					return err
+				}
 			}
 		case reflect.Struct:
 			if !v.CanAddr() {
@@ -213,7 +300,9 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 			}
 
 			// Recursively set embedded anonymous structs
-			AttributeFlags(c, v.Addr().Interface())
+			if err := AttributeFlags(c, v.Addr().Interface()); err != nil {
+				return err
+			}
 		default:
 			// Unknown kind on field " + fieldType.Name + " on " + objValue.Type().Name()
 			continue
@@ -221,19 +310,31 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) {
 	}
 
 	// If any arguments are passed, parse them immediately
+	subC, args, err := c.Find(args)
+	if err != nil {
+		return err
+	}
 	if len(args) > 0 {
-		c.ParseFlags(args)
+		// Some kraft commands accept flags which registration is delayed using
+		// RegisterFlag. Parsing these here would result in a failure.
+		args = filterOutRegisteredFlags(subC, args)
+
+		if err := subC.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
+			return err
+		}
 	}
 
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.PreRunE = bind(c.PreRunE, arrays, slices, maps, optInt, optBool, optString, envs)
 	c.RunE = bind(c.RunE, arrays, slices, maps, optInt, optBool, optString, envs)
+
+	return nil
 }
 
 // New populates a cobra.Command object by extracting args from struct tags of the
 // Runnable obj passed.  Also the Run method is assigned to the RunE of the command.
 // name = Override the struct field with
-func New(obj Runnable, cmd cobra.Command) *cobra.Command {
+func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
 	c := cmd
 	if c.Use == "" {
 		c.Use = fmt.Sprintf("%s [SUBCOMMAND] [FLAGS]", Name(obj))
@@ -253,7 +354,9 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 	c.RunE = obj.Run
 
 	// Parse the attributes of this object into addressable flags for this command
-	AttributeFlags(&c, obj)
+	if err := AttributeFlags(&c, obj); err != nil {
+		return nil, err
+	}
 
 	// Set help and usage methods
 	c.SetHelpFunc(func(cmd *cobra.Command, args []string) {
@@ -262,7 +365,7 @@ func New(obj Runnable, cmd cobra.Command) *cobra.Command {
 	c.SetUsageFunc(rootUsageFunc)
 	c.SetFlagErrorFunc(rootFlagErrorFunc)
 
-	return &c
+	return &c, nil
 }
 
 func assignOptBool(app *cobra.Command, maps map[string]reflect.Value) error {

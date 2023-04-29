@@ -3,7 +3,7 @@ name: Commits Formatting Check
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: staging
+    branches: [staging]
 
 jobs:
   commit:
@@ -14,10 +14,10 @@ jobs:
         if: always()
         uses: taskmedia/action-conventional-commits@v1.1.0
         with:
-          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert"
+          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
 
       - name: Commit Lines Length Check
-        if: always()
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^(?!(?:.|\n)*(?:^|\n).{74,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
@@ -43,7 +43,7 @@ jobs:
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert)(\(\w+\))?!?: '
+          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod)(\(\w+\))?!?: '
           error: 'The PR title must follow the conventional commits format.'
           excludeDescription: 'true'
           excludeTitle: 'false'
@@ -51,7 +51,7 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: PR Title Check Length
-        if: always()
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^(?!.{75,}).*'
@@ -63,7 +63,7 @@ jobs:
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: PR Description Check
-        if: always()
+        if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^\S+( \S+)*$'

@@ -51,16 +51,18 @@ func miniTS() int {
 	return int(time.Since(baseTimestamp) / time.Second)
 }
 
+type renderFunc func(...string) string
+
 type ColorScheme struct {
-	InfoLevel  func(string) string
-	WarnLevel  func(string) string
-	ErrorLevel func(string) string
-	FatalLevel func(string) string
-	PanicLevel func(string) string
-	DebugLevel func(string) string
-	TraceLevel func(string) string
-	Prefix     func(string) string
-	Timestamp  func(string) string
+	InfoLevel  renderFunc
+	WarnLevel  renderFunc
+	ErrorLevel renderFunc
+	FatalLevel renderFunc
+	PanicLevel renderFunc
+	DebugLevel renderFunc
+	TraceLevel renderFunc
+	Prefix     renderFunc
+	Timestamp  renderFunc
 }
 
 type TextFormatter struct {
@@ -190,7 +192,7 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string, timestampFormat string, colorScheme *ColorScheme) {
-	var levelColor func(string) string
+	var levelColor renderFunc
 	var levelText string
 	switch entry.Level {
 	case logrus.InfoLevel:

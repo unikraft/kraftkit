@@ -23,7 +23,7 @@ type Update struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Update{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Update{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",
 		Long: heredoc.Doc(`
@@ -36,6 +36,23 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*Update) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *Update) Run(cmd *cobra.Command, args []string) error {

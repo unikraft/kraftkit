@@ -4,6 +4,7 @@
 ![](https://img.shields.io/static/v1?label=license&message=BSD-3&color=%23385177)
 [![](https://img.shields.io/discord/762976922531528725.svg?label=discord&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)][unikraft-discord]
 [![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
+![Latest release](https://img.shields.io/github/v/release/unikraft/kraftkit)
 
 KraftKit provides a suite of tools and Go-based framework for building custom, minimal, immutable lightweight unikernel virtual machines based on [Unikraft](https://unikraft.org): a fast, secure and open-source library operating system.
 
@@ -26,6 +27,19 @@ curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 ```
 
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
+
+### Container build environment
+
+KraftKit ships a container build environment which you can use instead of installing any dependencies directly on your host.
+It includes the `kraft` binary as well as all the additional tools and libraries for building Unikraft unikernels.
+Simply attach a working directory on your host as a mount path volume mapped to `/workspace`, e.g.:
+
+```shell
+docker run -it --rm -v $(pwd):/workspace --entrypoint bash kraftkit.sh/base:latest
+```
+
+The above command will drop you into a container shell.
+Simply type `exit` or Ctrl+D to quit.
 
 ## Quickstart
 

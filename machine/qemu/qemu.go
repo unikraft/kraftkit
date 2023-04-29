@@ -505,14 +505,13 @@ func NewQemuDriver(opts ...driveropts.DriverOption) (*QemuDriver, error) {
 	return &driver, nil
 }
 
-func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (machine.MachineID, error) {
+func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (mid machine.MachineID, err error) {
 	mcfg, err := machine.NewMachineConfig(opts...)
 	if err != nil {
 		return machine.NullMachineID, fmt.Errorf("could build machine config: %v", err)
 	}
 
-	mid, err := machine.NewRandomMachineID()
-	if err != nil {
+	if mid, err = machine.NewRandomMachineID(); err != nil {
 		return machine.NullMachineID, fmt.Errorf("could not generate new machine ID: %v", err)
 	}
 
@@ -660,7 +659,9 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 
 	defer func() {
 		if err != nil {
-			qd.Destroy(ctx, mid)
+			if dErr := qd.Destroy(ctx, mid); dErr != nil {
+				err = fmt.Errorf("%w. Additionally, while destroying machine: %w", err, dErr)
+			}
 		}
 	}()
 
@@ -893,7 +894,7 @@ func (qd *QemuDriver) Start(ctx context.Context, mid machine.MachineID) error {
 	return err
 }
 
-func (qd *QemuDriver) exitStatusAndAtFromConfig(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
+func (qd *QemuDriver) exitStatusAndAtFromConfig(mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
 	exitStatus = -1 // return -1 if the process hasn't started
 	exitedAt = time.Time{}
 
@@ -909,7 +910,7 @@ func (qd *QemuDriver) exitStatusAndAtFromConfig(ctx context.Context, mid machine
 }
 
 func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
-	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 	if err != nil {
 		return
 	}
@@ -922,7 +923,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 	for {
 		select {
 		case state := <-events:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			switch state {
 			case machine.MachineStateExited, machine.MachineStateDead:
@@ -930,7 +931,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 			}
 
 		case err2 := <-errs:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			if errors.Is(err2, qmp.ErrAcceptedNonEvent) {
 				continue
@@ -939,7 +940,7 @@ func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStat
 			return
 
 		case <-ctx.Done():
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(ctx, mid)
+			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
 
 			// TODO: Should we return an error if the context is cancelled?
 			return
@@ -990,7 +991,9 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 		return err
 	}
 
-	watcher.Add(mcfg.LogFile)
+	if err := watcher.Add(mcfg.LogFile); err != nil {
+		return err
+	}
 
 	// First read everything that already exists inside of the log file.
 	for {
@@ -1268,7 +1271,9 @@ func (qd *QemuDriver) Destroy(ctx context.Context, mid machine.MachineID) error 
 		machine.MachineStateExited,
 		machine.MachineStateDead:
 	default:
-		qd.Stop(ctx, mid)
+		if err := qd.Stop(ctx, mid); err != nil {
+			return err
+		}
 	}
 
 	return qd.dopts.Store.Purge(mid)

@@ -1,0 +1,82 @@
+name: Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - '**'
+      - '!.github/**'
+      - '.github/workflows/gotests.yaml'
+
+jobs:
+  gounit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.2
+          cache: false
+
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Install libgit2/git2go
+        run: make git2go
+
+      - name: Run tests
+        run: make test
+
+  e2e-cli:
+    name: Test kraft CLI commands
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.2
+          cache: false
+
+      - name: Go caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Install libgit2/git2go
+        run: make git2go
+
+      - name: Install Ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo
+
+      - name: Install kraft
+        run: make kraft DOCKER= DISTDIR="$(go env GOPATH)"/bin
+
+      - name: Run unit tests
+        run: ginkgo -v -p -randomize-all ./test/e2e/framework/...
+
+      - name: Run e2e tests
+        env:
+          KRAFTKIT_NO_CHECK_UPDATES: true
+        run: ginkgo -v -p -randomize-all ./test/e2e/cli/

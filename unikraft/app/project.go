@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"kraftkit.sh/kconfig"
+	"kraftkit.sh/log"
 	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 )
@@ -143,6 +145,19 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		popts.kconfig.OverrideBy(library.KConfig())
 	}
 
+	// Post-process each target by parsing any available .config file
+	for _, target := range app.targets {
+		kvmap, err := kconfig.NewKeyValueMapFromFile(
+			filepath.Join(popts.workdir, target.ConfigFilename()),
+		)
+		if err != nil {
+			log.G(ctx).Warnf("could not read target config file: %v", err)
+			continue
+		}
+
+		target.KConfig().OverrideBy(kvmap)
+	}
+
 	project, err := NewApplicationFromOptions(
 		WithName(projectName),
 		WithWorkingDir(popts.workdir),
@@ -160,7 +175,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if !popts.skipNormalization {
-		err = normalize(project.(*application), popts.resolvePaths)
+		err = normalize(project.(*application))
 		if err != nil {
 			return nil, err
 		}

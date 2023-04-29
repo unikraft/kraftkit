@@ -20,7 +20,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Update timers on all active items and their parents
-	pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
+	_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
 		if pti.status == StatusRunning ||
 			pti.status == StatusRunningChild ||
 			pti.status == StatusRunningButAChildHasFailed {
@@ -41,7 +41,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case spinner.TickMsg:
-		pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
+		_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
 			pti.spinner, cmd = pti.spinner.Update(msg)
 			cmds = append(cmds, cmd)
 
@@ -64,7 +64,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pt.quitting = true
 			cmds = append(cmds, tea.Quit)
 		} else {
-			pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
+			_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
 				if !pti.timer.Running() {
 					cmds = append(cmds, pti.timer.Init())
 				}

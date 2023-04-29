@@ -5,19 +5,28 @@
 package prepare
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 )
 
-type Prepare struct{}
+type Prepare struct {
+	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
+	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
+	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
+}
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Prepare{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Prepare{}, cobra.Command{
 		Short:   "Prepare a Unikraft unikernel",
 		Use:     "prepare [DIR]",
 		Aliases: []string{"p"},
@@ -26,14 +35,31 @@ func New() *cobra.Command {
 			prepare a Unikraft unikernel`),
 		Example: heredoc.Doc(`
 			# Prepare the cwd project
-			$ kraft build prepare
+			$ kraft prepare
 
 			# Prepare a project at a path
-			$ kraft build prepare path/to/app`),
+			$ kraft prepare path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*Prepare) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
@@ -61,5 +87,29 @@ func (opts *Prepare) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return project.Prepare(ctx, nil)
+	// Filter project targets by any provided CLI options
+	targets := cli.FilterTargets(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
+
+	var t target.Target
+
+	switch {
+	case len(targets) == 1:
+		t = targets[0]
+
+	case config.G[config.KraftKit](ctx).NoPrompt:
+		return fmt.Errorf("could not determine which target to prepare")
+
+	default:
+		t, err = cli.SelectTarget(targets)
+		if err != nil {
+			return err
+		}
+	}
+
+	return project.Prepare(ctx, t)
 }

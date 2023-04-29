@@ -94,7 +94,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 
 	total := 0
 
-	pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
+	_ = pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
 		total++
 		item.norender = pt.norender
 		return nil
@@ -156,16 +156,11 @@ func (pt *ProcessTree) Start() error {
 
 	tprog = tea.NewProgram(pt, teaOpts...)
 
-	go func() {
-		if _, err := tprog.Run(); err != nil {
-			pt.errChan <- err
-		} else {
-			pt.errChan <- pt.err
-		}
-	}()
+	if _, err := tprog.Run(); err != nil {
+		return err
+	}
 
-	err := <-pt.errChan
-	return err
+	return pt.err
 }
 
 func (pt *ProcessTree) Init() tea.Cmd {

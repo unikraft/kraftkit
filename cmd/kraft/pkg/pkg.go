@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
@@ -40,10 +41,11 @@ type Pkg struct {
 	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	Volumes      []string `local:"true" long:"volume" short:"v" usage:"Additional volumes to bundle within the package"`
+	WithKConfig  bool     `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&Pkg{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Pkg{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -79,6 +81,9 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	cmd.AddCommand(list.New())
 	cmd.AddCommand(pull.New())
@@ -89,10 +94,18 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
+
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
 
 	return nil
 }
@@ -185,15 +198,19 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						}
 					}
 
-					single, err := project.WithTarget(targ)
-					if err != nil {
-						return err
-					}
-
-					if _, err := pm.Pack(ctx, single,
+					popts := []packmanager.PackOption{
+						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
-					); err != nil {
+					}
+
+					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
+						popts = append(popts,
+							packmanager.PackWithKernelVersion(ukversion.Value),
+						)
+					}
+
+					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
 						return err
 					}
 
@@ -209,7 +226,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
-			processtree.WithVerb("Packaging..."),
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
 		},

@@ -111,4 +111,6 @@ RUN set -xe; \
     rm -Rf /var/lib/apt/lists/*; \
     kraft --log-type basic --log-level debug pkg update;
 
+WORKDIR /workspace
+
 ENTRYPOINT [ "kraft" ]

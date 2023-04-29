@@ -14,6 +14,7 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/text"
 )
 
@@ -44,7 +45,7 @@ func rootUsageFunc(command *cobra.Command) error {
 	return nil
 }
 
-func rootFlagErrorFunc(cmd *cobra.Command, err error) error {
+func rootFlagErrorFunc(_ *cobra.Command, err error) error {
 	if err == pflag.ErrHelp {
 		return err
 	}
@@ -118,7 +119,7 @@ func fullname(cmd *cobra.Command) string {
 }
 
 func rootHelpFunc(cmd *cobra.Command, args []string) {
-	if isRootCmd(cmd.Parent()) && len(args) >= 2 && args[1] != "--help" && args[1] != "-h" {
+	if isRootCmd(cmd.Parent()) && len(args) >= 2 && !set.NewStringSet(args...).ContainsAnyOf("--help", "-h") {
 		nestedSuggestFunc(cmd, args[1])
 		hasFailed = true
 		return

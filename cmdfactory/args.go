@@ -18,7 +18,7 @@ func MinimumArgs(n int, msg string) cobra.PositionalArgs {
 		return cobra.MinimumNArgs(1)
 	}
 
-	return func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, args []string) error {
 		if len(args) < n {
 			return FlagErrorf("%s", msg)
 		}
@@ -27,7 +27,7 @@ func MinimumArgs(n int, msg string) cobra.PositionalArgs {
 }
 
 func ExactArgs(n int, msg string) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, args []string) error {
 		if len(args) > n {
 			return FlagErrorf("too many arguments")
 		}
@@ -65,7 +65,7 @@ func NoArgsQuoteReminder(cmd *cobra.Command, args []string) error {
 }
 
 func MaxDirArgs(n int) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, args []string) error {
 		if len(args) > n {
 			return FlagErrorf("expected no more than %d paths received %d", n, len(args))
 

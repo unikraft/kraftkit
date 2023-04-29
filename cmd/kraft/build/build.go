@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
@@ -33,7 +34,7 @@ import (
 type Build struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Fast         bool   `long:"fast" usage:"Use maximum parallization when performing the build"`
+	Fast         bool   `long:"fast" usage:"Use maximum parallelization when performing the build"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
@@ -46,8 +47,8 @@ type Build struct {
 }
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Build{}, cobra.Command{
-		Short: "Configure and build Unikraft unikernels ",
+	cmd, err := cmdfactory.New(&Build{}, cobra.Command{
+		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
@@ -66,6 +67,23 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*Build) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *Build) Run(cmd *cobra.Command, args []string) error {
@@ -114,7 +132,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		// name of the project and the target/plat string (which is variable in
 		// length).
 		for _, targ := range project.Targets() {
-			if newLen := len(targ.Name()) + len(targ.ArchPlatString()) + 15; newLen > nameWidth {
+			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
 				nameWidth = newLen
 			}
 		}
@@ -124,7 +142,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
 
-	_, err = project.Components()
+	_, err = project.Components(ctx)
 	if err != nil && project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
@@ -229,7 +247,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Overwrite template with user options
-	components, err := project.Components()
+	components, err := project.Components(ctx)
 	if err != nil {
 		return err
 	}
@@ -327,43 +345,13 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	processes = []*paraprogress.Process{} // reset
 
-	var selected target.Targets
-
-	// Filter the targets by CLI selection
-	for _, targ := range project.Targets() {
-		switch true {
-		case
-			// If no arguments are supplied
-			len(opts.Target) == 0 &&
-				len(opts.Architecture) == 0 &&
-				len(opts.Platform) == 0,
-
-			// If the --target flag is supplied and the target name match
-			len(opts.Target) > 0 &&
-				targ.Name() == opts.Target,
-
-			// If only the --arch flag is supplied and the target's arch matches
-			len(opts.Architecture) > 0 &&
-				len(opts.Platform) == 0 &&
-				targ.Architecture().Name() == opts.Architecture,
-
-			// If only the --plat flag is supplied and the target's platform matches
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) == 0 &&
-				targ.Platform().Name() == opts.Platform,
-
-			// If both the --arch and --plat flag are supplied and match the target
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) > 0 &&
-				targ.Architecture().Name() == opts.Architecture &&
-				targ.Platform().Name() == opts.Platform:
-
-			selected = append(selected, targ)
-
-		default:
-			continue
-		}
-	}
+	// Filter project targets by any provided CLI options
+	selected := cli.FilterTargets(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
 
 	if len(selected) == 0 {
 		return fmt.Errorf("no targets selected to build")
@@ -381,7 +369,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		targ := targ
 		if !opts.NoConfigure {
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("configuring %s (%s)", targ.Name(), targ.ArchPlatString()),
+				fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Configure(
 						ctx,
@@ -401,7 +389,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 		if !opts.NoPrepare {
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("preparing %s (%s)", targ.Name(), targ.ArchPlatString()),
+				fmt.Sprintf("preparing %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
 					return project.Prepare(
 						ctx,
@@ -420,7 +408,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		processes = append(processes, paraprogress.NewProcess(
-			fmt.Sprintf("building %s (%s)", targ.Name(), targ.ArchPlatString()),
+			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 			func(ctx context.Context, w func(progress float64)) error {
 				return project.Build(
 					ctx,

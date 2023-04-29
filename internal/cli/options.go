@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -128,7 +129,24 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		}
 
 		// Attribute all configuration flags and command-line argument values
-		cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args...)
+		if err := cmdfactory.AttributeFlags(cmd, cfgm.Config, os.Args[1:]...); err != nil {
+			return err
+		}
+
+		// Did the user specify a non-standard config directory?  The following
+		// check is possible thanks to the attribution of flags to the config file.
+		// If a flag specifies changing the config directory, we must
+		// re-instantiate the ConfigManager with the configuration from that
+		// directory.
+		if cpath := cfg.Paths.Config; cpath != "" && cpath != config.ConfigDir() {
+			cfgm, err = config.NewConfigManager(
+				cfg,
+				config.WithFile[config.KraftKit](filepath.Join(cpath, "config.yaml"), true),
+			)
+			if err != nil {
+				return err
+			}
+		}
 
 		copts.ConfigManager = cfgm
 
@@ -198,7 +216,6 @@ func WithDefaultHTTPClient() CliOption {
 		httpClient, err := httpclient.NewHTTPClient(
 			copts.IOStreams,
 			copts.ConfigManager.Config.HTTPUnixSocket,
-			true,
 		)
 		if err != nil {
 			return err

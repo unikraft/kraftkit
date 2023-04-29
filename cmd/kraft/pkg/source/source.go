@@ -17,7 +17,7 @@ import (
 type Source struct{}
 
 func New() *cobra.Command {
-	return cmdfactory.New(&Source{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Source{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",
 		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
@@ -31,6 +31,23 @@ func New() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (*Source) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *Source) Run(cmd *cobra.Command, args []string) error {

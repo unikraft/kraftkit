@@ -38,13 +38,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
 
 type ProperClean struct{}
 
 func New() *cobra.Command {
-	cmd := cmdfactory.New(&ProperClean{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ProperClean{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
 		Aliases: []string{"pc"},
@@ -53,16 +54,31 @@ func New() *cobra.Command {
 			Remove the Unikraft project build folder containing all build artifacts`),
 		Example: heredoc.Doc(`
 			# Properclean the cwd build directory
-			$ kraft build properclean
+			$ kraft properclean
 
 			# Properclean a project at a path
-			$ kraft build properclean path/to/app`),
+			$ kraft properclean path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
+}
+
+func (*ProperClean) Pre(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	pm, err := packmanager.NewUmbrellaManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	return nil
 }
 
 func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
