@@ -111,7 +111,7 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 
 // String implements fmt.Stringer and returns the canonical string
 // representation of the nameable object
-func TypeNameVersion(entity fmt.Stringer) string {
+func TypeNameVersion(entity Nameable) string {
 	var ret strings.Builder
 	if entity.Type() != ComponentTypeUnknown {
 		ret.WriteString(string(entity.Type()))

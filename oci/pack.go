@@ -370,6 +370,11 @@ func (ocipack *ociPackage) Version() string {
 	return ocipack.ref.Identifier()
 }
 
+// String() implements fmt.Stringer
+func (ocipack *ociPackage) String() string {
+	return unikraft.TypeNameVersion(ocipack)
+}
+
 // imageRef returns the OCI-standard image name in the format `name:tag`
 func (ocipack *ociPackage) imageRef() string {
 	return fmt.Sprintf("%s:%s", ocipack.Name(), ocipack.Version())

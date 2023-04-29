@@ -83,7 +83,7 @@ func (mp mpack) Version() string {
 }
 
 func (mp mpack) String() string {
-	return mp.TypeNameVersion(mp)
+	return unikraft.TypeNameVersion(mp)
 }
 
 func (mp mpack) Metadata() any {
