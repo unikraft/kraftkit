@@ -37,26 +37,24 @@ func NewStringSet() *stringSet {
 	return s
 }
 
-func (s *stringSet) Add(value string) {
-	if s.Contains(value) {
-		return
-	}
-	s.m[value] = exists
-	s.v = append(s.v, value)
-}
-
-func (s *stringSet) AddValues(values []string) {
-	for _, v := range values {
-		s.Add(v)
+func (s *stringSet) Add(values ...string) {
+	for _, value := range values {
+		if s.Contains(value) {
+			continue
+		}
+		s.m[value] = exists
+		s.v = append(s.v, value)
 	}
 }
 
-func (s *stringSet) Remove(value string) {
-	if !s.Contains(value) {
-		return
+func (s *stringSet) Remove(values ...string) {
+	for _, value := range values {
+		if !s.Contains(value) {
+			continue
+		}
+		delete(s.m, value)
+		s.v = sliceWithout(s.v, value)
 	}
-	delete(s.m, value)
-	s.v = sliceWithout(s.v, value)
 }
 
 func sliceWithout(s []string, v string) []string {
@@ -71,12 +69,6 @@ func sliceWithout(s []string, v string) []string {
 		return s
 	}
 	return append(s[:idx], s[idx+1:]...)
-}
-
-func (s *stringSet) RemoveValues(values []string) {
-	for _, v := range values {
-		s.Remove(v)
-	}
 }
 
 func (s *stringSet) Contains(value string) bool {
