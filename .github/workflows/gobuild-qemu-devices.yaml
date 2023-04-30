@@ -39,7 +39,8 @@ jobs:
         run: |
           set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
-          go build -o dist/ ./tools/go-generate-qemu-devices/...
+          cd tools/go-generate-qemu-devices
+          go build -o ../../dist/
 
       - name: Run Help Message
         run: |
