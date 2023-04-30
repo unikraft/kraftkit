@@ -52,7 +52,7 @@ jobs:
         with:
           path: |
             ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install
-          key: libgit2-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          key: libgit2-${{ runner.os }}-${{ hashFiles(steps.goenv.outputs.mod) }}
 
       - name: Reset libgit2 pkg-config mtime
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
