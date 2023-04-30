@@ -1,6 +1,8 @@
 name: Tests
 
 on:
+  push:
+    branches: [staging]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [staging]
