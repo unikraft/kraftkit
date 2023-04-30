@@ -39,7 +39,7 @@ jobs:
           path: |
             ${{ steps.goenv.outputs.cache }}
             ${{ steps.goenv.outputs.modcache }}
-          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('${{ steps.goenv.outputs.mod }}') }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
@@ -92,7 +92,7 @@ jobs:
           path: |
             ${{ steps.goenv.outputs.cache }}
             ${{ steps.goenv.outputs.modcache }}
-          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('${{ steps.goenv.outputs.mod }}') }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
