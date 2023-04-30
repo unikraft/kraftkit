@@ -1,6 +1,8 @@
 name: tools/protoc-gen-go-netconn
 
 on:
+  push:
+    branches: [staging]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [staging]
