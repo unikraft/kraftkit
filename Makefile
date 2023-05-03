@@ -147,14 +147,12 @@ properclean: ## Completely clean the repository's build artifacts.
 
 .PHONY: git2go
 git2go: $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
-	$(GO) install -tags static github.com/libgit2/git2go/v31/...
+	$(GO) install -tags static github.com/libgit2/git2go/v34/...
 
 $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
 	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/build
 	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/install
 	(cd $(VENDORDIR)/libgit2/git2go/static-build/build && $(CMAKE) \
-		-DTHREADSAFE=ON \
-		-DBUILD_CLAR=OFF \
 		-DBUILD_SHARED_LIBS=OFF \
 		-DREGEX_BACKEND=builtin \
 		-DUSE_BUNDLED_ZLIB=ON \
@@ -172,7 +170,7 @@ $(VENDORDIR)/libgit2/git2go/vendor/libgit2: $(VENDORDIR)/libgit2/git2go
 	$(GIT) -C $(VENDORDIR)/libgit2/git2go submodule update --init --recursive
 
 $(VENDORDIR)/libgit2/git2go:
-	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@
+	$(GIT) clone --branch v34.0.0 --recurse-submodules https://github.com/libgit2/git2go.git $@
 
 .PHONY: help
 help: ## Show this help menu and exit.

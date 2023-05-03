@@ -31,7 +31,7 @@ require (
 	github.com/henvic/httpretty v0.1.0
 	github.com/imdario/mergo v0.3.15
 	github.com/kubescape/go-git-url v0.0.24
-	github.com/libgit2/git2go/v31 v31.7.9
+	github.com/libgit2/git2go/v34 v34.0.0
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.18
 	github.com/mattn/go-shellwords v1.0.12
@@ -62,7 +62,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.1
 )
 
-replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/libgit2/git2go
+replace github.com/libgit2/git2go/v34 v34.0.0 => ./third_party/libgit2/git2go
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect

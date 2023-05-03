@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 
-	libgit "github.com/libgit2/git2go/v31"
+	libgit "github.com/libgit2/git2go/v34"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -37,29 +37,29 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	}
 
 	copts := &libgit.CloneOptions{
-		FetchOptions: &libgit.FetchOptions{
+		FetchOptions: libgit.FetchOptions{
 			RemoteCallbacks: libgit.RemoteCallbacks{
-				TransferProgressCallback: func(stats libgit.TransferProgress) libgit.ErrorCode {
+				TransferProgressCallback: func(stats libgit.TransferProgress) error {
 					popts.OnProgress((float64(stats.IndexedObjects) / float64(stats.TotalObjects)) / 2)
-					return libgit.ErrorCodeOK
+					return nil
 				},
-				PackProgressCallback: func(_ int32, current, total uint32) libgit.ErrorCode {
+				PackProgressCallback: func(_ int32, current, total uint32) error {
 					popts.OnProgress(0.5 + (float64(current)/float64(total))/2)
-					return libgit.ErrorCodeOK
+					return nil
 				},
 				// Warning: Returning "error OK" here prevents hostkey look ups
-				CertificateCheckCallback: func(cert *libgit.Certificate, _ bool, hostname string) libgit.ErrorCode {
+				CertificateCheckCallback: func(cert *libgit.Certificate, _ bool, hostname string) error {
 					if cert != nil && len(cert.Hostkey.Hostkey) > 0 {
 						log.G(ctx).
 							WithField("hostname", hostname).
 							WithField("sha256", hex.EncodeToString(cert.Hostkey.HashSHA256[:])).
 							Warn("hostkey look up disabled")
 					}
-					return libgit.ErrorCodeOK
+					return nil
 				},
 			},
 		},
-		CheckoutOpts: &libgit.CheckoutOptions{
+		CheckoutOptions: libgit.CheckoutOptions{
 			Strategy: libgit.CheckoutForce, // .CheckoutSafe,
 		},
 		Bare: false,

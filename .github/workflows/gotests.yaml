@@ -55,6 +55,13 @@ jobs:
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
         run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libssh2-1-dev
+
       - name: Install libgit2/git2go
         run: make git2go
 
@@ -107,6 +114,13 @@ jobs:
       - name: Reset libgit2 pkg-config mtime
         if: steps.libgit2-cache.outputs.cache-hit == 'true'
         run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
+
+      # Temporary workaround until this pipeline uses the 'myself' buildenv
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libssh2-1-dev
 
       - name: Install libgit2/git2go
         run: make git2go
