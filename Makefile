@@ -123,10 +123,18 @@ cicheck: ## Run CI checks.
 	$(GOCILINT) run
 
 .PHONY: test
-test: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
-test: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
-test: ## Run unit tests.
+test: test-unit test-e2e ## Run all tests.
+
+.PHONY: test-unit
+test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
+test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
+test-unit: git2go ## Run unit tests.
 	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all --tags static $(GOTEST_PKGS)
+
+
+.PHONY: test-e2e
+test-e2e: $(BIN) ## Run CLI end-to-end tests.
+	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all test/e2e/cli/...
 
 .PHONY: install-golangci-lint
 install-golangci-lint: GOLANGCI_LINT_VERSION     ?= 1.51.2
@@ -183,7 +191,7 @@ help: ## Show this help menu and exit.
 		printf "  make [VAR=... [VAR=...]] \033[36mTARGET\033[0m\n\n"; \
 		printf "\033[1mTARGETS\033[0m\n"; \
 	} \
-	/^[a-zA-Z_-]+:.*?##/ { \
+	/^[a-zA-Z0-9_-]+:.*?##/ { \
 		printf "  \033[36m%-23s\033[0m %s\n", $$1, $$2 \
 	} \
 	/^##@/ { \
