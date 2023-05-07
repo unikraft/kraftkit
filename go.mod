@@ -59,7 +59,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go/v2 v2.0.2
-	sigs.k8s.io/kustomize/kyaml v0.14.1
+	sigs.k8s.io/kustomize/kyaml v0.14.2
 )
 
 replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/libgit2/git2go
