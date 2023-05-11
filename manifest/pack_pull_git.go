@@ -6,17 +6,96 @@ package manifest
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
-	libgit "github.com/libgit2/git2go/v31"
+	"github.com/go-git/go-git/v5"
+	gitplumbing "github.com/go-git/go-git/v5/plumbing"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 )
+
+type cloneProgress struct {
+	onProgress     func(progress float64)
+	once           *sync.Once
+	completeParent chan struct{}
+	completeWorker chan struct{}
+}
+
+func (p cloneProgress) Write(b []byte) (int, error) {
+	if p.onProgress == nil {
+		return len(b), nil
+	}
+
+	var prog string
+	var scale float64
+
+	// Trim prefix
+	switch {
+	case strings.HasPrefix(string(b), "Counting objects"):
+		prog = strings.TrimPrefix(string(b), "Counting objects: ")
+		scale = 0.1
+	case strings.HasPrefix(string(b), "Compressing objects"):
+		prog = strings.TrimPrefix(string(b), "Compressing objects: ")
+		scale = 0.2
+	case strings.HasPrefix(string(b), "Total "):
+		p.once.Do(func() {
+			go func() {
+				for i := 0; i < 99; i++ {
+					exponential := math.Pow(1.02, float64(2*i)) * 1000
+					timeToWait := time.Duration(int(exponential) + rand.Intn(250))
+					time.Sleep(timeToWait * time.Millisecond)
+
+					p.onProgress(0.2 + 0.8*(float64(i)/100.0))
+
+					select {
+					case <-p.completeWorker:
+						p.completeParent <- struct{}{}
+						return
+					default:
+						continue
+					}
+				}
+				<-p.completeWorker
+				p.completeParent <- struct{}{}
+			}()
+		})
+
+		return len(b), nil
+	default:
+		return len(b), nil
+	}
+
+	// Trim leading spaces
+	progressString := strings.TrimLeft(prog, " ")
+
+	// Trim everything after '%'
+	percent := strings.IndexByte(prog, '%')
+	if percent < 0 {
+		return len(b), nil
+	}
+	progressString = progressString[:percent]
+
+	// Convert to float
+	var progress float64
+	if _, err := fmt.Sscanf(progressString, "%f", &progress); err != nil {
+		return len(b), err
+	}
+
+	// Call callback
+	p.onProgress(scale * (progress / 100.0))
+
+	return len(b), nil
+}
 
 // pullGit is used internally to pull a specific Manifest resource using if the
 // Manifest has the repo defined within.
@@ -36,72 +115,62 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		return fmt.Errorf("requesting Git with empty repository in manifest")
 	}
 
-	copts := &libgit.CloneOptions{
-		FetchOptions: &libgit.FetchOptions{
-			RemoteCallbacks: libgit.RemoteCallbacks{
-				TransferProgressCallback: func(stats libgit.TransferProgress) libgit.ErrorCode {
-					popts.OnProgress((float64(stats.IndexedObjects) / float64(stats.TotalObjects)) / 2)
-					return libgit.ErrorCodeOK
-				},
-				PackProgressCallback: func(_ int32, current, total uint32) libgit.ErrorCode {
-					popts.OnProgress(0.5 + (float64(current)/float64(total))/2)
-					return libgit.ErrorCodeOK
-				},
-				// Warning: Returning "error OK" here prevents hostkey look ups
-				CertificateCheckCallback: func(cert *libgit.Certificate, _ bool, hostname string) libgit.ErrorCode {
-					if cert != nil && len(cert.Hostkey.Hostkey) > 0 {
-						log.G(ctx).
-							WithField("hostname", hostname).
-							WithField("sha256", hex.EncodeToString(cert.Hostkey.HashSHA256[:])).
-							Warn("hostkey look up disabled")
-					}
-					return libgit.ErrorCodeOK
-				},
-			},
-		},
-		CheckoutOpts: &libgit.CheckoutOptions{
-			Strategy: libgit.CheckoutForce, // .CheckoutSafe,
-		},
-		Bare: false,
-	}
+	completeWorker := make(chan struct{})
+	completeParent := make(chan struct{})
 
+	copts := &git.CloneOptions{
+		SingleBranch:      true,
+		Tags:              git.NoTags,
+		NoCheckout:        false,
+		Depth:             1,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		Progress: cloneProgress{
+			onProgress:     popts.OnProgress,
+			completeWorker: completeWorker,
+			completeParent: completeParent,
+			once:           &sync.Once{},
+		},
+	}
 	path := manifest.Origin
 
 	// Is this an SSH URL?
 	if isSSHURL(path) {
-		// This is a quirk of git2go, if we have determined it was an SSH path and
-		// it does not contain the prefix, we should include it so it can be
-		// recognised internally by the module.
 		if strings.HasPrefix(path, "git@") {
 			path = "ssh://" + path
 		}
-
-		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(_, usernameFromUrl string, allowedTypes libgit.CredentialType) (*libgit.Credential, error) {
-			if allowedTypes == libgit.CredentialTypeUsername && len(usernameFromUrl) == 0 {
-				return nil, fmt.Errorf("username required in SSH URL")
-			}
-
-			return libgit.NewCredentialSSHKeyFromAgent(usernameFromUrl)
+		copts.Auth, err = gitssh.NewSSHAgentAuth("git")
+		if err != nil {
+			return fmt.Errorf("could not create SSH agent auth: %w", err)
 		}
 	} else {
-		copts.FetchOptions.RemoteCallbacks.CredentialsCallback = func(fullUrl, _ string, _ libgit.CredentialType) (*libgit.Credential, error) {
-			u, err := url.Parse(fullUrl)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse git repository: %v", err)
-			}
+		if !strings.HasPrefix(path, "https://") {
+			path = "https://" + path
+		}
+		u, err := url.Parse(path)
+		if err != nil {
+			return fmt.Errorf("could not parse URL: %w", err)
+		}
+		endpoint := u.Host
 
-			if auth, ok := manifest.Auths()[u.Host]; ok {
-				if len(auth.User) > 0 && len(auth.Token) > 0 {
-					return libgit.NewCredentialUserpassPlaintext(auth.User, auth.Token)
+		if manifest.Auths() != nil {
+			if cfg, ok := manifest.Auths()[endpoint]; ok {
+				if cfg.User != "" && cfg.Token != "" {
+					copts.Auth = &githttp.BasicAuth{
+						Username: cfg.User,
+						Password: cfg.Token,
+					}
+				} else if cfg.Token != "" {
+					copts.Auth = &githttp.TokenAuth{
+						Token: cfg.Token,
+					}
 				}
 			}
-
-			return libgit.NewCredentialDefault()
 		}
 	}
+	copts.URL = path
 
 	if popts.Version() != "" {
-		copts.CheckoutBranch = popts.Version()
+		copts.ReferenceName = gitplumbing.NewBranchReferenceName(popts.Version())
 	}
 
 	local, err := unikraft.PlaceComponent(
@@ -110,7 +179,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		manifest.Name,
 	)
 	if err != nil {
-		return fmt.Errorf("could not place component package: %s", err)
+		return fmt.Errorf("could not place component package: %w", err)
 	}
 
 	log.G(ctx).
@@ -119,9 +188,14 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		WithField("branch", popts.Version()).
 		Infof("git clone")
 
-	if _, err = libgit.Clone(path, local, copts); err != nil {
-		return fmt.Errorf("could not clone repository: %v", err)
+	if _, err = git.PlainCloneContext(ctx, local, false, copts); err != nil {
+		return fmt.Errorf("could not clone repository: %w", err)
 	}
+
+	// Wait for the go routine to finish
+	completeWorker <- struct{}{}
+	<-completeParent
+	popts.OnProgress(1.0)
 
 	log.G(ctx).Infof("successfully cloned %s into %s", path, local)
 
