@@ -1,3 +1,0 @@
-[submodule "libgit2/git2go"]
-	path = third_party/libgit2/git2go
-	url = https://github.com/libgit2/git2go.git

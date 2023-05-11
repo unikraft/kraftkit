@@ -35,7 +35,7 @@ builds:
     binary: #@ binary
     main: #@ "./cmd/{}".format(binary)
     env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
       - GOMOD=kraftkit.sh
     goos:
       - linux
@@ -46,8 +46,4 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
-    tags:
-      - static
-    hooks:
-      pre: make git2go
 #@ end
