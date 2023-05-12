@@ -8,6 +8,7 @@ package packmanager
 // component.
 type PackOptions struct {
 	appSourceFiles                   bool
+	args                             []string
 	initrd                           string
 	kconfig                          bool
 	kernelLibraryIntermediateObjects bool
@@ -21,6 +22,11 @@ type PackOptions struct {
 // packaged.
 func (popts *PackOptions) PackAppSourceFiles() bool {
 	return popts.appSourceFiles
+}
+
+// Args returns the arguments to pass to the kernel.
+func (popts *PackOptions) Args() []string {
+	return popts.args
 }
 
 // Initrd returns the path of the initrd file that should be packaged.
@@ -66,6 +72,13 @@ type PackOption func(*PackOptions)
 func PackAppSourceFiles(pack bool) PackOption {
 	return func(popts *PackOptions) {
 		popts.appSourceFiles = pack
+	}
+}
+
+// PackArgs sets the arguments to be passed to the application.
+func PackArgs(args ...string) PackOption {
+	return func(popts *PackOptions) {
+		popts.args = args
 	}
 }
 
