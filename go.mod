@@ -16,7 +16,7 @@ require (
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.13.4
-	github.com/containerd/containerd v1.7.0
+	github.com/containerd/containerd v1.7.1
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/dustin/go-humanize v1.0.1
@@ -67,8 +67,8 @@ replace github.com/libgit2/git2go/v31 v31.7.9 => ./third_party/libgit2/git2go
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20221215162035-5330a85ea652 // indirect
-	github.com/Microsoft/go-winio v0.6.0 // indirect
-	github.com/Microsoft/hcsshim v0.10.0-rc.7 // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/hcsshim v0.10.0-rc.8 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230214155104-81033d7f4442 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -83,12 +83,12 @@ require (
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
-	github.com/containerd/ttrpc v1.2.1 // indirect
-	github.com/containerd/typeurl/v2 v2.1.0 // indirect
+	github.com/containerd/ttrpc v1.2.2 // indirect
+	github.com/containerd/typeurl/v2 v2.1.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
-	github.com/docker/cli v23.0.1+incompatible // indirect
+	github.com/docker/cli v23.0.3+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
