@@ -64,8 +64,8 @@ github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWR
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/cilium/ebpf v0.7.0/go.mod h1:/oI2+1shJiTGAMgl6/RgJr36Eo1jzrRcAWbcXO2usCA=
-github.com/cli/cli/v2 v2.28.0 h1:Fj9SjZAfXqIymTVkVSwhT34nfys8GVYVK3nBL1VcSkA=
-github.com/cli/cli/v2 v2.28.0/go.mod h1:NzPylKMgb8BCvWI8ZyS1vtIGwOPo0mDlLRdTuF8Zbuk=
+github.com/cli/cli/v2 v2.29.0 h1:wGRFQY6v51LLIsLdz0maW7zGG2YR7DZcMKowKjpxz7k=
+github.com/cli/cli/v2 v2.29.0/go.mod h1:NzPylKMgb8BCvWI8ZyS1vtIGwOPo0mDlLRdTuF8Zbuk=
 github.com/cli/go-gh v1.2.1 h1:xFrjejSsgPiwXFP6VYynKWwxLQcNJy3Twbu82ZDlR/o=
 github.com/cli/go-gh v1.2.1/go.mod h1:Jxk8X+TCO4Ui/GarwY9tByWm/8zp4jJktzVZNlTW5VM=
 github.com/cli/go-gh/v2 v2.0.0 h1:JAgQY7VNHletsO0Eqr+/PzF7fF5QEjhY2t2+Tev3vmk=
