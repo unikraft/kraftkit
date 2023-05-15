@@ -1,0 +1,76 @@
+name: Expire Action Caches
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+
+  check-and-update:
+    name: Clean
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: write
+
+    steps:
+      - name: Clean up obsolete caches
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const cachePrefixes = new Map([
+              ['gochecks-Linux-go-', 0],
+              ['gounit-Linux-go-',   0],
+              ['e2e-cli-Linux-go-',  0]
+            ]);
+
+            const cacheSuffixLen = 64
+
+            await github.
+              paginate(github.rest.actions.getActionsCacheList, {
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              })
+              .then(caches => {
+                for (const cache of caches) {
+                  if (cache.ref == 'refs/heads/staging') {
+                    const cachePrefix = cache.key.slice(0, -cacheSuffixLen)
+                    if (cachePrefixes.has(cachePrefix)) {
+                      const seen = cachePrefixes.get(cachePrefix)
+                      if (seen > 0) {
+                        (async () => {
+                          await github.rest.actions.deleteActionsCacheById({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            cache_id: cache.id
+                          })
+                          core.notice(`Deleted cache with key ${cache.key} for ref ${cache.ref}`)
+                        })()
+                      }
+                      cachePrefixes.set(cachePrefix, seen + 1)
+                    }
+                  } else {
+                    (async () => {
+                      await github.rest.repos.getBranch({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        branch: cache.ref
+                      })
+                      .catch(error => {
+                        if (error.status == 404) {
+                          (async () => {
+                            await github.rest.actions.deleteActionsCacheById({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              cache_id: cache.id
+                            })
+                            core.notice(`Deleted cache with key ${cache.key} for ref ${cache.ref}`)
+                          })()
+                        } else {
+                          throw error
+                        }
+                      })
+                    })()
+                  }
+                }
+              });
