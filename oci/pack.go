@@ -56,6 +56,11 @@ var (
 func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packmanager.PackOption) (pack.Package, error) {
 	var err error
 
+	popts := &packmanager.PackOptions{}
+	for _, opt := range opts {
+		opt(popts)
+	}
+
 	// Initialize the ociPackage by copying over target.Target attributes
 	ocipack := ociPackage{
 		arch:    targ.Architecture(),
@@ -63,6 +68,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		kconfig: targ.KConfig(),
 		kernel:  targ.Kernel(),
 		initrd:  targ.Initrd(),
+		command: popts.Args(),
 	}
 
 	if flagTag != "" {
@@ -86,11 +92,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	popts := &packmanager.PackOptions{}
-	for _, opt := range opts {
-		opt(popts)
 	}
 
 	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {

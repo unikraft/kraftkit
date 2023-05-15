@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/mattn/go-shellwords"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
@@ -31,6 +32,7 @@ import (
 
 type Pkg struct {
 	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Args         string   `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Dbg          bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
 	Force        bool     `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
 	Format       string   `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
@@ -183,6 +185,11 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				name += " (" + format.String() + ")"
 			}
 
+			cmdShellArgs, err := shellwords.Parse(opts.Args)
+			if err != nil {
+				return err
+			}
+
 			tree = append(tree, processtree.NewProcessTreeItem(
 				name,
 				targ.Architecture().Name()+"/"+targ.Platform().Name(),
@@ -199,6 +206,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 					}
 
 					popts := []packmanager.PackOption{
+						packmanager.PackArgs(cmdShellArgs...),
 						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
