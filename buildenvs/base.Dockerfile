@@ -86,11 +86,11 @@ RUN set -xe; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       make=4.3-4.1 \
-      libncursesw5-dev=6.2+20201114-2 \
-      libncursesw5=6.2+20201114-2 \
+      libncursesw5-dev=6.2+20201114-2+deb11u1 \
+      libncursesw5=6.2+20201114-2+deb11u1 \
       libyaml-dev=0.2.2-1 \
       flex=2.6.4-8 \
-      git=1:2.30.2-1 \
+      git=1:2.30.2-1+deb11u2 \
       wget=1.21-1+deb11u1 \
       patch=2.7.6-7 \
       gawk=1:5.1.0-1 \
@@ -104,7 +104,6 @@ RUN set -xe; \
       autoconf=2.69-14 \
       xz-utils=5.2.5-2.1~deb11u1 \
       python3=3.9.2-3 \
-      libgit2-dev=1.1.0+dfsg.1-4 \
       ca-certificates=20210119; \
     apt-get clean; \
     rm -Rf /var/cache/apt/*; \
