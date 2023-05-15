@@ -19,9 +19,11 @@ jobs:
         with:
           script: |
             const cachePrefixes = new Map([
-              ['gochecks-Linux-go-', 0],
-              ['gounit-Linux-go-',   0],
-              ['e2e-cli-Linux-go-',  0]
+              ['e2e-cli-Linux-go-',            0],
+              ['gochecks-Linux-go-',           0],
+              ['gounit-Linux-go-',             0],
+              ['build-protoc-Linux-go-',       0],
+              ['build-qemu-devices-Linux-go-', 0]
             ]);
 
             const cacheSuffixLen = 64
