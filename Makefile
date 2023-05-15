@@ -85,10 +85,9 @@ endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
-$(addprefix $(.PROXY), $(BIN)): git2go tidy
+$(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
 	$(GO) build \
-		-tags static \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
@@ -102,7 +101,6 @@ buildenv-%:
 .PHONY: devenv
 devenv: DOCKER_RUN_EXTRA ?= -it --name $(REPO)-devenv
 devenv: WITH_KVM         ?= n
-devenv: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
 devenv: ## Start the development environment container.
 ifeq ($(WITH_KVM),y)
 	$(Q)$(call DOCKER_RUN,--device /dev/kvm $(DOCKER_RUN_EXTRA),myself-full,bash)
@@ -128,9 +126,8 @@ test: test-unit test-e2e ## Run all tests.
 .PHONY: test-unit
 test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
 test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
-test-unit: git2go ## Run unit tests.
-	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all --tags static $(GOTEST_PKGS)
-
+test-unit: ## Run unit tests.
+	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all $(GOTEST_PKGS)
 
 .PHONY: test-e2e
 test-e2e: $(BIN) ## Run CLI end-to-end tests.
@@ -152,35 +149,6 @@ properclean: IMAGE       ?= $(REGISTRY)/$(ENVIRONMENT):$(IMAGE_TAG)
 properclean: ## Completely clean the repository's build artifacts.
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
-
-.PHONY: git2go
-git2go: $(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
-	$(GO) install -tags static github.com/libgit2/git2go/v31/...
-
-$(VENDORDIR)/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc: $(VENDORDIR)/libgit2/git2go/vendor/libgit2
-	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/build
-	$(MKDIR) -p $(VENDORDIR)/libgit2/git2go/static-build/install
-	(cd $(VENDORDIR)/libgit2/git2go/static-build/build && $(CMAKE) \
-		-DTHREADSAFE=ON \
-		-DBUILD_CLAR=OFF \
-		-DBUILD_SHARED_LIBS=OFF \
-		-DREGEX_BACKEND=builtin \
-		-DUSE_BUNDLED_ZLIB=ON \
-		-DUSE_HTTPS=ON \
-		-DUSE_SSH=ON \
-		-DCMAKE_C_FLAGS=-fPIC \
-		-DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-		-DCMAKE_INSTALL_PREFIX=$(VENDORDIR)/libgit2/git2go/static-build/install \
-		-DCMAKE_INSTALL_LIBDIR="lib" \
-		-DDEPRECATE_HARD="${BUILD_DEPRECATE_HARD}" \
-		$(VENDORDIR)/libgit2/git2go/vendor/libgit2)
-	$(MAKE) -C $(VENDORDIR)/libgit2/git2go/static-build/build install
-
-$(VENDORDIR)/libgit2/git2go/vendor/libgit2: $(VENDORDIR)/libgit2/git2go
-	$(GIT) -C $(VENDORDIR)/libgit2/git2go submodule update --init --recursive
-
-$(VENDORDIR)/libgit2/git2go:
-	$(GIT) clone --branch v31.7.9 --recurse-submodules https://github.com/libgit2/git2go.git $@
 
 .PHONY: help
 help: ## Show this help menu and exit.

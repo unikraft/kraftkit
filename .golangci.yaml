@@ -4,12 +4,6 @@ run:
   skip-dirs:
     - tmp/
     - dist/
-  skip-files:
-    # Temporarily ignore the file which uses libgit2 dependency since this will 
-    # fail on the static check.
-    - manifest/pack_pull_git.go
-  build-tags:
-    - static
 
 linters:
   enable:

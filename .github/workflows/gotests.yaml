@@ -44,18 +44,6 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
-      - name: libgit2 cache
-        id: libgit2-cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install
-          key: libgit2-${{ runner.os }}-${{ hashFiles(steps.goenv.outputs.mod) }}
-
-      - name: Reset libgit2 pkg-config mtime
-        if: steps.libgit2-cache.outputs.cache-hit == 'true'
-        run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
-
       - name: Run tests
         run: make test-unit
 
@@ -93,18 +81,6 @@ jobs:
           key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
-
-      - name: libgit2 cache
-        id: libgit2-cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install
-          key: libgit2-${{ runner.os }}-${{ hashFiles(steps.goenv.outputs.mod) }}
-
-      - name: Reset libgit2 pkg-config mtime
-        if: steps.libgit2-cache.outputs.cache-hit == 'true'
-        run: touch -cm ${{ github.workspace }}/third_party/libgit2/git2go/static-build/install/lib/pkgconfig/libgit2.pc
 
       - name: Run framework unit tests
         run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
