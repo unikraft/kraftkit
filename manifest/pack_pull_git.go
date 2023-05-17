@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -188,7 +189,28 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		WithField("branch", popts.Version()).
 		Infof("git clone")
 
-	if _, err = git.PlainCloneContext(ctx, local, false, copts); err != nil {
+	_, err = git.PlainCloneContext(ctx, local, false, copts)
+	switch {
+	case errors.Is(err, git.ErrRepositoryAlreadyExists):
+		reps, err := git.PlainOpen(local)
+		if err != nil {
+			return fmt.Errorf("could not open repository: %w", err)
+		}
+		err = reps.FetchContext(ctx, &git.FetchOptions{
+			RemoteURL: copts.URL,
+			Tags:      copts.Tags,
+			Depth:     copts.Depth,
+			Auth:      copts.Auth,
+			Progress:  nil,
+		})
+		switch {
+		case errors.Is(err, git.NoErrAlreadyUpToDate), errors.Is(err, git.ErrBranchExists), err == nil:
+			log.G(ctx).Infof("successfully updated %s in %s", path, local)
+			return nil
+		default:
+			return fmt.Errorf("could not clone repository: %w", err)
+		}
+	case err != nil:
 		return fmt.Errorf("could not clone repository: %w", err)
 	}
 
