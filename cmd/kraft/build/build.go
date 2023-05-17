@@ -46,6 +46,12 @@ type Build struct {
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 }
 
+// The longest word is "configuring" (which is 11 characters long), plus
+// additional space characters (2 characters), brackets (2 characters) the
+// name of the project and the target/plat string (which is variable in
+// length).
+const maxExtraCharacters = 15
+
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Build{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",
@@ -127,12 +133,12 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	// two independent processtrees if we are using "render" mode (aka the fancy
 	// mode is enabled).
 	if !norender {
-		// The longest word is "configuring" (which is 11 characters long), plus
-		// additional space characters (2 characters), brackets (2 characters) the
-		// name of the project and the target/plat string (which is variable in
-		// length).
-		for _, targ := range project.Targets() {
-			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
+		comps, err := project.Components(ctx)
+		if err != nil {
+			return err
+		}
+		for _, component := range comps {
+			if newLen := len(unikraft.TypeNameVersion(component)) + maxExtraCharacters; newLen > nameWidth {
 				nameWidth = newLen
 			}
 		}
