@@ -25,7 +25,7 @@ require (
 	github.com/genuinetools/reg v0.16.1
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/gobwas/glob v0.2.3
-	github.com/google/go-containerregistry v0.15.1
+	github.com/google/go-containerregistry v0.15.2
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.1.0
