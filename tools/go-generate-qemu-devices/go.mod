@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/golang/glog v1.0.0
 	github.com/iancoleman/strcase v0.2.0
-	kraftkit.sh v0.5.1
+	kraftkit.sh v0.5.2
 	mvdan.cc/gofumpt v0.5.0
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
 )
