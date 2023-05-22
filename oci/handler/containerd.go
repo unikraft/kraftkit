@@ -281,7 +281,6 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 		err = combineErrors(err, done(ctx))
 	}()
 
-	ctx, stopProgress := context.WithCancel(ctx)
 	progress := make(chan struct{})
 	ongoing := newJobs(name)
 
@@ -309,7 +308,6 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 
 	// Fetch the image
 	_, err = handle.client.Fetch(ctx, name, ropts...)
-	stopProgress()
 	if err != nil {
 		return err
 	}
@@ -447,7 +445,11 @@ outer:
 
 			var offset int64 = 0
 			var total int64 = 0
+			var exists int = 0
 			for _, status := range statuses {
+				if status.Status == "exists" || status.Status == "resolved" {
+					exists++
+				}
 				if status.Total > 0 {
 					offset += status.Offset
 					total += status.Total
@@ -456,7 +458,7 @@ outer:
 
 			onProgress(float64(offset) / float64(total))
 
-			if done {
+			if done || (len(statuses) == exists) {
 				return
 			}
 		case <-ctx.Done():
