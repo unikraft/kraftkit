@@ -124,7 +124,7 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 				subs := strings.SplitN(arg, "=", 2)
 
 				flagName := strings.TrimPrefix(subs[0], "--")
-				if registeredFlagsNames.Contains(flagName) {
+				if registeredFlagsNames.ContainsExactly(flagName) {
 					if len(subs) == 1 {
 						args = args[1:]
 					}
@@ -138,7 +138,7 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 				subs := strings.SplitN(arg, "=", 2)
 
 				flagName := strings.TrimPrefix(subs[0], "-")
-				if registeredFlagsNames.Contains(flagName) {
+				if registeredFlagsNames.ContainsExactly(flagName) {
 					if len(subs) == 1 {
 						args = args[1:]
 					}
