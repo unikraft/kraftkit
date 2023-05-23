@@ -22,8 +22,6 @@ nfpms:
     license: BSD 3-clause
     bindir: /usr/local/bin
     homepage: https://kraftkit.sh
-    dependencies:
-      - libc6 (>= 2.14)
     formats:
       - deb
       - rpm
