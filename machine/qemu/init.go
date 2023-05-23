@@ -448,4 +448,7 @@ func init() {
 	// gob.Register(QemuDisplayCurses{})
 	// gob.Register(QemuDisplayEglHeadless{})
 	gob.Register(QemuDisplayNone{})
+
+	// CLI configuration
+	gob.Register(QemuConfig{})
 }
