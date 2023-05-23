@@ -10,17 +10,17 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	"kraftkit.sh/machine/driveropts"
+	mplatform "kraftkit.sh/machine/platform"
 )
 
 type Rm struct {
-	All bool `long:"all" usage:"Remove all machines"`
+	All      bool `long:"all" usage:"Remove all machines"`
+	platform string
 }
 
 func New() *cobra.Command {
@@ -39,97 +39,94 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().VarP(
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"p",
+		"Set the platform virtual machine monitor driver.",
+	)
+
 	return cmd
 }
 
-var (
-	observations = waitgroup.WaitGroup[machine.MachineID]{}
-	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
-)
+var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
+
+func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
+	opts.platform = cmd.Flag("plat").Value.String()
+	return nil
+}
 
 func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
+	platform := mplatform.PlatformUnknown
+
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
+			return err
+		}
+	} else {
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
+	}
+
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+	}
+
+	controller, err := strategy.NewMachineV1alpha1(ctx)
 	if err != nil {
-		return fmt.Errorf("could not access machine store: %v", err)
+		return err
 	}
 
-	mcfgs, err := store.ListAllMachineConfigs()
+	machines, err := controller.List(ctx, &machineapi.MachineList{})
 	if err != nil {
-		return fmt.Errorf("could not list machines: %v", err)
+		return err
 	}
 
-	var mids []machine.MachineID
+	var remove []*machineapi.Machine
 
-	for _, mid1 := range args {
-		found := false
-		for _, mid2 := range mcfgs {
-			if mid1 == mid2.ID.ShortString() || mid1 == mid2.ID.String() || mid1 == string(mid2.Name) {
-				mids = append(mids, mid2.ID)
-				found = true
-			}
-		}
-
-		if !found {
-			return fmt.Errorf("could not find machine %s", mid1)
-		}
-	}
-
-	if len(args) == 0 && opts.All {
-		mids = []machine.MachineID{}
-		for _, mcfg := range mcfgs {
-			mids = append(mids, mcfg.ID)
-		}
-	}
-
-	for _, mid := range mids {
-		mid := mid // loop closure
-
-		if !opts.All && observations.Contains(mid) {
+	for _, machine := range machines.Items {
+		if len(args) == 0 && opts.All {
+			remove = append(remove, &machine)
 			continue
 		}
 
-		observations.Add(mid)
+		if args[0] == machine.Name || args[0] == string(machine.UID) {
+			remove = append(remove, &machine)
+		}
+	}
+
+	for _, machine := range remove {
+		machine := machine // loop closure
+
+		if observations.Contains(machine) {
+			continue
+		}
+
+		observations.Add(machine)
 
 		go func() {
-			observations.Add(mid)
+			observations.Add(machine)
 
-			log.G(ctx).Infof("removing %s", mid.ShortString())
+			log.G(ctx).Infof("deleting %s", machine.Name)
 
-			mcfg := &machine.MachineConfig{}
-			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-				log.G(ctx).Errorf("could not look up machine config: %v", err)
-				observations.Done(mid)
-				return
-			}
-
-			driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
-
-			if _, ok := drivers[driverType]; !ok {
-				driver, err := machinedriver.New(driverType,
-					driveropts.WithMachineStore(store),
-					driveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-				)
-				if err != nil {
-					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
-					observations.Done(mid)
-					return
-				}
-
-				drivers[driverType] = driver
-			}
-
-			driver := drivers[driverType]
-
-			if err := driver.Destroy(ctx, mid); err != nil {
-				log.G(ctx).Errorf("could not remove machine %s: %v", mid.ShortString(), err)
+			if _, err := controller.Delete(ctx, machine); err != nil {
+				log.G(ctx).Errorf("could not delete machine %s: %v", machine.Name, err)
 			} else {
-				log.G(ctx).Infof("removed %s", mid.ShortString())
+				log.G(ctx).Infof("deleted %s", machine.Name)
 			}
 
-			observations.Done(mid)
+			observations.Done(machine)
 		}()
 	}
 

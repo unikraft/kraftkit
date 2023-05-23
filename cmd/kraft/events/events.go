@@ -17,17 +17,18 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	"kraftkit.sh/machine/driveropts"
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/machine/qemu/qmp"
 )
 
 type Events struct {
+	platform     string
 	Granularity  time.Duration `long:"poll-granularity" short:"g" usage:"How often the machine store and state should polled"`
 	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
@@ -49,22 +50,58 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().VarP(
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"p",
+		"Set the platform virtual machine monitor driver.",
+	)
+
 	return cmd
 }
 
-var (
-	observations = waitgroup.WaitGroup[machine.MachineID]{}
-	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
-)
+var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
+
+func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
+	opts.platform = cmd.Flag("plat").Value.String()
+	return nil
+}
 
 func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx, cancel := context.WithCancel(cmd.Context())
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
+	platform := mplatform.PlatformUnknown
+
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			cancel()
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
+			cancel()
+			return err
+		}
+	} else {
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			cancel()
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
+	}
+
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		cancel()
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+	}
+
+	controller, err := strategy.NewMachineV1alpha1(ctx)
 	if err != nil {
 		cancel()
-		return fmt.Errorf("could not access machine store: %v", err)
+		return err
 	}
 
 	var pidfile *os.File
@@ -126,51 +163,25 @@ seek:
 		default:
 		}
 
-		var mids []machine.MachineID
-		allMids, err := store.ListAllMachineIDs()
+		machines, err := controller.List(ctx, &machineapi.MachineList{})
 		if err != nil {
 			return fmt.Errorf("could not list machines: %v", err)
 		}
 
-		if len(args) > 0 {
-			for _, mid := range allMids {
-				if args[0] == mid.String() || args[0] == mid.ShortString() {
-					mids = append(mids, mid)
+		for _, machine := range machines.Items {
+			if len(args) == 0 || (args[0] == string(machine.UID) || args[0] == machine.Name) {
+				switch machine.Status.State {
+				case machineapi.MachineStateFailed,
+					machineapi.MachineStateExited,
+					machineapi.MachineStateUnknown:
+					if opts.QuitTogether {
+						continue
+					}
+				default:
 				}
+
+				observations.Add(&machine)
 			}
-		} else {
-			mids = allMids
-		}
-
-		if len(mids) == 0 && opts.QuitTogether {
-			cancel()
-			break seek
-		}
-
-		for _, mid := range mids {
-			mid := mid // loop closure
-
-			state, err := store.LookupMachineState(mid)
-			if err != nil {
-				log.G(ctx).Errorf("could not look up machine state: %v", err)
-				continue
-			}
-
-			if observations.Contains(mid) {
-				continue
-			}
-
-			switch state {
-			case machine.MachineStateDead,
-				machine.MachineStateExited,
-				machine.MachineStateUnknown:
-				if opts.QuitTogether {
-					continue
-				}
-			default:
-			}
-
-			observations.Add(mid)
 		}
 
 		if len(observations.Items()) == 0 && opts.QuitTogether {
@@ -178,82 +189,24 @@ seek:
 			break seek
 		}
 
-		for _, mid := range observations.Items() {
-			mid := mid // loop closure
-
-			var mcfg machine.MachineConfig
-			if err := store.LookupMachineConfig(mid, &mcfg); err != nil {
-				log.G(ctx).Errorf("could not look up machine config: %v", err)
-				continue
-			}
+		for _, machine := range observations.Items() {
+			machine := machine // loop closure
 
 			go func() {
-				mcfg := &machine.MachineConfig{}
-				if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-					log.G(ctx).Errorf("could not look up machine config: %v", err)
-					return
-				}
-
-				driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
-
-				if _, ok := drivers[driverType]; !ok {
-					driver, err := machinedriver.New(driverType,
-						driveropts.WithMachineStore(store),
-						driveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-					)
-					if err != nil {
-						log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid, err)
-						observations.Done(mid)
-						return
-					}
-
-					drivers[driverType] = driver
-				}
-
-				driver := drivers[driverType]
-
-				events, errs, err := driver.ListenStatusUpdate(ctx, mid)
+				events, errs, err := controller.Watch(ctx, machine)
 				if err != nil {
-					log.G(ctx).Debugf("could not listen for status updates for %s: %v", mid.ShortString(), err)
-
-					// Check the state of the machine using the driver, for a more
-					// accurate read
-					state, err := driver.State(ctx, mid)
-					if err != nil {
-						log.G(ctx).Errorf("could not look up machine state: %v", err)
-					}
-
-					switch state {
-					case machine.MachineStateExited, machine.MachineStateDead:
-						if mcfg.DestroyOnExit {
-							log.G(ctx).Infof("removing %s", mid.ShortString())
-							if err := driver.Destroy(ctx, mid); err != nil {
-								log.G(ctx).Errorf("could not remove machine: %v", err)
-							}
-						}
-					case machine.MachineStateRunning:
-						if err := store.SaveMachineState(mid, machine.MachineStateExited); err != nil {
-							log.G(ctx).Errorf("could not shutdown machine: %v", err)
-						}
-					}
-
+					log.G(ctx).Debugf("could not listen for status updates for %s: %v", machine.Name, err)
 					return
 				}
 
 				for {
 					// Wait on either channel
 					select {
-					case state := <-events:
-						log.G(ctx).Infof("%s : %s", mid.ShortString(), state.String())
-						switch state {
-						case machine.MachineStateExited, machine.MachineStateDead:
-							if mcfg.DestroyOnExit {
-								log.G(ctx).Infof("removing %s", mid.ShortString())
-								if err := driver.Destroy(ctx, mid); err != nil {
-									log.G(ctx).Errorf("could not remove machine: %v: ", err)
-								}
-							}
-							observations.Done(mid)
+					case machine := <-events:
+						log.G(ctx).Infof("%s : %s", machine.Name, machine.Status.State.String())
+						switch machine.Status.State {
+						case machineapi.MachineStateExited, machineapi.MachineStateFailed:
+							observations.Done(machine)
 							return
 						}
 
@@ -261,10 +214,10 @@ seek:
 						if !errors.Is(err, qmp.ErrAcceptedNonEvent) {
 							log.G(ctx).Errorf("%v", err)
 						}
-						observations.Done(mid)
+						observations.Done(machine)
 
 					case <-ctx.Done():
-						observations.Done(mid)
+						observations.Done(machine)
 						return
 					}
 				}

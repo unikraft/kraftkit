@@ -11,6 +11,11 @@ import (
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 )
 
+// strategies contains the map of registered strategies, whether provided as
+// part from builtins and are host specific, or those that have been registered
+// dynamically at runtime.
+var strategies = make(map[Platform]*Strategy)
+
 // NewStrategyConstructor is a prototype for the instantiation function of a
 // platform driver implementation.
 type NewStrategyConstructor[T any] func(context.Context, ...any) (T, error)
@@ -21,4 +26,25 @@ type Strategy struct {
 	Name               string
 	Platform           Platform
 	NewMachineV1alpha1 NewStrategyConstructor[machinev1alpha1.MachineService]
+}
+
+// Strategies returns the list of registered platform implementations.
+func Strategies() map[Platform]*Strategy {
+	base := hostSupportedStrategies()
+	for name, driverInfo := range strategies {
+		base[name] = driverInfo
+	}
+
+	return base
+}
+
+// DriverNames returns the list of registered platform driver implementation
+// names.
+func DriverNames() []string {
+	ret := []string{}
+	for plat := range Strategies() {
+		ret = append(ret, plat.String())
+	}
+
+	return ret
 }

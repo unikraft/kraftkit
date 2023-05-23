@@ -7,6 +7,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/acorn-io/baaah v0.0.0-20230522221318-afcc93619e30
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/briandowns/spinner v1.23.0
 	github.com/cavaliergopher/cpio v1.0.1
@@ -37,7 +38,6 @@ require (
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/moby/moby v23.0.5+incompatible
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.15.1
 	github.com/onsi/ginkgo/v2 v2.9.5

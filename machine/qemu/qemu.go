@@ -14,19 +14,28 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	zip "api.zip"
+	"github.com/acorn-io/baaah/pkg/merr"
+	"github.com/fsnotify/fsnotify"
+	"github.com/mitchellh/mapstructure"
+	goprocess "github.com/shirou/gopsutil/v3/process"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
+
+	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/retrytimeout"
-	"kraftkit.sh/machine"
-	"kraftkit.sh/machine/driveropts"
 	"kraftkit.sh/machine/qemu/qmp"
 	qmpv1alpha "kraftkit.sh/machine/qemu/qmp/v1alpha"
-
-	"github.com/fsnotify/fsnotify"
-	goprocess "github.com/shirou/gopsutil/v3/process"
+	"kraftkit.sh/unikraft/export/v0/ukargparse"
 )
 
 const (
@@ -39,87 +48,107 @@ const (
 	DefaultTailPeekSize   = 1024
 )
 
-type QemuDriver struct {
-	dopts *driveropts.DriverOptions
+// machineV1alpha1Service ...
+type machineV1alpha1Service struct {
+	eopts []exec.ExecOption
 }
 
-func NewQemuDriver(opts ...driveropts.DriverOption) (*QemuDriver, error) {
-	dopts, err := driveropts.NewDriverOptions(opts...)
-	if err != nil {
-		return nil, err
+// NewMachineV1alpha1Service implements kraftkit.sh/machine/platform.NewStrategyConstructor
+func NewMachineV1alpha1Service(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
+	service := machineV1alpha1Service{}
+
+	for _, opt := range opts {
+		qopt, ok := opt.(MachineServiceV1alpha1Option)
+		if !ok {
+			panic("cannot apply non-MachineServiceV1alpha1Option type methods")
+		}
+
+		if err := qopt(&service); err != nil {
+			return nil, err
+		}
 	}
 
-	if dopts.Store == nil {
-		return nil, fmt.Errorf("cannot instantiate QEMU driver without machine store")
-	}
-
-	driver := QemuDriver{
-		dopts: dopts,
-	}
-
-	return &driver, nil
+	return &service, nil
 }
 
-func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption) (mid machine.MachineID, err error) {
-	mcfg, err := machine.NewMachineConfig(opts...)
-	if err != nil {
-		return machine.NullMachineID, fmt.Errorf("could build machine config: %v", err)
+// Create implements kraftkit.sh/api/machine/v1alpha1.MachineService.Create
+func (service *machineV1alpha1Service) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	if machine.ObjectMeta.UID == "" {
+		machine.ObjectMeta.UID = uuid.NewUUID()
 	}
 
-	if mid, err = machine.NewRandomMachineID(); err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not generate new machine ID: %v", err)
+	machine.Status.State = machinev1alpha1.MachineStateUnknown
+
+	if len(machine.Status.StateDir) == 0 {
+		machine.Status.StateDir = config.G[config.KraftKit](ctx).RuntimeDir
 	}
-
-	mcfg.ID = mid
-
-	pidFile := filepath.Join(qd.dopts.RuntimeDir, mid.String()+".pid")
 
 	// Set and create the log file for this machine
-	if mcfg.LogFile == "" {
-		mcfg.LogFile = filepath.Join(qd.dopts.RuntimeDir, mid.String()+".log")
+	if len(machine.Status.LogFile) == 0 {
+		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, string(machine.ObjectMeta.UID)+".log")
+	}
+
+	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
+		quantity, err := resource.ParseQuantity("64M")
+		if err != nil {
+			machine.Status.State = machinev1alpha1.MachineStateFailed
+			return machine, err
+		}
+
+		machine.Spec.Resources.Requests[corev1.ResourceMemory] = quantity
+	}
+
+	if machine.Spec.Resources.Requests.Cpu().Value() == 0 {
+		quantity, err := resource.ParseQuantity("1")
+		if err != nil {
+			machine.Status.State = machinev1alpha1.MachineStateFailed
+			return machine, err
+		}
+
+		machine.Spec.Resources.Requests[corev1.ResourceCPU] = quantity
 	}
 
 	qopts := []QemuOption{
 		WithDaemonize(true),
 		WithEnableKVM(true),
 		WithNoGraphic(true),
+		WithPidFile(filepath.Join(machine.Status.StateDir, string(machine.ObjectMeta.UID)+".pid")),
 		WithNoReboot(true),
 		WithNoStart(true),
-		WithPidFile(pidFile),
-		WithName(mid.String()),
-		WithKernel(mcfg.KernelPath),
-		WithAppend(mcfg.Arguments...),
+		WithName(string(machine.ObjectMeta.UID)),
+		WithKernel(machine.Status.KernelPath),
 		WithVGA(QemuVGANone),
 		WithMemory(QemuMemory{
-			Size: mcfg.MemorySize,
+			// The value returned from Memory() is in bytes
+			Size: uint64(machine.Spec.Resources.Requests.Memory().Value() / 1000000),
 			Unit: QemuMemoryUnitMB,
 		}),
 		// Create a QMP connection solely for manipulating the machine
 		WithQMP(QemuHostCharDevUnix{
-			SocketDir: qd.dopts.RuntimeDir,
-			Name:      mid.String() + "_control",
+			SocketDir: machine.Status.StateDir,
+			Name:      string(machine.ObjectMeta.UID) + "_control",
 			NoWait:    true,
 			Server:    true,
 		}),
 		// Create a QMP connection solely for listening to events
 		WithQMP(QemuHostCharDevUnix{
-			SocketDir: qd.dopts.RuntimeDir,
-			Name:      mid.String() + "_events",
+			SocketDir: machine.Status.StateDir,
+			Name:      string(machine.ObjectMeta.UID) + "_events",
 			NoWait:    true,
 			Server:    true,
 		}),
 		WithSerial(QemuHostCharDevFile{
 			Monitor:  false,
-			Filename: mcfg.LogFile,
+			Filename: machine.Status.LogFile,
 		}),
 		WithMonitor(QemuHostCharDevUnix{
-			SocketDir: qd.dopts.RuntimeDir,
-			Name:      mid.String() + "_mon",
+			SocketDir: machine.Status.StateDir,
+			Name:      string(machine.ObjectMeta.UID) + "_mon",
 			NoWait:    true,
 			Server:    true,
 		}),
 		WithSMP(QemuSMP{
-			CPUs:    mcfg.NumVCPUs,
+			CPUs:    uint64(machine.Spec.Resources.Requests.Cpu().Value()),
 			Threads: 1,
 			Sockets: 1,
 		}),
@@ -131,19 +160,46 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 		WithParallel(QemuHostCharDevNone{}),
 	}
 
-	if len(mcfg.InitrdPath) > 0 {
+	// TODO: Parse Rootfs types
+	if len(machine.Spec.Rootfs) > 0 {
 		qopts = append(qopts,
-			WithInitRd(mcfg.InitrdPath),
+			WithInitRd(machine.Spec.Rootfs),
 		)
 	}
 
+	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
+	if err != nil {
+		return machine, err
+	}
+
+	// TODO(nderjung): This is standard "Unikraft" positional argument syntax
+	// (kernel args and application arguments separated with "--").  The resulting
+	// string should be standardized through a central function.
+	args := kernelArgs.Strings()
+	if len(args) > 0 {
+		args = append(args, "--")
+	}
+	args = append(args, machine.Spec.ApplicationArgs...)
+	qopts = append(qopts, WithAppend(args...))
+
 	var bin string
 
-	switch mcfg.Architecture {
+	switch machine.Spec.Architecture {
 	case "x86_64", "amd64":
 		bin = QemuSystemX86
 
-		if mcfg.HardwareAcceleration {
+		if machine.Spec.Emulation {
+			qopts = append(qopts,
+				WithMachine(QemuMachine{
+					Type: QemuMachineTypePC,
+				}),
+				WithCPU(QemuCPU{
+					CPU: QemuCPUX86Qemu64,
+					On:  QemuCPUFeatures{QemuCPUFeatureVmx},
+					Off: QemuCPUFeatures{QemuCPUFeatureSvm},
+				}),
+			)
+		} else {
 			qopts = append(qopts,
 				WithMachine(QemuMachine{
 					Type:         QemuMachineTypePC,
@@ -153,17 +209,6 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 					CPU: QemuCPUX86Host,
 					On:  QemuCPUFeatures{QemuCPUFeatureX2apic},
 					Off: QemuCPUFeatures{QemuCPUFeaturePmu},
-				}),
-			)
-		} else {
-			qopts = append(qopts,
-				WithMachine(QemuMachine{
-					Type: QemuMachineTypePC,
-				}),
-				WithCPU(QemuCPU{
-					CPU: QemuCPUX86Qemu64,
-					On:  QemuCPUFeatures{QemuCPUFeatureVmx},
-					Off: QemuCPUFeatures{QemuCPUFeatureSvm},
 				}),
 			)
 		}
@@ -185,64 +230,88 @@ func (qd *QemuDriver) Create(ctx context.Context, opts ...machine.MachineOption)
 		)
 
 	default:
-		return machine.NullMachineID, fmt.Errorf("unsupported architecture: %s", mcfg.Architecture)
+		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
 
 	qcfg, err := NewQemuConfig(qopts...)
 	if err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not generate QEMU config: %v", err)
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not generate QEMU config: %v", err)
 	}
+
+	machine.Status.PlatformConfig = *qcfg
 
 	e, err := exec.NewExecutable(bin, *qcfg)
 	if err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU executable: %v", err)
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not prepare QEMU executable: %v", err)
 	}
 
-	process, err := exec.NewProcessFromExecutable(e, qd.dopts.ExecOptions...)
+	process, err := exec.NewProcessFromExecutable(e, service.eopts...)
 	if err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not prepare QEMU process: %v", err)
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not prepare QEMU process: %v", err)
 	}
 
-	mcfg.CreatedAt = time.Now()
+	machine.CreationTimestamp = metav1.Now()
 
-	// Start and also wait for the process to quit as we have invoked
-	// daemonization of the process.  When it exits, we'll have a PID we can use
-	// to manipulate the VMM.
+	// Start and also wait for the process to be released, this ensures the
+	// program is actively being executed.
 	if err := process.StartAndWait(ctx); err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not start and wait for QEMU process: %v", err)
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not start and wait for QEMU process: %v", err)
 	}
 
-	defer func() {
-		if err != nil {
-			if dErr := qd.Destroy(ctx, mid); dErr != nil {
-				err = fmt.Errorf("%w. Additionally, while destroying machine: %w", err, dErr)
-			}
-		}
-	}()
+	machine.Status.State = machinev1alpha1.MachineStateCreated
 
-	if err = qd.dopts.Store.SaveMachineConfig(mid, *mcfg); err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not save machine config: %v", err)
-	}
-
-	if err = qd.dopts.Store.SaveDriverConfig(mid, *qcfg); err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not save driver config: %v", err)
-	}
-
-	if err = qd.dopts.Store.SaveMachineState(mid, machine.MachineStateCreated); err != nil {
-		return machine.NullMachineID, fmt.Errorf("could not save machine state: %v", err)
-	}
-
-	return mid, nil
+	return machine, nil
 }
 
-func (qd *QemuDriver) Config(ctx context.Context, mid machine.MachineID) (*QemuConfig, error) {
-	dcfg := &QemuConfig{}
+// Update implements kraftkit.sh/api/machine/v1alpha1.MachineService
+func (service *machineV1alpha1Service) Update(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	panic("not implemented: kraftkit.sh/machine/qemu.machineV1alpha1Service.Update")
+}
 
-	if err := qd.dopts.Store.LookupDriverConfig(mid, dcfg); err != nil {
+// getQEMUConfigFromPlatformConfig converts the provided platformConfig
+// interface into meaningful QemuConfig.
+func getQEMUConfigFromPlatformConfig(platformConfig interface{}) (*QemuConfig, error) {
+	qcfgptr, ok := platformConfig.(*QemuConfig)
+	if ok {
+		return qcfgptr, nil
+	}
+
+	// If we cannot directly cast it to the structure, attempt to decode a
+	// mapstructure version of the same configuration.
+	var qcfg QemuConfig
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Result: &qcfg,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			// Directly embbed a less-erroring version of StringToIPHookFunc[0] which
+			// does not return an error when parsing an IP that returns nil.
+			// [0]: https://github.com/mitchellh/mapstructure/blob/bf980b35cac4dfd34e05254ee5aba086504c3f96/decode_hooks.go#L141-L163
+			func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+				if f.Kind() != reflect.String {
+					return data, nil
+				}
+				if t != reflect.TypeOf(net.IP{}) {
+					return data, nil
+				}
+
+				// Instead of parsing it, just return an empty net.IP structure, since
+				// we do not yet set IP addresses with Firecracker's configuration.
+				return net.IP{}, nil
+			},
+		),
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return dcfg, nil
+	if err := decoder.Decode(platformConfig); err != nil {
+		return nil, err
+	}
+
+	return &qcfg, nil
 }
 
 func qmpClientHandshake(conn *net.Conn) (*qmpv1alpha.QEMUMachineProtocolClient, error) {
@@ -265,8 +334,8 @@ func qmpClientHandshake(conn *net.Conn) (*qmpv1alpha.QEMUMachineProtocolClient, 
 	return qmpClient, nil
 }
 
-func (qd *QemuDriver) QMPClient(ctx context.Context, mid machine.MachineID) (*qmpv1alpha.QEMUMachineProtocolClient, error) {
-	qcfg, err := qd.Config(ctx, mid)
+func (service *machineV1alpha1Service) QMPClient(ctx context.Context, machine *machinev1alpha1.Machine) (*qmpv1alpha.QEMUMachineProtocolClient, error) {
+	qcfg, err := getQEMUConfigFromPlatformConfig(machine.Status.PlatformConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -278,25 +347,6 @@ func (qd *QemuDriver) QMPClient(ctx context.Context, mid machine.MachineID) (*qm
 	}
 
 	return qmpClientHandshake(&conn)
-}
-
-func (qd *QemuDriver) Pid(ctx context.Context, mid machine.MachineID) (uint32, error) {
-	qcfg, err := qd.Config(ctx, mid)
-	if err != nil {
-		return 0, err
-	}
-
-	pidData, err := os.ReadFile(qcfg.PidFile)
-	if err != nil {
-		return 0, fmt.Errorf("could not read pid file: %v", err)
-	}
-
-	pid, err := strconv.ParseUint(strings.TrimSpace(string(pidData)), 10, 32)
-	if err != nil {
-		return 0, fmt.Errorf("could not convert pid string \"%s\" to uint64: %v", pidData, err)
-	}
-
-	return uint32(pid), nil
 }
 
 func processFromPidFile(pidFile string) (*goprocess.Process, error) {
@@ -318,13 +368,14 @@ func processFromPidFile(pidFile string) (*goprocess.Process, error) {
 	return process, nil
 }
 
-func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.MachineID) (chan machine.MachineState, chan error, error) {
-	events := make(chan machine.MachineState)
+// Watch implements kraftkit.sh/api/machine/v1alpha1.MachineService
+func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machinev1alpha1.Machine) (chan *machinev1alpha1.Machine, chan error, error) {
+	events := make(chan *machinev1alpha1.Machine)
 	errs := make(chan error)
 
-	qcfg, err := qd.Config(ctx, mid)
-	if err != nil {
-		return nil, nil, err
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot cast QEMU platform configuration from machine status")
 	}
 
 	// Always use index 1 for monitoring events
@@ -362,7 +413,7 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 			}
 
 			// Check the current state
-			state, err := qd.State(ctx, mid)
+			machine, err := service.Get(ctx, machine)
 			if err != nil {
 				errs <- err
 				continue
@@ -370,7 +421,7 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 
 			// Initialize with the current state
 			if firstCall {
-				events <- state
+				events <- machine
 				firstCall = false
 			}
 
@@ -384,16 +435,20 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 			// Send the event through the channel
 			switch event.Event {
 			case qmpv1alpha.EVENT_STOP, qmpv1alpha.EVENT_SUSPEND, qmpv1alpha.EVENT_POWERDOWN:
-				events <- machine.MachineStatePaused
+				machine.Status.State = machinev1alpha1.MachineStatePaused
+				events <- machine
 
 			case qmpv1alpha.EVENT_RESUME:
-				events <- machine.MachineStateRunning
+				machine.Status.State = machinev1alpha1.MachineStateRunning
+				events <- machine
 
 			case qmpv1alpha.EVENT_RESET, qmpv1alpha.EVENT_WAKEUP:
-				events <- machine.MachineStateRestarting
+				machine.Status.State = machinev1alpha1.MachineStateRestarting
+				events <- machine
 
 			case qmpv1alpha.EVENT_SHUTDOWN:
-				events <- machine.MachineStateExited
+				machine.Status.State = machinev1alpha1.MachineStateExited
+				events <- machine
 
 				if !qcfg.NoShutdown {
 					break accept
@@ -407,147 +462,85 @@ func (qd *QemuDriver) ListenStatusUpdate(ctx context.Context, mid machine.Machin
 	return events, errs, nil
 }
 
-func (qd *QemuDriver) AddBridge() {}
-
-func (qd *QemuDriver) Start(ctx context.Context, mid machine.MachineID) error {
-	qmpClient, err := qd.QMPClient(ctx, mid)
+// Start implements kraftkit.sh/api/machine/v1alpha1.MachineService
+func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return fmt.Errorf("could not start qemu instance: %v", err)
+		return machine, fmt.Errorf("could not start qemu instance: %v", err)
 	}
 
 	defer qmpClient.Close()
 	_, err = qmpClient.Cont(qmpv1alpha.ContRequest{})
 	if err != nil {
-		return err
+		return machine, err
 	}
 
-	// TODO: Timeout? Unikernels boot quickly, but a user environment may be
-	// saturated...
-
-	qcfg, err := qd.Config(ctx, mid)
-	if err != nil {
-		return err
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return machine, fmt.Errorf("cannot cast QEMU platform configuration from machine status")
 	}
 
-	// Check if the process is alive
 	process, err := processFromPidFile(qcfg.PidFile)
 	if err != nil {
-		return err
+		return machine, err
 	}
 
-	isRunning, err := process.IsRunning()
-	if err != nil {
-		return err
-	}
+	machine.Status.Pid = process.Pid
+	machine.Status.State = machinev1alpha1.MachineStateRunning
+	machine.Status.StartedAt = time.Now()
 
-	if isRunning {
-		if err := qd.dopts.Store.SaveMachineState(mid, machine.MachineStateRunning); err != nil {
-			return err
-		}
-	}
-
-	return err
+	return machine, nil
 }
 
-func (qd *QemuDriver) exitStatusAndAtFromConfig(mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
-	exitStatus = -1 // return -1 if the process hasn't started
-	exitedAt = time.Time{}
-
-	var mcfg machine.MachineConfig
-	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
-		return exitStatus, exitedAt, fmt.Errorf("could not look up machine config: %v", err)
-	}
-
-	exitStatus = mcfg.ExitStatus
-	exitedAt = mcfg.ExitedAt
-
-	return
-}
-
-func (qd *QemuDriver) Wait(ctx context.Context, mid machine.MachineID) (exitStatus int, exitedAt time.Time, err error) {
-	exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
+// Pause implements kraftkit.sh/api/machine/v1alpha1.MachineService
+func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return
-	}
-
-	events, errs, err := qd.ListenStatusUpdate(ctx, mid)
-	if err != nil {
-		return
-	}
-
-	for {
-		select {
-		case state := <-events:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
-
-			switch state {
-			case machine.MachineStateExited, machine.MachineStateDead:
-				return
-			}
-
-		case err2 := <-errs:
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
-
-			if errors.Is(err2, qmp.ErrAcceptedNonEvent) {
-				continue
-			}
-
-			return
-
-		case <-ctx.Done():
-			exitStatus, exitedAt, err = qd.exitStatusAndAtFromConfig(mid)
-
-			// TODO: Should we return an error if the context is cancelled?
-			return
-		}
-	}
-}
-
-func (qd *QemuDriver) StartAndWait(ctx context.Context, mid machine.MachineID) (int, time.Time, error) {
-	if err := qd.Start(ctx, mid); err != nil {
-		// return -1 if the process hasn't started.
-		return -1, time.Time{}, err
-	}
-
-	return qd.Wait(ctx, mid)
-}
-
-func (qd *QemuDriver) Pause(ctx context.Context, mid machine.MachineID) error {
-	qmpClient, err := qd.QMPClient(ctx, mid)
-	if err != nil {
-		return fmt.Errorf("could not start qemu instance: %v", err)
+		return machine, fmt.Errorf("could not start qemu instance: %v", err)
 	}
 
 	defer qmpClient.Close()
 
 	_, err = qmpClient.Stop(qmpv1alpha.StopRequest{})
 	if err != nil {
-		return err
+		return machine, err
 	}
 
-	return qd.dopts.Store.SaveMachineState(mid, machine.MachineStatePaused)
+	machine.Status.State = machinev1alpha1.MachineStatePaused
+
+	return machine, nil
 }
 
-func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, writer io.Writer) error {
-	var mcfg machine.MachineConfig
-	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
-		return fmt.Errorf("could not look up machine config: %v", err)
-	}
+// Logs implements kraftkit.sh/api/machine/v1alpha1.MachineService
+func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machinev1alpha1.Machine) (chan string, chan error, error) {
+	logs := make(chan string)
+	errs := make(chan error)
 
-	f, err := os.Open(mcfg.LogFile)
+	// Start a goroutine which continuously outputs the logs to the provided
+	// channel.
+	go service.logs(ctx, machine, &logs, &errs)
+
+	return logs, errs, nil
+}
+
+func (service *machineV1alpha1Service) logs(ctx context.Context, machine *machinev1alpha1.Machine, logs *chan string, errs *chan error) {
+	f, err := os.Open(machine.Status.LogFile)
 	if err != nil {
-		return err
+		*errs <- err
+		return
 	}
 
 	// var offset int64
 	reader := bufio.NewReaderSize(f, DefaultTailBufferSize)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		*errs <- err
+		return
 	}
 
-	if err := watcher.Add(mcfg.LogFile); err != nil {
-		return err
+	if err := watcher.Add(machine.Status.LogFile); err != nil {
+		*errs <- err
+		return
 	}
 
 	// First read everything that already exists inside of the log file.
@@ -571,7 +564,8 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 
 		s, err := reader.ReadBytes('\n')
 		if err != nil && err != io.EOF {
-			return err
+			*errs <- err
+			return
 		}
 
 		// If we encounter EOF before a line delimiter, ReadBytes() will return the
@@ -584,23 +578,25 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 
 			_, err = f.Seek(-int64(l), io.SeekCurrent)
 			if err != nil {
-				return err
+				*errs <- err
+				return
 			}
 
 			reader.Reset(f)
 			break
 		}
 
-		fmt.Fprintf(writer, "%s", s[discarded:])
+		*logs <- string(s[discarded:])
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			*errs <- ctx.Err()
+			return
 		case event, ok := <-watcher.Events:
 			if !ok {
-				return nil
+				return
 			}
 
 			switch event.Op {
@@ -623,7 +619,8 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 
 				s, err := reader.ReadBytes('\n')
 				if err != nil && err != io.EOF {
-					return err
+					*errs <- err
+					return
 				}
 
 				// If we encounter EOF before a line delimiter, ReadBytes() will return the
@@ -636,37 +633,28 @@ func (qd *QemuDriver) TailWriter(ctx context.Context, mid machine.MachineID, wri
 
 					_, err = f.Seek(-int64(l), io.SeekCurrent)
 					if err != nil {
-						return err
+						*errs <- err
+						return
 					}
 
 					reader.Reset(f)
 					continue
 				}
 
-				fmt.Fprintf(writer, "%s", s[discarded:])
+				*logs <- string(s[discarded:])
 			}
 		}
 	}
 }
 
-func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state machine.MachineState, err error) {
-	state = machine.MachineStateUnknown
+// Get implements kraftkit.sh/api/machine/v1alpha1/MachineService.Get
+func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	state := machinev1alpha1.MachineStateUnknown
+	savedState := machine.Status.State
 
-	qcfg, err := qd.Config(ctx, mid)
-	if err != nil {
-		return
-	}
-
-	state, err = qd.dopts.Store.LookupMachineState(mid)
-	if err != nil {
-		return
-	}
-
-	savedState := state
-
-	var mcfg machine.MachineConfig
-	if err := qd.dopts.Store.LookupMachineConfig(mid, &mcfg); err != nil {
-		return state, fmt.Errorf("could not look up machine config: %v", err)
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
 	}
 
 	// Check if the process is alive, which ultimately indicates to us whether we
@@ -675,52 +663,52 @@ func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state m
 	if process, err := processFromPidFile(qcfg.PidFile); err == nil {
 		activeProcess, err = process.IsRunning()
 		if err != nil {
-			state = machine.MachineStateDead
-			activeProcess = false
+			state = machinev1alpha1.MachineStateExited
 		}
 	}
 
-	exitedAt := mcfg.ExitedAt
-	exitStatus := mcfg.ExitStatus
+	exitedAt := machine.Status.ExitedAt
+	exitCode := machine.Status.ExitCode
 
 	defer func() {
-		if exitStatus >= 0 && mcfg.ExitedAt.IsZero() {
+		if exitCode >= 0 && machine.Status.ExitedAt.IsZero() {
 			exitedAt = time.Now()
 		}
 
 		// Update the machine config with the latest values if they are different from
 		// what we have on record
-		if mcfg.ExitedAt != exitedAt || mcfg.ExitStatus != exitStatus {
-			mcfg.ExitedAt = exitedAt
-			mcfg.ExitStatus = exitStatus
-			if err = qd.dopts.Store.SaveMachineConfig(mid, mcfg); err != nil {
-				return
-			}
+		if machine.Status.ExitedAt != exitedAt || machine.Status.ExitCode != exitCode {
+			machine.Status.ExitedAt = exitedAt
+			machine.Status.ExitCode = exitCode
 		}
 
-		// Finally, save the state if it is different from the what we have on record
+		// Set the start time to now if it was not previously set
+		if machine.Status.StartedAt.IsZero() && state == machinev1alpha1.MachineStateRunning {
+			machine.Status.StartedAt = time.Now()
+		}
+
+		// Finally, save the state if it is different from the what we have on
+		// record
 		if state != savedState {
-			if err = qd.dopts.Store.SaveMachineState(mid, state); err != nil {
-				return
-			}
+			machine.Status.State = state
 		}
 	}()
 
 	if !activeProcess {
-		if savedState == machine.MachineStateRunning {
-			state = machine.MachineStateDead
-			exitStatus = 1
+		state = machinev1alpha1.MachineStateExited
+		if savedState == machinev1alpha1.MachineStateRunning {
+			exitCode = 1
 		}
-		return
+		return machine, nil
 	}
 
-	qmpClient, err := qd.QMPClient(ctx, mid)
+	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
-		state = machine.MachineStateDead
-		exitStatus = 1
-		return
+		state = machinev1alpha1.MachineStateExited
+		exitCode = 1
+		return machine, nil
 	} else if err != nil {
-		return state, fmt.Errorf("could not attach to QMP client: %v", err)
+		return machine, fmt.Errorf("could not attach to QMP client: %v", err)
 	}
 
 	defer qmpClient.Close()
@@ -731,76 +719,81 @@ func (qd *QemuDriver) State(ctx context.Context, mid machine.MachineID) (state m
 		// We cannot amend the status at this point, even if the process is
 		// alive, since it is not an indicator of the state of the VM, only of the
 		// VMM.  So we return what we already know via LookupMachineConfig.
-		return state, fmt.Errorf("could not query machine status via QMP: %v", err)
+		return machine, fmt.Errorf("could not query machine status via QMP: %v", err)
 	}
 
 	// Map the QMP status to supported machine states
 	switch status.Return.Status {
 	case qmpv1alpha.RUN_STATE_GUEST_PANICKED, qmpv1alpha.RUN_STATE_INTERNAL_ERROR, qmpv1alpha.RUN_STATE_IO_ERROR:
-		state = machine.MachineStateDead
-		exitStatus = 1
+		state = machinev1alpha1.MachineStateFailed
+		exitCode = 1
 
 	case qmpv1alpha.RUN_STATE_PAUSED:
-		state = machine.MachineStatePaused
-		exitStatus = -1
+		state = machinev1alpha1.MachineStatePaused
+		exitCode = -1
 
 	case qmpv1alpha.RUN_STATE_RUNNING:
-		state = machine.MachineStateRunning
-		exitStatus = -1
+		state = machinev1alpha1.MachineStateRunning
+		exitCode = -1
 
 	case qmpv1alpha.RUN_STATE_SHUTDOWN:
-		state = machine.MachineStateExited
-		exitStatus = 0
+		state = machinev1alpha1.MachineStateExited
+		exitCode = 0
 
 	case qmpv1alpha.RUN_STATE_SUSPENDED:
-		state = machine.MachineStateSuspended
-		exitStatus = -1
+		state = machinev1alpha1.MachineStateSuspended
+		exitCode = -1
 
 	default:
 		// qmpv1alpha.RUN_STATE_SAVE_VM,
 		// qmpv1alpha.RUN_STATE_PRELAUNCH,
 		// qmpv1alpha.RUN_STATE_RESTORE_VM,
 		// qmpv1alpha.RUN_STATE_WATCHDOG,
-		state = machine.MachineStateUnknown
-		exitStatus = -1
+		state = machinev1alpha1.MachineStateUnknown
+		exitCode = -1
 	}
 
-	return
+	return machine, nil
 }
 
-func (qd *QemuDriver) List(ctx context.Context) ([]machine.MachineID, error) {
-	var mids []machine.MachineID
+// List implements kraftkit.sh/api/machine/v1alpha1.MachineService.List
+func (service *machineV1alpha1Service) List(ctx context.Context, machines *machinev1alpha1.MachineList) (*machinev1alpha1.MachineList, error) {
+	cached := machines.Items
+	machines.Items = make([]zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus], len(cached))
 
-	midmap, err := qd.dopts.Store.ListAllMachineConfigs()
-	if err != nil {
-		return nil, err
-	}
-
-	for mid, mcfg := range midmap {
-		if mcfg.DriverName == "qemu" {
-			mids = append(mids, mid)
+	// Iterate through each machine and grab the latest status
+	for i, machine := range cached {
+		machine, err := service.Get(ctx, &machine)
+		if err != nil {
+			machines.Items = cached
+			return machines, err
 		}
+
+		machines.Items[i] = *machine
 	}
 
-	return mids, nil
+	return machines, nil
 }
 
-func (qd *QemuDriver) Stop(ctx context.Context, mid machine.MachineID) error {
-	qmpClient, err := qd.QMPClient(ctx, mid)
+// Stop implements kraftkit.sh/api/machine/v1alpha1.MachineService.Stop
+func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return err
+		return machine, fmt.Errorf("could not stop qemu instance: %v", err)
 	}
 
 	defer qmpClient.Close()
 	_, err = qmpClient.Quit(qmpv1alpha.QuitRequest{})
 	if err != nil {
-		return err
+		return machine, err
 	}
 
-	qcfg, err := qd.Config(ctx, mid)
-	if err != nil {
-		return err
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
 	}
+
+	machine.Status.State = machinev1alpha1.MachineStateExited
 
 	if err := retrytimeout.RetryTimeout(5*time.Second, func() error {
 		if _, err := os.ReadFile(qcfg.PidFile); !os.IsNotExist(err) {
@@ -809,42 +802,28 @@ func (qd *QemuDriver) Stop(ctx context.Context, mid machine.MachineID) error {
 
 		return nil
 	}); err != nil {
-		return err
+		return machine, err
 	}
 
-	return qd.dopts.Store.SaveMachineState(mid, machine.MachineStateExited)
+	return machine, nil
 }
 
-func (qd *QemuDriver) Destroy(ctx context.Context, mid machine.MachineID) error {
-	state, err := qd.dopts.Store.LookupMachineState(mid)
-	if err != nil {
-		return err
+// Delete implements kraftkit.sh/api/machine/v1alpha1.MachineService.Delete
+func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
 	}
 
-	switch state {
-	case machine.MachineStateUnknown,
-		machine.MachineStateExited,
-		machine.MachineStateDead:
-	default:
-		if err := qd.Stop(ctx, mid); err != nil {
-			return err
-		}
-	}
+	var errs merr.Errors
 
-	return qd.dopts.Store.Purge(mid)
-}
+	errs = append(errs, os.Remove(machine.Status.LogFile))
 
-func (qd *QemuDriver) Shutdown(ctx context.Context, mid machine.MachineID) error {
-	qmpClient, err := qd.QMPClient(ctx, mid)
-	if err != nil {
-		return err
-	}
+	// Do not throw errors (likely these resources do not exist at this point)
+	// when trying to remove ephemeral files that are controlled by the QEMU
+	// process.
+	_ = os.Remove(qcfg.QMP[0].Resource())
+	_ = os.Remove(qcfg.QMP[1].Resource())
 
-	defer qmpClient.Close()
-	_, err = qmpClient.SystemPowerdown(qmpv1alpha.SystemPowerdownRequest{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return nil, errs.Err()
 }

@@ -11,20 +11,21 @@ import (
 	"path/filepath"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/rancher/wrangler/pkg/signals"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	machinedriveropts "kraftkit.sh/machine/driveropts"
+	machinename "kraftkit.sh/machine/name"
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
@@ -37,21 +38,20 @@ type Run struct {
 	Architecture  string `long:"arch" short:"m" usage:"Set the architecture"`
 	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
-	Hypervisor    string
 	InitRd        string `long:"initrd" short:"i" usage:"Use the specified initrd"`
-	Memory        int    `long:"memory" short:"M" usage:"Assign MB memory to the unikernel"`
+	Memory        string `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
 	Name          string `long:"name" short:"n" usage:"Name of the instance"`
-	Platform      string `long:"plat" short:"p" usage:"Set the platform"`
-	Remove        bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Target        string `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	WithKernelDbg bool   `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	platform      string
+	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
 }
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
-		Use:     "run [FLAGS] PROJECT|KERNEL -- [UNIKRAFT ARGS] -- [APP ARGS]",
-		Args:    cobra.MaximumNArgs(1),
+		Use:     "run [FLAGS] PROJECT|KERNEL -- [APP ARGS]",
 		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
@@ -69,18 +69,17 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
-		"hypervisor",
-		"H",
-		"Set the hypervisor machine driver.",
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"Set the platform virtual machine monitor driver.",
 	)
 
 	return cmd
 }
 
 func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
-	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+	opts.platform = cmd.Flag("plat").Value.String()
 
 	ctx := cmd.Context()
 	pm, err := packmanager.NewUmbrellaManager(ctx)
@@ -97,46 +96,42 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
-	driverType := machinedriver.UnknownDriver
+	platform := mplatform.PlatformUnknown
 
-	if opts.Hypervisor == "auto" {
-		driverType, err = machinedriver.DetectHostHypervisor()
-		if err != nil {
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
 			return err
 		}
-	} else if opts.Hypervisor == "config" {
-		opts.Hypervisor = config.G[config.KraftKit](ctx).DefaultPlat
 	} else {
-		driverType = machinedriver.DriverTypeFromName(opts.Hypervisor)
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
 	}
 
-	if driverType == machinedriver.UnknownDriver {
-		return fmt.Errorf("unknown hypervisor driver: %s", opts.Hypervisor)
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 	}
 
-	debug := log.Levels()[config.G[config.KraftKit](ctx).Log.Level] >= logrus.DebugLevel
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
-	if err != nil {
-		return fmt.Errorf("could not access machine store: %v", err)
+	machine := &machineapi.Machine{
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: machineapi.MachineSpec{
+			Rootfs: opts.InitRd,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{},
+			},
+		},
 	}
 
-	driver, err := machinedriver.New(driverType,
-		machinedriveropts.WithBackground(opts.Detach),
-		machinedriveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-		machinedriveropts.WithMachineStore(store),
-		machinedriveropts.WithDebug(debug),
-		machinedriveropts.WithExecOptions(
-			exec.WithStdout(os.Stdout),
-			exec.WithStderr(os.Stderr),
-		),
-	)
+	controller, err := strategy.NewMachineV1alpha1(ctx)
 	if err != nil {
 		return err
-	}
-
-	mopts := []machine.MachineOption{
-		machine.WithDriverName(driverType.String()),
-		machine.WithDestroyOnExit(opts.Remove),
 	}
 
 	// The following sequence checks the position argument of `kraft run ENTITY`
@@ -164,14 +159,14 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	//
 	var workdir string
 	var entity string
-	var kernelArgs []string
+	var appArgs []string
 
 	// Determine if more than one positional arguments have been provided.  If
 	// this is the case, everything after the first position argument are kernel
 	// parameters which should be passed appropriately.
 	if len(args) > 1 {
 		entity = args[0]
-		kernelArgs = args[1:]
+		appArgs = args[1:]
 	} else if len(args) == 1 {
 		entity = args[0]
 	}
@@ -189,28 +184,21 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		if app.IsWorkdirInitialized(cwd) {
 			workdir = cwd
-			kernelArgs = args
+			appArgs = args
 		}
 	}
 
 	// b). Is the provided first position argument a binary image?
 	if f, err := os.Stat(entity); err == nil && !f.IsDir() {
-		if len(opts.Architecture) == 0 || len(opts.Platform) == 0 {
+		if len(opts.Architecture) == 0 || len(opts.platform) == 0 {
 			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
-		if opts.Name == "" {
-			opts.Name = namesgenerator.GetRandomName(0)
-		}
-
-		mopts = append(mopts,
-			machine.WithArchitecture(opts.Architecture),
-			machine.WithPlatform(opts.Platform),
-			machine.WithName(machine.MachineName(opts.Name)),
-			machine.WithKernel(entity),
-			machine.WithSource("kernel://"+filepath.Base(entity)),
-			machine.WithInitRd(opts.InitRd),
-		)
+		appArgs = args[1:]
+		machine.Spec.Architecture = opts.Architecture
+		machine.Spec.Platform = opts.platform
+		machine.Spec.Kernel = "kernel://" + entity
+		machine.Status.KernelPath = entity
 
 		// c). use the provided package manager
 	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
@@ -250,12 +238,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		// TODO(nderjung): Somehow this needs to be garbage collected if in
-		// detach-mode.
-		if !opts.Detach {
-			defer os.RemoveAll(dir)
-		}
-
 		paramodel, err := paraprogress.NewParaProgress(
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
@@ -290,17 +272,18 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("package does not convert to target")
 		}
 
-		if opts.Name == "" {
-			opts.Name = namesgenerator.GetRandomName(0)
+		appArgs = args[1:]
+		machine.Spec.Architecture = targ.Architecture().Name()
+		machine.Spec.Platform = targ.Platform().Name()
+		machine.Spec.Kernel = fmt.Sprintf("%s://%s", pm.Format(), entity)
+
+		// Use the symbolic debuggable kernel image?
+		if opts.WithKernelDbg {
+			machine.Status.KernelPath = targ.KernelDbg()
+		} else {
+			machine.Status.KernelPath = targ.Kernel()
 		}
 
-		mopts = append(mopts,
-			machine.WithArchitecture(targ.Architecture().Name()),
-			machine.WithPlatform(targ.Platform().Name()),
-			machine.WithName(machine.MachineName(opts.Name)),
-			machine.WithKernel(targ.Kernel()),
-			machine.WithSource(fmt.Sprintf("%s://%s", pm.Format(), entity)),
-		)
 		// d). use a defined working directory as a Unikraft project
 	} else if len(workdir) > 0 {
 		project, err := app.NewProjectFromOptions(
@@ -316,7 +299,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		targets := cli.FilterTargets(
 			project.Targets(),
 			opts.Architecture,
-			opts.Platform,
+			opts.platform,
 			opts.Target,
 		)
 
@@ -339,25 +322,15 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		name := t.Name()
-		if opts.Name != "" {
-			name = opts.Name
-		}
-
-		mopts = append(mopts,
-			machine.WithArchitecture(t.Architecture().Name()),
-			machine.WithPlatform(t.Platform().Name()),
-			machine.WithName(machine.MachineName(name)),
-			machine.WithAcceleration(!opts.DisableAccel),
-			machine.WithSource("project://"+project.Name()+":"+t.Name()),
-			machine.WithInitRd(opts.InitRd),
-		)
+		machine.Spec.Kernel = "project://" + project.Name() + ":" + t.Name()
+		machine.Spec.Architecture = t.Architecture().Name()
+		machine.Spec.Platform = t.Platform().Name()
 
 		// Use the symbolic debuggable kernel image?
 		if opts.WithKernelDbg {
-			mopts = append(mopts, machine.WithKernel(t.KernelDbg()))
+			machine.Status.KernelPath = t.KernelDbg()
 		} else {
-			mopts = append(mopts, machine.WithKernel(t.Kernel()))
+			machine.Status.KernelPath = t.Kernel()
 		}
 
 		// If no entity was set earlier and we're not within the context of a working
@@ -367,43 +340,59 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// c). Is the provided first position argument a binary image?
 	} else if f, err := os.Stat(entity); err == nil && !f.IsDir() {
-		if len(opts.Architecture) == 0 || len(opts.Platform) == 0 {
+		if len(opts.Architecture) == 0 || len(opts.platform) == 0 {
 			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
 		}
 
-		if opts.Name == "" {
-			opts.Name = namesgenerator.GetRandomName(0)
-		}
-
-		mopts = append(mopts,
-			machine.WithArchitecture(opts.Architecture),
-			machine.WithPlatform(opts.Platform),
-			machine.WithName(machine.MachineName(opts.Name)),
-			machine.WithKernel(entity),
-			machine.WithSource("kernel://"+filepath.Base(entity)),
-			machine.WithInitRd(opts.InitRd),
-		)
+		machine.Spec.Kernel = "kernel://" + entity
+		machine.Spec.Architecture = opts.Architecture
+		machine.Spec.Platform = opts.platform
+		machine.Status.KernelPath = entity
 	} else {
 		return fmt.Errorf("could not determine what to run: %s", entity)
 	}
 
-	mopts = append(mopts,
-		machine.WithMemorySize(uint64(opts.Memory)),
-		machine.WithArguments(kernelArgs),
-	)
+	if opts.Name != "" {
+		// Check if this name has been previously used
+		machines, err := controller.List(ctx, &machineapi.MachineList{})
+		if err != nil {
+			return err
+		}
+
+		for _, machine := range machines.Items {
+			if opts.Name == machine.Name {
+				return fmt.Errorf("machine instance name already in use: %s", opts.Name)
+			}
+		}
+	} else {
+		opts.Name = machinename.NewRandomMachineName(0)
+	}
+
+	machine.ObjectMeta.Name = opts.Name
+	machine.Spec.KernelArgs = opts.KernelArgs
+	machine.Spec.ApplicationArgs = appArgs
+
+	if len(opts.Memory) > 0 {
+		quantity, err := resource.ParseQuantity(opts.Memory)
+		if err != nil {
+			return err
+		}
+
+		machine.Spec.Resources.Requests[corev1.ResourceMemory] = quantity
+	}
 
 	// Create the machine
-	mid, err := driver.Create(ctx, mopts...)
+	machine, err = controller.Create(ctx, machine)
 	if err != nil {
 		return err
 	}
 
-	log.G(ctx).Debugf("created %s instance %s", driverType.String(), mid.ShortString())
+	log.G(ctx).Debugf("created %s instance %s", platform.String(), machine.Name)
 
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
 		go func() {
-			events, errs, err := driver.ListenStatusUpdate(ctx, mid)
+			events, errs, err := controller.Watch(ctx, machine)
 			if err != nil {
 				log.G(ctx).Errorf("could not listen for machine updates: %v", err)
 				signals.RequestShutdown()
@@ -416,14 +405,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			for {
 				// Wait on either channel
 				select {
-				case status := <-events:
-					if err := store.SaveMachineState(mid, status); err != nil {
-						log.G(ctx).Errorf("could not save machine state: %v", err)
-						return
-					}
-
-					switch status {
-					case machine.MachineStateExited, machine.MachineStateDead:
+				case update := <-events:
+					switch update.Status.State {
+					case machineapi.MachineStateExited, machineapi.MachineStateFailed:
 						signals.RequestShutdown()
 						break loop
 					}
@@ -440,38 +424,40 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start the machine
-	if err := driver.Start(ctx, mid); err != nil {
+	machine, err = controller.Start(ctx, machine)
+	if err != nil {
 		signals.RequestShutdown()
 		return err
 	}
 
 	if !opts.Detach {
-		if err := driver.TailWriter(ctx, mid, iostreams.G(ctx).Out); err != nil {
-			return err
+		logs, errs, err := controller.Logs(ctx, machine)
+		if err != nil {
+			signals.RequestShutdown()
+			return fmt.Errorf("could not listen for machine logs: %v", err)
 		}
 
-		// Wait for the context to be cancelled, which can occur if a fatal error
-		// occurs or the user has requested a SIGINT (Ctrl+C).
-		<-ctx.Done()
+	loop:
+		for {
+			// Wait on either channel
+			select {
+			case line := <-logs:
+				fmt.Fprint(iostreams.G(ctx).Out, line)
 
-		// Reading the state to determine whether to invoke a stop request but this
-		// also simultaneously updates the state if it has exited.
-		state, stateErr := driver.State(ctx, mid)
+			case err := <-errs:
+				log.G(ctx).Errorf("received event error: %v", err)
+				break loop
+
+			case <-ctx.Done():
+				break loop
+			}
+		}
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
-			log.G(ctx).Debugf("removing %s", mid.ShortString())
-			if err := driver.Destroy(ctx, mid); stateErr == nil && err != nil {
-				log.G(ctx).
-					WithField("mid", mid).
-					Errorf("could not remove: %v", err)
-			}
-		} else if state == machine.MachineStateRunning {
-			log.G(ctx).Debugf("stopping %s", mid.ShortString())
-			if err := driver.Stop(ctx, mid); stateErr == nil && err != nil {
-				log.G(ctx).
-					WithField("mid", mid).
-					Errorf("could not stop: %v", err)
+			log.G(ctx).Debugf("removing %s", machine.Name)
+			if _, err := controller.Delete(ctx, machine); err != nil {
+				return fmt.Errorf("could not remove: %v", err)
 			}
 		}
 	}

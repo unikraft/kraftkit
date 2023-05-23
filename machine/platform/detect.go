@@ -123,6 +123,14 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 		if err == nil {
 			if set.NewStringSet(contents...).Contains("kvm") {
 				return PlatformKVM, SystemHost, nil
+				// } else if set.NewStringSet(contents...).Contains("hv_util") {
+				// 	return HypervisorHyperV, SystemGuest, nil
+				// } else if set.NewStringSet(contents...).Contains("vboxdrv") {
+				// 	return HypervisorVirtualBox, SystemHost, nil
+				// } else if set.NewStringSet(contents...).Contains("vboxguest") {
+				// 	return HypervisorVirtualBox, SystemGuest, nil
+				// } else if set.NewStringSet(contents...).Contains("vmware") {
+				// 	return HypervisorVMwareESX, SystemGuest, nil
 			}
 		}
 	}
