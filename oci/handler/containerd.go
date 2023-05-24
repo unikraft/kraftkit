@@ -468,8 +468,8 @@ outer:
 }
 
 // PushImage implements ImagePusher.
-func (handle *ContainerdHandler) PushImage(ctx context.Context, image ocispec.Image, reader io.Reader, onProgress func(float64)) error {
-	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.PushImage")
+func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+	return handle.client.Push(namespaces.WithNamespace(ctx, handle.namespace), ref, *target)
 }
 
 // UnpackImage implements ImageUnpacker.
