@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/containerd/containerd"
@@ -19,6 +20,7 @@ import (
 	clog "github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
+	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -300,8 +302,18 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 		return nil, nil
 	})
 
+	resolver, err := dockerconfigresolver.New(
+		ctx,
+		strings.Split(name, "/")[0],
+		dockerconfigresolver.WithSkipVerifyCerts(true),
+	)
+	if err != nil {
+		return err
+	}
+
 	ropts := []containerd.RemoteOpt{
 		containerd.WithImageHandler(h),
+		containerd.WithResolver(resolver),
 		// TODO(nderjung): Specify a Unikraft-centric platform/architecture
 		// combination containerd.WithPlatform(platforms.DefaultString()),
 	}
@@ -469,7 +481,21 @@ outer:
 
 // PushImage implements ImagePusher.
 func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
-	return handle.client.Push(namespaces.WithNamespace(ctx, handle.namespace), ref, *target)
+	resolver, err := dockerconfigresolver.New(
+		ctx,
+		strings.Split(ref, "/")[0],
+		dockerconfigresolver.WithSkipVerifyCerts(true),
+	)
+	if err != nil {
+		return err
+	}
+
+	return handle.client.Push(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		ref,
+		*target,
+		containerd.WithResolver(resolver),
+	)
 }
 
 // UnpackImage implements ImageUnpacker.
