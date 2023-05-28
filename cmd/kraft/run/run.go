@@ -215,11 +215,11 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		// c). use the provided package manager
 	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
 		// First try the local cache of the catalog
-		packs, err := pm.Catalog(ctx, packmanager.CatalogQuery{
-			Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
-			Name:    entity,
-			NoCache: false,
-		})
+		packs, err := pm.Catalog(ctx,
+			packmanager.WithTypes(unikraft.ComponentTypeApp),
+			packmanager.WithName(entity),
+			packmanager.WithCache(true),
+		)
 		if err != nil {
 			return err
 		}
@@ -228,11 +228,11 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("could not determine what to run, too many options")
 		} else if len(packs) == 0 {
 			// Second, try accessing the remote catalog
-			packs, err = pm.Catalog(ctx, packmanager.CatalogQuery{
-				Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
-				Name:    entity,
-				NoCache: true,
-			})
+			packs, err = pm.Catalog(ctx,
+				packmanager.WithTypes(unikraft.ComponentTypeApp),
+				packmanager.WithName(entity),
+				packmanager.WithCache(false),
+			)
 			if err != nil {
 				return err
 			}

@@ -156,12 +156,12 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				unikraft.TypeNameVersion(project.Template()),
 			), "",
 			func(ctx context.Context) error {
-				packages, err = packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
-					Name:    project.Template().Name(),
-					Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
-					Version: project.Template().Version(),
-					NoCache: opts.NoCache,
-				})
+				packages, err = packmanager.G(ctx).Catalog(ctx,
+					packmanager.WithName(project.Template().Name()),
+					packmanager.WithTypes(unikraft.ComponentTypeApp),
+					packmanager.WithVersion(project.Template().Version()),
+					packmanager.WithCache(!opts.NoCache),
+				)
 				if err != nil {
 					return err
 				}
@@ -265,15 +265,13 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 				unikraft.TypeNameVersion(component),
 			), "",
 			func(ctx context.Context) error {
-				p, err := packmanager.G(ctx).Catalog(ctx, packmanager.CatalogQuery{
-					Name: component.Name(),
-					Types: []unikraft.ComponentType{
-						component.Type(),
-					},
-					Version: component.Version(),
-					Source:  component.Source(),
-					NoCache: opts.NoCache,
-				})
+				p, err := packmanager.G(ctx).Catalog(ctx,
+					packmanager.WithName(component.Name()),
+					packmanager.WithTypes(component.Type()),
+					packmanager.WithVersion(component.Version()),
+					packmanager.WithSource(component.Source()),
+					packmanager.WithCache(!opts.NoCache),
+				)
 				if err != nil {
 					return err
 				}

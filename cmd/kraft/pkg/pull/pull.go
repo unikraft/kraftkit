@@ -115,7 +115,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 	type pmQuery struct {
 		pm    packmanager.PackageManager
-		query packmanager.CatalogQuery
+		query []packmanager.QueryOption
 	}
 
 	var queries []pmQuery
@@ -141,12 +141,12 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					unikraft.TypeNameVersion(project.Template()),
 				), "",
 				func(ctx context.Context) error {
-					packages, err = pm.Catalog(ctx, packmanager.CatalogQuery{
-						Name:    project.Template().Name(),
-						Types:   []unikraft.ComponentType{unikraft.ComponentTypeApp},
-						Version: project.Template().Version(),
-						NoCache: !opts.ForceCache,
-					})
+					packages, err = pm.Catalog(ctx,
+						packmanager.WithName(project.Template().Name()),
+						packmanager.WithTypes(unikraft.ComponentTypeApp),
+						packmanager.WithVersion(project.Template().Version()),
+						packmanager.WithCache(!opts.ForceCache),
+					)
 					if err != nil {
 						return err
 					}
@@ -237,12 +237,12 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		for _, c := range components {
 			queries = append(queries, pmQuery{
 				pm: pm,
-				query: packmanager.CatalogQuery{
-					Name:    c.Name(),
-					Version: c.Version(),
-					Source:  c.Source(),
-					Types:   []unikraft.ComponentType{c.Type()},
-					NoCache: !opts.ForceCache,
+				query: []packmanager.QueryOption{
+					packmanager.WithName(c.Name()),
+					packmanager.WithVersion(c.Version()),
+					packmanager.WithSource(c.Source()),
+					packmanager.WithTypes(c.Type()),
+					packmanager.WithCache(opts.ForceCache),
 				},
 			})
 		}
@@ -257,35 +257,34 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 			queries = append(queries, pmQuery{
 				pm: pm,
-				query: packmanager.CatalogQuery{
-					NoCache: !opts.ForceCache,
-					Name:    arg,
+				query: []packmanager.QueryOption{
+					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithName(arg),
 				},
 			})
 		}
 	}
 
 	for _, c := range queries {
-		next, err := c.pm.Catalog(ctx, c.query)
+		query := packmanager.NewQuery(c.query...)
+		next, err := c.pm.Catalog(ctx, c.query...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", pm.Format().String()).
-				WithField("name", c.query.Name).
+				WithField("name", query.Name()).
 				Warn(err)
 			continue
 		}
 
 		if len(next) == 0 {
-			log.G(ctx).Warnf("could not find %s", c.query.String())
+			log.G(ctx).Warnf("could not find %s", query.String())
 			continue
 		}
 
 		for _, p := range next {
 			p := p
 			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s",
-					c.query.String(),
-				),
+				fmt.Sprintf("pulling %s", query.String()),
 				func(ctx context.Context, w func(progress float64)) error {
 					return p.Pull(
 						ctx,

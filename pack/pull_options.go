@@ -4,11 +4,15 @@
 // You may not use this file except in compliance with the License.
 package pack
 
-import "kraftkit.sh/utils"
+import (
+	"kraftkit.sh/config"
+	"kraftkit.sh/utils"
+)
 
 // PullOptions contains the list of options which can be set for pulling a
 // package.
 type PullOptions struct {
+	auths             map[string]*config.AuthConfig
 	architectures     []string
 	platforms         []string
 	version           string
@@ -16,6 +20,16 @@ type PullOptions struct {
 	onProgress        func(progress float64)
 	workdir           string
 	useCache          bool
+}
+
+// Auths returns the set authentication config for a given domain or nil if the
+// domain was not found.
+func (ppo *PullOptions) Auths(domain string) *config.AuthConfig {
+	if auth, ok := ppo.auths[domain]; ok {
+		return auth
+	}
+
+	return nil
 }
 
 // OnProgress calls (if set) an embedded progress function which can be used to
@@ -63,6 +77,19 @@ func NewPullOptions(opts ...PullOption) (*PullOptions, error) {
 	}
 
 	return options, nil
+}
+
+// WithPullAuthConfig sets the authentication config to use when pulling the
+// package.
+func WithPullAuthConfig(auth *config.AuthConfig) PullOption {
+	return func(opts *PullOptions) error {
+		if opts.auths == nil {
+			opts.auths = make(map[string]*config.AuthConfig, 1)
+		}
+
+		opts.auths[auth.Endpoint] = auth
+		return nil
+	}
 }
 
 // WithPullArchitecture requests a given architecture (if applicable)

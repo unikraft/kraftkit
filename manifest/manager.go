@@ -182,26 +182,21 @@ func (m manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManage
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([]pack.Package, error) {
+func (m manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var err error
 	var index *ManifestIndex
 	var allManifests []*Manifest
 
+	query := packmanager.NewQuery(qopts...)
 	mopts := []ManifestOption{
-		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+		WithAuthConfig(query.Auths()),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"name":    query.Name,
-		"version": query.Version,
-		"source":  query.Source,
-		"types":   query.Types,
-		"cache":   !query.NoCache,
-	}).Debug("querying manifest catalog")
+	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
 
-	if len(query.Source) > 0 {
-		provider, err := NewProvider(ctx, query.Source, mopts...)
+	if len(query.Source()) > 0 {
+		provider, err := NewProvider(ctx, query.Source(), mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -212,7 +207,7 @@ func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQ
 		}
 
 		allManifests = append(allManifests, manifests...)
-	} else if query.NoCache {
+	} else if !query.UseCache() {
 		index, err = m.update(ctx)
 		if err != nil {
 			return nil, err
@@ -237,29 +232,32 @@ func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQ
 
 	var packages []pack.Package
 	var g glob.Glob
+	types := query.Types()
+	name := query.Name()
+	version := query.Version()
 
-	if len(query.Name) > 0 {
-		t, n, v, err := unikraft.GuessTypeNameVersion(query.Name)
+	if len(name) > 0 {
+		t, n, v, err := unikraft.GuessTypeNameVersion(name)
 
 		// Overwrite additional attributes if pattern-matchable
 		if err == nil {
-			query.Name = n
+			name = n
 			if t != unikraft.ComponentTypeUnknown {
-				query.Types = append(query.Types, t)
+				types = append(types, t)
 			}
 
 			if len(v) > 0 {
-				query.Version = v
+				version = v
 			}
 		}
 	}
 
-	g = glob.MustCompile(query.Name)
+	g = glob.MustCompile(name)
 
 	for _, manifest := range allManifests {
-		if len(query.Types) > 0 {
+		if len(types) > 0 {
 			found := false
-			for _, t := range query.Types {
+			for _, t := range types {
 				if manifest.Type == t {
 					found = true
 					break
@@ -270,29 +268,29 @@ func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQ
 			}
 		}
 
-		if len(query.Source) > 0 && manifest.Origin != query.Source {
+		if len(query.Source()) > 0 && manifest.Origin != query.Source() {
 			continue
 		}
 
-		if len(query.Name) > 0 && !g.Match(manifest.Name) {
+		if len(name) > 0 && !g.Match(manifest.Name) {
 			continue
 		}
 
 		var versions []string
-		if len(query.Version) > 0 {
+		if len(version) > 0 {
 			if len(manifest.Versions) == 1 && len(manifest.Versions[0].Version) == 0 {
 				log.G(ctx).Warn("manifest does not supply version")
 			}
 
-			for _, version := range manifest.Versions {
-				if version.Version == query.Version {
-					versions = append(versions, version.Version)
+			for _, v := range manifest.Versions {
+				if v.Version == version {
+					versions = append(versions, v.Version)
 					break
 				}
 			}
 			if len(versions) == 0 {
 				for _, channel := range manifest.Channels {
-					if channel.Name == query.Version {
+					if channel.Name == version {
 						versions = append(versions, channel.Name)
 						break
 					}
@@ -364,7 +362,7 @@ func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQ
 	return packages, nil
 }
 
-func (m manifestManager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, bool, error) {
+func (m manifestManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
