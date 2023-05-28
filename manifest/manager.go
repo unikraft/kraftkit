@@ -66,7 +66,7 @@ func (m manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 
 	mopts := []ManifestOption{
 		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
-		WithSourcesRootDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
 	for _, manipath := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
@@ -189,7 +189,7 @@ func (m manifestManager) Catalog(ctx context.Context, query packmanager.CatalogQ
 
 	mopts := []ManifestOption{
 		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
-		WithSourcesRootDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{

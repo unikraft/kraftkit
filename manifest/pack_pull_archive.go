@@ -68,7 +68,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		authHeader := ""
 		authenticated := false
 
-		if auth, ok := manifest.Auths()[u.Host]; ok {
+		if auth := popts.Auths(u.Host); auth != nil {
 			if len(auth.User) > 0 {
 				authenticated = true
 				authHeader = "Basic " + base64.StdEncoding.

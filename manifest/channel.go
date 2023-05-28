@@ -38,5 +38,4 @@ type ManifestChannel struct {
 	Manifest string `yaml:"manifest,omitempty"`
 	Resource string `yaml:"resource"`
 	Sha256   string `yaml:"sha256,omitempty"`
-	Local    string `yaml:"-"`
 }

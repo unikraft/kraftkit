@@ -26,13 +26,13 @@ type GitProvider struct {
 	repo   string
 	remote *git.Remote
 	refs   []*gitplumbing.Reference
-	mopts  []ManifestOption
+	mopts  *ManifestOptions
 	branch string
 	ctx    context.Context
 }
 
 // NewGitProvider attempts to parse a provided path as a Git repository
-func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	isSSH := false
 	fullpath := path
 	if isSSHURL(path) {
@@ -58,12 +58,12 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 	})
 
 	lopts := &git.ListOptions{}
-	tempm := &Manifest{}
-
-	for _, opt := range mopts {
-		if err := opt(tempm); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
-		}
+	provider := GitProvider{
+		repo:   path,
+		remote: remote,
+		mopts:  NewManifestOptions(opts...),
+		branch: gitURL.GetBranchName(),
+		ctx:    ctx,
 	}
 
 	if isSSH {
@@ -76,7 +76,7 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 		if err != nil {
 			return nil, err
 		}
-	} else if auth, ok := tempm.auths[gitURL.GetHostName()]; ok {
+	} else if auth, ok := provider.mopts.auths[gitURL.GetHostName()]; ok {
 		if len(auth.User) > 0 {
 			lopts.Auth = &githttp.BasicAuth{
 				Username: auth.User,
@@ -91,19 +91,12 @@ func NewGitProvider(ctx context.Context, path string, mopts ...ManifestOption) (
 
 	// If this is a valid Git repository then let's generate a Manifest based on
 	// what we can read from the remote
-	refs, err := remote.ListContext(ctx, lopts)
+	provider.refs, err = remote.ListContext(ctx, lopts)
 	if err != nil {
 		return nil, fmt.Errorf("could not list remote git repository: %v", err)
 	}
 
-	return GitProvider{
-		repo:   path,
-		remote: remote,
-		refs:   refs,
-		mopts:  mopts,
-		branch: gitURL.GetBranchName(),
-		ctx:    ctx,
-	}, nil
+	return provider, nil
 }
 
 // probeChannels is an internal method which matches Git branches for the
@@ -209,27 +202,10 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 		Provider: gp,
 	}
 
-	for _, opt := range gp.mopts {
-		if err := opt(manifest); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
-		}
-	}
-
 	log.G(gp.ctx).Infof("probing %s", gp.repo)
 
 	manifest.Channels = append(manifest.Channels, gp.probeChannels()...)
-
 	manifest.Versions = append(manifest.Versions, gp.probeVersions()...)
-
-	// TODO: This is the correct place to apply the options.  We do it earlier to
-	// access the logger.  The same issue appears in github.go.  The logger
-	// interface needs to be replaced with a contextualised version, see:
-	// https://github.com/unikraft/kraftkit/issues/74
-	for _, opt := range gp.mopts {
-		if err := opt(manifest); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
-		}
-	}
 
 	// TODO: Set the latest version
 	// if len(manifest.Versions) > 0 {

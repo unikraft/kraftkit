@@ -28,7 +28,7 @@ import (
 type GitHubProvider struct {
 	path   string
 	repo   ghrepo.Interface
-	mopts  []ManifestOption
+	mopts  *ManifestOptions
 	client *github.Client
 	branch string
 	ctx    context.Context
@@ -40,7 +40,7 @@ type GitHubProvider struct {
 // can both probe GitHub's API as well as exploit the fact that it is a Git
 // repository to retrieve information and deliver information as a Manifest
 // format.
-func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	var branch string
 
 	repo, err := ghrepo.NewFromURL(path)
@@ -48,16 +48,16 @@ func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption
 		return nil, err
 	}
 
-	// Cheap hack to get authentication details for GitHub and the logger
-	manifest := &Manifest{}
-	for _, o := range mopts {
-		if err := o(manifest); err != nil {
-			return nil, err
-		}
+	provider := GitHubProvider{
+		path:   path,
+		repo:   repo,
+		branch: branch,
+		ctx:    ctx,
+		mopts:  NewManifestOptions(opts...),
 	}
 
-	client := github.NewClient(nil)
-	if ghauth, ok := manifest.Auths()[repo.RepoHost()]; ok {
+	provider.client = github.NewClient(nil)
+	if ghauth, ok := provider.mopts.auths[repo.RepoHost()]; ok {
 		if !ghauth.VerifySSL {
 			insecureClient := &http.Client{
 				Transport: &http.Transport{
@@ -87,7 +87,7 @@ func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption
 				return nil, fmt.Errorf("failed to parse v3 endpoint: %s", err)
 			}
 
-			client, err = github.NewEnterpriseClient(
+			provider.client, err = github.NewEnterpriseClient(
 				endpoint.String(),
 				endpoint.String(),
 				oauth2Client,
@@ -96,18 +96,11 @@ func NewGitHubProvider(ctx context.Context, path string, mopts ...ManifestOption
 				return nil, err
 			}
 		} else {
-			client = github.NewClient(oauth2Client)
+			provider.client = github.NewClient(oauth2Client)
 		}
 	}
 
-	return GitHubProvider{
-		path:   path,
-		repo:   repo,
-		mopts:  mopts,
-		client: client,
-		branch: branch,
-		ctx:    ctx,
-	}, nil
+	return provider, nil
 }
 
 func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
@@ -122,7 +115,7 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	if len(ghp.branch) > 0 {
 		repo += "@" + ghp.branch
 	}
-	manifest, err := gitProviderFromGitHub(ghp.ctx, repo, ghp.mopts...)
+	manifest, err := gitProviderFromGitHub(ghp.ctx, repo, ghp.mopts.opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +197,7 @@ func (ghp GitHubProvider) appendRepositoriesToManifestInParallel(repos []*github
 	for _, repo := range repos {
 		go func(repo *github.Repository) {
 			defer wg.Done()
-			manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.CloneURL, ghp.mopts...)
+			manifest, err := gitProviderFromGitHub(ghp.ctx, *repo.CloneURL, ghp.mopts.opts...)
 			if err != nil {
 				mu.Lock()
 				errs = append(errs, err)
@@ -247,10 +240,10 @@ func (ghp GitHubProvider) appendRepositoriesToManifestInParallel(repos []*github
 // with the Provider interface.  We can exploit this knowledge by accepting an
 // input GitHub repository and making the necessary known adjustments to the
 // channel and version Resource attribute.
-func gitProviderFromGitHub(ctx context.Context, repo string, mopts ...ManifestOption) (*Manifest, error) {
+func gitProviderFromGitHub(ctx context.Context, repo string, opts ...ManifestOption) (*Manifest, error) {
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	provider, err := NewGitProvider(ctx, repo, mopts...)
+	provider, err := NewGitProvider(ctx, repo, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -281,16 +274,6 @@ func gitProviderFromGitHub(ctx context.Context, repo string, mopts ...ManifestOp
 		}
 
 		manifest.Versions[j] = version
-	}
-
-	// TODO: This is the correct place to apply the options.  We do it earlier to
-	// access the logger.  The same issue appears in git.go.  The logger interface needs to be replaced with a
-	// contextualised version, see:
-	// https://github.com/unikraft/kraftkit/issues/74
-	for _, opt := range mopts {
-		if err := opt(manifest); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
-		}
 	}
 
 	return manifest, nil

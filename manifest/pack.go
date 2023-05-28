@@ -7,6 +7,7 @@ package manifest
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -25,13 +26,6 @@ const ManifestFormat pack.PackageFormat = "manifest"
 // provided version as a positional parameter, the manifest can be reduced to
 // represent a specific version.
 func NewPackageFromManifestWithVersion(manifest *Manifest, version string, opts ...ManifestOption) (pack.Package, error) {
-	// Apply the options to this manifest
-	for _, opt := range opts {
-		if err := opt(manifest); err != nil {
-			return nil, err
-		}
-	}
-
 	var channels []ManifestChannel
 	var versions []ManifestVersion
 
@@ -112,14 +106,31 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	var checksum string
 	var cache string
 
-	if len(manifest.Channels) == 1 {
+	if manifest.mopts.cacheDir == "" {
+		err = fmt.Errorf("cannot determine cache dir")
+	} else if len(manifest.Channels) == 1 {
+		ext := filepath.Ext(manifest.Channels[0].Resource)
+		if ext == ".gz" {
+			ext = ".tar.gz"
+		}
+
 		resource = manifest.Channels[0].Resource
 		checksum = manifest.Channels[0].Sha256
-		cache = manifest.Channels[0].Local
+		cache = filepath.Join(
+			manifest.mopts.cacheDir, manifest.Name+"-"+manifest.Channels[0].Name+ext,
+		)
+
 	} else if len(manifest.Versions) == 1 {
+		ext := filepath.Ext(manifest.Versions[0].Resource)
+		if ext == ".gz" {
+			ext = ".tar.gz"
+		}
+
 		resource = manifest.Versions[0].Resource
 		checksum = manifest.Versions[0].Sha256
-		cache = manifest.Versions[0].Local
+		cache = filepath.Join(
+			manifest.mopts.cacheDir, manifest.Name+"-"+manifest.Versions[0].Version+ext,
+		)
 	} else {
 		err = fmt.Errorf("too many options")
 	}
