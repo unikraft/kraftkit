@@ -18,7 +18,7 @@ require (
 	github.com/compose-spec/compose-go v1.13.4
 	github.com/containerd/containerd v1.7.0-beta.2
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/docker/docker v23.0.5+incompatible
+	github.com/docker/docker v24.0.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
 	github.com/fsnotify/fsnotify v1.6.0
