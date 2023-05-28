@@ -30,7 +30,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/henvic/httpretty v0.1.0
 	github.com/imdario/mergo v0.3.15
-	github.com/kubescape/go-git-url v0.0.24
+	github.com/kubescape/go-git-url v0.0.25
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.18
 	github.com/mattn/go-shellwords v1.0.12
