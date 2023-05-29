@@ -73,7 +73,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	if flagTag != "" {
 		ocipack.ref, err = name.ParseReference(flagTag,
-			name.WithDefaultRegistry(defaultRegistry),
+			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	} else {
 		// It's possible to pass an OCI artifact reference in the Kraftfile, e.g.:
@@ -87,7 +87,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		// ```
 		ocipack.ref, err = name.ParseReference(
 			targ.Name(),
-			name.WithDefaultRegistry(defaultRegistry),
+			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	}
 	if err != nil {
@@ -95,7 +95,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
-		namespace := defaultNamespace
+		namespace := DefaultNamespace
 		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
 			namespace = n
 		}
@@ -259,7 +259,7 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(defaultRegistry),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(defaultRegistry),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse OCI image name reference: %v", err)

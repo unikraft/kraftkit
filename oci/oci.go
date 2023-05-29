@@ -15,8 +15,8 @@ var (
 )
 
 const (
-	defaultRegistry  = "unikraft.org"
-	defaultNamespace = "default"
+	DefaultRegistry  = "unikraft.org"
+	DefaultNamespace = "default"
 )
 
 // FIXME(antoineco): avoid init, initialize things where needed

@@ -213,7 +213,7 @@ func (image *Image) SetCmd(_ context.Context, cmd []string) {
 // Save the image.
 func (image *Image) Save(ctx context.Context, source string, onProgress func(float64)) (ocispec.Descriptor, error) {
 	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(defaultRegistry),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, err

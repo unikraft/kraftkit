@@ -362,7 +362,7 @@ func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts
 	// 1. Check if the source is a reference to a local image
 
 	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(defaultRegistry),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return nil, false, err
