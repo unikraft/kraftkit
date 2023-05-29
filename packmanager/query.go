@@ -59,7 +59,7 @@ func (query *Query) UseCache() bool {
 }
 
 // Auth returns authentication configuration for a given domain or nil if the
-// domain does not have (or require) any authenticaiton.
+// domain does not have (or require) any authentication.
 func (query *Query) Auths() map[string]config.AuthConfig {
 	return query.auths
 }

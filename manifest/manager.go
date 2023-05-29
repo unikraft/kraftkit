@@ -50,8 +50,21 @@ func init() {
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
 // Unikraft manifests.
-func NewManifestManager(ctx context.Context) (packmanager.PackageManager, error) {
-	return manifestManager{}, nil
+func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageManager, error) {
+	manager := manifestManager{}
+
+	for _, mopt := range opts {
+		opt, ok := mopt.(ManifestManagerOption)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast ManifestManager option")
+		}
+
+		if err := opt(ctx, &manager); err != nil {
+			return nil, err
+		}
+	}
+
+	return manager, nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
