@@ -7,7 +7,6 @@ package plat
 import (
 	"context"
 	"os"
-	"strings"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -92,15 +91,15 @@ func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	values.OverrideBy(pc.kconfig)
 
 	// The following are built-in assumptions given the naming conventions used
-	// within the Unikraft core.  Ultimately, this should be discovered by probing
-	// the core or the external microlibrary.
-
-	var plat strings.Builder
-	plat.WriteString(kconfig.Prefix)
-	plat.WriteString("PLAT_")
-	plat.WriteString(strings.ToUpper(pc.Name()))
-
-	values.Set(plat.String(), kconfig.Yes)
+	// within the Unikraft core.
+	switch pc.Name() {
+	case "fc", "firecracker":
+		values.Set("CONFIG_PLAT_KVM", kconfig.Yes)
+		values.Set("CONFIG_KVM_VMM_FIRECRACKER", kconfig.Yes)
+	case "kvm", "qemu":
+		values.Set("CONFIG_PLAT_KVM", kconfig.Yes)
+		values.Set("CONFIG_KVM_VMM_QEMU", kconfig.Yes)
+	}
 
 	return values
 }
