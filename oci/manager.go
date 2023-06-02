@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/docker/docker/api/types"
 	regtool "github.com/genuinetools/reg/registry"
@@ -20,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
@@ -32,50 +30,34 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-type ociManager struct{}
+type ociManager struct {
+	registries []string
+	auths      map[string]types.AuthConfig
+	handle     func(ctx context.Context) (context.Context, handler.Handler, error)
+}
 
 const OCIFormat pack.PackageFormat = "oci"
 
 // NewOCIManager instantiates a new package manager based on OCI archives.
-func NewOCIManager(ctx context.Context) (packmanager.PackageManager, error) {
+func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager, error) {
 	manager := ociManager{}
 
-	// Attempt to initialize the handler simply to determine whether an error will
-	// be thrown as this will pre-emptively prevent subsequent calls which in turn
-	// cannot be made.  In the context of KraftKit, the umbrella package will
-	// simply skip its construction process and omit its further use.
-	_, _, err := manager.handle(ctx)
-	if err != nil {
-		return nil, err
+	for _, mopt := range opts {
+		opt, ok := mopt.(OCIManagerOption)
+		if !ok {
+			return nil, fmt.Errorf("cannot cast OCI Manager option")
+		}
+
+		if err := opt(ctx, &manager); err != nil {
+			return nil, err
+		}
+	}
+
+	if manager.handle == nil {
+		return nil, fmt.Errorf("cannot instantiate OCI Manaiger without handler")
 	}
 
 	return &manager, nil
-}
-
-// handle is an internal method that returns the instantiated handler.Handler.
-// This allows for lazy-loading the instantiation to the relevant client only
-// when it is needed.
-func (manager ociManager) handle(ctx context.Context) (context.Context, handler.Handler, error) {
-	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
-		namespace := defaultNamespace
-		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
-			namespace = n
-		}
-
-		log.G(ctx).WithFields(logrus.Fields{
-			"addr":      contAddr,
-			"namespace": namespace,
-		}).Debug("using containerd handler")
-
-		ctx, handle, err := handler.NewContainerdHandler(ctx, contAddr, namespace)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return ctx, handle, nil
-	}
-
-	return nil, nil, fmt.Errorf("could not determine handler")
 }
 
 // Update implements packmanager.PackageManager
@@ -105,24 +87,15 @@ func (manager ociManager) Unpack(ctx context.Context, entity pack.Package, opts 
 
 // registry is a wrapper method for authenticating and listing OCI repositories
 // from a provided domain representing a registry.
-func registry(ctx context.Context, domain string) (*regtool.Registry, error) {
+func (manager ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 	var err error
 	var auth types.AuthConfig
-	insecure := false
 
-	if a, ok := config.G[config.KraftKit](ctx).Auth[domain]; ok {
+	if a, ok := manager.auths[domain]; ok {
 		log.G(ctx).
 			WithField("registry", domain).
 			Debug("authenticating")
-
-		auth, err = repoutils.GetAuthConfig(a.User, a.Token, domain)
-		if err != nil {
-			return nil, err
-		}
-
-		if !a.VerifySSL {
-			insecure = true
-		}
+		auth = a
 	} else {
 		auth, err = repoutils.GetAuthConfig("", "", domain)
 		if err != nil {
@@ -132,7 +105,6 @@ func registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 
 	reg, err := regtool.New(ctx, auth, regtool.Opt{
 		Domain:   domain,
-		Insecure: insecure,
 		Debug:    false,
 		SkipPing: true,
 		Headers: map[string]string{
@@ -147,37 +119,34 @@ func registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 }
 
 // Catalog implements packmanager.PackageManager
-func (manager ociManager) Catalog(ctx context.Context, query packmanager.CatalogQuery) ([]pack.Package, error) {
+func (manager ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var packs []pack.Package
+	query := packmanager.NewQuery(qopts...)
+	qname := query.Name()
+	qversion := query.Version()
 
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format
-	ref, refErr := name.ParseReference(query.Name,
-		name.WithDefaultRegistry(defaultRegistry),
+	ref, refErr := name.ParseReference(qname,
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if refErr == nil {
-		if ref.Identifier() != "latest" && query.Version != "" && ref.Identifier() != query.Version {
+		if ref.Identifier() != "latest" && qversion != "" && ref.Identifier() != qversion {
 			return nil, fmt.Errorf("cannot determine which version as name contains version and version query paremeter set")
-		} else if query.Version == "" {
-			query.Name = ref.Context().String()
-			query.Version = ref.Identifier()
+		} else if qversion == "" {
+			qname = ref.Context().String()
+			qversion = ref.Identifier()
 		}
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"name":    query.Name,
-		"version": query.Version,
-		"source":  query.Source,
-		"types":   query.Types,
-		"cache":   !query.NoCache,
-	}).Debug("querying oci catalog")
+	log.G(ctx).WithFields(query.Fields()).Debug("querying oci catalog")
 
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if query.NoCache {
+	if !query.UseCache() {
 		// If a direct reference can be made, attempt to generate a package from it
 		if refErr == nil {
 			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
@@ -188,17 +157,12 @@ func (manager ociManager) Catalog(ctx context.Context, query packmanager.Catalog
 			}
 		}
 
-		registries := config.G[config.KraftKit](ctx).Unikraft.Manifests
-		if len(registries) == 0 {
-			registries = []string{defaultRegistry}
-		}
-
-		for _, domain := range registries {
+		for _, domain := range manager.registries {
 			log.G(ctx).
 				WithField("registry", domain).
 				Trace("querying")
 
-			reg, err := registry(ctx, domain)
+			reg, err := manager.registry(ctx, domain)
 			if err != nil {
 				log.G(ctx).
 					WithField("registry", domain).
@@ -216,11 +180,11 @@ func (manager ociManager) Catalog(ctx context.Context, query packmanager.Catalog
 
 			for _, fullref := range catalog {
 				// Skip direct references from the remote registry
-				if query.NoCache && refErr == nil && ref.String() == fullref {
+				if !query.UseCache() && refErr == nil && ref.String() == fullref {
 					continue
 				}
 
-				if len(query.Name) > 0 && fullref != query.Name {
+				if len(qname) > 0 && fullref != qname {
 					continue
 				}
 
@@ -276,7 +240,7 @@ func (manager ociManager) Catalog(ctx context.Context, query packmanager.Catalog
 		}
 
 		// Skip if querying for the name and the name does not match
-		if len(query.Name) > 0 && refname != query.Name {
+		if len(qname) > 0 && refname != qname {
 			log.G(ctx).
 				WithField("ref", manifest.Config.Digest.String()).
 				Trace("skipping non-unikernel digest")
@@ -295,7 +259,7 @@ func (manager ociManager) Catalog(ctx context.Context, query packmanager.Catalog
 		fullref := fmt.Sprintf("%s:%s", refname, revision)
 
 		// Skip direct references from the remote registry
-		if query.NoCache && refErr == nil && ref.String() == fullref {
+		if !query.UseCache() && refErr == nil && ref.String() == fullref {
 			log.G(ctx).
 				WithField("ref", manifest.Config.Digest.String()).
 				Trace("skipping non-unikernel digest")
@@ -303,7 +267,7 @@ func (manager ociManager) Catalog(ctx context.Context, query packmanager.Catalog
 		}
 
 		// Skip if querying for a version and the version does not match
-		if len(query.Version) > 0 && revision != query.Version {
+		if len(qversion) > 0 && revision != qversion {
 			log.G(ctx).
 				WithField("ref", manifest.Config.Digest.String()).
 				Trace("skipping non-unikernel digest")
@@ -362,7 +326,7 @@ func (manager ociManager) RemoveSource(ctx context.Context, source string) error
 }
 
 // IsCompatible implements packmanager.PackageManager
-func (manager ociManager) IsCompatible(ctx context.Context, source string) (packmanager.PackageManager, bool, error) {
+func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).
 		WithField("source", source).
 		Debug("checking if source is an oci unikernel")
@@ -370,7 +334,7 @@ func (manager ociManager) IsCompatible(ctx context.Context, source string) (pack
 	// 1. Check if the source is a reference to a local image
 
 	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(defaultRegistry),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return nil, false, err
@@ -391,7 +355,7 @@ func (manager ociManager) IsCompatible(ctx context.Context, source string) (pack
 	// 2. Check if the source is a remote registry
 
 	if uri, err := url.Parse(source); err == nil && uri.Host == source {
-		if reg, err := registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
+		if reg, err := manager.registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
 			return manager, true, nil
 		}
 	}

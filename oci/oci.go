@@ -15,14 +15,20 @@ var (
 )
 
 const (
-	defaultRegistry  = "unikraft.org"
-	defaultNamespace = "default"
+	DefaultRegistry  = "unikraft.org"
+	DefaultNamespace = "default"
 )
 
 // FIXME(antoineco): avoid init, initialize things where needed
 func init() {
 	// Register a new pkg.Package type
-	_ = packmanager.RegisterPackageManager(OCIFormat, NewOCIManager)
+	_ = packmanager.RegisterPackageManager(
+		OCIFormat,
+		NewOCIManager,
+		WithDefaultAuth(),
+		WithDefaultRegistries(),
+		WithDetectHandler(),
+	)
 
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(

@@ -20,13 +20,13 @@ type DirectoryProvider struct {
 	typ   unikraft.ComponentType
 	name  string
 	dir   string
-	mopts []ManifestOption
+	mopts *ManifestOptions
 	ctx   context.Context
 }
 
 // NewDirectoryProvider attempts to parse a provided path as a Unikraft
 // "microlibirary" directory
-func NewDirectoryProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+func NewDirectoryProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	if f, err := os.Stat(path); err != nil || (err == nil && !f.IsDir()) {
 		return nil, fmt.Errorf("could not access directory '%s': %v", path, err)
 	}
@@ -57,13 +57,15 @@ func NewDirectoryProvider(ctx context.Context, path string, mopts ...ManifestOpt
 		return nil, fmt.Errorf("unknown type for directory: %s", path)
 	}
 
-	return DirectoryProvider{
+	provider := DirectoryProvider{
 		typ:   t,
 		name:  n,
 		dir:   path,
-		mopts: mopts,
+		mopts: NewManifestOptions(opts...),
 		ctx:   ctx,
-	}, nil
+	}
+
+	return &provider, nil
 }
 
 func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
@@ -80,15 +82,6 @@ func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
 			},
 		},
 	}
-
-	for _, opt := range dp.mopts {
-		if err := opt(manifest); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
-		}
-	}
-
-	// Force the local back to the original directory
-	manifest.Channels[0].Local = dp.dir
 
 	return []*Manifest{manifest}, nil
 }

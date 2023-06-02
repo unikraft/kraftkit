@@ -17,6 +17,7 @@ import (
 
 var (
 	packageManagers            = make(map[pack.PackageFormat]PackageManager)
+	packageManagerOpts         = make(map[pack.PackageFormat][]any)
 	packageManagerConstructors = make(map[pack.PackageFormat]NewManagerConstructor)
 )
 
@@ -26,7 +27,7 @@ func PackageManagers() map[pack.PackageFormat]PackageManager {
 	return packageManagers
 }
 
-func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConstructor) error {
+func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConstructor, opts ...any) error {
 	if _, ok := packageManagerConstructors[ctxk]; ok {
 		return fmt.Errorf("package manager already registered: %s", ctxk)
 	}
@@ -47,7 +48,13 @@ func NewUmbrellaManager(ctx context.Context) (PackageManager, error) {
 	for format, constructor := range packageManagerConstructors {
 		log.G(ctx).WithField("format", format).Trace("initializing package manager")
 
-		manager, err := constructor(ctx)
+		var opts []any
+
+		if pmopts, ok := packageManagerOpts[format]; ok {
+			opts = pmopts
+		}
+
+		manager, err := constructor(ctx, opts...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", format).
@@ -157,10 +164,10 @@ func (u umbrella) Unpack(ctx context.Context, source pack.Package, opts ...Unpac
 	return ret, nil
 }
 
-func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Package, error) {
+func (u umbrella) Catalog(ctx context.Context, qopts ...QueryOption) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range packageManagers {
-		pack, err := manager.Catalog(ctx, query)
+		pack, err := manager.Catalog(ctx, qopts...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", manager.Format()).
@@ -174,7 +181,7 @@ func (u umbrella) Catalog(ctx context.Context, query CatalogQuery) ([]pack.Packa
 	return packages, nil
 }
 
-func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManager, bool, error) {
+func (u umbrella) IsCompatible(ctx context.Context, source string, qopts ...QueryOption) (PackageManager, bool, error) {
 	if source == "" {
 		return nil, false, fmt.Errorf("cannot determine compatibility of empty source")
 	}
@@ -185,7 +192,7 @@ func (u umbrella) IsCompatible(ctx context.Context, source string) (PackageManag
 			"source": source,
 		}).Tracef("checking compatibility")
 
-		pm, compatible, err := manager.IsCompatible(ctx, source)
+		pm, compatible, err := manager.IsCompatible(ctx, source, qopts...)
 		if err == nil && compatible {
 			return pm, true, nil
 		} else if err != nil {

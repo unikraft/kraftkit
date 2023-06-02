@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
-	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -54,10 +53,9 @@ type Manifest struct {
 	// Versions
 	Versions []ManifestVersion `yaml:"versions,omitempty"`
 
-	// auth is an internal property set by a ManifestOption which is used by the
-	// Manifest to access information a bout itself aswell as downloading a given
-	// resource
-	auths map[string]config.AuthConfig
+	// mopts contains additional configuration used within the implementation that
+	// are non-exportable attributes and variables.
+	mopts *ManifestOptions
 }
 
 type ManifestProvider struct {
@@ -108,7 +106,7 @@ func (mp ManifestProvider) String() string {
 }
 
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
-func NewManifestFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOption) (*Manifest, error) {
+func NewManifestFromBytes(ctx context.Context, raw []byte, opts ...ManifestOption) (*Manifest, error) {
 	// TODO: This deserialization mechanism is used to encode the provider into the
 	// resulting manifest file and feels a bit of a hack since we are running
 	// `yaml.Marshal` twice.  The library exposes `yaml.Marshler` and
@@ -137,7 +135,10 @@ func NewManifestFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOpti
 		return nil, err
 	}
 
-	manifest := &Manifest{}
+	manifest := &Manifest{
+		mopts: NewManifestOptions(opts...),
+	}
+
 	if err := yaml.Unmarshal(raw, manifest); err != nil {
 		return nil, err
 	}
@@ -149,14 +150,8 @@ func NewManifestFromBytes(ctx context.Context, raw []byte, mopts ...ManifestOpti
 	}
 
 	if providerName != "" {
-		manifest.Provider, err = NewProviderFromString(ctx, providerName, manifest.Origin, manifest, mopts...)
+		manifest.Provider, err = NewProviderFromString(ctx, providerName, manifest.Origin, manifest, opts...)
 		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, o := range mopts {
-		if err := o(manifest); err != nil {
 			return nil, err
 		}
 	}
@@ -421,14 +416,4 @@ func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
 	}
 
 	return nil, fmt.Errorf("manifest does not have a default channel: %s", m.Origin)
-}
-
-// Auths returns the map of provided authentication configuration passed as an
-// option to the Manifest
-func (m Manifest) Auths() map[string]config.AuthConfig {
-	if m.auths == nil {
-		m.auths = make(map[string]config.AuthConfig)
-	}
-
-	return m.auths
 }

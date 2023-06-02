@@ -16,7 +16,7 @@ import (
 // and output during "construction", particularly providing access to a
 // referencable context with which they can access (within the context of
 // KraftKit) the logging, IOStreams and Config subsystems.
-type NewManagerConstructor func(context.Context) (PackageManager, error)
+type NewManagerConstructor func(context.Context, ...any) (PackageManager, error)
 
 type PackageManager interface {
 	// Update retrieves and stores locally a cache of the upstream registry.
@@ -34,7 +34,7 @@ type PackageManager interface {
 	Unpack(context.Context, pack.Package, ...UnpackOption) ([]component.Component, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(context.Context, CatalogQuery) ([]pack.Package, error)
+	Catalog(context.Context, ...QueryOption) ([]pack.Package, error)
 
 	// Add a source to the package manager
 	AddSource(context.Context, string) error
@@ -44,7 +44,7 @@ type PackageManager interface {
 
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
-	IsCompatible(context.Context, string) (PackageManager, bool, error)
+	IsCompatible(context.Context, string, ...QueryOption) (PackageManager, bool, error)
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.

@@ -85,7 +85,7 @@ func (mip ManifestIndexProvider) String() string {
 
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
-func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIndex, error) {
+func NewManifestIndexFromBytes(raw []byte, opts ...ManifestOption) (*ManifestIndex, error) {
 	index := &ManifestIndex{}
 
 	if err := yaml.Unmarshal(raw, index); err != nil {
@@ -97,12 +97,7 @@ func NewManifestIndexFromBytes(raw []byte, mopts ...ManifestOption) (*ManifestIn
 	}
 
 	for i, manifest := range index.Manifests {
-		for _, o := range mopts {
-			if err := o(manifest); err != nil {
-				return nil, err
-			}
-		}
-
+		manifest.mopts = NewManifestOptions(opts...)
 		index.Manifests[i] = manifest
 	}
 

@@ -153,17 +153,15 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		}
 		endpoint := u.Host
 
-		if manifest.Auths() != nil {
-			if cfg, ok := manifest.Auths()[endpoint]; ok {
-				if cfg.User != "" && cfg.Token != "" {
-					copts.Auth = &githttp.BasicAuth{
-						Username: cfg.User,
-						Password: cfg.Token,
-					}
-				} else if cfg.Token != "" {
-					copts.Auth = &githttp.TokenAuth{
-						Token: cfg.Token,
-					}
+		if auth := popts.Auths(endpoint); auth != nil {
+			if auth.User != "" && auth.Token != "" {
+				copts.Auth = &githttp.BasicAuth{
+					Username: auth.User,
+					Password: auth.Token,
+				}
+			} else if auth.Token != "" {
+				copts.Auth = &githttp.TokenAuth{
+					Token: auth.Token,
 				}
 			}
 		}

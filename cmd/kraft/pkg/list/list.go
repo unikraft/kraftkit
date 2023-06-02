@@ -80,23 +80,21 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		opts.Limit = -1
 	}
 
-	query := packmanager.CatalogQuery{
-		NoCache: opts.Update,
-	}
+	types := []unikraft.ComponentType{}
 	if opts.ShowCore {
-		query.Types = append(query.Types, unikraft.ComponentTypeCore)
+		types = append(types, unikraft.ComponentTypeCore)
 	}
 	if opts.ShowArchs {
-		query.Types = append(query.Types, unikraft.ComponentTypeArch)
+		types = append(types, unikraft.ComponentTypeArch)
 	}
 	if opts.ShowPlats {
-		query.Types = append(query.Types, unikraft.ComponentTypePlat)
+		types = append(types, unikraft.ComponentTypePlat)
 	}
 	if opts.ShowLibs {
-		query.Types = append(query.Types, unikraft.ComponentTypeLib)
+		types = append(types, unikraft.ComponentTypeLib)
 	}
 	if opts.ShowApps {
-		query.Types = append(query.Types, unikraft.ComponentTypeApp)
+		types = append(types, unikraft.ComponentTypeApp)
 	}
 
 	var packages []pack.Package
@@ -115,9 +113,9 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 
 	} else {
-		packages, err = packmanager.G(ctx).Catalog(
-			ctx,
-			query,
+		packages, err = packmanager.G(ctx).Catalog(ctx,
+			packmanager.WithCache(!opts.Update),
+			packmanager.WithTypes(types...),
 		)
 		if err != nil {
 			return err
