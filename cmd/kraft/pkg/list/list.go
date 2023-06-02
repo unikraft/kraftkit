@@ -14,12 +14,12 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
-	"kraftkit.sh/utils"
 )
 
 type List struct {
@@ -147,7 +147,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
-	table := utils.NewTablePrinter(ctx)
+	table := tableprinter.NewTablePrinter(ctx)
 
 	// Header row
 	table.AddField("TYPE", nil, cs.Bold)

@@ -54,7 +54,7 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 	}
 
 	if manager.handle == nil {
-		return nil, fmt.Errorf("cannot instantiate OCI Manaiger without handler")
+		return nil, fmt.Errorf("cannot instantiate OCI Manager without handler")
 	}
 
 	return &manager, nil

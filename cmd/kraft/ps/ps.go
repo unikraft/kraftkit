@@ -11,6 +11,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine"
@@ -155,7 +156,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
-	table := utils.NewTablePrinter(ctx)
+	table := tableprinter.NewTablePrinter(ctx)
 
 	// Header row
 	table.AddField("MACHINE ID", nil, cs.Bold)
