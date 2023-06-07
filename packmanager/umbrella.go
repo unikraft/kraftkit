@@ -33,6 +33,7 @@ func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConst
 	}
 
 	packageManagerConstructors[ctxk] = constructor
+	packageManagerOpts[ctxk] = opts
 
 	return nil
 }
