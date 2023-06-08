@@ -47,6 +47,37 @@ type InitrdConfig struct {
 	OutDir     string
 }
 
+// NewFromFile interprets a given path as a initramfs disk file and returns an
+// instantiated InitrdConfig if successful.
+func NewFromFile(path string) (*InitrdConfig, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	config := InitrdConfig{
+		Output: path,
+		Format: NEWC,
+	}
+	reader := cpio.NewReader(file)
+
+	// Iterate through the files in the archive.
+	for {
+		hdr, err := reader.Next()
+		if err == io.EOF {
+			// end of cpio archive
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		config.Input = append(config.Input, hdr.Name)
+	}
+
+	return &config, nil
+}
+
 func (i *InitrdConfig) NewWriter(w io.Writer) (*cpio.Writer, error) {
 	switch i.Format {
 	case ODC:
