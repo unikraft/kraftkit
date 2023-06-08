@@ -30,7 +30,7 @@ func WithDetectHandler() OCIManagerOption {
 			log.G(ctx).WithFields(logrus.Fields{
 				"addr":      contAddr,
 				"namespace": namespace,
-			}).Debug("using containerd handler")
+			}).Trace("using containerd handler")
 
 			manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 				return handler.NewContainerdHandler(ctx, contAddr, namespace)
@@ -57,7 +57,7 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 		log.G(ctx).WithFields(logrus.Fields{
 			"addr":      addr,
 			"namespace": namespace,
-		}).Debug("using containerd handler")
+		}).Trace("using containerd handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			return handler.NewContainerdHandler(ctx, addr, namespace)
