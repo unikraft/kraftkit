@@ -25,132 +25,98 @@ package tableprinter
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sort"
 	"strings"
 
 	"kraftkit.sh/internal/text"
-	"kraftkit.sh/iostreams"
 )
 
-type TablePrinter interface {
-	IsTTY() bool
-	AddField(string, func(int, string) string, func(string) string)
-	EndRow()
-	Render() error
+type TableOutputFormat string
+
+const (
+	OutputFormatTable = TableOutputFormat("table")
+	OutputFormatJSON  = TableOutputFormat("json")
+	OutputFormatYAML  = TableOutputFormat("yaml")
+
+	DefaultDelimeter = "  "
+)
+
+type TableField struct {
+	text  string
+	color func(string) string
 }
 
-type TablePrinterOptions struct {
-	IsTTY bool
+func (f *TableField) DisplayWidth() int {
+	return text.DisplayWidth(f.text)
 }
 
-func NewTablePrinter(ctx context.Context) TablePrinter {
-	io := iostreams.G(ctx)
-	return NewTablePrinterWithOptions(ctx, TablePrinterOptions{
-		IsTTY: io.IsStdoutTTY(),
-	})
+type TablePrinter struct {
+	format       TableOutputFormat
+	rows         [][]TableField
+	maxWidth     int
+	delimeter    string
+	truncateFunc func(int, string) string
 }
 
-func NewTablePrinterWithOptions(ctx context.Context, opts TablePrinterOptions) TablePrinter {
-	io := iostreams.G(ctx)
-	if opts.IsTTY {
-		return &ttyTablePrinter{
-			out:      io.Out,
-			maxWidth: io.TerminalWidth(),
+// NewTablePrinter returns a pointer instance of TablePrinter struct.
+func NewTablePrinter(ctx context.Context, topts ...TablePrinterOption) (*TablePrinter, error) {
+	printer := TablePrinter{
+		format:       OutputFormatTable,
+		delimeter:    DefaultDelimeter,
+		truncateFunc: text.Truncate,
+	}
+
+	for _, tpo := range topts {
+		err := tpo(&printer)
+		if err != nil {
+			return nil, err
 		}
+
 	}
-	return &tsvTablePrinter{
-		out: io.Out,
+
+	return &printer, nil
+}
+
+// AddField adds a new field to the table.
+func (printer *TablePrinter) AddField(s string, colorFunc func(string) string) {
+	if printer.rows == nil {
+		printer.rows = make([][]TableField, 1)
 	}
-}
 
-type tableField struct {
-	Text         string
-	TruncateFunc func(int, string) string
-	ColorFunc    func(string) string
-}
-
-func (f *tableField) DisplayWidth() int {
-	return text.DisplayWidth(f.Text)
-}
-
-type ttyTablePrinter struct {
-	out      io.Writer
-	maxWidth int
-	rows     [][]tableField
-}
-
-func (t ttyTablePrinter) IsTTY() bool {
-	return true
-}
-
-func (t *ttyTablePrinter) AddField(s string, truncateFunc func(int, string) string, colorFunc func(string) string) {
-	if truncateFunc == nil {
-		truncateFunc = text.Truncate
+	rowI := len(printer.rows) - 1
+	field := TableField{
+		text:  s,
+		color: colorFunc,
 	}
-	if t.rows == nil {
-		t.rows = make([][]tableField, 1)
-	}
-	rowI := len(t.rows) - 1
-	field := tableField{
-		Text:         s,
-		TruncateFunc: truncateFunc,
-		ColorFunc:    colorFunc,
-	}
-	t.rows[rowI] = append(t.rows[rowI], field)
+
+	printer.rows[rowI] = append(printer.rows[rowI], field)
 }
 
-func (t *ttyTablePrinter) EndRow() {
-	t.rows = append(t.rows, []tableField{})
+// EndRow ends the current row.
+func (printer *TablePrinter) EndRow() {
+	printer.rows = append(printer.rows, []TableField{})
 }
 
-func (t *ttyTablePrinter) Render() error {
-	if len(t.rows) == 0 {
+func (printer *TablePrinter) Render(w io.Writer) error {
+	if len(printer.rows) == 0 {
 		return nil
 	}
 
-	delim := "  "
-	numCols := len(t.rows[0])
-	colWidths := t.calculateColumnWidths(len(delim))
-
-	for _, row := range t.rows {
-		for col, field := range row {
-			if col > 0 {
-				_, err := fmt.Fprint(t.out, delim)
-				if err != nil {
-					return err
-				}
-			}
-			truncVal := field.TruncateFunc(colWidths[col], field.Text)
-			if col < numCols-1 {
-				// pad value with spaces on the right
-				if padWidth := colWidths[col] - field.DisplayWidth(); padWidth > 0 {
-					truncVal += strings.Repeat(" ", padWidth)
-				}
-			}
-			if field.ColorFunc != nil {
-				truncVal = field.ColorFunc(truncVal)
-			}
-			_, err := fmt.Fprint(t.out, truncVal)
-			if err != nil {
-				return err
-			}
-		}
-		if len(row) > 0 {
-			_, err := fmt.Fprint(t.out, "\n")
-			if err != nil {
-				return err
-			}
-		}
+	switch printer.format {
+	case OutputFormatJSON:
+		return printer.renderJSON(w)
+	case OutputFormatYAML:
+		return printer.renderYAML(w)
+	default:
+		return printer.renderTable(w)
 	}
-	return nil
 }
 
-func (t *ttyTablePrinter) calculateColumnWidths(delimSize int) []int {
-	numCols := len(t.rows[0])
+func (printer *TablePrinter) calculateColumnWidths(delimSize int) []int {
+	numCols := len(printer.rows[0])
 	allColWidths := make([][]int, numCols)
-	for _, row := range t.rows {
+	for _, row := range printer.rows {
 		for col, field := range row {
 			allColWidths[col] = append(allColWidths[col], field.DisplayWidth())
 		}
@@ -167,10 +133,12 @@ func (t *ttyTablePrinter) calculateColumnWidths(delimSize int) []int {
 	}
 
 	colWidths := make([]int, numCols)
+
 	// never truncate the first column
 	colWidths[0] = maxColWidths[0]
+
 	// never truncate the last column if it contains URLs
-	if strings.HasPrefix(t.rows[0][numCols-1].Text, "https://") {
+	if strings.HasPrefix(printer.rows[0][numCols-1].text, "https://") {
 		colWidths[numCols-1] = maxColWidths[numCols-1]
 	}
 
@@ -179,8 +147,9 @@ func (t *ttyTablePrinter) calculateColumnWidths(delimSize int) []int {
 		for col := 0; col < numCols; col++ {
 			setWidths += colWidths[col]
 		}
-		return t.maxWidth - delimSize*(numCols-1) - setWidths
+		return printer.maxWidth - delimSize*(numCols-1) - setWidths
 	}
+
 	numFixedCols := func() int {
 		fixedCols := 0
 		for col := 0; col < numCols; col++ {
@@ -204,6 +173,7 @@ func (t *ttyTablePrinter) calculateColumnWidths(delimSize int) []int {
 	}
 
 	firstFlexCol := -1
+
 	// truncate long columns to the remaining available width
 	if numFlexColumns := numCols - numFixedCols(); numFlexColumns > 0 {
 		perColumn := availWidth() / numFlexColumns
@@ -230,30 +200,4 @@ func (t *ttyTablePrinter) calculateColumnWidths(delimSize int) []int {
 	}
 
 	return colWidths
-}
-
-type tsvTablePrinter struct {
-	out        io.Writer
-	currentCol int
-}
-
-func (t tsvTablePrinter) IsTTY() bool {
-	return false
-}
-
-func (t *tsvTablePrinter) AddField(text string, _ func(int, string) string, _ func(string) string) {
-	if t.currentCol > 0 {
-		fmt.Fprint(t.out, "\t")
-	}
-	fmt.Fprint(t.out, text)
-	t.currentCol++
-}
-
-func (t *tsvTablePrinter) EndRow() {
-	fmt.Fprint(t.out, "\n")
-	t.currentCol = 0
-}
-
-func (t *tsvTablePrinter) Render() error {
-	return nil
 }

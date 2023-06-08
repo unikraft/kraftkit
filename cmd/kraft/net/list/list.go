@@ -19,7 +19,8 @@ import (
 )
 
 type List struct {
-	Long   bool `long:"long" short:"l" usage:"Show more information"`
+	Long   bool   `long:"long" short:"l" usage:"Show more information"`
+	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 	driver string
 }
 
@@ -98,28 +99,35 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
-	table := tableprinter.NewTablePrinter(ctx)
+
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(opts.Output),
+	)
+	if err != nil {
+		return err
+	}
 
 	// Header row
 	if opts.Long {
-		table.AddField("MACHINE ID", nil, cs.Bold)
+		table.AddField("MACHINE ID", cs.Bold)
 	}
-	table.AddField("NAME", nil, cs.Bold)
-	table.AddField("NETWORK", nil, cs.Bold)
-	table.AddField("DRIVER", nil, cs.Bold)
-	table.AddField("STATUS", nil, cs.Bold)
+	table.AddField("NAME", cs.Bold)
+	table.AddField("NETWORK", cs.Bold)
+	table.AddField("DRIVER", cs.Bold)
+	table.AddField("STATUS", cs.Bold)
 	table.EndRow()
 
 	for _, item := range items {
 		if opts.Long {
-			table.AddField(item.id, nil, nil)
+			table.AddField(item.id, nil)
 		}
-		table.AddField(item.name, nil, nil)
-		table.AddField(item.network, nil, nil)
-		table.AddField(item.driver, nil, nil)
-		table.AddField(item.status.String(), nil, nil)
+		table.AddField(item.name, nil)
+		table.AddField(item.network, nil)
+		table.AddField(item.driver, nil)
+		table.AddField(item.status.String(), nil)
 		table.EndRow()
 	}
 
-	return table.Render()
+	return table.Render(iostreams.G(ctx).Out)
 }
