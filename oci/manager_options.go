@@ -35,6 +35,8 @@ func WithDetectHandler() OCIManagerOption {
 			manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 				return handler.NewContainerdHandler(ctx, contAddr, namespace)
 			}
+
+			return nil
 		}
 
 		return fmt.Errorf("could not detect OCI handler")
