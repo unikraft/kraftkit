@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/containerd/nerdctl/pkg/strutil"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -52,6 +53,7 @@ type Run struct {
 	networkName     string
 	networkStrategy *network.Strategy
 	platform        string
+	Ports           []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Remove          bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Target          string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
 	WithKernelDbg   bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
@@ -160,6 +162,18 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				Requests: corev1.ResourceList{},
 			},
 		},
+	}
+
+	// Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
+	if len(opts.Ports) > 0 {
+		opts.Ports = strutil.DedupeStrSlice(opts.Ports)
+		for _, port := range opts.Ports {
+			parsed, err := machineapi.ParsePort(port)
+			if err != nil {
+				return err
+			}
+			machine.Spec.Ports = append(machine.Spec.Ports, parsed...)
+		}
 	}
 
 	// Was a network specified? E.g. --network=bridge:kraft0

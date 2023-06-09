@@ -169,6 +169,34 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		)
 	}
 
+	if len(machine.Spec.Ports) > 0 {
+		// Start MAC addresses iteratively.
+		startMac, err := macaddr.GenerateMacAddress(true)
+		if err != nil {
+			return machine, err
+		}
+
+		for i, port := range machine.Spec.Ports {
+			mac := port.MacAddress
+			if mac == "" {
+				startMac = macaddr.IncrementMacAddress(startMac)
+				mac = startMac.String()
+			}
+
+			hostnetid := fmt.Sprintf("hostnet%d", i)
+			qopts = append(qopts,
+				WithDevice(QemuDeviceVirtioNetPci{
+					Mac:    mac,
+					Netdev: hostnetid,
+				}),
+				WithNetDevice(QemuNetDevUser{
+					Id:      hostnetid,
+					Hostfwd: fmt.Sprintf("%s::%d-:%d", port.Protocol, port.HostPort, port.MachinePort),
+				}),
+			)
+		}
+	}
+
 	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
 	if err != nil {
 		return machine, err

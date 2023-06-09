@@ -86,9 +86,12 @@ require (
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
+	github.com/containerd/go-cni v1.1.9 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
+	github.com/containernetworking/cni v1.1.2 // indirect
+	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
@@ -152,6 +155,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/rootless-containers/rootlesskit v1.1.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.5 // indirect
 	github.com/skeema/knownhosts v1.1.0 // indirect

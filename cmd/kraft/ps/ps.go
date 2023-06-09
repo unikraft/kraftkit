@@ -102,6 +102,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		created string
 		status  machineapi.MachineState
 		mem     string
+		ports   string
 		arch    string
 		plat    string
 	}
@@ -117,6 +118,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 			status:  machine.Status.State,
 			mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
 			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
+			ports:   machine.Spec.Ports.String(),
 			arch:    machine.Spec.Architecture,
 			plat:    machine.Spec.Platform,
 		})
@@ -143,6 +145,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	table.AddField("STATUS", nil, cs.Bold)
 	table.AddField("MEM", nil, cs.Bold)
 	if opts.Long {
+		table.AddField("PORTS", nil, cs.Bold)
 		table.AddField("ARCH", nil, cs.Bold)
 		table.AddField("PLAT", nil, cs.Bold)
 	}
@@ -159,6 +162,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		table.AddField(item.status.String(), nil, nil)
 		table.AddField(item.mem, nil, nil)
 		if opts.Long {
+			table.AddField(item.ports, nil, nil)
 			table.AddField(item.arch, nil, nil)
 			table.AddField(item.plat, nil, nil)
 		}
