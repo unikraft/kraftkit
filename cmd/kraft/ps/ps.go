@@ -104,7 +104,6 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		mem     string
 		arch    string
 		plat    string
-		driver  string
 	}
 
 	var items []psTable
@@ -120,7 +119,6 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
 			arch:    machine.Spec.Architecture,
 			plat:    machine.Spec.Platform,
-			driver:  platform.String(),
 		})
 	}
 
@@ -147,7 +145,6 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	if opts.Long {
 		table.AddField("ARCH", nil, cs.Bold)
 		table.AddField("PLAT", nil, cs.Bold)
-		table.AddField("DRIVER", nil, cs.Bold)
 	}
 	table.EndRow()
 
@@ -164,7 +161,6 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		if opts.Long {
 			table.AddField(item.arch, nil, nil)
 			table.AddField(item.plat, nil, nil)
-			table.AddField(item.driver, nil, nil)
 		}
 		table.EndRow()
 	}
