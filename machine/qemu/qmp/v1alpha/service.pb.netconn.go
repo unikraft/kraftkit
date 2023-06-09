@@ -389,3 +389,649 @@ func (c *QEMUMachineProtocolClient) QueryStatus(req QueryStatusRequest) (*QueryS
 
 	return &res, nil
 }
+
+func (c *QEMUMachineProtocolClient) SetLink(req SetLinkRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddLegacyNic(req NetdevAddLegacyNicRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevUser(req NetdevAddDevUserRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevTap(req NetdevAddDevTapRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevL2TPv3(req NetdevAddDevL2TPv3Request) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevSocket(req NetdevAddDevSocketRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevStream(req NetdevAddDevStreamRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevDgram(req NetdevAddDevDgramRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVde(req NetdevAddDevVdeRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevBridge(req NetdevAddDevBridgeRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevHubPort(req NetdevAddDevHubPortRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevNetmap(req NetdevAddDevNetmapRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVhostUser(req NetdevAddDevVhostUserRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVhostVDPA(req NetdevAddDevVhostVDPARequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVmnetHost(req NetdevAddDevVmnetHostRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVmnetShared(req NetdevAddDevVmnetSharedRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevAddDevVmnetBridged(req NetdevAddDevVmnetBridgedRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) NetdevDel(req NetdevDelRequest) (*any, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res any
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *QEMUMachineProtocolClient) QueryRxFilter(req QueryRxFilterRequest) (*QueryRxFilterResponse, error) {
+	var b []byte
+	var err error
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if err := c.setRpcRequestSetDefaults(&req); err != nil {
+		return nil, err
+	}
+
+	b, err = json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := c.send.Write(append(b, '\x0a')); err != nil {
+		return nil, err
+	}
+	if err := c.send.Flush(); err != nil {
+		return nil, err
+	}
+
+	var res QueryRxFilterResponse
+	b, err = c.recv.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
