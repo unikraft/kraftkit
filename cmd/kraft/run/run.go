@@ -387,8 +387,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.G(ctx).Debugf("created %s instance %s", platform.String(), machine.Name)
-
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
 		go func() {
@@ -455,11 +453,13 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
-			log.G(ctx).Debugf("removing %s", machine.Name)
 			if _, err := controller.Delete(ctx, machine); err != nil {
 				return fmt.Errorf("could not remove: %v", err)
 			}
 		}
+	} else {
+		// Output the name of the instance such that it can be piped
+		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
 	}
 
 	return nil
