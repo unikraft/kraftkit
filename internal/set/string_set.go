@@ -23,6 +23,8 @@
 
 package set
 
+import "strings"
+
 var exists = struct{}{}
 
 type stringSet struct {
@@ -43,7 +45,7 @@ func NewStringSet(values ...string) *stringSet {
 	return s
 }
 
-func (s *stringSet) Add(values ...string) {
+func (s *stringSet) Add(values ...string) *stringSet {
 	for _, value := range values {
 		if s.Contains(value) {
 			continue
@@ -51,9 +53,11 @@ func (s *stringSet) Add(values ...string) {
 		s.m[value] = exists
 		s.v = append(s.v, value)
 	}
+
+	return s
 }
 
-func (s *stringSet) Remove(values ...string) {
+func (s *stringSet) Remove(values ...string) *stringSet {
 	for _, value := range values {
 		if !s.Contains(value) {
 			continue
@@ -61,6 +65,8 @@ func (s *stringSet) Remove(values ...string) {
 		delete(s.m, value)
 		s.v = sliceWithout(s.v, value)
 	}
+
+	return s
 }
 
 func sliceWithout(s []string, v string) []string {
@@ -77,14 +83,29 @@ func sliceWithout(s []string, v string) []string {
 	return append(s[:idx], s[idx+1:]...)
 }
 
+func (s *stringSet) ContainsExactly(value string) bool {
+	return s.ContainsExactlyAnyOf(value)
+}
+
+func (s *stringSet) ContainsExactlyAnyOf(values ...string) bool {
+	for _, value := range values {
+		if _, c := s.m[value]; c {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *stringSet) Contains(value string) bool {
 	return s.ContainsAnyOf(value)
 }
 
 func (s *stringSet) ContainsAnyOf(values ...string) bool {
-	for _, value := range values {
-		if _, c := s.m[value]; c {
-			return true
+	for _, c := range s.v {
+		for _, value := range values {
+			if strings.Contains(c, value) {
+				return true
+			}
 		}
 	}
 	return false

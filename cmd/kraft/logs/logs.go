@@ -10,21 +10,19 @@ import (
 	"io"
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
-	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	machinedriveropts "kraftkit.sh/machine/driveropts"
+	mplatform "kraftkit.sh/machine/platform"
 )
 
 type Logs struct {
-	Follow bool `long:"follow" short:"f" usage:"Follow log output"`
+	platform string
+	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
 func New() *cobra.Command {
@@ -39,75 +37,80 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "auto"),
-		"hypervisor",
-		"H",
-		"Set the hypervisor machine driver.",
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"p",
+		"Set the platform virtual machine monitor driver.",
 	)
 
 	return cmd
+}
+
+func (opts *Logs) Pre(cmd *cobra.Command, _ []string) error {
+	opts.platform = cmd.Flag("plat").Value.String()
+	return nil
 }
 
 func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
+	platform := mplatform.PlatformUnknown
 
-	debug := log.Levels()[config.G[config.KraftKit](ctx).Log.Level] >= logrus.DebugLevel
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
-	if err != nil {
-		return fmt.Errorf("could not access machine store: %v", err)
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
+			return err
+		}
+	} else {
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
 	}
 
-	mcfgs, err := store.ListAllMachineConfigs()
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+	}
+
+	controller, err := strategy.NewMachineV1alpha1(ctx)
 	if err != nil {
 		return err
 	}
 
-	var mcfg *machine.MachineConfig
+	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return err
+	}
 
-	for _, candidate := range mcfgs {
-		if machine.MachineName(args[0]) == candidate.Name {
-			mcfg = &candidate
+	var machine *machineapi.Machine
+
+	for _, candidate := range machines.Items {
+		if args[0] == candidate.Name {
+			machine = &candidate
 			break
-		} else if candidate.ID.Short().String() == args[0] {
-			mcfg = &candidate
-			break
-		} else if candidate.ID.String() == args[0] {
-			mcfg = &candidate
+		} else if string(candidate.UID) == args[0] {
+			machine = &candidate
 			break
 		}
 	}
 
-	if mcfg == nil {
+	if machine == nil {
 		return fmt.Errorf("could not find instance %s", args[0])
 	}
 
-	driver, err := machinedriver.New(machinedriver.DriverTypeFromName(mcfg.DriverName),
-		machinedriveropts.WithBackground(false),
-		machinedriveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-		machinedriveropts.WithMachineStore(store),
-		machinedriveropts.WithDebug(debug),
-		machinedriveropts.WithExecOptions(
-			exec.WithStdout(os.Stdout),
-			exec.WithStderr(os.Stderr),
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	mid := mcfg.ID
-
-	// Skip checking the error, if we receive an error, we will not tail the logs.
-	state, _ := driver.State(ctx, mid)
-
-	if opts.Follow && state == machine.MachineStateRunning {
+	if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {
 		ctx, cancel := context.WithCancel(ctx)
 
 		go func() {
-			events, errs, err := driver.ListenStatusUpdate(ctx, mid)
+			events, errs, err := controller.Watch(ctx, machine)
 			if err != nil {
+				cancel()
 				log.G(ctx).Errorf("could not listen for machine updates: %v", err)
 				return
 			}
@@ -117,13 +120,8 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 				// Wait on either channel
 				select {
 				case status := <-events:
-					if err := store.SaveMachineState(mid, status); err != nil {
-						log.G(ctx).Errorf("could not save machine state: %v", err)
-						return
-					}
-
-					switch status {
-					case machine.MachineStateExited, machine.MachineStateDead:
+					switch status.Status.State {
+					case machineapi.MachineStateExited, machineapi.MachineStateFailed:
 						break loop
 					}
 
@@ -137,13 +135,29 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		if tErr := driver.TailWriter(ctx, mid, iostreams.G(ctx).Out); tErr != nil {
-			err = fmt.Errorf("%w. Additionally, while tailing writer: %w", err, tErr)
+		logs, errs, err := controller.Logs(ctx, machine)
+		if err != nil {
+			cancel()
+			return err
 		}
-		cancel()
-		return err
+
+	loop:
+		for {
+			// Wait on either channel
+			select {
+			case line := <-logs:
+				fmt.Fprint(iostreams.G(ctx).Out, line)
+
+			case err := <-errs:
+				log.G(ctx).Errorf("received event error: %v", err)
+				break loop
+
+			case <-ctx.Done():
+				break loop
+			}
+		}
 	} else {
-		fd, err := os.Open(mcfg.LogFile)
+		fd, err := os.Open(machine.Status.LogFile)
 		if err != nil {
 			return err
 		}

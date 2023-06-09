@@ -6,28 +6,27 @@ package stop
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
+	"kraftkit.sh/internal/set"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	"kraftkit.sh/machine/driveropts"
+	mplatform "kraftkit.sh/machine/platform"
 )
 
 type Stop struct {
-	All bool `long:"all" usage:"Remove all machines"`
+	All      bool `long:"all" usage:"Remove all machines"`
+	platform string
 }
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
-		Args:  cobra.MinimumNArgs(0),
 		Long: heredoc.Doc(`
 			Stop one or more running unikernels`),
 		Annotations: map[string]string{
@@ -38,151 +37,92 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().VarP(
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"p",
+		"Set the platform virtual machine monitor driver.",
+	)
+
 	return cmd
 }
 
-type machineWaitGroup struct {
-	lock sync.RWMutex
-	mids []machine.MachineID
-}
-
-func (mwg *machineWaitGroup) Add(mid machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if mwg.Contains(mid) {
-		return
+func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 && !opts.All {
+		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
 
-	mwg.mids = append(mwg.mids, mid)
+	opts.platform = cmd.Flag("plat").Value.String()
+	return nil
 }
-
-func (mwg *machineWaitGroup) Done(needle machine.MachineID) {
-	mwg.lock.Lock()
-	defer mwg.lock.Unlock()
-
-	if !mwg.Contains(needle) {
-		return
-	}
-
-	for i, mid := range mwg.mids {
-		if mid == needle {
-			mwg.mids = append(mwg.mids[:i], mwg.mids[i+1:]...)
-			return
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Wait() {
-	for {
-		if len(mwg.mids) == 0 {
-			break
-		}
-	}
-}
-
-func (mwg *machineWaitGroup) Contains(needle machine.MachineID) bool {
-	for _, mid := range mwg.mids {
-		if mid == needle {
-			return true
-		}
-	}
-
-	return false
-}
-
-var (
-	observations = new(machineWaitGroup)
-	drivers      = make(map[machinedriver.DriverType]machinedriver.Driver)
-)
 
 func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 && !opts.All {
+		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
+	}
+
 	var err error
 
 	ctx := cmd.Context()
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
+	platform := mplatform.PlatformUnknown
+
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
+			return err
+		}
+	} else {
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
+	}
+
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+	}
+
+	controller, err := strategy.NewMachineV1alpha1(ctx)
 	if err != nil {
-		return fmt.Errorf("could not access machine store: %v", err)
+		return err
 	}
 
-	mcfgs, err := store.ListAllMachineConfigs()
+	machines, err := controller.List(ctx, &machineapi.MachineList{})
 	if err != nil {
-		return fmt.Errorf("could not list machines: %v", err)
+		return err
 	}
 
-	var mids []machine.MachineID
+	var stop []machineapi.Machine
 
-	for _, mid1 := range args {
-		found := false
-		for _, mid2 := range mcfgs {
-			if mid1 == mid2.ID.ShortString() || mid1 == mid2.ID.String() || mid1 == string(mid2.Name) {
-				mids = append(mids, mid2.ID)
-				found = true
-			}
-		}
-
-		if !found {
-			return fmt.Errorf("could not find machine %s", mid1)
-		}
-	}
-
-	if len(args) == 0 && opts.All {
-		mids = []machine.MachineID{}
-		for _, mcfg := range mcfgs {
-			mids = append(mids, mcfg.ID)
-		}
-	}
-
-	for _, mid := range mids {
-		mid := mid // loop closure
-
-		if observations.Contains(mid) {
+	for _, machine := range machines.Items {
+		if opts.All {
+			stop = append(stop, machine)
 			continue
 		}
 
-		observations.Add(mid)
-
-		go func() {
-			observations.Add(mid)
-
-			log.G(ctx).Infof("stopping %s", mid.ShortString())
-
-			mcfg := &machine.MachineConfig{}
-			if err := store.LookupMachineConfig(mid, mcfg); err != nil {
-				log.G(ctx).Errorf("could not look up machine config: %v", err)
-				observations.Done(mid)
-				return
-			}
-
-			driverType := machinedriver.DriverTypeFromName(mcfg.DriverName)
-
-			if _, ok := drivers[driverType]; !ok {
-				driver, err := machinedriver.New(driverType,
-					driveropts.WithMachineStore(store),
-					driveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-				)
-				if err != nil {
-					log.G(ctx).Errorf("could not instantiate machine driver for %s: %v", mid.ShortString(), err)
-					observations.Done(mid)
-					return
-				}
-
-				drivers[driverType] = driver
-			}
-
-			driver := drivers[driverType]
-
-			if err := driver.Stop(ctx, mid); err != nil {
-				log.G(ctx).Errorf("could not stop machine %s: %v", mid.ShortString(), err)
-			} else {
-				log.G(ctx).Infof("stopped %s", mid.ShortString())
-			}
-
-			observations.Done(mid)
-		}()
+		if args[0] == machine.Name || args[0] == string(machine.UID) {
+			stop = append(stop, machine)
+		}
 	}
 
-	observations.Wait()
+	if len(stop) == 0 {
+		return fmt.Errorf("machine(s) not found")
+	}
+
+	for _, machine := range stop {
+		if machine.Status.State == machineapi.MachineStateExited {
+			continue
+		} else if _, err := controller.Stop(ctx, &machine); err != nil {
+			log.G(ctx).Errorf("could not stop machine %s: %v", machine.Name, err)
+		} else {
+			fmt.Fprintln(iostreams.G(ctx).Out, machine.Name)
+		}
+	}
 
 	return nil
 }

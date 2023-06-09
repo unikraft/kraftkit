@@ -6,18 +6,15 @@ package ps
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine"
-	machinedriver "kraftkit.sh/machine/driver"
-	machinedriveropts "kraftkit.sh/machine/driveropts"
-	"kraftkit.sh/utils"
+	mplatform "kraftkit.sh/machine/platform"
 
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -25,11 +22,10 @@ import (
 
 type Ps struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the list by architecture"`
-	Hypervisor   string
 	Long         bool   `long:"long" short:"l" usage:"Show more information"`
-	Platform     string `long:"plat" short:"p" usage:"Filter the list by platform"`
-	Quiet        bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
-	ShowAll      bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
+	platform     string
+	Quiet        bool `long:"quiet" short:"q" usage:"Only display machine IDs"`
+	ShowAll      bool `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
 }
 
 func New() *cobra.Command {
@@ -47,104 +43,82 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(machinedriver.DriverNames(), "all"),
-		"hypervisor",
-		"H",
-		"Set the hypervisor driver.",
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		"plat",
+		"p",
+		"Set the platform virtual machine monitor driver.",
 	)
 
 	return cmd
+}
+
+func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
+	opts.platform = cmd.Flag("plat").Value.String()
+	return nil
 }
 
 func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()
-	opts.Hypervisor = cmd.Flag("hypervisor").Value.String()
+	platform := mplatform.PlatformUnknown
 
-	var onlyDriverType *machinedriver.DriverType
-	if opts.Hypervisor == "all" {
-		dt, err := machinedriver.DetectHostHypervisor()
-		if err != nil {
+	if opts.platform == "" || opts.platform == "auto" {
+		var mode mplatform.SystemMode
+		platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
 			return err
 		}
-		onlyDriverType = &dt
 	} else {
-		if !utils.Contains(machinedriver.DriverNames(), opts.Hypervisor) {
-			return fmt.Errorf("unknown hypervisor driver: %s", opts.Hypervisor)
+		var ok bool
+		platform, ok = mplatform.Platforms()[opts.platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
 		}
 	}
 
+	strategy, ok := mplatform.Strategies()[platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+	}
+
+	controller, err := strategy.NewMachineV1alpha1(ctx)
+	if err != nil {
+		return err
+	}
+
+	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return err
+	}
+
 	type psTable struct {
-		id      machine.MachineID
-		image   string
+		id      string
+		name    string
+		kernel  string
 		args    string
 		created string
-		status  machine.MachineState
+		status  machineapi.MachineState
 		mem     string
 		arch    string
 		plat    string
-		driver  string
 	}
 
 	var items []psTable
 
-	store, err := machine.NewMachineStoreFromPath(config.G[config.KraftKit](ctx).RuntimeDir)
-	if err != nil {
-		return err
-	}
-
-	mids, err := store.ListAllMachineConfigs()
-	if err != nil {
-		return err
-	}
-
-	drivers := make(map[machinedriver.DriverType]machinedriver.Driver)
-
-	for mid, mopts := range mids {
-		if onlyDriverType != nil && mopts.DriverName != onlyDriverType.String() {
-			continue
-		}
-
-		driverType := machinedriver.DriverTypeFromName(mopts.DriverName)
-		if driverType == machinedriver.UnknownDriver {
-			log.G(ctx).Warnf("unknown driver %s for %s", driverType.String(), mid)
-			continue
-		}
-
-		if _, ok := drivers[driverType]; !ok {
-			driver, err := machinedriver.New(driverType,
-				machinedriveropts.WithRuntimeDir(config.G[config.KraftKit](ctx).RuntimeDir),
-				machinedriveropts.WithMachineStore(store),
-			)
-			if err != nil {
-				return err
-			}
-
-			drivers[driverType] = driver
-		}
-
-		driver := drivers[driverType]
-
-		state, err := driver.State(ctx, mid)
-		if err != nil {
-			return err
-		}
-
-		if !opts.ShowAll && state != machine.MachineStateRunning {
-			continue
-		}
-
+	for _, machine := range machines.Items {
 		items = append(items, psTable{
-			id:      mid,
-			args:    strings.Join(mopts.Arguments, " "),
-			image:   mopts.Source,
-			status:  state,
-			mem:     strconv.FormatUint(mopts.MemorySize, 10) + "MB",
-			created: humanize.Time(mopts.CreatedAt),
-			arch:    mopts.Architecture,
-			plat:    mopts.Platform,
-			driver:  mopts.DriverName,
+			id:      string(machine.UID),
+			name:    machine.Name,
+			args:    strings.Join(machine.Spec.ApplicationArgs, " "),
+			kernel:  machine.Spec.Kernel,
+			status:  machine.Status.State,
+			mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
+			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
+			arch:    machine.Spec.Architecture,
+			plat:    machine.Spec.Platform,
 		})
 	}
 
@@ -159,8 +133,11 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	table := tableprinter.NewTablePrinter(ctx)
 
 	// Header row
-	table.AddField("MACHINE ID", nil, cs.Bold)
-	table.AddField("IMAGE", nil, cs.Bold)
+	if opts.Long {
+		table.AddField("MACHINE ID", nil, cs.Bold)
+	}
+	table.AddField("NAME", nil, cs.Bold)
+	table.AddField("KERNEL", nil, cs.Bold)
 	table.AddField("ARGS", nil, cs.Bold)
 	table.AddField("CREATED", nil, cs.Bold)
 	table.AddField("STATUS", nil, cs.Bold)
@@ -168,13 +145,15 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	if opts.Long {
 		table.AddField("ARCH", nil, cs.Bold)
 		table.AddField("PLAT", nil, cs.Bold)
-		table.AddField("DRIVER", nil, cs.Bold)
 	}
 	table.EndRow()
 
 	for _, item := range items {
-		table.AddField(item.id.ShortString(), nil, nil)
-		table.AddField(item.image, nil, nil)
+		if opts.Long {
+			table.AddField(item.id, nil, nil)
+		}
+		table.AddField(item.name, nil, nil)
+		table.AddField(item.kernel, nil, nil)
 		table.AddField(item.args, nil, nil)
 		table.AddField(item.created, nil, nil)
 		table.AddField(item.status.String(), nil, nil)
@@ -182,7 +161,6 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		if opts.Long {
 			table.AddField(item.arch, nil, nil)
 			table.AddField(item.plat, nil, nil)
-			table.AddField(item.driver, nil, nil)
 		}
 		table.EndRow()
 	}
