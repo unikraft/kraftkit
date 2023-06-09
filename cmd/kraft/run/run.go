@@ -276,6 +276,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		machine.Spec.Architecture = targ.Architecture().Name()
 		machine.Spec.Platform = targ.Platform().Name()
 		machine.Spec.Kernel = fmt.Sprintf("%s://%s", pm.Format(), entity)
+		if opts.InitRd == "" && targ.Initrd() != nil {
+			machine.Spec.Rootfs = targ.Initrd().Output
+		}
 
 		// Use the symbolic debuggable kernel image?
 		if opts.WithKernelDbg {
