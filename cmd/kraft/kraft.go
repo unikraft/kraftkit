@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/cmd/kraft/login"
 	"kraftkit.sh/cmd/kraft/logs"
 	"kraftkit.sh/cmd/kraft/menu"
+	"kraftkit.sh/cmd/kraft/net"
 	"kraftkit.sh/cmd/kraft/pkg"
 	"kraftkit.sh/cmd/kraft/prepare"
 	"kraftkit.sh/cmd/kraft/properclean"
@@ -81,6 +82,7 @@ func New() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
 	cmd.AddCommand(events.New())
 	cmd.AddCommand(logs.New())
+	cmd.AddCommand(net.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
