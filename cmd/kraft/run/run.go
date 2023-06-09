@@ -97,6 +97,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 
 	if opts.platform == "" || opts.platform == "auto" {
 		var mode mplatform.SystemMode
@@ -177,11 +181,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// Otherwise use the current working directory
 	} else {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
 		if app.IsWorkdirInitialized(cwd) {
 			workdir = cwd
 			appArgs = args
@@ -195,9 +194,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		appArgs = args[1:]
+		entity = filepath.Join(cwd, entity)
 		machine.Spec.Architecture = opts.Architecture
 		machine.Spec.Platform = opts.platform
-		machine.Spec.Kernel = "kernel://" + entity
+		machine.Spec.Kernel = "kernel://" + filepath.Base(entity)
 		machine.Status.KernelPath = entity
 
 		// c). use the provided package manager
