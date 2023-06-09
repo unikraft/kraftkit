@@ -412,6 +412,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 				case err := <-errs:
 					log.G(ctx).Errorf("received event error: %v", err)
+					signals.RequestShutdown()
 					break loop
 
 				case <-ctx.Done():
@@ -444,6 +445,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 			case err := <-errs:
 				log.G(ctx).Errorf("received event error: %v", err)
+				signals.RequestShutdown()
 				break loop
 
 			case <-ctx.Done():
