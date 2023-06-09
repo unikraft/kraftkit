@@ -22,8 +22,6 @@ message CapabilitiesRequest {
 	Arguments arguments = 1 [ json_name = "arguments,omitempty" ];
 }
 
-message CapabilitiesResponse {}
-
 message QuitRequest {
 	option (execute) = "quit";
 }

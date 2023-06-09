@@ -123,7 +123,7 @@ service QEMUMachineProtocol {
 	// <- { "return": {} }
 	//
 	// Note: This command must be issued before issuing any other command.
-	rpc Capabilities(CapabilitiesRequest) returns (CapabilitiesResponse) {}
+	rpc Capabilities(CapabilitiesRequest) returns (google.protobuf.Any) {}
 
 	// # Show KVM information
 	//

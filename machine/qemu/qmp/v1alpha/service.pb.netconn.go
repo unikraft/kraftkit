@@ -288,7 +288,7 @@ func (c *QEMUMachineProtocolClient) SystemWakeup(req SystemWakeupRequest) (*any,
 	return &res, nil
 }
 
-func (c *QEMUMachineProtocolClient) Capabilities(req CapabilitiesRequest) (*CapabilitiesResponse, error) {
+func (c *QEMUMachineProtocolClient) Capabilities(req CapabilitiesRequest) (*any, error) {
 	var b []byte
 	var err error
 
@@ -310,7 +310,7 @@ func (c *QEMUMachineProtocolClient) Capabilities(req CapabilitiesRequest) (*Capa
 		return nil, err
 	}
 
-	var res CapabilitiesResponse
+	var res any
 	b, err = c.recv.ReadBytes('\n')
 	if err != nil {
 		return nil, err
