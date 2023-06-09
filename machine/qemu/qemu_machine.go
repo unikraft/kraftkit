@@ -46,16 +46,16 @@ const (
 )
 
 type QemuMachine struct {
-	Type          QemuMachineType          `json_name:"type,omitempty"`
-	Accelerators  []QemuMachineAccelerator `json_name:"accelerator,omitempty"`
-	VMPort        QemuMachineOptOnOffAuto  `json_name:"vmport,omitempty"`
-	DumpGuestCore bool                     `json_name:"dump-guest-core,omitempty"`
-	MemMerge      bool                     `json_name:"mem-merge,omitempty"`
-	AESKeyWrap    bool                     `json_name:"qes-key-wrap,omitempty"`
-	DEAKeyWrap    bool                     `json_name:"dea-key-wrap,omitempty"`
-	SupressVMDesc bool                     `json_name:"suppress-vmdesc,omitempty"`
-	NVDIMM        bool                     `json_name:"nvdimm,omitempty"`
-	HMAT          bool                     `json_name:"hmat,omitempty"`
+	Type          QemuMachineType          `json:"type,omitempty"`
+	Accelerators  []QemuMachineAccelerator `json:"accelerator,omitempty"`
+	VMPort        QemuMachineOptOnOffAuto  `json:"vmport,omitempty"`
+	DumpGuestCore bool                     `json:"dump_guest_core,omitempty"`
+	MemMerge      bool                     `json:"mem_merge,omitempty"`
+	AESKeyWrap    bool                     `json:"qes_key_wrap,omitempty"`
+	DEAKeyWrap    bool                     `json:"dea_key_wrap,omitempty"`
+	SupressVMDesc bool                     `json:"suppress_vmdesc,omitempty"`
+	NVDIMM        bool                     `json:"nvdimm,omitempty"`
+	HMAT          bool                     `json:"hmat,omitempty"`
 }
 
 // String returns a QEMU command-line compatible -machine flag value
