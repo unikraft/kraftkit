@@ -453,6 +453,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
+			if _, err := controller.Stop(ctx, machine); err != nil {
+				return fmt.Errorf("could not stop: %v", err)
+			}
 			if _, err := controller.Delete(ctx, machine); err != nil {
 				return fmt.Errorf("could not remove: %v", err)
 			}
