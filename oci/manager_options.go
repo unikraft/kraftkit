@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/docker/docker/api/types"
+	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/genuinetools/reg/repoutils"
 	"github.com/sirupsen/logrus"
 	"kraftkit.sh/config"
@@ -83,7 +83,7 @@ func WithDefaultRegistries() OCIManagerOption {
 func WithDefaultAuth() OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
 		if manager.auths == nil {
-			manager.auths = make(map[string]types.AuthConfig)
+			manager.auths = make(map[string]regtypes.AuthConfig)
 		}
 
 		for domain, auth := range config.G[config.KraftKit](ctx).Auth {
@@ -110,14 +110,14 @@ func WithRegistries(registries ...string) OCIManagerOption {
 
 // WithDockerConfig sets the authentication configuration to use when making
 // calls to authenticated registries.
-func WithDockerConfig(auth types.AuthConfig) OCIManagerOption {
+func WithDockerConfig(auth regtypes.AuthConfig) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
 		if auth.ServerAddress == "" {
 			return fmt.Errorf("cannot use auth config without server address")
 		}
 
 		if manager.auths == nil {
-			manager.auths = make(map[string]types.AuthConfig, 1)
+			manager.auths = make(map[string]regtypes.AuthConfig, 1)
 		}
 
 		manager.auths[auth.ServerAddress] = auth
