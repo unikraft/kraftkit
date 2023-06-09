@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
@@ -16,8 +17,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli"
@@ -25,6 +28,7 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
+	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -35,17 +39,23 @@ import (
 )
 
 type Run struct {
-	Architecture  string `long:"arch" short:"m" usage:"Set the architecture"`
-	Detach        bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
-	DisableAccel  bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
-	InitRd        string `long:"initrd" short:"i" usage:"Use the specified initrd"`
-	Memory        string `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
-	Name          string `long:"name" short:"n" usage:"Name of the instance"`
-	platform      string
-	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
-	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
+	Architecture    string `long:"arch" short:"m" usage:"Set the architecture"`
+	Detach          bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
+	DisableAccel    bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
+	InitRd          string `long:"initrd" usage:"Use the specified initrd"`
+	IP              string `long:"ip" usage:"Assign the provided IP address"`
+	MacAddress      string `long:"mac" usage:"Assign the provided MAC address"`
+	Memory          string `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
+	Name            string `long:"name" short:"n" usage:"Name of the instance"`
+	Network         string `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	networkDriver   string
+	networkName     string
+	networkStrategy *network.Strategy
+	platform        string
+	Remove          bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Target          string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	WithKernelDbg   bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	KernelArgs      []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
 }
 
 func New() *cobra.Command {
@@ -79,6 +89,25 @@ func New() *cobra.Command {
 }
 
 func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
+	if opts.Network == "" && opts.IP != "" {
+		return fmt.Errorf("cannot assign IP address without providing --network")
+	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
+		return fmt.Errorf("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
+	}
+
+	if opts.Network != "" {
+		// TODO(nderjung): With a little bit more work, the driver can be
+		// automatically detected.
+		parts := strings.SplitN(opts.Network, ":", 2)
+		opts.networkDriver, opts.networkName = parts[0], parts[1]
+
+		var ok bool
+		opts.networkStrategy, ok = network.Strategies()[opts.networkDriver]
+		if !ok {
+			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
+		}
+	}
+
 	opts.platform = cmd.Flag("plat").Value.String()
 
 	ctx := cmd.Context()
@@ -131,6 +160,95 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				Requests: corev1.ResourceList{},
 			},
 		},
+	}
+
+	// Was a network specified? E.g. --network=bridge:kraft0
+	if opts.Network != "" {
+		netcontroller, err := opts.networkStrategy.NewNetworkV1alpha1(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Try to discover the user-provided network.
+		found, err := netcontroller.Get(ctx, &networkapi.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: opts.networkName,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		// Generate the UID pre-emptively so that we can uniquely reference the
+		// network interface which will allow us to clean it up later. Additionally,
+		// it's OK if the IP or MAC address are empty, the network controller will
+		// populate values if they are unset and will populate with new values
+		// following the returning from the Update operation.
+		newIface := networkapi.NetworkInterfaceTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: uuid.NewUUID(),
+			},
+			Spec: networkapi.NetworkInterfaceSpec{
+				IP:         opts.IP,
+				MacAddress: opts.MacAddress,
+			},
+		}
+
+		// Update the list of interfaces
+		if found.Spec.Interfaces == nil {
+			found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{}
+		}
+		found.Spec.Interfaces = append(found.Spec.Interfaces, newIface)
+
+		// Update the network with the new interface.
+		found, err = netcontroller.Update(ctx, found)
+		if err != nil {
+			return err
+		}
+
+		// Only use the single new interface.
+		for _, iface := range found.Spec.Interfaces {
+			if iface.UID == newIface.UID {
+				newIface = iface
+				break
+			}
+		}
+
+		// Set the interface on the machine.
+		found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{newIface}
+		machine.Spec.Networks = []networkapi.NetworkSpec{found.Spec}
+
+		// Set up a clean up method to remove the interface if the machine exits and
+		// we are requesting to remove the machine.
+		if opts.Remove && !opts.Detach {
+			defer func() {
+				// Get the latest version of the network.
+				found, err := netcontroller.Get(ctx, &networkapi.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: opts.networkName,
+					},
+				})
+				if err != nil {
+					log.G(ctx).Errorf("could not get network information for %s: %v", opts.networkName, err)
+					return
+				}
+
+				// Remove the new network interface
+				for i, iface := range found.Spec.Interfaces {
+					if iface.UID == newIface.UID {
+						ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
+						ret = append(ret, found.Spec.Interfaces[:i]...)
+						found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
+						break
+					}
+				}
+
+				if _, err = netcontroller.Update(ctx, found); err != nil {
+					log.G(ctx).Errorf("could not update network %s: %v", opts.networkName, err)
+					return
+				}
+			}()
+		}
 	}
 
 	controller, err := strategy.NewMachineV1alpha1(ctx)
