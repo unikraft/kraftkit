@@ -56,7 +56,7 @@ func NewQemuConfig(qopts ...QemuOption) (*QemuConfig, error) {
 
 func WithAppend(append ...string) QemuOption {
 	return func(qc *QemuConfig) error {
-		qc.Append = qc.Append + " " + strings.Join(append, " ")
+		qc.Append = strings.Join(append, " ")
 		return nil
 	}
 }
