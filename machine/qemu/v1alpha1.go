@@ -586,7 +586,9 @@ func (service *machineV1alpha1Service) logs(ctx context.Context, machine *machin
 			break
 		}
 
-		*logs <- string(s[discarded:])
+		if len(s) > discarded {
+			*logs <- string(s[discarded:])
+		}
 	}
 
 	for {
