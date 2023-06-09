@@ -173,7 +173,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			ocispec.MediaTypeImageLayer,
 			popts.Initrd(),
 			WellKnownInitrdPath,
-			WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
+			WithLayerAnnotation(AnnotationKernelInitrdPath, WellKnownInitrdPath),
 		)
 		if err != nil {
 			return nil, err
