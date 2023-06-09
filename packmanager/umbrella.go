@@ -59,7 +59,7 @@ func NewUmbrellaManager(ctx context.Context) (PackageManager, error) {
 		if err != nil {
 			log.G(ctx).
 				WithField("format", format).
-				Warnf("could not initialize package manager: %v", err)
+				Debugf("could not initialize package manager: %v", err)
 			continue
 		}
 

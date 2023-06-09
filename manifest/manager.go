@@ -330,7 +330,7 @@ func (m manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Query
 		} else {
 			more, err := NewPackageFromManifest(manifest, mopts...)
 			if err != nil {
-				log.G(ctx).Warn(err)
+				log.G(ctx).Debug(err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
