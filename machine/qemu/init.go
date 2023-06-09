@@ -449,6 +449,17 @@ func init() {
 	// gob.Register(QemuDisplayEglHeadless{})
 	gob.Register(QemuDisplayNone{})
 
+	// Network Devices
+	// gob.Register(QemuNetDevBridge{})
+	// gob.Register(QemuNetDevHubport{})
+	// gob.Register(QemuNetDevL2tpv3{})
+	// gob.Register(QemuNetDevSocket{})
+	// gob.Register(QemuNetDevTap{})
+	// gob.Register(QemuNetDevUser{})
+	// gob.Register(QemuNetDevVde{})
+	// gob.Register(QemuNetDevVhostUser{})
+	// gob.Register(QemuNetDevVhostVdpa{})
+
 	// CLI configuration
 	gob.Register(QemuConfig{})
 }

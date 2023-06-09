@@ -21,6 +21,7 @@ type QemuConfig struct {
 	Memory     QemuMemory        `flag:"-m"           json:"memory,omitempty"`
 	Monitor    QemuHostCharDev   `flag:"-monitor"     json:"monitor,omitempty"`
 	Name       string            `flag:"-name"        json:"name,omitempty"`
+	NetDevs    []QemuNetDev      `flag:"-netdev"      json:"netdev,omitempty"`
 	NoACPI     bool              `flag:"-no-acpi"     json:"no_acpi,omitempty"`
 	NoDefaults bool              `flag:"-nodefaults"  json:"no_defaults,omitempty"`
 	NoGraphic  bool              `flag:"-nographic"   json:"no_graphic,omitempty"`
@@ -151,6 +152,18 @@ func WithMonitor(chardev QemuHostCharDev) QemuOption {
 func WithName(name string) QemuOption {
 	return func(qc *QemuConfig) error {
 		qc.Name = name
+		return nil
+	}
+}
+
+func WithNetDevice(netdev QemuNetDev) QemuOption {
+	return func(qc *QemuConfig) error {
+		if qc.NetDevs == nil {
+			qc.NetDevs = make([]QemuNetDev, 0)
+		}
+
+		qc.NetDevs = append(qc.NetDevs, netdev)
+
 		return nil
 	}
 }
