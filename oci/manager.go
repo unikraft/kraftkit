@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/docker/docker/api/types"
+	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -32,7 +32,7 @@ import (
 
 type ociManager struct {
 	registries []string
-	auths      map[string]types.AuthConfig
+	auths      map[string]regtypes.AuthConfig
 	handle     func(ctx context.Context) (context.Context, handler.Handler, error)
 }
 
@@ -89,7 +89,7 @@ func (manager ociManager) Unpack(ctx context.Context, entity pack.Package, opts 
 // from a provided domain representing a registry.
 func (manager ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 	var err error
-	var auth types.AuthConfig
+	var auth regtypes.AuthConfig
 
 	if a, ok := manager.auths[domain]; ok {
 		log.G(ctx).
