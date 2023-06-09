@@ -162,9 +162,8 @@ func NewProjectOptions(opts ...ProjectOption) (*ProjectOptions, error) {
 	}
 
 	popts.interpolate = &interp.Options{
-		Substitute:      template.Substitute,
-		LookupValue:     popts.LookupConfig,
-		TypeCastMapping: interpolateTypeCastMapping,
+		Substitute:  template.Substitute,
+		LookupValue: popts.LookupConfig,
 	}
 
 	for _, o := range opts {
