@@ -24,6 +24,7 @@ require (
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
+	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/genuinetools/reg v0.16.1
 	github.com/go-git/go-git/v5 v5.6.1
@@ -52,6 +53,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
+	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.8.0
@@ -156,6 +158,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/whilp/git-urls v1.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
