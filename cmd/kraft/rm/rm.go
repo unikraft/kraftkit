@@ -13,7 +13,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/set"
-	"kraftkit.sh/internal/waitgroup"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
 )
@@ -48,8 +48,6 @@ func New() *cobra.Command {
 
 	return cmd
 }
-
-var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
 
 func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
@@ -93,44 +91,38 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var remove []*machineapi.Machine
+	var remove []machineapi.Machine
 
 	for _, machine := range machines.Items {
 		if len(args) == 0 && opts.All {
-			remove = append(remove, &machine)
+			remove = append(remove, machine)
 			continue
 		}
 
 		if args[0] == machine.Name || args[0] == string(machine.UID) {
-			remove = append(remove, &machine)
+			remove = append(remove, machine)
 		}
+	}
+
+	if len(remove) == 0 {
+		return fmt.Errorf("machine(s) not found")
 	}
 
 	for _, machine := range remove {
-		machine := machine // loop closure
-
-		if observations.Contains(machine) {
-			continue
+		// Stop the machine before deleting it.
+		if machine.Status.State == machineapi.MachineStateRunning {
+			if _, err := controller.Stop(ctx, &machine); err != nil {
+				log.G(ctx).Errorf("could not stop machine %s: %v", machine.Name, err)
+			}
 		}
 
-		observations.Add(machine)
-
-		go func() {
-			observations.Add(machine)
-
-			log.G(ctx).Infof("deleting %s", machine.Name)
-
-			if _, err := controller.Delete(ctx, machine); err != nil {
-				log.G(ctx).Errorf("could not delete machine %s: %v", machine.Name, err)
-			} else {
-				log.G(ctx).Infof("deleted %s", machine.Name)
-			}
-
-			observations.Done(machine)
-		}()
+		// Now delete the machine.
+		if _, err := controller.Delete(ctx, &machine); err != nil {
+			log.G(ctx).Errorf("could not delete machine %s: %v", machine.Name, err)
+		} else {
+			fmt.Fprintln(iostreams.G(ctx).Out, machine.Name)
+		}
 	}
-
-	observations.Wait()
 
 	return nil
 }

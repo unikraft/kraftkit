@@ -27,7 +27,6 @@ func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
-		Args:  cobra.MaximumNArgs(1),
 		Long: heredoc.Doc(`
 			Stop one or more running unikernels`),
 		Annotations: map[string]string{
@@ -54,6 +53,10 @@ func (opts *Stop) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 && !opts.All {
+		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
+	}
+
 	var err error
 
 	ctx := cmd.Context()
