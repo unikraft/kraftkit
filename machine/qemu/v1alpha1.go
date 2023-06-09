@@ -33,9 +33,11 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/retrytimeout"
+	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/machine/qemu/qmp"
 	qmpv1alpha "kraftkit.sh/machine/qemu/qmp/v1alpha"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
+	"kraftkit.sh/unikraft/export/v0/uknetdev"
 )
 
 const (
@@ -170,6 +172,66 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
 	if err != nil {
 		return machine, err
+	}
+
+	if len(machine.Spec.Networks) > 0 {
+		// Start MAC addresses iteratively.  Each interface will have the last
+		// hexdecimal byte increase by 1 starting at 1, allowing for easy-to-spot
+		// interface IDs from the MAC address.  The return value below returns `:00`
+		// as the last byte.
+		startMac, err := macaddr.GenerateMacAddress(true)
+		if err != nil {
+			return machine, err
+		}
+
+		i := 0 // host network ID.
+
+		// Iterate over each interface of each network interface associated with
+		// this machine and attach it as a device.
+		for _, network := range machine.Spec.Networks {
+			for _, iface := range network.Interfaces {
+				mac := iface.Spec.MacAddress
+				if mac == "" {
+					// Increase the MAC address value by 1 such that we are able to
+					// identify interface IDs.
+					startMac = macaddr.IncrementMacAddress(startMac)
+					mac = startMac.String()
+				}
+
+				hostnetid := fmt.Sprintf("hostnet%d", i)
+				qopts = append(qopts,
+					// TODO(nderjung): The network device should be customizable based on
+					// the network spec or machine spec.  Additional insight can be provided
+					// by inspecting the KConfig options.  Potentially the MachineSpec is
+					// updated to reflect different systems or provide access to the
+					// KConfig values.
+					WithDevice(QemuDeviceVirtioNetPci{
+						Netdev: hostnetid,
+						Mac:    mac,
+					}),
+					WithNetDevice(QemuNetDevTap{
+						Id:         hostnetid,
+						Ifname:     iface.Spec.IfName,
+						Br:         network.IfName,
+						Script:     "no", // Disable execution
+						Downscript: "no", // Disable execution
+					}),
+				)
+
+				// Assign the first interface statically via command-line arguments, also
+				// checking if the built-in arguments for
+				if !kernelArgs.Contains(uknetdev.ParamIpv4Addr) && i == 0 {
+					kernelArgs = append(kernelArgs,
+						uknetdev.ParamIpv4Addr.WithValue(iface.Spec.IP),
+						uknetdev.ParamIpv4GwAddr.WithValue(network.Gateway),
+						uknetdev.ParamIpv4SubnetMask.WithValue(network.Netmask),
+					)
+				}
+
+				// Increment the host network ID for additional interfaces.
+				i++
+			}
+		}
 	}
 
 	// TODO(nderjung): This is standard "Unikraft" positional argument syntax
