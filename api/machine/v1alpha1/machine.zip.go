@@ -10,6 +10,8 @@ import (
 
 	zip "api.zip"
 	corev1 "k8s.io/api/core/v1"
+
+	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 )
 
 type (
@@ -43,6 +45,9 @@ type MachineSpec struct {
 	// Application arguments are runtime arguments provided to the application and
 	// not the kernel.
 	ApplicationArgs []string `json:"args,omitempty"`
+
+	// Networks associated with this machine.
+	Networks []networkv1alpha1.NetworkSpec `json:"interfaces,omitempty"`
 
 	// Resources describes the compute resources (requests and limits) required by
 	// this machine.
