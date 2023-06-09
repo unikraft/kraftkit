@@ -47,7 +47,11 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Stop) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 && !opts.All {
+		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
+	}
+
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
@@ -96,7 +100,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 	var stop []machineapi.Machine
 
 	for _, machine := range machines.Items {
-		if len(args) == 0 && opts.All {
+		if opts.All {
 			stop = append(stop, machine)
 			continue
 		}
