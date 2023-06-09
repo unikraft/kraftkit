@@ -421,6 +421,15 @@ unpack:
 
 		// Set the kernel, since it is a well-known within the destination path
 		ocipack.kernel = filepath.Join(popts.Workdir(), WellKnownKernelPath)
+
+		// Set the initrd if available
+		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
+		if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
+			ocipack.initrd, err = initrd.NewFromFile(initrdPath)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
