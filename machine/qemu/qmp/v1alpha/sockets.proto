@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file expect in compliance with the License.
+syntax = "proto3";
+
+package qmp.v1alpha;
+
+import "machine/qemu/qmp/v1alpha/descriptor.proto";
+
+option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+
+// Available SocketAddress types
+//
+// Since: 2.9
+enum SocketAddressType {
+	// Internet address
+	SOCKET_ADDRESS_TYPE_INET = 0 [ (json_name) = "inet" ];
+	// Unix domain socket
+	SOCKET_ADDRESS_TYPE_UNIX = 1 [ (json_name) = "unix" ];
+	// VMCI address
+	SOCKET_ADDRESS_TYPE_VSOCK = 2 [ (json_name) = "vsock" ];
+	// decimal is for file descriptor number, otherwise a file descriptor name.
+	// Named file descriptors are permitted in monitor commands, in combination
+	// with the 'getfd' command. Decimal file descriptors are permitted at startup
+	// or other contexts where no monitor context is active.
+	SOCKET_ADDRESS_TYPE_FD = 3 [ (json_name) = "fd" ];
+}
+
+// Captures a socket address or address range in the Internet
+// namespace.
+//
+// Since: 1.3
+message InetSocketAddress {
+	// host part of the address
+	string host = 1 [ json_name = "host" ];
+	// port part of the address
+	string port = 2 [ json_name = "port" ];
+	// true if the host/port are guaranteed to be numeric, false if name
+	// resolution should be attempted.  Defaults to false. (Since 2.9)
+	bool numeric = 3 [ json_name = "numeric" ];
+	// If present, this is range of possible addresses, with port between `port`
+	// and `to`.
+	int32 to = 4 [ json_name = "to" ];
+	// whether to accept IPv4 addresses, default try both IPv4 and IPv6
+	bool ipv4 = 5 [ json_name = "ipv4" ];
+	// whether to accept IPv6 addresses, default try both IPv4 and IPv6
+	bool ipv6 = 6 [ json_name = "ipv6" ];
+	// enable keep-alive when connecting to this socket.  Not supported for
+	// passive sockets.  (Since 4.2)
+	bool keep_alive = 7 [ json_name = "keep-alive" ];
+	// enable multi-path TCP. (Since 6.1)
+	bool mptcp = 8 [ json_name = "mptcp" ];
+}
+
+// Captures a socket address in the local ("Unix socket") namespace.
+//
+// Since: 1.3
+message UnixSocketAddress {
+	// filesystem path to use
+	string path = 1 [ json_name = "path" ];
+	// if true, this is a Linux abstract socket address.  `path` will be prefixed
+	// by a null byte, and optionally padded with null bytes.  Defaults to false.
+	// (Since 5.1)
+	bool abstract = 2 [ json_name = "abstract" ];
+	// if false, pad an abstract socket address with enough null bytes to make it
+	// fill struct sockaddr_un member sun_path. Defaults to true.  (Since 5.1)
+	bool tight = 3 [ json_name = "tight" ];
+}
+
+// Captures a socket address in the vsock namespace.
+//
+// Note: string types are used to allow for possible future hostname or
+//     service resolution support.
+//
+// Since: 2.8
+message VsockSocketAddress {
+	// unique host identifier
+	string cid = 1 [ json_name = "cid" ];
+	// port
+	string port = 2 [ json_name = "port" ];
+}
+
+// Captures the address of a socket, which could also be a named file
+// descriptor
+//
+// Since: 2.9
+message SocketAddress {
+	SocketAddressType  type  = 1 [ json_name = "type" ];
+	InetSocketAddress  inet  = 2 [ json_name = "inet" ];
+	UnixSocketAddress  unix  = 3 [ json_name = "unix" ];
+	VsockSocketAddress vsock = 4 [ json_name = "vsock" ];
+	string             fd    = 5 [ json_name = "fd" ];
+}

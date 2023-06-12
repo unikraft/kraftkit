@@ -9,12 +9,15 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
@@ -108,7 +111,57 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("machine(s) not found")
 	}
 
+	netcontrollers := make(map[string]networkapi.NetworkService, 0)
+
 	for _, machine := range remove {
+		// First remove all the associated network interfaces.
+		for _, net := range machine.Spec.Networks {
+			netcontroller, ok := netcontrollers[net.Driver]
+
+			// Store the instantiation of the network controller strategy.
+			if !ok {
+				strategy, ok := network.Strategies()[net.Driver]
+				if !ok {
+					return fmt.Errorf("unknown machine network driver: %s", net.Driver)
+				}
+
+				netcontroller, err = strategy.NewNetworkV1alpha1(ctx)
+				if err != nil {
+					return err
+				}
+
+				netcontrollers[net.Driver] = netcontroller
+			}
+
+			// Get the latest version of the network.
+			found, err := netcontroller.Get(ctx, &networkapi.Network{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: net.IfName,
+				},
+			})
+			if err != nil {
+				log.G(ctx).Warnf("could not get network information for %s: %v", net.IfName, err)
+				continue
+			}
+
+			for _, machineIface := range net.Interfaces {
+				// Remove the associated network interfaces
+				for i, netIface := range found.Spec.Interfaces {
+					if machineIface.UID == netIface.UID {
+						ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
+						ret = append(ret, found.Spec.Interfaces[:i]...)
+						found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
+						break
+					}
+				}
+
+				if _, err = netcontroller.Update(ctx, found); err != nil {
+					log.G(ctx).Warnf("could not update network %s: %v", net.IfName, err)
+					continue
+				}
+			}
+		}
+
 		// Stop the machine before deleting it.
 		if machine.Status.State == machineapi.MachineStateRunning {
 			if _, err := controller.Stop(ctx, &machine); err != nil {

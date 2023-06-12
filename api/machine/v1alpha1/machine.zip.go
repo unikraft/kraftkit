@@ -10,7 +10,37 @@ import (
 
 	zip "api.zip"
 	corev1 "k8s.io/api/core/v1"
+
+	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 )
+
+// MachinePort represents a network port in a single container.
+type MachinePort struct {
+	// If specified, this must be an IANA_SVC_NAME and unique within the host.
+	// Each named port on the host must have a unique name. Name for the port that
+	// can be referred to by services.
+	Name string `json:"name,omitempty"`
+
+	// Number of port to expose on the host.  If specified, this must be a valid
+	// port number, 0 < x < 65536.
+	HostPort int32 `json:"hostPort,omitempty"`
+
+	// Number of port to expose on the machine's IP address. This must be a valid
+	// port number, 0 < x < 65536.
+	MachinePort int32 `json:"machinePort"`
+
+	// Protocol for port. Must be UDP or TCP. Defaults to "TCP".
+	Protocol corev1.Protocol `json:"protocol,omitempty"`
+
+	// What host IP to bind the external port to.
+	HostIP string `json:"hostIP,omitempty"`
+
+	// MAC address of the port.
+	MacAddress string `json:"macAddress,omitempty"`
+}
+
+// MachinePorts is a slice of MachinePort
+type MachinePorts []MachinePort
 
 type (
 	// Machine is the mutable API object that represents a machine instance.
@@ -43,6 +73,12 @@ type MachineSpec struct {
 	// Application arguments are runtime arguments provided to the application and
 	// not the kernel.
 	ApplicationArgs []string `json:"args,omitempty"`
+
+	// Ports lists the ports and their mappings
+	Ports MachinePorts `json:"ports,omitempty"`
+
+	// Networks associated with this machine.
+	Networks []networkv1alpha1.NetworkSpec `json:"interfaces,omitempty"`
 
 	// Resources describes the compute resources (requests and limits) required by
 	// this machine.

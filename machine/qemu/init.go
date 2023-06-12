@@ -322,7 +322,7 @@ func init() {
 	// gob.Register(QemuDeviceTulip{})
 	// gob.Register(QemuDeviceUsbNet{})
 	// gob.Register(QemuDeviceVirtioNetDevice{})
-	// gob.Register(QemuDeviceVirtioNetPci{})
+	gob.Register(QemuDeviceVirtioNetPci{})
 	// gob.Register(QemuDeviceVirtioNetPciNonTransitional{})
 	// gob.Register(QemuDeviceVirtioNetPciTransitional{})
 	// gob.Register(QemuDeviceVmxnet3{})
@@ -448,6 +448,17 @@ func init() {
 	// gob.Register(QemuDisplayCurses{})
 	// gob.Register(QemuDisplayEglHeadless{})
 	gob.Register(QemuDisplayNone{})
+
+	// Network Devices
+	// gob.Register(QemuNetDevBridge{})
+	// gob.Register(QemuNetDevHubport{})
+	// gob.Register(QemuNetDevL2tpv3{})
+	// gob.Register(QemuNetDevSocket{})
+	gob.Register(QemuNetDevTap{})
+	gob.Register(QemuNetDevUser{})
+	// gob.Register(QemuNetDevVde{})
+	// gob.Register(QemuNetDevVhostUser{})
+	// gob.Register(QemuNetDevVhostVdpa{})
 
 	// CLI configuration
 	gob.Register(QemuConfig{})

@@ -12,11 +12,13 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 )
 
 func init() {
 	utilruntime.Must(zip.Register(
 		machinev1alpha1.AddToScheme,
+		networkv1alpha1.AddToScheme,
 	))
 
 	gob.Register(resource.Quantity{})

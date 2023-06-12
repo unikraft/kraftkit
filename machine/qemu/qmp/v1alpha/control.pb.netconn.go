@@ -29,9 +29,6 @@ type CapabilitiesRequestArguments struct {
 	Enable []Capability `json:"enable"`
 }
 
-type CapabilitiesResponse struct {
-}
-
 type QuitRequest struct {
 	Execute string `json:"execute" default:"quit"`
 }

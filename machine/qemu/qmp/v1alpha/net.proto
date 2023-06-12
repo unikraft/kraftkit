@@ -1,0 +1,599 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file expect in compliance with the License.
+syntax = "proto3";
+
+package qmp.v1alpha;
+
+import "machine/qemu/qmp/v1alpha/descriptor.proto";
+import "machine/qemu/qmp/v1alpha/sockets.proto";
+
+option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+
+message SetLinkRequest {
+	option (execute) = "set_link";
+	message Arguments {
+		string name = 1 [ json_name = "name"];
+		bool   up   = 2 [ json_name = "up" ];
+	}
+	Arguments arguments = 1 [ json_name = "arguments,omitempty" ];
+}
+
+// Available netdev drivers.
+enum NetClientDriver {
+	NET_CLIENT_DRIVER_NONE       =  0 [ (json_name) = "none" ];
+	NET_CLIENT_DRIVER_NIC        =  1 [ (json_name) = "nic" ];
+	NET_CLIENT_DRIVER_USER       =  2 [ (json_name) = "user" ];
+	NET_CLIENT_DRIVER_TAP        =  3 [ (json_name) = "tap" ];
+	NET_CLIENT_DRIVER_L2TPV3     =  4 [ (json_name) = "l2tpv3" ];
+	NET_CLIENT_DRIVER_SOCKET     =  5 [ (json_name) = "socket" ];
+	NET_CLIENT_DRIVER_STREAM     =  6 [ (json_name) = "stream" ];
+	NET_CLIENT_DRIVER_DGRAM      =  7 [ (json_name) = "dgram" ];
+	NET_CLIENT_DRIVER_VDE        =  8 [ (json_name) = "vde" ];
+	NET_CLIENT_DRIVER_BRIDGE     =  9 [ (json_name) = "bridge" ];
+	NET_CLIENT_DRIVER_HUBPORT    = 10 [ (json_name) = "hubport" ];
+	NET_CLIENT_DRIVER_NETMAP     = 11 [ (json_name) = "netmap" ];
+	NET_CLIENT_DRIVER_VHOST_USER = 12 [ (json_name) = "vhost-user" ];
+	NET_CLIENT_DRIVER_VHOST_VDPA = 13 [ (json_name) = "vhost-vdpa" ];
+}
+
+// Create a new Network Interface Card.
+//
+// Since: 1.2
+message NetLegacyNicOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// id of -netdev to connect to
+	string netdev = 3 [ json_name = "netdev" ];
+	// MAC address
+	string macaddr = 4 [ json_name = "macaddr" ];
+	// device model (e1000, rtl8139, virtio etc.)
+	string model = 5 [ json_name = "model" ];
+	// PCI device address
+	string addr = 6 [ json_name = "addr" ];
+	// number of MSI-x vectors, 0 to disable MSI-X
+	uint32 vectors = 7 [ json_name = "vectors" ];
+}
+
+// Use the user mode network stack which requires no administrator privilege to
+// run.
+//
+// Since: 1.2
+message NetdevUserOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// client hostname reported by the builtin DHCP server
+	string hostname = 3 [ json_name = "hostname" ];
+	// isolate the guest from the host
+	bool restrict = 4 [ json_name = "restrict" ];
+	// whether to support IPv4, default true for enabled (since 2.6)
+	bool ipv4 = 5 [ json_name = "ipv4" ];
+	// whether to support IPv6, default true for enabled (since 2.6)
+	bool ipv6 = 6 [ json_name = "ipv6" ];
+	// legacy parameter, use net= instead
+	string ip = 7 [ json_name = "ip" ];
+	// IP network address that the guest will see, in the form addr[/netmask] The
+	// netmask is optional, and can be either in the form a.b.c.d or as a number
+	// of valid top-most bits. Default is 10.0.2.0/24.
+	string net = 8 [ json_name = "net" ];
+	// guest-visible address of the host
+	string host = 9 [ json_name = "host" ];
+	// root directory of the built-in TFTP server
+	string tftp = 10 [ json_name = "tftp" ];
+	// BOOTP filename, for use with tftp=
+	string bootfile = 11 [ json_name = "bootfile" ];
+	// the first of the 16 IPs the built-in DHCP server can assign
+	string dhcpstart = 12 [ json_name = "dhcpstart" ];
+	// guest-visible address of the virtual nameserver
+	string dns = 13 [ json_name = "dns" ];
+	// list of DNS suffixes to search, passed as DHCP option to the guest
+	string dnssearch = 14 [ json_name = "dnssearch" ];
+	// guest-visible domain name of the virtual nameserver (since 3.0)
+	string domainname = 15 [ json_name = "domainname" ];
+	// IPv6 network prefix (default is fec0::) (since 2.6). The network prefix is
+	// given in the usual hexadecimal IPv6 address notation.
+	string ipv6_prefix = 16 [ json_name = "ipv6-prefix" ];
+	// IPv6 network prefix length (default is 64) (since 2.6)
+	int64  ipv6_prefixlen = 17 [ json_name = "ipv6-prefixlen" ];
+	// guest-visible IPv6 address of the host (since 2.6)
+	string ipv6_host = 18 [ json_name = "ipv6-host" ];
+	// guest-visible IPv6 address of the virtual nameserver (since 2.6)
+	string ipv6_dns = 19 [ json_name = "ipv6-dns" ];
+	// root directory of the built-in SMB server
+	string smb = 20 [ json_name = "smb" ];
+	// IP address of the built-in SMB server
+	string smbserver = 21 [ json_name = "smbserver" ];
+	// redirect incoming TCP or UDP host connections to guest endpoints
+	string hostfwd = 22 [ json_name = "hostfwd" ];
+	// forward guest TCP connections
+	string guestfwd = 23 [ json_name = "guestfwd" ];
+	// RFC2132 "TFTP server name" string (Since 3.1)
+	string tftp_server_name = 24 [ json_name = "tftp-server-name" ];
+}
+
+// Used to configure a host TAP network interface backend.
+//
+// Since: 1.2
+message NetdevTapOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// interface name
+	string ifname = 3 [ json_name = "ifname" ];
+	// file descriptor of an already opened tap
+	string fd = 4 [ json_name = "fd" ];
+	// multiple file descriptors of already opened multiqueue capable tap
+	string fds = 5 [ json_name = "fds" ];
+	// script to initialize the interface
+	string script = 6 [ json_name = "script" ];
+	// script to shut down the interface
+	string downscript = 7 [ json_name = "downscript" ];
+	// bridge name (since 2.8)
+	string br = 8 [ json_name = "br" ];
+	// command to execute to configure bridge
+	string helper = 9 [ json_name = "helper" ];
+	// send buffer limit. Understands [TGMKkb] suffixes.
+	uint64 sndbuf = 10 [ json_name = "sndbuf" ];
+	// enable the IFF_VNET_HDR flag on the tap interface
+	bool vnet_hdr = 11 [ json_name = "vnet_hdr" ];
+	// enable vhost-net network accelerator
+	bool vhost = 12 [ json_name = "vhost" ];
+	// file descriptor of an already opened vhost net device
+	string vhostfd = 13 [ json_name = "vhostfd" ];
+	// file descriptors of multiple already opened vhost net devices
+	string vhostfds = 14 [ json_name = "vhostfds" ];
+	// vhost on for non-MSIX virtio guests
+	bool vhostforce = 15 [ json_name = "vhostforce" ];
+	// number of queues to be created for multiqueue capable tap
+	uint32 queues = 16 [ json_name = "queues" ];
+	// maximum number of microseconds that could be spent on busy polling for tap
+	// (since 2.7)
+	uint32 poll_us = 17 [ json_name = "poll-us" ];
+}
+
+// Configure an Ethernet over L2TPv3 tunnel.
+//
+// Since: 2.1
+message NetdevL2TPv3Options {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// source address
+	string src = 3 [ json_name = "src" ];
+	// destination address
+	string dst = 4 [ json_name = "dst" ];
+	// source port - mandatory for udp, optional for ip
+	string srcport = 5 [ json_name = "srcport" ];
+	// destination port - mandatory for udp, optional for ip
+	string dstport = 6 [ json_name = "dstport" ];
+	// force the use of ipv6
+	bool ipv6 = 7 [ json_name = "ipv6" ];
+	// use the udp version of l2tpv3 encapsulation
+	bool udp = 8 [ json_name = "udp" ];
+	// use 64 bit cookies
+	bool cookie64 = 9 [ json_name = "cookie64" ];
+	// have sequence counter
+	bool counter = 10 [ json_name = "counter" ];
+	// pin sequence counter to zero - workaround for buggy implementations or
+	// networks with packet reorder
+	bool pincounter = 11 [ json_name = "pincounter" ];
+	// 32 or 64 bit transmit cookie
+	uint64 txcookie = 12 [ json_name = "txcookie" ];
+	// 32 or 64 bit receive cookie
+	uint64 rxcookie = 13 [ json_name = "rxcookie" ];
+	// 32 bit transmit session
+	uint32 txsession = 14 [ json_name = "txsession" ];
+	// 32 bit receive session - if not specified set to the same value as transmit
+	uint32 rxsession = 15 [ json_name = "rxsession" ];
+	// additional offset - allows the insertion of additional application-specific
+	// data before the packet payload
+	uint32 offset = 16 [ json_name = "offset" ];
+}
+
+// Socket netdevs are used to establish a network connection to another QEMU
+// virtual machine via a TCP socket.
+//
+// Since: 1.2
+message NetdevSocketOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// file descriptor of an already opened socket
+	string fd = 3 [ json_name = "fd" ];
+	// port number, and optional hostname, to listen on
+	string listen = 4 [ json_name = "listen" ];
+	// port number, and optional hostname, to connect to
+	string connect = 5 [ json_name = "connect" ];
+	// UDP multicast address and port number
+	string mcast = 6 [ json_name = "mcast" ];
+	// source address and port for multicast and udp packets
+	string localaddr = 7 [ json_name = "localaddr" ];
+	// UDP unicast address and port number
+	string udp = 8 [ json_name = "udp" ];
+}
+
+// Configuration info for stream socket netdev
+//
+// Only SocketAddress types 'unix', 'inet' and 'fd' are supported.
+//
+// Since: 7.2
+message NetdevStreamOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// socket address to listen on (server=true) or connect to (server=false)
+	SocketAddress addr = 3 [ json_name = "addr" ];
+	// create server socket (default: false)
+	bool server = 4 [ json_name = "server" ];
+}
+
+// Configuration info for datagram socket netdev.
+//
+// Only SocketAddress types 'unix', 'inet' and 'fd' are supported.
+//
+// If remote address is present and it's a multicast address, local address
+// is optional. Otherwise local address is required and remote address is
+// optional.
+//
+// .. table:: Valid parameters combination table
+//    :widths: auto
+//
+//    =============  ========  =====
+//    remote         local     okay?
+//    =============  ========  =====
+//    absent         absent    no
+//    absent         not fd    no
+//    absent         fd        yes
+//    multicast      absent    yes
+//    multicast      present   yes
+//    not multicast  absent    no
+//    not multicast  present   yes
+//    =============  ========  =====
+//
+// Since: 7.2
+message NetdevDgramOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// local address
+	SocketAddress local = 3 [ json_name = "local" ];
+	// remote address
+	SocketAddress remote = 4 [ json_name = "remote" ];
+}
+
+// Connect to a vde switch running on the host.
+//
+// Since: 1.2
+message NetdevVdeOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// socket path
+	string sock = 3 [ json_name = "sock" ];
+	// port number
+	int32 port = 4 [ json_name = "port" ];
+	// group owner of socket
+	string group = 5 [ json_name = "group" ];
+	// permissions for socket
+	int32 mode = 6 [ json_name = "mode" ];
+}
+
+// Connect a host TAP network interface to a host bridge device.
+//
+// Since: 1.2
+message NetdevBridgeOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// bridge name
+	string br = 3 [ json_name = "br" ];
+	// command to execute to configure bridge
+	string helper = 4 [ json_name = "helper" ];
+}
+
+// Connect two or more net clients through a software hub.
+//
+// Since: 1.2
+message NetdevHubPortOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// hub identifier number
+	int32  hubid = 3 [ json_name = "hubid" ];
+	// used to connect hub to a netdev instead of a device (since 2.12)
+	string netdev = 4 [ json_name = "netdev" ];
+}
+
+// Connect a client to a netmap-enabled NIC or to a VALE switch port
+//
+// Since: 2.0
+message NetdevNetmapOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// Either the name of an existing network interface supported by netmap, or
+	// the name of a VALE port (created on the fly). A VALE port name is in the
+	// form 'valeXXX:YYY', where XXX and YYY are non-negative integers. XXX
+	// identifies a switch and YYY identifies a port of the switch. VALE ports
+	// having the same XXX are therefore connected to the same switch.
+	string ifname = 3 [ json_name = "ifname" ];
+	// path of the netmap device (default: '/dev/netmap').
+	string devname = 4 [ json_name = "devname" ];
+}
+
+// Vhost-user network backend
+//
+// Since: 2.1
+message NetdevVhostUserOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// name of a unix socket chardev
+	string chardev = 3 [ json_name = "chardev" ];
+	// vhost on for non-MSIX virtio guests (default: false).
+	bool vhostforce = 4 [ json_name = "vhostforce" ];
+	// number of queues to be created for multiqueue vhost-user (default: 1)
+	// (Since 2.5)
+	int32 queues = 5 [ json_name = "queues" ];
+}
+
+// Vhost-vdpa network backend
+//
+// vDPA device is a device that uses a datapath which complies with the virtio
+// specifications with a vendor specific control path. 
+//
+// Since: 5.1
+message NetdevVhostVDPAOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// path of vhost-vdpa device (default:'/dev/vhost-vdpa-0')
+	string vhostdev = 3 [ json_name = "vhostdev" ];
+	// file descriptor of an already opened vhost vdpa device
+	string vhostfd = 4 [ json_name = "vhostfd" ];
+	// number of queues to be created for multiqueue vhost-vdpa (default: 1)
+	int32 queues = 5 [ json_name = "queues" ];
+	// Start device with (experimental) shadow virtqueue. (Since 7.1) (default:
+	// false). `x-svq` is experimental.
+	bool x_svq = 6 [ json_name = "x-svq" ];
+}
+
+// vmnet (host mode) network backend.
+//
+// Allows the vmnet interface to communicate with other vmnet interfaces that
+// are in host mode and also with the host.
+//
+// Since: 7.1
+message NetdevVmnetHostOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// The starting IPv4 address to use for the interface. Must be in the private
+	// IP range (RFC 1918). Must be specified along with @end-address and
+	// @subnet-mask. This address is used as the gateway address. The subsequent
+	// address up to and including end-address are placed in the DHCP pool.
+	string start_address = 3 [ json_name = "start-address" ];
+	// The DHCP IPv4 range end address to use for the interface. Must be in the
+	// private IP range (RFC 1918). Must be specified along with @start-address
+	// and @subnet-mask.
+	string end_address = 4 [ json_name = "end-address" ];
+	// The IPv4 subnet mask to use on the interface. Must be specified along with
+	// @start-address and @subnet-mask.
+	string subnet_mask = 5 [ json_name = "subnet-mask" ];
+	// Enable isolation for this interface. Interface isolation ensures that vmnet
+	// interface is not able to communicate with any other vmnet interfaces. Only
+	// communication with host is allowed. Requires at least macOS Big Sur 11.0.
+	bool isolated = 6 [ json_name = "isolated" ];
+	// The identifier (UUID) to uniquely identify the isolated network vmnet
+	// interface should be added to. If set, no DHCP service is provided for this
+	// interface and network communication is allowed only with other interfaces
+	// added to this network identified by the UUID. Requires at least macOS Big
+	// Sur 11.0.
+	string net_uuid = 7 [ json_name = "net-uuid" ];
+}
+
+// vmnet (shared mode) network backend.
+//
+// Allows traffic originating from the vmnet interface to reach the Internet
+// through a network address translator (NAT). The vmnet interface can
+// communicate with the host and with other shared mode interfaces on the same
+// subnet. If no DHCP settings, subnet mask and IPv6 prefix specified, the
+// interface can communicate with any of other interfaces in shared mode.
+//
+// Since: 7.1
+message NetdevVmnetSharedOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// The starting IPv4 address to use for the interface. Must be in the private
+	// IP range (RFC 1918). Must be specified along with @end-address and
+	// @subnet-mask. This address is used as the gateway address. The subsequent
+	// address up to and including end-address are placed in the DHCP pool.
+	string start_address = 3 [ json_name = "start-address" ];
+	// The DHCP IPv4 range end address to use for the interface. Must be in the
+	// private IP range (RFC 1918). Must be specified along with @start-address
+	// and @subnet-mask.
+	string end_address = 4 [ json_name = "end-address" ];
+	// The IPv4 subnet mask to use on the interface. Must be specified along with
+	// @start-address and @subnet-mask.
+	string subnet_mask = 5 [ json_name = "subnet-mask" ];
+	// Enable isolation for this interface. Interface isolation ensures that vmnet
+	// interface is not able to communicate with any other vmnet interfaces. Only
+	// communication with host is allowed. Requires at least macOS Big Sur 11.0.
+	bool isolated = 6 [ json_name = "isolated" ];
+	// The IPv6 prefix to use into guest network. Must be a unique local address
+	// i.e. start with fd00::/8 and have length of 64.
+	string nat66_prefix = 7 [ json_name = "nat66-prefix" ];
+}
+
+// vmnet (bridged mode) network backend.
+//
+// Bridges the vmnet interface with a physical network interface.
+//
+// Since: 7.1
+message NetdevVmnetBridgedOptions {
+	// identifier for monitor commands.
+	string id = 1 [ json_name = "id" ];
+	// Specify the driver used for interpreting remaining arguments.
+	NetClientDriver type = 2 [ json_name = "type" ];
+	// The name of the physical interface to be bridged.
+	string ifname = 3 [ json_name = "ifname" ];
+	// Enable isolation for this interface. Interface isolation ensures that vmnet
+	// interface is not able to communicate with any other vmnet interfaces. Only
+	// communication with host is allowed. Requires at least macOS Big Sur 11.0.
+	bool isolated = 4 [ json_name = "isolated" ];
+}
+
+message NetdevAddLegacyNicRequest {
+	option (execute) = "netdev_add";
+	NetLegacyNicOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevUserRequest {
+	option (execute) = "netdev_add";
+	NetdevUserOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevTapRequest {
+	option (execute) = "netdev_add";
+	NetdevTapOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevL2TPv3Request {
+	option (execute) = "netdev_add";
+	NetdevL2TPv3Options arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevSocketRequest {
+	option (execute) = "netdev_add";
+	NetdevSocketOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevStreamRequest {
+	option (execute) = "netdev_add";
+	NetdevStreamOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevDgramRequest {
+	option (execute) = "netdev_add";
+	NetdevDgramOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVdeRequest {
+	option (execute) = "netdev_add";
+	NetdevVdeOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevBridgeRequest {
+	option (execute) = "netdev_add";
+	NetdevBridgeOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevHubPortRequest {
+	option (execute) = "netdev_add";
+	NetdevHubPortOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevNetmapRequest {
+	option (execute) = "netdev_add";
+	NetdevNetmapOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVhostUserRequest {
+	option (execute) = "netdev_add";
+	NetdevVhostUserOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVhostVDPARequest {
+	option (execute) = "netdev_add";
+	NetdevVhostVDPAOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVmnetHostRequest {
+	option (execute) = "netdev_add";
+	NetdevVmnetHostOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVmnetSharedRequest {
+	option (execute) = "netdev_add";
+	NetdevVmnetSharedOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevAddDevVmnetBridgedRequest {
+	option (execute) = "netdev_add";
+	NetdevVmnetBridgedOptions arguments = 1 [ json_name = "arguments" ];
+}
+
+message NetdevDelRequest {
+	option (execute) = "netdev_del";
+	message Arguments {
+		string id = 1 [ json_name = "id" ];
+	}
+	Arguments arguments = 1 [ json_name = "arguments" ];
+}
+
+message QueryRxFilterRequest {
+	option (execute) = "query-rx-filter";
+	message Arguments {
+		string name = 1 [ json_name = "name" ];
+	}
+	Arguments arguments = 1 [ json_name = "arguments" ];
+}
+
+// Packets receiving state
+//
+// Since: 1.6
+enum RxState {
+	// filter assigned packets according to the mac-table
+	RX_STATE_NORMAL = 0 [ (json_name) = "normal" ];
+	// don't receive any assigned packet
+	RX_STATE_NONE = 1 [ (json_name) = "none" ];
+	// receive all assigned packets
+	RX_STATE_ALL = 2 [ (json_name) = "all" ];
+}
+
+// Rx-filter information for a NIC.
+message QueryRxFilterResponse {
+	// net client name
+	string name = 1 [ json_name = "name" ];
+	// whether promiscuous mode is enabled
+	bool promiscuous = 2 [ json_name = "promiscuous" ];
+	// multicast receive state
+	RxState multicast = 3 [ json_name = "multicast" ];
+	// unicast receive state
+	RxState unicast = 4 [ json_name = "unicast" ];
+	// vlan receive state (Since 2.0)
+	RxState vlan = 5 [ json_name = "vlan" ];
+	// whether to receive broadcast
+	bool broadcast_allowed = 6 [ json_name = "broadcast-allowed" ];
+	// multicast table is overflowed or not
+	bool multicast_overflow = 7 [ json_name = "multicast-overflow" ];
+	// unicast table is overflowed or not
+	bool unicast_overflow = 8 [ json_name = "unicast-overflow" ];
+	// the main macaddr string
+	string main_mac = 9 [ json_name = "main-mac" ];
+	// a list of active vlan id
+	repeated int32 vlan_table = 10 [ json_name = "vlan-table" ];
+	// a list of unicast macaddr string
+	repeated string unicast_table = 11 [ json_name = "unicast-table" ];
+	// a list of multicast macaddr string
+	repeated string multicast_table = 12 [ json_name = "multicast-table" ];
+}

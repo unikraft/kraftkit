@@ -1,34 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//
-// Authors: Alexander Jung <alex@unikraft.io>
-//
-// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 syntax = "proto3";
 
 package qmp.v1alpha;
@@ -41,6 +14,7 @@ import "machine/qemu/qmp/v1alpha/greeting.proto";
 import "machine/qemu/qmp/v1alpha/machine.proto";
 import "machine/qemu/qmp/v1alpha/misc.proto";
 import "machine/qemu/qmp/v1alpha/run_state.proto";
+import "machine/qemu/qmp/v1alpha/net.proto";
 
 option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
 
@@ -150,7 +124,7 @@ service QEMUMachineProtocol {
 	// <- { "return": {} }
 	//
 	// Note: This command must be issued before issuing any other command.
-	rpc Capabilities(CapabilitiesRequest) returns (CapabilitiesResponse) {}
+	rpc Capabilities(CapabilitiesRequest) returns (google.protobuf.Any) {}
 
 	// # Show KVM information
 	//
@@ -195,4 +169,162 @@ service QEMUMachineProtocol {
 	// -> { "execute": "query-status" }
 	// <- { "return": { "running": true, "singlestep": false, "status": "running" } }
 	rpc QueryStatus(QueryStatusRequest) returns (QueryStatusResponse) {}
+
+	// # Sets the link status of a virtual network adapter.
+	//
+	// @name: the device name of the virtual network adapter
+	//
+	// @up: true to set the link status to be up
+	//
+	// Returns: Nothing on success
+	//          If @name is not a valid network device, DeviceNotFound
+	//
+	// Since: 0.14
+	//
+	// Notes: Not all network adapters support setting link status.  This command
+	//        will succeed even if the network adapter does not support link status
+	//        notification.
+	//
+	// Example:
+	//
+	// -> { "execute": "set_link",
+	//      "arguments": { "name": "e1000.0", "up": false } }
+	// <- { "return": {} }
+	rpc SetLink(SetLinkRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type nic
+	// 
+	// Since: 0.14
+	rpc NetdevAddLegacyNic(NetdevAddLegacyNicRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type user
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevUser(NetdevAddDevUserRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type tap
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevTap(NetdevAddDevTapRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type l2tpv3
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevL2TPv3(NetdevAddDevL2TPv3Request) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type socket
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevSocket(NetdevAddDevSocketRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type stream
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevStream(NetdevAddDevStreamRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type dgram
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevDgram(NetdevAddDevDgramRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vde
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVde(NetdevAddDevVdeRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type bridge
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevBridge(NetdevAddDevBridgeRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type hubport
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevHubPort(NetdevAddDevHubPortRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type netmap
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevNetmap(NetdevAddDevNetmapRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vhost-user
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVhostUser(NetdevAddDevVhostUserRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vhost-vdpa
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVhostVDPA(NetdevAddDevVhostVDPARequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vmnet-host
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVmnetHost(NetdevAddDevVmnetHostRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vmnet-shared
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVmnetShared(NetdevAddDevVmnetSharedRequest) returns (google.protobuf.Any) {}
+
+	// # Add a network backend for type vmnet-bridged
+	// 
+	// Since: 0.14
+	rpc NetdevAddDevVmnetBridged(NetdevAddDevVmnetBridgedRequest) returns (google.protobuf.Any) {}
+
+	// # Remove a network backend.
+	//
+	// @id: the name of the network backend to remove
+	//
+	// Returns: Nothing on success
+	//          If @id is not a valid network backend, DeviceNotFound
+	//
+	// Since: 0.14
+	//
+	// Example:
+	//
+	// -> { "execute": "netdev_del", "arguments": { "id": "netdev1" } }
+	// <- { "return": {} }
+	rpc NetdevDel(NetdevDelRequest) returns (google.protobuf.Any) {}
+
+	// # Return rx-filter information for all NICs (or for the given NIC).
+	//
+	// @name: net client name
+	//
+	// Returns: list of @RxFilterInfo for all NICs (or for the given NIC).
+	//          Returns an error if the given @name doesn't exist, or given
+	//          NIC doesn't support rx-filter querying, or given net client
+	//          isn't a NIC.
+	//
+	// Since: 1.6
+	//
+	// Example:
+	//
+	// -> { "execute": "query-rx-filter", "arguments": { "name": "vnet0" } }
+	// <- { "return": [
+	//         {
+	//             "promiscuous": true,
+	//             "name": "vnet0",
+	//             "main-mac": "52:54:00:12:34:56",
+	//             "unicast": "normal",
+	//             "vlan": "normal",
+	//             "vlan-table": [
+	//                 4,
+	//                 0
+	//             ],
+	//             "unicast-table": [
+	//             ],
+	//             "multicast": "normal",
+	//             "multicast-overflow": false,
+	//             "unicast-overflow": false,
+	//             "multicast-table": [
+	//                 "01:00:5e:00:00:01",
+	//                 "33:33:00:00:00:01",
+	//                 "33:33:ff:12:34:56"
+	//             ],
+	//             "broadcast-allowed": false
+	//         }
+	//       ]
+	//    }
+	rpc QueryRxFilter(QueryRxFilterRequest) returns (QueryRxFilterResponse) {}
 }
