@@ -6,7 +6,32 @@ package pack
 
 // PushOptions contains the list of options which can be set whilst pushing a
 // package.
-type PushOptions struct{}
+type PushOptions struct {
+	onProgress func(progress float64)
+}
 
 // PushOption is an option function which is used to modify PushOptions.
-type PushOption func(*PushOptions)
+type PushOption func(*PushOptions) error
+
+// NewPushOptions creates PushOptions
+func NewPushOptions(opts ...PushOption) (*PushOptions, error) {
+	options := &PushOptions{}
+
+	for _, o := range opts {
+		err := o(options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return options, nil
+}
+
+// WithPushProgressFunc set an optional progress function which is used as a
+// callback during the transmission of the package and the host.
+func WithPushProgressFunc(onProgress func(progress float64)) PushOption {
+	return func(opts *PushOptions) error {
+		opts.onProgress = onProgress
+		return nil
+	}
+}

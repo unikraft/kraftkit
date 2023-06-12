@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
+	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
@@ -381,9 +382,18 @@ func (ocipack *ociPackage) Metadata() any {
 	return nil
 }
 
-// Metadata implements pack.Package
+// Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
-	return fmt.Errorf("not implemented: oci.ociPackage.Push")
+	manifestJson, err := json.Marshal(ocipack.image.manifest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	ocipack.image.manifestDesc = content.NewDescriptorFromBytes(
+		ocispec.MediaTypeImageManifest,
+		manifestJson,
+	)
+	return ocipack.image.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.image.manifestDesc)
 }
 
 // Pull implements pack.Package

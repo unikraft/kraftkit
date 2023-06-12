@@ -40,7 +40,7 @@ func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Pull{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
-		Aliases: []string{"p"},
+		Aliases: []string{"pl"},
 		Long: heredoc.Doc(`
 			Pull a Unikraft unikernel, component microlibrary from a remote location
 		`),

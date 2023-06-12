@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
@@ -330,6 +331,11 @@ func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts
 	log.G(ctx).
 		WithField("source", source).
 		Debug("checking if source is an oci unikernel")
+
+	// 0. Append latest tag if not specified
+	if !strings.Contains(source, ":") {
+		source = fmt.Sprintf("%s:latest", source)
+	}
 
 	// 1. Check if the source is a reference to a local image
 
