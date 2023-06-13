@@ -25,7 +25,9 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
-type manifestManager struct{}
+type manifestManager struct {
+	manifests []string
+}
 
 // useGit is a local variable used within the context of the manifest package
 // and is dynamically injected as a CLI option.
@@ -64,12 +66,19 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 		}
 	}
 
+	// Populate the internal list of manifests with locally saved manifests
+	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		if _, compatible, _ := manager.IsCompatible(ctx, manifest); compatible {
+			manager.manifests = append(manager.manifests, manifest)
+		}
+	}
+
 	return &manager, nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
 func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
-	if len(config.G[config.KraftKit](ctx).Unikraft.Manifests) == 0 {
+	if len(m.manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
 
@@ -82,7 +91,7 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
 	}
 
-	for _, manipath := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+	for _, manipath := range m.manifests {
 		// If the path of the manipath is the same as the current manifest or it
 		// resides in the same directory as KraftKit's configured path for manifests
 		// then we can skip this since we don't want to update ourselves.
@@ -154,33 +163,26 @@ func (m *manifestManager) Update(ctx context.Context) error {
 }
 
 func (m *manifestManager) AddSource(ctx context.Context, source string) error {
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source == manifest {
-			log.G(ctx).Warnf("manifest already saved: %s", source)
-			return nil
-		}
+	if m.manifests == nil {
+		m.manifests = make([]string, 0)
 	}
 
-	log.G(ctx).Infof("adding to list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
-		config.G[config.KraftKit](ctx).Unikraft.Manifests,
-		source,
-	)
-	return config.M[config.KraftKit](ctx).Write(true)
+	m.manifests = append(m.manifests, source)
+
+	return nil
 }
 
 func (m *manifestManager) RemoveSource(ctx context.Context, source string) error {
-	manifests := []string{}
-
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source != manifest {
-			manifests = append(manifests, manifest)
+	for i, needle := range m.manifests {
+		if needle == source {
+			ret := make([]string, 0)
+			ret = append(ret, m.manifests[:i]...)
+			m.manifests = append(ret, m.manifests[i+1:]...)
+			break
 		}
 	}
 
-	log.G(ctx).Infof("removing from list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
-	return config.M[config.KraftKit](ctx).Write(false)
+	return nil
 }
 
 func (m *manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {

@@ -58,6 +58,13 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 		return nil, fmt.Errorf("cannot instantiate OCI Manager without handler")
 	}
 
+	// Populate the internal list of manifests with locally saved manifests
+	for _, registry := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		if _, compatible, _ := manager.IsCompatible(ctx, registry); compatible {
+			manager.registries = append(manager.registries, registry)
+		}
+	}
+
 	return &manager, nil
 }
 
@@ -296,34 +303,27 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 // AddSource implements packmanager.PackageManager
 func (manager *ociManager) AddSource(ctx context.Context, source string) error {
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source == manifest {
-			log.G(ctx).Warnf("manifest already saved: %s", source)
-			return nil
-		}
+	if manager.registries == nil {
+		manager.registries = make([]string, 0)
 	}
 
-	log.G(ctx).Infof("adding to list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
-		config.G[config.KraftKit](ctx).Unikraft.Manifests,
-		source,
-	)
-	return config.M[config.KraftKit](ctx).Write(true)
+	manager.registries = append(manager.registries, source)
+
+	return nil
 }
 
 // RemoveSource implements packmanager.PackageManager
 func (manager *ociManager) RemoveSource(ctx context.Context, source string) error {
-	manifests := []string{}
-
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source != manifest {
-			manifests = append(manifests, manifest)
+	for i, needle := range manager.registries {
+		if needle == source {
+			ret := make([]string, 0)
+			ret = append(ret, manager.registries[:i]...)
+			manager.registries = append(ret, manager.registries[i+1:]...)
+			break
 		}
 	}
 
-	log.G(ctx).Infof("removing from list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
-	return config.M[config.KraftKit](ctx).Write(false)
+	return nil
 }
 
 // IsCompatible implements packmanager.PackageManager

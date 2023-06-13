@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 )
 
@@ -55,24 +56,29 @@ func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
 
 // Run executes the unsource command
 func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
-	var err error
-	var compatible bool
-
-	source := ""
-
-	if len(args) > 0 {
-		source = args[0]
-	}
-
 	ctx := cmd.Context()
-	pm := packmanager.G(ctx)
+	for _, source := range args {
+		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+		if err != nil {
+			return err
+		} else if !compatible {
+			return errors.New("incompatible package manager")
+		}
 
-	pm, compatible, err = pm.IsCompatible(ctx, source)
-	if err != nil {
-		return err
-	} else if !compatible {
-		return errors.New("incompatible package manager")
+		manifests := []string{}
+
+		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			if source != manifest {
+				manifests = append(manifests, manifest)
+			}
+		}
+
+		config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
+
+		if err := config.M[config.KraftKit](ctx).Write(false); err != nil {
+			return err
+		}
 	}
 
-	return pm.RemoveSource(ctx, source)
+	return nil
 }
