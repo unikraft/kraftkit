@@ -64,11 +64,11 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 		}
 	}
 
-	return manager, nil
+	return &manager, nil
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
-func (m manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
+func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	if len(config.G[config.KraftKit](ctx).Unikraft.Manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
@@ -107,7 +107,7 @@ func (m manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	return localIndex, nil
 }
 
-func (m manifestManager) Update(ctx context.Context) error {
+func (m *manifestManager) Update(ctx context.Context) error {
 	// Create parent directories if not present
 	if err := os.MkdirAll(filepath.Dir(m.LocalManifestIndex(ctx)), 0o771); err != nil {
 		return err
@@ -153,7 +153,7 @@ func (m manifestManager) Update(ctx context.Context) error {
 	return localIndex.WriteToFile(m.LocalManifestIndex(ctx))
 }
 
-func (m manifestManager) AddSource(ctx context.Context, source string) error {
+func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 		if source == manifest {
 			log.G(ctx).Warnf("manifest already saved: %s", source)
@@ -169,7 +169,7 @@ func (m manifestManager) AddSource(ctx context.Context, source string) error {
 	return config.M[config.KraftKit](ctx).Write(true)
 }
 
-func (m manifestManager) RemoveSource(ctx context.Context, source string) error {
+func (m *manifestManager) RemoveSource(ctx context.Context, source string) error {
 	manifests := []string{}
 
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
@@ -183,19 +183,19 @@ func (m manifestManager) RemoveSource(ctx context.Context, source string) error 
 	return config.M[config.KraftKit](ctx).Write(false)
 }
 
-func (m manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (m *manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	return nil, fmt.Errorf("not implemented manifest.manager.Pack")
 }
 
-func (m manifestManager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
+func (m *manifestManager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
 	return nil, fmt.Errorf("not implemented manifest.manager.Unpack")
 }
 
-func (m manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManager, error) {
+func (m *manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (m manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var err error
 	var index *ManifestIndex
 	var allManifests []*Manifest
@@ -375,7 +375,7 @@ func (m manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Query
 	return packages, nil
 }
 
-func (m manifestManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
+func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Debug("checking if source is compatible with the manifest manager")
@@ -392,7 +392,7 @@ func (m manifestManager) IsCompatible(ctx context.Context, source string, qopts 
 }
 
 // LocalManifestDir returns the user configured path to all the manifests
-func (m manifestManager) LocalManifestsDir(ctx context.Context) string {
+func (m *manifestManager) LocalManifestsDir(ctx context.Context) string {
 	if len(config.G[config.KraftKit](ctx).Paths.Manifests) > 0 {
 		return config.G[config.KraftKit](ctx).Paths.Manifests
 	}
@@ -401,10 +401,10 @@ func (m manifestManager) LocalManifestsDir(ctx context.Context) string {
 }
 
 // LocalManifestIndex returns the user configured path to the manifest index
-func (m manifestManager) LocalManifestIndex(ctx context.Context) string {
+func (m *manifestManager) LocalManifestIndex(ctx context.Context) string {
 	return filepath.Join(m.LocalManifestsDir(ctx), "index.yaml")
 }
 
-func (m manifestManager) Format() pack.PackageFormat {
+func (m *manifestManager) Format() pack.PackageFormat {
 	return ManifestFormat
 }
