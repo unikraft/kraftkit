@@ -459,7 +459,9 @@ outer:
 			var total int64 = 0
 			var exists int = 0
 			for _, status := range statuses {
-				if status.Status == "exists" || status.Status == "resolved" {
+				if status.Status == "exists" ||
+					status.Status == "resolved" ||
+					status.Status == "done" {
 					exists++
 				}
 				if status.Total > 0 {
