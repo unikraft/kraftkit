@@ -62,12 +62,12 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 }
 
 // Update implements packmanager.PackageManager
-func (manager ociManager) Update(ctx context.Context) error {
+func (manager *ociManager) Update(ctx context.Context) error {
 	return nil
 }
 
 // Pack implements packmanager.PackageManager
-func (manager ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	targ, ok := entity.(target.Target)
 	if !ok {
 		return nil, fmt.Errorf("entity is not Unikraft target")
@@ -82,13 +82,13 @@ func (manager ociManager) Pack(ctx context.Context, entity component.Component, 
 }
 
 // Unpack implements packmanager.PackageManager
-func (manager ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
+func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
 	return nil, fmt.Errorf("not implemented: oci.manager.Unpack")
 }
 
 // registry is a wrapper method for authenticating and listing OCI repositories
 // from a provided domain representing a registry.
-func (manager ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
+func (manager *ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 	var err error
 	var auth regtypes.AuthConfig
 
@@ -120,7 +120,7 @@ func (manager ociManager) registry(ctx context.Context, domain string) (*regtool
 }
 
 // Catalog implements packmanager.PackageManager
-func (manager ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var packs []pack.Package
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
@@ -295,7 +295,7 @@ func (manager ociManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 }
 
 // AddSource implements packmanager.PackageManager
-func (manager ociManager) AddSource(ctx context.Context, source string) error {
+func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 		if source == manifest {
 			log.G(ctx).Warnf("manifest already saved: %s", source)
@@ -312,7 +312,7 @@ func (manager ociManager) AddSource(ctx context.Context, source string) error {
 }
 
 // RemoveSource implements packmanager.PackageManager
-func (manager ociManager) RemoveSource(ctx context.Context, source string) error {
+func (manager *ociManager) RemoveSource(ctx context.Context, source string) error {
 	manifests := []string{}
 
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
@@ -327,7 +327,7 @@ func (manager ociManager) RemoveSource(ctx context.Context, source string) error
 }
 
 // IsCompatible implements packmanager.PackageManager
-func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
+func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).
 		WithField("source", source).
 		Debug("checking if source is an oci unikernel")
@@ -416,11 +416,11 @@ func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts
 }
 
 // From implements packmanager.PackageManager
-func (manager ociManager) From(pack.PackageFormat) (packmanager.PackageManager, error) {
+func (manager *ociManager) From(pack.PackageFormat) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("not possible: oci.manager.From")
 }
 
 // Format implements packmanager.PackageManager
-func (manager ociManager) Format() pack.PackageFormat {
+func (manager *ociManager) Format() pack.PackageFormat {
 	return OCIFormat
 }
