@@ -379,7 +379,7 @@ func (ocipack *ociPackage) imageRef() string {
 
 // Metadata implements pack.Package
 func (ocipack *ociPackage) Metadata() any {
-	return nil
+	return ocipack.image.manifest
 }
 
 // Push implements pack.Package
