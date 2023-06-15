@@ -109,7 +109,7 @@ func parseStringProp(entry string) map[string]interface{} {
 			component["version"] = v
 		}
 
-	} else if u, err := url.Parse("https://" + entry); err == nil && u.Host != "" {
+	} else if u, err := url.Parse(entry); err == nil && u.Host != "" {
 		component["source"] = entry
 
 		if v := urlHasVersion(u); len(v) > 0 {
