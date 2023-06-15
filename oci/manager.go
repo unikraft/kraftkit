@@ -292,6 +292,12 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	return packs, nil
 }
 
+// SetSources implements packmanager.PackageManager
+func (manager *ociManager) SetSources(_ context.Context, sources ...string) error {
+	manager.registries = sources
+	return nil
+}
+
 // AddSource implements packmanager.PackageManager
 func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 	if manager.registries == nil {

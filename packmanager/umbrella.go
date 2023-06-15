@@ -97,6 +97,17 @@ func (u umbrella) Update(ctx context.Context) error {
 	return nil
 }
 
+func (u umbrella) SetSources(ctx context.Context, sources ...string) error {
+	for _, manager := range packageManagers {
+		err := manager.SetSources(ctx, sources...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (u umbrella) AddSource(ctx context.Context, source string) error {
 	for _, manager := range packageManagers {
 		log.G(ctx).WithFields(logrus.Fields{

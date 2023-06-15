@@ -162,6 +162,11 @@ func (m *manifestManager) Update(ctx context.Context) error {
 	return localIndex.WriteToFile(m.LocalManifestIndex(ctx))
 }
 
+func (m *manifestManager) SetSources(_ context.Context, sources ...string) error {
+	m.manifests = sources
+	return nil
+}
+
 func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	if m.manifests == nil {
 		m.manifests = make([]string, 0)
