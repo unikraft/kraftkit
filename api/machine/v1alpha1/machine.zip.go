@@ -118,6 +118,9 @@ type MachineStatus struct {
 	// The fully-qualified path to the kernel image of the machine instance.
 	KernelPath string `json:"kernelPath,omitempty"`
 
+	// The fully-qualified path to the initramfs file of the machine instance.
+	InitrdPath string `json:"initrdPath,omitempty"`
+
 	// ExitCode is the ...
 	ExitCode int `json:"exitCode,omitempty"`
 

@@ -163,9 +163,9 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	// TODO: Parse Rootfs types
-	if len(machine.Spec.Rootfs) > 0 {
+	if len(machine.Status.InitrdPath) > 0 {
 		qopts = append(qopts,
-			WithInitRd(machine.Spec.Rootfs),
+			WithInitRd(machine.Status.InitrdPath),
 		)
 	}
 
