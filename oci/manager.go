@@ -58,13 +58,6 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 		return nil, fmt.Errorf("cannot instantiate OCI Manager without handler")
 	}
 
-	// Populate the internal list of manifests with locally saved manifests
-	for _, registry := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if _, compatible, _ := manager.IsCompatible(ctx, registry); compatible {
-			manager.registries = append(manager.registries, registry)
-		}
-	}
-
 	return &manager, nil
 }
 
