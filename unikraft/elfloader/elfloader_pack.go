@@ -38,6 +38,17 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 		}
 	}
 
+	if defaultPrebuilt != "" {
+		// Return early if the user provided a custom elfloader unikernel
+		// application.
+		if ok, _ := unikraft.IsFileUnikraftUnikernel(defaultPrebuilt); ok {
+			elfloader.kernel = defaultPrebuilt
+			return &elfloader, nil
+		}
+	} else {
+		defaultPrebuilt = DefaultPrebuilt
+	}
+
 	var err error
 	elfloader.registry = packmanager.G(ctx)
 	if elfloader.registry == nil {

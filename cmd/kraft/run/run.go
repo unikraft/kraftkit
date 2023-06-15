@@ -115,6 +115,7 @@ type runner interface {
 // controller.
 func runners() []runner {
 	return []runner{
+		&runnerLinuxu{},
 		&runnerKernel{},
 		&runnerProject{},
 		&runnerPackage{},
