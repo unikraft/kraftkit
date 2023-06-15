@@ -7,72 +7,75 @@ package run
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/containerd/nerdctl/pkg/strutil"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	machinename "kraftkit.sh/machine/name"
 	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
-	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/paraprogress"
-	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/target"
 )
 
 type Run struct {
-	Architecture    string `long:"arch" short:"m" usage:"Set the architecture"`
-	Detach          bool   `long:"detach" short:"d" usage:"Run unikernel in background"`
-	DisableAccel    bool   `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
-	InitRd          string `long:"initrd" usage:"Use the specified initrd"`
-	IP              string `long:"ip" usage:"Assign the provided IP address"`
-	MacAddress      string `long:"mac" usage:"Assign the provided MAC address"`
-	Memory          string `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
-	Name            string `long:"name" short:"n" usage:"Name of the instance"`
-	Network         string `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
-	networkDriver   string
-	networkName     string
-	networkStrategy *network.Strategy
-	platform        string
-	Ports           []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
-	Remove          bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Target          string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	WithKernelDbg   bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
-	KernelArgs      []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
+	Architecture  string   `long:"arch" short:"m" usage:"Set the architecture"`
+	Detach        bool     `long:"detach" short:"d" usage:"Run unikernel in background"`
+	DisableAccel  bool     `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
+	InitRd        string   `long:"initrd" usage:"Use the specified initrd"`
+	IP            string   `long:"ip" usage:"Assign the provided IP address"`
+	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
+	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
+	Memory        string   `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
+	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
+	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
+	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	RunAs         string   `long:"as" usage:"Force a specific runner"`
+	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+
+	platform          mplatform.Platform
+	networkDriver     string
+	networkName       string
+	networkController networkapi.NetworkService
+	machineController machineapi.MachineService
 }
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
-		Use:     "run [FLAGS] PROJECT|KERNEL -- [APP ARGS]",
+		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
 		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
 		Example: heredoc.Doc(`
-			# Run a unikernel kernel image
+			# (project) single target in cwd.
+			kraft run
+
+			# (project) single target at path.
+			kraft run path/to/project
+
+			# (project) select a single target from multiple in project cwd.
+			kraft run -t TARGET
+
+			# (project) multiple targets at path.
+			kraft run -t TARGET path/to/project
+
+			# (kernel) Run a unikernel kernel image.
 			kraft run path/to/kernel-x86_64-kvm
 
-			# Run a project which only has one target
-			kraft run path/to/project`),
+			# (package) Run an OCI-compatible unikernel.
+			kraft run unikraft.org/helloworld:latest`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
@@ -90,7 +93,39 @@ func New() *cobra.Command {
 	return cmd
 }
 
+// runner is an interface for defining different mechanisms to execute the
+// provided unikernel.  Standardizing first the check, Runnable, to determine
+// whether the provided input is capable of executing, and Prepare, actually
+// performing the preparation of the Machine specification for the controller.
+type runner interface {
+	// String implements fmt.Stringer and returns the name of the implementing
+	// runner.
+	fmt.Stringer
+
+	// Runnable checks whether the provided configuration is runnable.
+	Runnable(context.Context, *Run, ...string) (bool, error)
+
+	// Prepare the provided configuration into a machine specification ready for
+	// execution by the controller.
+	Prepare(context.Context, *Run, *machineapi.Machine, ...string) error
+}
+
+// runners is the list of built-in runners which are checked sequentially for
+// capability.  The first to test positive via Runnable is used with the
+// controller.
+func runners() []runner {
+	return []runner{
+		&runnerKernel{},
+		&runnerProject{},
+		&runnerPackage{},
+	}
+}
+
 func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
+	var err error
+	ctx := cmd.Context()
+
+	// Discover the network controller strategy.
 	if opts.Network == "" && opts.IP != "" {
 		return fmt.Errorf("cannot assign IP address without providing --network")
 	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
@@ -103,16 +138,48 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		parts := strings.SplitN(opts.Network, ":", 2)
 		opts.networkDriver, opts.networkName = parts[0], parts[1]
 
-		var ok bool
-		opts.networkStrategy, ok = network.Strategies()[opts.networkDriver]
+		networkStrategy, ok := network.Strategies()[opts.networkDriver]
 		if !ok {
 			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
 		}
+
+		opts.networkController, err = networkStrategy.NewNetworkV1alpha1(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	opts.platform = cmd.Flag("plat").Value.String()
+	// Discover the platform machine controller strataegy.
+	plat := cmd.Flag("plat").Value.String()
+	opts.platform = mplatform.PlatformUnknown
 
-	ctx := cmd.Context()
+	if plat == "" || plat == "auto" {
+		var mode mplatform.SystemMode
+		opts.platform, mode, err = mplatform.Detect(ctx)
+		if mode == mplatform.SystemGuest {
+			return fmt.Errorf("nested virtualization not supported")
+		} else if err != nil {
+			return err
+		}
+	} else {
+		var ok bool
+		opts.platform, ok = mplatform.Platforms()[plat]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		}
+	}
+
+	machineStrategy, ok := mplatform.Strategies()[opts.platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
+	}
+
+	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Set use of the global package manager.
 	pm, err := packmanager.NewUmbrellaManager(ctx)
 	if err != nil {
 		return err
@@ -125,34 +192,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	var err error
-
 	ctx := cmd.Context()
-	platform := mplatform.PlatformUnknown
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if opts.platform == "" || opts.platform == "auto" {
-		var mode mplatform.SystemMode
-		platform, mode, err = mplatform.Detect(ctx)
-		if mode == mplatform.SystemGuest {
-			return fmt.Errorf("nested virtualization not supported")
-		} else if err != nil {
-			return err
-		}
-	} else {
-		var ok bool
-		platform, ok = mplatform.Platforms()[opts.platform]
-		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
-		}
-	}
-
-	strategy, ok := mplatform.Strategies()[platform]
-	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
-	}
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
@@ -164,348 +204,62 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	// Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
-	if len(opts.Ports) > 0 {
-		opts.Ports = strutil.DedupeStrSlice(opts.Ports)
-		for _, port := range opts.Ports {
-			parsed, err := machineapi.ParsePort(port)
-			if err != nil {
-				return err
-			}
-			machine.Spec.Ports = append(machine.Spec.Ports, parsed...)
-		}
-	}
-
-	// Was a network specified? E.g. --network=bridge:kraft0
-	if opts.Network != "" {
-		netcontroller, err := opts.networkStrategy.NewNetworkV1alpha1(ctx)
-		if err != nil {
-			return err
-		}
-
-		// Try to discover the user-provided network.
-		found, err := netcontroller.Get(ctx, &networkapi.Network{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: opts.networkName,
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		// Generate the UID pre-emptively so that we can uniquely reference the
-		// network interface which will allow us to clean it up later. Additionally,
-		// it's OK if the IP or MAC address are empty, the network controller will
-		// populate values if they are unset and will populate with new values
-		// following the returning from the Update operation.
-		newIface := networkapi.NetworkInterfaceTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				UID: uuid.NewUUID(),
-			},
-			Spec: networkapi.NetworkInterfaceSpec{
-				IP:         opts.IP,
-				MacAddress: opts.MacAddress,
-			},
-		}
-
-		// Update the list of interfaces
-		if found.Spec.Interfaces == nil {
-			found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{}
-		}
-		found.Spec.Interfaces = append(found.Spec.Interfaces, newIface)
-
-		// Update the network with the new interface.
-		found, err = netcontroller.Update(ctx, found)
-		if err != nil {
-			return err
-		}
-
-		// Only use the single new interface.
-		for _, iface := range found.Spec.Interfaces {
-			if iface.UID == newIface.UID {
-				newIface = iface
-				break
-			}
-		}
-
-		// Set the interface on the machine.
-		found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{newIface}
-		machine.Spec.Networks = []networkapi.NetworkSpec{found.Spec}
-
-		// Set up a clean up method to remove the interface if the machine exits and
-		// we are requesting to remove the machine.
-		if opts.Remove && !opts.Detach {
-			defer func() {
-				// Get the latest version of the network.
-				found, err := netcontroller.Get(ctx, &networkapi.Network{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: opts.networkName,
-					},
-				})
-				if err != nil {
-					log.G(ctx).Errorf("could not get network information for %s: %v", opts.networkName, err)
-					return
-				}
-
-				// Remove the new network interface
-				for i, iface := range found.Spec.Interfaces {
-					if iface.UID == newIface.UID {
-						ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
-						ret = append(ret, found.Spec.Interfaces[:i]...)
-						found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
-						break
-					}
-				}
-
-				if _, err = netcontroller.Update(ctx, found); err != nil {
-					log.G(ctx).Errorf("could not update network %s: %v", opts.networkName, err)
-					return
-				}
-			}()
-		}
-	}
-
-	controller, err := strategy.NewMachineV1alpha1(ctx)
-	if err != nil {
+	if err := opts.parsePorts(ctx, machine); err != nil {
 		return err
 	}
 
-	// The following sequence checks the position argument of `kraft run ENTITY`
-	// where ENTITY can either be:
-	// a). path to a project which either uses the only specified target or one
-	//     specified via the -t flag, e.g.:
-	//
-	//     $ kraft run path/to/project # with 1 default target
-	//     # or for multiple targets
-	//     $ kraft run -t target-name path/to/project
-	//
-	// b). path to a kernel, e.g.:
-	//
-	//     $ kraft run path/to/kernel
-	//
-	// c). A package manager image reference containing a unikernel;
-	//
-	// d). a target defined within the context of `workdir` (which is either set
-	//     via -w or is the current working directory), e.g.:
-	//
-	//     $ cd path/to/project
-	//     $ kraft run target-name
-	//     # or
-	//     $ kraft run -w path/to/project target-name
-	//
-	var workdir string
-	var entity string
-	var appArgs []string
-
-	// Determine if more than one positional arguments have been provided.  If
-	// this is the case, everything after the first position argument are kernel
-	// parameters which should be passed appropriately.
-	if len(args) > 1 {
-		entity = args[0]
-		appArgs = args[1:]
-	} else if len(args) == 1 {
-		entity = args[0]
+	if err := opts.parseNetworks(ctx, machine); err != nil {
+		return err
 	}
 
-	// a). path to a project
-	if len(entity) > 0 && app.IsWorkdirInitialized(entity) {
-		workdir = entity
-
-		// Otherwise use the current working directory
-	} else {
-		if app.IsWorkdirInitialized(cwd) {
-			workdir = cwd
-			appArgs = args
-		}
+	if err := opts.assignName(ctx, machine); err != nil {
+		return err
 	}
 
-	// b). Is the provided first position argument a binary image?
-	if f, err := os.Stat(entity); err == nil && !f.IsDir() {
-		if len(opts.Architecture) == 0 || len(opts.platform) == 0 {
-			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
-		}
-
-		appArgs = args[1:]
-		entity = filepath.Join(cwd, entity)
-		machine.Spec.Architecture = opts.Architecture
-		machine.Spec.Platform = opts.platform
-		machine.Spec.Kernel = "kernel://" + filepath.Base(entity)
-		machine.Status.KernelPath = entity
-
-		// c). use the provided package manager
-	} else if pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, entity); err == nil && compatible {
-		// First try the local cache of the catalog
-		packs, err := pm.Catalog(ctx,
-			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithName(entity),
-			packmanager.WithCache(true),
-		)
-		if err != nil {
-			return err
-		}
-
-		if len(packs) > 1 {
-			return fmt.Errorf("could not determine what to run, too many options")
-		} else if len(packs) == 0 {
-			// Second, try accessing the remote catalog
-			packs, err = pm.Catalog(ctx,
-				packmanager.WithTypes(unikraft.ComponentTypeApp),
-				packmanager.WithName(entity),
-				packmanager.WithCache(false),
-			)
-			if err != nil {
-				return err
+	// Iterate through the list of built-in runners which sequentially tests
+	// whether the provided input matches the requirements for being run given its
+	// context.  The first to test positive is used to prepare the machine
+	// specification which is later passed to the controller.
+	var run runner
+	var errs []error
+	for _, candidate := range runners() {
+		if opts.RunAs != "" {
+			if candidate.String() == opts.RunAs {
+				if _, err := candidate.Runnable(ctx, opts, args...); err != nil {
+					return fmt.Errorf("forced runner %s but provided argument was not capable: %v", opts.RunAs, err)
+				}
+				run = candidate
+				break
 			}
 
-			if len(packs) > 1 {
-				return fmt.Errorf("could not determine what to run, too many options")
-			} else if len(packs) == 0 {
-				return fmt.Errorf("not found: %s", entity)
-			}
+			continue
 		}
 
-		// Create a temporary directory where the image can be stored
-		dir, err := os.MkdirTemp("", "")
-		if err != nil {
-			return err
+		log.G(ctx).
+			WithField("runner", candidate.String()).
+			Trace("checking runnability")
+
+		capable, err := candidate.Runnable(ctx, opts, args...)
+		if capable && err == nil {
+			run = candidate
+			break
+		} else if err != nil {
+			errs = append(errs, err)
 		}
-
-		paramodel, err := paraprogress.NewParaProgress(
-			ctx,
-			[]*paraprogress.Process{paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", entity),
-				func(ctx context.Context, w func(progress float64)) error {
-					return packs[0].Pull(
-						ctx,
-						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(dir),
-					)
-				},
-			)},
-			paraprogress.IsParallel(false),
-			paraprogress.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
-			paraprogress.WithFailFast(true),
-		)
-		if err != nil {
-			return err
-		}
-
-		if err := paramodel.Start(); err != nil {
-			return err
-		}
-
-		// Crucially, the catalog should return an interface that also implements
-		// target.Target.  This demonstrates that the implementing package can
-		// resolve application kernels.
-		targ, ok := packs[0].(target.Target)
-		if !ok {
-			return fmt.Errorf("package does not convert to target")
-		}
-
-		appArgs = args[1:]
-		machine.Spec.Architecture = targ.Architecture().Name()
-		machine.Spec.Platform = targ.Platform().Name()
-		machine.Spec.Kernel = fmt.Sprintf("%s://%s", pm.Format(), entity)
-		if opts.InitRd == "" && targ.Initrd() != nil {
-			machine.Spec.Rootfs = targ.Initrd().Output
-		}
-
-		// Use the symbolic debuggable kernel image?
-		if opts.WithKernelDbg {
-			machine.Status.KernelPath = targ.KernelDbg()
-		} else {
-			machine.Status.KernelPath = targ.Kernel()
-		}
-
-		// d). use a defined working directory as a Unikraft project
-	} else if len(workdir) > 0 {
-		project, err := app.NewProjectFromOptions(
-			ctx,
-			app.WithProjectWorkdir(workdir),
-			app.WithProjectDefaultKraftfiles(),
-		)
-		if err != nil {
-			return err
-		}
-
-		// Filter project targets by any provided CLI options
-		targets := cli.FilterTargets(
-			project.Targets(),
-			opts.Architecture,
-			opts.platform,
-			opts.Target,
-		)
-
-		var t target.Target
-
-		switch {
-		case len(targets) == 1:
-			t = targets[0]
-
-		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
-			return fmt.Errorf("could not determine what to run based on provided CLI arguments")
-
-		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) == 0:
-			return fmt.Errorf("could not match any target")
-
-		default:
-			t, err = cli.SelectTarget(targets)
-			if err != nil {
-				return err
-			}
-		}
-
-		machine.Spec.Kernel = "project://" + project.Name() + ":" + t.Name()
-		machine.Spec.Architecture = t.Architecture().Name()
-		machine.Spec.Platform = t.Platform().Name()
-
-		// Use the symbolic debuggable kernel image?
-		if opts.WithKernelDbg {
-			machine.Status.KernelPath = t.KernelDbg()
-		} else {
-			machine.Status.KernelPath = t.Kernel()
-		}
-
-		// If no entity was set earlier and we're not within the context of a working
-		// directory, then we're unsure what to run
-	} else if len(entity) == 0 {
-		return fmt.Errorf("cannot run without providing a working directory (and target), kernel binary or package")
-
-		// c). Is the provided first position argument a binary image?
-	} else if f, err := os.Stat(entity); err == nil && !f.IsDir() {
-		if len(opts.Architecture) == 0 || len(opts.platform) == 0 {
-			return fmt.Errorf("cannot use `kraft run KERNEL` without specifying --arch and --plat")
-		}
-
-		machine.Spec.Kernel = "kernel://" + entity
-		machine.Spec.Architecture = opts.Architecture
-		machine.Spec.Platform = opts.platform
-		machine.Status.KernelPath = entity
-	} else {
-		return fmt.Errorf("could not determine what to run: %s", entity)
+	}
+	if run == nil {
+		return fmt.Errorf("could not determine what to run: %v", errs)
 	}
 
-	if opts.Name != "" {
-		// Check if this name has been previously used
-		machines, err := controller.List(ctx, &machineapi.MachineList{})
-		if err != nil {
-			return err
-		}
-
-		for _, machine := range machines.Items {
-			if opts.Name == machine.Name {
-				return fmt.Errorf("machine instance name already in use: %s", opts.Name)
-			}
-		}
-	} else {
-		opts.Name = machinename.NewRandomMachineName(0)
+	// Prepare the machine specification based on the compatible runner.
+	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
+		return err
 	}
 
-	machine.ObjectMeta.Name = opts.Name
-	machine.Spec.KernelArgs = opts.KernelArgs
-	machine.Spec.ApplicationArgs = appArgs
+	// Override with command-line flags
+	if len(opts.KernelArgs) > 0 {
+		machine.Spec.KernelArgs = opts.KernelArgs
+	}
 
 	if len(opts.Memory) > 0 {
 		quantity, err := resource.ParseQuantity(opts.Memory)
@@ -517,7 +271,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create the machine
-	machine, err = controller.Create(ctx, machine)
+	machine, err = opts.machineController.Create(ctx, machine)
 	if err != nil {
 		return err
 	}
@@ -525,7 +279,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
 		go func() {
-			events, errs, err := controller.Watch(ctx, machine)
+			events, errs, err := opts.machineController.Watch(ctx, machine)
 			if err != nil {
 				log.G(ctx).Errorf("could not listen for machine updates: %v", err)
 				signals.RequestShutdown()
@@ -558,14 +312,14 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start the machine
-	machine, err = controller.Start(ctx, machine)
+	machine, err = opts.machineController.Start(ctx, machine)
 	if err != nil {
 		signals.RequestShutdown()
 		return err
 	}
 
 	if !opts.Detach {
-		logs, errs, err := controller.Logs(ctx, machine)
+		logs, errs, err := opts.machineController.Logs(ctx, machine)
 		if err != nil {
 			signals.RequestShutdown()
 			return fmt.Errorf("could not listen for machine logs: %v", err)
@@ -590,10 +344,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
-			if _, err := controller.Stop(ctx, machine); err != nil {
+			if _, err := opts.machineController.Stop(ctx, machine); err != nil {
 				return fmt.Errorf("could not stop: %v", err)
 			}
-			if _, err := controller.Delete(ctx, machine); err != nil {
+			if _, err := opts.machineController.Delete(ctx, machine); err != nil {
 				return fmt.Errorf("could not remove: %v", err)
 			}
 		}

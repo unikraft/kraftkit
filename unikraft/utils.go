@@ -39,7 +39,7 @@ func IsFileUnikraftUnikernel(path string) (bool, error) {
 		".uk_thread_inittab",
 	)
 	for _, symbol := range fe.Sections {
-		if knownUnikraftSections.Contains(symbol.Name) {
+		if knownUnikraftSections.ContainsExactly(symbol.Name) {
 			return true, nil
 		}
 	}
