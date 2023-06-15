@@ -287,20 +287,9 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 	ongoing := newJobs(name)
 
 	go func() {
-		if onProgress != nil {
-			handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), onProgress)
-		}
-
+		handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), onProgress)
 		close(progress)
 	}()
-
-	h := images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
-			ongoing.Add(desc)
-		}
-
-		return nil, nil
-	})
 
 	resolver, err := dockerconfigresolver.New(
 		ctx,
@@ -312,7 +301,13 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 	}
 
 	ropts := []containerd.RemoteOpt{
-		containerd.WithImageHandler(h),
+		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
+				ongoing.Add(desc)
+			}
+
+			return nil, nil
+		})),
 		containerd.WithResolver(resolver),
 		// TODO(nderjung): Specify a Unikraft-centric platform/architecture
 		// combination containerd.WithPlatform(platforms.DefaultString()),
@@ -382,31 +377,32 @@ outer:
 
 			keys := []string{ongoing.name}
 
-			activeSeen := map[string]struct{}{}
-			if !done {
-				active, err := cs.ListStatuses(ctx, "")
-				if err != nil {
-					log.G(ctx).WithError(err).Error("active check failed")
-					continue
-				}
-
-				// update status of active entries!
-				for _, active := range active {
-					statuses[active.Ref] = statusInfo{
-						Ref:       active.Ref,
-						Status:    "downloading",
-						Offset:    active.Offset,
-						Total:     active.Total,
-						StartedAt: active.StartedAt,
-						UpdatedAt: active.UpdatedAt,
-					}
-					activeSeen[active.Ref] = struct{}{}
-				}
-			}
-
 			// now, update the items in jobs that are not in active
 			for _, j := range ongoing.Jobs() {
 				key := remotes.MakeRefKey(ctx, j)
+
+				activeSeen := map[string]struct{}{}
+				if !done {
+					activeStatuses, err := cs.ListStatuses(ctx, fmt.Sprintf("ref==%s", key))
+					if err != nil {
+						log.G(ctx).WithError(err).Error("active check failed")
+						continue
+					}
+
+					// update status of active entries!
+					for _, active := range activeStatuses {
+						statuses[active.Ref] = statusInfo{
+							Ref:       active.Ref,
+							Status:    "downloading",
+							Offset:    active.Offset,
+							Total:     active.Total,
+							StartedAt: active.StartedAt,
+							UpdatedAt: active.UpdatedAt,
+						}
+						activeSeen[active.Ref] = struct{}{}
+					}
+				}
+
 				keys = append(keys, key)
 				if _, ok := activeSeen[key]; ok {
 					continue
@@ -470,7 +466,9 @@ outer:
 				}
 			}
 
-			onProgress(float64(offset) / float64(total))
+			if onProgress != nil {
+				onProgress(float64(offset) / float64(total))
+			}
 
 			if done || (len(statuses) == exists) {
 				return
