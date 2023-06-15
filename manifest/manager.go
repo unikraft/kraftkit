@@ -16,7 +16,6 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 
-	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -27,27 +26,6 @@ import (
 
 type manifestManager struct {
 	manifests []string
-}
-
-// useGit is a local variable used within the context of the manifest package
-// and is dynamically injected as a CLI option.
-var useGit = false
-
-// FIXME(antoineco): avoid init, initialize things where needed
-func init() {
-	// Register a new pack.Package type
-	_ = packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
-
-	// Register additional command-line flags
-	cmdfactory.RegisterFlag(
-		"kraft pkg pull",
-		cmdfactory.BoolVarP(
-			&useGit,
-			"git", "g",
-			false,
-			"Use Git when pulling sources",
-		),
-	)
 }
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
