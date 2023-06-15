@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
@@ -321,89 +319,105 @@ func (manager *ociManager) RemoveSource(ctx context.Context, source string) erro
 
 // IsCompatible implements packmanager.PackageManager
 func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
-	log.G(ctx).
-		WithField("source", source).
-		Debug("checking if source is an oci unikernel")
-
-	// 0. Append latest tag if not specified
-	if !strings.Contains(source, ":") {
-		source = fmt.Sprintf("%s:latest", source)
-	}
-
-	// 1. Check if the source is a reference to a local image
-
-	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(DefaultRegistry),
-	)
-	if err != nil {
-		return nil, false, err
-	}
-
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, false, err
 	}
 
-	_, err = handle.ResolveImage(ctx, source)
-	if err == nil {
-		return manager, true, nil
+	// Check if the provided source is a fully qualified OCI reference
+	isLocalImage := func(source string) bool {
+		log.G(ctx).WithField("source", source).Debug("checking if source is OCI image")
+
+		// First try without known registries
+		_, err = handle.ResolveImage(ctx, source)
+		if err == nil {
+			return true
+		}
+
+		// Now try with known registries
+		for _, registry := range manager.registries {
+			ref, err := name.ParseReference(source,
+				name.WithDefaultRegistry(registry),
+			)
+			if err != nil {
+				continue
+			}
+
+			_, err = handle.ResolveImage(ctx, ref.Context().String())
+			if err == nil {
+				return true
+			}
+		}
+
+		return false
 	}
 
-	log.G(ctx).Debugf("could not resolve local image: %v", err)
-
-	// 2. Check if the source is a remote registry
-
-	if uri, err := url.Parse(source); err == nil && uri.Host == source {
+	// Check if the provided source an OCI Distrubtion Spec capable registry
+	isRegistry := func(source string) bool {
 		if reg, err := manager.registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
+			return true
+		}
+
+		return false
+	}
+
+	// Check if the provided source is OCI registry
+	isRemoteImage := func(source string) bool {
+		log.G(ctx).WithField("source", source).Debug("checking if source is registry")
+		opts := []crane.Option{
+			crane.WithContext(ctx),
+			crane.WithUserAgent(version.UserAgent()),
+		}
+
+		if auth, ok := config.G[config.KraftKit](ctx).Auth[source]; ok {
+			// We split up the options for authenticating and the option for "verifying
+			// ssl" such that a user can simply disable secure connection to a registry
+			// which is publically accessible.
+
+			if auth.User != "" && auth.Token != "" {
+				log.G(ctx).
+					WithField("registry", source).
+					Debug("authenticating")
+
+				opts = append(opts,
+					crane.WithAuth(authn.FromConfig(authn.AuthConfig{
+						Username: auth.User,
+						Password: auth.Token,
+					})),
+				)
+			}
+
+			if !auth.VerifySSL {
+				rt := http.DefaultTransport.(*http.Transport).Clone()
+				rt.TLSClientConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+				opts = append(opts,
+					crane.Insecure,
+					crane.WithTransport(rt),
+				)
+			}
+		}
+
+		raw, err := crane.Config(source, opts...)
+		if err == nil && len(raw) > 0 {
+			return true
+		}
+
+		log.G(ctx).WithField("source", source).Trace(err)
+
+		return false
+	}
+
+	for _, check := range []func(string) bool{
+		isLocalImage,
+		isRegistry,
+		isRemoteImage,
+	} {
+		if check(source) {
 			return manager, true, nil
 		}
 	}
-
-	log.G(ctx).Debugf("source is not a registry: %v", err)
-
-	// 3. Check if the source is a full reference tag at a remote registry
-
-	opts := []crane.Option{
-		crane.WithContext(ctx),
-		crane.WithUserAgent(version.UserAgent()),
-	}
-
-	if auth, ok := config.G[config.KraftKit](ctx).Auth[ref.Context().RegistryStr()]; ok {
-		// We split up the options for authenticating and the option for "verifying
-		// ssl" such that a user can simply disable secure connection to a registry
-		// which is publically accessible.
-
-		if auth.User != "" && auth.Token != "" {
-			log.G(ctx).
-				WithField("registry", ref.Context().RegistryStr()).
-				Debug("authenticating")
-
-			opts = append(opts,
-				crane.WithAuth(authn.FromConfig(authn.AuthConfig{
-					Username: auth.User,
-					Password: auth.Token,
-				})),
-			)
-		}
-
-		if !auth.VerifySSL {
-			rt := http.DefaultTransport.(*http.Transport).Clone()
-			rt.TLSClientConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-			opts = append(opts,
-				crane.Insecure,
-				crane.WithTransport(rt),
-			)
-		}
-	}
-
-	raw, err := crane.Config(source, opts...)
-	if err == nil && len(raw) > 0 {
-		return manager, true, nil
-	}
-
-	log.G(ctx).Warnf("could not resolve remote image: %v", err)
 
 	return nil, false, nil
 }
