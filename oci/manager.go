@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
@@ -62,12 +60,12 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 }
 
 // Update implements packmanager.PackageManager
-func (manager ociManager) Update(ctx context.Context) error {
+func (manager *ociManager) Update(ctx context.Context) error {
 	return nil
 }
 
 // Pack implements packmanager.PackageManager
-func (manager ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	targ, ok := entity.(target.Target)
 	if !ok {
 		return nil, fmt.Errorf("entity is not Unikraft target")
@@ -82,13 +80,13 @@ func (manager ociManager) Pack(ctx context.Context, entity component.Component, 
 }
 
 // Unpack implements packmanager.PackageManager
-func (manager ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
+func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
 	return nil, fmt.Errorf("not implemented: oci.manager.Unpack")
 }
 
 // registry is a wrapper method for authenticating and listing OCI repositories
 // from a provided domain representing a registry.
-func (manager ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
+func (manager *ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 	var err error
 	var auth regtypes.AuthConfig
 
@@ -120,7 +118,7 @@ func (manager ociManager) registry(ctx context.Context, domain string) (*regtool
 }
 
 // Catalog implements packmanager.PackageManager
-func (manager ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var packs []pack.Package
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
@@ -294,133 +292,148 @@ func (manager ociManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	return packs, nil
 }
 
+// SetSources implements packmanager.PackageManager
+func (manager *ociManager) SetSources(_ context.Context, sources ...string) error {
+	manager.registries = sources
+	return nil
+}
+
 // AddSource implements packmanager.PackageManager
-func (manager ociManager) AddSource(ctx context.Context, source string) error {
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source == manifest {
-			log.G(ctx).Warnf("manifest already saved: %s", source)
-			return nil
-		}
+func (manager *ociManager) AddSource(ctx context.Context, source string) error {
+	if manager.registries == nil {
+		manager.registries = make([]string, 0)
 	}
 
-	log.G(ctx).Infof("adding to list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
-		config.G[config.KraftKit](ctx).Unikraft.Manifests,
-		source,
-	)
-	return config.M[config.KraftKit](ctx).Write(true)
+	manager.registries = append(manager.registries, source)
+
+	return nil
 }
 
 // RemoveSource implements packmanager.PackageManager
-func (manager ociManager) RemoveSource(ctx context.Context, source string) error {
-	manifests := []string{}
-
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if source != manifest {
-			manifests = append(manifests, manifest)
+func (manager *ociManager) RemoveSource(ctx context.Context, source string) error {
+	for i, needle := range manager.registries {
+		if needle == source {
+			ret := make([]string, 0)
+			ret = append(ret, manager.registries[:i]...)
+			manager.registries = append(ret, manager.registries[i+1:]...)
+			break
 		}
 	}
 
-	log.G(ctx).Infof("removing from list of manifests: %s", source)
-	config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
-	return config.M[config.KraftKit](ctx).Write(false)
+	return nil
 }
 
 // IsCompatible implements packmanager.PackageManager
-func (manager ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
-	log.G(ctx).
-		WithField("source", source).
-		Debug("checking if source is an oci unikernel")
-
-	// 0. Append latest tag if not specified
-	if !strings.Contains(source, ":") {
-		source = fmt.Sprintf("%s:latest", source)
-	}
-
-	// 1. Check if the source is a reference to a local image
-
-	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(DefaultRegistry),
-	)
-	if err != nil {
-		return nil, false, err
-	}
-
+func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, false, err
 	}
 
-	_, err = handle.ResolveImage(ctx, source)
-	if err == nil {
-		return manager, true, nil
+	// Check if the provided source is a fully qualified OCI reference
+	isLocalImage := func(source string) bool {
+		log.G(ctx).WithField("source", source).Debug("checking if source is OCI image")
+
+		// First try without known registries
+		_, err = handle.ResolveImage(ctx, source)
+		if err == nil {
+			return true
+		}
+
+		// Now try with known registries
+		for _, registry := range manager.registries {
+			ref, err := name.ParseReference(source,
+				name.WithDefaultRegistry(registry),
+			)
+			if err != nil {
+				continue
+			}
+
+			_, err = handle.ResolveImage(ctx, ref.Context().String())
+			if err == nil {
+				return true
+			}
+		}
+
+		return false
 	}
 
-	log.G(ctx).Debugf("could not resolve local image: %v", err)
-
-	// 2. Check if the source is a remote registry
-
-	if uri, err := url.Parse(source); err == nil && uri.Host == source {
+	// Check if the provided source an OCI Distrubtion Spec capable registry
+	isRegistry := func(source string) bool {
 		if reg, err := manager.registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
+			return true
+		}
+
+		return false
+	}
+
+	// Check if the provided source is OCI registry
+	isRemoteImage := func(source string) bool {
+		log.G(ctx).WithField("source", source).Debug("checking if source is registry")
+		opts := []crane.Option{
+			crane.WithContext(ctx),
+			crane.WithUserAgent(version.UserAgent()),
+		}
+
+		if auth, ok := config.G[config.KraftKit](ctx).Auth[source]; ok {
+			// We split up the options for authenticating and the option for "verifying
+			// ssl" such that a user can simply disable secure connection to a registry
+			// which is publically accessible.
+
+			if auth.User != "" && auth.Token != "" {
+				log.G(ctx).
+					WithField("registry", source).
+					Debug("authenticating")
+
+				opts = append(opts,
+					crane.WithAuth(authn.FromConfig(authn.AuthConfig{
+						Username: auth.User,
+						Password: auth.Token,
+					})),
+				)
+			}
+
+			if !auth.VerifySSL {
+				rt := http.DefaultTransport.(*http.Transport).Clone()
+				rt.TLSClientConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+				opts = append(opts,
+					crane.Insecure,
+					crane.WithTransport(rt),
+				)
+			}
+		}
+
+		raw, err := crane.Config(source, opts...)
+		if err == nil && len(raw) > 0 {
+			return true
+		}
+
+		log.G(ctx).WithField("source", source).Trace(err)
+
+		return false
+	}
+
+	for _, check := range []func(string) bool{
+		isLocalImage,
+		isRegistry,
+		isRemoteImage,
+	} {
+		if check(source) {
 			return manager, true, nil
 		}
 	}
-
-	log.G(ctx).Debugf("source is not a registry: %v", err)
-
-	// 3. Check if the source is a full reference tag at a remote registry
-
-	opts := []crane.Option{
-		crane.WithContext(ctx),
-		crane.WithUserAgent(version.UserAgent()),
-	}
-
-	if auth, ok := config.G[config.KraftKit](ctx).Auth[ref.Context().RegistryStr()]; ok {
-		// We split up the options for authenticating and the option for "verifying
-		// ssl" such that a user can simply disable secure connection to a registry
-		// which is publically accessible.
-
-		if auth.User != "" && auth.Token != "" {
-			log.G(ctx).
-				WithField("registry", ref.Context().RegistryStr()).
-				Debug("authenticating")
-
-			opts = append(opts,
-				crane.WithAuth(authn.FromConfig(authn.AuthConfig{
-					Username: auth.User,
-					Password: auth.Token,
-				})),
-			)
-		}
-
-		if !auth.VerifySSL {
-			rt := http.DefaultTransport.(*http.Transport).Clone()
-			rt.TLSClientConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-			opts = append(opts,
-				crane.Insecure,
-				crane.WithTransport(rt),
-			)
-		}
-	}
-
-	raw, err := crane.Config(source, opts...)
-	if err == nil && len(raw) > 0 {
-		return manager, true, nil
-	}
-
-	log.G(ctx).Warnf("could not resolve remote image: %v", err)
 
 	return nil, false, nil
 }
 
 // From implements packmanager.PackageManager
-func (manager ociManager) From(pack.PackageFormat) (packmanager.PackageManager, error) {
+func (manager *ociManager) From(pack.PackageFormat) (packmanager.PackageManager, error) {
 	return nil, fmt.Errorf("not possible: oci.manager.From")
 }
 
 // Format implements packmanager.PackageManager
-func (manager ociManager) Format() pack.PackageFormat {
+func (manager *ociManager) Format() pack.PackageFormat {
 	return OCIFormat
 }

@@ -82,12 +82,16 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	machine.Status.State = machinev1alpha1.MachineStateUnknown
 
 	if len(machine.Status.StateDir) == 0 {
-		machine.Status.StateDir = config.G[config.KraftKit](ctx).RuntimeDir
+		machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+	}
+
+	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
+		return machine, err
 	}
 
 	// Set and create the log file for this machine
 	if len(machine.Status.LogFile) == 0 {
-		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, string(machine.ObjectMeta.UID)+".log")
+		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
@@ -114,7 +118,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		WithDaemonize(true),
 		WithEnableKVM(true),
 		WithNoGraphic(true),
-		WithPidFile(filepath.Join(machine.Status.StateDir, string(machine.ObjectMeta.UID)+".pid")),
+		WithPidFile(filepath.Join(machine.Status.StateDir, "machine.pid")),
 		WithNoReboot(true),
 		WithNoStart(true),
 		WithName(string(machine.ObjectMeta.UID)),
@@ -128,14 +132,14 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		// Create a QMP connection solely for manipulating the machine
 		WithQMP(QemuHostCharDevUnix{
 			SocketDir: machine.Status.StateDir,
-			Name:      string(machine.ObjectMeta.UID) + "_control",
+			Name:      "qemu_control",
 			NoWait:    true,
 			Server:    true,
 		}),
 		// Create a QMP connection solely for listening to events
 		WithQMP(QemuHostCharDevUnix{
 			SocketDir: machine.Status.StateDir,
-			Name:      string(machine.ObjectMeta.UID) + "_events",
+			Name:      "qemu_events",
 			NoWait:    true,
 			Server:    true,
 		}),
@@ -145,7 +149,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		}),
 		WithMonitor(QemuHostCharDevUnix{
 			SocketDir: machine.Status.StateDir,
-			Name:      string(machine.ObjectMeta.UID) + "_mon",
+			Name:      "qemu_mon",
 			NoWait:    true,
 			Server:    true,
 		}),
@@ -163,9 +167,9 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	// TODO: Parse Rootfs types
-	if len(machine.Spec.Rootfs) > 0 {
+	if len(machine.Status.InitrdPath) > 0 {
 		qopts = append(qopts,
-			WithInitRd(machine.Spec.Rootfs),
+			WithInitRd(machine.Status.InitrdPath),
 		)
 	}
 

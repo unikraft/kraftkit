@@ -71,9 +71,18 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 // defined through its configuration.
 func WithDefaultRegistries() OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
-		manager.registries = append([]string{DefaultRegistry},
-			config.G[config.KraftKit](ctx).Unikraft.Manifests...,
-		)
+		manager.registries = make([]string, 0)
+
+		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
+				manager.registries = append(manager.registries, manifest)
+			}
+		}
+
+		if len(manager.registries) == 0 {
+			manager.registries = []string{DefaultRegistry}
+		}
+
 		return nil
 	}
 }

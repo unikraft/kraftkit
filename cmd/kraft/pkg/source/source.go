@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
+	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 )
 
@@ -51,23 +53,32 @@ func (*Source) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *Source) Run(cmd *cobra.Command, args []string) error {
-	var err error
-	var compatible bool
-
-	source := ""
-	if len(args) > 0 {
-		source = args[0]
-	}
-
 	ctx := cmd.Context()
-	pm := packmanager.G(ctx)
 
-	pm, compatible, err = pm.IsCompatible(ctx, source)
-	if err != nil {
-		return err
-	} else if !compatible {
-		return errors.New("incompatible package manager")
+	for _, source := range args {
+		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+		if err != nil {
+			return err
+		} else if !compatible {
+			return errors.New("incompatible package manager")
+		}
+
+		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			if source == manifest {
+				log.G(ctx).Warnf("manifest already saved: %s", source)
+				return nil
+			}
+		}
+
+		config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
+			config.G[config.KraftKit](ctx).Unikraft.Manifests,
+			source,
+		)
+
+		if err := config.M[config.KraftKit](ctx).Write(true); err != nil {
+			return err
+		}
 	}
 
-	return pm.AddSource(ctx, source)
+	return nil
 }

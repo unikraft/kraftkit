@@ -36,6 +36,9 @@ type PackageManager interface {
 	// Catalog returns all packages known to the manager via given query
 	Catalog(context.Context, ...QueryOption) ([]pack.Package, error)
 
+	// Set the list of sources for the package manager
+	SetSources(context.Context, ...string) error
+
 	// Add a source to the package manager
 	AddSource(context.Context, string) error
 
