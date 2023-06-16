@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -97,11 +99,20 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		}
 	}
 
-	// Create a temporary directory where the image can be stored
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
+	// Pre-emptively prepare the UID so that we can extract the kernel to the
+	// defined state directory.
+	machine.ObjectMeta.UID = uuid.NewUUID()
+	machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
 		return err
 	}
+
+	// Clean up the package directory if an error occurs before returning.
+	defer func() {
+		if err != nil {
+			os.RemoveAll(machine.Status.StateDir)
+		}
+	}()
 
 	paramodel, err := paraprogress.NewParaProgress(
 		ctx,
@@ -111,7 +122,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 				return packs[0].Pull(
 					ctx,
 					pack.WithPullProgressFunc(w),
-					pack.WithPullWorkdir(dir),
+					pack.WithPullWorkdir(machine.Status.StateDir),
 				)
 			},
 		)},
