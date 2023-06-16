@@ -113,13 +113,21 @@ type runner interface {
 // runners is the list of built-in runners which are checked sequentially for
 // capability.  The first to test positive via Runnable is used with the
 // controller.
-func runners() []runner {
-	return []runner{
-		&runnerLinuxu{},
-		&runnerKernel{},
-		&runnerProject{},
-		&runnerPackage{},
+func runners() map[string]runner {
+	r := map[string]runner{
+		"linuxu":  &runnerLinuxu{},
+		"kernel":  &runnerKernel{},
+		"project": &runnerProject{},
+		"package": &runnerPackage{},
 	}
+
+	for k, pm := range packmanager.PackageManagers() {
+		r[string(k)] = &runnerPackage{
+			pm: pm,
+		}
+	}
+
+	return r
 }
 
 func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
@@ -188,6 +196,20 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
 
+	if opts.RunAs != "" {
+		runners := runners()
+		if _, ok = runners[opts.RunAs]; !ok {
+			choices := make([]string, len(runners))
+			i := 0
+			for choice := range runners {
+				choices[i] = choice
+				i++
+			}
+
+			return fmt.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
+		}
+	}
+
 	return nil
 }
 
@@ -217,35 +239,34 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var run runner
+	var errs []error
+	runners := runners()
+
+	if opts.RunAs != "" {
+		run = runners[opts.RunAs]
+		if _, err := run.Runnable(ctx, opts, args...); err != nil {
+			return fmt.Errorf("forced runner %s but provided argument was not capable: %v", opts.RunAs, err)
+		}
+	}
+
 	// Iterate through the list of built-in runners which sequentially tests
 	// whether the provided input matches the requirements for being run given its
 	// context.  The first to test positive is used to prepare the machine
 	// specification which is later passed to the controller.
-	var run runner
-	var errs []error
-	for _, candidate := range runners() {
-		if opts.RunAs != "" {
-			if candidate.String() == opts.RunAs {
-				if _, err := candidate.Runnable(ctx, opts, args...); err != nil {
-					return fmt.Errorf("forced runner %s but provided argument was not capable: %v", opts.RunAs, err)
-				}
+	if run == nil {
+		for _, candidate := range runners {
+			log.G(ctx).
+				WithField("runner", candidate.String()).
+				Trace("checking runnability")
+
+			capable, err := candidate.Runnable(ctx, opts, args...)
+			if capable && err == nil {
 				run = candidate
 				break
+			} else if err != nil {
+				errs = append(errs, err)
 			}
-
-			continue
-		}
-
-		log.G(ctx).
-			WithField("runner", candidate.String()).
-			Trace("checking runnability")
-
-		capable, err := candidate.Runnable(ctx, opts, args...)
-		if capable && err == nil {
-			run = candidate
-			break
-		} else if err != nil {
-			errs = append(errs, err)
 		}
 	}
 	if run == nil {

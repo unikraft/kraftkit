@@ -34,6 +34,10 @@ type runnerPackage struct {
 
 // String implements Runner.
 func (runner *runnerPackage) String() string {
+	if runner.pm != nil {
+		return runner.pm.Format().String()
+	}
+
 	return "package"
 }
 
@@ -46,7 +50,11 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 	runner.packName = args[0]
 	runner.args = args[1:]
 
-	pm, compatible, err := packmanager.G(ctx).IsCompatible(ctx, runner.packName)
+	if runner.pm == nil {
+		runner.pm = packmanager.G(ctx)
+	}
+
+	pm, compatible, err := runner.pm.IsCompatible(ctx, runner.packName)
 	if err == nil && compatible {
 		runner.pm = pm
 		return true, nil
