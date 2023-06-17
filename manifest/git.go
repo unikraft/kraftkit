@@ -219,6 +219,8 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 		return pullGit(ctx, manifest, popts...)
 	}
 
+	manifest.mopts = gp.mopts
+
 	if err := pullArchive(ctx, manifest, popts...); err != nil {
 		log.G(ctx).Trace(err)
 		return pullGit(ctx, manifest, popts...)

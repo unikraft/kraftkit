@@ -98,6 +98,8 @@ func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
 }
 
 func (mp ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+	manifest.mopts = mp.manifest.mopts
+
 	return pullArchive(ctx, manifest, opts...)
 }
 

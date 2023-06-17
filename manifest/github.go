@@ -130,6 +130,8 @@ func (ghp GitHubProvider) PullManifest(ctx context.Context, manifest *Manifest, 
 		return pullGit(ctx, manifest, popts...)
 	}
 
+	manifest.mopts = ghp.mopts
+
 	if err := pullArchive(ctx, manifest, popts...); err != nil {
 		log.G(ctx).Trace(err)
 		return pullGit(ctx, manifest, popts...)
