@@ -32,7 +32,7 @@ require (
 	github.com/google/go-containerregistry v0.15.2
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/henvic/httpretty v0.1.0
+	github.com/henvic/httpretty v0.1.2
 	github.com/imdario/mergo v0.3.15
 	github.com/kubescape/go-git-url v0.0.25
 	github.com/mattn/go-colorable v0.1.13
