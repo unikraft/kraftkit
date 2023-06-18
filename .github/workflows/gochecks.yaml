@@ -47,7 +47,7 @@ jobs:
             ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Check that go.mod is tidy
-        uses: protocol/multiple-go-modules@v1.2
+        uses: protocol/multiple-go-modules@v1.4
         with:
           run: |
             git config --global --add safe.directory '*'
@@ -73,7 +73,7 @@ jobs:
           skip-cache: true
 
       - name: go generate
-        uses: protocol/multiple-go-modules@v1.2
+        uses: protocol/multiple-go-modules@v1.4
         if: (success() || failure()) && env.RUNGOGENERATE == 'true'
         with:
           run: |
