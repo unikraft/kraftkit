@@ -78,7 +78,7 @@ type MachineSpec struct {
 	Ports MachinePorts `json:"ports,omitempty"`
 
 	// Networks associated with this machine.
-	Networks []networkv1alpha1.NetworkSpec `json:"interfaces,omitempty"`
+	Networks []networkv1alpha1.NetworkSpec `json:"networks,omitempty"`
 
 	// Resources describes the compute resources (requests and limits) required by
 	// this machine.
