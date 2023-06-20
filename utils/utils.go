@@ -26,6 +26,8 @@ package utils
 import (
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -146,4 +148,18 @@ func HumanizeDuration(dur time.Duration) string {
 	}
 
 	return fmt.Sprintf("%d.%ds", sec, ms)
+}
+
+// RelativePath resolve a relative to the base path.
+func RelativePath(base, path string) string {
+	if path[0] == '~' {
+		home, _ := os.UserHomeDir()
+		path = filepath.Join(home, path[1:])
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	return filepath.Join(base, path)
 }
