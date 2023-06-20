@@ -41,16 +41,11 @@ type Build struct {
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
+	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 }
-
-// The longest word is "configuring" (which is 11 characters long), plus
-// additional space characters (2 characters), brackets (2 characters) the
-// name of the project and the target/plat string (which is variable in
-// length).
-const maxExtraCharacters = 15
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Build{}, cobra.Command{
@@ -92,65 +87,14 @@ func (*Build) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Build) Run(cmd *cobra.Command, args []string) error {
-	var err error
-	var workdir string
-
-	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-	}
-
-	if len(args) == 0 {
-		workdir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	} else {
-		workdir = args[0]
-	}
-
-	ctx := cmd.Context()
-
-	// Initialize at least the configuration options for a project
-	project, err := app.NewProjectFromOptions(
-		ctx,
-		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultKraftfiles(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if !app.IsWorkdirInitialized(workdir) {
-		return fmt.Errorf("cannot build uninitialized project! start with: ukbuild init")
-	}
-
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
-	nameWidth := -1
-
-	// Calculate the width of the longest process name so that we can align the
-	// two independent processtrees if we are using "render" mode (aka the fancy
-	// mode is enabled).
-	if !norender {
-		comps, err := project.Components(ctx)
-		if err != nil {
-			return err
-		}
-		for _, component := range comps {
-			if newLen := len(unikraft.TypeNameVersion(component)) + maxExtraCharacters; newLen > nameWidth {
-				nameWidth = newLen
-			}
-		}
-	}
-
+func (opts *Build) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
+	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	auths := config.G[config.KraftKit](ctx).Auth
 
-	_, err = project.Components(ctx)
-	if err != nil && project.Template().Name() != "" {
+	if _, err := project.Components(ctx); err != nil && project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
@@ -353,7 +297,67 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	processes = []*paraprogress.Process{} // reset
+	return nil
+}
+
+func (opts *Build) Run(cmd *cobra.Command, args []string) error {
+	var err error
+	var workdir string
+
+	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
+		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	}
+
+	if len(args) == 0 {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		workdir = args[0]
+	}
+
+	ctx := cmd.Context()
+
+	// Initialize at least the configuration options for a project
+	project, err := app.NewProjectFromOptions(
+		ctx,
+		app.WithProjectWorkdir(workdir),
+		app.WithProjectDefaultKraftfiles(),
+	)
+	if err != nil {
+		return err
+	}
+
+	if !app.IsWorkdirInitialized(workdir) {
+		return fmt.Errorf("cannot build uninitialized project")
+	}
+
+	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	nameWidth := -1
+
+	// Calculate the width of the longest process name so that we can align the
+	// two independent processtrees if we are using "render" mode (aka the fancy
+	// mode is enabled).
+	if !norender {
+		// The longest word is "configuring" (which is 11 characters long), plus
+		// additional space characters (2 characters), brackets (2 characters) the
+		// name of the project and the target/plat string (which is variable in
+		// length).
+		for _, targ := range project.Targets() {
+			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
+				nameWidth = newLen
+			}
+		}
+	}
+
+	if !opts.NoPull {
+		if err := opts.pull(ctx, project, workdir, norender, nameWidth); err != nil {
+			return err
+		}
+	}
+
+	processes := []*paraprogress.Process{} // reset
 
 	// Filter project targets by any provided CLI options
 	selected := cli.FilterTargets(
