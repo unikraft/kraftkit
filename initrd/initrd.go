@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/utils"
+
 	"github.com/cavaliergopher/cpio"
 )
 
@@ -39,25 +41,26 @@ var NameToType = map[string]InitrdFormat{
 }
 
 type InitrdConfig struct {
-	Output     string       `yaml:",omitempty" json:"output,omitempty"`
-	Input      []string     `yaml:",omitempty" json:"input,omitempty"`
-	Format     InitrdFormat `yaml:",omitempty" json:"format,omitempty"`
-	Compress   bool         `yaml:",omitempty" json:"compress,omitempty"`
-	WorkingDir string
-	OutDir     string
+	Output   string            `yaml:"output,omitempty"`
+	Files    map[string]string `yaml:"files,omitempty"`
+	Format   InitrdFormat      `yaml:"format,omitempty"`
+	Compress bool              `yaml:"compress,omitempty"`
+	workdir  string
 }
 
 // NewFromFile interprets a given path as a initramfs disk file and returns an
 // instantiated InitrdConfig if successful.
-func NewFromFile(path string) (*InitrdConfig, error) {
+func NewFromFile(workdir, path string) (*InitrdConfig, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
 	config := InitrdConfig{
-		Output: path,
-		Format: NEWC,
+		Output:  path,
+		Format:  NEWC,
+		Files:   make(map[string]string),
+		workdir: workdir,
 	}
 	reader := cpio.NewReader(file)
 
@@ -72,7 +75,7 @@ func NewFromFile(path string) (*InitrdConfig, error) {
 			return nil, err
 		}
 
-		config.Input = append(config.Input, hdr.Name)
+		config.Files[filepath.Join(workdir, hdr.Name)] = hdr.Name
 	}
 
 	return &config, nil
@@ -104,48 +107,24 @@ func (i *InitrdConfig) NewReader(w io.Reader) (*cpio.Reader, error) {
 	}
 }
 
-// RelativePath resolve a relative path based the working directory
-func (i *InitrdConfig) RelativePath(path string) string {
-	if path[0] == '~' {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, path[1:])
-	}
-
-	if filepath.IsAbs(path) {
-		return path
-	}
-
-	return filepath.Join(i.WorkingDir, path)
-}
-
-// ParseInitrdConfig parse short syntax for architecture configuration
-func ParseInitrdConfig(workdir string, value string) (*InitrdConfig, error) {
+// NewFromPath accepts a positional argument base which is the directory that
+// the provided files should be serialized from.  The prefix positional argument
+// is used to affix all embedded files to the provided location.  Left empty,
+// the defeault prefix is "/".
+func NewFromPath(base string, prefix string, files ...string) (*InitrdConfig, error) {
 	initrd := &InitrdConfig{
 		Format: NEWC,
 	}
 
-	if len(value) == 0 {
-		return initrd, fmt.Errorf("uninitialized value for initrd")
+	if prefix == "" {
+		prefix = "/"
+	}
+	if !strings.HasPrefix(prefix, "/") {
+		return nil, fmt.Errorf("must use absolute path in prefix: %s", prefix)
 	}
 
-	// Possible formats:
-	//
-	// ./path/on/disk (all files, we'll create a temp file)
-	// ./path/on/disk:./filename.format (if format=cpio, select default)
-	// ./path/on/diisk:./filename.formatz (-z suffix means compress)
-
-	split := strings.Split(value, ":")
-	if len(split) == 1 {
-		initrd.Input = []string{
-			fmt.Sprintf("%s:%s", workdir, split[0]),
-		}
-	} else if len(split) == 2 {
-		initrd.Input = []string{
-			fmt.Sprintf("%s:%s", workdir, split[0]),
-		}
-		initrd.Output = initrd.RelativePath(split[1])
-	} else if len(split) > 2 {
-		return initrd, fmt.Errorf("unexpected initrd format, expected path:file expression")
+	for _, file := range files {
+		initrd.Files[utils.RelativePath(base, file)] = filepath.Join(prefix, file)
 	}
 
 	return initrd, nil
