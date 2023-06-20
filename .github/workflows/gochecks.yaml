@@ -62,14 +62,15 @@ jobs:
         if: success() || failure()  # run this step even if the previous one failed
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.52.2
-          args: --disable-all --enable=gofumpt
+          version: v1.53.3
+          args: --disable-all --enable=gofumpt --out-format=colored-line-number
           skip-cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.52.2
+          version: v1.53.3
+          args: --out-format=colored-line-number
           skip-cache: true
 
       - name: go generate
