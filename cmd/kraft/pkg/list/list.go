@@ -36,8 +36,8 @@ type List struct {
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&List{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
-		Use:     "list [FLAGS] [DIR]",
-		Aliases: []string{"l", "ls"},
+		Use:     "ls [FLAGS] [DIR]",
+		Aliases: []string{"l", "list"},
 		Args:    cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Doc(`
 			List installed Unikraft component packages.
