@@ -147,6 +147,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
+	auths := config.G[config.KraftKit](ctx).Auth
 
 	_, err = project.Components(ctx)
 	if err != nil && project.Template().Name() != "" {
@@ -161,6 +162,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					packmanager.WithTypes(unikraft.ComponentTypeApp),
 					packmanager.WithVersion(project.Template().Version()),
 					packmanager.WithCache(!opts.NoCache),
+					packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 				)
 				if err != nil {
 					return err
@@ -259,6 +261,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 	for _, component := range components {
 		component := component // loop closure
+		auths := auths
 
 		searches = append(searches, processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
@@ -271,6 +274,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					packmanager.WithVersion(component.Version()),
 					packmanager.WithSource(component.Source()),
 					packmanager.WithCache(!opts.NoCache),
+					packmanager.WithAuthConfig(auths),
 				)
 				if err != nil {
 					return err
@@ -314,6 +318,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	if len(missingPacks) > 0 {
 		for _, p := range missingPacks {
 			p := p // loop closure
+			auths := auths
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s",
 					unikraft.TypeNameVersion(p),
@@ -325,6 +330,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullWorkdir(workdir),
 						// pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(!opts.NoCache),
+						pack.WithPullAuthConfig(auths),
 					)
 				},
 			))
