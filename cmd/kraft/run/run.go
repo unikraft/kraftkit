@@ -188,14 +188,6 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Set use of the global package manager.
-	pm, err := packmanager.NewUmbrellaManager(ctx)
-	if err != nil {
-		return err
-	}
-
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
-
 	if opts.RunAs != "" {
 		runners := runners()
 		if _, ok = runners[opts.RunAs]; !ok {
@@ -208,6 +200,16 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 			return fmt.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
 		}
+	}
+
+	if opts.RunAs != "kernel" {
+		// Set use of the global package manager.
+		pm, err := packmanager.NewUmbrellaManager(ctx)
+		if err != nil {
+			return err
+		}
+
+		cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
 	}
 
 	return nil
