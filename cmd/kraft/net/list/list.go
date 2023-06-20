@@ -30,7 +30,7 @@ func New() *cobra.Command {
 		Aliases: []string{"list"},
 		Args:    cobra.NoArgs,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "run",
+			cmdfactory.AnnotationHelpGroup: "net",
 		},
 	})
 	if err != nil {
