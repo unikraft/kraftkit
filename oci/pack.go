@@ -435,7 +435,7 @@ unpack:
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
 		if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
-			ocipack.initrd, err = initrd.NewFromFile(initrdPath)
+			ocipack.initrd, err = initrd.NewFromFile(popts.Workdir(), initrdPath)
 			if err != nil {
 				return err
 			}
