@@ -74,7 +74,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	var all []*application
 
 	name, _ := popts.GetProjectName()
-	outdir := DefaultOutputDir
+	outdir := unikraft.BuildDir
 
 	for i, file := range popts.kraftfiles {
 		iface := file.config

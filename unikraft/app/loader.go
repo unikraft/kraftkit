@@ -25,10 +25,10 @@ import (
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"kraftkit.sh/unikraft"
 )
 
 const (
-	DefaultOutputDir  = "build"
 	DefaultConfigFile = ".config"
 )
 
@@ -46,7 +46,7 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 	app.name = name
 	app.path = popts.workdir
 
-	outdir := DefaultOutputDir
+	outdir := unikraft.BuildDir
 	if n, ok := iface["outdir"]; ok {
 		outdir, ok = n.(string)
 		if !ok {
