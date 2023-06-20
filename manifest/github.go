@@ -43,6 +43,10 @@ type GitHubProvider struct {
 func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	var branch string
 
+	if u, err := url.Parse(path); err != nil || u.Host != "github.com" {
+		return nil, fmt.Errorf("provided path does not originate from GitHub: %s", path)
+	}
+
 	repo, err := ghrepo.NewFromURL(path)
 	if err != nil {
 		return nil, err
