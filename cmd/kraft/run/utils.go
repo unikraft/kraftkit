@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
-	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
 )
 
@@ -85,38 +84,6 @@ func (opts *Run) parseNetworks(ctx context.Context, machine *machineapi.Machine)
 	// Set the interface on the machine.
 	found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{newIface}
 	machine.Spec.Networks = []networkapi.NetworkSpec{found.Spec}
-
-	// Set up a clean up method to remove the interface if the machine exits and
-	// we are requesting to remove the machine.
-	if opts.Remove && !opts.Detach {
-		defer func() {
-			// Get the latest version of the network.
-			found, err := opts.networkController.Get(ctx, &networkapi.Network{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: opts.networkName,
-				},
-			})
-			if err != nil {
-				log.G(ctx).Errorf("could not get network information for %s: %v", opts.networkName, err)
-				return
-			}
-
-			// Remove the new network interface
-			for i, iface := range found.Spec.Interfaces {
-				if iface.UID == newIface.UID {
-					ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
-					ret = append(ret, found.Spec.Interfaces[:i]...)
-					found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
-					break
-				}
-			}
-
-			if _, err = opts.networkController.Update(ctx, found); err != nil {
-				log.G(ctx).Errorf("could not update network %s: %v", opts.networkName, err)
-				return
-			}
-		}()
-	}
 
 	return nil
 }

@@ -227,18 +227,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	if err := opts.parsePorts(ctx, machine); err != nil {
-		return err
-	}
-
-	if err := opts.parseNetworks(ctx, machine); err != nil {
-		return err
-	}
-
-	if err := opts.assignName(ctx, machine); err != nil {
-		return err
-	}
-
 	var run runner
 	var errs []error
 	runners := runners()
@@ -292,6 +280,18 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		machine.Spec.Resources.Requests[corev1.ResourceMemory] = quantity
 	}
 
+	if err := opts.parsePorts(ctx, machine); err != nil {
+		return err
+	}
+
+	if err := opts.parseNetworks(ctx, machine); err != nil {
+		return err
+	}
+
+	if err := opts.assignName(ctx, machine); err != nil {
+		return err
+	}
+
 	// Create the machine
 	machine, err = opts.machineController.Create(ctx, machine)
 	if err != nil {
@@ -330,6 +330,18 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 					break loop
 				}
 			}
+
+			// Remove the instance on Ctrl+C if the --rm flag is passed
+			if opts.Remove {
+				if _, err := opts.machineController.Stop(ctx, machine); err != nil {
+					log.G(ctx).Errorf("could not stop: %v", err)
+					return
+				}
+				if _, err := opts.machineController.Delete(ctx, machine); err != nil {
+					log.G(ctx).Errorf("could not remove: %v", err)
+					return
+				}
+			}
 		}()
 	}
 
@@ -363,19 +375,37 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				break loop
 			}
 		}
-
-		// Remove the instance on Ctrl+C if the --rm flag is passed
-		if opts.Remove {
-			if _, err := opts.machineController.Stop(ctx, machine); err != nil {
-				return fmt.Errorf("could not stop: %v", err)
-			}
-			if _, err := opts.machineController.Delete(ctx, machine); err != nil {
-				return fmt.Errorf("could not remove: %v", err)
-			}
-		}
 	} else {
 		// Output the name of the instance such that it can be piped
 		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
+	}
+
+	// Set up a clean up method to remove the interface if the machine exits and
+	// we are requesting to remove the machine.
+	if opts.Remove && !opts.Detach && len(machine.Spec.Networks) > 0 {
+		// Get the latest version of the network.
+		found, err := opts.networkController.Get(ctx, &networkapi.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: opts.networkName,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("could not get network information for %s: %v", opts.networkName, err)
+		}
+
+		// Remove the new network interface
+		for i, iface := range found.Spec.Interfaces {
+			if iface.UID == machine.Spec.Networks[0].Interfaces[0].UID {
+				ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
+				ret = append(ret, found.Spec.Interfaces[:i]...)
+				found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
+				break
+			}
+		}
+
+		if _, err = opts.networkController.Update(ctx, found); err != nil {
+			return fmt.Errorf("could not update network %s: %v", opts.networkName, err)
+		}
 	}
 
 	return nil
