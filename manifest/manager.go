@@ -194,12 +194,12 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
 
 	if len(query.Source()) > 0 {
-		provider, err := NewProvider(ctx, query.Source(), mopts...)
+		provider, err := NewProvider(ctx, query.Source(), query.Version(), mopts...)
 		if err != nil {
 			return nil, err
 		}
 
-		manifests, err := provider.Manifests()
+		manifests, err := provider.Manifests(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -369,7 +369,9 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 		return m, true, nil
 	}
 
-	if _, err := NewProvider(ctx, source); err != nil {
+	query := packmanager.NewQuery(qopts...)
+
+	if _, err := NewProvider(ctx, source, query.Version()); err != nil {
 		return nil, false, fmt.Errorf("incompatible source")
 	}
 

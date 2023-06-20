@@ -7,6 +7,7 @@ package manifest
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"kraftkit.sh/internal/ghrepo"
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -40,9 +42,7 @@ type GitHubProvider struct {
 // can both probe GitHub's API as well as exploit the fact that it is a Git
 // repository to retrieve information and deliver information as a Manifest
 // format.
-func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
-	var branch string
-
+func NewGitHubProvider(ctx context.Context, path, version string, opts ...ManifestOption) (Provider, error) {
 	if u, err := url.Parse(path); err != nil || u.Host != "github.com" {
 		return nil, fmt.Errorf("provided path does not originate from GitHub: %s", path)
 	}
@@ -55,7 +55,7 @@ func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption)
 	provider := GitHubProvider{
 		path:   path,
 		repo:   repo,
-		branch: branch,
+		branch: version,
 		ctx:    ctx,
 		mopts:  NewManifestOptions(opts...),
 	}
@@ -107,7 +107,7 @@ func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption)
 	return provider, nil
 }
 
-func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
+func (ghp GitHubProvider) Manifests(ctx context.Context) ([]*Manifest, error) {
 	// Is this a wildcard? E.g. lib-*?
 	if strings.HasSuffix(ghp.repo.RepoName(), "*") {
 		return ghp.manifestsFromWildcard()
@@ -116,12 +116,62 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
 	repo := ghp.path
-	if len(ghp.branch) > 0 {
+	if useGit && len(ghp.branch) > 0 {
 		repo += "@" + ghp.branch
 	}
 	manifest, err := gitProviderFromGitHub(ghp.ctx, repo, ghp.mopts.opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if !useGit {
+		resource := ghrepo.SHAArchive(ghp.repo, ghp.branch)
+
+		authHeader := ""
+		authenticated := false
+
+		if auth, ok := manifest.mopts.auths[ghp.repo.RepoHost()]; ok {
+			if len(auth.User) > 0 {
+				authenticated = true
+				authHeader = "Basic " + base64.StdEncoding.
+					EncodeToString([]byte(auth.User+":"+auth.Token))
+			} else if len(auth.Token) > 0 {
+				authenticated = true
+				authHeader = "Bearer " + auth.Token
+			}
+		}
+
+		client := &http.Client{}
+
+		head, err := http.NewRequestWithContext(ctx, "HEAD", resource, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		head.Header.Set("User-Agent", version.UserAgent())
+		if len(manifest.mopts.auths) > 0 {
+			head.Header.Set("Authorization", authHeader)
+		}
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"url":           resource,
+			"method":        "HEAD",
+			"authenticated": authenticated,
+		}).Trace("http")
+
+		// Get the total size of the remote resource.  Note: this fails for GitHub
+		// archives as Content-Length is, for some reason, always set to 0.
+		res, err := client.Do(head)
+		if err != nil {
+			return nil, fmt.Errorf("could not perform HEAD request on resource: %v", err)
+		} else if res.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("received HTTP error code %d on resource", res.StatusCode)
+		}
+
+		manifest.Versions = append(manifest.Versions, ManifestVersion{
+			Version:  ghp.branch,
+			Resource: resource,
+		})
 	}
 
 	manifest.Provider = ghp
@@ -249,12 +299,12 @@ func (ghp GitHubProvider) appendRepositoriesToManifestInParallel(repos []*github
 func gitProviderFromGitHub(ctx context.Context, repo string, opts ...ManifestOption) (*Manifest, error) {
 	// Ultimately, since this is Git, we can use the GitProvider, and update the
 	// path to the resource with a known location
-	provider, err := NewGitProvider(ctx, repo, opts...)
+	provider, err := NewGitProvider(ctx, repo, "", opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	manifests, err := provider.Manifests()
+	manifests, err := provider.Manifests(ctx)
 	if err != nil {
 		return nil, err
 	}

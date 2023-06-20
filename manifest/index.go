@@ -41,7 +41,7 @@ type ManifestIndexProvider struct {
 // a local file on disk and then a remote URL.  If either of these checks pass,
 // the Provider is instantiated since the path does indeed represent a
 // ManifestIndex.
-func NewManifestIndexProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+func NewManifestIndexProvider(ctx context.Context, path, _ string, mopts ...ManifestOption) (Provider, error) {
 	index, err := NewManifestIndexFromFile(path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
@@ -71,7 +71,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 	return nil, fmt.Errorf("provided path is not a manifest index: %s", path)
 }
 
-func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
+func (mip ManifestIndexProvider) Manifests(_ context.Context) ([]*Manifest, error) {
 	return mip.index.Manifests, nil
 }
 
