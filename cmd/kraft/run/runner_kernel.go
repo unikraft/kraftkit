@@ -50,6 +50,7 @@ func (runner *runnerKernel) Prepare(ctx context.Context, opts *Run, machine *mac
 	machine.Spec.Platform = opts.platform.String()
 	machine.Spec.Kernel = "kernel://" + filename
 	machine.Status.KernelPath = runner.kernelPath
+	machine.Spec.ApplicationArgs = runner.args
 
 	// We need to know the architecture pre-emptively, see if we can
 	// "intelligently" guess this by inspecting the ELF binary if the -m|--arch
