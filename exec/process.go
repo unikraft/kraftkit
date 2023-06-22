@@ -13,7 +13,6 @@ import (
 	"strings"
 	"syscall"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
@@ -84,8 +83,6 @@ func (e *Process) Start(ctx context.Context) error {
 		)
 	} else if len(e.opts.stdoutcbs) > 0 {
 		e.cmd.Stdout = io.MultiWriter(e.opts.stdoutcbs...)
-	} else {
-		e.cmd.Stdout = iostreams.G(ctx).Out
 	}
 
 	// Set the stderr
@@ -103,16 +100,10 @@ func (e *Process) Start(ctx context.Context) error {
 		)
 	} else if len(e.opts.stderrcbs) > 0 {
 		e.cmd.Stderr = io.MultiWriter(e.opts.stderrcbs...)
-	} else {
-		e.cmd.Stderr = iostreams.G(ctx).ErrOut
 	}
 
 	// Set the stdin
-	if e.opts.stdin != nil {
-		e.cmd.Stdin = e.opts.stdin
-	} else {
-		e.cmd.Stdin = iostreams.G(ctx).In
-	}
+	e.cmd.Stdin = e.opts.stdin
 
 	// Add any set environmental variables including the host's
 	e.cmd.Env = append(os.Environ(), e.opts.env...)
@@ -125,6 +116,7 @@ func (e *Process) Start(ctx context.Context) error {
 		e.cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setpgid: true,
 		}
+		e.cmd.Stdin = nil
 	}
 
 	if err := e.cmd.Start(); err != nil {
