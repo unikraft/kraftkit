@@ -12,7 +12,7 @@ import (
 // PullOptions contains the list of options which can be set for pulling a
 // package.
 type PullOptions struct {
-	auths             map[string]*config.AuthConfig
+	auths             map[string]config.AuthConfig
 	architectures     []string
 	platforms         []string
 	version           string
@@ -26,7 +26,7 @@ type PullOptions struct {
 // domain was not found.
 func (ppo *PullOptions) Auths(domain string) *config.AuthConfig {
 	if auth, ok := ppo.auths[domain]; ok {
-		return auth
+		return &auth
 	}
 
 	return nil
@@ -81,13 +81,16 @@ func NewPullOptions(opts ...PullOption) (*PullOptions, error) {
 
 // WithPullAuthConfig sets the authentication config to use when pulling the
 // package.
-func WithPullAuthConfig(auth *config.AuthConfig) PullOption {
+func WithPullAuthConfig(auth map[string]config.AuthConfig) PullOption {
 	return func(opts *PullOptions) error {
 		if opts.auths == nil {
-			opts.auths = make(map[string]*config.AuthConfig, 1)
+			opts.auths = map[string]config.AuthConfig{}
 		}
 
-		opts.auths[auth.Endpoint] = auth
+		for k, v := range auth {
+			opts.auths[k] = v
+		}
+
 		return nil
 	}
 }
