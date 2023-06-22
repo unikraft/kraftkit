@@ -68,8 +68,7 @@ func (e *Process) Cmdline() string {
 
 // Start the process
 func (e *Process) Start(ctx context.Context) error {
-	e.cmd = exec.CommandContext(
-		ctx,
+	e.cmd = exec.Command(
 		e.executable.bin,
 		e.executable.Args()...,
 	)
