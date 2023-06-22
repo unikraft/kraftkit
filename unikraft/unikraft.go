@@ -33,5 +33,5 @@ const (
 
 	// Built-in paths
 	VendorDir = ".unikraft"
-	BuildDir  = "build"
+	BuildDir  = ".unikraft/build"
 )
