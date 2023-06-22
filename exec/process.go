@@ -131,12 +131,6 @@ func (e *Process) Start(ctx context.Context) error {
 		return fmt.Errorf("could not start process: %v", err)
 	}
 
-	if e.opts.detach {
-		if err := e.cmd.Process.Release(); err != nil {
-			return fmt.Errorf("could not release process: %v", err)
-		}
-	}
-
 	return nil
 }
 
@@ -154,6 +148,12 @@ func (e *Process) Wait() error {
 	}
 
 	return err
+}
+
+// Release releases any resources associated with the process rendering it
+// unusable in the future. Release only needs to be called if Wait is not.
+func (e *Process) Release() error {
+	return e.cmd.Process.Release()
 }
 
 // StartAndWait starts the process and waits for it to exit
