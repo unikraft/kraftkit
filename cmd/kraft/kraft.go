@@ -82,11 +82,13 @@ func New() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
 	cmd.AddCommand(events.New())
 	cmd.AddCommand(logs.New())
-	cmd.AddCommand(net.New())
 	cmd.AddCommand(ps.New())
 	cmd.AddCommand(rm.New())
 	cmd.AddCommand(run.New())
 	cmd.AddCommand(stop.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
+	cmd.AddCommand(net.New())
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.New())

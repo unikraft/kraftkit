@@ -31,7 +31,7 @@ func New() *cobra.Command {
 		Aliases: []string{"network"},
 		Hidden:  true,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "run",
+			cmdfactory.AnnotationHelpGroup: "net",
 		},
 	})
 	if err != nil {
