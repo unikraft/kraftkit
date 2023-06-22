@@ -185,3 +185,8 @@ func (e *Process) Pid() (int, error) {
 
 	return e.cmd.Process.Pid, nil
 }
+
+// Cmd returns the go Cmd of the process.
+func (e *Process) Cmd() *exec.Cmd {
+	return e.cmd
+}
