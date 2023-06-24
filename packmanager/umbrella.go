@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/log"
+
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/component"
 )
@@ -294,4 +295,29 @@ func NewUmbrellaManager(ctx context.Context, constructors []func(*UmbrellaManage
 	}
 
 	return u, nil
+}
+
+func (u UmbrellaManager) Show(ctx context.Context, outputFormat string, qopts ...QueryOption) (any, error) {
+	var metadatas []any
+
+	for _, manager := range u.packageManagers {
+		log.G(ctx).WithFields(logrus.Fields{
+			"format": manager.Format(),
+		}).Tracef("showing package information")
+
+		metadata, err := manager.Show(ctx, outputFormat, qopts...)
+		if err != nil {
+			log.G(ctx).
+				WithField("format", manager.Format()).
+				Debugf("could not show package: %v", err)
+			continue
+		}
+
+		metadatas = append(metadatas, metadata)
+	}
+	if len(metadatas) == 0 {
+		return nil, fmt.Errorf("no information found about requested package")
+	}
+
+	return metadatas[0], nil
 }
