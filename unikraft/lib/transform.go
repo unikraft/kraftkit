@@ -7,10 +7,12 @@ package lib
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
+	"kraftkit.sh/utils"
 )
 
 // TransformFromSchema parses an input schema and returns an instantiated
@@ -38,6 +40,19 @@ func TransformFromSchema(ctx context.Context, name string, props interface{}) (L
 
 	if source, ok := c["source"]; ok {
 		lib.source = source.(string)
+
+		// If the provided source is a directory on the host, set the "path" to this
+		// value.  The "path" is the location on disk where the microlibrary will
+		// eventually saved by the relevant package manager.  For completeness, use
+		// absolute paths for both the path and the source.
+		if f, err := os.Stat(lib.source); err == nil && f.IsDir() {
+			if uk != nil && uk.UK_BASE != "" {
+				lib.path = utils.RelativePath(uk.UK_BASE, lib.source)
+				lib.source = lib.path
+			} else {
+				lib.path = lib.source
+			}
+		}
 	}
 
 	if version, ok := c["version"]; ok {
