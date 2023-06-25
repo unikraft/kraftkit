@@ -6,15 +6,14 @@ package pack
 
 import (
 	"kraftkit.sh/config"
-	"kraftkit.sh/utils"
 )
 
 // PullOptions contains the list of options which can be set for pulling a
 // package.
 type PullOptions struct {
 	auths             map[string]config.AuthConfig
-	architectures     []string
-	platforms         []string
+	architecture      string
+	platform          string
 	version           string
 	calculateChecksum bool
 	onProgress        func(progress float64)
@@ -30,6 +29,16 @@ func (ppo *PullOptions) Auths(domain string) *config.AuthConfig {
 	}
 
 	return nil
+}
+
+// Architecture to pull.
+func (ppo *PullOptions) Architecture() string {
+	return ppo.architecture
+}
+
+// Platform to pull.
+func (ppo *PullOptions) Platform() string {
+	return ppo.platform
 }
 
 // OnProgress calls (if set) an embedded progress function which can be used to
@@ -96,38 +105,18 @@ func WithPullAuthConfig(auth map[string]config.AuthConfig) PullOption {
 }
 
 // WithPullArchitecture requests a given architecture (if applicable)
-func WithPullArchitecture(archs ...string) PullOption {
+func WithPullArchitecture(arch string) PullOption {
 	return func(opts *PullOptions) error {
-		for _, arch := range archs {
-			if arch == "" {
-				continue
-			}
-
-			if utils.Contains(opts.architectures, arch) {
-				continue
-			}
-
-			opts.architectures = append(opts.architectures, archs...)
-		}
+		opts.architecture = arch
 
 		return nil
 	}
 }
 
 // WithPullPlatform requests a given platform (if applicable).
-func WithPullPlatform(plats ...string) PullOption {
+func WithPullPlatform(plat string) PullOption {
 	return func(opts *PullOptions) error {
-		for _, plat := range plats {
-			if plat == "" {
-				continue
-			}
-
-			if utils.Contains(opts.platforms, plat) {
-				continue
-			}
-
-			opts.platforms = append(opts.platforms, plats...)
-		}
+		opts.platform = plat
 
 		return nil
 	}

@@ -37,7 +37,7 @@ type ImageResolver interface {
 }
 
 type ImageFetcher interface {
-	FetchImage(context.Context, string, func(float64)) error
+	FetchImage(context.Context, string, string, func(float64)) error
 }
 
 type ImageUnpacker interface {
