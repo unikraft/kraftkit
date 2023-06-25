@@ -1,5 +1,5 @@
-api.zip v0.1.3 h1:IOqW9Y0zyXyNkox80zcpWLFMenDXkJD9XyJxPxXPp10=
-api.zip v0.1.3/go.mod h1:xsEsIv4k2Olwd1GozH37SnY5jPgpExGeSz+TDQUpZNw=
+api.zip v0.1.4 h1:QezlTcFDaA6UYBD9ZihorU4+Znegvp7zYnmk6UOWNUE=
+api.zip v0.1.4/go.mod h1:xsEsIv4k2Olwd1GozH37SnY5jPgpExGeSz+TDQUpZNw=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 h1:EKPd1INOIyr5hWOWhvpmQpY6tKjeG0hT1s3AMC/9fic=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1/go.mod h1:VzwV+t+dZ9j/H867F1M2ziD+yLHtB46oM35FxxMJ4d0=
