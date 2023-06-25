@@ -38,14 +38,20 @@ func (runner *runnerProject) String() string {
 func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
 	var err error
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false, fmt.Errorf("getting current working directory: %w", err)
+	}
+
 	if len(args) == 0 {
-		runner.workdir, err = os.Getwd()
-		if err != nil {
-			return false, err
-		}
+		runner.workdir = cwd
 	} else {
-		runner.workdir = args[0]
-		runner.args = args[1:]
+		runner.workdir = cwd
+		runner.args = args
+		if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
+			runner.workdir = args[0]
+			runner.args = args[1:]
+		}
 	}
 
 	if !app.IsWorkdirInitialized(runner.workdir) {
@@ -102,6 +108,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 	machine.Spec.Kernel = "project://" + project.Name() + ":" + targetName
 	machine.Spec.Architecture = t.Architecture().Name()
 	machine.Spec.Platform = t.Platform().Name()
+	machine.Spec.ApplicationArgs = runner.args
 
 	// Use the symbolic debuggable kernel image?
 	if opts.WithKernelDbg {
