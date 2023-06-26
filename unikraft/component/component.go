@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -59,7 +60,14 @@ func TranslateFromSchema(props interface{}) (map[string]interface{}, error) {
 		for key, prop := range entry {
 			switch key {
 			case "version":
-				component["version"] = prop.(string)
+				switch tprop := prop.(type) {
+				case string:
+					component["version"] = tprop
+				case int:
+					component["version"] = strconv.Itoa(tprop)
+				default:
+					component["version"] = fmt.Sprint(prop)
+				}
 
 			case "source":
 				for k, v := range parseStringProp(prop.(string)) {

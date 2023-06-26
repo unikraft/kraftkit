@@ -204,6 +204,14 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		return err
 	}
 	for _, component := range components {
+		// Skip "finding" the component if path is the same as the source (which
+		// means that the source code is already available as it is a directory on
+		// disk.  In this scenario, the developer is likely hacking the particular
+		// microlibrary/component.
+		if component.Path() == component.Source() {
+			continue
+		}
+
 		component := component // loop closure
 		auths := auths
 
