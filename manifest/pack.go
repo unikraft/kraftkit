@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -94,6 +96,20 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	opts = append(opts, pack.WithPullVersion(mp.version))
 
 	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
+}
+
+func (mp mpack) Delete(ctx context.Context, version string) error {
+	sourcesDir := config.G[config.KraftKit](ctx).Paths.Sources
+	if !strings.HasSuffix(sourcesDir, "/") {
+		sourcesDir += "/"
+	}
+
+	packPath := sourcesDir + mp.Name() + "-" + version + ".tar.gz"
+	err := mp.manifest.Provider.Delete(ctx, packPath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

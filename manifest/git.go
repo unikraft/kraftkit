@@ -229,6 +229,10 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 	return nil
 }
 
+func (gp GitProvider) Delete(ctx context.Context, packPath string) error {
+	return fmt.Errorf("Delete is not implemented for GitProvider")
+}
+
 func (gp GitProvider) String() string {
 	return "git"
 }

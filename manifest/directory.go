@@ -132,6 +132,10 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 	return nil
 }
 
+func (dp DirectoryProvider) Delete(ctx context.Context, packPath string) error {
+	return fmt.Errorf("Delete is not implemented for DirectoryProvider")
+}
+
 func (dp DirectoryProvider) String() string {
 	return "dir"
 }

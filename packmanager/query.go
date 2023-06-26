@@ -31,6 +31,9 @@ type Query struct {
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
+
+	// Selects all the packages (Currently, being used to prune all the packages on the host machine).
+	all bool
 }
 
 // Source specifies where the origin of the package
@@ -127,6 +130,12 @@ func WithCache(useCache bool) QueryOption {
 func WithAuthConfig(auths map[string]config.AuthConfig) QueryOption {
 	return func(query *Query) {
 		query.auths = auths
+	}
+}
+
+func WithAll(all bool) QueryOption {
+	return func(query *Query) {
+		query.all = all
 	}
 }
 

@@ -42,6 +42,9 @@ type PackageManager interface {
 	// Add a source to the package manager
 	AddSource(context.Context, string) error
 
+	// Prune a/all packages from the host machine
+	Prune(context.Context, ...QueryOption) error
+
 	// Remove a source from the package manager
 	RemoveSource(context.Context, string) error
 

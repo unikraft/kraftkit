@@ -155,6 +155,10 @@ func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
+func (m *manifestManager) Prune(context.Context, ...packmanager.QueryOption) error {
+	return fmt.Errorf("Prune has not been implemented for manifestManager.")
+}
+
 func (m *manifestManager) RemoveSource(ctx context.Context, source string) error {
 	for i, needle := range m.manifests {
 		if needle == source {

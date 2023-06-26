@@ -312,6 +312,10 @@ func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
+func (manager *ociManager) Prune(context.Context, ...packmanager.QueryOption) error {
+	return fmt.Errorf("Prune has not been implemented for OCI Manager.")
+}
+
 // RemoveSource implements packmanager.PackageManager
 func (manager *ociManager) RemoveSource(ctx context.Context, source string) error {
 	for i, needle := range manager.registries {

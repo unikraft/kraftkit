@@ -103,6 +103,10 @@ func (mp ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest,
 	return pullArchive(ctx, manifest, opts...)
 }
 
+func (mp ManifestProvider) Delete(ctx context.Context, packPath string) error {
+	return os.Remove(packPath)
+}
+
 func (mp ManifestProvider) String() string {
 	return "manifest"
 }

@@ -468,6 +468,10 @@ unpack:
 	return nil
 }
 
+func (ocipack *ociPackage) Delete(ctx context.Context, version string) error {
+	return fmt.Errorf("Delete has not been implemented for ociPackage")
+}
+
 // Pull implements pack.Package
 func (ocipack *ociPackage) Format() pack.PackageFormat {
 	return OCIFormat

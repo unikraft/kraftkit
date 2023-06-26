@@ -22,6 +22,9 @@ type Provider interface {
 	// PullManifest from the provider.
 	PullManifest(context.Context, *Manifest, ...pack.PullOption) error
 
+	// Delete deletes available package locally.
+	Delete(context.Context, string) error
+
 	// String returns the name of the provider
 	fmt.Stringer
 }
