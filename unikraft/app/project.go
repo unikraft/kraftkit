@@ -19,6 +19,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"kraftkit.sh/kconfig"
@@ -112,6 +113,12 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		UK_NAME:   name,
 		UK_BASE:   popts.RelativePath(workdir),
 		BUILD_DIR: popts.RelativePath(outdir),
+	}
+
+	if _, err := os.Stat(uk.BUILD_DIR); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(uk.BUILD_DIR, 0o755); err != nil {
+			return nil, fmt.Errorf("creating build directory: %w", err)
+		}
 	}
 
 	ctx = unikraft.WithContext(ctx, uk)
