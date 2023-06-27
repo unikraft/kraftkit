@@ -46,7 +46,7 @@ func New() *cobra.Command {
 		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
 		"plat",
 		"p",
-		"Set the platform virtual machine monitor driver.",
+		"Set the platform virtual machine monitor driver.  Set to 'auto' to detect the guest's platform and 'host' to use the host platform.",
 	)
 
 	return cmd
@@ -62,29 +62,34 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
+	var controller machineapi.MachineService
 
-	if opts.platform == "" || opts.platform == "auto" {
-		var mode mplatform.SystemMode
-		platform, mode, err = mplatform.Detect(ctx)
-		if mode == mplatform.SystemGuest {
-			return fmt.Errorf("nested virtualization not supported")
-		} else if err != nil {
-			return err
-		}
+	if opts.All || opts.platform == "auto" {
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		var ok bool
-		platform, ok = mplatform.Platforms()[opts.platform]
-		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+		if opts.platform == "host" {
+			var mode mplatform.SystemMode
+			platform, mode, err = mplatform.Detect(ctx)
+			if mode == mplatform.SystemGuest {
+				return fmt.Errorf("nested virtualization not supported")
+			} else if err != nil {
+				return err
+			}
+		} else {
+			var ok bool
+			platform, ok = mplatform.Platforms()[opts.platform]
+			if !ok {
+				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+			}
 		}
-	}
 
-	strategy, ok := mplatform.Strategies()[platform]
-	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
-	}
+		strategy, ok := mplatform.Strategies()[platform]
+		if !ok {
+			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+		}
 
-	controller, err := strategy.NewMachineV1alpha1(ctx)
+		controller, err = strategy.NewMachineV1alpha1(ctx)
+	}
 	if err != nil {
 		return err
 	}
