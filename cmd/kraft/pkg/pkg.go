@@ -32,19 +32,18 @@ import (
 )
 
 type Pkg struct {
-	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
-	Args         string   `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
-	Dbg          bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
-	Force        bool     `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
-	Format       string   `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
-	Initrd       string   `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
-	Kernel       string   `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
-	Name         string   `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	Output       string   `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
-	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
-	Volumes      []string `local:"true" long:"volume" short:"v" usage:"Additional volumes to bundle within the package"`
-	WithKConfig  bool     `local:"true" long:"with-kconfig" usage:"Include the target .config"`
+	Architecture string `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Args         string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
+	Dbg          bool   `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
+	Force        bool   `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
+	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Initrd       string `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
+	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
+	Name         string `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	Output       string `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
+	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
 func New() *cobra.Command {
@@ -62,24 +61,10 @@ func New() *cobra.Command {
 
 			The default behaviour of %[1]skraft pkg%[1]s is to package a project.  Given no
 			arguments, you will be guided through interactive mode.
-
-			For initram and disk images, passing in a directory as the argument will
-			result automatically packaging that directory into the requested format.
-			Separating the input with a %[1]s:%[1]s delimiter allows you to set the
-			output that of the artifact.
 		`, "`"),
 		Example: heredoc.Doc(`
-			# Package the current Unikraft project (cwd)
-			$ kraft pkg
-
-			# Package path to a Unikraft project
-			$ kraft pkg path/to/application
-
-			# Package with an additional initramfs
-			$ kraft pkg --initrd ./root-fs .
-
-			# Same as above but also save the resulting CPIO artifact locally
-			$ kraft pkg --initrd ./root-fs:./root-fs.cpio .`),
+			# Package a project as an OCI archive and embed the target's KConfig.
+			$ kraft pkg --as oci --oci-tag unikraft.org/nginx:latest --with-kconfig`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
