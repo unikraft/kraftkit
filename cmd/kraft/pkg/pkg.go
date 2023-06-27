@@ -61,24 +61,10 @@ func New() *cobra.Command {
 
 			The default behaviour of %[1]skraft pkg%[1]s is to package a project.  Given no
 			arguments, you will be guided through interactive mode.
-
-			For initram and disk images, passing in a directory as the argument will
-			result automatically packaging that directory into the requested format.
-			Separating the input with a %[1]s:%[1]s delimiter allows you to set the
-			output that of the artifact.
 		`, "`"),
 		Example: heredoc.Doc(`
-			# Package the current Unikraft project (cwd)
-			$ kraft pkg
-
-			# Package path to a Unikraft project
-			$ kraft pkg path/to/application
-
-			# Package with an additional initramfs
-			$ kraft pkg --initrd ./root-fs .
-
-			# Same as above but also save the resulting CPIO artifact locally
-			$ kraft pkg --initrd ./root-fs:./root-fs.cpio .`),
+			# Package a project as an OCI archive and embed the target's KConfig.
+			$ kraft pkg --as oci --oci-tag unikraft.org/nginx:latest --with-kconfig`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
