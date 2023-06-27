@@ -77,51 +77,66 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	var items []psTable
 
 	ctx := cmd.Context()
-	platforms := mplatform.Strategies()
-	if opts.platform != "all" {
-		if _, ok := platforms[mplatform.Platform(opts.platform)]; !ok {
-			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform)
+	platform := mplatform.PlatformUnknown
+	var controller machineapi.MachineService
+
+	if opts.platform == "all" {
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+	} else {
+		if opts.platform == "" || opts.platform == "auto" {
+			var mode mplatform.SystemMode
+			platform, mode, err = mplatform.Detect(ctx)
+			if mode == mplatform.SystemGuest {
+				return fmt.Errorf("nested virtualization not supported")
+			} else if err != nil {
+				return err
+			}
+		} else {
+			var ok bool
+			platform, ok = mplatform.Platforms()[opts.platform]
+			if !ok {
+				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+			}
 		}
+
+		strategy, ok := mplatform.Strategies()[platform]
+		if !ok {
+			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+		}
+
+		controller, err = strategy.NewMachineV1alpha1(ctx)
+	}
+	if err != nil {
+		return err
 	}
 
-	for platform, strategy := range platforms {
-		if opts.platform != "all" && opts.platform != platform.String() {
-			continue
+	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return err
+	}
+
+	for _, machine := range machines.Items {
+		entry := psTable{
+			id:      string(machine.UID),
+			name:    machine.Name,
+			args:    strings.Join(machine.Spec.ApplicationArgs, " "),
+			kernel:  machine.Spec.Kernel,
+			status:  machine.Status.State,
+			mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
+			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
+			ports:   machine.Spec.Ports.String(),
+			arch:    machine.Spec.Architecture,
+			plat:    machine.Spec.Platform,
+			ips:     []string{},
 		}
 
-		controller, err := strategy.NewMachineV1alpha1(ctx)
-		if err != nil {
-			return err
-		}
-
-		machines, err := controller.List(ctx, &machineapi.MachineList{})
-		if err != nil {
-			return err
-		}
-
-		for _, machine := range machines.Items {
-			entry := psTable{
-				id:      string(machine.UID),
-				name:    machine.Name,
-				args:    strings.Join(machine.Spec.ApplicationArgs, " "),
-				kernel:  machine.Spec.Kernel,
-				status:  machine.Status.State,
-				mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
-				created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
-				ports:   machine.Spec.Ports.String(),
-				arch:    machine.Spec.Architecture,
-				plat:    machine.Spec.Platform,
-				ips:     []string{},
+		for _, net := range machine.Spec.Networks {
+			for _, iface := range net.Interfaces {
+				entry.ips = append(entry.ips, iface.Spec.IP)
 			}
-
-			for _, net := range machine.Spec.Networks {
-				for _, iface := range net.Interfaces {
-					entry.ips = append(entry.ips, iface.Spec.IP)
-				}
-			}
-
-			items = append(items, entry)
 		}
+
+		items = append(items, entry)
 	}
 
 	err = iostreams.G(ctx).StartPager()
