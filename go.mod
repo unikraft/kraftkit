@@ -3,7 +3,7 @@ module kraftkit.sh
 go 1.20
 
 require (
-	api.zip v0.1.4
+	api.zip v0.1.5
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/semver/v3 v3.2.1

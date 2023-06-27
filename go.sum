@@ -1,5 +1,5 @@
-api.zip v0.1.4 h1:QezlTcFDaA6UYBD9ZihorU4+Znegvp7zYnmk6UOWNUE=
-api.zip v0.1.4/go.mod h1:xsEsIv4k2Olwd1GozH37SnY5jPgpExGeSz+TDQUpZNw=
+api.zip v0.1.5 h1:yepLKQk/v/DgfpIA1Q5xuvWzB+0GWp1yejoDQCjsT1s=
+api.zip v0.1.5/go.mod h1:xsEsIv4k2Olwd1GozH37SnY5jPgpExGeSz+TDQUpZNw=
 bazil.org/fuse v0.0.0-20160811212531-371fbbdaa898/go.mod h1:Xbm+BRKSBEpa4q4hTSxohYNQpsxXPbPry4JJWOB3LB8=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
