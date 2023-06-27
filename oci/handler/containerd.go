@@ -273,7 +273,7 @@ func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref strin
 }
 
 // FetchImage implements ImageFetcher.
-func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, onProgress func(float64)) (err error) {
+func (handle *ContainerdHandler) FetchImage(ctx context.Context, name, plat string, onProgress func(float64)) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
@@ -309,8 +309,10 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, name string, on
 			return nil, nil
 		})),
 		containerd.WithResolver(resolver),
-		// TODO(nderjung): Specify a Unikraft-centric platform/architecture
-		// combination containerd.WithPlatform(platforms.DefaultString()),
+	}
+
+	if plat != "" {
+		ropts = append(ropts, containerd.WithPlatform(plat))
 	}
 
 	// Fetch the image

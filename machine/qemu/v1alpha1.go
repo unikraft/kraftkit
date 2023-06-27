@@ -5,12 +5,9 @@
 package qemu
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,7 +18,6 @@ import (
 
 	zip "api.zip"
 	"github.com/acorn-io/baaah/pkg/merr"
-	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +28,7 @@ import (
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/logtail"
 	"kraftkit.sh/internal/retrytimeout"
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/machine/qemu/qmp"
@@ -44,10 +41,6 @@ const (
 	QemuSystemX86     = "qemu-system-x86_64"
 	QemuSystemArm     = "qemu-system-arm"
 	QemuSystemAarch64 = "qemu-system-aarch64"
-
-	// Log tail buffering
-	DefaultTailBufferSize = 4 * 1024
-	DefaultTailPeekSize   = 1024
 )
 
 // machineV1alpha1Service ...
@@ -607,140 +600,7 @@ func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machi
 
 // Logs implements kraftkit.sh/api/machine/v1alpha1.MachineService
 func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machinev1alpha1.Machine) (chan string, chan error, error) {
-	logs := make(chan string)
-	errs := make(chan error)
-
-	// Start a goroutine which continuously outputs the logs to the provided
-	// channel.
-	go service.logs(ctx, machine, &logs, &errs)
-
-	return logs, errs, nil
-}
-
-func (service *machineV1alpha1Service) logs(ctx context.Context, machine *machinev1alpha1.Machine, logs *chan string, errs *chan error) {
-	f, err := os.Open(machine.Status.LogFile)
-	if err != nil {
-		*errs <- err
-		return
-	}
-
-	// var offset int64
-	reader := bufio.NewReaderSize(f, DefaultTailBufferSize)
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		*errs <- err
-		return
-	}
-
-	if err := watcher.Add(machine.Status.LogFile); err != nil {
-		*errs <- err
-		return
-	}
-
-	// First read everything that already exists inside of the log file.
-	for {
-		// discard leading NUL bytes
-		var discarded int
-
-		for {
-			b, _ := reader.Peek(DefaultTailPeekSize)
-			i := bytes.LastIndexByte(b, '\x00')
-
-			if i > 0 {
-				n, _ := reader.Discard(i + 1)
-				discarded += n
-			}
-
-			if i+1 < DefaultTailPeekSize {
-				break
-			}
-		}
-
-		s, err := reader.ReadBytes('\n')
-		if err != nil && err != io.EOF {
-			*errs <- err
-			return
-		}
-
-		// If we encounter EOF before a line delimiter, ReadBytes() will return the
-		// remaining bytes, so push them back onto the buffer, rewind our seek
-		// position, and wait for further file changes.  We also have to save our
-		// dangling byte count in the event that we want to re-open the file and
-		// seek to the end.
-		if err == io.EOF {
-			l := len(s)
-
-			_, err = f.Seek(-int64(l), io.SeekCurrent)
-			if err != nil {
-				*errs <- err
-				return
-			}
-
-			reader.Reset(f)
-			break
-		}
-
-		if len(s) > discarded {
-			*logs <- string(s[discarded:])
-		}
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			*errs <- ctx.Err()
-			return
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-
-			switch event.Op {
-			case fsnotify.Write:
-				var discarded int
-
-				for {
-					b, _ := reader.Peek(DefaultTailPeekSize)
-					i := bytes.LastIndexByte(b, '\x00')
-
-					if i > 0 {
-						n, _ := reader.Discard(i + 1)
-						discarded += n
-					}
-
-					if i+1 < DefaultTailPeekSize {
-						break
-					}
-				}
-
-				s, err := reader.ReadBytes('\n')
-				if err != nil && err != io.EOF {
-					*errs <- err
-					return
-				}
-
-				// If we encounter EOF before a line delimiter, ReadBytes() will return the
-				// remaining bytes, so push them back onto the buffer, rewind our seek
-				// position, and wait for further file changes.  We also have to save our
-				// dangling byte count in the event that we want to re-open the file and
-				// seek to the end.
-				if err == io.EOF {
-					l := len(s)
-
-					_, err = f.Seek(-int64(l), io.SeekCurrent)
-					if err != nil {
-						*errs <- err
-						return
-					}
-
-					reader.Reset(f)
-					continue
-				}
-
-				*logs <- string(s[discarded:])
-			}
-		}
-	}
+	return logtail.NewLogTail(ctx, machine.Status.LogFile)
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1/MachineService.Get

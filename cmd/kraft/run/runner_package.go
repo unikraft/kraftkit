@@ -123,6 +123,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 					ctx,
 					pack.WithPullProgressFunc(w),
 					pack.WithPullWorkdir(machine.Status.StateDir),
+					pack.WithPullPlatform(opts.platform.String()),
 				)
 			},
 		)},

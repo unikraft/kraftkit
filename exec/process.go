@@ -13,7 +13,6 @@ import (
 	"strings"
 	"syscall"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
@@ -69,8 +68,7 @@ func (e *Process) Cmdline() string {
 
 // Start the process
 func (e *Process) Start(ctx context.Context) error {
-	e.cmd = exec.CommandContext(
-		ctx,
+	e.cmd = exec.Command(
 		e.executable.bin,
 		e.executable.Args()...,
 	)
@@ -84,8 +82,6 @@ func (e *Process) Start(ctx context.Context) error {
 		)
 	} else if len(e.opts.stdoutcbs) > 0 {
 		e.cmd.Stdout = io.MultiWriter(e.opts.stdoutcbs...)
-	} else {
-		e.cmd.Stdout = iostreams.G(ctx).Out
 	}
 
 	// Set the stderr
@@ -103,16 +99,10 @@ func (e *Process) Start(ctx context.Context) error {
 		)
 	} else if len(e.opts.stderrcbs) > 0 {
 		e.cmd.Stderr = io.MultiWriter(e.opts.stderrcbs...)
-	} else {
-		e.cmd.Stderr = iostreams.G(ctx).ErrOut
 	}
 
 	// Set the stdin
-	if e.opts.stdin != nil {
-		e.cmd.Stdin = e.opts.stdin
-	} else {
-		e.cmd.Stdin = iostreams.G(ctx).In
-	}
+	e.cmd.Stdin = e.opts.stdin
 
 	// Add any set environmental variables including the host's
 	e.cmd.Env = append(os.Environ(), e.opts.env...)
@@ -125,16 +115,11 @@ func (e *Process) Start(ctx context.Context) error {
 		e.cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setpgid: true,
 		}
+		e.cmd.Stdin = nil
 	}
 
 	if err := e.cmd.Start(); err != nil {
 		return fmt.Errorf("could not start process: %v", err)
-	}
-
-	if e.opts.detach {
-		if err := e.cmd.Process.Release(); err != nil {
-			return fmt.Errorf("could not release process: %v", err)
-		}
 	}
 
 	return nil
@@ -154,6 +139,12 @@ func (e *Process) Wait() error {
 	}
 
 	return err
+}
+
+// Release releases any resources associated with the process rendering it
+// unusable in the future. Release only needs to be called if Wait is not.
+func (e *Process) Release() error {
+	return e.cmd.Process.Release()
 }
 
 // StartAndWait starts the process and waits for it to exit
@@ -184,4 +175,9 @@ func (e *Process) Pid() (int, error) {
 	}
 
 	return e.cmd.Process.Pid, nil
+}
+
+// Cmd returns the go Cmd of the process.
+func (e *Process) Cmd() *exec.Cmd {
+	return e.cmd
 }

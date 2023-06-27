@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("all").ToSlice(), "all"),
 		"plat",
 		"p",
 		"Set the platform virtual machine monitor driver.",
@@ -60,40 +60,6 @@ func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
-	platform := mplatform.PlatformUnknown
-
-	if opts.platform == "" || opts.platform == "auto" {
-		var mode mplatform.SystemMode
-		platform, mode, err = mplatform.Detect(ctx)
-		if mode == mplatform.SystemGuest {
-			return fmt.Errorf("nested virtualization not supported")
-		} else if err != nil {
-			return err
-		}
-	} else {
-		var ok bool
-		platform, ok = mplatform.Platforms()[opts.platform]
-		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
-		}
-	}
-
-	strategy, ok := mplatform.Strategies()[platform]
-	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
-	}
-
-	controller, err := strategy.NewMachineV1alpha1(ctx)
-	if err != nil {
-		return err
-	}
-
-	machines, err := controller.List(ctx, &machineapi.MachineList{})
-	if err != nil {
-		return err
-	}
-
 	type psTable struct {
 		id      string
 		name    string
@@ -105,23 +71,57 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		ports   string
 		arch    string
 		plat    string
+		ips     []string
 	}
 
 	var items []psTable
 
-	for _, machine := range machines.Items {
-		items = append(items, psTable{
-			id:      string(machine.UID),
-			name:    machine.Name,
-			args:    strings.Join(machine.Spec.ApplicationArgs, " "),
-			kernel:  machine.Spec.Kernel,
-			status:  machine.Status.State,
-			mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
-			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
-			ports:   machine.Spec.Ports.String(),
-			arch:    machine.Spec.Architecture,
-			plat:    machine.Spec.Platform,
-		})
+	ctx := cmd.Context()
+	platforms := mplatform.Strategies()
+	if opts.platform != "all" {
+		if _, ok := platforms[mplatform.Platform(opts.platform)]; !ok {
+			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform)
+		}
+	}
+
+	for platform, strategy := range platforms {
+		if opts.platform != "all" && opts.platform != platform.String() {
+			continue
+		}
+
+		controller, err := strategy.NewMachineV1alpha1(ctx)
+		if err != nil {
+			return err
+		}
+
+		machines, err := controller.List(ctx, &machineapi.MachineList{})
+		if err != nil {
+			return err
+		}
+
+		for _, machine := range machines.Items {
+			entry := psTable{
+				id:      string(machine.UID),
+				name:    machine.Name,
+				args:    strings.Join(machine.Spec.ApplicationArgs, " "),
+				kernel:  machine.Spec.Kernel,
+				status:  machine.Status.State,
+				mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
+				created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
+				ports:   machine.Spec.Ports.String(),
+				arch:    machine.Spec.Architecture,
+				plat:    machine.Spec.Platform,
+				ips:     []string{},
+			}
+
+			for _, net := range machine.Spec.Networks {
+				for _, iface := range net.Interfaces {
+					entry.ips = append(entry.ips, iface.Spec.IP)
+				}
+			}
+
+			items = append(items, entry)
+		}
 	}
 
 	err = iostreams.G(ctx).StartPager()
@@ -143,11 +143,14 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	table.AddField("ARGS", nil, cs.Bold)
 	table.AddField("CREATED", nil, cs.Bold)
 	table.AddField("STATUS", nil, cs.Bold)
-	table.AddField("MEM", nil, cs.Bold)
 	if opts.Long {
 		table.AddField("PORTS", nil, cs.Bold)
+		table.AddField("IP", nil, cs.Bold)
+	}
+	table.AddField("MEM", nil, cs.Bold)
+	table.AddField("PLAT", nil, cs.Bold)
+	if opts.Long {
 		table.AddField("ARCH", nil, cs.Bold)
-		table.AddField("PLAT", nil, cs.Bold)
 	}
 	table.EndRow()
 
@@ -160,11 +163,16 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		table.AddField(item.args, nil, nil)
 		table.AddField(item.created, nil, nil)
 		table.AddField(item.status.String(), nil, nil)
-		table.AddField(item.mem, nil, nil)
 		if opts.Long {
 			table.AddField(item.ports, nil, nil)
-			table.AddField(item.arch, nil, nil)
+			table.AddField(strings.Join(item.ips, ","), nil, nil)
+		}
+		table.AddField(item.mem, nil, nil)
+		if opts.Long {
 			table.AddField(item.plat, nil, nil)
+			table.AddField(item.arch, nil, nil)
+		} else {
+			table.AddField(fmt.Sprintf("%s/%s", item.plat, item.arch), nil, nil)
 		}
 		table.EndRow()
 	}

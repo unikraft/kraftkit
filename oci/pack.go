@@ -413,6 +413,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 	if err := ocipack.image.handle.FetchImage(
 		ctx,
 		ocipack.imageRef(),
+		popts.Platform(),
 		popts.OnProgress,
 	); err != nil {
 		return err

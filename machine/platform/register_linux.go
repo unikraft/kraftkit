@@ -6,15 +6,51 @@ package platform
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	zip "api.zip"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/set"
+	"kraftkit.sh/machine/firecracker"
 	"kraftkit.sh/machine/qemu"
 	"kraftkit.sh/machine/store"
 )
+
+// storePlatformFilter is a mechanism to narrow the results returned from the
+// store which is shared between all platforms.  In this filter, we prefix all
+// requests to the Zip API client with a check for the machine's specification
+// of the platform based on the provided argument.
+func storePlatformFilter(platform Platform) zip.OnBefore {
+	return func(_ context.Context, req zip.ReferenceObject) (any, error) {
+		// If this object is listable, attempt to retrieve from a list from
+		// the store instead.
+		if list, ok := req.(*zip.ObjectList[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus]); ok {
+			cached := list.Items
+			list.Items = []zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus]{}
+
+			for _, machine := range cached {
+				if machine.Spec.Platform != platform.String() {
+					continue
+				}
+
+				list.Items = append(list.Items, machine)
+			}
+			return list, nil
+		}
+
+		// Cast the referenceable object, which we know is a spec-and-status object.
+		obj := req.(*zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus])
+
+		if obj.Spec.Platform != platform.String() {
+			return nil, fmt.Errorf("machine is not %s instance: %s", platform.String(), obj.Name)
+		}
+
+		return obj, nil
+	}
+}
 
 var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
 	service, err := qemu.NewMachineV1alpha1Service(ctx, opts...)
@@ -36,6 +72,34 @@ var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1
 		ctx,
 		service,
 		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
+		zip.WithBefore(storePlatformFilter(PlatformQEMU)),
+	)
+}
+
+var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
+	if set.NewStringSet("debug", "trace").Contains(config.G[config.KraftKit](ctx).Log.Level) {
+		opts = append(opts, firecracker.WithDebug(true))
+	}
+	service, err := firecracker.NewMachineV1alpha1Service(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	embeddedStore, err := store.NewEmbeddedStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](
+		filepath.Join(
+			config.G[config.KraftKit](ctx).RuntimeDir,
+			"machinev1alpha1",
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return machinev1alpha1.NewMachineServiceHandler(
+		ctx,
+		service,
+		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
+		zip.WithBefore(storePlatformFilter(PlatformFirecracker)),
 	)
 }
 
@@ -48,6 +112,9 @@ func hostSupportedStrategies() map[Platform]*Strategy {
 		},
 		PlatformKVM: {
 			NewMachineV1alpha1: qemuV1alpha1Driver,
+		},
+		PlatformFirecracker: {
+			NewMachineV1alpha1: firecrackerV1alpha1Driver,
 		},
 	}
 }
