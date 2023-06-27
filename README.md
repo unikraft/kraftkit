@@ -18,6 +18,16 @@ With KraftKit, you can easily leverage Unikraft and manage specialized, high-per
 
 There are many benefits in running your application as a unikernel: for more information about [the performance of unikernels 🚀](https://unikraft.org/docs/features/performance/), [the added security 🔒](https://unikraft.org/docs/features/security/) and [a positive impact on the environment 🌱](https://unikraft.org/docs/features/green/) please [check out Unikraft's documentation][unikraft-docs] and the introductory chapters on these impacts.
 
+## Features
+
+- 🔥 Native [Firecracker MicroVM](https://firecracker-microvm.github.io/) support;
+- 📚 Pre-built unikernel app catalog;
+- 🤹‍♀️ Daemonless unikernel VM instance manager;
+- 📦 OCI packaging and distribution support;
+- 🚜 ELF binary / POSIX-compatibility support;
+- 🧰 Go SDK for building unikernels programmatically; and
+- 🚀 _much more!_
+
 ## Installation
 
 You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
