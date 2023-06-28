@@ -40,6 +40,12 @@ func TestFilterOutRegisteredFlags(t *testing.T) {
 			args:   []string{"--subcmd1-override1", "val1", "--subcmd1-override2=val2", "--y", "yval", "--z=zval"},
 			expect: []string{"--y", "yval", "--z=zval"},
 		},
+		{
+			// unikraft/kraftkit#552
+			desc:   "args contain flags with empty values",
+			args:   []string{"--subcmd1-override1", "", "--subcmd1-override2=", "-v", "-w", "", "-x=", "--y", "", "--z="},
+			expect: []string{"-v", "-w", "", "-x=", "--y", "", "--z="},
+		},
 	}
 
 	for _, tc := range testCases {
