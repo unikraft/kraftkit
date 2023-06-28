@@ -115,8 +115,8 @@ func filterOutRegisteredFlags(cmd *cobra.Command, args []string) (filteredArgs [
 			args = args[1:]
 
 			switch {
-			// not a flag
-			case arg[0] != '-' || len(arg) == 1:
+			// not a flag ("", <val>, -)
+			case len(arg) == 0 || arg[0] != '-' || len(arg) == 1:
 				filteredArgs = append(filteredArgs, arg)
 
 			// long flag
