@@ -64,7 +64,7 @@ gcc:
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
 
 .PHONY: myself
-myself: GO_VERSION  ?= 1.20.2
+myself: GO_VERSION  ?= 1.20.6
 myself: ENVIRONMENT ?= myself
 myself: IMAGE       ?= $(REGISTRY)/myself:$(IMAGE_TAG)
 myself: TARGET      ?= kraftkit
@@ -90,7 +90,7 @@ myself-full:
 base: ENVIRONMENT      ?= base
 base: GCC_PREFIX       ?= x86_64-linux-gnu
 base: GCC_VERSION      ?= 12.2.0
-base: GO_VERSION       ?= 1.20.2
+base: GO_VERSION       ?= 1.20.6
 base: IMAGE            ?= $(REGISTRY)/base:$(IMAGE_TAG)
 base: KRAFTKIT_VERSION ?= latest
 base: QEMU_VERSION     ?= 7.1.0

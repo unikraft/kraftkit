@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG GO_VERSION=1.20.2
+ARG GO_VERSION=1.20.6
 
 FROM golang:${GO_VERSION}-bullseye AS kraftkit-full
 
@@ -31,7 +31,7 @@ RUN set -xe; \
 
 WORKDIR /go/src/kraftkit.sh
 
-COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.20.2 /usr/bin/goreleaser /usr/bin/
+COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.20.6 /usr/bin/goreleaser /usr/bin/
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go
