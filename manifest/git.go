@@ -32,7 +32,7 @@ type GitProvider struct {
 }
 
 // NewGitProvider attempts to parse a provided path as a Git repository
-func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
+func NewGitProvider(ctx context.Context, path, _ string, opts ...ManifestOption) (Provider, error) {
 	isSSH := false
 	fullpath := path
 	if isSSHURL(path) {
@@ -183,7 +183,7 @@ func (gp GitProvider) probeVersions() []ManifestVersion {
 	return versions
 }
 
-func (gp GitProvider) Manifests() ([]*Manifest, error) {
+func (gp GitProvider) Manifests(_ context.Context) ([]*Manifest, error) {
 	base := filepath.Base(gp.repo)
 	ext := filepath.Ext(gp.repo)
 	if len(ext) > 0 {
@@ -206,6 +206,7 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 
 	manifest.Channels = append(manifest.Channels, gp.probeChannels()...)
 	manifest.Versions = append(manifest.Versions, gp.probeVersions()...)
+	manifest.mopts = gp.mopts
 
 	// TODO: Set the latest version
 	// if len(manifest.Versions) > 0 {

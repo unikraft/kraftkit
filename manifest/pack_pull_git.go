@@ -123,7 +123,6 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		SingleBranch:      true,
 		Tags:              git.NoTags,
 		NoCheckout:        false,
-		Depth:             1,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 		Progress: cloneProgress{
 			onProgress:     popts.OnProgress,
@@ -169,7 +168,11 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	copts.URL = path
 
 	if popts.Version() != "" {
-		copts.ReferenceName = gitplumbing.NewBranchReferenceName(popts.Version())
+		if gitplumbing.IsHash(popts.Version()) {
+			copts.SingleBranch = false
+		} else {
+			copts.ReferenceName = gitplumbing.NewBranchReferenceName(popts.Version())
+		}
 	}
 
 	local, err := unikraft.PlaceComponent(
@@ -187,10 +190,10 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		WithField("branch", popts.Version()).
 		Infof("git clone")
 
-	_, err = git.PlainCloneContext(ctx, local, false, copts)
+	reps, err := git.PlainCloneContext(ctx, local, false, copts)
 	switch {
 	case errors.Is(err, git.ErrRepositoryAlreadyExists):
-		reps, err := git.PlainOpen(local)
+		reps, err = git.PlainOpen(local)
 		if err != nil {
 			return fmt.Errorf("could not open repository: %w", err)
 		}
@@ -210,6 +213,20 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		}
 	case err != nil:
 		return fmt.Errorf("could not clone repository: %w", err)
+	}
+
+	if popts.Version() != "" && gitplumbing.IsHash(popts.Version()) {
+		wktree, err := reps.Worktree()
+		if err != nil {
+			return err
+		}
+
+		if err := wktree.Checkout(&git.CheckoutOptions{
+			Hash:  gitplumbing.NewHash(popts.Version()),
+			Force: true,
+		}); err != nil {
+			return fmt.Errorf("could not checkout hash: %v", err)
+		}
 	}
 
 	// Wait for the go routine to finish

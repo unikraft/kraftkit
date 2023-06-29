@@ -145,7 +145,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		if err != nil {
 			return fmt.Errorf("could not initialize GET request to download package: %v", err)
 		} else if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("received non-200 HTTP status code when attempting to download package: %v", err)
+			return fmt.Errorf("received %d HTTP status code when attempting to download package", res.StatusCode)
 		}
 
 		defer res.Body.Close()

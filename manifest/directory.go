@@ -26,7 +26,7 @@ type DirectoryProvider struct {
 
 // NewDirectoryProvider attempts to parse a provided path as a Unikraft
 // "microlibirary" directory
-func NewDirectoryProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
+func NewDirectoryProvider(ctx context.Context, path, _ string, opts ...ManifestOption) (Provider, error) {
 	if f, err := os.Stat(path); err != nil || (err == nil && !f.IsDir()) {
 		return nil, fmt.Errorf("could not access directory '%s': %v", path, err)
 	}
@@ -68,7 +68,7 @@ func NewDirectoryProvider(ctx context.Context, path string, opts ...ManifestOpti
 	return &provider, nil
 }
 
-func (dp DirectoryProvider) Manifests() ([]*Manifest, error) {
+func (dp DirectoryProvider) Manifests(_ context.Context) ([]*Manifest, error) {
 	manifest := &Manifest{
 		Type:     dp.typ,
 		Name:     dp.name,

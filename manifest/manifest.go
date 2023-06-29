@@ -67,7 +67,7 @@ type ManifestProvider struct {
 // file on disk and a remote URL.  If populating a Manifest struct is possible
 // given the path, then this provider is able to return list of exactly 1
 // manifest.
-func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOption) (Provider, error) {
+func NewManifestProvider(ctx context.Context, path, _ string, mopts ...ManifestOption) (Provider, error) {
 	manifest, err := NewManifestFromFile(ctx, path, mopts...)
 	if err == nil {
 		log.G(ctx).WithFields(logrus.Fields{
@@ -93,7 +93,7 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 	return nil, fmt.Errorf("provided path is not a manifest: %s", path)
 }
 
-func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
+func (mp ManifestProvider) Manifests(_ context.Context) ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
 }
 
@@ -152,7 +152,7 @@ func NewManifestFromBytes(ctx context.Context, raw []byte, opts ...ManifestOptio
 	}
 
 	if providerName != "" {
-		manifest.Provider, err = NewProviderFromString(ctx, providerName, manifest.Origin, manifest, opts...)
+		manifest.Provider, err = NewProviderFromString(ctx, providerName, manifest.Origin, "", manifest, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -300,12 +300,12 @@ func findManifestsFromSource(ctx context.Context, lastSource, source string, mop
 		}
 	}
 
-	provider, err := NewProvider(ctx, source, mopts...)
+	provider, err := NewProvider(ctx, source, "", mopts...)
 	if err != nil {
 		return nil, err
 	}
 
-	newManifests, err := provider.Manifests()
+	newManifests, err := provider.Manifests(ctx)
 	if err != nil {
 		return nil, err
 	}
