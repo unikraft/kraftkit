@@ -9,8 +9,8 @@ type Platform string
 const (
 	PlatformUnknown     = Platform("unknown")
 	PlatformFirecracker = Platform("fc")
-	PlatformKVM         = Platform("kvm")
 	PlatformQEMU        = Platform("qemu")
+	PlatformKVM         = PlatformQEMU
 	PlatformXen         = Platform("xen")
 )
 
@@ -23,7 +23,7 @@ func (ht Platform) String() string {
 func Platforms() map[string]Platform {
 	return map[string]Platform{
 		"fc":   PlatformFirecracker,
-		"kvm":  PlatformKVM,
+		"kvm":  PlatformQEMU,
 		"qemu": PlatformQEMU,
 		"xen":  PlatformXen,
 	}
