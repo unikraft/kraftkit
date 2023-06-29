@@ -178,10 +178,34 @@ func (iterator *machineV1alpha1ServiceIterator) List(ctx context.Context, cached
 
 // Watch implements kraftkit.sh/api/machine/v1alpha1.MachineService
 func (iterator *machineV1alpha1ServiceIterator) Watch(ctx context.Context, machine *machinev1alpha1.Machine) (chan *machinev1alpha1.Machine, chan error, error) {
-	panic("not implemented: kraftkit.sh/machine/platform.machineV1alpha1ServiceIterator.Watch")
+	var errs []error
+
+	for _, strategy := range iterator.strategies {
+		eventChan, errChan, err := strategy.Watch(ctx, machine)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		return eventChan, errChan, nil
+	}
+
+	return nil, nil, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
 }
 
 // Logs implements kraftkit.sh/api/machine/v1alpha1.MachineService
 func (iterator *machineV1alpha1ServiceIterator) Logs(ctx context.Context, machine *machinev1alpha1.Machine) (chan string, chan error, error) {
-	panic("not implemented: kraftkit.sh/machine/platform.machineV1alpha1ServiceIterator.Logs")
+	var errs []error
+
+	for _, strategy := range iterator.strategies {
+		logChan, errChan, err := strategy.Logs(ctx, machine)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		return logChan, errChan, nil
+	}
+
+	return nil, nil, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
 }
