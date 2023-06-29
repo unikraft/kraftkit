@@ -150,7 +150,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
+	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
 		// Set use of the global package manager.
 		pm, err := packmanager.NewUmbrellaManager(ctx)
 		if err != nil {
