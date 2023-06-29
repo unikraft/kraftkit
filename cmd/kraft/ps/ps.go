@@ -24,8 +24,9 @@ type Ps struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the list by architecture"`
 	Long         bool   `long:"long" short:"l" usage:"Show more information"`
 	platform     string
-	Quiet        bool `long:"quiet" short:"q" usage:"Only display machine IDs"`
-	ShowAll      bool `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
+	Quiet        bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
+	ShowAll      bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
+	Output       string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
 func New() *cobra.Command {
@@ -147,50 +148,49 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
-	table := tableprinter.NewTablePrinter(ctx)
+
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(opts.Output),
+	)
+	if err != nil {
+		return err
+	}
 
 	// Header row
 	if opts.Long {
-		table.AddField("MACHINE ID", nil, cs.Bold)
+		table.AddField("MACHINE ID", cs.Bold)
 	}
-	table.AddField("NAME", nil, cs.Bold)
-	table.AddField("KERNEL", nil, cs.Bold)
-	table.AddField("ARGS", nil, cs.Bold)
-	table.AddField("CREATED", nil, cs.Bold)
-	table.AddField("STATUS", nil, cs.Bold)
+	table.AddField("NAME", cs.Bold)
+	table.AddField("KERNEL", cs.Bold)
+	table.AddField("ARGS", cs.Bold)
+	table.AddField("CREATED", cs.Bold)
+	table.AddField("STATUS", cs.Bold)
+	table.AddField("MEM", cs.Bold)
 	if opts.Long {
-		table.AddField("PORTS", nil, cs.Bold)
-		table.AddField("IP", nil, cs.Bold)
-	}
-	table.AddField("MEM", nil, cs.Bold)
-	table.AddField("PLAT", nil, cs.Bold)
-	if opts.Long {
-		table.AddField("ARCH", nil, cs.Bold)
+		table.AddField("PORTS", cs.Bold)
+		table.AddField("ARCH", cs.Bold)
+		table.AddField("PLAT", cs.Bold)
 	}
 	table.EndRow()
 
 	for _, item := range items {
 		if opts.Long {
-			table.AddField(item.id, nil, nil)
+			table.AddField(item.id, nil)
 		}
-		table.AddField(item.name, nil, nil)
-		table.AddField(item.kernel, nil, nil)
-		table.AddField(item.args, nil, nil)
-		table.AddField(item.created, nil, nil)
-		table.AddField(item.status.String(), nil, nil)
+		table.AddField(item.name, nil)
+		table.AddField(item.kernel, nil)
+		table.AddField(item.args, nil)
+		table.AddField(item.created, nil)
+		table.AddField(item.status.String(), nil)
+		table.AddField(item.mem, nil)
 		if opts.Long {
-			table.AddField(item.ports, nil, nil)
-			table.AddField(strings.Join(item.ips, ","), nil, nil)
-		}
-		table.AddField(item.mem, nil, nil)
-		if opts.Long {
-			table.AddField(item.plat, nil, nil)
-			table.AddField(item.arch, nil, nil)
-		} else {
-			table.AddField(fmt.Sprintf("%s/%s", item.plat, item.arch), nil, nil)
+			table.AddField(item.ports, nil)
+			table.AddField(item.arch, nil)
+			table.AddField(item.plat, nil)
 		}
 		table.EndRow()
 	}
 
-	return table.Render()
+	return table.Render(iostreams.G(ctx).Out)
 }
