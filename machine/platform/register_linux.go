@@ -76,9 +76,6 @@ func hostSupportedStrategies() map[Platform]*Strategy {
 		PlatformQEMU: {
 			NewMachineV1alpha1: qemuV1alpha1Driver,
 		},
-		PlatformKVM: {
-			NewMachineV1alpha1: qemuV1alpha1Driver,
-		},
 		PlatformFirecracker: {
 			NewMachineV1alpha1: firecrackerV1alpha1Driver,
 		},
