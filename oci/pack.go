@@ -413,7 +413,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 
 	// If it's possible to resolve the image reference, the image has already been
 	// pulled to the local image store
-	_, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
+	image, err := ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
 	if err == nil {
 		goto unpack
 	}
@@ -440,6 +440,10 @@ unpack:
 
 		// Set the kernel, since it is a well-known within the destination path
 		ocipack.kernel = filepath.Join(popts.Workdir(), WellKnownKernelPath)
+
+		// Set the command
+		ocipack.command = image.Config.Cmd
+		ocipack.image.config = image
 
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
