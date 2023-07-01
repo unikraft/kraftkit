@@ -285,6 +285,10 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 					versions = append(versions, v.Version)
 					break
 				}
+				if v.Unikraft == version {
+					versions = append(versions, v.Unikraft)
+					break
+				}
 			}
 			if len(versions) == 0 {
 				for _, channel := range manifest.Channels {

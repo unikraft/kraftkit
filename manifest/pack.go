@@ -37,7 +37,7 @@ func NewPackageFromManifestWithVersion(manifest *Manifest, version string, opts 
 	}
 
 	for _, ver := range manifest.Versions {
-		if ver.Version == version {
+		if ver.Version == version || ver.Unikraft == version {
 			// resource = ver.Resource
 			versions = append(versions, ver)
 		}
