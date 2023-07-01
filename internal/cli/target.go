@@ -15,6 +15,10 @@ import (
 // SelectTarget is a utility method used in a CLI context to prompt the user
 // for a specific application's target.
 func SelectTarget(targets target.Targets) (target.Target, error) {
+	if len(targets) == 1 {
+		return targets[0], nil
+	}
+
 	names := make([]string, 0, len(targets))
 	for _, t := range targets {
 		names = append(names, fmt.Sprintf(
