@@ -107,11 +107,17 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}).Debug("oci: packaging via containerd")
 
 		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace)
-		if err != nil {
-			return nil, err
-		}
 	} else {
-		return nil, fmt.Errorf("did not specify oci package output")
+		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": ociDir,
+		}).Trace("oci: directory handler")
+
+		ocipack.handle, err = handler.NewDirectoryHandler(ociDir)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO: Remove the existing reference if a --force-remove|--overwrite flag is
