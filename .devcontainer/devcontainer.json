@@ -1,32 +1,10 @@
 {
-	"name": "Kraftkit development container",
-
-	"image": "kraftkit.sh/myself-full:latest",
-
-	"features": {
-	},
-
-
-	"customizations": {
-		"vscode": {
-			"settings": {},
-			"extensions": [
-        "coenraads.bracket-pair-colorizer-2",
-        "github.vscode-pull-request-github",
-        "vscode-icons-team.vscode-icons",
-        "visualstudioexptteam.vscodeintellicode",
-        "ms-vscode.go"
-      ]
-		}
-	},
-
-	"forwardPorts": [8080],
- 
-	"remoteUser": "root",
-    
+  "name": "Kraftkit development environment",
+  "image": "kraftkit.sh/myself-full:latest",
+  "remoteUser": "root",
   "hostRequirements": {
-    "cpus": 2,
-    "memory": "2gb",
-    "storage": "32gb"
+      "cpus": 2,
+      "memory": "8gb",
+      "storage": "32gb"
   }
 }
