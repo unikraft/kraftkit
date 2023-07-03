@@ -205,11 +205,6 @@ func (kp *kconfigParser) parseLine() {
 		return
 	}
 
-	if kp.TryConsume("$") {
-		_ = kp.Shell()
-		return
-	}
-
 	ident := kp.Ident()
 	if kp.TryConsume("=") || kp.TryConsume(":=") {
 		// Macro definition, see:
