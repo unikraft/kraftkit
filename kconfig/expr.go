@@ -5,7 +5,9 @@
 package kconfig
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // expr represents an arbitrary kconfig expression used in "depends on",
@@ -14,6 +16,7 @@ import (
 type expr interface {
 	String() string
 	collectDeps(map[string]bool)
+	json.Marshaler
 }
 
 type exprShell struct {
@@ -22,6 +25,15 @@ type exprShell struct {
 
 func (ex *exprShell) String() string {
 	return "$" + ex.cmd
+}
+
+func (ex *exprShell) MarshalJSON() ([]byte, error) {
+	ret := ex.String()
+	if strings.HasPrefix(ret, "\"") && strings.HasSuffix(ret, "\"") {
+		ret = ret[1 : len(ret)-1]
+	}
+	ret = strings.ReplaceAll(ret, "\"", "\\\"")
+	return []byte("\"" + ret + "\""), nil
 }
 
 func (ex *exprShell) collectDeps(deps map[string]bool) {
@@ -35,6 +47,15 @@ func (ex *exprNot) String() string {
 	return fmt.Sprintf("!(%v)", ex.ex)
 }
 
+func (ex *exprNot) MarshalJSON() ([]byte, error) {
+	ret := ex.String()
+	if strings.HasPrefix(ret, "\"") && strings.HasSuffix(ret, "\"") {
+		ret = ret[1 : len(ret)-1]
+	}
+	ret = strings.ReplaceAll(ret, "\"", "\\\"")
+	return []byte("\"" + ret + "\""), nil
+}
+
 func (ex *exprNot) collectDeps(deps map[string]bool) {
 }
 
@@ -44,6 +65,15 @@ type exprIdent struct {
 
 func (ex *exprIdent) String() string {
 	return ex.name
+}
+
+func (ex *exprIdent) MarshalJSON() ([]byte, error) {
+	ret := ex.String()
+	if strings.HasPrefix(ret, "\"") && strings.HasSuffix(ret, "\"") {
+		ret = ret[1 : len(ret)-1]
+	}
+	ret = strings.ReplaceAll(ret, "\"", "\\\"")
+	return []byte("\"" + ret + "\""), nil
 }
 
 func (ex *exprIdent) collectDeps(deps map[string]bool) {
@@ -56,6 +86,15 @@ type exprString struct {
 
 func (ex *exprString) String() string {
 	return fmt.Sprintf("%q", ex.val)
+}
+
+func (ex *exprString) MarshalJSON() ([]byte, error) {
+	ret := ex.String()
+	if strings.HasPrefix(ret, "\"") && strings.HasSuffix(ret, "\"") {
+		ret = ret[1 : len(ret)-1]
+	}
+	ret = strings.ReplaceAll(ret, "\"", "\\\"")
+	return []byte("\"" + ret + "\""), nil
 }
 
 func (ex *exprString) collectDeps(deps map[string]bool) {
@@ -106,6 +145,15 @@ func (op binOp) String() string {
 
 func (ex *exprBin) String() string {
 	return fmt.Sprintf("(%v %v %v)", ex.lex, ex.op, ex.rex)
+}
+
+func (ex *exprBin) MarshalJSON() ([]byte, error) {
+	ret := ex.String()
+	if strings.HasPrefix(ret, "\"") && strings.HasSuffix(ret, "\"") {
+		ret = ret[1 : len(ret)-1]
+	}
+	ret = strings.ReplaceAll(ret, "\"", "\\\"")
+	return []byte("\"" + ret + "\""), nil
 }
 
 func (ex *exprBin) collectDeps(deps map[string]bool) {

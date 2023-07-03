@@ -18,57 +18,70 @@ import (
 
 // KConfigFile represents a parsed Kconfig file (including includes).
 type KConfigFile struct {
-	Root    *KConfigMenu            // mainmenu
-	Configs map[string]*KConfigMenu // only config/menuconfig entries
+	// Root is the main menu
+	Root *KConfigMenu `json:"root,omitempty"`
+
+	// All config/menuconfig entries
+	Configs map[string]*KConfigMenu `json:"configs,omitempty"`
 }
 
-// Menu represents a single hierarchical menu or config.
+// KConfigMenu represents a single hierarchical menu or config.
 type KConfigMenu struct {
-	Kind   MenuKind       // config/menu/choice/etc
-	Type   ConfigType     // tristate/bool/string/etc
-	Name   string         // name without CONFIG_
-	Elems  []*KConfigMenu // sub-elements for menus
-	Parent *KConfigMenu   // parent menu, non-nil for everythign except for mainmenu
+	// Kind represents the structure type, e.g. config/menu/choice/etc
+	Kind MenuKind `json:"kind,omitempty"`
 
+	// Type of menu element, e.g. tristate/bool/string/etc
+	Type ConfigType `json:"type,omitempty"`
+
+	// Name without CONFIG_
+	Name string `json:"name,omitempty"`
+
+	// Sub-elements for menus
+	Children []*KConfigMenu `json:"children,omitempty"`
+
+	// Prompt is the 1-line description of the menu entry.
+	Prompt KConfigPrompt `json:"prompt,omitempty"`
+
+	// Default value of the entry.
+	Default DefaultValue `json:"default,omitempty"`
+
+	// Parent menu, non-nil for everythign except for mainmenu
+	parent      *KConfigMenu
 	kconfigFile *KConfigFile // back-link to the owning KConfig
-	prompts     []prompt
-	defaults    []defaultVal
 	dependsOn   expr
 	visibleIf   expr
 	deps        map[string]bool
 	depsOnce    sync.Once
 }
 
-type prompt struct {
-	text string
-	cond expr
+type KConfigPrompt struct {
+	Text      string `json:"text,omitempty"`
+	Condition expr   `json:"condition,omitempty"`
 }
 
-type defaultVal struct {
-	val  expr
-	cond expr
+type DefaultValue struct {
+	Value     expr `json:"value,omitempty"`
+	Condition expr `json:"condition,omitempty"`
 }
 
 type (
-	MenuKind   int
-	ConfigType int
+	MenuKind   string
+	ConfigType string
 )
 
 const (
-	_ MenuKind = iota
-	MenuConfig
-	MenuGroup
-	MenuChoice
-	MenuComment
+	MenuConfig  = MenuKind("config")
+	MenuGroup   = MenuKind("group")
+	MenuChoice  = MenuKind("choice")
+	MenuComment = MenuKind("comment")
 )
 
 const (
-	_ ConfigType = iota
-	TypeBool
-	TypeTristate
-	TypeString
-	TypeInt
-	TypeHex
+	TypeBool     = ConfigType("bool")
+	TypeTristate = ConfigType("tristate")
+	TypeString   = ConfigType("string")
+	TypeInt      = ConfigType("int")
+	TypeHex      = ConfigType("hex")
 )
 
 // DependsOn returns all transitive configs this config depends on.
@@ -97,16 +110,6 @@ func (m *KConfigMenu) DependsOn() map[string]bool {
 		}
 	})
 	return m.deps
-}
-
-func (m *KConfigMenu) Prompt() string {
-	// TODO: check prompt conditions, some prompts may be not visible. If all
-	// prompts are not visible, then then menu if effectively disabled (at least
-	// for user).
-	for _, p := range m.prompts {
-		return p.text
-	}
-	return ""
 }
 
 type kconfigParser struct {
@@ -164,7 +167,7 @@ func (kconf *KConfigFile) walk(m *KConfigMenu, dependsOn, visibleIf expr) {
 		kconf.Configs[m.Name] = m
 	}
 
-	for _, elem := range m.Elems {
+	for _, elem := range m.Children {
 		kconf.walk(elem, m.dependsOn, m.visibleIf)
 	}
 }
@@ -227,20 +230,20 @@ func (kp *kconfigParser) parseMenu(cmd string) {
 
 	case "mainmenu":
 		kp.pushCurrent(&KConfigMenu{
-			Kind:    MenuConfig,
-			prompts: []prompt{{text: kp.QuotedString()}},
+			Kind:   MenuConfig,
+			Prompt: KConfigPrompt{Text: kp.QuotedString()},
 		})
 
 	case "comment":
 		kp.newCurrent(&KConfigMenu{
-			Kind:    MenuComment,
-			prompts: []prompt{{text: kp.QuotedString()}},
+			Kind:   MenuComment,
+			Prompt: KConfigPrompt{Text: kp.QuotedString()},
 		})
 
 	case "menu":
 		kp.pushCurrent(&KConfigMenu{
-			Kind:    MenuGroup,
-			prompts: []prompt{{text: kp.QuotedString()}},
+			Kind:   MenuGroup,
+			Prompt: KConfigPrompt{Text: kp.QuotedString()},
 		})
 
 	case "if":
@@ -408,8 +411,8 @@ func (kp *kconfigParser) popCurrent() {
 	last := kp.stack[len(kp.stack)-1]
 	kp.stack = kp.stack[:len(kp.stack)-1]
 	top := kp.stack[len(kp.stack)-1]
-	last.Parent = top
-	top.Elems = append(top.Elems, last)
+	last.parent = top
+	top.Children = append(top.Children, last)
 }
 
 func (kp *kconfigParser) newCurrent(m *KConfigMenu) {
@@ -439,8 +442,8 @@ func (kp *kconfigParser) endCurrent() {
 
 	top := kp.stack[len(kp.stack)-1]
 	if top != kp.cur {
-		kp.cur.Parent = top
-		top.Elems = append(top.Elems, kp.cur)
+		kp.cur.parent = top
+		top.Children = append(top.Children, kp.cur)
 	}
 
 	kp.cur = nil
@@ -448,23 +451,23 @@ func (kp *kconfigParser) endCurrent() {
 
 func (kp *kconfigParser) tryParsePrompt() {
 	if str, ok := kp.TryQuotedString(); ok {
-		prompt := prompt{
-			text: str,
+		prompt := KConfigPrompt{
+			Text: str,
 		}
 
 		if kp.TryConsume("if") {
-			prompt.cond = kp.parseExpr()
+			prompt.Condition = kp.parseExpr()
 		}
 
-		kp.current().prompts = append(kp.current().prompts, prompt)
+		kp.current().Prompt = prompt
 	}
 }
 
 func (kp *kconfigParser) parseDefaultValue() {
-	def := defaultVal{val: kp.parseExpr()}
+	def := DefaultValue{Value: kp.parseExpr()}
 	if kp.TryConsume("if") {
-		def.cond = kp.parseExpr()
+		def.Condition = kp.parseExpr()
 	}
 
-	kp.current().defaults = append(kp.current().defaults, def)
+	kp.current().Default = def
 }
