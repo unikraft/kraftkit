@@ -143,6 +143,7 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *mac
 			func(ctx context.Context, w func(progress float64)) error {
 				popts := []pack.PullOption{
 					pack.WithPullWorkdir(dir),
+					pack.WithPullPlatform(opts.platform.String()),
 				}
 				if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 					popts = append(popts, pack.WithPullProgressFunc(w))
