@@ -99,6 +99,8 @@ func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	case "kvm", "qemu":
 		values.Set("CONFIG_PLAT_KVM", kconfig.Yes)
 		values.Set("CONFIG_KVM_VMM_QEMU", kconfig.Yes)
+	case "xen":
+		values.Set("CONFIG_PLAT_XEN", kconfig.Yes)
 	}
 
 	return values
