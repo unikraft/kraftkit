@@ -27,17 +27,15 @@ func (cpu QemuCPU) String() string {
 
 	if len(cpu.On) > 0 {
 		for _, on := range cpu.On {
-			ret.WriteString(",")
+			ret.WriteString(",+")
 			ret.WriteString(string(on))
-			ret.WriteString("=on")
 		}
 	}
 
 	if len(cpu.Off) > 0 {
 		for _, off := range cpu.Off {
-			ret.WriteString(",")
+			ret.WriteString(",-")
 			ret.WriteString(string(off))
-			ret.WriteString("=off")
 		}
 	}
 

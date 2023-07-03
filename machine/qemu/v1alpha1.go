@@ -109,7 +109,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	qopts := []QemuOption{
 		WithDaemonize(true),
-		WithEnableKVM(true),
 		WithNoGraphic(true),
 		WithPidFile(filepath.Join(machine.Status.StateDir, "machine.pid")),
 		WithNoReboot(true),
@@ -282,12 +281,13 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				}),
 				WithCPU(QemuCPU{
 					CPU: QemuCPUX86Qemu64,
-					On:  QemuCPUFeatures{QemuCPUFeatureVmx},
-					Off: QemuCPUFeatures{QemuCPUFeatureSvm},
+					On:  QemuCPUFeatures{QemuCPUFeaturePdpe1gb},
+					Off: QemuCPUFeatures{QemuCPUFeatureVmx, QemuCPUFeatureSvm},
 				}),
 			)
 		} else {
 			qopts = append(qopts,
+				WithEnableKVM(true),
 				WithMachine(QemuMachine{
 					Type:         QemuMachineTypePC,
 					Accelerators: []QemuMachineAccelerator{QemuMachineAccelKVM},
