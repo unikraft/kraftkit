@@ -376,6 +376,10 @@ func (kp *kconfigParser) parseProperty(prop string) {
 }
 
 func (kp *kconfigParser) includeSource(file string) {
+	// ignore blank files
+	if file == "" {
+		return
+	}
 	kp.newCurrent(nil)
 	file = filepath.Join(kp.baseDir, file)
 	data, err := os.ReadFile(file)
