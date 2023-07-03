@@ -6,6 +6,7 @@ package build
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -45,6 +46,9 @@ type Build struct {
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
+
+	project app.Application
+	workdir string
 }
 
 func New() *cobra.Command {
@@ -75,7 +79,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Build) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pm, err := packmanager.NewUmbrellaManager(ctx)
 	if err != nil {
@@ -83,6 +87,28 @@ func (*Build) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	if len(args) == 0 {
+		opts.workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		opts.workdir = args[0]
+	}
+
+	popts := []app.ProjectOption{
+		app.WithProjectWorkdir(opts.workdir),
+		app.WithProjectDefaultKraftfiles(),
+	}
+
+	// Initialize at least the configuration options for a project
+	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
+	if err != nil && errors.Is(err, app.ErrNoKraftfile) {
+		return fmt.Errorf("cannot build project directory without a Kraftfile")
+	} else if err != nil {
+		return fmt.Errorf("could not initialize project directory: %w", err)
+	}
 
 	return nil
 }
@@ -94,17 +120,17 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	auths := config.G[config.KraftKit](ctx).Auth
 
-	if _, err := project.Components(ctx); err != nil && project.Template().Name() != "" {
+	if _, err := opts.project.Components(ctx); err != nil && opts.project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
-				unikraft.TypeNameVersion(project.Template()),
+				unikraft.TypeNameVersion(opts.project.Template()),
 			), "",
 			func(ctx context.Context) error {
 				packages, err = packmanager.G(ctx).Catalog(ctx,
-					packmanager.WithName(project.Template().Name()),
+					packmanager.WithName(opts.project.Template().Name()),
 					packmanager.WithTypes(unikraft.ComponentTypeApp),
-					packmanager.WithVersion(project.Template().Version()),
+					packmanager.WithVersion(opts.project.Template().Version()),
 					packmanager.WithCache(!opts.NoCache),
 					packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 				)
@@ -114,11 +140,11 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 
 				if len(packages) == 0 {
 					return fmt.Errorf("could not find: %s",
-						unikraft.TypeNameVersion(project.Template()),
+						unikraft.TypeNameVersion(opts.project.Template()),
 					)
 				} else if len(packages) > 1 {
 					return fmt.Errorf("too many options for %s",
-						unikraft.TypeNameVersion(project.Template()),
+						unikraft.TypeNameVersion(opts.project.Template()),
 					)
 				}
 
@@ -177,8 +203,8 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		}
 	}
 
-	if project.Template().Name() != "" {
-		templateWorkdir, err := unikraft.PlaceComponent(workdir, project.Template().Type(), project.Template().Name())
+	if opts.project.Template().Name() != "" {
+		templateWorkdir, err := unikraft.PlaceComponent(workdir, opts.project.Template().Type(), opts.project.Template().Name())
 		if err != nil {
 			return err
 		}
@@ -192,14 +218,14 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 			return err
 		}
 
-		project, err = templateProject.MergeTemplate(ctx, project)
+		opts.project, err = templateProject.MergeTemplate(ctx, project)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Overwrite template with user options
-	components, err := project.Components(ctx)
+	components, err := opts.project.Components(ctx)
 	if err != nil {
 		return err
 	}
@@ -309,38 +335,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 }
 
 func (opts *Build) Run(cmd *cobra.Command, args []string) error {
-	var err error
-	var workdir string
-
-	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-	}
-
-	if len(args) == 0 {
-		workdir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	} else {
-		workdir = args[0]
-	}
-
 	ctx := cmd.Context()
-
-	// Initialize at least the configuration options for a project
-	project, err := app.NewProjectFromOptions(
-		ctx,
-		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultKraftfiles(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if !app.IsWorkdirInitialized(workdir) {
-		return fmt.Errorf("cannot build uninitialized project")
-	}
-
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 	nameWidth := -1
 
@@ -352,7 +347,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		// additional space characters (2 characters), brackets (2 characters) the
 		// name of the project and the target/plat string (which is variable in
 		// length).
-		for _, targ := range project.Targets() {
+		for _, targ := range opts.project.Targets() {
 			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
 				nameWidth = newLen
 			}
@@ -360,7 +355,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !opts.NoPull {
-		if err := opts.pull(ctx, project, workdir, norender, nameWidth); err != nil {
+		if err := opts.pull(ctx, opts.project, opts.workdir, norender, nameWidth); err != nil {
 			return err
 		}
 	}
@@ -369,7 +364,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	// Filter project targets by any provided CLI options
 	selected := cli.FilterTargets(
-		project.Targets(),
+		opts.project.Targets(),
 		opts.Architecture,
 		opts.Platform,
 		opts.Target,
@@ -393,7 +388,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
-					return project.Configure(
+					return opts.project.Configure(
 						ctx,
 						targ, // Target-specific options
 						nil,  // No extra configuration options
@@ -413,7 +408,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("preparing %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 				func(ctx context.Context, w func(progress float64)) error {
-					return project.Prepare(
+					return opts.project.Prepare(
 						ctx,
 						targ, // Target-specific options
 						append(
@@ -432,7 +427,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 			func(ctx context.Context, w func(progress float64)) error {
-				return project.Build(
+				return opts.project.Build(
 					ctx,
 					targ, // Target-specific options
 					app.WithBuildProgressFunc(w),
