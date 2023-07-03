@@ -43,6 +43,7 @@ type Build struct {
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
 	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
+	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
@@ -338,6 +339,32 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 	nameWidth := -1
+
+	if !opts.NoUpdate {
+		model, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+				processtree.WithRenderer(norender),
+			},
+			[]*processtree.ProcessTreeItem{
+				processtree.NewProcessTreeItem(
+					"updating package index",
+					"",
+					func(ctx context.Context) error {
+						return packmanager.G(ctx).Update(ctx)
+					},
+				),
+			}...,
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := model.Start(); err != nil {
+			return err
+		}
+	}
 
 	// Calculate the width of the longest process name so that we can align the
 	// two independent processtrees if we are using "render" mode (aka the fancy
