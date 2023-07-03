@@ -474,7 +474,7 @@ func (ocipack *ociPackage) Path() string {
 }
 
 // KConfigTree implements unikraft.component.Component
-func (ocipack *ociPackage) KConfigTree(...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (ocipack *ociPackage) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, fmt.Errorf("not implemented: oci.ociPackage.KConfigTree")
 }
 

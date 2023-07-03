@@ -158,7 +158,7 @@ func (tc *TargetConfig) ConfigFilename() string {
 	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, filepath.Base(tc.kernel))
 }
 
-func (tc *TargetConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (tc *TargetConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, fmt.Errorf("target does not have a Config.uk file")
 }
 

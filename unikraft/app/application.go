@@ -5,6 +5,8 @@
 package app
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -15,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
 
+	"kraftkit.sh/exec"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
@@ -231,13 +234,74 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 	return app, nil
 }
 
-func (app application) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	config_uk := filepath.Join(app.workingDir, unikraft.Config_uk)
-	if _, err := os.Stat(config_uk); err != nil {
-		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+func (app application) KConfigTree(ctx context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+	var libraryPaths []string
+
+	for _, lib := range app.libraries {
+		libraryPaths = append(libraryPaths, lib.Path())
 	}
 
-	return kconfig.Parse(config_uk, app.KConfig().Override(env...).Slice()...)
+	args := &core.MakeArgs{
+		OutputDir:      app.outDir,
+		ApplicationDir: app.workingDir,
+		LibraryDirs:    strings.Join(libraryPaths, core.MakeDelimeter),
+	}
+
+	var buf bytes.Buffer
+
+	m, err := make.NewFromInterface(*args,
+		make.WithDirectory(app.unikraft.Path()),
+		make.WithNoPrintDirectory(true),
+		make.WithTarget("print-vars"),
+		make.WithExecOptions(
+			exec.WithStdout(bufio.NewWriter(&buf)),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.Execute(ctx); err != nil {
+		return nil, err
+	}
+
+	base := []*kconfig.KeyValue{
+		{Key: "UK_BASE", Value: app.unikraft.Path()},
+	}
+
+	// Parse each line starting with `[file] `
+	for _, line := range strings.Split(buf.String(), "\n") {
+		if !strings.HasPrefix(line, "[file] ") {
+			continue
+		}
+
+		parts := strings.Split(line[7:], " ")
+
+		// Skip make variables
+		if strings.HasPrefix(parts[0], ".") {
+			continue
+		}
+
+		if strings.HasPrefix(parts[0], "_") {
+			continue
+		}
+
+		// Skip unexported variables
+		if strings.ToUpper(parts[0]) != parts[0] {
+			continue
+		}
+
+		val := strings.Join(parts[2:], " ")
+		val = strings.ReplaceAll(val, "//", "/")
+
+		if val == "<recursive>" {
+			continue
+		}
+
+		base = append(base, &kconfig.KeyValue{Key: parts[0], Value: val})
+	}
+
+	return app.unikraft.KConfigTree(ctx, app.KConfig().Override(base...).Slice()...)
 }
 
 func (app application) KConfig() kconfig.KeyValueMap {

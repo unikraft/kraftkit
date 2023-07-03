@@ -78,7 +78,7 @@ func (ac ArchitectureConfig) IsUnpacked() bool {
 	return false
 }
 
-func (ac ArchitectureConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (ac ArchitectureConfig) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// Architectures are built directly into the Unikraft core for now.
 	return nil, nil
 }

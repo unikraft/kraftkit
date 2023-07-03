@@ -72,7 +72,7 @@ func (tc TemplateConfig) Path() string {
 }
 
 // KConfigTree returns the path to the kconfig file of the template
-func (tc TemplateConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (tc TemplateConfig) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, nil
 }
 

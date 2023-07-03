@@ -27,7 +27,7 @@ type Component interface {
 
 	// KConfigTree returns the component's KConfig configuration menu tree which
 	// returns all possible options for the component
-	KConfigTree(...*kconfig.KeyValue) (*kconfig.KConfigFile, error)
+	KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error)
 
 	// KConfig returns the component's set of file KConfig which is known when the
 	// relevant component packages have been retrieved
