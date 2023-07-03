@@ -188,6 +188,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{},
 			},
+			Emulation: opts.DisableAccel,
 		},
 	}
 
