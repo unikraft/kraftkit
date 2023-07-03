@@ -6,6 +6,8 @@ package run
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -14,10 +16,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -57,24 +62,45 @@ func New() *cobra.Command {
 		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
 			Launch a unikernel`),
-		Example: heredoc.Doc(`
-			# (project) single target in cwd.
-			kraft run
+		Example: heredoc.Docf(`
+			Run a built target in the current working directory project:
+			%[1]s%[1]s%[1]s
+			$ kraft run
+			%[1]s%[1]s%[1]s
 
-			# (project) single target at path.
-			kraft run path/to/project
+			Run a selected target from multiple in project at the provided
+			working directory:
+			%[1]s%[1]s%[1]s
+			$ kraft run -t TARGET path/to/project
+			%[1]s%[1]s%[1]s
 
-			# (project) select a single target from multiple in project cwd.
-			kraft run -t TARGET
+			Run a specific kernel binary:
+			%[1]s%[1]s%[1]s
+			$ kraft run --arch x86_64 --plat qemu path/to/kernel-x86_64-qemu
+			%[1]s%[1]s%[1]s
 
-			# (project) multiple targets at path.
-			kraft run -t TARGET path/to/project
+			Run an OCI-compatible unikernel, mapping port 8080 on the host
+			to port 80 in the unikernel:
+			%[1]s%[1]s%[1]s
+			$ kraft run -p 8080:80 unikraft.org/nginx:latest
+			%[1]s%[1]s%[1]s
 
-			# (kernel) Run a unikernel kernel image.
-			kraft run path/to/kernel-x86_64-kvm
+			Run a Linux userspace binary in POSIX-/binary- compatibility mode:
+			%[1]s%[1]s%[1]s
+			$ kraft run path/to/helloworld
+			%[1]s%[1]s%[1]s
 
-			# (package) Run an OCI-compatible unikernel.
-			kraft run unikraft.org/helloworld:latest`),
+			Supply an initramfs file to the unikernel that is instantiated based on 
+			the current project working directory:
+			$ kraft run --initrd ./initramfs.cpio .
+
+			Supply a path which is dynamically serialized into an initramfs CPIO
+			archive:
+			$ kraft run -i ./path/to/rootfs .
+
+			Specify a specific path inside the initramfs, /root, mapped to the host:
+			$ kraft run -i ./path/to/rootfs:/root .
+			`, "`"),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
@@ -184,7 +210,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: machineapi.MachineSpec{
-			Rootfs: opts.InitRd,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{},
 			},
@@ -254,6 +279,61 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 	if err := opts.assignName(ctx, machine); err != nil {
 		return err
+	}
+
+	// If the user has supplied an initram path, set this now, this overrides any
+	// preparation and is considered higher priority compared to what has been set
+	// prior to this point.
+	if opts.InitRd != "" {
+		if machine.ObjectMeta.UID == "" {
+			machine.ObjectMeta.UID = uuid.NewUUID()
+		}
+
+		if len(machine.Status.StateDir) == 0 {
+			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+		}
+
+		if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
+			return fmt.Errorf("could not make machine state dir: %w", err)
+		}
+
+		var ramfs *initrd.InitrdConfig
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("could not get current working directory: %w", err)
+		}
+
+		if strings.Contains(opts.InitRd, initrd.InputDelimeter) {
+			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
+
+			log.G(ctx).
+				WithField("output", output).
+				Debug("serializing initramfs cpio archive")
+
+			ramfs, err = initrd.NewFromMapping(cwd, output, opts.InitRd)
+			if err != nil {
+				return fmt.Errorf("could not prepare initramfs: %w", err)
+			}
+		} else if f, err := os.Stat(opts.InitRd); err == nil && f.IsDir() {
+			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
+
+			log.G(ctx).
+				WithField("output", output).
+				Debug("serializing initramfs cpio archive")
+
+			ramfs, err = initrd.NewFromMapping(cwd, output, fmt.Sprintf("%s:/", opts.InitRd))
+			if err != nil {
+				return fmt.Errorf("could not prepare initramfs: %w", err)
+			}
+		} else {
+			ramfs, err = initrd.NewFromFile(cwd, opts.InitRd)
+			if err != nil {
+				return fmt.Errorf("could not prepare initramfs: %w", err)
+			}
+		}
+
+		machine.Spec.Rootfs = fmt.Sprintf("cpio+%s://%s", ramfs.Format, ramfs.Output)
+		machine.Status.InitrdPath = ramfs.Output
 	}
 
 	// Create the machine
