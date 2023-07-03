@@ -381,7 +381,9 @@ func (kp *kconfigParser) includeSource(file string) {
 		return
 	}
 	kp.newCurrent(nil)
-	file = filepath.Join(kp.baseDir, file)
+	if file[0] != '/' {
+		file = filepath.Join(kp.baseDir, file)
+	}
 	data, err := os.ReadFile(file)
 	if err != nil {
 		kp.failf("%v", err)
