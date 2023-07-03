@@ -31,11 +31,6 @@ func newParser(data []byte, file string, env KeyValueMap) *parser {
 // nextLine resets the parser to the next line.
 // Automatically concatenates lines split with \ at the end.
 func (p *parser) nextLine() bool {
-	if !p.eol() {
-		p.failf("tailing data at the end of line")
-		return false
-	}
-
 	if p.err != nil || len(p.data) == 0 {
 		return false
 	}
