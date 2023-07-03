@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -41,6 +42,9 @@ type KConfigMenu struct {
 
 	// Prompt is the 1-line description of the menu entry.
 	Prompt KConfigPrompt `json:"prompt,omitempty"`
+
+	// Help information about the menu item.
+	Help string `json:"help,omitempty"`
 
 	// Default value of the entry.
 	Default DefaultValue `json:"default,omitempty"`
@@ -358,17 +362,7 @@ func (kp *kconfigParser) parseProperty(prop string) {
 		}
 
 	case "help", "---help---":
-		// Help rules are tricky: end of help is identified by smaller indentation
-		// level as would be rendered on a terminal with 8-column tabs setup, minus
-		// empty lines.
-		for kp.nextLine() {
-			if kp.eol() {
-				continue
-			}
-			kp.helpIdent = kp.identLevel()
-			kp.ConsumeLine()
-			break
-		}
+		kp.tryParseHelp()
 
 	default:
 		kp.failf("unknown line")
@@ -476,4 +470,24 @@ func (kp *kconfigParser) parseDefaultValue() {
 	}
 
 	kp.current().Default = def
+}
+
+func (kp *kconfigParser) tryParseHelp() {
+	var help []string
+	baseHelpIdent := -1
+	for kp.nextLine() {
+		if kp.eol() {
+			continue
+		}
+		if len(help) > 0 && kp.identLevel() < baseHelpIdent {
+			break
+		}
+		if baseHelpIdent == -1 {
+			baseHelpIdent = kp.identLevel()
+		}
+		help = append(help, kp.ConsumeLine())
+		kp.helpIdent = kp.identLevel()
+	}
+
+	kp.current().Help = strings.Join(help, " ")
 }
