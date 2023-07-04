@@ -162,7 +162,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 			filepath.Join(popts.workdir, target.ConfigFilename()),
 		)
 		if err != nil {
-			log.G(ctx).Debugf("could not read target config file: %v", err)
+			log.G(ctx).Tracef("skipping uninitialized target config file: %v", err)
 			continue
 		}
 
