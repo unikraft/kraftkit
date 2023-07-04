@@ -35,12 +35,12 @@ import (
 type Build struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Fast         bool   `long:"fast" usage:"Use maximum parallelization when performing the build"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast       bool   `long:"no-fast" usage:"Use maximum parallelization when performing the build"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
 	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
@@ -417,7 +417,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	if opts.Jobs > 0 {
 		mopts = append(mopts, make.WithJobs(opts.Jobs))
 	} else {
-		mopts = append(mopts, make.WithMaxJobs(opts.Fast))
+		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
 	}
 
 	for _, targ := range selected {
