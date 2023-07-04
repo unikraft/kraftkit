@@ -33,6 +33,7 @@ import (
 )
 
 type Build struct {
+	All          bool   `long:"all" usage:"Build all targets"`
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
@@ -402,12 +403,23 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	processes := []*paraprogress.Process{} // reset
 
 	// Filter project targets by any provided CLI options
-	selected := cli.FilterTargets(
-		opts.project.Targets(),
-		opts.Architecture,
-		opts.Platform,
-		opts.Target,
-	)
+	selected := opts.project.Targets()
+	if !opts.All {
+		selected = cli.FilterTargets(
+			selected,
+			opts.Architecture,
+			opts.Platform,
+			opts.Target,
+		)
+
+		if !config.G[config.KraftKit](ctx).NoPrompt {
+			res, err := cli.SelectTarget(selected)
+			if err != nil {
+				return err
+			}
+			selected = []target.Target{res}
+		}
+	}
 
 	if len(selected) == 0 {
 		return fmt.Errorf("no targets selected to build")

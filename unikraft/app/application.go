@@ -45,7 +45,7 @@ type Application interface {
 	Libraries(ctx context.Context) (lib.Libraries, error)
 
 	// Targets returns the application's targets
-	Targets() target.Targets
+	Targets() []target.Target
 
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
@@ -107,16 +107,9 @@ type Application interface {
 	// TargetNames return names for all targets in this Compose config
 	TargetNames() []string
 
-	// TargetByName returns the `target.Target` based on an input name
-	TargetByName(string) (target.Target, error)
-
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
 	Components(context.Context) ([]component.Component, error)
-
-	// WithTarget is a reducer that returns the application with only the provided
-	// target.
-	WithTarget(target.Target) (Application, error)
 }
 
 type application struct {
@@ -130,7 +123,7 @@ type application struct {
 	template      template.TemplateConfig
 	unikraft      core.UnikraftConfig
 	libraries     lib.Libraries
-	targets       target.Targets
+	targets       []*target.TargetConfig
 	kraftfiles    []string
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
@@ -183,8 +176,12 @@ func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
 	return libs, nil
 }
 
-func (app application) Targets() target.Targets {
-	return app.targets
+func (app application) Targets() []target.Target {
+	targets := []target.Target{}
+	for _, t := range app.targets {
+		targets = append(targets, target.Target(t))
+	}
+	return targets
 }
 
 func (app application) Extensions() component.Extensions {
@@ -211,7 +208,12 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 		}
 	}
 
-	app.targets = merge.Targets()
+	// TODO(nderjung): This entire method and procedure needs to be re-thought to
+	// be better extensible.  For now, it is unused.  We can safely cast this:
+	app.targets = []*target.TargetConfig{}
+	for _, t := range merge.Targets() {
+		app.targets = append(app.targets, t.(*target.TargetConfig))
+	}
 
 	for id, ext := range merge.Extensions() {
 		app.extensions[id] = ext
@@ -558,21 +560,6 @@ func (app application) TargetNames() []string {
 	return names
 }
 
-// TargetByName returns the `*target.TargetConfig` based on an input name
-func (app application) TargetByName(name string) (target.Target, error) {
-	if len(name) == 0 {
-		return nil, fmt.Errorf("no target name specified in lookup")
-	}
-
-	for _, k := range app.targets {
-		if k.Name() == name {
-			return k, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unknown target: %s", name)
-}
-
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
 func (app application) Components(ctx context.Context) ([]component.Component, error) {
@@ -635,10 +622,4 @@ func (app application) PrintInfo(ctx context.Context) string {
 	}
 
 	return tree.String()
-}
-
-func (app application) WithTarget(targ target.Target) (Application, error) {
-	ret := app
-	ret.targets = target.Targets{targ.(*target.TargetConfig)}
-	return ret, nil
 }
