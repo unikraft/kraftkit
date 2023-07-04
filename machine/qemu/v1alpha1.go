@@ -68,6 +68,14 @@ func NewMachineV1alpha1Service(ctx context.Context, opts ...any) (machinev1alpha
 
 // Create implements kraftkit.sh/api/machine/v1alpha1.MachineService.Create
 func (service *machineV1alpha1Service) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+	if machine.Status.KernelPath == "" {
+		return machine, fmt.Errorf("empty kernel path")
+	}
+
+	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
+		return machine, fmt.Errorf("supplied kernel path does not exist: %s", machine.Status.KernelPath)
+	}
+
 	if machine.ObjectMeta.UID == "" {
 		machine.ObjectMeta.UID = uuid.NewUUID()
 	}
