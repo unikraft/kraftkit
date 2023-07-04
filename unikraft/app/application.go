@@ -107,9 +107,6 @@ type Application interface {
 	// TargetNames return names for all targets in this Compose config
 	TargetNames() []string
 
-	// TargetByName returns the `target.Target` based on an input name
-	TargetByName(string) (target.Target, error)
-
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
 	Components(context.Context) ([]component.Component, error)
@@ -552,21 +549,6 @@ func (app application) TargetNames() []string {
 	sort.Strings(names)
 
 	return names
-}
-
-// TargetByName returns the `*target.TargetConfig` based on an input name
-func (app application) TargetByName(name string) (target.Target, error) {
-	if len(name) == 0 {
-		return nil, fmt.Errorf("no target name specified in lookup")
-	}
-
-	for _, k := range app.targets {
-		if k.Name() == name {
-			return k, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unknown target: %s", name)
 }
 
 // Components returns a unique list of Unikraft components which this
