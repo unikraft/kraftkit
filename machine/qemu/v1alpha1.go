@@ -320,6 +320,20 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
 
+	// Create a log file just for the QEMU process which can be used to debug
+	// issues when starting the VMM.
+	qemuLogFile := filepath.Join(machine.Status.StateDir, "qemu.log")
+	fi, err := os.Create(qemuLogFile)
+	if err != nil {
+		return machine, err
+	}
+
+	defer fi.Close()
+
+	service.eopts = append(service.eopts,
+		exec.WithStdout(fi),
+	)
+
 	qcfg, err := NewQemuConfig(qopts...)
 	if err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
@@ -346,6 +360,12 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	// program is actively being executed.
 	if err := process.StartAndWait(ctx); err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
+
+		// Propagate the contents of the QEMU log file as an error
+		if errLog, err2 := os.ReadFile(qemuLogFile); err2 == nil {
+			err = errors.Join(fmt.Errorf(strings.TrimSpace(string(errLog))), err)
+		}
+
 		return machine, fmt.Errorf("could not start and wait for QEMU process: %v", err)
 	}
 
