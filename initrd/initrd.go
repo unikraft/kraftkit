@@ -5,8 +5,10 @@
 package initrd
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +59,7 @@ func NewFromFile(workdir, path string) (*InitrdConfig, error) {
 	}
 
 	config := InitrdConfig{
-		Output:  path,
+		Output:  utils.RelativePath(workdir, path),
 		Format:  NEWC,
 		Files:   make(map[string]string),
 		workdir: workdir,
@@ -128,4 +130,115 @@ func NewFromPath(base string, prefix string, files ...string) (*InitrdConfig, er
 	}
 
 	return initrd, nil
+}
+
+// NewFromMapping accepts a working directory base that represents the relative
+// path of the files to serialize which are provided by a slice of mappings,
+// each delimetered by the default delimeter `:` which separates the path on the
+// host and the path inside of the iniramfs.  A destination of the final archive
+// is provided by the positional argument output.
+func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, error) {
+	initrd := InitrdConfig{
+		workdir: workdir,
+		Output:  output,
+		Format:  NEWC,
+		Files:   make(map[string]string),
+	}
+
+	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("could not open initramfs file: %w", err)
+	}
+
+	writer := cpio.NewWriter(f)
+	defer writer.Close()
+
+	for _, mapping := range maps {
+		split := strings.Split(mapping, InputDelimeter)
+		if len(split) != 2 {
+			return nil, fmt.Errorf("could not parse mapping '%s': must be in format <hostPath>:<initrdPath>", mapping)
+		}
+
+		hostPath := utils.RelativePath(workdir, split[0])
+		initrdPath := split[1]
+
+		f, err := os.Stat(hostPath)
+		if err != nil && errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("path does not exist: %s", hostPath)
+		} else if err == nil && f.IsDir() {
+			// The provided mapping is a directory, lets iterate over each path
+			if err := filepath.WalkDir(hostPath, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+
+				internal := strings.TrimPrefix(path, hostPath)
+				if internal == "" {
+					return nil
+				}
+
+				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), "//", "/")
+
+				info, err := d.Info()
+				if err != nil {
+					return err
+				}
+
+				if d.Type().IsDir() {
+					if err := writer.WriteHeader(&cpio.Header{
+						Name: internal,
+						Mode: cpio.TypeDir,
+					}); err != nil {
+						return err
+					}
+
+					return nil
+				}
+
+				initrd.Files[path] = internal
+
+				data, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+
+				if err := writer.WriteHeader(&cpio.Header{
+					Name: internal,
+					Mode: cpio.FileMode(d.Type().Perm()),
+					Size: info.Size(),
+				}); err != nil {
+					return err
+				}
+
+				if _, err := writer.Write(data); err != nil {
+					return err
+				}
+
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+		} else {
+			data, err := os.ReadFile(hostPath)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := writer.WriteHeader(&cpio.Header{
+				Name: initrdPath,
+				Mode: cpio.FileMode(f.Mode().Perm()),
+				Size: f.Size(),
+			}); err != nil {
+				return nil, err
+			}
+
+			if _, err := writer.Write(data); err != nil {
+				return nil, err
+			}
+
+			initrd.Files[initrdPath] = hostPath
+		}
+	}
+
+	return &initrd, nil
 }
