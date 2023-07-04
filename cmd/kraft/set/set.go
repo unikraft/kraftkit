@@ -45,7 +45,8 @@ import (
 )
 
 type Set struct {
-	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
+	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
 func New() *cobra.Command {
@@ -126,13 +127,19 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
 	}
 
-	// Initialize at least the configuration options for a project
-	project, err := app.NewProjectFromOptions(
-		ctx,
+	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultKraftfiles(),
 		app.WithProjectConfig(confOpts),
-	)
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
+	}
+
+	// Initialize at least the configuration options for a project
+	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}

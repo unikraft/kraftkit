@@ -42,7 +42,9 @@ import (
 	"kraftkit.sh/unikraft/app"
 )
 
-type ProperClean struct{}
+type ProperClean struct {
+	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+}
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&ProperClean{}, cobra.Command{
@@ -96,12 +98,18 @@ func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
 		workdir = args[0]
 	}
 
-	// Initialize at least the configuration options for a project
-	project, err := app.NewProjectFromOptions(
-		ctx,
+	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultKraftfiles(),
-	)
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
+	}
+
+	// Initialize at least the configuration options for a project
+	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}

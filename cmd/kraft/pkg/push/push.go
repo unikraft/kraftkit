@@ -23,7 +23,8 @@ import (
 )
 
 type Push struct {
-	Format string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Format    string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 }
 
 func New() *cobra.Command {
@@ -85,12 +86,18 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 	ref := ""
 	if workdir != "" {
-		// Read the kraft yaml specification and get the target name
-		project, err := app.NewProjectFromOptions(
-			ctx,
+		popts := []app.ProjectOption{
 			app.WithProjectWorkdir(workdir),
-			app.WithProjectDefaultKraftfiles(),
-		)
+		}
+
+		if len(opts.Kraftfile) > 0 {
+			popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+		} else {
+			popts = append(popts, app.WithProjectDefaultKraftfiles())
+		}
+
+		// Read the kraft yaml specification and get the target name
+		project, err := app.NewProjectFromOptions(ctx, popts...)
 		if err != nil {
 			return err
 		}
