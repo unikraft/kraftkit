@@ -45,7 +45,7 @@ type Application interface {
 	Libraries(ctx context.Context) (lib.Libraries, error)
 
 	// Targets returns the application's targets
-	Targets() target.Targets
+	Targets() []target.Target
 
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
@@ -123,7 +123,7 @@ type application struct {
 	template      template.TemplateConfig
 	unikraft      core.UnikraftConfig
 	libraries     lib.Libraries
-	targets       target.Targets
+	targets       []*target.TargetConfig
 	kraftfiles    []string
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
@@ -176,8 +176,12 @@ func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
 	return libs, nil
 }
 
-func (app application) Targets() target.Targets {
-	return app.targets
+func (app application) Targets() []target.Target {
+	targets := []target.Target{}
+	for _, t := range app.targets {
+		targets = append(targets, target.Target(t))
+	}
+	return targets
 }
 
 func (app application) Extensions() component.Extensions {
@@ -204,7 +208,12 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 		}
 	}
 
-	app.targets = merge.Targets()
+	// TODO(nderjung): This entire method and procedure needs to be re-thought to
+	// be better extensible.  For now, it is unused.  We can safely cast this:
+	app.targets = []*target.TargetConfig{}
+	for _, t := range merge.Targets() {
+		app.targets = append(app.targets, t.(*target.TargetConfig))
+	}
 
 	for id, ext := range merge.Extensions() {
 		app.extensions[id] = ext

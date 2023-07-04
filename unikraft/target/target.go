@@ -77,8 +77,6 @@ type TargetConfig struct {
 	command []string
 }
 
-type Targets []*TargetConfig
-
 // NewTargetFromOptions is a constructor for TargetConfig.
 func NewTargetFromOptions(opts ...TargetOption) (Target, error) {
 	tc := TargetConfig{}

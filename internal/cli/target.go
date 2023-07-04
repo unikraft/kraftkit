@@ -14,7 +14,7 @@ import (
 
 // SelectTarget is a utility method used in a CLI context to prompt the user
 // for a specific application's target.
-func SelectTarget(targets target.Targets) (target.Target, error) {
+func SelectTarget(targets []target.Target) (target.Target, error) {
 	if len(targets) == 1 {
 		return targets[0], nil
 	}
@@ -49,8 +49,8 @@ func SelectTarget(targets target.Targets) (target.Target, error) {
 
 // FilterTargets returns a subset of `targets` based in input strings `arch`,
 // `plat` and/or `targ`
-func FilterTargets(targets target.Targets, arch, plat, targ string) target.Targets {
-	var selected target.Targets
+func FilterTargets(targets []target.Target, arch, plat, targ string) []target.Target {
+	var selected []target.Target
 
 	type condition func(target.Target, string, string, string) bool
 

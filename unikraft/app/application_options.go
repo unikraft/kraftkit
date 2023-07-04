@@ -134,7 +134,7 @@ func WithLibraries(libraries lib.Libraries) ApplicationOption {
 }
 
 // WithTargets sets the application's target list
-func WithTargets(targets target.Targets) ApplicationOption {
+func WithTargets(targets []*target.TargetConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.targets = targets
 		return nil
