@@ -178,7 +178,7 @@ func (lc LibraryConfig) Path() string {
 	return lc.path
 }
 
-func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (lc LibraryConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(lc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
@@ -188,21 +188,9 @@ func (lc LibraryConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigF
 }
 
 func (lc LibraryConfig) KConfig() kconfig.KeyValueMap {
-	menu, _ := lc.KConfigTree()
-
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(lc.kconfig)
-
-	if menu == nil {
-		// Naively set the KConfig option for this library based on Unikraft
-		// convention.
-		values.Set(kconfig.Prefix+"LIB"+strings.ToUpper(lc.name), kconfig.Yes)
-
-		return values
-	}
-
-	values.Set(kconfig.Prefix+menu.Root.Name, kconfig.Yes)
-
+	values.Set(kconfig.Prefix+"LIB"+strings.ToUpper(lc.name), kconfig.Yes)
 	return values
 }
 

@@ -86,7 +86,7 @@ func (uc UnikraftConfig) IsUnpacked() bool {
 	return false
 }
 
-func (uc UnikraftConfig) KConfigTree(extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (uc UnikraftConfig) KConfigTree(ctx context.Context, extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(uc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
 		return nil, fmt.Errorf("could not read component Config.uk: %v", err)

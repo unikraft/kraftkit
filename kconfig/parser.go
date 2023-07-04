@@ -1,11 +1,16 @@
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2020 syzkaller project authors. All rights reserved.
-// Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+// Copyright 2022 Unikraft GmbH. All rights reserved.
+// Licensed under the Apache-2.0 License (the "License").
+// You may not use this file except in compliance with the License.
 
 package kconfig
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"os/exec"
 	"strings"
 )
 
@@ -31,11 +36,6 @@ func newParser(data []byte, file string, env KeyValueMap) *parser {
 // nextLine resets the parser to the next line.
 // Automatically concatenates lines split with \ at the end.
 func (p *parser) nextLine() bool {
-	if !p.eol() {
-		p.failf("tailing data at the end of line")
-		return false
-	}
-
 	if p.err != nil || len(p.data) == 0 {
 		return false
 	}
@@ -142,6 +142,86 @@ func (p *parser) MustConsume(what string) {
 	}
 }
 
+func (p *parser) interpolate(b []byte) string {
+	var vars []string
+	var v []byte
+	parsing := false
+	str := string(b)
+
+	for i := 0; i < len(b); i++ {
+		// Test if we're parsing a variable which starts with `$(` and not a shell
+		// invocation which starts with `$(shell `.
+		if i+1 <= len(b) && b[i] == '$' && b[i+1] == '(' &&
+			(i+8 <= len(b) && string(b[i+2:i+7]) != "shell") {
+			i += 2 // skip the '$('
+			parsing = true
+
+			// If we're busy accepting a variable name and come to an end `)` we can
+			// stop and save.
+		} else if parsing && b[i] == ')' {
+			parsing = false
+			vars = append(vars, string(v))
+			v = []byte{}
+		}
+
+		// Save the next character to the variable name if we're parsing.
+		if parsing {
+			v = append(v, b[i])
+		}
+	}
+
+	for _, v := range vars {
+		if v == "" {
+			continue
+		}
+
+		// Evaluate known variables found from the provided environment
+		if !strings.HasPrefix("shell", v) {
+			replace, ok := p.env[v]
+			if !ok {
+				// Try with the prefix `CONFIG_`
+				replace, ok = p.env["CONFIG_"+v]
+				if !ok {
+					continue
+				}
+			}
+
+			str = strings.ReplaceAll(str, fmt.Sprintf("$(%s)", v), replace.Value)
+		}
+	}
+
+	// Evaluate shell executions
+	if len(str) > 7 && str[0:8] == "$(shell," {
+		line := strings.TrimPrefix(str, "$(shell,")
+		line = strings.TrimSuffix(line, ")")
+
+		quoted := false
+		args := strings.FieldsFunc(line, func(r rune) bool {
+			if r == '\'' || r == '"' {
+				quoted = !quoted
+			}
+			return !quoted && r == ' '
+		})
+
+		for i := range args {
+			args[i] = strings.TrimSpace(args[i])
+			args[i] = strings.TrimPrefix(args[i], "'")
+			args[i] = strings.TrimSuffix(args[i], "'")
+		}
+
+		var buf bytes.Buffer
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = bufio.NewWriter(&buf)
+		if err := cmd.Run(); err != nil {
+			p.failf("could not execute shell: %s", err.Error())
+			return ""
+		}
+		str = strings.TrimSpace(buf.String())
+	}
+
+	return str
+}
+
 func (p *parser) QuotedString() string {
 	var str []byte
 	quote := p.char()
@@ -173,7 +253,7 @@ func (p *parser) QuotedString() string {
 	}
 
 	p.skipSpaces()
-	return string(str)
+	return p.interpolate(str)
 }
 
 func (p *parser) TryQuotedString() (string, bool) {

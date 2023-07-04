@@ -80,7 +80,7 @@ func (pc PlatformConfig) IsUnpacked() bool {
 	return false
 }
 
-func (pc PlatformConfig) KConfigTree(env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
+func (pc PlatformConfig) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	// TODO: Try within the Unikraft codebase as well as via an external
 	// microlibrary.  For now, return nil as undetermined.
 	return nil, nil
