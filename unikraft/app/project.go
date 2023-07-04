@@ -28,6 +28,10 @@ import (
 	"kraftkit.sh/unikraft"
 )
 
+// ErrNoKraftfile is thrown when a project is instantiated at a directory
+// without a recognizable Kraftfile.
+var ErrNoKraftfile = fmt.Errorf("no Kraftfile specified")
+
 // DefaultFileNames defines the kraft file names for auto-discovery (in order
 // of preference)
 var DefaultFileNames = []string{
@@ -69,7 +73,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if len(popts.kraftfiles) < 1 {
-		return nil, fmt.Errorf("no Kraftfile specified")
+		return nil, ErrNoKraftfile
 	}
 
 	var all []*application
