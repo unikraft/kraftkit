@@ -247,12 +247,12 @@ func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOpti
 
 	contents, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read file: %w", err)
 	}
 
 	manifest, err := NewManifestFromBytes(ctx, contents, mopts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode manifest from bytes: %w", err)
 	}
 
 	// manifest.Origin = path

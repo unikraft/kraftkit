@@ -11,13 +11,14 @@ import (
 	"github.com/spf13/pflag"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/lib/add"
+	"kraftkit.sh/internal/cli/kraft/lib/create"
 	"kraftkit.sh/internal/cli/kraft/lib/remove"
 )
 
-type Lib struct{}
+type LibOptions struct{}
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&Lib{}, cobra.Command{
+	cmd, err := cmdfactory.New(&LibOptions{}, cobra.Command{
 		Short:   "Manage and maintain Unikraft microlibraries",
 		Use:     "lib SUBCOMMAND",
 		Aliases: []string{"library"},
@@ -32,10 +33,11 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(remove.NewCmd())
 	cmd.AddCommand(add.NewCmd())
+	cmd.AddCommand(create.NewCmd())
 
 	return cmd
 }
 
-func (opts *Lib) Run(_ context.Context, _ []string) error {
+func (opts *LibOptions) Run(_ context.Context, _ []string) error {
 	return pflag.ErrHelp
 }
