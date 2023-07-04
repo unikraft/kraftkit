@@ -242,6 +242,10 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		component := component // loop closure
 		auths := auths
 
+		if f, err := os.Stat(component.Source()); err == nil && f.IsDir() {
+			continue
+		}
+
 		searches = append(searches, processtree.NewProcessTreeItem(
 			fmt.Sprintf("finding %s",
 				unikraft.TypeNameVersion(component),
