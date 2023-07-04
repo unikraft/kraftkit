@@ -23,6 +23,7 @@ import (
 )
 
 type List struct {
+	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
 	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`
@@ -102,11 +103,17 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	// List pacakges part of a project
 	if len(workdir) > 0 {
-		project, err := app.NewProjectFromOptions(
-			ctx,
+		popts := []app.ProjectOption{
 			app.WithProjectWorkdir(workdir),
-			app.WithProjectDefaultKraftfiles(),
-		)
+		}
+
+		if len(opts.Kraftfile) > 0 {
+			popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+		} else {
+			popts = append(popts, app.WithProjectDefaultKraftfiles())
+		}
+
+		project, err := app.NewProjectFromOptions(ctx, popts...)
 		if err != nil {
 			return err
 		}

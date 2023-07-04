@@ -22,6 +22,7 @@ import (
 
 type Menu struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
+	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }
@@ -78,12 +79,18 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 		workdir = args[0]
 	}
 
-	// Initialize at least the configuration options for a project
-	project, err := app.NewProjectFromOptions(
-		ctx,
+	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
-		app.WithProjectDefaultKraftfiles(),
-	)
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
+	}
+
+	// Initialize at least the configuration options for a project
+	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}

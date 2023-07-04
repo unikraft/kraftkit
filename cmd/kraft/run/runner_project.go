@@ -63,11 +63,17 @@ func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...st
 
 // Prepare implements Runner.
 func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
-	project, err := app.NewProjectFromOptions(
-		ctx,
+	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(runner.workdir),
-		app.WithProjectDefaultKraftfiles(),
-	)
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
+	}
+
+	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
 	}

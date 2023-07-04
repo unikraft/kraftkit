@@ -38,6 +38,7 @@ type Build struct {
 	Fast         bool   `long:"fast" usage:"Use maximum parallelization when performing the build"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
@@ -100,7 +101,12 @@ func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
 
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(opts.workdir),
-		app.WithProjectDefaultKraftfiles(),
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
 	}
 
 	// Initialize at least the configuration options for a project
@@ -210,11 +216,17 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 			return err
 		}
 
-		templateProject, err := app.NewProjectFromOptions(
-			ctx,
-			app.WithProjectWorkdir(templateWorkdir),
-			app.WithProjectDefaultKraftfiles(),
-		)
+		popts := []app.ProjectOption{
+			app.WithProjectWorkdir(workdir),
+		}
+
+		if len(opts.Kraftfile) > 0 {
+			popts = append(popts, app.WithProjectKraftfile(templateWorkdir))
+		} else {
+			popts = append(popts, app.WithProjectDefaultKraftfiles())
+		}
+
+		templateProject, err := app.NewProjectFromOptions(ctx, popts...)
 		if err != nil {
 			return err
 		}

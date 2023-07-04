@@ -28,6 +28,7 @@ type Pull struct {
 	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
 	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
+	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	Manager      string `long:"manager" short:"M" usage:"Force the handler type (Omittion will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
@@ -124,10 +125,17 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	// so we can get a list of components
 	if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
 		workdir = args[0]
+		popts := []app.ProjectOption{}
+
+		if len(opts.Kraftfile) > 0 {
+			popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+		} else {
+			popts = append(popts, app.WithProjectDefaultKraftfiles())
+		}
+
 		project, err := app.NewProjectFromOptions(
 			ctx,
-			app.WithProjectWorkdir(workdir),
-			app.WithProjectDefaultKraftfiles(),
+			append(popts, app.WithProjectWorkdir(workdir))...,
 		)
 		if err != nil {
 			return err
@@ -217,8 +225,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 		templateProject, err := app.NewProjectFromOptions(
 			ctx,
-			app.WithProjectWorkdir(templateWorkdir),
-			app.WithProjectDefaultKraftfiles(),
+			append(popts, app.WithProjectWorkdir(templateWorkdir))...,
 		)
 		if err != nil {
 			return err
