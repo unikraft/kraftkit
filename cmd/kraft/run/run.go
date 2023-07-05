@@ -252,6 +252,8 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not determine what to run: %v", errs)
 	}
 
+	log.G(ctx).WithField("runner", run.String()).Debug("using")
+
 	// Prepare the machine specification based on the compatible runner.
 	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
 		return err
