@@ -172,6 +172,8 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
 	}
 
+	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
+
 	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
 	if err != nil {
 		return err
@@ -251,6 +253,8 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	if run == nil {
 		return fmt.Errorf("could not determine what to run: %v", errs)
 	}
+
+	log.G(ctx).WithField("runner", run.String()).Debug("using")
 
 	// Prepare the machine specification based on the compatible runner.
 	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
@@ -354,7 +358,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return
 			}
 
-			log.G(ctx).Debug("waiting for machine events")
+			log.G(ctx).Trace("waiting for machine events")
 
 		loop:
 			for {

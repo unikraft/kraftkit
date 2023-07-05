@@ -367,7 +367,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
-	}).Debug("checking if source is compatible with the manifest manager")
+	}).Trace("checking if source is compatible with the manifest manager")
 
 	if _, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil {
 		return m, true, nil
