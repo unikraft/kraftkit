@@ -76,6 +76,28 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("supplied kernel path does not exist: %s", machine.Status.KernelPath)
 	}
 
+	var bin string
+
+	switch machine.Spec.Architecture {
+	case "x86_64", "amd64":
+		bin = QemuSystemX86
+	case "arm":
+		bin = QemuSystemArm
+	default:
+		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
+	}
+
+	// Determine the version of QEMU so as to both determine whether it is a
+	// suitable version and to adjust the supplied command-line arguments.
+	qemuVersion, err := GetQemuVersionFromBin(ctx, bin)
+	if err != nil {
+		return machine, err
+	}
+
+	if qemuVersion.LessThan(QemuVersion4_2_0) {
+		return machine, fmt.Errorf("unsupported QEMU version: %s: please upgrade to a newer version", qemuVersion.String())
+	}
+
 	if machine.ObjectMeta.UID == "" {
 		machine.ObjectMeta.UID = uuid.NewUUID()
 	}
@@ -276,12 +298,8 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	args = append(args, machine.Spec.ApplicationArgs...)
 	qopts = append(qopts, WithAppend(args...))
 
-	var bin string
-
 	switch machine.Spec.Architecture {
 	case "x86_64", "amd64":
-		bin = QemuSystemX86
-
 		if machine.Spec.Emulation {
 			qopts = append(qopts,
 				WithMachine(QemuMachine{
@@ -307,14 +325,12 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				}),
 			)
 		}
-
-		qopts = append(qopts,
-			WithDevice(QemuDeviceSga{}),
-		)
-
+		if qemuVersion.LessThan(QemuVersion8_0_0) {
+			qopts = append(qopts,
+				WithDevice(QemuDeviceSga{}),
+			)
+		}
 	case "arm":
-		bin = QemuSystemArm
-
 		qopts = append(qopts,
 			WithMachine(QemuMachine{
 				Type: QemuMachineTypeVirt,

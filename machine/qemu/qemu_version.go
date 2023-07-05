@@ -16,6 +16,14 @@ import (
 	"kraftkit.sh/exec"
 )
 
+var (
+	QemuVersion4_2_0 = semver.New(4, 2, 0, "", "")
+	QemuVersion5_2_0 = semver.New(5, 2, 0, "", "")
+	QemuVersion6_2_0 = semver.New(6, 2, 0, "", "")
+	QemuVersion7_2_0 = semver.New(7, 2, 0, "", "")
+	QemuVersion8_0_0 = semver.New(8, 0, 0, "", "")
+)
+
 // GetQemuVersionFromBin is direct method of accessing the version of the
 // provided QEMU binary by executing it with the well-known flag `-version` and
 // parsing its output.
