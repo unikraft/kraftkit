@@ -43,6 +43,18 @@ aurs:
     commit_author:
       name: Unikraft Bot
       email: monkey+aur@unikraft.io
+nix:
+  - name: kraftkit
+    repository:
+      owner: unikraft
+      name: nur
+    homepage: https://kraftkit.sh
+    description: Build and use highly customized and ultra-lightweight unikernels
+    path: pkgs/kraftkit/default.nix
+    license: BSD-3-Clause
+    install: |-
+      mkdir -p $out/bin
+      cp -vr ./dist/kraft $out/bin/kraft
 
 builds:
 #@ for binary in ["kraft"]:
