@@ -73,7 +73,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if popts.kraftfile == nil {
-		return nil, fmt.Errorf("no Kraft files specified")
+		return nil, ErrNoKraftfile
 	}
 
 	name, _ := popts.GetProjectName()
