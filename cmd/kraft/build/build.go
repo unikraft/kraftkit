@@ -354,8 +354,31 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 
 func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+
+	// Filter project targets by any provided CLI options
+	selected := opts.project.Targets()
+	if !opts.All {
+		selected = cli.FilterTargets(
+			selected,
+			opts.Architecture,
+			opts.Platform,
+			opts.Target,
+		)
+
+		if !config.G[config.KraftKit](ctx).NoPrompt {
+			res, err := cli.SelectTarget(selected)
+			if err != nil {
+				return err
+			}
+			selected = []target.Target{res}
+		}
+	}
+
+	if len(selected) == 0 {
+		return fmt.Errorf("no targets selected to build")
+	}
+
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
-	nameWidth := -1
 
 	if !opts.NoUpdate {
 		model, err := processtree.NewProcessTree(
@@ -383,6 +406,8 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	nameWidth := -1
+
 	// Calculate the width of the longest process name so that we can align the
 	// two independent processtrees if we are using "render" mode (aka the fancy
 	// mode is enabled).
@@ -391,7 +416,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		// additional space characters (2 characters), brackets (2 characters) the
 		// name of the project and the target/plat string (which is variable in
 		// length).
-		for _, targ := range opts.project.Targets() {
+		for _, targ := range selected {
 			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
 				nameWidth = newLen
 			}
@@ -404,30 +429,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	processes := []*paraprogress.Process{} // reset
-
-	// Filter project targets by any provided CLI options
-	selected := opts.project.Targets()
-	if !opts.All {
-		selected = cli.FilterTargets(
-			selected,
-			opts.Architecture,
-			opts.Platform,
-			opts.Target,
-		)
-
-		if !config.G[config.KraftKit](ctx).NoPrompt {
-			res, err := cli.SelectTarget(selected)
-			if err != nil {
-				return err
-			}
-			selected = []target.Target{res}
-		}
-	}
-
-	if len(selected) == 0 {
-		return fmt.Errorf("no targets selected to build")
-	}
+	processes := []*paraprogress.Process{}
 
 	var mopts []make.MakeOption
 	if opts.Jobs > 0 {
