@@ -195,7 +195,7 @@ func KernelDbgName(target TargetConfig) (string, error) {
 // architecture combination.
 func TargetPlatArchName(target Target) string {
 	return fmt.Sprintf(
-		"%s-%s",
+		"%s/%s",
 		target.Platform().Name(),
 		target.Architecture().Name(),
 	)
