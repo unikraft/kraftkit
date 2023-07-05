@@ -169,9 +169,10 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 	table.AddField("MEM", cs.Bold)
 	if opts.Long {
 		table.AddField("PORTS", cs.Bold)
+		table.AddField("IP", cs.Bold)
 		table.AddField("ARCH", cs.Bold)
-		table.AddField("PLAT", cs.Bold)
 	}
+	table.AddField("PLAT", cs.Bold)
 	table.EndRow()
 
 	for _, item := range items {
@@ -186,8 +187,11 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		table.AddField(item.mem, nil)
 		if opts.Long {
 			table.AddField(item.ports, nil)
+			table.AddField(strings.Join(item.ips, ","), nil)
 			table.AddField(item.arch, nil)
 			table.AddField(item.plat, nil)
+		} else {
+			table.AddField(fmt.Sprintf("%s/%s", item.plat, item.arch), nil)
 		}
 		table.EndRow()
 	}
