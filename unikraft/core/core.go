@@ -197,3 +197,16 @@ func (uk UnikraftConfig) CONFIG() (string, error) {
 func (uk UnikraftConfig) CONFIGLIB() (string, error) {
 	return filepath.Join(uk.path, CONFIGLIB), nil
 }
+
+// MarshalYAML makes UnikraftConfig implement yaml.Marshaller
+func (uc UnikraftConfig) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{
+		"version": uc.version,
+	}
+
+	if uc.kconfig != nil && len(uc.kconfig) > 0 {
+		ret["kconfig"] = uc.kconfig
+	}
+
+	return ret, nil
+}

@@ -16,11 +16,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
+	"gopkg.in/yaml.v3"
 
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/yamlmerger"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
+	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
@@ -53,8 +56,8 @@ type Application interface {
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
 
-	// Kraftfiles returns the application's kraft configuration files
-	Kraftfiles() []string
+	// Kraftfile returns the application's kraft configuration file
+	Kraftfile() *Kraftfile
 
 	// MergeTemplate merges the application's configuration with the given
 	// configuration
@@ -113,6 +116,13 @@ type Application interface {
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
 	Components(context.Context) ([]component.Component, error)
+
+	// WithTarget is a reducer that returns the application with only the provided
+	// target.
+	WithTarget(target.Target) (Application, error)
+
+	// Serialize and save the application to the kraftfile
+	Save() error
 }
 
 type application struct {
@@ -127,7 +137,7 @@ type application struct {
 	unikraft      core.UnikraftConfig
 	libraries     lib.Libraries
 	targets       []*target.TargetConfig
-	kraftfiles    []string
+	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
 }
@@ -191,8 +201,8 @@ func (app application) Extensions() component.Extensions {
 	return app.extensions
 }
 
-func (app application) Kraftfiles() []string {
-	return app.kraftfiles
+func (app application) Kraftfile() *Kraftfile {
+	return app.kraftfile
 }
 
 func (app application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
@@ -222,7 +232,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 		app.extensions[id] = ext
 	}
 
-	app.kraftfiles = append(app.kraftfiles, merge.Kraftfiles()...)
+	app.kraftfile = merge.Kraftfile()
 
 	for id, val := range merge.KConfig() {
 		app.configuration[id] = val
@@ -686,4 +696,91 @@ func (app application) PrintInfo(ctx context.Context) string {
 	}
 
 	return tree.String()
+}
+
+func (app application) WithTarget(targ target.Target) (Application, error) {
+	ret := app
+	ret.targets = []*target.TargetConfig{targ.(*target.TargetConfig)}
+	return ret, nil
+}
+
+// MarshalYAML makes application implement yaml.Marshaller
+func (app application) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{
+		"specification": schema.SchemaVersionLatest,
+		"name":          app.name,
+		"unikraft":      app.unikraft,
+	}
+
+	// We purposefully do not marshal the configuration as this top level
+	// kconfig is redundant with the kconfig files in the libraries and
+	// unikraft.
+	// TODO: Figure out if anything is actually needed at this top level
+	// if app.configuration != nil && len(app.configuration) > 0 {
+	// 	ret["kconfig"] = app.configuration
+	// }
+
+	if app.targets != nil && len(app.targets) > 0 {
+		ret["targets"] = app.targets
+	}
+
+	if app.libraries != nil && len(app.libraries) > 0 {
+		ret["libraries"] = app.libraries
+	}
+
+	return ret, nil
+}
+
+func (app application) Save() error {
+	// Marshal the app object to YAML
+	yamlData, err := yaml.Marshal(app)
+	if err != nil {
+		return err
+	}
+
+	// Validate the YAML data against the schema
+	var yamlMap map[string]interface{}
+	err = yaml.Unmarshal(yamlData, &yamlMap)
+	if err != nil {
+		return err
+	}
+	err = schema.Validate(yamlMap)
+	if err != nil {
+		return err
+	}
+
+	yamlFile, err := os.ReadFile(app.kraftfile.path)
+	if err != nil {
+		return err
+	}
+
+	// Parse YAML file to a Node structure
+	var into yaml.Node
+	err = yaml.Unmarshal(yamlFile, &into)
+	if err != nil {
+		return err
+	}
+
+	var from yaml.Node
+	if err := yaml.Unmarshal(yamlData, &from); err != nil {
+		return fmt.Errorf("could not unmarshal YAML: %s", err)
+	}
+
+	if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
+		return fmt.Errorf("could not merge YAML: %s", err)
+	}
+
+	// Marshal the Node structure back to YAML
+	yaml, err := yaml.Marshal(&into)
+	if err != nil {
+		return err
+	}
+
+	// Write the YAML data to the file
+	err = os.WriteFile(app.kraftfile.path, []byte(yaml), 0o644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

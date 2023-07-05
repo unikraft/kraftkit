@@ -526,3 +526,15 @@ func (ocipack *ociPackage) Command() []string {
 func (ocipack *ociPackage) ConfigFilename() string {
 	return ""
 }
+
+// MarshalYAML implements unikraft.target.Target (yaml.Marshaler)
+func (ocipack *ociPackage) MarshalYAML() (interface{}, error) {
+	if ocipack == nil {
+		return nil, nil
+	}
+
+	return map[string]interface{}{
+		"architecture": ocipack.arch.Name(),
+		"platform":     ocipack.plat.Name(),
+	}, nil
+}

@@ -46,24 +46,28 @@ func normalize(project *application) error {
 	}
 	project.workingDir = absWorkingDir
 
-	absKraftfiles, err := absKraftfiles(project.Kraftfiles())
+	absKraftfile, err := absKraftfile(project.Kraftfile())
 	if err != nil {
 		return err
 	}
 
-	return WithKraftfiles(absKraftfiles)(project)
+	err = WithKraftfile(absKraftfile)(project)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func absKraftfiles(kraftfiles []string) ([]string, error) {
-	absKraftfiles := make([]string, len(kraftfiles))
-	for i, kraftFile := range kraftfiles {
-		absKraftfile, err := filepath.Abs(kraftFile)
-		if err != nil {
-			return nil, err
-		}
-		absKraftfiles[i] = absKraftfile
+func absKraftfile(kraftFile *Kraftfile) (*Kraftfile, error) {
+	absKraftfile, err := filepath.Abs(kraftFile.path)
+	if err != nil {
+		return nil, err
 	}
-	return absKraftfiles, nil
+
+	kraftFile.path = absKraftfile
+
+	return kraftFile, nil
 }
 
 func normalizeProjectName(s string) string {

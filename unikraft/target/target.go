@@ -200,3 +200,11 @@ func TargetPlatArchName(target Target) string {
 		target.Architecture().Name(),
 	)
 }
+
+// MarshalYAML makes TargetConfig implement yaml.Marshaller
+func (tc TargetConfig) MarshalYAML() (interface{}, error) {
+	return map[string]interface{}{
+		"architecture": tc.architecture.Name(),
+		"platform":     tc.platform.Name(),
+	}, nil
+}

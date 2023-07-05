@@ -30,7 +30,7 @@ import (
 )
 
 // kraftfile is a filename and the contents of the file
-type kraftfile struct {
+type Kraftfile struct {
 	// path is the path of the yaml configuration file
 	path string
 
@@ -43,11 +43,11 @@ type kraftfile struct {
 }
 
 // ProjectOptions group configuration options used to instantiate a new
-// ApplicationConfig from a working directory and set of kraftfiles
+// ApplicationConfig from a working directory and a kraftfile
 type ProjectOptions struct {
 	name              string
 	workdir           string
-	kraftfiles        []kraftfile
+	kraftfile         *Kraftfile
 	kconfig           kconfig.KeyValueMap
 	skipValidation    bool
 	skipInterpolation bool
@@ -65,15 +65,17 @@ func (popts *ProjectOptions) Workdir() (string, error) {
 		return popts.workdir, nil
 	}
 
-	for _, file := range popts.kraftfiles {
-		if file.path != "" && file.path != "-" {
-			absPath, err := filepath.Abs(file.path)
-			if err != nil {
-				return "", err
-			}
+	if popts.kraftfile == nil {
+		return os.Getwd()
+	}
 
-			return filepath.Dir(absPath), nil
+	if popts.kraftfile.path != "" && popts.kraftfile.path != "-" {
+		absPath, err := filepath.Abs(popts.kraftfile.path)
+		if err != nil {
+			return "", err
 		}
+
+		return filepath.Dir(absPath), nil
 	}
 
 	return os.Getwd()
@@ -115,10 +117,6 @@ func (popts *ProjectOptions) GetProjectName() (string, bool) {
 // AddKraftfile adds and extracts the file contents and attaches it to the
 // ProjectOptions.
 func (popts *ProjectOptions) AddKraftfile(file string) error {
-	if popts.kraftfiles == nil {
-		popts.kraftfiles = make([]kraftfile, 0)
-	}
-
 	var b []byte
 	var err error
 
@@ -145,10 +143,10 @@ func (popts *ProjectOptions) AddKraftfile(file string) error {
 		}
 	}
 
-	popts.kraftfiles = append(popts.kraftfiles, kraftfile{
+	popts.kraftfile = &Kraftfile{
 		path:    file,
 		content: b,
-	})
+	}
 
 	return nil
 }
@@ -279,7 +277,7 @@ func getAsEqualsMap(em []string) map[string]string {
 // directory
 func WithProjectDefaultKraftfiles() ProjectOption {
 	return func(popts *ProjectOptions) error {
-		if len(popts.kraftfiles) > 0 {
+		if popts.kraftfile != nil {
 			return nil
 		}
 

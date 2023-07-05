@@ -80,6 +80,10 @@ func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
 	return nil
 }
 
+func (tc TemplateConfig) MarshalYAML() (interface{}, error) {
+	return nil, nil
+}
+
 // PrintInfo prints information about the template
 func (tc TemplateConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.template.TemplateConfig.PrintInfo"

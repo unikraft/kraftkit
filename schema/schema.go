@@ -142,3 +142,10 @@ func getMostSpecificError(errors []gojsonschema.ResultError) validationError {
 func specificity(err gojsonschema.ResultError) int {
 	return len(strings.Split(err.Field(), "."))
 }
+
+type SchemaVersion string
+
+const (
+	SchemaVersionV0_5   = "0.5"
+	SchemaVersionLatest = SchemaVersionV0_5
+)

@@ -107,6 +107,10 @@ func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 	return values
 }
 
+func (ac ArchitectureConfig) MarshalYAML() (interface{}, error) {
+	return nil, nil
+}
+
 func (ac ArchitectureConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.arch.ArchitectureConfig.PrintInfo"
 }

@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 
+	"gopkg.in/yaml.v3"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 )
@@ -18,6 +19,7 @@ import (
 // Component is the abstract interface for managing the individual microlibrary
 type Component interface {
 	unikraft.Nameable
+	yaml.Marshaler
 
 	// Source returns the component source
 	Source() string
