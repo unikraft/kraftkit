@@ -27,6 +27,23 @@ nfpms:
       - rpm
       - apk
 
+aurs:
+  - homepage: https://kraftkit.sh
+    description: Build and use highly customized and ultra-lightweight unikernels
+    maintainers:
+      - "Alexander Jung <alex at unikraft dot io>"
+    license: "BSD-3-Clause"
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/kraftkit-bin.git"
+    package: |-
+      # bin
+      install -Dm755 "./dist/kraft" "${pkgdir}/usr/bin/kraft"
+      # license
+      install -Dm644 "./LICENSE.md" "${pkgdir}/usr/share/licenses/kraftkit/LICENSE"
+    commit_author:
+      name: Unikraft Bot
+      email: monkey+aur@unikraft.io
+
 builds:
 #@ for binary in ["kraft"]:
   - id: #@ "{}-linuxu".format(binary)
