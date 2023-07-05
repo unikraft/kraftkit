@@ -172,6 +172,8 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
 	}
 
+	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
+
 	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
 	if err != nil {
 		return err
