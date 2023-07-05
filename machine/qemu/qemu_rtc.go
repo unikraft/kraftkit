@@ -40,6 +40,10 @@ type QemuRTC struct {
 }
 
 func (qr QemuRTC) String() string {
+	if qr.Base == "" {
+		return ""
+	}
+
 	var ret strings.Builder
 	ret.WriteString("base=")
 
