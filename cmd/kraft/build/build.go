@@ -43,7 +43,6 @@ type Build struct {
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFast       bool   `long:"no-fast" usage:"Use maximum parallelization when performing the build"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoPrepare    bool   `long:"no-prepare" usage:"Do not run Unikraft's prepare step before building"`
 	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
 	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
@@ -456,26 +455,6 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 							exec.WithStdout(log.G(ctx).Writer()),
 							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
 						),
-					)
-				},
-			))
-		}
-
-		if !opts.NoPrepare {
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("preparing %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
-				func(ctx context.Context, w func(progress float64)) error {
-					return opts.project.Prepare(
-						ctx,
-						targ, // Target-specific options
-						append(
-							mopts,
-							make.WithProgressFunc(w),
-							make.WithExecOptions(
-								exec.WithStdout(log.G(ctx).Writer()),
-								exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
-							),
-						)...,
 					)
 				},
 			))
