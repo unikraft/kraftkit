@@ -356,7 +356,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				return
 			}
 
-			log.G(ctx).Debug("waiting for machine events")
+			log.G(ctx).Trace("waiting for machine events")
 
 		loop:
 			for {
