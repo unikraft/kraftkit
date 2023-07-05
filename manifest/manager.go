@@ -369,7 +369,7 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 		"source": source,
 	}).Trace("checking if source is compatible with the manifest manager")
 
-	if _, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil {
+	if t, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil && t != unikraft.ComponentTypeUnknown {
 		return m, true, nil
 	}
 

@@ -32,19 +32,29 @@ type runner interface {
 // runners is the list of built-in runners which are checked sequentially for
 // capability.  The first to test positive via Runnable is used with the
 // controller.
-func runners() map[string]runner {
-	r := map[string]runner{
-		// "api":     &runnerApi{},
-		"linuxu":  &runnerLinuxu{},
-		"kernel":  &runnerKernel{},
-		"project": &runnerProject{},
+func runners() []runner {
+	r := []runner{
+		&runnerLinuxu{},
+		&runnerKernel{},
+		&runnerProject{},
 	}
 
-	for k, pm := range packmanager.PackageManagers() {
-		r[string(k)] = &runnerPackage{
+	for _, pm := range packmanager.PackageManagers() {
+		r = append(r, &runnerPackage{
 			pm: pm,
-		}
+		})
 	}
 
 	return r
+}
+
+// runnersByName is a utility method that returns a map of the available runners
+// such that their alias name can be quickly looked up.
+func runnersByName() map[string]runner {
+	runners := runners()
+	ret := make(map[string]runner, len(runners))
+	for _, runner := range runners {
+		ret[runner.String()] = runner
+	}
+	return ret
 }
