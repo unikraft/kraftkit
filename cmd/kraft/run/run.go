@@ -190,10 +190,11 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	if opts.RunAs != "" {
-		runners := runners()
+		runners := runnersByName()
 		if _, ok = runners[opts.RunAs]; !ok {
 			choices := make([]string, len(runners))
 			i := 0
+
 			for choice := range runners {
 				choices[i] = choice
 				i++
@@ -221,37 +222,32 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	var run runner
-	var errs []error
 	runners := runners()
 
-	if opts.RunAs != "" {
-		run = runners[opts.RunAs]
-		if _, err := run.Runnable(ctx, opts, args...); err != nil {
-			return fmt.Errorf("forced runner %s but provided argument was not capable: %v", opts.RunAs, err)
-		}
-	}
-
-	// Iterate through the list of built-in runners which sequentially tests
-	// whether the provided input matches the requirements for being run given its
-	// context.  The first to test positive is used to prepare the machine
+	// Iterate through the list of built-in runners which sequentially tests and
+	// first test whether the --as flag has been set to force a specific runner or
+	// whether the current context matches the requirements for being run given
+	// its context.  The first to test positive is used to prepare the machine
 	// specification which is later passed to the controller.
-	if run == nil {
-		for _, candidate := range runners {
-			log.G(ctx).
-				WithField("runner", candidate.String()).
-				Trace("checking runnability")
+	for _, candidate := range runners {
+		if opts.RunAs != "" && candidate.String() != opts.RunAs {
+			continue
+		}
 
-			capable, err := candidate.Runnable(ctx, opts, args...)
-			if capable && err == nil {
-				run = candidate
-				break
-			} else if err != nil {
-				errs = append(errs, err)
-			}
+		log.G(ctx).
+			WithField("runner", candidate.String()).
+			Trace("checking runnability")
+
+		capable, err := candidate.Runnable(ctx, opts, args...)
+		if capable && err == nil {
+			run = candidate
+			break
 		}
 	}
-	if run == nil {
-		return fmt.Errorf("could not determine what to run: %v", errs)
+	if run == nil && opts.RunAs != "" {
+		return fmt.Errorf("unknown runner: %s", opts.RunAs)
+	} else if run == nil {
+		return fmt.Errorf("could not determine how to run provided input")
 	}
 
 	log.G(ctx).WithField("runner", run.String()).Debug("using")
