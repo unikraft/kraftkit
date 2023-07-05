@@ -56,6 +56,9 @@ type QemuMachine struct {
 	SupressVMDesc bool                     `json:"suppress_vmdesc,omitempty"`
 	NVDIMM        bool                     `json:"nvdimm,omitempty"`
 	HMAT          bool                     `json:"hmat,omitempty"`
+
+	// Added in QEMU 8.0.0
+	Graphics bool `json:"graphics,omitempty"`
 }
 
 // String returns a QEMU command-line compatible -machine flag value
@@ -109,6 +112,11 @@ func (qm QemuMachine) String() string {
 	}
 	if qm.HMAT {
 		ret.WriteString(",hmat=on")
+	}
+
+	// Added in QEMU 8.0.0
+	if qm.HMAT {
+		ret.WriteString(",graphics=on")
 	}
 
 	return ret.String()
