@@ -161,7 +161,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	} else {
 		var ok bool
-		opts.platform, ok = mplatform.Platforms()[plat]
+		opts.platform, ok = mplatform.PlatformsByName()[plat]
 		if !ok {
 			return fmt.Errorf("unknown platform driver: %s", opts.platform)
 		}
