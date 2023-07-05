@@ -77,7 +77,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			}
 		} else {
 			var ok bool
-			platform, ok = mplatform.Platforms()[opts.platform]
+			platform, ok = mplatform.PlatformsByName()[opts.platform]
 			if !ok {
 				return fmt.Errorf("unknown platform driver: %s", opts.platform)
 			}

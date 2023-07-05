@@ -19,12 +19,37 @@ func (ht Platform) String() string {
 	return string(ht)
 }
 
-// Platforms returns the list of known platforms.
-func Platforms() map[string]Platform {
+// PlatformsByName returns the list of known platforms and their name alises.
+func PlatformsByName() map[string]Platform {
 	return map[string]Platform{
-		"fc":   PlatformFirecracker,
-		"kvm":  PlatformQEMU,
-		"qemu": PlatformQEMU,
-		"xen":  PlatformXen,
+		"fc":          PlatformFirecracker,
+		"firecracker": PlatformFirecracker,
+		"kvm":         PlatformQEMU,
+		"qemu":        PlatformQEMU,
+		"xen":         PlatformXen,
 	}
+}
+
+// Platforms returns all the unique platforms.
+func Platforms() []Platform {
+	return []Platform{
+		PlatformFirecracker,
+		PlatformQEMU,
+		PlatformXen,
+	}
+}
+
+// PlatformAliases returns all the name alises for a given platform.
+func PlatformAliases() map[Platform][]string {
+	aliases := map[Platform][]string{}
+
+	for alias, plat := range PlatformsByName() {
+		if aliases[plat] == nil {
+			aliases[plat] = make([]string, 0)
+		}
+
+		aliases[plat] = append(aliases[plat], alias)
+	}
+
+	return aliases
 }

@@ -42,8 +42,11 @@ func Strategies() map[Platform]*Strategy {
 // names.
 func DriverNames() []string {
 	ret := []string{}
-	for plat := range Strategies() {
-		ret = append(ret, plat.String())
+
+	for alias, plat := range PlatformsByName() {
+		if _, ok := Strategies()[plat]; ok {
+			ret = append(ret, alias)
+		}
 	}
 
 	return ret

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/unikraft"
 )
 
@@ -22,6 +23,12 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 		platform.name = value
 	default:
 		return nil, fmt.Errorf("invalid type %T for platform", data)
+	}
+
+	// If the user has provided an alias for a known internal platform name,
+	// rewrite it to the correct name.
+	if alias, ok := mplatform.PlatformsByName()[platform.name]; ok {
+		platform.name = alias.String()
 	}
 
 	if uk != nil && uk.UK_BASE != "" {
