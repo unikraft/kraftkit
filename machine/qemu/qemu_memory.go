@@ -28,6 +28,10 @@ const (
 )
 
 func (qm QemuMemory) String() string {
+	if qm.Size == 0 && len(qm.Unit) == 0 {
+		return ""
+	}
+
 	var ret strings.Builder
 
 	if qm.Size == 0 {
