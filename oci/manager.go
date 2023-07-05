@@ -189,6 +189,9 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 				raw, err := crane.Manifest(fullref)
 				if err != nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						Tracef("cannot get manifest: %s", err)
 					continue
 				}
 
