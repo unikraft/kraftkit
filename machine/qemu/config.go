@@ -36,6 +36,7 @@ type QemuConfig struct {
 	SMP        QemuSMP           `flag:"-smp"         json:"smp,omitempty"`
 	TBSize     int               `flag:"-tb-size"     json:"tb_size,omitempty"`
 	VGA        QemuVGA           `flag:"-vga"         json:"vga,omitempty"`
+	Version    bool              `flag:"-version"     json:"-"`
 
 	// Command-line arguments for qemu-system-i386 and qemu-system-x86_64 only
 	NoHPET bool `flag:"-no-hpet" json:"no_hpet,omitempty"`
