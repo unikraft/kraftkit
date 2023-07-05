@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/selection"
 	"kraftkit.sh/unikraft/target"
 )
@@ -30,7 +31,12 @@ func SelectTarget(targets []target.Target) (target.Target, error) {
 
 	sort.Strings(names)
 
-	sp := selection.New("select target:", names)
+	queryMark := lipgloss.NewStyle().
+		Background(lipgloss.Color("12")).
+		Foreground(lipgloss.Color("15")).
+		Render
+
+	sp := selection.New(queryMark("[?]")+" select target:", names)
 	sp.Filter = nil
 
 	result, err := sp.RunPrompt()
