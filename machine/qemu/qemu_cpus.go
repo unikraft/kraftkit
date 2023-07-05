@@ -21,6 +21,10 @@ type QemuCPU struct {
 }
 
 func (cpu QemuCPU) String() string {
+	if cpu.CPU == nil {
+		return ""
+	}
+
 	var ret strings.Builder
 
 	ret.WriteString(cpu.CPU.String())
