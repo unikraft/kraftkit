@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/genuinetools/reg/repoutils"
@@ -30,7 +31,7 @@ func WithDetectHandler() OCIManagerOption {
 			log.G(ctx).WithFields(logrus.Fields{
 				"addr":      contAddr,
 				"namespace": namespace,
-			}).Trace("using containerd handler")
+			}).Trace("using oci containerd handler")
 
 			manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 				return handler.NewContainerdHandler(ctx, contAddr, namespace)
@@ -39,7 +40,23 @@ func WithDetectHandler() OCIManagerOption {
 			return nil
 		}
 
-		return fmt.Errorf("could not detect OCI handler")
+		// Fall-back to using a simpler directory/tarball-based OCI handler
+		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": ociDir,
+		}).Trace("using oci directory handler")
+
+		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
+			handle, err := handler.NewDirectoryHandler(ociDir)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return ctx, handle, nil
+		}
+
+		return nil
 	}
 }
 
