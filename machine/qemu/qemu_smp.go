@@ -34,11 +34,11 @@ type QemuSMP struct {
 // [cpus=]n[,maxcpus=cpus][,cores=cores][,threads=threads][,dies=dies]
 // [,sockets=sockets]
 func (qsmp QemuSMP) String() string {
-	var ret strings.Builder
-
 	if qsmp.CPUs <= 0 {
-		qsmp.CPUs = 1
+		return ""
 	}
+
+	var ret strings.Builder
 
 	ret.WriteString("cpus=")
 	ret.WriteString(strconv.FormatUint(qsmp.CPUs, 10))
