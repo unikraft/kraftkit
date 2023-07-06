@@ -53,3 +53,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
           FURY_USER: ${{ secrets.FURY_USER }}
+          AUR_KEY: ${{ secrets.AUR_KEY }}
