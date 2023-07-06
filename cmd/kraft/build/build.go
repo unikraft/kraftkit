@@ -41,7 +41,7 @@ type Build struct {
 	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast       bool   `long:"no-fast" usage:"Use maximum parallelization when performing the build"`
+	NoFast       bool   `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
 	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
