@@ -16,7 +16,7 @@ type AuthConfig struct {
 
 type KraftKit struct {
 	NoPrompt       bool   `yaml:"no_prompt" env:"KRAFTKIT_NO_PROMPT" long:"no-prompt" usage:"Do not prompt for user interaction" default:"false"`
-	NoParallel     bool   `yaml:"no_parallel" env:"KRAFTKIT_NO_PARALLEL" long:"no-parallel" usage:"Do not run internal tasks in parallel" default:"true"`
+	NoParallel     bool   `yaml:"no_parallel" env:"KRAFTKIT_NO_PARALLEL" long:"no-parallel" usage:"Do not run internal tasks in parallel" default:"false"`
 	NoEmojis       bool   `yaml:"no_emojis" env:"KRAFTKIT_NO_EMOJIS" long:"no-emojis" usage:"Do not use emojis in any console output" default:"true"`
 	NoCheckUpdates bool   `yaml:"no_check_updates" env:"KRAFTKIT_NO_CHECK_UPDATES" long:"no-check-updates" usage:"Do not check for updates" default:"false"`
 	Editor         string `yaml:"editor" env:"KRAFTKIT_EDITOR" long:"editor" usage:"Set the text editor to open when prompt to edit a file"`
