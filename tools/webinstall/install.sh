@@ -28,9 +28,19 @@ INSTALL_SERVER=${INSTALL_SERVER:-https://get.kraftkit.sh}
 INSTALL_TLS=${INSTALL_TLS:-y}
 DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
+KRAFTKIT_RUNTIME_DIR=${KRAFTKIT_RUNTIME_DIR:-/var/kraftkit}
 
 # Commands as variables to make them easier to override
 GREP=${GREP:-grep}
+GETENT=${GETENT:-getent}
+NEWGRP=${NEWGRP:-newgrp}
+ID=${ID:-id}
+SU=${SU:-su}
+GROUPADD=${GROUPADD:-groupadd}
+CHGRP=${CHGRP:-chgrp}
+CHMOD=${CHMOD:-chmod}
+USERMOD=${USERMOD:-usermod}
+MKDIR=${MKDIR:-mkdir}
 CAT=${CAT:-cat}
 SUDO=${SUDO:-sudo}
 AWK=${AWK:-awk}
@@ -1161,6 +1171,116 @@ install_linux_manual() {
     _CLEANUP_VERSION=""
 }
 
+# check_usergroup checks the environment for the kraftkit group.
+# If the group already exists, it means that it owns all default files.
+# $1: the group name
+# Returns:
+# Code: 0 if group doesn't exist, 1 if it exists
+check_usergroup() {
+    _chu_group="$1"
+
+    need_cmd "$GETENT"
+
+    if [ -z "$($GETENT group "$_chu_group")" ]; then
+        return 0
+    fi
+
+    say_debug "group $_chu_group already exists"
+    return 1
+}
+
+# create_usergroup creates the kraftkit group and sets the permissions for
+# the default files (KRAFTKIT_RUNTIME_DIR).
+# $1: the group name
+# Returns:
+# Code: 0 on success, 1 on error
+create_usergroup() {
+    _cug_group="$1"
+
+    need_cmd "$CHGRP"
+    need_cmd "$CHMOD"
+    need_cmd "$GROUPADD"
+    need_cmd "$MKDIR"
+    need_cmd "$ID"
+
+    say "creating $_cug_group group"
+    do_cmd "$GROUPADD $_cug_group"
+
+    say_debug "saving current user"
+    _cug_user="$($ID -n -u)"
+
+    say "adding $_cug_user to $_cug_group group"
+    do_cmd "$USERMOD -a -G $_cug_group $_cug_user"
+
+    say "creating default directories"
+    _cug_default_dirs="$KRAFTKIT_RUNTIME_DIR"
+    for _cug_default_dir in $_cug_default_dirs; do
+
+        # Check if the directory exists
+        if [ -d "$_cug_default_dir" ]; then
+            say "directory $_cug_default_dir already exists."
+            
+            # Ask the user if they want to delete
+            get_user_response "do you want to delete existing directory? [y/N]: " "n"
+            _cug_answer="$_RETVAL"
+
+            if printf "%s" "$_cug_answer" | "$GREP" -q -E "$_NO_ANS"; then
+                say_debug "not deleting $_cug_default_dir"
+                say "old files will not be owned by the $_cug_group group"
+            elif printf "%s" "$_cug_answer" | "$GREP" -q -E "$_YES_ANS"; then
+                say "deleting $_cug_default_dir"
+                do_cmd "$RM -rf $_cug_default_dir"
+
+                # Create the directory
+                do_cmd "$MKDIR -p $_cug_default_dir"
+            else
+                err "error: choose either yes or no."
+            fi 
+        else
+
+            # Create the directory
+            do_cmd "$MKDIR -p $_cug_default_dir"
+        fi
+
+        # Set the group and permissions
+        do_cmd "$CHGRP $_cug_group $_cug_default_dir"
+        do_cmd "$CHMOD 775 $_cug_default_dir"
+        do_cmd "$CHMOD g+s $_cug_default_dir"
+    done
+}
+
+# switch_usergroup switches to the new group in a new shell. Does not return.
+# $1: the group name
+# Returns:
+# Code: 0 on success, nothing if switched
+switch_usergroup() {
+    _sug_group="$1"
+
+    if [ "$NEED_TTY" = "y" ]; then
+        get_user_response "reload shell to apply changes? [Y/n]: " "y"
+        _sug_answer="$_RETVAL"
+
+        if printf "%s" "$_sug_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
+            need_cmd "$ID"
+            need_cmd "$SU"
+
+            say_debug "saving current user"
+            _sug_user="$($ID -n -u)"
+
+            say_debug "moving to new shell"
+            do_cmd "$SU -p $_sug_user"
+        elif printf "%s" "$_sug_answer" | "$GREP" -q -E "$_NO_ANS"; then
+            say_debug "keeping current shell"
+        else
+            err "error: choose either yes or no."
+        fi
+    else
+        say_debug "skipping shell restart"
+    fi
+
+    return 0
+}
+
 # install_kraftkit installs the kraftkit package for the current architecture.
 # $1: the architecture
 # $2: whether to install in auto mode
@@ -1298,12 +1418,19 @@ main() {
     _main_auto_install="$_RETVAL"
     say_debug "Auto install: $_main_auto_install"
 
+    # Create kraftkit group and own files if it doesn't exist
+    check_usergroup "kraftkit" && create_usergroup "kraftkit"
+    _main_new_group="$?"
+
     # Install kraftkit for the given architecture
     install_kraftkit "$_main_arch" "$_main_auto_install"
     say "kraftkit was installed successfully to $PREFIX/kraft"
 
     # Check if kraft is installed and working
     kraft -h
+
+    # Switch to new group if wanted
+    switch_usergroup "kraftkit"
 
     return $?
 }
