@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"fmt"
 	"os"
 	"time"
 
 	zip "api.zip"
 	"github.com/dgraph-io/badger/v3"
+	"github.com/juju/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -98,12 +98,12 @@ func (store *embedded[_, _]) open() error {
 		var err error
 		db, err = badger.Open(store.bopts)
 		if err != nil {
-			return fmt.Errorf("could not open machine store: %v", err)
+			return errors.Annotate(err, "could not open machine store")
 		}
 
 		return nil
 	}); err != nil {
-		return fmt.Errorf("could not open machine store: %v", err)
+		return errors.Annotate(err, "could not open machine store")
 	}
 
 	store.db = db
@@ -131,12 +131,12 @@ func (store *embedded[_, _]) Create(ctx context.Context, key string, _, out runt
 
 	b := bytes.Buffer{}
 	if err := gob.NewEncoder(&b).Encode(out); err != nil {
-		return fmt.Errorf("could not encode driver config for %s: %v", key, err)
+		return errors.Annotatef(err, "could not encode driver config for %s", key)
 	}
 
 	txn := store.db.NewTransaction(true)
 	if err := txn.SetEntry(badger.NewEntry([]byte(key), b.Bytes())); err != nil {
-		return fmt.Errorf("could not save machine driver to store for %s: %v", key, err)
+		return errors.Annotatef(err, "could not save machine driver to store for %s", key)
 	}
 
 	return txn.Commit()
@@ -177,12 +177,12 @@ func (store *embedded[_, _]) Get(ctx context.Context, key string, opts storage.G
 	if err := store.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {
-			return fmt.Errorf("could not access store for %s: %v", key, err)
+			return errors.Annotatef(err, "could not access store for %s", key)
 		}
 
 		val, err := item.ValueCopy(nil)
 		if err != nil {
-			return fmt.Errorf("could not copy from store for %s: %v", key, err)
+			return errors.Annotatef(err, "could not copy from store for %s", key)
 		}
 
 		b := bytes.Buffer{}
@@ -190,7 +190,7 @@ func (store *embedded[_, _]) Get(ctx context.Context, key string, opts storage.G
 
 		return gob.NewDecoder(&b).Decode(objPtr)
 	}); err != nil {
-		return fmt.Errorf("could not read from store for %s: %v", key, err)
+		return errors.Annotatef(err, "could not read from store for %s", key)
 	}
 
 	return nil
@@ -238,7 +238,7 @@ func (store *embedded[Spec, Status]) GetList(ctx context.Context, key string, op
 
 		return nil
 	}); err != nil {
-		return fmt.Errorf("could not list from store at %s: %v", key, err)
+		return errors.Annotatef(err, "could not list from store at %s", key)
 	}
 
 	return nil

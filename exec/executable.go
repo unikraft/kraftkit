@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type Executable struct {
@@ -24,7 +26,7 @@ type Executable struct {
 // what is passed to the flag.
 func NewExecutable(bin string, face interface{}, args ...string) (*Executable, error) {
 	if len(bin) == 0 {
-		return nil, fmt.Errorf("binary argument cannot be empty")
+		return nil, errors.New("binary argument cannot be empty")
 	}
 
 	e := &Executable{}
@@ -62,7 +64,7 @@ type flag struct {
 func parseFlag(tag reflect.StructTag) (*flag, error) {
 	parts := strings.Split(tag.Get("flag"), ",")
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("could not parse flag without tag")
+		return nil, errors.New("could not parse flag without tag")
 	}
 
 	f := &flag{
@@ -74,7 +76,7 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 		case strings.HasPrefix(part, "omitvalueif"):
 			omit := strings.Split(part, "=")
 			if len(omit) == 1 {
-				return nil, fmt.Errorf("omitvalueif requires value")
+				return nil, errors.New("omitvalueif requires value")
 			}
 			f.omitvalueif = omit[1]
 
@@ -90,7 +92,7 @@ func parseFlag(tag reflect.StructTag) (*flag, error) {
 // with tag annotations `flag`
 func ParseInterfaceArgs(face interface{}, args ...string) ([]string, error) {
 	if face != nil && reflect.ValueOf(face).Kind() == reflect.Ptr {
-		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
+		return nil, errors.New("cannot derive interface arguments from pointer: passed by reference")
 	}
 
 	t := reflect.TypeOf(face)

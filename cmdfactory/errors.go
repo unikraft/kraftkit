@@ -4,16 +4,14 @@
 package cmdfactory
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/juju/errors"
 )
 
 // FlagErrorf returns a new FlagError that wraps an error produced by
 // fmt.Errorf(format, args...).
 func FlagErrorf(format string, args ...interface{}) error {
-	return FlagErrorWrap(fmt.Errorf(format, args...))
+	return FlagErrorWrap(errors.Errorf(format, args...))
 }
 
 // FlagError returns a new FlagError that wraps the specified error.

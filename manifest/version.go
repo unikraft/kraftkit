@@ -32,7 +32,7 @@
 package manifest
 
 import (
-	"fmt"
+	"github.com/juju/errors"
 )
 
 type ManifestVersionType string
@@ -52,7 +52,7 @@ type ManifestVersion struct {
 
 func (mv *ManifestVersion) ShortGitSha() (string, error) {
 	if mv.Type != ManifestVersionGitSha {
-		return "", fmt.Errorf("manifest version is not derived from Git")
+		return "", errors.New("manifest version is not derived from Git")
 	}
 
 	return mv.Version[:7], nil

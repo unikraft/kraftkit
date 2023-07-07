@@ -32,11 +32,11 @@
 package config
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"gopkg.in/yaml.v3"
 
 	"kraftkit.sh/internal/yamlmerger"
@@ -50,7 +50,7 @@ type YamlFeeder struct {
 func (f YamlFeeder) Feed(structure interface{}) error {
 	file, err := os.Open(filepath.Clean(f.File))
 	if err != nil {
-		return fmt.Errorf("cannot open yaml file: %v", err)
+		return errors.Annotate(err, "cannot open yaml file")
 	}
 
 	defer file.Close()
@@ -66,7 +66,7 @@ func (f YamlFeeder) Feed(structure interface{}) error {
 	}
 
 	if err = yaml.NewDecoder(file).Decode(structure); err != nil {
-		return fmt.Errorf("cannot feed config file: %v", err)
+		return errors.Annotate(err, "cannot feed config file")
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func (f YamlFeeder) Feed(structure interface{}) error {
 
 func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 	if len(yf.File) == 0 {
-		return fmt.Errorf("filename for YAML cannot be empty")
+		return errors.New("filename for YAML cannot be empty")
 	}
 
 	// Create parent directories if not present
@@ -86,19 +86,19 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 	// Open the file (create if not present)
 	f, err := os.OpenFile(yf.File, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
+		return errors.Annotate(err, "could not open file")
 	}
 
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return fmt.Errorf("could not read file: %v", err)
+		return errors.Annotate(err, "could not read file")
 	}
 
 	from := yaml.Node{}
 	if err := yaml.Unmarshal(data, &from); err != nil {
-		return fmt.Errorf("could not unmarshal YAML: %s", err)
+		return errors.Errorf("could not unmarshal YAML: %s", err)
 	}
 
 	yml, err := yaml.Marshal(structure)
@@ -114,7 +114,7 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 	// When kind is 0, it is an uninitialized YAML structure (aka empty file)
 	if from.Kind != 0 && merge {
 		if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
-			return fmt.Errorf("could not update config: %v", err)
+			return errors.Annotate(err, "could not update config")
 		}
 	}
 

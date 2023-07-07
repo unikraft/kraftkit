@@ -6,9 +6,9 @@ package lib
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -81,12 +81,12 @@ func TransformMapFromSchema(ctx context.Context, data interface{}) (interface{},
 				libraries[name] = comp
 
 			default:
-				return data, fmt.Errorf("invalid type %T for component", props)
+				return data, errors.Errorf("invalid type %T for component", props)
 			}
 		}
 
 		return libraries, nil
 	}
 
-	return data, fmt.Errorf("invalid type %T for library", data)
+	return data, errors.Errorf("invalid type %T for library", data)
 }

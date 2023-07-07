@@ -6,10 +6,10 @@ package arch
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -42,7 +42,7 @@ func NewArchitectureFromSchema(value string) (ArchitectureConfig, error) {
 	architecture := ArchitectureConfig{}
 
 	if len(value) == 0 {
-		return architecture, fmt.Errorf("cannot ommit architecture name")
+		return architecture, errors.New("cannot ommit architecture name")
 	}
 
 	architecture.name = value

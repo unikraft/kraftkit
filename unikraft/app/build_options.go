@@ -5,9 +5,9 @@
 package app
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/make"
 )
@@ -57,7 +57,7 @@ func WithBuildLogFile(path string) BuildOption {
 
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
 		if err != nil {
-			return fmt.Errorf("could not create or open build log file: %v", err)
+			return errors.Annotate(err, "could not create or open build log file")
 		}
 
 		bo.mopts = append(bo.mopts, make.WithExecOptions(

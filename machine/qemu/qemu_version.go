@@ -8,10 +8,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/juju/errors"
 
 	"kraftkit.sh/exec"
 )
@@ -32,7 +32,7 @@ func GetQemuVersionFromBin(ctx context.Context, bin string) (*semver.Version, er
 		Version: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare QEMU executable: %v", err)
+		return nil, errors.Annotate(err, "could not prepare QEMU executable")
 	}
 
 	var buf bytes.Buffer
@@ -41,13 +41,13 @@ func GetQemuVersionFromBin(ctx context.Context, bin string) (*semver.Version, er
 		exec.WithStdout(bufio.NewWriter(&buf)),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare QEMU process: %v", err)
+		return nil, errors.Annotate(err, "could not prepare QEMU process")
 	}
 
 	// Start and also wait for the process to be released, this ensures the
 	// program is actively being executed.
 	if err := process.StartAndWait(ctx); err != nil {
-		return nil, fmt.Errorf("could not start and wait for QEMU process: %v", err)
+		return nil, errors.Annotate(err, "could not start and wait for QEMU process")
 	}
 
 	// Get the first line of the returned value
@@ -55,7 +55,7 @@ func GetQemuVersionFromBin(ctx context.Context, bin string) (*semver.Version, er
 
 	// Check if the returned value has the magic words
 	if !strings.HasPrefix(ret, "QEMU emulator version ") {
-		return nil, fmt.Errorf("malformed return value cannot parse QEMU version")
+		return nil, errors.New("malformed return value cannot parse QEMU version")
 	}
 
 	ret = strings.TrimPrefix(ret, "QEMU emulator version ")

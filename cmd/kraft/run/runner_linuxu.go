@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -42,7 +43,7 @@ func (runner *runnerLinuxu) String() string {
 // Runnable implements Runner.
 func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
 	if len(args) == 0 {
-		return false, fmt.Errorf("no arguments supplied")
+		return false, errors.New("no arguments supplied")
 	}
 
 	runner.exePath = args[0]
@@ -52,24 +53,24 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 	if err != nil {
 		return false, err
 	} else if fs.IsDir() {
-		return false, fmt.Errorf("first positional argument is a directory: %s", runner.exePath)
+		return false, errors.Errorf("first positional argument is a directory: %s", runner.exePath)
 	}
 
 	fi, err := os.Open(runner.exePath)
 	if err != nil {
-		return false, fmt.Errorf("opening file %s: %w", runner.exePath, err)
+		return false, errors.Annotatef(err, "opening file %s", runner.exePath)
 	}
 
 	defer fi.Close()
 
 	ef, err := elf.NewFile(fi)
 	if err != nil {
-		return false, fmt.Errorf("reading ELF file %s: %w", runner.exePath, err)
+		return false, errors.Annotatef(err, "reading ELF file %s", runner.exePath)
 	}
 
 	// Both static and dynamic PIEs have this type.
 	if ef.Type != elf.ET_DYN {
-		return false, fmt.Errorf("ELF file is shared object")
+		return false, errors.New("ELF file is shared object")
 	}
 
 	// Based on file(1) and elf.(*File).DynString.
@@ -77,12 +78,12 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 	// https://cs.opensource.google/go/go/+/refs/tags/go1.20.4:src/debug/elf/file.go;l=1602-1643
 	ds := ef.SectionByType(elf.SHT_DYNAMIC)
 	if ds == nil {
-		return false, fmt.Errorf("ELF file has type %s but no dynamic section", ef.Type)
+		return false, errors.Errorf("ELF file has type %s but no dynamic section", ef.Type)
 	}
 
 	d, err := ds.Data()
 	if err != nil {
-		return false, fmt.Errorf("reading ELF section %s of type %s", ds.Name, ds.Type)
+		return false, errors.Errorf("reading ELF section %s of type %s", ds.Name, ds.Type)
 	}
 
 	for len(d) > 0 {
@@ -112,7 +113,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 		}
 	}
 
-	return false, fmt.Errorf("file is not ELF executable")
+	return false, errors.New("file is not ELF executable")
 }
 
 // Prepare implements Runner.

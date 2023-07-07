@@ -5,8 +5,9 @@
 package ukargparse
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type Params []Param
@@ -19,7 +20,7 @@ func Parse(args ...string) (Params, error) {
 	for _, arg := range args {
 		libAndName := strings.SplitN(arg, ".", 1)
 		if len(libAndName) != 2 {
-			return nil, fmt.Errorf("expected param to be in the format 'libname.param=value' but got: '%s'", arg)
+			return nil, errors.Errorf("expected param to be in the format 'libname.param=value' but got: '%s'", arg)
 		}
 
 		param := paramStr{

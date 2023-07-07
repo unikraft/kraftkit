@@ -8,13 +8,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/archive"
@@ -101,9 +101,9 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		// archives as Content-Length is, for some reason, always set to 0.
 		res, err := client.Do(head)
 		if err != nil {
-			return fmt.Errorf("could not perform HEAD request on resource: %v", err)
+			return errors.Annotate(err, "could not perform HEAD request on resource")
 		} else if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("received HTTP error code %d on resource", res.StatusCode)
+			return errors.Errorf("received HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
 			log.G(ctx).Warnf("could not determine package size before pulling")
 			pp.total = 0
@@ -114,12 +114,12 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		// Create a temporary partial of the destination path of the resource
 		tmpCache := cache + ".part"
 		if err := os.MkdirAll(filepath.Dir(tmpCache), 0o755); err != nil {
-			return fmt.Errorf("could not create parent directorires: %v", err)
+			return errors.Annotate(err, "could not create parent directorires")
 		}
 
 		f, err := os.OpenFile(tmpCache, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o755)
 		if err != nil {
-			return fmt.Errorf("could not create cache file: %v", err)
+			return errors.Annotate(err, "could not create cache file")
 		}
 
 		defer f.Close()
@@ -143,9 +143,9 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		// Perform the request to actually retrieve the file
 		res, err = client.Do(get)
 		if err != nil {
-			return fmt.Errorf("could not initialize GET request to download package: %v", err)
+			return errors.Annotate(err, "could not initialize GET request to download package")
 		} else if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("received non-200 HTTP status code when attempting to download package: %v", err)
+			return errors.Annotate(err, "received non-200 HTTP status code when attempting to download package")
 		}
 
 		defer res.Body.Close()
@@ -166,17 +166,17 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 
 				f, err := os.Open(tmpCache)
 				if err != nil {
-					return fmt.Errorf("could not perform checksum: %v", err)
+					return errors.Annotate(err, "could not perform checksum")
 				}
 				defer f.Close()
 
 				h := sha256.New()
 				if _, err := io.Copy(h, f); err != nil {
-					return fmt.Errorf("could not perform checksum: %v", err)
+					return errors.Annotate(err, "could not perform checksum")
 				}
 
 				if checksum != string(h.Sum(nil)) {
-					return fmt.Errorf("checksum of package does not match")
+					return errors.New("checksum of package does not match")
 				}
 
 				log.G(ctx).WithFields(logrus.Fields{
@@ -188,7 +188,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 
 		// Copy the completed download to the local cache path
 		if err := os.Rename(tmpCache, cache); err != nil {
-			return fmt.Errorf("could not move downloaded package '%s' to destination '%s': %v", tmpCache, cache, err)
+			return errors.Annotatef(err, "could not move downloaded package '%s' to destination '%s'", tmpCache, cache)
 		}
 	} else {
 		log.G(ctx).WithFields(logrus.Fields{
@@ -205,7 +205,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 			manifest.Name,
 		)
 		if err != nil {
-			return fmt.Errorf("could not place component package: %s", err)
+			return errors.Errorf("could not place component package: %s", err)
 		}
 	}
 
@@ -219,7 +219,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		if err := archive.Unarchive(cache, local,
 			archive.StripComponents(1),
 		); err != nil {
-			return fmt.Errorf("could not unarchive: %v", err)
+			return errors.Annotate(err, "could not unarchive")
 		}
 	}
 

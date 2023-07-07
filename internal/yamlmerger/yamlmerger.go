@@ -24,15 +24,14 @@
 package yamlmerger
 
 import (
-	"fmt"
-
+	"github.com/juju/errors"
 	"gopkg.in/yaml.v3"
 )
 
 // https://stackoverflow.com/a/65784135
 func RecursiveMerge(from, into *yaml.Node) error {
 	if from.Kind != into.Kind {
-		return fmt.Errorf("cannot merge nodes of different kinds")
+		return errors.New("cannot merge nodes of different kinds")
 	}
 
 	switch from.Kind {
@@ -43,7 +42,7 @@ func RecursiveMerge(from, into *yaml.Node) error {
 				if nodesEqual(from.Content[i], into.Content[j]) {
 					found = true
 					if err := RecursiveMerge(from.Content[i+1], into.Content[j+1]); err != nil {
-						return fmt.Errorf("at key " + from.Content[i].Value + ": " + err.Error())
+						return errors.Errorf("at key " + from.Content[i].Value + ": " + err.Error())
 					}
 					break
 				}
@@ -74,7 +73,7 @@ func RecursiveMerge(from, into *yaml.Node) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("can only merge mapping, sequence and scalar nodes")
+		return errors.New("can only merge mapping, sequence and scalar nodes")
 	}
 
 	return nil

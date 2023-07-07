@@ -14,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/erikh/ping"
+	"github.com/juju/errors"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +33,7 @@ func NewNetworkServiceV1alpha1(ctx context.Context, opts ...any) (networkv1alpha
 // Create implements kraftkit.sh/api/network/v1alpha1.Create
 func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	if network.Name == "" {
-		return nil, fmt.Errorf("cannot create network without name")
+		return nil, errors.New("cannot create network without name")
 	}
 
 	if network.ObjectMeta.UID == "" {
@@ -48,10 +49,10 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 
 	// Validate the options.
 	if len(network.Spec.Gateway) == 0 {
-		return network, fmt.Errorf("gateway cannot be empty")
+		return network, errors.New("gateway cannot be empty")
 	}
 	if len(network.Spec.Netmask) == 0 {
-		return network, fmt.Errorf("netmask cannot be empty")
+		return network, errors.New("netmask cannot be empty")
 	}
 
 	bridge := &netlink.Bridge{
@@ -63,9 +64,9 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 	_, err := net.InterfaceByName(network.Name)
 	if err == nil {
 		// Bridge already exists, return early.
-		return network, fmt.Errorf("network already exists: %s", network.Name)
+		return network, errors.Errorf("network already exists: %s", network.Name)
 	} else if !strings.Contains(err.Error(), "no such network interface") {
-		return network, fmt.Errorf("getting interface %s failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "getting interface %s failed", network.Name)
 	}
 
 	// Create the bridge.
@@ -74,7 +75,7 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 	la.MTU = bridge.MTU
 	br := &netlink.Bridge{LinkAttrs: la}
 	if err := netlink.LinkAdd(br); err != nil {
-		return network, fmt.Errorf("bridge creation for %s failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "bridge creation for %s failed", network.Name)
 	}
 
 	// br.Promisc = 1 // TODO(nderjung): Should the bridge be promiscuous?
@@ -87,19 +88,19 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 		},
 	}
 	if err := netlink.AddrAdd(br, addr); err != nil {
-		return network, fmt.Errorf("adding address %s to bridge %s failed: %v", addr.String(), network.Name, err)
+		return network, errors.Annotatef(err, "adding address %s to bridge %s failed", addr.String(), network.Name)
 	}
 
 	// Bring the bridge up.
 	if err := netlink.LinkSetUp(br); err != nil {
-		return network, fmt.Errorf("bringing bridge %s up failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "bringing bridge %s up failed", network.Name)
 	}
 
 	network.CreationTimestamp = metav1.Now()
 
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("could not get bridge %s details: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not get bridge %s details", network.Name)
 	}
 
 	// Use the internal network bridge networking system to determine
@@ -159,23 +160,23 @@ func (service *v1alpha1Network) Start(ctx context.Context, network *networkv1alp
 	for _, iface := range network.Spec.Interfaces {
 		link, err := netlink.LinkByName(iface.Spec.IfName)
 		if err != nil {
-			return network, fmt.Errorf("getting link %s failed: %v", network.Name, err)
+			return network, errors.Annotatef(err, "getting link %s failed", network.Name)
 		}
 
 		if err := netlink.LinkSetUp(link); err != nil {
-			return network, fmt.Errorf("could not bring %s link down: %v", network.Name, err)
+			return network, errors.Annotatef(err, "could not bring %s link down", network.Name)
 		}
 	}
 
 	// Get the bridge link.
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "getting bridge %s failed", network.Name)
 	}
 
 	// Bring up the bridge link
 	if err := netlink.LinkSetUp(link); err != nil {
-		return network, fmt.Errorf("could not bring %s link up: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not bring %s link up", network.Name)
 	}
 
 	network.Status.State = networkv1alpha1.NetworkStateUp
@@ -189,27 +190,27 @@ func (service *v1alpha1Network) Stop(ctx context.Context, network *networkv1alph
 	for _, iface := range network.Spec.Interfaces {
 		link, err := netlink.LinkByName(iface.Spec.IfName)
 		if err != nil {
-			return network, fmt.Errorf("getting link %s failed: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "getting link %s failed", iface.Spec.IfName)
 		}
 
 		if ping.Ping(&net.IPAddr{IP: net.ParseIP(iface.Spec.IP), Zone: ""}, 150*time.Millisecond) {
-			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
+			return network, errors.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
 		}
 
 		if err := netlink.LinkSetDown(link); err != nil {
-			return network, fmt.Errorf("could not bring %s link down: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "could not bring %s link down", iface.Spec.IfName)
 		}
 	}
 
 	// Get the bridge link.
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "getting bridge %s failed", network.Name)
 	}
 
 	// Bring down the bridge link
 	if err := netlink.LinkSetDown(link); err != nil {
-		return network, fmt.Errorf("could not bring %s bridge down: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not bring %s bridge down", network.Name)
 	}
 
 	network.Status.State = networkv1alpha1.NetworkStateDown
@@ -222,17 +223,17 @@ func (service *v1alpha1Network) Stop(ctx context.Context, network *networkv1alph
 func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("could not get bridge link: %v", err)
+		return network, errors.Annotate(err, "could not get bridge link")
 	}
 
 	bridge, ok := link.(*netlink.Bridge)
 	if !ok {
-		return network, fmt.Errorf("network link is not bridge")
+		return network, errors.New("network link is not bridge")
 	}
 
 	bridgeface, err := net.InterfaceByName(bridge.Name)
 	if err != nil {
-		return nil, fmt.Errorf("could not get bridge interface: %v", err)
+		return nil, errors.Annotate(err, "could not get bridge interface")
 	}
 
 	ipnet := &net.IPNet{
@@ -243,7 +244,7 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 	// Start MAC addresses iteratively.
 	startMac, err := macaddr.GenerateMacAddress(true)
 	if err != nil {
-		return network, fmt.Errorf("could not prepare MAC address generator: %v", err)
+		return network, errors.Annotate(err, "could not prepare MAC address generator")
 	}
 
 	// Populate a hashmap of link aliases that allow us to quickly reference later
@@ -282,7 +283,7 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		if iface.Spec.IP == "" {
 			ip, err := AllocateIP(ctx, ipnet, bridgeface, bridge)
 			if err != nil {
-				return network, fmt.Errorf("could not allocate interface IP for %s: %v", iface.Spec.IfName, err)
+				return network, errors.Annotatef(err, "could not allocate interface IP for %s", iface.Spec.IfName)
 			}
 
 			iface.Spec.IP = ip.String()
@@ -299,15 +300,15 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		if existing, err := netlink.LinkByName(tap.Name); err == nil {
 			if existing.Attrs().Flags&net.FlagRunning != 0 {
 				if err = netlink.LinkSetDown(tap); err != nil {
-					return network, fmt.Errorf("could not bring %s link down: %v", iface.Spec.IfName, err)
+					return network, errors.Annotatef(err, "could not bring %s link down", iface.Spec.IfName)
 				}
 				if err := netlink.LinkModify(tap); err != nil {
-					return network, fmt.Errorf("could not update %s link: %v", iface.Spec.IfName, err)
+					return network, errors.Annotatef(err, "could not update %s link", iface.Spec.IfName)
 				}
 			}
 		} else {
 			if err := netlink.LinkAdd(tap); err != nil {
-				return network, fmt.Errorf("could not create %s link: %v", iface.Spec.IfName, err)
+				return network, errors.Annotatef(err, "could not create %s link", iface.Spec.IfName)
 			}
 		}
 
@@ -315,11 +316,11 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		// combination of the network and this interface.
 		alias := fmt.Sprintf("%s:%s", network.ObjectMeta.UID, iface.ObjectMeta.UID)
 		if err := netlink.LinkSetAlias(tap, alias); err != nil {
-			return network, fmt.Errorf("could not set link alias: %v", err)
+			return network, errors.Annotatef(err, "could not set link alias")
 		}
 
 		if err = netlink.LinkSetUp(tap); err != nil {
-			return network, fmt.Errorf("could not bring %s link up: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "could not bring %s link up", iface.Spec.IfName)
 		}
 
 		inuse[alias] = true
@@ -329,7 +330,7 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 	// Clean up any removed interfaces.  Re-check the link list.
 	links, err := netlink.LinkList()
 	if err != nil {
-		return network, fmt.Errorf("could not gather list of existing links: %v", err)
+		return network, errors.Annotate(err, "could not gather list of existing links")
 	}
 
 	for _, link := range links {
@@ -343,11 +344,11 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		}
 
 		if err = netlink.LinkSetDown(tap); err != nil {
-			return network, fmt.Errorf("could not bring %s link down: %v", tap.Name, err)
+			return network, errors.Annotatef(err, "could not bring %s link down", tap.Name)
 		}
 
 		if err = netlink.LinkDel(tap); err != nil {
-			return network, fmt.Errorf("could not remove %s: %v", tap.Name, err)
+			return network, errors.Annotatef(err, "could not remove %s", tap.Name)
 		}
 	}
 
@@ -361,38 +362,38 @@ func (service *v1alpha1Network) Delete(ctx context.Context, network *networkv1al
 		// Get the link.
 		link, err := netlink.LinkByName(iface.Spec.IfName)
 		if err != nil {
-			return network, fmt.Errorf("could not get %s link: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "could not get %s link", iface.Spec.IfName)
 		}
 
 		if ping.Ping(&net.IPAddr{IP: net.ParseIP(iface.Spec.IP), Zone: ""}, 150*time.Millisecond) {
-			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
+			return network, errors.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
 		}
 
 		// Bring down the bridge link
 		if err := netlink.LinkSetDown(link); err != nil {
-			return network, fmt.Errorf("could not bring %s link down: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "could not bring %s link down", iface.Spec.IfName)
 		}
 
 		// Delete the bridge link.
 		if err := netlink.LinkDel(link); err != nil {
-			return network, fmt.Errorf("could not delete %s link: %v", iface.Spec.IfName, err)
+			return network, errors.Annotatef(err, "could not delete %s link", iface.Spec.IfName)
 		}
 	}
 
 	// Get the bridge link.
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
+		return network, errors.Annotatef(err, "getting bridge %s failed", network.Name)
 	}
 
 	// Bring down the bridge link
 	if err := netlink.LinkSetDown(link); err != nil {
-		return network, fmt.Errorf("could not bring %s link down: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not bring %s link down", network.Name)
 	}
 
 	// Delete the bridge link.
 	if err := netlink.LinkDel(link); err != nil {
-		return network, fmt.Errorf("could not delete %s link: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not delete %s link", network.Name)
 	}
 
 	return nil, nil
@@ -429,7 +430,7 @@ func mapBridgeStatistics(network *networkv1alpha1.Network, bridge *netlink.Bridg
 func (service *v1alpha1Network) Get(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
-		return network, fmt.Errorf("could not get link %s: %v", network.Name, err)
+		return network, errors.Annotatef(err, "could not get link %s", network.Name)
 	}
 
 	if network.ObjectMeta.CreationTimestamp == *new(metav1.Time) {
@@ -438,7 +439,7 @@ func (service *v1alpha1Network) Get(ctx context.Context, network *networkv1alpha
 
 	bridge, ok := link.(*netlink.Bridge)
 	if !ok {
-		return network, fmt.Errorf("network link is not bridge")
+		return network, errors.New("network link is not bridge")
 	}
 
 	addrs, err := netlink.AddrList(bridge, nl.FAMILY_V4)

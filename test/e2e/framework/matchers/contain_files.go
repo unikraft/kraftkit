@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 )
@@ -26,29 +27,29 @@ var _ types.GomegaMatcher = (*containFilesMatcher)(nil)
 func (matcher *containFilesMatcher) Match(actual any) (success bool, err error) {
 	actualDirName, ok := actual.(string)
 	if !ok {
-		return false, fmt.Errorf("ContainFiles matcher expects a directory path")
+		return false, errors.New("ContainFiles matcher expects a directory path")
 	}
 
 	dirEntries, err := os.ReadDir(actualDirName)
 	if err != nil {
-		matcher.err = fmt.Errorf("reading directory entries: %w", err)
+		matcher.err = errors.Annotate(err, "reading directory entries")
 		return false, nil
 	}
 
 	if n, nExpect := len(dirEntries), len(matcher.fileNames); n < nExpect {
-		matcher.err = fmt.Errorf("directory contains less entries (%d) than provided files names (%d)", n, nExpect)
+		matcher.err = errors.Errorf("directory contains less entries (%d) than provided files names (%d)", n, nExpect)
 		return false, nil
 	}
 
 	for _, fn := range matcher.fileNames {
 		fi, err := os.Stat(filepath.Join(actualDirName, fn))
 		if err != nil {
-			matcher.err = fmt.Errorf("reading file info: %w", err)
+			matcher.err = errors.Annotate(err, "reading file info")
 			return false, nil
 		}
 
 		if !fi.Mode().IsRegular() {
-			matcher.err = fmt.Errorf("file %q is not regular (type: %s)", fi.Name(), fi.Mode().Type())
+			matcher.err = errors.Errorf("file %q is not regular (type: %s)", fi.Name(), fi.Mode().Type())
 			return false, nil
 		}
 	}

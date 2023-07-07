@@ -5,12 +5,13 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"reflect"
 	"strings"
 	"syscall"
+
+	"github.com/juju/errors"
 )
 
 // ConfigManager uses the package facilities, there should be at least one
@@ -34,7 +35,7 @@ func WithFile[C any](file string, forceCreate bool) ConfigManagerOption[C] {
 	return func(cm *ConfigManager[C]) error {
 		ext := strings.Split(file, ".")
 		if len(ext) == 1 {
-			return fmt.Errorf("unknown file extension for config file: %s", file)
+			return errors.Errorf("unknown file extension for config file: %s", file)
 		}
 
 		_, err := os.Stat(file)
@@ -47,12 +48,12 @@ func WithFile[C any](file string, forceCreate bool) ConfigManagerOption[C] {
 			if os.IsNotExist(err) {
 				err := yml.Write(cm.Config, forceCreate)
 				if err != nil {
-					return fmt.Errorf("could not write initial config: %v", err)
+					return errors.Annotate(err, "could not write initial config")
 				}
 			}
 			return WithFeeder[C](yml)(cm)
 		default:
-			return fmt.Errorf("unsupported file extension: %s", file)
+			return errors.Errorf("unsupported file extension: %s", file)
 		}
 	}
 }
@@ -65,7 +66,7 @@ func WithDefaultConfigFile[C any]() ConfigManagerOption[C] {
 
 func NewConfigManager[C any](c *C, opts ...ConfigManagerOption[C]) (*ConfigManager[C], error) {
 	if c == nil {
-		return nil, fmt.Errorf("cannot instantiate ConfigManager without Config")
+		return nil, errors.New("cannot instantiate ConfigManager without Config")
 	}
 
 	cm := &ConfigManager[C]{
@@ -74,14 +75,14 @@ func NewConfigManager[C any](c *C, opts ...ConfigManagerOption[C]) (*ConfigManag
 
 	for _, o := range opts {
 		if err := o(cm); err != nil {
-			return nil, fmt.Errorf("could not apply config manager option: %v", err)
+			return nil, errors.Annotate(err, "could not apply config manager option")
 		}
 	}
 
 	// Feed the config, pass the manager anyway if this fails, we still have
 	// defaults
 	if err := cm.Feed(); err != nil {
-		return cm, fmt.Errorf("could not feed config: %v", err)
+		return cm, errors.Annotate(err, "could not feed config")
 	}
 
 	return cm, nil
@@ -141,7 +142,7 @@ func (cm *ConfigManager[C]) SetupListener(fallback func(err error)) *ConfigManag
 // feedStruct feeds a struct using given feeder.
 func (cm *ConfigManager[C]) feedStruct(f Feeder, s interface{}) error {
 	if err := f.Feed(s); err != nil {
-		return fmt.Errorf("failed to feed config: %v", err)
+		return errors.Annotate(err, "failed to feed config")
 	}
 
 	return nil
@@ -168,7 +169,7 @@ func Default[C any](key string) string {
 
 func findConfigDefault[C any](needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
 	if v.Kind() != reflect.Ptr {
-		return needle, offset, def, v, fmt.Errorf("not a pointer value")
+		return needle, offset, def, v, errors.New("not a pointer value")
 	}
 
 	if needle == offset {
@@ -202,5 +203,5 @@ func findConfigDefault[C any](needle, offset, def string, v reflect.Value) (stri
 		}
 	}
 
-	return needle, offset, def, v, fmt.Errorf("could not find default for: %s", needle)
+	return needle, offset, def, v, errors.Errorf("could not find default for: %s", needle)
 }

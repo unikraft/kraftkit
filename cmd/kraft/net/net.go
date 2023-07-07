@@ -5,8 +5,7 @@
 package net
 
 import (
-	"fmt"
-
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmd/kraft/net/create"
@@ -50,9 +49,9 @@ func New() *cobra.Command {
 
 func (opts *Net) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.Driver == "" {
-		return fmt.Errorf("network driver must be set")
+		return errors.New("network driver must be set")
 	} else if !set.NewStringSet(network.DriverNames()...).Contains(opts.Driver) {
-		return fmt.Errorf("unsupported network driver strategy: %s", opts.Driver)
+		return errors.Errorf("unsupported network driver strategy: %s", opts.Driver)
 	}
 
 	return nil

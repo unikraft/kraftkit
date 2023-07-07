@@ -2,12 +2,12 @@ package oci
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/genuinetools/reg/repoutils"
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -139,7 +139,7 @@ func WithRegistries(registries ...string) OCIManagerOption {
 func WithDockerConfig(auth regtypes.AuthConfig) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
 		if auth.ServerAddress == "" {
-			return fmt.Errorf("cannot use auth config without server address")
+			return errors.New("cannot use auth config without server address")
 		}
 
 		if manager.auths == nil {

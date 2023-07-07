@@ -6,7 +6,6 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -90,7 +90,7 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 		}, nil
 	}
 
-	return nil, fmt.Errorf("provided path is not a manifest: %s", path)
+	return nil, errors.Errorf("provided path is not a manifest: %s", path)
 }
 
 func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
@@ -146,9 +146,9 @@ func NewManifestFromBytes(ctx context.Context, raw []byte, opts ...ManifestOptio
 	}
 
 	if len(manifest.Name) == 0 {
-		return nil, fmt.Errorf("unset name in manifest")
+		return nil, errors.New("unset name in manifest")
 	} else if len(manifest.Type) == 0 {
-		return nil, fmt.Errorf("unset type in manifest")
+		return nil, errors.New("unset type in manifest")
 	}
 
 	if providerName != "" {
@@ -167,13 +167,13 @@ func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOpti
 	if err != nil {
 		return nil, err
 	} else if f.Size() == 0 {
-		return nil, fmt.Errorf("manifest path is empty: %s", path)
+		return nil, errors.Errorf("manifest path is empty: %s", path)
 	}
 
 	// Check if we're directly pointing to a compatible manifest file
 	ext := filepath.Ext(path)
 	if ext != ".yml" && ext != ".yaml" {
-		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+		return nil, errors.Errorf("unsupported manifest extension for path: %s", path)
 	}
 
 	contents, err := os.ReadFile(path)
@@ -196,7 +196,7 @@ func NewManifestFromFile(ctx context.Context, path string, mopts ...ManifestOpti
 func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOption) (*Manifest, error) {
 	u, err := url.Parse(path)
 	if err != nil || u.Scheme == "" || u.Host == "" {
-		return nil, fmt.Errorf("provided path was not a valid URL")
+		return nil, errors.New("provided path was not a valid URL")
 	}
 
 	var contents []byte
@@ -220,7 +220,7 @@ func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOptio
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("manifest index not found: %s", path)
+		return nil, errors.Errorf("manifest index not found: %s", path)
 	}
 
 	get, err := http.NewRequestWithContext(ctx, "GET", path, nil)
@@ -242,13 +242,13 @@ func NewManifestFromURL(ctx context.Context, path string, mopts ...ManifestOptio
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received %d error when retrieving: %s", resp.StatusCode, path)
+		return nil, errors.Errorf("received %d error when retrieving: %s", resp.StatusCode, path)
 	}
 
 	// Check if we're directly pointing to a compatible manifest file
 	ext := filepath.Ext(path)
 	if ext != ".yml" && ext != ".yaml" {
-		return nil, fmt.Errorf("unsupported manifest extension for path: %s", path)
+		return nil, errors.Errorf("unsupported manifest extension for path: %s", path)
 	}
 
 	contents, err = io.ReadAll(resp.Body)
@@ -356,7 +356,7 @@ func (m Manifest) WriteToFile(path string) error {
 	// Open the file (create if not present)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
+		return errors.Annotate(err, "could not open file")
 	}
 
 	defer f.Close()
@@ -405,7 +405,7 @@ func (m Manifest) WriteToFile(path string) error {
 // DefaultChannel returns the default channel of the Manifest
 func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
 	if len(m.Channels) == 0 {
-		return nil, fmt.Errorf("manifest does not have any channels")
+		return nil, errors.New("manifest does not have any channels")
 	}
 
 	// Use the channel by default to determine the latest version.  In the
@@ -417,5 +417,5 @@ func (m Manifest) DefaultChannel() (*ManifestChannel, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("manifest does not have a default channel: %s", m.Origin)
+	return nil, errors.Errorf("manifest does not have a default channel: %s", m.Origin)
 }

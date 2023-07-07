@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 )
@@ -23,12 +24,12 @@ var _ types.GomegaMatcher = (*beAnEmptyDirectoryMatcher)(nil)
 func (matcher *beAnEmptyDirectoryMatcher) Match(actual any) (success bool, err error) {
 	actualDirName, ok := actual.(string)
 	if !ok {
-		return false, fmt.Errorf("BeAnEmptyDirectory matcher expects a directory path")
+		return false, errors.New("BeAnEmptyDirectory matcher expects a directory path")
 	}
 
 	dirEntries, err := os.ReadDir(actualDirName)
 	if err != nil {
-		matcher.err = fmt.Errorf("reading directory entries: %w", err)
+		matcher.err = errors.Annotate(err, "reading directory entries")
 		return false, nil
 	}
 
@@ -36,7 +37,7 @@ func (matcher *beAnEmptyDirectoryMatcher) Match(actual any) (success bool, err e
 	hasEntries := n > 0
 
 	if hasEntries {
-		matcher.err = fmt.Errorf("directory contains %d entries", n)
+		matcher.err = errors.Errorf("directory contains %d entries", n)
 	}
 
 	return !hasEntries, nil

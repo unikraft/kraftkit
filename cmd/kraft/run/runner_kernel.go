@@ -7,9 +7,9 @@ package run
 import (
 	"context"
 	"debug/elf"
-	"fmt"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/unikraft"
 )
@@ -31,7 +31,7 @@ func (runner *runnerKernel) String() string {
 // Runnable implements Runner.
 func (runner *runnerKernel) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
 	if len(args) == 0 {
-		return false, fmt.Errorf("no arguments supplied")
+		return false, errors.New("no arguments supplied")
 	}
 
 	var err error
@@ -71,7 +71,7 @@ func (runner *runnerKernel) Prepare(ctx context.Context, opts *Run, machine *mac
 		case elf.EM_AARCH64:
 			machine.Spec.Architecture = "arm64"
 		default:
-			return fmt.Errorf("unsupported kernel architecture: %v", fe.Machine.String())
+			return errors.Errorf("unsupported kernel architecture: %v", fe.Machine.String())
 		}
 	} else {
 		machine.Spec.Architecture = opts.Architecture

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -125,9 +126,9 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 	// Discover the network controller strategy.
 	if opts.Network == "" && opts.IP != "" {
-		return fmt.Errorf("cannot assign IP address without providing --network")
+		return errors.New("cannot assign IP address without providing --network")
 	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
-		return fmt.Errorf("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
+		return errors.New("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
 	}
 
 	if opts.Network != "" {
@@ -138,7 +139,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 		networkStrategy, ok := network.Strategies()[opts.networkDriver]
 		if !ok {
-			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
+			return errors.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
 		}
 
 		opts.networkController, err = networkStrategy.NewNetworkV1alpha1(ctx)
@@ -155,7 +156,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		var mode mplatform.SystemMode
 		opts.platform, mode, err = mplatform.Detect(ctx)
 		if mode == mplatform.SystemGuest {
-			return fmt.Errorf("nested virtualization not supported")
+			return errors.New("nested virtualization not supported")
 		} else if err != nil {
 			return err
 		}
@@ -163,13 +164,13 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		var ok bool
 		opts.platform, ok = mplatform.PlatformsByName()[plat]
 		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+			return errors.Errorf("unknown platform driver: %s", opts.platform)
 		}
 	}
 
 	machineStrategy, ok := mplatform.Strategies()[opts.platform]
 	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
+		return errors.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
 	}
 
 	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
@@ -200,7 +201,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 				i++
 			}
 
-			return fmt.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
+			return errors.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
 		}
 	}
 
@@ -245,9 +246,9 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if run == nil && opts.RunAs != "" {
-		return fmt.Errorf("unknown runner: %s", opts.RunAs)
+		return errors.Errorf("unknown runner: %s", opts.RunAs)
 	} else if run == nil {
-		return fmt.Errorf("could not determine how to run provided input")
+		return errors.New("could not determine how to run provided input")
 	}
 
 	log.G(ctx).WithField("runner", run.String()).Debug("using")
@@ -296,13 +297,13 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
-			return fmt.Errorf("could not make machine state dir: %w", err)
+			return errors.Annotate(err, "could not make machine state dir")
 		}
 
 		var ramfs *initrd.InitrdConfig
 		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("could not get current working directory: %w", err)
+			return errors.Annotate(err, "could not get current working directory")
 		}
 
 		if strings.Contains(opts.InitRd, initrd.InputDelimeter) {
@@ -314,7 +315,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 			ramfs, err = initrd.NewFromMapping(cwd, output, opts.InitRd)
 			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
+				return errors.Annotate(err, "could not prepare initramfs")
 			}
 		} else if f, err := os.Stat(opts.InitRd); err == nil && f.IsDir() {
 			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
@@ -325,12 +326,12 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 			ramfs, err = initrd.NewFromMapping(cwd, output, fmt.Sprintf("%s:/", opts.InitRd))
 			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
+				return errors.Annotate(err, "could not prepare initramfs")
 			}
 		} else {
 			ramfs, err = initrd.NewFromFile(cwd, opts.InitRd)
 			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
+				return errors.Annotate(err, "could not prepare initramfs")
 			}
 		}
 
@@ -402,7 +403,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		logs, errs, err := opts.machineController.Logs(ctx, machine)
 		if err != nil {
 			signals.RequestShutdown()
-			return fmt.Errorf("could not listen for machine logs: %v", err)
+			return errors.Annotate(err, "could not listen for machine logs")
 		}
 
 	loop:
@@ -436,7 +437,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("could not get network information for %s: %v", opts.networkName, err)
+			return errors.Annotatef(err, "could not get network information for %s", opts.networkName)
 		}
 
 		// Remove the new network interface
@@ -450,7 +451,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if _, err = opts.networkController.Update(ctx, found); err != nil {
-			return fmt.Errorf("could not update network %s: %v", opts.networkName, err)
+			return errors.Annotatef(err, "could not update network %s", opts.networkName)
 		}
 	}
 

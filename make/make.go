@@ -6,10 +6,10 @@ package make
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/exec"
 )
 
@@ -24,7 +24,7 @@ type export struct {
 func parseExport(tag reflect.StructTag) (*export, error) {
 	parts := strings.Split(tag.Get("export"), ",")
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("could not identify export tag")
+		return nil, errors.New("could not identify export tag")
 	}
 
 	e := &export{
@@ -59,13 +59,13 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 	v := reflect.ValueOf(args)
 
 	if v.Kind() == reflect.Ptr {
-		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
+		return nil, errors.New("cannot derive interface arguments from pointer: passed by reference")
 	}
 
 	for i := 0; i < t.NumField(); i++ {
 		e, err := parseExport(t.Field(i).Tag)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse export tag: %s", err)
+			return nil, errors.Errorf("could not parse export tag: %s", err)
 		}
 
 		if len(e.export) > 0 {

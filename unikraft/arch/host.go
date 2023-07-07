@@ -5,8 +5,9 @@
 package arch
 
 import (
-	"fmt"
 	"runtime"
+
+	"github.com/juju/errors"
 )
 
 // HostArchitecture returns the architecture of the host or an error if
@@ -19,6 +20,6 @@ func HostArchitecture() (string, error) {
 	case "arm", "arm64":
 		return arch, nil
 	default:
-		return "", fmt.Errorf("unsupported architecture: %v", arch)
+		return "", errors.Errorf("unsupported architecture: %v", arch)
 	}
 }

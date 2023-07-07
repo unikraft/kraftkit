@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/log"
@@ -87,7 +88,7 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 		return provider, nil
 	}
 
-	return nil, fmt.Errorf("could not determine provider for: %s", path)
+	return nil, errors.Errorf("could not determine provider for: %s", path)
 }
 
 // NewProviderFromString returns a provider based on a giving string which
@@ -114,5 +115,5 @@ func NewProviderFromString(ctx context.Context, provider, path string, entity an
 		return NewDirectoryProvider(ctx, path, mopts...)
 	}
 
-	return nil, fmt.Errorf("could not determine provider for: %s", path)
+	return nil, errors.Errorf("could not determine provider for: %s", path)
 }

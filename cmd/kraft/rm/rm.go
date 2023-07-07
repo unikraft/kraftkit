@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -71,7 +72,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			var mode mplatform.SystemMode
 			platform, mode, err = mplatform.Detect(ctx)
 			if mode == mplatform.SystemGuest {
-				return fmt.Errorf("nested virtualization not supported")
+				return errors.New("nested virtualization not supported")
 			} else if err != nil {
 				return err
 			}
@@ -79,13 +80,13 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			var ok bool
 			platform, ok = mplatform.PlatformsByName()[opts.platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return errors.Errorf("unknown platform driver: %s", opts.platform)
 			}
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]
 		if !ok {
-			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+			return errors.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
 		controller, err = strategy.NewMachineV1alpha1(ctx)
@@ -113,7 +114,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(remove) == 0 {
-		return fmt.Errorf("machine(s) not found")
+		return errors.New("machine(s) not found")
 	}
 
 	netcontrollers := make(map[string]networkapi.NetworkService, 0)
@@ -127,7 +128,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			if !ok {
 				strategy, ok := network.Strategies()[net.Driver]
 				if !ok {
-					return fmt.Errorf("unknown machine network driver: %s", net.Driver)
+					return errors.Errorf("unknown machine network driver: %s", net.Driver)
 				}
 
 				netcontroller, err = strategy.NewNetworkV1alpha1(ctx)

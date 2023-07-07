@@ -29,6 +29,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type T interface {
@@ -127,7 +129,7 @@ type commandStub struct {
 // Run satisfies Runnable
 func (s *commandStub) Run() error {
 	if s.exitStatus != 0 {
-		return fmt.Errorf("%s exited with status %d", s.pattern, s.exitStatus)
+		return errors.Errorf("%s exited with status %d", s.pattern, s.exitStatus)
 	}
 	return nil
 }
@@ -135,7 +137,7 @@ func (s *commandStub) Run() error {
 // Output satisfies Runnable
 func (s *commandStub) Output() ([]byte, error) {
 	if s.exitStatus != 0 {
-		return []byte(nil), fmt.Errorf("%s exited with status %d", s.pattern, s.exitStatus)
+		return []byte(nil), errors.Errorf("%s exited with status %d", s.pattern, s.exitStatus)
 	}
 	return []byte(s.stdout), nil
 }

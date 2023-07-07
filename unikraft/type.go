@@ -6,10 +6,11 @@
 package unikraft
 
 import (
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type ComponentType string
@@ -72,7 +73,7 @@ func GuessTypeNameVersion(input string) (ComponentType, string, string, error) {
 
 	match := re.FindStringSubmatch(input)
 	if len(match) == 0 {
-		return ComponentTypeUnknown, "", "", fmt.Errorf("cannot determine name and type from \"%s\"", input)
+		return ComponentTypeUnknown, "", "", errors.Errorf("cannot determine name and type from \"%s\"", input)
 	}
 
 	t, n, v := match[1], match[2], match[3]
@@ -103,7 +104,7 @@ func PlaceComponent(workdir string, t ComponentType, name string) (string, error
 		return filepath.Join(workdir, VendorDir, t.Plural(), name), nil
 	}
 
-	return "", fmt.Errorf("cannot place component of unknown type")
+	return "", errors.New("cannot place component of unknown type")
 }
 
 // TypeNameVersion returns the canonical name of the component using the format

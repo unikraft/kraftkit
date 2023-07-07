@@ -5,10 +5,10 @@
 package fetch
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -109,7 +109,7 @@ func (opts *Fetch) Run(cmd *cobra.Command, args []string) error {
 		t = targets[0]
 
 	case config.G[config.KraftKit](ctx).NoPrompt:
-		return fmt.Errorf("could not determine which target to prepare")
+		return errors.New("could not determine which target to prepare")
 
 	default:
 		t, err = cli.SelectTarget(targets)

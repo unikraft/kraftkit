@@ -7,6 +7,8 @@ package exec
 import (
 	"fmt"
 	"io"
+
+	"github.com/juju/errors"
 )
 
 type ExecOptions struct {
@@ -29,7 +31,7 @@ func NewExecOptions(eopts ...ExecOption) (*ExecOptions, error) {
 
 	for _, o := range eopts {
 		if err := o(eo); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
+			return nil, errors.Annotate(err, "could not apply option")
 		}
 	}
 

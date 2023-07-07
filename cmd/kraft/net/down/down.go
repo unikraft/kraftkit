@@ -7,6 +7,7 @@ package down
 import (
 	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -46,7 +47,7 @@ func (opts *Down) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
+		return errors.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)

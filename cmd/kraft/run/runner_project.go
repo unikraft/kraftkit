@@ -6,9 +6,9 @@ package run
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli"
@@ -40,7 +40,7 @@ func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...st
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return false, fmt.Errorf("getting current working directory: %w", err)
+		return false, errors.Annotate(err, "getting current working directory")
 	}
 
 	if len(args) == 0 {
@@ -55,7 +55,7 @@ func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...st
 	}
 
 	if !app.IsWorkdirInitialized(runner.workdir) {
-		return false, fmt.Errorf("path is not project: %s", runner.workdir)
+		return false, errors.Errorf("path is not project: %s", runner.workdir)
 	}
 
 	return true, nil
@@ -75,7 +75,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 
 	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
-		return fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
+		return errors.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
 	}
 
 	// Filter project targets by any provided CLI options
@@ -90,18 +90,18 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 
 	switch {
 	case len(targets) == 0:
-		return fmt.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.platform.String(), opts.Architecture)
+		return errors.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.platform.String(), opts.Architecture)
 
 	case len(targets) == 1:
 		t = targets[0]
 
 	case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
-		return fmt.Errorf("could not determine what to run based on provided CLI arguments")
+		return errors.New("could not determine what to run based on provided CLI arguments")
 
 	default:
 		t, err = cli.SelectTarget(targets)
 		if err != nil {
-			return fmt.Errorf("could not select target: %v", err)
+			return errors.Errorf("could not select target: %v", err)
 		}
 	}
 

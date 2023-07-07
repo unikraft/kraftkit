@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -50,7 +51,7 @@ func (opts *Inspect) Run(cmd *cobra.Command, args []string) error {
 
 	strategy, ok := network.Strategies()[opts.Driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
+		return errors.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)

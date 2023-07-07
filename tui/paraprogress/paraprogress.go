@@ -6,12 +6,12 @@ package paraprogress
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/barkimedes/go-deepcopy"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/juju/errors"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
 	"kraftkit.sh/log"
@@ -38,7 +38,7 @@ type ParaProgress struct {
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
 	if len(processes) == 0 {
-		return nil, fmt.Errorf("no processes to perform")
+		return nil, errors.New("no processes to perform")
 	}
 
 	md := &ParaProgress{
@@ -146,7 +146,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			md.quitting = true
-			md.err = fmt.Errorf("force quit")
+			md.err = errors.New("force quit")
 			return md, tea.Quit
 		}
 	case StatusMsg:

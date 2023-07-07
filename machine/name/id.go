@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 // MachineID is a 16 byte universally unique identifier.
@@ -93,7 +95,7 @@ func NewRandomMachineID() (MachineID, error) {
 // MachineID.
 func ValidateMachineID(id string) error {
 	if ok := validHex.MatchString(id); !ok {
-		return fmt.Errorf("image ID %q is invalid", id)
+		return errors.Errorf("image ID %q is invalid", id)
 	}
 
 	return nil

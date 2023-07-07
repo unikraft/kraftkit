@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -65,7 +66,7 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			var mode mplatform.SystemMode
 			platform, mode, err = mplatform.Detect(ctx)
 			if mode == mplatform.SystemGuest {
-				return fmt.Errorf("nested virtualization not supported")
+				return errors.New("nested virtualization not supported")
 			} else if err != nil {
 				return err
 			}
@@ -73,13 +74,13 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			var ok bool
 			platform, ok = mplatform.PlatformsByName()[opts.platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return errors.Errorf("unknown platform driver: %s", opts.platform)
 			}
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]
 		if !ok {
-			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+			return errors.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
 		controller, err = strategy.NewMachineV1alpha1(ctx)
@@ -106,7 +107,7 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if machine == nil {
-		return fmt.Errorf("could not find instance %s", args[0])
+		return errors.Errorf("could not find instance %s", args[0])
 	}
 
 	if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {

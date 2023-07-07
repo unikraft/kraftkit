@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	jujuerrors "github.com/juju/errors"
 	gomegafmt "github.com/onsi/gomega/format"
 )
 
@@ -47,7 +48,9 @@ func (c *Cmd) Run() error {
 			if r, ok := c.Cmd.Stderr.(io.Reader); ok {
 				b, re := io.ReadAll(r)
 				if re != nil {
-					return fmt.Errorf("%w. Additionally, while reading stderr: %w", err, re)
+					re = jujuerrors.Annotate(re, "Additionally, while reading stderr")
+					err = jujuerrors.Wrap(err, re)
+					return err
 				}
 				ee.Stderr = b
 				return &ExitError{ExitError: ee}

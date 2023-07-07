@@ -14,6 +14,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +64,7 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 
 		btoken, err := term.ReadPassword(int(iostreams.G(ctx).In.Fd()))
 		if err != nil {
-			return fmt.Errorf("could not read password: %v", err)
+			return errors.Annotate(err, "could not read password")
 		}
 
 		fmt.Fprint(iostreams.G(ctx).Out, "\n")

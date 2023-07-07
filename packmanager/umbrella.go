@@ -6,8 +6,8 @@ package packmanager
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/log"
@@ -29,7 +29,7 @@ func PackageManagers() map[pack.PackageFormat]PackageManager {
 
 func RegisterPackageManager(ctxk pack.PackageFormat, constructor NewManagerConstructor, opts ...any) error {
 	if _, ok := packageManagerConstructors[ctxk]; ok {
-		return fmt.Errorf("package manager already registered: %s", ctxk)
+		return errors.Errorf("package manager already registered: %s", ctxk)
 	}
 
 	packageManagerConstructors[ctxk] = constructor
@@ -64,7 +64,7 @@ func NewUmbrellaManager(ctx context.Context) (PackageManager, error) {
 		}
 
 		if format, ok := packageManagers[manager.Format()]; ok {
-			return nil, fmt.Errorf("package manager already registered: %s", format)
+			return nil, errors.Errorf("package manager already registered: %s", format)
 		}
 
 		packageManagers[manager.Format()] = manager
@@ -80,7 +80,7 @@ func (u umbrella) From(sub pack.PackageFormat) (PackageManager, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("unknown package manager: %s", sub)
+	return nil, errors.Errorf("unknown package manager: %s", sub)
 }
 
 func (u umbrella) Update(ctx context.Context) error {
@@ -195,7 +195,7 @@ func (u umbrella) Catalog(ctx context.Context, qopts ...QueryOption) ([]pack.Pac
 
 func (u umbrella) IsCompatible(ctx context.Context, source string, qopts ...QueryOption) (PackageManager, bool, error) {
 	if source == "" {
-		return nil, false, fmt.Errorf("cannot determine compatibility of empty source")
+		return nil, false, errors.Errorf("cannot determine compatibility of empty source")
 	}
 
 	for _, manager := range packageManagers {
@@ -214,7 +214,7 @@ func (u umbrella) IsCompatible(ctx context.Context, source string, qopts ...Quer
 		}
 	}
 
-	return nil, false, fmt.Errorf("cannot find compatible package manager for source: %s", source)
+	return nil, false, errors.Errorf("cannot find compatible package manager for source: %s", source)
 }
 
 func (u umbrella) Format() pack.PackageFormat {

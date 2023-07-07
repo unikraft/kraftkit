@@ -6,8 +6,8 @@ package arch
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/unikraft"
 )
 
@@ -21,7 +21,7 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 	case string:
 		architecture.name = value
 	default:
-		return nil, fmt.Errorf("invalid type %T for architecture", data)
+		return nil, errors.Errorf("invalid type %T for architecture", data)
 	}
 
 	if uk != nil && uk.UK_BASE != "" {

@@ -12,6 +12,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 const DotConfigFileName = ".config"
@@ -86,7 +88,7 @@ func (kvm KeyValueMap) OverrideBy(other KeyValueMap) KeyValueMap {
 func NewKeyValueMapFromFile(file string) (KeyValueMap, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, fmt.Errorf("could not open file: %v", err)
+		return nil, errors.Annotate(err, "could not open file")
 	}
 
 	defer f.Close()
@@ -353,7 +355,7 @@ func (cf *DotConfigFile) Serialize() []byte {
 func ParseConfig(file string) (*DotConfigFile, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open .config file %v: %v", file, err)
+		return nil, errors.Annotatef(err, "failed to open .config file %v", file)
 	}
 
 	return ParseConfigData(data)

@@ -33,6 +33,7 @@ import (
 	"strings"
 
 	"github.com/cli/cli/v2/git"
+	"github.com/juju/errors"
 )
 
 // Interface describes an object that represents a GitHub repository
@@ -51,12 +52,12 @@ func New(owner, repo string) Interface {
 func NewFromURL(path string) (Interface, error) {
 	u, err := url.Parse(path)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse url: %s", err)
+		return nil, errors.Errorf("could not parse url: %s", err)
 	}
 
 	parts := strings.Split(u.Path, "/")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
+		return nil, errors.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
 	}
 
 	owner := parts[1]
@@ -115,7 +116,7 @@ func FromFullNameWithHost(nwo, fallbackHost string) (Interface, error) {
 	parts := strings.SplitN(nwo, "/", 4)
 	for _, p := range parts {
 		if len(p) == 0 {
-			return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, nwo)
+			return nil, errors.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, nwo)
 		}
 	}
 	switch len(parts) {
@@ -124,19 +125,19 @@ func FromFullNameWithHost(nwo, fallbackHost string) (Interface, error) {
 	case 2:
 		return NewWithHost(parts[0], parts[1], fallbackHost), nil
 	default:
-		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, nwo)
+		return nil, errors.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, nwo)
 	}
 }
 
 // FromURL extracts the GitHub repository information from a git remote URL
 func FromURL(u *url.URL) (Interface, error) {
 	if u.Hostname() == "" {
-		return nil, fmt.Errorf("no hostname detected")
+		return nil, errors.New("no hostname detected")
 	}
 
 	parts := strings.SplitN(strings.Trim(u.Path, "/"), "/", 3)
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid path: %s", u.Path)
+		return nil, errors.Errorf("invalid path: %s", u.Path)
 	}
 
 	return NewWithHost(parts[0], strings.TrimSuffix(parts[1], ".git"), u.Hostname()), nil

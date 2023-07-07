@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/juju/errors"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	"oras.land/oras-go/v2/content"
@@ -257,7 +258,7 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 	// Check if the OCI image has a known annotation which identifies if a
 	// unikernel is contained within
 	if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
-		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
+		return nil, errors.New("OCI image does not contain a Unikraft unikernel")
 	}
 
 	var err error
@@ -308,57 +309,57 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse OCI image name reference: %v", err)
+		return nil, errors.Annotate(err, "cannot parse OCI image name reference")
 	}
 
 	raw, err := crane.Manifest(ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not get manifest: %v", err)
+		return nil, errors.Annotate(err, "could not get manifest")
 	}
 
 	var manifest ocispec.Manifest
 
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return nil, fmt.Errorf("could not unmarshal manifest: %v", err)
+		return nil, errors.Annotate(err, "could not unmarshal manifest")
 	}
 
 	// Check if the OCI image has a known annotation which identifies if a
 	// unikernel is contained within
 	if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
-		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
+		return nil, errors.New("OCI image does not contain a Unikraft unikernel")
 	}
 
 	ocipack.image, err = NewImageFromManifestSpec(ctx, handle, manifest)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate image from manifest: %v", err)
+		return nil, errors.Annotate(err, "could not generate image from manifest")
 	}
 
 	if manifest.Config.Platform == nil {
-		return nil, fmt.Errorf("remote image platform is unknown")
+		return nil, errors.New("remote image platform is unknown")
 	}
 
 	// TODO(nderjung): Setting the architecture and platform are a bit of a hack
 	// at the moment.  A nicer mechanism should be used.
 	architecture, err := arch.TransformFromSchema(ctx, manifest.Config.Platform.Architecture)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert architecture string")
+		return nil, errors.New("could not convert architecture string")
 	}
 
 	var ok bool
 
 	ocipack.arch, ok = architecture.(arch.Architecture)
 	if !ok {
-		return nil, fmt.Errorf("could not convert architecture string")
+		return nil, errors.New("could not convert architecture string")
 	}
 
 	platform, err := plat.TransformFromSchema(ctx, manifest.Config.Platform.OS)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert platform string")
+		return nil, errors.New("could not convert platform string")
 	}
 
 	ocipack.plat, ok = platform.(plat.Platform)
 	if !ok {
-		return nil, fmt.Errorf("could not convert platform string")
+		return nil, errors.New("could not convert platform string")
 	}
 
 	return &ocipack, nil
@@ -396,7 +397,7 @@ func (ocipack *ociPackage) Metadata() any {
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
 	manifestJson, err := json.Marshal(ocipack.image.manifest)
 	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
+		return errors.Annotate(err, "failed to marshal manifest")
 	}
 
 	ocipack.image.manifestDesc = content.NewDescriptorFromBytes(
@@ -485,7 +486,7 @@ func (ocipack *ociPackage) Path() string {
 
 // KConfigTree implements unikraft.component.Component
 func (ocipack *ociPackage) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	return nil, fmt.Errorf("not implemented: oci.ociPackage.KConfigTree")
+	return nil, errors.New("not implemented: oci.ociPackage.KConfigTree")
 }
 
 // KConfig implements unikraft.component.Component

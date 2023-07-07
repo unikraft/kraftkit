@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 	"github.com/vishvananda/netlink"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,7 @@ func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
 	// 	return fmt.Errorf("cannot create network without subnet")
 	// }
 	if opts.Network == "" {
-		return fmt.Errorf("cannot create network without gateway and subnet in CIDR format")
+		return errors.New("cannot create network without gateway and subnet in CIDR format")
 	}
 
 	return nil
@@ -66,7 +67,7 @@ func (opts *Create) Run(cmd *cobra.Command, args []string) error {
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
+		return errors.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)

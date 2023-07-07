@@ -18,6 +18,7 @@ import (
 
 	zip "api.zip"
 	"github.com/acorn-io/baaah/pkg/merr"
+	jujuerrors "github.com/juju/errors"
 	"github.com/mitchellh/mapstructure"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 	corev1 "k8s.io/api/core/v1"
@@ -69,11 +70,11 @@ func NewMachineV1alpha1Service(ctx context.Context, opts ...any) (machinev1alpha
 // Create implements kraftkit.sh/api/machine/v1alpha1.MachineService.Create
 func (service *machineV1alpha1Service) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	if machine.Status.KernelPath == "" {
-		return machine, fmt.Errorf("empty kernel path")
+		return machine, jujuerrors.New("empty kernel path")
 	}
 
 	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
-		return machine, fmt.Errorf("supplied kernel path does not exist: %s", machine.Status.KernelPath)
+		return machine, jujuerrors.Errorf("supplied kernel path does not exist: %s", machine.Status.KernelPath)
 	}
 
 	var bin string
@@ -84,7 +85,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	case "arm":
 		bin = QemuSystemArm
 	default:
-		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
+		return nil, jujuerrors.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
 
 	// Determine the version of QEMU so as to both determine whether it is a
@@ -95,7 +96,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	if qemuVersion.LessThan(QemuVersion4_2_0) {
-		return machine, fmt.Errorf("unsupported QEMU version: %s: please upgrade to a newer version", qemuVersion.String())
+		return machine, jujuerrors.Errorf("unsupported QEMU version: %s: please upgrade to a newer version", qemuVersion.String())
 	}
 
 	if machine.ObjectMeta.UID == "" {
@@ -341,7 +342,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		)
 
 	default:
-		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
+		return nil, jujuerrors.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
 
 	// Create a log file just for the QEMU process which can be used to debug
@@ -361,7 +362,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	qcfg, err := NewQemuConfig(qopts...)
 	if err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
-		return machine, fmt.Errorf("could not generate QEMU config: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not generate QEMU config")
 	}
 
 	machine.Status.PlatformConfig = *qcfg
@@ -369,13 +370,13 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	e, err := exec.NewExecutable(bin, *qcfg)
 	if err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
-		return machine, fmt.Errorf("could not prepare QEMU executable: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not prepare QEMU executable")
 	}
 
 	process, err := exec.NewProcessFromExecutable(e, service.eopts...)
 	if err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
-		return machine, fmt.Errorf("could not prepare QEMU process: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not prepare QEMU process")
 	}
 
 	machine.CreationTimestamp = metav1.Now()
@@ -387,10 +388,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 		// Propagate the contents of the QEMU log file as an error
 		if errLog, err2 := os.ReadFile(qemuLogFile); err2 == nil {
-			err = errors.Join(fmt.Errorf(strings.TrimSpace(string(errLog))), err)
+			err = errors.Join(jujuerrors.Errorf(strings.TrimSpace(string(errLog))), err)
 		}
 
-		return machine, fmt.Errorf("could not start and wait for QEMU process: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not start and wait for QEMU process")
 	}
 
 	machine.Status.State = machinev1alpha1.MachineStateCreated
@@ -483,17 +484,17 @@ func (service *machineV1alpha1Service) QMPClient(ctx context.Context, machine *m
 func processFromPidFile(pidFile string) (*goprocess.Process, error) {
 	pidData, err := os.ReadFile(pidFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read pid file: %v", err)
+		return nil, jujuerrors.Annotate(err, "could not read pid file")
 	}
 
 	pid, err := strconv.ParseUint(strings.TrimSpace(string(pidData)), 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert pid string \"%s\" to uint64: %v", pidData, err)
+		return nil, jujuerrors.Annotatef(err, "could not convert pid string \"%s\" to uint64", pidData)
 	}
 
 	process, err := goprocess.NewProcess(int32(pid))
 	if err != nil {
-		return nil, fmt.Errorf("could not look up process %d: %v", pid, err)
+		return nil, jujuerrors.Annotatef(err, "could not look up process %d", pid)
 	}
 
 	return process, nil
@@ -506,7 +507,7 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 
 	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
 	if !ok {
-		return nil, nil, fmt.Errorf("cannot cast QEMU platform configuration from machine status")
+		return nil, nil, jujuerrors.New("cannot cast QEMU platform configuration from machine status")
 	}
 
 	// Always use index 1 for monitoring events
@@ -585,7 +586,7 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 					break accept
 				}
 			default:
-				errs <- fmt.Errorf("unsupported event: %s", event.Event)
+				errs <- jujuerrors.Errorf("unsupported event: %s", event.Event)
 			}
 		}
 	}()
@@ -597,7 +598,7 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return machine, fmt.Errorf("could not start qemu instance: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not start qemu instance")
 	}
 
 	defer qmpClient.Close()
@@ -608,7 +609,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 
 	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
 	if !ok {
-		return machine, fmt.Errorf("cannot cast QEMU platform configuration from machine status")
+		return machine, jujuerrors.New("cannot cast QEMU platform configuration from machine status")
 	}
 
 	process, err := processFromPidFile(qcfg.PidFile)
@@ -627,7 +628,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return machine, fmt.Errorf("could not start qemu instance: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not start qemu instance")
 	}
 
 	defer qmpClient.Close()
@@ -654,7 +655,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 
 	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
 	if !ok {
-		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
+		return machine, errors.New("cannot read QEMU platform configuration from machine status")
 	}
 
 	// Check if the process is alive, which ultimately indicates to us whether we
@@ -708,7 +709,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		exitCode = 1
 		return machine, nil
 	} else if err != nil {
-		return machine, fmt.Errorf("could not attach to QMP client: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not attach to QMP client")
 	}
 
 	defer qmpClient.Close()
@@ -719,7 +720,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		// We cannot amend the status at this point, even if the process is
 		// alive, since it is not an indicator of the state of the VM, only of the
 		// VMM.  So we return what we already know via LookupMachineConfig.
-		return machine, fmt.Errorf("could not query machine status via QMP: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not query machine status via QMP")
 	}
 
 	// Map the QMP status to supported machine states
@@ -779,7 +780,7 @@ func (service *machineV1alpha1Service) List(ctx context.Context, machines *machi
 func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return machine, fmt.Errorf("could not stop qemu instance: %v", err)
+		return machine, jujuerrors.Annotate(err, "could not stop qemu instance")
 	}
 
 	defer qmpClient.Close()
@@ -790,14 +791,14 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 
 	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
 	if !ok {
-		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
+		return machine, errors.New("cannot read QEMU platform configuration from machine status")
 	}
 
 	machine.Status.State = machinev1alpha1.MachineStateExited
 
 	if err := retrytimeout.RetryTimeout(5*time.Second, func() error {
 		if _, err := os.ReadFile(qcfg.PidFile); !os.IsNotExist(err) {
-			return fmt.Errorf("process still active")
+			return errors.New("process still active")
 		}
 
 		return nil
@@ -812,7 +813,7 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
 	if !ok {
-		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
+		return machine, errors.New("cannot read QEMU platform configuration from machine status")
 	}
 
 	var errs merr.Errors

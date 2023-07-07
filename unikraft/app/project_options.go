@@ -17,7 +17,6 @@
 package app
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,6 +24,7 @@ import (
 
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/compose-spec/compose-go/template"
+	"github.com/juju/errors"
 
 	"kraftkit.sh/kconfig"
 )
@@ -290,7 +290,7 @@ func WithProjectDefaultKraftfiles() ProjectOption {
 			candidates := findFiles(DefaultFileNames, pwd)
 			if len(candidates) > 0 {
 				if len(candidates) > 1 {
-					return fmt.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
+					return errors.Errorf("found multiple config files with supported names: %s", strings.Join(candidates, ", "))
 				}
 
 				return popts.AddKraftfile(candidates[0])

@@ -6,10 +6,10 @@ package pkg
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/mattn/go-shellwords"
 	"github.com/spf13/cobra"
 
@@ -86,7 +86,7 @@ func New() *cobra.Command {
 
 func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+		return errors.New("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
 
 	ctx := cmd.Context()

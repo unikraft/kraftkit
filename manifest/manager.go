@@ -6,7 +6,6 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/gobwas/glob"
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/config"
@@ -36,7 +36,7 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 	for _, mopt := range opts {
 		opt, ok := mopt.(ManifestManagerOption)
 		if !ok {
-			return nil, fmt.Errorf("cannot cast ManifestManager option")
+			return nil, errors.New("cannot cast ManifestManager option")
 		}
 
 		if err := opt(ctx, &manager); err != nil {
@@ -57,7 +57,7 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 // update retrieves and returns a cache of the upstream manifest registry
 func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	if len(m.manifests) == 0 {
-		return nil, fmt.Errorf("no manifests specified in config")
+		return nil, errors.New("no manifests specified in config")
 	}
 
 	localIndex := &ManifestIndex{
@@ -169,15 +169,15 @@ func (m *manifestManager) RemoveSource(ctx context.Context, source string) error
 }
 
 func (m *manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
-	return nil, fmt.Errorf("not implemented manifest.manager.Pack")
+	return nil, errors.New("not implemented manifest.manager.Pack")
 }
 
 func (m *manifestManager) Unpack(ctx context.Context, p pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
-	return nil, fmt.Errorf("not implemented manifest.manager.Unpack")
+	return nil, errors.New("not implemented manifest.manager.Unpack")
 }
 
 func (m *manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManager, error) {
-	return nil, fmt.Errorf("method not applicable to manifest manager")
+	return nil, errors.New("method not applicable to manifest manager")
 }
 
 func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
@@ -374,7 +374,7 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 	}
 
 	if _, err := NewProvider(ctx, source); err != nil {
-		return nil, false, fmt.Errorf("incompatible source")
+		return nil, false, errors.New("incompatible source")
 	}
 
 	return m, true, nil

@@ -2,9 +2,9 @@ package run
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/containerd/nerdctl/pkg/strutil"
+	"github.com/juju/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -104,7 +104,7 @@ func (opts *Run) assignName(ctx context.Context, machine *machineapi.Machine) er
 
 	for _, found := range machines.Items {
 		if opts.Name == found.Name {
-			return fmt.Errorf("machine instance name already in use: %s", opts.Name)
+			return errors.Errorf("machine instance name already in use: %s", opts.Name)
 		}
 	}
 

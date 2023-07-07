@@ -5,11 +5,11 @@
 package cli
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -206,11 +206,11 @@ func WithDefaultHTTPClient() CliOption {
 		}
 
 		if copts.ConfigManager == nil {
-			return fmt.Errorf("cannot access config manager")
+			return errors.New("cannot access config manager")
 		}
 
 		if copts.IOStreams == nil {
-			return fmt.Errorf("cannot access IO streams")
+			return errors.New("cannot access IO streams")
 		}
 
 		httpClient, err := httpclient.NewHTTPClient(
@@ -236,7 +236,7 @@ func WithDefaultPluginManager() CliOption {
 		}
 
 		if copts.ConfigManager == nil {
-			return fmt.Errorf("cannot access config manager")
+			return errors.New("cannot access config manager")
 		}
 
 		copts.PluginManager = plugins.NewPluginManager(copts.ConfigManager.Config.Paths.Plugins, nil)

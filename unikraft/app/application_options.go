@@ -5,10 +5,10 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -32,7 +32,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 
 	for _, o := range aopts {
 		if err := o(ac); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
+			return nil, errors.Annotate(err, "could not apply option")
 		}
 	}
 

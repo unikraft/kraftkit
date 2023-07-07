@@ -5,8 +5,7 @@
 package make
 
 import (
-	"fmt"
-
+	"github.com/juju/errors"
 	"kraftkit.sh/exec"
 )
 
@@ -55,7 +54,7 @@ func NewMakeOptions(mopts ...MakeOption) (*MakeOptions, error) {
 
 	for _, o := range mopts {
 		if err := o(mo); err != nil {
-			return nil, fmt.Errorf("could not apply option: %v", err)
+			return nil, errors.Annotatef(err, "could not apply option")
 		}
 	}
 

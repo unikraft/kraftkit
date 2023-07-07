@@ -7,11 +7,12 @@ package archive
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 // Unarchive takes an input src file and determines (based on its extension)
@@ -21,21 +22,21 @@ func Unarchive(src, dst string, opts ...UnarchiveOption) error {
 		return UntarGz(src, dst, opts...)
 	}
 
-	return fmt.Errorf("unrecognized extension: %s", filepath.Base(src))
+	return errors.Errorf("unrecognized extension: %s", filepath.Base(src))
 }
 
 // UntarGz unarchives a tarball which has been gzip compressed
 func UntarGz(src, dst string, opts ...UnarchiveOption) error {
 	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
+		return errors.Annotate(err, "could not open file")
 	}
 
 	defer f.Close()
 
 	gzipReader, err := gzip.NewReader(f)
 	if err != nil {
-		return fmt.Errorf("could not open gzip reader: %v", err)
+		return errors.Annotate(err, "could not open gzip reader")
 	}
 
 	return Untar(gzipReader, dst, opts...)
@@ -78,23 +79,23 @@ func Untar(src io.Reader, dst string, opts ...UnarchiveOption) error {
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path, info.Mode()); err != nil {
-				return fmt.Errorf("could not create directory: %v", err)
+				return errors.Annotate(err, "could not create directory")
 			}
 
 		case tar.TypeReg:
 			// Create parent path if it does not exist
 			if err := os.MkdirAll(filepath.Dir(path), info.Mode()); err != nil {
-				return fmt.Errorf("could not create directory: %v", err)
+				return errors.Annotate(err, "could not create directory")
 			}
 
 			newFile, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
 			if err != nil {
-				return fmt.Errorf("could not create file: %v", err)
+				return errors.Annotate(err, "could not create file")
 			}
 
 			if _, err := io.Copy(newFile, tr); err != nil {
 				newFile.Close()
-				return fmt.Errorf("could not copy file: %v", err)
+				return errors.Annotate(err, "could not copy file")
 			}
 
 			newFile.Close()

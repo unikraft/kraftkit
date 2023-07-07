@@ -6,8 +6,8 @@ package plat
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/juju/errors"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/unikraft"
 )
@@ -22,7 +22,7 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 	case string:
 		platform.name = value
 	default:
-		return nil, fmt.Errorf("invalid type %T for platform", data)
+		return nil, errors.Errorf("invalid type %T for platform", data)
 	}
 
 	// If the user has provided an alias for a known internal platform name,

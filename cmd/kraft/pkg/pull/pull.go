@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -160,9 +161,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					}
 
 					if len(packages) == 0 {
-						return fmt.Errorf("could not find: %s", unikraft.TypeNameVersion(project.Template()))
+						return errors.Errorf("could not find: %s", unikraft.TypeNameVersion(project.Template()))
 					} else if len(packages) > 1 {
-						return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
+						return errors.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
 					}
 					return nil
 				},
@@ -182,7 +183,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			if err := treemodel.Start(); err != nil {
-				return fmt.Errorf("could not complete search: %v", err)
+				return errors.Annotate(err, "could not complete search")
 			}
 
 			proc := paraprogress.NewProcess(
@@ -214,7 +215,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			}
 
 			if err := paramodel.Start(); err != nil {
-				return fmt.Errorf("could not pull all components: %v", err)
+				return errors.Annotate(err, "could not pull all components")
 			}
 		}
 

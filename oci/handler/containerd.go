@@ -21,6 +21,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/juju/errors"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -64,7 +65,7 @@ func NewContainerdHandler(ctx context.Context, address, namespace string, opts .
 // existing containerd client connection.
 func NewContainerdWithClient(ctx context.Context, client *containerd.Client) (context.Context, *ContainerdHandler, error) {
 	if client == nil {
-		return nil, nil, fmt.Errorf("no containerd client provided")
+		return nil, nil, errors.New("no containerd client provided")
 	}
 
 	return ctx, &ContainerdHandler{client: client}, nil
@@ -538,7 +539,7 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 	}
 
 	if !isUnpacked {
-		return fmt.Errorf("empty image")
+		return errors.New("empty image")
 	}
 
 	// TODO(nderjung): This is where we could used media-types to extract the
@@ -569,7 +570,7 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 
 // FinalizeImage implements ImageFinalizer.
 func (handle *ContainerdHandler) FinalizeImage(ctx context.Context, image ocispec.Image) error {
-	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.FinalizeImage")
+	return errors.New("not implemented: oci.handler.ContainerdHandler.FinalizeImage")
 }
 
 // combineErrors is a helper for handling multiple potential errors, combining
@@ -579,7 +580,7 @@ func combineErrors(original, additional error) error {
 	case additional == nil:
 		return original
 	case original != nil:
-		return fmt.Errorf("%w. Additionally: %w", original, additional)
+		return errors.Errorf("%v. Additionally: %v", original, additional)
 	default:
 		return additional
 	}

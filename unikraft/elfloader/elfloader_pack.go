@@ -6,8 +6,8 @@ package elfloader
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/pack"
@@ -88,13 +88,13 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("could not find elfloader")
+		return nil, errors.New("could not find elfloader")
 	} else if len(results) > 1 {
 		options := make([]string, len(results))
 		for i, result := range results {
 			options[i] = result.Name()
 		}
-		return nil, fmt.Errorf("too many options: %v", options)
+		return nil, errors.Errorf("too many options: %v", options)
 	}
 
 	elfloader.pack = results[0]

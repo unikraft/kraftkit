@@ -8,7 +8,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/log"
@@ -38,12 +38,12 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 	dst = filepath.ToSlash(dst)
 
 	if dst == "" {
-		return fmt.Errorf("cannot tar file with no specified destination")
+		return errors.New("cannot tar file with no specified destination")
 	} else if dst[0] == '/' {
 		dst = dst[1:]
 	}
 	if strings.HasSuffix(dst, "/") {
-		return fmt.Errorf("attempting to use TarFileWriter with directory")
+		return errors.New("attempting to use TarFileWriter with directory")
 	}
 
 	aopts := ArchiveOptions{}
@@ -55,7 +55,7 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 
 	fi, err := os.Stat(src)
 	if err != nil {
-		return fmt.Errorf("fail to stat %s: %v", src, err)
+		return errors.Annotatef(err, "fail to stat %s", src)
 	}
 
 	var link string
@@ -68,7 +68,7 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 
 	header, err := tar.FileInfoHeader(fi, link)
 	if err != nil {
-		return fmt.Errorf("%s: %w", src, err)
+		return errors.Annotatef(err, "%s", src)
 	}
 
 	header.Name = dst
@@ -85,7 +85,7 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 	}
 
 	if err := tw.WriteHeader(header); err != nil {
-		return fmt.Errorf("tar: %w", err)
+		return errors.Annotate(err, "tar")
 	}
 
 	if mode.IsRegular() {
@@ -96,14 +96,14 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 
 		fp, err := os.Open(src)
 		if err != nil {
-			return fmt.Errorf("fail to open file %s: %v", src, err)
+			return errors.Annotatef(err, "fail to open file %s", src)
 		}
 
 		buf := bufPool.Get().(*[]byte)
 		defer bufPool.Put(buf)
 
 		if _, err := io.CopyBuffer(tw, fp, *buf); err != nil {
-			return fmt.Errorf("failed to copy to %s: %w", src, err)
+			return errors.Annotatef(err, "failed to copy to %s", src)
 		}
 
 		if err := fp.Close(); err != nil {
@@ -126,7 +126,7 @@ func TarFileTo(ctx context.Context, src, dst, out string, opts ...ArchiveOption)
 
 	fp, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not create tarball file: %s: %v", out, err)
+		return errors.Annotatef(err, "could not create tarball file: %s", out)
 	}
 
 	var tw *tar.Writer
@@ -164,7 +164,7 @@ func TarFileTo(ctx context.Context, src, dst, out string, opts ...ArchiveOption)
 func TarFile(ctx context.Context, src, prefix, out string, opts ...ArchiveOption) error {
 	fp, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not create tarball file: %s: %v", out, err)
+		return errors.Annotatef(err, "could not create tarball file: %s", out)
 	}
 
 	tw := tar.NewWriter(fp)
@@ -183,7 +183,7 @@ func TarFile(ctx context.Context, src, prefix, out string, opts ...ArchiveOption
 func TarDir(ctx context.Context, root, prefix, out string, opts ...ArchiveOption) error {
 	fp, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not create tarball file: %s: %v", out, err)
+		return errors.Annotatef(err, "could not create tarball file: %s", out)
 	}
 
 	tw := tar.NewWriter(fp)

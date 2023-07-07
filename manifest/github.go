@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v32/github"
+	jujuerrors "github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
@@ -84,7 +84,7 @@ func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption)
 		if repo.RepoHost() != "github.com" {
 			endpoint, err := url.Parse(repo.RepoHost())
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse v3 endpoint: %s", err)
+				return nil, jujuerrors.Errorf("failed to parse v3 endpoint: %s", err)
 			}
 
 			provider.client, err = github.NewEnterpriseClient(
@@ -148,7 +148,7 @@ func (ghp GitHubProvider) String() string {
 // parse a GitHub source with a wildcard repository name, e.g. lib-*
 func (ghp GitHubProvider) manifestsFromWildcard() ([]*Manifest, error) {
 	if !strings.HasSuffix(ghp.repo.RepoName(), "*") {
-		return nil, fmt.Errorf("not a wildcard")
+		return nil, jujuerrors.New("not a wildcard")
 	}
 
 	var repos []*github.Repository

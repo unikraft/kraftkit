@@ -6,13 +6,13 @@ package exec
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/log"
 )
 
@@ -39,7 +39,7 @@ func NewProcess(bin string, args []string, eopts ...ExecOption) (*Process, error
 // *Executable object and optional execution options
 func NewProcessFromExecutable(executable *Executable, eopts ...ExecOption) (*Process, error) {
 	if executable == nil {
-		return nil, fmt.Errorf("cannot prepare process without executable")
+		return nil, errors.New("cannot prepare process without executable")
 	}
 
 	opts, err := NewExecOptions(eopts...)
@@ -119,7 +119,7 @@ func (e *Process) Start(ctx context.Context) error {
 	}
 
 	if err := e.cmd.Start(); err != nil {
-		return fmt.Errorf("could not start process: %v", err)
+		return errors.Annotate(err, "could not start process")
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func (e *Process) Start(ctx context.Context) error {
 // Wait for the process to complete
 func (e *Process) Wait() error {
 	if e.cmd == nil {
-		return fmt.Errorf("process has not yet started cannot wait")
+		return errors.New("process has not yet started cannot wait")
 	}
 
 	err := e.cmd.Wait()
@@ -171,7 +171,7 @@ func (e *Process) Kill() error {
 // Pid returns the process ID
 func (e *Process) Pid() (int, error) {
 	if e.cmd == nil || e.cmd.Process == nil || e.cmd.Process.Pid == -1 {
-		return -1, fmt.Errorf("could not locate pid")
+		return -1, errors.New("could not locate pid")
 	}
 
 	return e.cmd.Process.Pid, nil

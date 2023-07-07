@@ -6,10 +6,10 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -28,7 +28,7 @@ type DirectoryProvider struct {
 // "microlibirary" directory
 func NewDirectoryProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	if f, err := os.Stat(path); err != nil || (err == nil && !f.IsDir()) {
-		return nil, fmt.Errorf("could not access directory '%s': %v", path, err)
+		return nil, errors.Annotatef(err, "could not access directory '%s'", path)
 	}
 
 	// Determine the type preemptively
@@ -54,7 +54,7 @@ func NewDirectoryProvider(ctx context.Context, path string, opts ...ManifestOpti
 	}
 
 	if t == unikraft.ComponentTypeUnknown {
-		return nil, fmt.Errorf("unknown type for directory: %s", path)
+		return nil, errors.Errorf("unknown type for directory: %s", path)
 	}
 
 	provider := DirectoryProvider{
@@ -93,12 +93,12 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 	}
 
 	if len(popts.Workdir()) == 0 {
-		return fmt.Errorf("cannot pull without without working directory")
+		return errors.New("cannot pull without without working directory")
 	}
 
 	// The directory provider only has one channel, exploit this knowledge
 	if len(manifest.Channels) != 1 {
-		return fmt.Errorf("cannot determine channel for directory provider")
+		return errors.New("cannot determine channel for directory provider")
 	}
 
 	local, err := unikraft.PlaceComponent(
@@ -107,7 +107,7 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 		manifest.Name,
 	)
 	if err != nil {
-		return fmt.Errorf("could not place component package: %s", err)
+		return errors.Errorf("could not place component package: %s", err)
 	}
 
 	f, err := os.Lstat(local)
@@ -120,13 +120,13 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 		return nil
 	} else if err == nil && f.Mode()&os.ModeSymlink == os.ModeSymlink {
 		if err := os.Remove(local); err != nil {
-			return fmt.Errorf("could not remove symlink: %v", err)
+			return errors.Annotate(err, "could not remove symlink")
 		}
 	}
 
 	// Simply generate a symbolic link to the directory resource
 	if err := os.Symlink(manifest.Channels[0].Resource, local); err != nil {
-		return fmt.Errorf("could not copy directory: %v", err)
+		return errors.Annotate(err, "could not copy directory")
 	}
 
 	return nil

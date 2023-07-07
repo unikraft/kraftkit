@@ -34,12 +34,11 @@ package qmp
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"reflect"
 	"time"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/utils"
 )
 
@@ -101,7 +100,7 @@ func (em *QMPEventMonitor[T]) Accept() (*QMPEvent[T], error) {
 	}
 
 	if !found {
-		return nil, fmt.Errorf("unknown QMP event type: %s", typ)
+		return nil, errors.Errorf("unknown QMP event type: %s", typ)
 	}
 
 	return &QMPEvent[T]{

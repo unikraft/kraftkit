@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/google/go-containerregistry/pkg/name"
+	jujuerrors "github.com/juju/errors"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -47,7 +47,7 @@ type Image struct {
 // options.
 func NewImage(_ context.Context, handle handler.Handler, opts ...ImageOption) (*Image, error) {
 	if handle == nil {
-		return nil, fmt.Errorf("cannot use `NewImage` without handler")
+		return nil, jujuerrors.New("cannot use `NewImage` without handler")
 	}
 
 	image := Image{
@@ -95,7 +95,7 @@ func (image *Image) Layers() []*Layer {
 // descriptor.
 func (image *Image) AddLayer(ctx context.Context, layer *Layer) (ocispec.Descriptor, error) {
 	if layer == nil {
-		return ocispec.Descriptor{}, fmt.Errorf("cannot add empty layer")
+		return ocispec.Descriptor{}, jujuerrors.New("cannot add empty layer")
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
@@ -235,7 +235,7 @@ func (image *Image) Save(ctx context.Context, source string, onProgress func(flo
 				}
 
 				if _, err := image.AddBlob(egCtx, image.layers[i].blob); err != nil {
-					return fmt.Errorf("failed to push layer: %d: %v", i, err)
+					return jujuerrors.Annotatef(err, "failed to push layer: %d", i)
 				}
 
 				return nil
@@ -323,7 +323,7 @@ func (image *Image) Save(ctx context.Context, source string, onProgress func(flo
 
 	manifestJson, err := json.Marshal(image.manifest)
 	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
+		return ocispec.Descriptor{}, jujuerrors.Annotatef(err, "failed to marshal manifest")
 	}
 
 	image.manifestDesc = content.NewDescriptorFromBytes(
@@ -341,7 +341,7 @@ func (image *Image) Save(ctx context.Context, source string, onProgress func(flo
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
+		return ocispec.Descriptor{}, jujuerrors.Annotate(err, "failed to push manifest")
 	}
 
 	return image.manifestDesc, nil

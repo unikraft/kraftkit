@@ -6,9 +6,9 @@ package platform
 
 import (
 	"context"
-	"fmt"
 
 	zip "api.zip"
+	"github.com/juju/errors"
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 )
 
@@ -38,7 +38,7 @@ func storePlatformFilter(platform Platform) zip.OnBefore {
 		obj := req.(*zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus])
 
 		if obj.Spec.Platform != platform.String() {
-			return nil, fmt.Errorf("machine is not %s instance: %s", platform.String(), obj.Name)
+			return nil, errors.Errorf("machine is not %s instance: %s", platform.String(), obj.Name)
 		}
 
 		return obj, nil

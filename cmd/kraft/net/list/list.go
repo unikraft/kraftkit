@@ -5,11 +5,10 @@
 package list
 
 import (
-	"fmt"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
-
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/tableprinter"
@@ -53,7 +52,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %s", opts.driver)
+		return errors.Errorf("unsupported network driver strategy: %s", opts.driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)

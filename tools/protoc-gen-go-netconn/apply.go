@@ -180,12 +180,13 @@ import (
 {{ if .HasService }}
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 {{- end }}
 	"reflect"
 {{ if .HasService -}}
 	"sync"
+
+	jujuerrors "github.com/juju/errors"
 {{ end }}
 )
 {{ end }}
@@ -239,7 +240,7 @@ func (c *{{ .GoName }}Client) setRpcRequestSetDefaults(face any) error {
 		case reflect.String:
 			f.SetString(def)
 		default:
-			return fmt.Errorf("unsupported default kind: %s", f.Kind().String())
+			return jujuerrors.Errorf("unsupported default kind: %s", f.Kind().String())
 		}
 	}
 

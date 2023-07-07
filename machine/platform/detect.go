@@ -7,12 +7,12 @@ package platform
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/internal/set"
 )
 
@@ -149,5 +149,5 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 		}
 	}
 
-	return PlatformUnknown, SystemUnknown, fmt.Errorf("could not determine hypervisor and system mode")
+	return PlatformUnknown, SystemUnknown, errors.Errorf("could not determine hypervisor and system mode")
 }

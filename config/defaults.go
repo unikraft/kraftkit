@@ -5,10 +5,11 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"reflect"
 	"strconv"
+
+	"github.com/juju/errors"
 )
 
 const (
@@ -21,7 +22,7 @@ func NewDefaultKraftKitConfig() (*KraftKit, error) {
 	c := &KraftKit{}
 
 	if err := setDefaults(c); err != nil {
-		return nil, fmt.Errorf("could not set defaults for config: %s", err)
+		return nil, errors.Errorf("could not set defaults for config: %s", err)
 	}
 
 	// Add default path for plugins..
@@ -57,7 +58,7 @@ func setDefaults(s interface{}) error {
 
 func setDefaultValue(v reflect.Value, def string) error {
 	if v.Kind() != reflect.Ptr {
-		return fmt.Errorf("not a pointer value")
+		return errors.New("not a pointer value")
 	}
 
 	v = reflect.Indirect(v)
@@ -67,7 +68,7 @@ func setDefaultValue(v reflect.Value, def string) error {
 		if len(def) > 0 {
 			i, err := strconv.ParseInt(def, 10, 64)
 			if err != nil {
-				return fmt.Errorf("could not parse default integer value: %s", err)
+				return errors.Errorf("could not parse default integer value: %s", err)
 			}
 			v.SetInt(i)
 		}
@@ -81,7 +82,7 @@ func setDefaultValue(v reflect.Value, def string) error {
 		if len(def) > 0 {
 			b, err := strconv.ParseBool(def)
 			if err != nil {
-				return fmt.Errorf("could not parse default boolean value: %s", err)
+				return errors.Errorf("could not parse default boolean value: %s", err)
 			}
 			v.SetBool(b)
 		} else {

@@ -5,8 +5,9 @@
 package cmdfactory
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type EnumFlag struct {
@@ -39,7 +40,7 @@ func (a *EnumFlag) Set(p string) error {
 	}
 
 	if !isIncluded(a.Allowed, p) {
-		return fmt.Errorf("%s is not included in: %s", p, strings.Join(a.Allowed, ", "))
+		return errors.Errorf("%s is not included in: %s", p, strings.Join(a.Allowed, ", "))
 	}
 
 	a.Value = p

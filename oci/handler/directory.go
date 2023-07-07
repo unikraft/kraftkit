@@ -8,7 +8,6 @@ import (
 	"archive/tar"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/juju/errors"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -35,7 +35,7 @@ type DirectoryHandler struct {
 
 func NewDirectoryHandler(path string) (*DirectoryHandler, error) {
 	if err := os.MkdirAll(path, 0o755); err != nil {
-		return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
+		return nil, errors.Annotate(err, "could not create local oci cache directory")
 	}
 
 	return &DirectoryHandler{path: path}, nil
@@ -65,7 +65,7 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []
 	// there's nothing to return.
 	if _, err := os.Stat(manifestsDir); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(manifestsDir, 0o755); err != nil {
-			return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
+			return nil, errors.Annotate(err, "could not create local oci cache directory")
 		}
 
 		return nil, nil
@@ -158,12 +158,12 @@ func (handle *DirectoryHandler) PushDigest(ctx context.Context, ref string, desc
 
 	// Create the parent directory if it does not exist
 	if err := os.MkdirAll(filepath.Dir(blobPath), 0o644); err != nil {
-		return fmt.Errorf("could not make parent directory: %w", err)
+		return errors.Annotate(err, "could not make parent directory")
 	}
 
 	blob, err := os.OpenFile(blobPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not create blob: %w", err)
+		return errors.Annotate(err, "could not create blob")
 	}
 
 	var progresReader io.Reader
@@ -206,7 +206,7 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 	// Check whether the manifest exists
 	if _, err := os.Stat(manifestPath); err != nil {
-		return ocispec.Image{}, fmt.Errorf("manifest for %s does not exist: %s", ref.Name(), manifestPath)
+		return ocispec.Image{}, errors.Errorf("manifest for %s does not exist: %s", ref.Name(), manifestPath)
 	}
 
 	// Read the manifest
@@ -242,7 +242,7 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 	// Check whether the config exists
 	if _, err := os.Stat(configDir); err != nil {
-		return ocispec.Image{}, fmt.Errorf("could not access config file for %s: %w", ref.Name(), err)
+		return ocispec.Image{}, errors.Annotatef(err, "could not access config file for %s", ref.Name())
 	}
 
 	// Read the config
@@ -398,7 +398,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 
 // PushImage implements ImagePusher.
 func (handle *DirectoryHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
-	return fmt.Errorf("not implemented")
+	return errors.New("not implemented")
 }
 
 // UnpackImage implements ImageUnpacker.
@@ -477,5 +477,5 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, des
 
 // FinalizeImage implements ImageFinalizer.
 func (handle *DirectoryHandler) FinalizeImage(ctx context.Context, image ocispec.Image) error {
-	return fmt.Errorf("not implemented: oci.handler.DirectoryHandler.FinalizeImage")
+	return errors.New("not implemented: oci.handler.DirectoryHandler.FinalizeImage")
 }

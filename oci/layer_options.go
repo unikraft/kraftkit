@@ -4,7 +4,9 @@
 // You may not use this file except in compliance with the License.
 package oci
 
-import "fmt"
+import (
+	"github.com/juju/errors"
+)
 
 type LayerOption func(*Layer) error
 
@@ -12,7 +14,7 @@ type LayerOption func(*Layer) error
 func WithLayerAnnotation(key, val string) LayerOption {
 	return func(layer *Layer) error {
 		if layer.blob == nil {
-			return fmt.Errorf("cannot apply layer annotation without creating blob")
+			return errors.New("cannot apply layer annotation without creating blob")
 		}
 
 		if layer.blob.desc.Annotations == nil {

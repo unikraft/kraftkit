@@ -24,9 +24,9 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 )
@@ -44,5 +44,5 @@ var TerminalSize = func(w interface{}) (int, int, error) {
 		return term.GetSize(int(f.Fd()))
 	}
 
-	return 0, 0, fmt.Errorf("%v is not a file", w)
+	return 0, 0, errors.Errorf("%v is not a file", w)
 }

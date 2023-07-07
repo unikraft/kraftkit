@@ -10,11 +10,12 @@
 package kconfig
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/juju/errors"
 )
 
 // KConfigFile represents a parsed Kconfig file (including includes).
@@ -128,7 +129,7 @@ type kconfigParser struct {
 func Parse(file string, env ...*KeyValue) (*KConfigFile, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open Kconfig file %v: %v", file, err)
+		return nil, errors.Annotatef(err, "failed to open Kconfig file %v", file)
 	}
 	return ParseData(data, file, env...)
 }
@@ -149,7 +150,7 @@ func ParseData(data []byte, file string, extra ...*KeyValue) (*KConfigFile, erro
 	}
 
 	if len(kp.stack) == 0 {
-		return nil, fmt.Errorf("no mainmenu in config")
+		return nil, errors.New("no mainmenu in config")
 	}
 
 	root := kp.stack[0]

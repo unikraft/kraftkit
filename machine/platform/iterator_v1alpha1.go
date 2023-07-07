@@ -6,10 +6,10 @@ package platform
 
 import (
 	"context"
-	"fmt"
 
 	zip "api.zip"
 	"github.com/acorn-io/baaah/pkg/merr"
+	"github.com/juju/errors"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 )
@@ -53,7 +53,7 @@ func (iterator *machineV1alpha1ServiceIterator) Create(ctx context.Context, mach
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Start implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -70,7 +70,7 @@ func (iterator *machineV1alpha1ServiceIterator) Start(ctx context.Context, machi
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Pause implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -87,7 +87,7 @@ func (iterator *machineV1alpha1ServiceIterator) Pause(ctx context.Context, machi
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed: %w")
 }
 
 // Stop implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -104,7 +104,7 @@ func (iterator *machineV1alpha1ServiceIterator) Stop(ctx context.Context, machin
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Update implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -121,7 +121,7 @@ func (iterator *machineV1alpha1ServiceIterator) Update(ctx context.Context, mach
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Delete implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -138,7 +138,7 @@ func (iterator *machineV1alpha1ServiceIterator) Delete(ctx context.Context, mach
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -155,7 +155,7 @@ func (iterator *machineV1alpha1ServiceIterator) Get(ctx context.Context, machine
 		return ret, nil
 	}
 
-	return machine, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return machine, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // List implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -190,7 +190,7 @@ func (iterator *machineV1alpha1ServiceIterator) Watch(ctx context.Context, machi
 		return eventChan, errChan, nil
 	}
 
-	return nil, nil, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return nil, nil, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }
 
 // Logs implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -207,5 +207,5 @@ func (iterator *machineV1alpha1ServiceIterator) Logs(ctx context.Context, machin
 		return logChan, errChan, nil
 	}
 
-	return nil, nil, fmt.Errorf("all iterated platforms failed: %w", merr.NewErrors(errs...))
+	return nil, nil, errors.Annotate(merr.NewErrors(errs...), "all iterated platforms failed")
 }

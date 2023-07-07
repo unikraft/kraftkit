@@ -18,10 +18,10 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/schema"
@@ -30,7 +30,7 @@ import (
 
 // ErrNoKraftfile is thrown when a project is instantiated at a directory
 // without a recognizable Kraftfile.
-var ErrNoKraftfile = fmt.Errorf("no Kraftfile specified")
+var ErrNoKraftfile = errors.New("no Kraftfile specified")
 
 // DefaultFileNames defines the kraft file names for auto-discovery (in order
 // of preference)
@@ -53,7 +53,7 @@ func IsWorkdirInitialized(dir string) bool {
 func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Application, error) {
 	popts, err := NewProjectOptions(opts...)
 	if err != nil {
-		return nil, fmt.Errorf("could not apply project options: %v", err)
+		return nil, errors.Annotate(err, "could not apply project options")
 	}
 
 	workdir, err := popts.Workdir()
@@ -116,7 +116,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	if _, err := os.Stat(uk.BUILD_DIR); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(uk.BUILD_DIR, 0o755); err != nil {
-			return nil, fmt.Errorf("creating build directory: %w", err)
+			return nil, errors.Annotate(err, "creating build directory")
 		}
 	}
 

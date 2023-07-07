@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	jujuerrors "github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -112,9 +113,9 @@ func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
 	// Initialize at least the configuration options for a project
 	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-		return fmt.Errorf("cannot build project directory without a Kraftfile")
+		return jujuerrors.New("cannot build project directory without a Kraftfile")
 	} else if err != nil {
-		return fmt.Errorf("could not initialize project directory: %w", err)
+		return jujuerrors.Annotate(err, "could not initialize project directory")
 	}
 
 	return nil
@@ -146,11 +147,11 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 				}
 
 				if len(packages) == 0 {
-					return fmt.Errorf("could not find: %s",
+					return jujuerrors.Errorf("could not find: %s",
 						unikraft.TypeNameVersion(opts.project.Template()),
 					)
 				} else if len(packages) > 1 {
-					return fmt.Errorf("too many options for %s",
+					return jujuerrors.Errorf("too many options for %s",
 						unikraft.TypeNameVersion(opts.project.Template()),
 					)
 				}
@@ -173,7 +174,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		}
 
 		if err := treemodel.Start(); err != nil {
-			return fmt.Errorf("could not complete search: %v", err)
+			return jujuerrors.Annotate(err, "could not complete search")
 		}
 
 		proc := paraprogress.NewProcess(
@@ -206,7 +207,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		}
 
 		if err := paramodel.Start(); err != nil {
-			return fmt.Errorf("could not pull all components: %v", err)
+			return jujuerrors.Annotate(err, "could not pull all components")
 		}
 	}
 
@@ -276,11 +277,11 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 				}
 
 				if len(p) == 0 {
-					return fmt.Errorf("could not find: %s",
+					return jujuerrors.Errorf("could not find: %s",
 						unikraft.TypeNameVersion(component),
 					)
 				} else if len(p) > 1 {
-					return fmt.Errorf("too many options for %s",
+					return jujuerrors.Errorf("too many options for %s",
 						unikraft.TypeNameVersion(component),
 					)
 				}
@@ -306,7 +307,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		}
 
 		if err := treemodel.Start(); err != nil {
-			return fmt.Errorf("could not complete search: %v", err)
+			return jujuerrors.Annotate(err, "could not complete search")
 		}
 	}
 
@@ -344,7 +345,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 		}
 
 		if err := paramodel.Start(); err != nil {
-			return fmt.Errorf("could not pull all components: %v", err)
+			return jujuerrors.Annotate(err, "could not pull all components")
 		}
 	}
 
@@ -374,7 +375,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(selected) == 0 {
-		return fmt.Errorf("no targets selected to build")
+		return jujuerrors.New("no targets selected to build")
 	}
 
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY

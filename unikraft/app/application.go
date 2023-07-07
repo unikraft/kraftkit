@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/treeprint"
 	"gopkg.in/yaml.v3"
@@ -362,7 +363,7 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 
 	for _, library := range unformattedLibraries {
 		if !library.IsUnpacked() {
-			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
+			return nil, errors.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
 		libraries = append(libraries, library.Path())
@@ -409,7 +410,7 @@ func (app application) Make(ctx context.Context, tc target.Target, mopts ...make
 	makefile_uk := filepath.Join(app.WorkingDir(), unikraft.Makefile_uk)
 	if _, err := os.Stat(makefile_uk); err != nil && os.IsNotExist(err) {
 		if _, err := os.OpenFile(makefile_uk, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666); err != nil {
-			return fmt.Errorf("could not create application %s: %v", makefile_uk, err)
+			return errors.Annotatef(err, "could not create application %s", makefile_uk)
 		}
 	}
 
@@ -447,7 +448,7 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 	// Write the configuration to a temporary file
 	tmpfile, err := os.CreateTemp("", app.Name()+"-config*")
 	if err != nil {
-		return fmt.Errorf("could not create temporary defconfig file: %v", err)
+		return errors.Annotate(err, "could not create temporary defconfig file")
 	}
 
 	defer tmpfile.Close()
@@ -581,14 +582,14 @@ func (app application) Build(ctx context.Context, tc target.Target, opts ...Buil
 	for _, o := range opts {
 		err := o(bopts)
 		if err != nil {
-			return fmt.Errorf("could not apply build option: %v", err)
+			return errors.Annotate(err, "could not apply build option")
 		}
 	}
 
 	if !app.unikraft.IsUnpacked() {
 		// TODO: Produce better error messages (see #34).  In this case, we should
 		// indicate that `kraft pkg pull` needs to occur
-		return fmt.Errorf("cannot build without Unikraft core component source")
+		return errors.Errorf("cannot build without Unikraft core component source")
 	}
 
 	bopts.mopts = append(bopts.mopts, []make.MakeOption{
@@ -763,11 +764,11 @@ func (app application) Save() error {
 
 	var from yaml.Node
 	if err := yaml.Unmarshal(yamlData, &from); err != nil {
-		return fmt.Errorf("could not unmarshal YAML: %s", err)
+		return errors.Errorf("could not unmarshal YAML: %s", err)
 	}
 
 	if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
-		return fmt.Errorf("could not merge YAML: %s", err)
+		return errors.Errorf("could not merge YAML: %s", err)
 	}
 
 	// Marshal the Node structure back to YAML

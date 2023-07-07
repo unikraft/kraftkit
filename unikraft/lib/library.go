@@ -7,12 +7,12 @@ package lib
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
@@ -181,7 +181,7 @@ func (lc LibraryConfig) Path() string {
 func (lc LibraryConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(lc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
-		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+		return nil, errors.Annotate(err, "could not read component Config.uk")
 	}
 
 	return kconfig.Parse(config_uk, lc.kconfig.Override(env...).Slice()...)
@@ -215,7 +215,7 @@ func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (Librari
 
 	makefile_uk := filepath.Join(dir, unikraft.Makefile_uk)
 	if _, err := os.Stat(makefile_uk); err != nil {
-		return nil, fmt.Errorf("cannot parse library from directory without Makefile.uk")
+		return nil, errors.New("cannot parse library from directory without Makefile.uk")
 	}
 
 	// TODO: Parse the Config.uk file to grab even more information, e.g.
@@ -231,7 +231,7 @@ func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (Librari
 
 	fm, err := os.Open(makefile_uk)
 	if err != nil {
-		return nil, fmt.Errorf("could not open Makefile.uk: %v", err)
+		return nil, errors.Annotate(err, "could not open Makefile.uk")
 	}
 
 	defer fm.Close()
@@ -402,7 +402,7 @@ func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (Librari
 			}).Trace("reading")
 			fe, err := os.Open(exportsyms_uk)
 			if err != nil {
-				return nil, fmt.Errorf("could not open exportsyms.uk: %v", err)
+				return nil, errors.Annotate(err, "could not open exportsyms.uk")
 			}
 
 			defer fe.Close()

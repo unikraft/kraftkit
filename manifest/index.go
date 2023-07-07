@@ -6,7 +6,6 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -68,7 +68,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 		}, nil
 	}
 
-	return nil, fmt.Errorf("provided path is not a manifest index: %s", path)
+	return nil, errors.Errorf("provided path is not a manifest index: %s", path)
 }
 
 func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
@@ -76,7 +76,7 @@ func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 }
 
 func (mip ManifestIndexProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
-	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullManifest")
+	return errors.New("not implemented: manifest.ManifestIndexProvider.PullManifest")
 }
 
 func (mip ManifestIndexProvider) String() string {
@@ -93,7 +93,7 @@ func NewManifestIndexFromBytes(raw []byte, opts ...ManifestOption) (*ManifestInd
 	}
 
 	if index.Manifests == nil {
-		return nil, fmt.Errorf("nothing found in manifest index")
+		return nil, errors.New("nothing found in manifest index")
 	}
 
 	for i, manifest := range index.Manifests {
@@ -109,7 +109,7 @@ func NewManifestIndexFromFile(path string, mopts ...ManifestOption) (*ManifestIn
 	if err != nil {
 		return nil, err
 	} else if f.Size() == 0 {
-		return nil, fmt.Errorf("manifest index is empty: %s", path)
+		return nil, errors.Errorf("manifest index is empty: %s", path)
 	}
 
 	contents, err := os.ReadFile(path)
@@ -155,7 +155,7 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("manifest index not found: %s", path)
+		return nil, errors.Errorf("manifest index not found: %s", path)
 	}
 
 	get, err := http.NewRequest("GET", path, nil)
@@ -177,13 +177,13 @@ func NewManifestIndexFromURL(ctx context.Context, path string, mopts ...Manifest
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
+		return nil, errors.Errorf("received %d error when retreiving: %s", resp.StatusCode, path)
 	}
 
 	// Check if we're directly pointing to a compatible manifest file
 	ext := filepath.Ext(path)
 	if ext != ".yml" && ext != ".yaml" {
-		return nil, fmt.Errorf("unsupported manifest index extension for path: %s", path)
+		return nil, errors.Errorf("unsupported manifest index extension for path: %s", path)
 	}
 
 	contents, err := io.ReadAll(resp.Body)
@@ -205,7 +205,7 @@ func (mi *ManifestIndex) WriteToFile(path string) error {
 	// Open the file (create if not present)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
-		return fmt.Errorf("could not open file: %v", err)
+		return errors.Annotate(err, "could not open file")
 	}
 
 	defer f.Close()

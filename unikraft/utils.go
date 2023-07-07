@@ -2,9 +2,9 @@ package unikraft
 
 import (
 	"debug/elf"
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/internal/set"
 )
 
@@ -16,7 +16,7 @@ func IsFileUnikraftUnikernel(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	} else if fs.IsDir() {
-		return false, fmt.Errorf("first positional argument is a directory: %v", path)
+		return false, errors.Errorf("first positional argument is a directory: %v", path)
 	}
 
 	// Sanity check whether the provided file is an ELF kernel with
@@ -44,5 +44,5 @@ func IsFileUnikraftUnikernel(path string) (bool, error) {
 		}
 	}
 
-	return false, fmt.Errorf("provided file is not a Unikraft unikernel")
+	return false, errors.New("provided file is not a Unikraft unikernel")
 }

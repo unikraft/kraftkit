@@ -6,10 +6,11 @@ package qmpv1alpha
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"reflect"
 	"sync"
+
+	jujuerrors "github.com/juju/errors"
 )
 
 type QEMUMachineProtocolClient struct {
@@ -58,7 +59,7 @@ func (c *QEMUMachineProtocolClient) setRpcRequestSetDefaults(face any) error {
 		case reflect.String:
 			f.SetString(def)
 		default:
-			return fmt.Errorf("unsupported default kind: %s", f.Kind().String())
+			return jujuerrors.Errorf("unsupported default kind: %s", f.Kind().String())
 		}
 	}
 

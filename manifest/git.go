@@ -6,7 +6,6 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/juju/errors"
 	giturl "github.com/kubescape/go-git-url"
 
 	"kraftkit.sh/log"
@@ -93,7 +93,7 @@ func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (P
 	// what we can read from the remote
 	provider.refs, err = remote.ListContext(ctx, lopts)
 	if err != nil {
-		return nil, fmt.Errorf("could not list remote git repository: %v", err)
+		return nil, errors.Annotate(err, "could not list remote git repository")
 	}
 
 	return provider, nil

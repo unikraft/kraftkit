@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/juju/errors"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"kraftkit.sh/config"
@@ -44,7 +45,7 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 	for _, mopt := range opts {
 		opt, ok := mopt.(OCIManagerOption)
 		if !ok {
-			return nil, fmt.Errorf("cannot cast OCI Manager option")
+			return nil, errors.New("cannot cast OCI Manager option")
 		}
 
 		if err := opt(ctx, &manager); err != nil {
@@ -53,7 +54,7 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 	}
 
 	if manager.handle == nil {
-		return nil, fmt.Errorf("cannot instantiate OCI Manager without handler")
+		return nil, errors.New("cannot instantiate OCI Manager without handler")
 	}
 
 	return &manager, nil
@@ -68,7 +69,7 @@ func (manager *ociManager) Update(ctx context.Context) error {
 func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	targ, ok := entity.(target.Target)
 	if !ok {
-		return nil, fmt.Errorf("entity is not Unikraft target")
+		return nil, errors.New("entity is not Unikraft target")
 	}
 
 	pkg, err := NewPackageFromTarget(ctx, targ, opts...)
@@ -81,7 +82,7 @@ func (manager *ociManager) Pack(ctx context.Context, entity component.Component,
 
 // Unpack implements packmanager.PackageManager
 func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
-	return nil, fmt.Errorf("not implemented: oci.manager.Unpack")
+	return nil, errors.New("not implemented: oci.manager.Unpack")
 }
 
 // registry is a wrapper method for authenticating and listing OCI repositories
@@ -111,7 +112,7 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize registry: %v", err)
+		return nil, errors.Annotate(err, "could not initialize registry")
 	}
 
 	return reg, nil
@@ -131,7 +132,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	)
 	if refErr == nil {
 		if ref.Identifier() != "latest" && qversion != "" && ref.Identifier() != qversion {
-			return nil, fmt.Errorf("cannot determine which version as name contains version and version query paremeter set")
+			return nil, errors.New("cannot determine which version as name contains version and version query paremeter set")
 		} else if qversion == "" {
 			qname = ref.Context().String()
 			qversion = ref.Identifier()
@@ -433,7 +434,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 // From implements packmanager.PackageManager
 func (manager *ociManager) From(pack.PackageFormat) (packmanager.PackageManager, error) {
-	return nil, fmt.Errorf("not possible: oci.manager.From")
+	return nil, errors.New("not possible: oci.manager.From")
 }
 
 // Format implements packmanager.PackageManager

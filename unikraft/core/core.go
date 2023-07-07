@@ -6,10 +6,10 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
@@ -89,7 +89,7 @@ func (uc UnikraftConfig) IsUnpacked() bool {
 func (uc UnikraftConfig) KConfigTree(ctx context.Context, extra ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	config_uk := filepath.Join(uc.Path(), unikraft.Config_uk)
 	if _, err := os.Stat(config_uk); err != nil {
-		return nil, fmt.Errorf("could not read component Config.uk: %v", err)
+		return nil, errors.Annotate(err, "could not read component Config.uk")
 	}
 
 	return kconfig.Parse(config_uk, uc.kconfig.Override(extra...).Slice()...)

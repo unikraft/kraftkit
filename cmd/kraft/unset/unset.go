@@ -36,6 +36,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -94,7 +95,7 @@ func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
 
 	// Skip if nothing can be unset
 	if len(args) == 0 {
-		return fmt.Errorf("no options to unset")
+		return errors.New("no options to unset")
 	}
 
 	// Set the working directory
@@ -117,7 +118,7 @@ func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
 	// Check if the file exists
 	// TODO: offer option to start in interactive mode
 	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
+		return errors.Errorf("dotconfig file does not exist: %s", dotconfig)
 	}
 
 	// Initialize at least the configuration options for a project

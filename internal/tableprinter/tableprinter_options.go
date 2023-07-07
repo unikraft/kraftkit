@@ -1,6 +1,8 @@
 package tableprinter
 
-import "fmt"
+import (
+	"github.com/juju/errors"
+)
 
 // TablePrinterOption is a type of func(*TablePrinter).
 type TablePrinterOption func(*TablePrinter) error
@@ -19,7 +21,7 @@ func WithOutputFormat(format TableOutputFormat) TablePrinterOption {
 func WithOutputFormatFromString(format string) TablePrinterOption {
 	return func(opts *TablePrinter) error {
 		if format == "" {
-			return fmt.Errorf("unsupported table printer format: %s", format)
+			return errors.Errorf("unsupported table printer format: %s", format)
 		}
 		opts.format = TableOutputFormat(format)
 		return nil

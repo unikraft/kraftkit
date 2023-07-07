@@ -5,10 +5,9 @@
 package processtree
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/juju/errors"
 )
 
 func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -36,7 +35,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			pt.quitting = true
-			pt.err = fmt.Errorf("force quit")
+			pt.err = errors.New("force quit")
 			return pt, tea.Quit
 		}
 

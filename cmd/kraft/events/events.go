@@ -6,7 +6,6 @@ package events
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -78,7 +78,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		platform, mode, err = mplatform.Detect(ctx)
 		if mode == mplatform.SystemGuest {
 			cancel()
-			return fmt.Errorf("nested virtualization not supported")
+			return errors.New("nested virtualization not supported")
 		} else if err != nil {
 			cancel()
 			return err
@@ -88,14 +88,14 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		platform, ok = mplatform.PlatformsByName()[opts.platform]
 		if !ok {
 			cancel()
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+			return errors.Errorf("unknown platform driver: %s", opts.platform)
 		}
 	}
 
 	strategy, ok := mplatform.Strategies()[platform]
 	if !ok {
 		cancel()
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+		return errors.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 	}
 
 	controller, err := strategy.NewMachineV1alpha1(ctx)
@@ -116,7 +116,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		pidfile, err = os.OpenFile(config.G[config.KraftKit](ctx).EventsPidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666)
 		if err != nil {
 			cancel()
-			return fmt.Errorf("could not create pidfile: %v", err)
+			return errors.Annotate(err, "could not create pidfile")
 		}
 
 		defer func() {
@@ -130,12 +130,12 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 
 		if _, err := pidfile.Write([]byte(fmt.Sprintf("%d", os.Getpid()))); err != nil {
 			cancel()
-			return fmt.Errorf("failed to write PID file: %w", err)
+			return errors.Annotate(err, "failed to write PID file")
 		}
 
 		if err := pidfile.Sync(); err != nil {
 			cancel()
-			return fmt.Errorf("could not sync pid file: %v", err)
+			return errors.Annotate(err, "could not sync pid file")
 		}
 	}
 
@@ -165,7 +165,7 @@ seek:
 
 		machines, err := controller.List(ctx, &machineapi.MachineList{})
 		if err != nil {
-			return fmt.Errorf("could not list machines: %v", err)
+			return errors.Annotate(err, "could not list machines")
 		}
 
 		for _, machine := range machines.Items {

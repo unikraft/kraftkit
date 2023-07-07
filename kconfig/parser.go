@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 // parser is a helper for parsing simple text protocols tailored for kconfig syntax.
@@ -87,7 +89,7 @@ func (p *parser) identLevel() int {
 
 func (p *parser) failf(msg string, args ...interface{}) {
 	if p.err == nil {
-		p.err = fmt.Errorf("%v:%v:%v: %v\n%v", p.file, p.line, p.col, fmt.Sprintf(msg, args...), p.current)
+		p.err = errors.Errorf("%v:%v:%v: %v\n%v", p.file, p.line, p.col, fmt.Sprintf(msg, args...), p.current)
 	}
 }
 

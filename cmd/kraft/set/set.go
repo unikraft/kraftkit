@@ -37,6 +37,7 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -96,7 +97,7 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 
 	// Skip if nothing can be set
 	if len(args) == 0 {
-		return fmt.Errorf("no options to set")
+		return errors.New("no options to set")
 	}
 
 	// Set the working directory (remove the argument if it exists)
@@ -112,7 +113,7 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 	// Set the configuration options, skip the first one if needed
 	for _, arg := range args {
 		if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
-			return fmt.Errorf("invalid or malformed argument: %s", arg)
+			return errors.Errorf("invalid or malformed argument: %s", arg)
 		}
 
 		confOpts = append(confOpts, arg)
@@ -124,7 +125,7 @@ func (opts *Set) Run(cmd *cobra.Command, args []string) error {
 	// Check if the file exists
 	// TODO: offer option to start in interactive mode
 	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
+		return errors.Errorf("dotconfig file does not exist: %s", dotconfig)
 	}
 
 	popts := []app.ProjectOption{

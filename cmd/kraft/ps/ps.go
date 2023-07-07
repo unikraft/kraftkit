@@ -17,6 +17,7 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 
 	"github.com/dustin/go-humanize"
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -88,7 +89,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 			var mode mplatform.SystemMode
 			platform, mode, err = mplatform.Detect(ctx)
 			if mode == mplatform.SystemGuest {
-				return fmt.Errorf("nested virtualization not supported")
+				return errors.New("nested virtualization not supported")
 			} else if err != nil {
 				return err
 			}
@@ -96,13 +97,13 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 			var ok bool
 			platform, ok = mplatform.PlatformsByName()[opts.platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return errors.Errorf("unknown platform driver: %s", opts.platform)
 			}
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]
 		if !ok {
-			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+			return errors.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
 		controller, err = strategy.NewMachineV1alpha1(ctx)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/selection"
+	"github.com/juju/errors"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -50,7 +51,7 @@ func SelectTarget(targets []target.Target) (target.Target, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("could not select target")
+	return nil, errors.New("could not select target")
 }
 
 // FilterTargets returns a subset of `targets` based in input strings `arch`,

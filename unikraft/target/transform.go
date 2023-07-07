@@ -6,9 +6,9 @@ package target
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
@@ -82,5 +82,5 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 		return t, nil
 	}
 
-	return data, fmt.Errorf("invalid type %T for target", data)
+	return data, errors.Errorf("invalid type %T for target", data)
 }

@@ -44,6 +44,7 @@ import (
 	"strings"
 
 	"github.com/cli/safeexec"
+	"github.com/juju/errors"
 	"gopkg.in/yaml.v3"
 
 	"kraftkit.sh/internal/findsh"
@@ -109,13 +110,13 @@ func (pm *PluginManager) parseBinaryPluginDir(fi fs.FileInfo) (Plugin, error) {
 	manifestPath := filepath.Join(pm.dataDir, fi.Name(), PluginManifestFile)
 	manifest, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return ext, fmt.Errorf("could not open %s for reading: %w", manifestPath, err)
+		return ext, errors.Annotatef(err, "could not open %s for reading", manifestPath)
 	}
 
 	var man PluginManifest
 	err = yaml.Unmarshal(manifest, &man)
 	if err != nil {
-		return ext, fmt.Errorf("could not parse %s: %w", manifestPath, err)
+		return ext, errors.Annotatef(err, "could not parse %s", manifestPath)
 	}
 
 	// repo := ghrepo.NewWithHost(bm.Owner, bm.Name, bm.Host)
@@ -187,7 +188,7 @@ func (pm *PluginManager) List() ([]Plugin, error) {
 
 	if f, err := os.Stat(pm.dataDir); err != nil || !f.IsDir() {
 		if err := os.MkdirAll(pm.dataDir, 0o755); err != nil {
-			return results, fmt.Errorf("%v: %s", err, pm.dataDir)
+			return results, errors.Errorf("%v: %s", err, pm.dataDir)
 		}
 	}
 
@@ -228,11 +229,11 @@ func (pm *PluginManager) List() ([]Plugin, error) {
 }
 
 func (pm *PluginManager) Install(repo string) error {
-	return fmt.Errorf("not implemented")
+	return errors.New("not implemented")
 }
 
 func (pm *PluginManager) InstallLocal(repo string) error {
-	return fmt.Errorf("not implemented")
+	return errors.New("not implemented")
 }
 
 func (pm *PluginManager) Dispatch() error {

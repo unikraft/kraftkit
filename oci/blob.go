@@ -6,9 +6,9 @@ package oci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -24,7 +24,7 @@ type Blob struct {
 // type.
 func NewBlob(_ context.Context, mediaType string, data []byte, opts ...BlobOption) (*Blob, error) {
 	if mediaType == "" {
-		return nil, fmt.Errorf("unknown blob type")
+		return nil, errors.New("unknown blob type")
 	}
 
 	fi, err := os.CreateTemp("", "kraftkit_oci-*")
@@ -62,12 +62,12 @@ func NewBlob(_ context.Context, mediaType string, data []byte, opts ...BlobOptio
 func NewBlobFromFile(_ context.Context, mediaType string, filePath string, opts ...BlobOption) (*Blob, error) {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat %s: %v", filePath, err)
+		return nil, errors.Annotatef(err, "failed to stat %s", filePath)
 	}
 
 	fp, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %v", filePath, err)
+		return nil, errors.Annotatef(err, "failed to read %s", filePath)
 	}
 
 	defer func() {

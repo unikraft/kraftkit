@@ -19,6 +19,7 @@ import (
 	gitplumbing "github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	jujuerrors "github.com/juju/errors"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -107,13 +108,13 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	}
 
 	if len(popts.Workdir()) == 0 {
-		return fmt.Errorf("cannot Git clone manifest package without working directory")
+		return jujuerrors.New("cannot Git clone manifest package without working directory")
 	}
 
 	log.G(ctx).Debugf("using git to pull manifest package %s", manifest.Name)
 
 	if len(manifest.Origin) == 0 {
-		return fmt.Errorf("requesting Git with empty repository in manifest")
+		return jujuerrors.New("requesting Git with empty repository in manifest")
 	}
 
 	completeWorker := make(chan struct{})
@@ -141,7 +142,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		}
 		copts.Auth, err = gitssh.NewSSHAgentAuth("git")
 		if err != nil {
-			return fmt.Errorf("could not create SSH agent auth: %w", err)
+			return jujuerrors.Annotate(err, "could not create SSH agent auth")
 		}
 	} else {
 		if !strings.HasPrefix(path, "https://") {
@@ -149,7 +150,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		}
 		u, err := url.Parse(path)
 		if err != nil {
-			return fmt.Errorf("could not parse URL: %w", err)
+			return jujuerrors.Annotate(err, "could not parse URL")
 		}
 		endpoint := u.Host
 
@@ -178,7 +179,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		manifest.Name,
 	)
 	if err != nil {
-		return fmt.Errorf("could not place component package: %w", err)
+		return jujuerrors.Annotate(err, "could not place component package")
 	}
 
 	log.G(ctx).
@@ -192,7 +193,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	case errors.Is(err, git.ErrRepositoryAlreadyExists):
 		reps, err := git.PlainOpen(local)
 		if err != nil {
-			return fmt.Errorf("could not open repository: %w", err)
+			return jujuerrors.Annotate(err, "could not open repository")
 		}
 		err = reps.FetchContext(ctx, &git.FetchOptions{
 			RemoteURL: copts.URL,
@@ -206,10 +207,10 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 			log.G(ctx).Infof("successfully updated %s in %s", path, local)
 			return nil
 		default:
-			return fmt.Errorf("could not clone repository: %w", err)
+			return jujuerrors.Annotate(err, "could not clone repository")
 		}
 	case err != nil:
-		return fmt.Errorf("could not clone repository: %w", err)
+		return jujuerrors.Annotate(err, "could not clone repository")
 	}
 
 	// Wait for the go routine to finish

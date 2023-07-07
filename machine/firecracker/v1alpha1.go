@@ -6,7 +6,6 @@ package firecracker
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/fsnotify/fsnotify"
+	"github.com/juju/errors"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -71,11 +71,11 @@ func NewMachineV1alpha1Service(ctx context.Context, opts ...any) (machinev1alpha
 func (service *machineV1alpha1Service) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	// Start with fail-safe checks for unsupported specification declarations.
 	if len(machine.Spec.Ports) > 0 {
-		return machine, fmt.Errorf("kraftkit does not yet support port forwarding to firecracker (contributions welcome): please use a network instead")
+		return machine, errors.New("kraftkit does not yet support port forwarding to firecracker (contributions welcome): please use a network instead")
 	}
 
 	if machine.Status.KernelPath == "" {
-		return machine, fmt.Errorf("cannot create firecracker instance without kernel")
+		return machine, errors.New("cannot create firecracker instance without kernel")
 	}
 
 	if machine.ObjectMeta.UID == "" {
@@ -153,7 +153,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		ApiSock: fccfg.SocketPath,
 	})
 	if err != nil {
-		return machine, fmt.Errorf("could not prepare firecracker executable: %v", err)
+		return machine, errors.Annotate(err, "could not prepare firecracker executable")
 	}
 
 	process, err := exec.NewProcessFromExecutable(e,
@@ -161,7 +161,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		exec.WithDetach(true),
 	)
 	if err != nil {
-		return machine, fmt.Errorf("could not prepare firecracker process: %v", err)
+		return machine, errors.Annotate(err, "could not prepare firecracker process")
 	}
 
 	machine.CreationTimestamp = metav1.NewTime(time.Now())
@@ -182,7 +182,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	// Start and also wait for the process to be released, this ensures the
 	// program is actively being executed.
 	if err := process.Start(ctx); err != nil {
-		return machine, fmt.Errorf("could not start and wait for firecracker process: %v", err)
+		return machine, errors.Annotate(err, "could not start and wait for firecracker process")
 	}
 
 	// Wait for the socket file to be created
@@ -204,7 +204,7 @@ watch:
 
 	pid, err := process.Pid()
 	if err != nil {
-		return machine, fmt.Errorf("could not get firecracker pid: %v", err)
+		return machine, errors.Annotate(err, "could not get firecracker pid")
 	}
 
 	client := firecracker.NewClient(fccfg.SocketPath, logrus.NewEntry(log.G(ctx)), false)
@@ -316,7 +316,7 @@ func getFirecrackerConfigFromPlatformConfig(platformConfig interface{}) (*Firecr
 		return &fccfg, nil
 	}
 
-	return nil, fmt.Errorf("could not cast firecracker platform config from store")
+	return nil, errors.New("could not cast firecracker platform config from store")
 }
 
 // Update implements kraftkit.sh/api/machine/v1alpha1.MachineService
@@ -461,7 +461,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		// We cannot amend the status at this point, even if the process is
 		// alive, since it is not an indicator of the state of the VM, only of the
 		// VMM.  So we return what we already know via LookupMachineConfig.
-		return machine, fmt.Errorf("could not query machine status via API socket: %v", err)
+		return machine, errors.Annotate(err, "could not query machine status via API socket")
 	}
 
 	cancel()

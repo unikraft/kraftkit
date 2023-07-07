@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
@@ -46,7 +47,7 @@ func (runner *runnerPackage) String() string {
 // Runnable implements Runner.
 func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
 	if len(args) == 0 {
-		return false, fmt.Errorf("no arguments supplied")
+		return false, errors.New("no arguments supplied")
 	}
 
 	runner.packName = args[0]
@@ -80,7 +81,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	}
 
 	if len(packs) > 1 {
-		return fmt.Errorf("could not determine what to run, too many options")
+		return errors.New("could not determine what to run, too many options")
 	} else if len(packs) == 0 {
 		// Second, try accessing the remote catalog
 		packs, err = runner.pm.Catalog(ctx,
@@ -93,9 +94,9 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		}
 
 		if len(packs) > 1 {
-			return fmt.Errorf("could not determine what to run, too many options")
+			return errors.New("could not determine what to run, too many options")
 		} else if len(packs) == 0 {
-			return fmt.Errorf("not found: %s", runner.packName)
+			return errors.Errorf("not found: %s", runner.packName)
 		}
 	}
 
@@ -146,7 +147,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	// resolve application kernels.
 	targ, ok := packs[0].(target.Target)
 	if !ok {
-		return fmt.Errorf("package does not convert to target")
+		return errors.New("package does not convert to target")
 	}
 
 	machine.Spec.Architecture = targ.Architecture().Name()

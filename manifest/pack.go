@@ -6,9 +6,9 @@ package manifest
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -47,7 +47,7 @@ func NewPackageFromManifestWithVersion(manifest *Manifest, version string, opts 
 	manifest.Versions = versions
 
 	if len(channels) == 0 && len(versions) == 0 {
-		return nil, fmt.Errorf("unknown version: %s", version)
+		return nil, errors.Errorf("unknown version: %s", version)
 	}
 
 	return &mpack{manifest, version}, nil
@@ -81,14 +81,14 @@ func (mp mpack) Metadata() any {
 }
 
 func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
-	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
+	return errors.New("not implemented: manifest.ManifestPackage.Push")
 }
 
 func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	log.G(ctx).Debugf("pulling manifest package %s", mp.Name())
 
 	if mp.manifest.Provider == nil {
-		return fmt.Errorf("uninitialized manifest provider")
+		return errors.New("uninitialized manifest provider")
 	}
 
 	opts = append(opts, pack.WithPullVersion(mp.version))
@@ -107,7 +107,7 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 	var cache string
 
 	if manifest.mopts.cacheDir == "" {
-		err = fmt.Errorf("cannot determine cache dir")
+		err = errors.Errorf("cannot determine cache dir")
 	} else if len(manifest.Channels) == 1 {
 		ext := filepath.Ext(manifest.Channels[0].Resource)
 		if ext == ".gz" {
@@ -132,7 +132,7 @@ func resourceCacheChecksum(manifest *Manifest) (string, string, string, error) {
 			manifest.mopts.cacheDir, manifest.Name+"-"+manifest.Versions[0].Version+ext,
 		)
 	} else {
-		err = fmt.Errorf("too many options")
+		err = errors.New("too many options")
 	}
 
 	return resource, cache, checksum, err

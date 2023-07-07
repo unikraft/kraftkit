@@ -3,12 +3,12 @@ package bridge
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	"net"
 	"time"
 
 	"github.com/erikh/ping"
+	"github.com/juju/errors"
 	"github.com/vishvananda/netlink"
 	"kraftkit.sh/internal/set"
 )
@@ -59,7 +59,7 @@ func BridgeIPs(bridge *netlink.Bridge) ([]string, error) {
 
 	list, err = netlink.NeighList(bridge.Index, netlink.FAMILY_V4)
 	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve IPv4 neighbor information for interface %s: %v", bridge.Name, err)
+		return nil, errors.Annotatef(err, "cannot retrieve IPv4 neighbor information for interface %s", bridge.Name)
 	}
 
 	ips := make([]string, len(list))
@@ -92,7 +92,7 @@ search:
 
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled")
+			return nil, errors.New("context cancelled")
 		default:
 		}
 
@@ -100,7 +100,7 @@ search:
 		// If the IP is not within the provided network, it is not possible to
 		// increment the IP so return with an error.
 		case !ipnet.Contains(ip):
-			return nil, fmt.Errorf("could not allocate IP address in %v", ipnet.String())
+			return nil, errors.Errorf("could not allocate IP address in %v", ipnet.String())
 
 		// Skip the Bridge IP.
 		case func() bool {

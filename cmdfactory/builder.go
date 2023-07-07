@@ -17,10 +17,13 @@ import (
 	"time"
 	"unsafe"
 
+	jujuerrors "github.com/juju/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/set"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 )
 
 var (
@@ -178,7 +181,11 @@ func Main(ctx context.Context, cmd *cobra.Command) {
 	expandRegisteredFlags(cmd)
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		fmt.Println(err)
+		if set.NewStringSet("trace", "debug").Contains(log.G(ctx).Level.String()) {
+			fmt.Fprintln(iostreams.G(ctx).Out, jujuerrors.ErrorStack(err))
+		} else {
+			fmt.Println(err)
+		}
 		os.Exit(1)
 	}
 }

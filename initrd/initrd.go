@@ -6,7 +6,6 @@ package initrd
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"kraftkit.sh/utils"
 
 	"github.com/cavaliergopher/cpio"
+	jujuerrors "github.com/juju/errors"
 )
 
 const InputDelimeter = ":"
@@ -86,26 +86,26 @@ func NewFromFile(workdir, path string) (*InitrdConfig, error) {
 func (i *InitrdConfig) NewWriter(w io.Writer) (*cpio.Writer, error) {
 	switch i.Format {
 	case ODC:
-		return nil, fmt.Errorf("unsupported CPIO format: odc")
+		return nil, errors.New("unsupported CPIO format: odc")
 	case NEWC:
 		return cpio.NewWriter(w), nil
 	case USTAR:
-		return nil, fmt.Errorf("unsupported CPIO format: ustar")
+		return nil, errors.New("unsupported CPIO format: ustar")
 	default:
-		return nil, fmt.Errorf("unknown CPIO format")
+		return nil, errors.New("unknown CPIO format")
 	}
 }
 
 func (i *InitrdConfig) NewReader(w io.Reader) (*cpio.Reader, error) {
 	switch i.Format {
 	case ODC:
-		return nil, fmt.Errorf("unsupported CPIO format: odc")
+		return nil, errors.New("unsupported CPIO format: odc")
 	case NEWC:
 		return cpio.NewReader(w), nil
 	case USTAR:
-		return nil, fmt.Errorf("unsupported CPIO format: ustar")
+		return nil, errors.New("unsupported CPIO format: ustar")
 	default:
-		return nil, fmt.Errorf("unknown CPIO format")
+		return nil, errors.New("unknown CPIO format")
 	}
 }
 
@@ -122,7 +122,7 @@ func NewFromPath(base string, prefix string, files ...string) (*InitrdConfig, er
 		prefix = "/"
 	}
 	if !strings.HasPrefix(prefix, "/") {
-		return nil, fmt.Errorf("must use absolute path in prefix: %s", prefix)
+		return nil, jujuerrors.Errorf("must use absolute path in prefix: %s", prefix)
 	}
 
 	for _, file := range files {
@@ -147,7 +147,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 
 	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
-		return nil, fmt.Errorf("could not open initramfs file: %w", err)
+		return nil, jujuerrors.Annotate(err, "could not open initramfs file")
 	}
 
 	writer := cpio.NewWriter(f)
@@ -156,7 +156,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 	for _, mapping := range maps {
 		split := strings.Split(mapping, InputDelimeter)
 		if len(split) != 2 {
-			return nil, fmt.Errorf("could not parse mapping '%s': must be in format <hostPath>:<initrdPath>", mapping)
+			return nil, jujuerrors.Errorf("could not parse mapping '%s': must be in format <hostPath>:<initrdPath>", mapping)
 		}
 
 		hostPath := utils.RelativePath(workdir, split[0])
@@ -164,7 +164,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 
 		f, err := os.Stat(hostPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("path does not exist: %s", hostPath)
+			return nil, jujuerrors.Errorf("path does not exist: %s", hostPath)
 		} else if err == nil && f.IsDir() {
 			// The provided mapping is a directory, lets iterate over each path
 			if err := filepath.WalkDir(hostPath, func(path string, d fs.DirEntry, err error) error {

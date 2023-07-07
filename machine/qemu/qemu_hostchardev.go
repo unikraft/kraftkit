@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/juju/errors"
 )
 
 type QemuHostCharDev interface {
@@ -51,7 +53,7 @@ func (cd QemuHostCharDevVirtualConsole) Resource() string {
 }
 
 func (cd QemuHostCharDevVirtualConsole) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevVirtualConsole.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevVirtualConsole.Connection")
 }
 
 type QemuHostCharDevPty struct{}
@@ -65,7 +67,7 @@ func (cd QemuHostCharDevPty) Resource() string {
 }
 
 func (cd QemuHostCharDevPty) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevPty.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevPty.Connection")
 }
 
 type QemuHostCharDevNone struct{}
@@ -79,7 +81,7 @@ func (cd QemuHostCharDevNone) Resource() string {
 }
 
 func (cd QemuHostCharDevNone) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevNone.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevNone.Connection")
 }
 
 type QemuHostCharDevNull struct{}
@@ -94,7 +96,7 @@ func (cd QemuHostCharDevNull) Resource() string {
 }
 
 func (cd QemuHostCharDevNull) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevNull.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevNull.Connection")
 }
 
 type QemuHostCharDevNamed struct {
@@ -125,7 +127,7 @@ func (cd QemuHostCharDevNamed) Resource() string {
 }
 
 func (cd QemuHostCharDevNamed) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevNamed.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevNamed.Connection")
 }
 
 type QemuHostCharDevTty struct {
@@ -158,7 +160,7 @@ func (cd QemuHostCharDevTty) Resource() string {
 }
 
 func (cd QemuHostCharDevTty) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevTty.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevTty.Connection")
 }
 
 type QemuHostCharDevFile struct {
@@ -189,7 +191,7 @@ func (cd QemuHostCharDevFile) Resource() string {
 }
 
 func (cd QemuHostCharDevFile) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevFile.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevFile.Connection")
 }
 
 type QemuHostCharDevStdio struct {
@@ -213,7 +215,7 @@ func (cd QemuHostCharDevStdio) Resource() string {
 }
 
 func (cd QemuHostCharDevStdio) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevStdio.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevStdio.Connection")
 }
 
 type QemuHostCharDevPipe struct {
@@ -244,7 +246,7 @@ func (cd QemuHostCharDevPipe) Resource() string {
 }
 
 func (cd QemuHostCharDevPipe) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevPipe.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevPipe.Connection")
 }
 
 type QemuHostCharDevUDP struct {
@@ -296,7 +298,7 @@ func (cd QemuHostCharDevUDP) Resource() string {
 }
 
 func (cd QemuHostCharDevUDP) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevUDP.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevUDP.Connection")
 }
 
 const (
@@ -359,7 +361,7 @@ func (cd QemuHostCharDevTCP) Resource() string {
 }
 
 func (cd QemuHostCharDevTCP) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevTCP.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevTCP.Connection")
 }
 
 type QemuHostCharDevTelnet struct {
@@ -412,7 +414,7 @@ func (cd QemuHostCharDevTelnet) Resource() string {
 }
 
 func (cd QemuHostCharDevTelnet) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevTelnet.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevTelnet.Connection")
 }
 
 type QemuHostCharDevWebsocket struct {
@@ -464,7 +466,7 @@ func (cd QemuHostCharDevWebsocket) Resource() string {
 }
 
 func (cd QemuHostCharDevWebsocket) Connection() (net.Conn, error) {
-	return nil, fmt.Errorf("not implemented: machine.qemu.QemuHostCharDevWebsocket.Connection")
+	return nil, errors.New("not implemented: machine.qemu.QemuHostCharDevWebsocket.Connection")
 }
 
 type QemuHostCharDevUnix struct {

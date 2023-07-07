@@ -24,13 +24,13 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"syscall"
+
+	"github.com/juju/errors"
 )
 
 const (
@@ -229,7 +229,7 @@ func pathError(err error) error {
 	var pathError *os.PathError
 	if errors.As(err, &pathError) && errors.Is(pathError.Err, syscall.ENOTDIR) {
 		if p := findRegularFile(pathError.Path); p != "" {
-			return fmt.Errorf("remove or rename regular file `%s` (must be a directory)", p)
+			return errors.Errorf("remove or rename regular file `%s` (must be a directory)", p)
 		}
 	}
 	return err

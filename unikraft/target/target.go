@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/pack"
@@ -157,7 +158,7 @@ func (tc *TargetConfig) ConfigFilename() string {
 }
 
 func (tc *TargetConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
-	return nil, fmt.Errorf("target does not have a Config.uk file")
+	return nil, errors.New("target does not have a Config.uk file")
 }
 
 func (tc *TargetConfig) PrintInfo(ctx context.Context) string {
@@ -169,7 +170,7 @@ func (tc *TargetConfig) PrintInfo(ctx context.Context) string {
 // If we do not have a target name, return an error.
 func KernelName(target TargetConfig) (string, error) {
 	if target.Name() == "" {
-		return "", fmt.Errorf("target name not set, cannot determine binary name")
+		return "", errors.New("target name not set, cannot determine binary name")
 	}
 
 	return fmt.Sprintf(
