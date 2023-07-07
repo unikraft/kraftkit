@@ -13,7 +13,9 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -123,5 +125,9 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 		ctx,
 		t,
 		make.WithTarget("menuconfig"),
+		make.WithExecOptions(
+			exec.WithStdout(iostreams.G(ctx).Out),
+			exec.WithStdin(iostreams.G(ctx).In),
+		),
 	)
 }
