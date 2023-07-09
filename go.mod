@@ -45,7 +45,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0-rc3
+	github.com/opencontainers/image-spec v1.1.0-rc4
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.0.2
 	github.com/shirou/gopsutil/v3 v3.23.5
@@ -64,7 +64,7 @@ require (
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/apiserver v0.27.3
-	oras.land/oras-go/v2 v2.2.0
+	oras.land/oras-go/v2 v2.2.1
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
