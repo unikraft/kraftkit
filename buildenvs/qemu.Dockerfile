@@ -157,7 +157,7 @@ RUN set -ex; \
         --disable-sparse \
         --disable-spice \
         --disable-spice-protocol \
-        --disable-tcg \
+        --enable-tcg \
         --enable-tools \
         --disable-tpm \
         --disable-u2f \
