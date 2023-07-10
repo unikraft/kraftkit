@@ -143,6 +143,8 @@ type Application interface {
 
 	// Removes library from the project directory
 	RemoveLibrary(ctx context.Context, libraryName string) error
+	// Add library to the application.
+	AddLibrary(context.Context, lib.LibraryConfig) error
 }
 
 type application struct {
@@ -1071,5 +1073,14 @@ func (app application) RemoveLibrary(ctx context.Context, libraryName string) er
 	if !isLibraryExistInProject {
 		return fmt.Errorf("library %s does not exist in the project", libraryName)
 	}
+	return nil
+}
+
+func (app application) AddLibrary(ctx context.Context, library lib.LibraryConfig) error {
+	if app.libraries == nil {
+		app.libraries = map[string]*lib.LibraryConfig{}
+	}
+	app.libraries[library.Name()] = &library
+
 	return nil
 }

@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 )
@@ -559,4 +560,13 @@ func (lc LibraryConfig) MarshalYAML() (interface{}, error) {
 	}
 
 	return ret, nil
+}
+
+// NewLibraryFromPackage creates a new library from package.
+func NewLibraryFromPackage(ctx context.Context, pack pack.Package, version string) (LibraryConfig, error) {
+	library := LibraryConfig{
+		name:    pack.Name(),
+		version: pack.Version(),
+	}
+	return library, nil
 }
