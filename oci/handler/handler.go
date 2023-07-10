@@ -16,8 +16,8 @@ type DigestResolver interface {
 	DigestExists(context.Context, digest.Digest) (bool, error)
 }
 
-type DigestPusher interface {
-	PushDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
+type DigestSaver interface {
+	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
 }
 
 type DescriptorResolver interface {
@@ -46,7 +46,7 @@ type ImageUnpacker interface {
 
 type Handler interface {
 	DigestResolver
-	DigestPusher
+	DigestSaver
 	ManifestLister
 	ImagePusher
 	ImageResolver

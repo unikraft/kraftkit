@@ -127,8 +127,8 @@ func (pt *progressWriter) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// PushDigest implements DigestPusher.
-func (handle *DirectoryHandler) PushDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
+// SaveDigest implements DigestSaver.
+func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
 	blobPath := handle.path
 
 	switch desc.MediaType {

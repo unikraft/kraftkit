@@ -150,7 +150,7 @@ func (image *Image) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor
 		}
 	}()
 
-	if err := image.handle.PushDigest(ctx, "", blob.desc, fp, nil); err != nil {
+	if err := image.handle.SaveDigest(ctx, "", blob.desc, fp, nil); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -333,8 +333,8 @@ func (image *Image) Save(ctx context.Context, source string, onProgress func(flo
 	image.manifestDesc.ArtifactType = image.manifest.Config.MediaType
 	image.manifestDesc.Annotations = image.manifest.Annotations
 
-	// push manifest
-	if err := image.handle.PushDigest(
+	// save the manifest digest
+	if err := image.handle.SaveDigest(
 		ctx,
 		source,
 		image.manifestDesc,
