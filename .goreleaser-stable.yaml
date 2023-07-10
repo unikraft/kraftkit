@@ -26,7 +26,16 @@ nfpms:
       - deb
       - rpm
       - apk
-
+    recommends:
+      - bison
+      - build-essential
+      - flex
+      - git
+      - libncurses-dev
+      - qemu-system
+      - socat
+      - unzip
+      - wget
 aurs:
   - homepage: https://kraftkit.sh
     description: Build and use highly customized and ultra-lightweight unikernels
