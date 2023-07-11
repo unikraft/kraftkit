@@ -191,10 +191,17 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 		return ocispec.Image{}, err
 	}
 
+	var jsonPath string
+	if strings.ContainsRune(ref.Name(), '@') {
+		jsonPath = strings.ReplaceAll(ref.Name(), "@", string(filepath.Separator)) + ".json"
+	} else {
+		jsonPath = strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator)) + ".json"
+	}
+
 	manifestPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerManifestsDir,
-		strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator))+".json",
+		jsonPath,
 	)
 
 	// Check whether the manifest exists
@@ -277,10 +284,17 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		return err
 	}
 
+	var jsonPath string
+	if strings.ContainsRune(ref.Name(), '@') {
+		jsonPath = strings.ReplaceAll(ref.Name(), "@", string(filepath.Separator)) + ".json"
+	} else {
+		jsonPath = strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator)) + ".json"
+	}
+
 	manifestPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerManifestsDir,
-		strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator))+".json",
+		jsonPath,
 	)
 
 	// Recursively create the directory
