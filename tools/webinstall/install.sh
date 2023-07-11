@@ -325,7 +325,7 @@ check_curl_for_retry_support() {
 # Code: 0 if the OS is found, 1 otherwise
 check_os_release() {
     _cor_os="$1"
-    _ccr_ck1=""
+    _cor_ck1=""
     _cor_ck2=""
 
     # False positive - it does not interpret it as awk code because of the macro
@@ -1016,18 +1016,21 @@ install_linux_gnu() {
     need_cmd "$AWK"
     need_cmd "$GREP"
 
-    if check_os_release "rhel"; then
+    if check_os_release "rhel" || check_os_release "fedora"; then
         need_cmd "$YUM"
-        _ilg_rpm_path=$(printf "%s%s%s%s%s"         \
-            "[kraftkit]\n"                          \
-            "name=Kraftkit Repo\n"                  \
-            "baseurl=https://rpm.pkg.kraftkit.sh\n" \
-            "enabled=1\n"                           \
-            "gpgcheck=0\n"                          \
+        _ilg_rpm_path=$(printf "%s%s%s%s%s"             \
+            "[kraftkit]\n"                              \
+            "name=Kraftkit Repo\n"                      \
+            "baseurl=https://rpm.pkg.kraftkit.sh\n"     \
+            "enabled=1\n"                               \
+            "gpgcheck=0\n"                              \
         )
 
-        do_cmd "printf $_ilg_rpm_path | tee /etc/yum.repos.d/kraftkit.repo"
-        do_cmd "$YUM update -y"
+        # Do command directly as the output is inconsistent
+        say "Adding kraftkit package for RHEL/Fedora"
+        printf "%b" "${_ilg_rpm_path}" | tee /etc/yum.repos.d/kraftkit.repo
+
+        do_cmd "$YUM makecache"
         do_cmd "$YUM install -y kraftkit"
     elif check_os_release "debian"; then
         need_cmd "$APT"
