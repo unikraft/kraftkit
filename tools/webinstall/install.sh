@@ -45,6 +45,7 @@ YUM=${YUM:-yum}
 APT=${APT:-apt-get}
 APK=${APK:-apk}
 TAR=${TAR:-tar}
+PACMAN=${PACMAN:-pacman}
 INSTALL=${INSTALL:-install}
 RM=${RM:-rm}
 CUT=${CUT:-cut}
@@ -1183,9 +1184,11 @@ install_kraftkit() {
         case $_ikk_arch in
             *"linux-gnu"*)
                 install_linux_gnu
+                install_dependencies_gnu
                 ;;
             *"linux-musl"*)
                 install_linux_musl
+                install_dependencies_musl
                 ;;
             *"darwin"*)
                 install_darwin "$_ikk_arch"
@@ -1202,6 +1205,134 @@ install_kraftkit() {
         need_cmd "$INSTALL"
         install_linux_manual "$_ikk_arch"
     fi
+}
+
+# install_dependencies_gnu installs all kraftkit dependencies needed for
+# building and running unikernels on gnu distributions.
+# Returns:
+# Code: 0 on success, 1 on error
+install_dependencies_gnu() {
+    _idd_list=$(printf "%s %s %s %s %s %s %s %s %s" \
+        "bison"                             \
+        "build-essential"                   \
+        "flex"                              \
+        "git"                               \
+        "libncurses-dev"                    \
+        "qemu-system"                       \
+        "socat"                             \
+        "unzip"                             \
+        "wget"                              \
+    )
+
+    need_cmd "$AWK"
+    need_cmd "$GREP"
+
+    if check_os_release "rhel" || check_os_release "fedora"; then
+        _idd_list=$(printf "%s %s %s %s %s %s %s %s %s" \
+            "bison"                             \
+            "flex"                              \
+            "git"                               \
+            "ncurses-devel"                     \
+            "qemu-system-x86"                   \
+            "qemu-system-arm"                   \
+            "socat"                             \
+            "unzip"                             \
+            "wget"                              \
+        )
+        _idd_grp_lst="'C Development Tools and Libraries' 'Development Tools'"
+        _idd_no_weak_deps="--setopt=install_weak_deps=False"
+
+        need_cmd "$YUM"
+
+        do_cmd "$YUM makecache"
+
+        say_debug "Installing dependencies: $_idd_list $_idd_grp_lst"
+        do_cmd "$YUM group install $_idd_no_weak_deps -y $_idd_grp_lst"
+        do_cmd "$YUM install $_idd_no_weak_deps -y $_idd_list"
+    elif check_os_release "debian"; then
+        need_cmd "$APT"
+
+        do_cmd "$APT --allow-unauthenticated update"
+
+        say_debug "Installing dependencies: $_idd_list"
+        get_user_response "install recommended dependencies? [y/N]: " "n"
+        _idd_answer="$_RETVAL"
+
+        _idd_recommended=""
+        if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            _idd_recommended="--install-recommends"
+        elif printf "%s" "$_idd_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            _idd_recommended="--no-install-recommends"
+        else
+            err "fatal: choose either yes or no."
+        fi
+
+        do_cmd "$APT install $_idd_recommended -y $_idd_list"
+    elif check_os_release "arch"; then
+        _idd_list=$(printf "%s %s %s %s %s %s %s %s %s %s"   \
+            "base-devel"                            \
+            "bison"                                 \
+            "flex"                                  \
+            "git"                                   \
+            "ncurses"                               \
+            "qemu-system-arm"                       \
+            "qemu-system-x86"                       \
+            "socat"                                 \
+            "unzip"                                 \
+            "wget"                                  \
+        )
+
+        need_cmd "$PACMAN"
+
+        do_cmd "pacman -Syu --noconfirm $_idd_list"
+    else
+        _idd_msg=$(printf "error: %s%s%s"                               \
+            "Unsupported distribution. "                                \
+            "Try downloading your architecture-equivalent packages for "\
+            "this debian list: $_idd_list"                              \
+        )
+        err "$_idd_msg"
+    fi
+
+    return 0
+}
+
+# install_dependencies_gnu installs all kraftkit dependencies needed for
+# building and running unikernels on musl distributions.
+# Returns:
+# Code: 0 on success, 1 on error
+install_dependencies_musl() {
+    _idm_list=$(printf "%s %s %s %s %s %s %s %s %s %s"   \
+        "bison"                                 \
+        "build-base"                            \
+        "flex"                                  \
+        "git"                                   \
+        "ncurses-dev"                           \
+        "qemu-system-x86_64"                    \
+        "qemu-system-arm"                       \
+        "socat"                                 \
+        "unzip"                                 \
+        "wget"                                  \
+    )
+
+    need_cmd "$AWK"
+    need_cmd "$GREP"
+
+    if check_os_release "alpine"; then
+        need_cmd "$APK"
+
+        say_debug "Installing dependencies: $_idm_list"
+        do_cmd "$APK add --no-cache $_idm_list"
+    else
+        _idm_msg=$(printf "error: %s%s%s"                               \
+            "Unsupported distribution. "                                \
+            "Try downloading your architecture-equivalent packages for "\
+            "this alpine list: $_idm_list"                              \
+        )
+        err "$_idm_msg"
+    fi
+
+    return 0
 }
 
 # arg_parse parses the arguments passed to the script.
@@ -1306,7 +1437,7 @@ main() {
     _main_auto_install="$_RETVAL"
     say_debug "Auto install: $_main_auto_install"
 
-    # Install kraftkit for the given architecture
+    # Install kraftkit for the given architecture and its dependencies
     install_kraftkit "$_main_arch" "$_main_auto_install"
     say "kraftkit was installed successfully to $PREFIX/kraft"
 
