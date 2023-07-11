@@ -1027,8 +1027,8 @@ install_linux_gnu() {
         )
 
         do_cmd "printf $_ilg_rpm_path | tee /etc/yum.repos.d/kraftkit.repo"
-        do_cmd "$YUM update"
-        do_cmd "$YUM install kraftkit"
+        do_cmd "$YUM update -y"
+        do_cmd "$YUM install -y kraftkit"
     elif check_os_release "debian"; then
         need_cmd "$APT"
         _ilg_deb_path="deb [trusted=yes] https://deb.pkg.kraftkit.sh /"
@@ -1037,6 +1037,19 @@ install_linux_gnu() {
             "echo ${_ilg_deb_path} | "                  \
             "tee /etc/apt/sources.list.d/kraftkit.list" \
         )
+
+        get_user_response "install recommended dependencies? [y/N]: " "n"
+        _idd_answer="$_RETVAL"
+        
+        _idd_recommended=""
+        if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            _idd_recommended="--install-recommends"
+        elif printf "%s" "$_idd_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            _idd_recommended="--no-install-recommends"
+        else
+            err "fatal: choose either yes or no."
+        fi
+
         do_cmd "$_ilg_deb_cmd"
         do_cmd "$APT --allow-unauthenticated update"
         do_cmd "$APT install -y kraftkit"
