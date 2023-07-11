@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -380,6 +381,9 @@ func (ocipack *ociPackage) Version() string {
 
 // imageRef returns the OCI-standard image name in the format `name:tag`
 func (ocipack *ociPackage) imageRef() string {
+	if strings.HasPrefix(ocipack.Version(), "sha256:") {
+		return fmt.Sprintf("%s@%s", ocipack.Name(), ocipack.Version())
+	}
 	return fmt.Sprintf("%s:%s", ocipack.Name(), ocipack.Version())
 }
 
