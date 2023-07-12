@@ -317,7 +317,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		} else {
 			more, err := NewPackageFromManifest(manifest, mopts...)
 			if err != nil {
-				log.G(ctx).Debug(err)
+				log.G(ctx).Trace(err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
