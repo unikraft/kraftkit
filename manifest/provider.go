@@ -102,7 +102,7 @@ func NewProviderFromString(ctx context.Context, provider, path string, entity an
 			ctx:   ctx,
 		}, nil
 	case "manifest":
-		return ManifestProvider{
+		return &ManifestProvider{
 			path:     path,
 			manifest: entity.(*Manifest),
 		}, nil
