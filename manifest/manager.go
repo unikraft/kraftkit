@@ -226,8 +226,6 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		allManifests = append(allManifests, manifests...)
 	}
 
-	log.G(ctx).Debugf("found %d manifests in catalog", len(allManifests))
-
 	var packages []pack.Package
 	var g glob.Glob
 	types := query.Types()
@@ -360,6 +358,8 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		// the shorter string comes first
 		return len(iRunes) < len(jRunes)
 	})
+
+	log.G(ctx).Tracef("found %d/%d matching manifests in catalog", len(packages), len(allManifests))
 
 	return packages, nil
 }
