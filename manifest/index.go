@@ -47,7 +47,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("retrieved index")
-		return ManifestIndexProvider{
+		return &ManifestIndexProvider{
 			path:  path,
 			index: index,
 			mopts: mopts,
@@ -60,7 +60,7 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("retrieved index")
-		return ManifestIndexProvider{
+		return &ManifestIndexProvider{
 			path:  path,
 			index: index,
 			mopts: mopts,
@@ -71,15 +71,15 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 	return nil, fmt.Errorf("provided path is not a manifest index: %s", path)
 }
 
-func (mip ManifestIndexProvider) Manifests() ([]*Manifest, error) {
+func (mip *ManifestIndexProvider) Manifests() ([]*Manifest, error) {
 	return mip.index.Manifests, nil
 }
 
-func (mip ManifestIndexProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+func (mip *ManifestIndexProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
 	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullManifest")
 }
 
-func (mip ManifestIndexProvider) String() string {
+func (mip *ManifestIndexProvider) String() string {
 	return "index"
 }
 

@@ -95,7 +95,7 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 func NewProviderFromString(ctx context.Context, provider, path string, entity any, mopts ...ManifestOption) (Provider, error) {
 	switch provider {
 	case "index":
-		return ManifestIndexProvider{
+		return &ManifestIndexProvider{
 			path:  path,
 			index: entity.(*ManifestIndex),
 			mopts: mopts,
