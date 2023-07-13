@@ -127,5 +127,9 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 		machine.Status.InitrdPath = opts.InitRd
 	}
 
+	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
+		return fmt.Errorf("cannot run the selected project target '%s' without building the kernel: try running `kraft build` first: %w", targetName, err)
+	}
+
 	return nil
 }
