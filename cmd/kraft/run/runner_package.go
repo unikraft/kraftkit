@@ -80,7 +80,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	}
 
 	if len(packs) > 1 {
-		return fmt.Errorf("could not determine what to run, too many options")
+		return fmt.Errorf("could not determine what to run: too many options")
 	} else if len(packs) == 0 {
 		// Second, try accessing the remote catalog
 		packs, err = runner.pm.Catalog(ctx,
@@ -93,7 +93,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		}
 
 		if len(packs) > 1 {
-			return fmt.Errorf("could not determine what to run, too many options")
+			return fmt.Errorf("could not determine what to run: too many options")
 		} else if len(packs) == 0 {
 			return fmt.Errorf("not found: %s", runner.packName)
 		}
