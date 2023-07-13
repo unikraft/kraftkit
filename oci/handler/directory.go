@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/internal/version"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -272,8 +274,15 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	if err != nil {
 		return err
 	}
-
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	img, err := remote.Image(ref,
+		remote.WithContext(ctx),
+		remote.WithPlatform(v1.Platform{
+			OS:           strings.Split(platform, "/")[0],
+			Architecture: strings.Split(platform, "/")[1],
+		}),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+	)
 	if err != nil {
 		return err
 	}
