@@ -108,7 +108,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 	// Provide a meaningful name
 	targetName := t.Name()
 	if targetName == project.Name() || targetName == "" {
-		targetName = t.Platform().Name() + "-" + t.Architecture().Name()
+		targetName = t.Platform().Name() + "/" + t.Architecture().Name()
 	}
 
 	machine.Spec.Kernel = "project://" + project.Name() + ":" + targetName
