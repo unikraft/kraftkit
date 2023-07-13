@@ -307,6 +307,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	if err != nil {
 		return err
 	}
+	defer writer.Close()
 
 	if _, err := writer.Write(manifest); err != nil {
 		return err
@@ -343,6 +344,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	if err != nil {
 		return err
 	}
+	defer writer.Close()
 
 	// Write the config
 	if _, err = writer.Write(config); err != nil {
@@ -382,11 +384,13 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		if err != nil {
 			return err
 		}
+		defer writer.Close()
 
 		reader, err := layer.Compressed()
 		if err != nil {
 			return err
 		}
+		defer reader.Close()
 
 		if _, err = io.Copy(writer, reader); err != nil {
 			return err
