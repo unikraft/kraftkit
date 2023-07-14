@@ -45,7 +45,7 @@ type Application interface {
 	OutDir() string
 
 	// Template returns the application's template
-	Template() template.Template
+	Template() *template.TemplateConfig
 
 	// Libraries returns the application libraries' configurations
 	Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error)
@@ -133,7 +133,7 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
-	template      template.TemplateConfig
+	template      *template.TemplateConfig
 	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
@@ -170,7 +170,7 @@ func (app application) OutDir() string {
 	return app.outDir
 }
 
-func (app application) Template() template.Template {
+func (app application) Template() *template.TemplateConfig {
 	return app.template
 }
 
@@ -216,7 +216,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 	app.path = merge.Path()
 	app.workingDir = merge.WorkingDir()
 	app.outDir = merge.OutDir()
-	app.template = merge.Template().(template.TemplateConfig)
+	app.template = merge.Template()
 
 	libs, err := merge.Libraries(ctx)
 	if err != nil {
@@ -670,7 +670,7 @@ func (app application) Components(ctx context.Context) ([]component.Component, e
 		app.Unikraft(ctx),
 	}
 
-	if app.template.Name() != "" {
+	if app.template != nil {
 		components = append(components, app.template)
 	}
 

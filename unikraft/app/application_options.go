@@ -110,7 +110,7 @@ func WithOutDir(outDir string) ApplicationOption {
 }
 
 // WithTemplate sets the application's template
-func WithTemplate(template template.TemplateConfig) ApplicationOption {
+func WithTemplate(template *template.TemplateConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.template = template
 		return nil
