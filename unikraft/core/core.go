@@ -27,7 +27,7 @@ type Unikraft interface {
 	component.Component
 
 	// Libraries returns the application libraries' configurations
-	Libraries(ctx context.Context) (lib.Libraries, error)
+	Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error)
 }
 
 type UnikraftConfig struct {
@@ -107,7 +107,7 @@ func (uc UnikraftConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.core.UnikraftConfig.PrintInfo"
 }
 
-func (uk UnikraftConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
+func (uk UnikraftConfig) Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error) {
 	// Unikraft internal build system recognises internal libraries simply by
 	// iterating over the contents of the lib/ dir.  We do the same here.
 	config_uk_lib, err := uk.CONFIG_UK_LIB()
@@ -120,7 +120,7 @@ func (uk UnikraftConfig) Libraries(ctx context.Context) (lib.Libraries, error) {
 		return nil, err
 	}
 
-	libs := lib.Libraries{}
+	libs := map[string]*lib.LibraryConfig{}
 
 	for _, f := range files {
 		if !f.IsDir() {

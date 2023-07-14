@@ -126,7 +126,7 @@ func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
 }
 
 // WithLibraries sets the application's library list
-func WithLibraries(libraries lib.Libraries) ApplicationOption {
+func WithLibraries(libraries map[string]*lib.LibraryConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.libraries = libraries
 		return nil

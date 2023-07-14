@@ -83,15 +83,15 @@ func Transform(ctx context.Context, source interface{}, target interface{}, addi
 
 func createTransformHook(ctx context.Context, additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]TransformerFunc{
-		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(kconfig.KeyValueMap{}):     transformKConfig,
-		reflect.TypeOf(target.Command{}):          transformCommand,
-		reflect.TypeOf(arch.ArchitectureConfig{}): arch.TransformFromSchema,
-		reflect.TypeOf(plat.PlatformConfig{}):     plat.TransformFromSchema,
-		reflect.TypeOf(target.TargetConfig{}):     target.TransformFromSchema,
-		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
-		reflect.TypeOf(lib.Libraries{}):           lib.TransformMapFromSchema,
-		reflect.TypeOf(core.UnikraftConfig{}):     core.TransformFromSchema,
+		reflect.TypeOf(map[string]string{}):             transformMapStringString,
+		reflect.TypeOf(kconfig.KeyValueMap{}):           transformKConfig,
+		reflect.TypeOf(target.Command{}):                transformCommand,
+		reflect.TypeOf(arch.ArchitectureConfig{}):       arch.TransformFromSchema,
+		reflect.TypeOf(plat.PlatformConfig{}):           plat.TransformFromSchema,
+		reflect.TypeOf(target.TargetConfig{}):           target.TransformFromSchema,
+		reflect.TypeOf(initrd.InitrdConfig{}):           transformInitrd,
+		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
+		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
 	}
 
 	for _, transformer := range additionalTransformers {

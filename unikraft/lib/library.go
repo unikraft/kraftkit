@@ -156,8 +156,6 @@ type LibraryConfig struct {
 	srcs []*make.ConditionalValue
 }
 
-type Libraries map[string]*LibraryConfig
-
 func (lc LibraryConfig) Name() string {
 	return lc.name
 }
@@ -223,8 +221,8 @@ func (lc LibraryConfig) PrintInfo(ctx context.Context) string {
 // The method can return multiple libraries if they are detected from a
 // top-level Makefile.uk/Config.uk pair which can arbitrarily register any
 // number of libraries.
-func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (Libraries, error) {
-	libs := Libraries{}
+func NewFromDir(ctx context.Context, dir string, opts ...LibraryOption) (map[string]*LibraryConfig, error) {
+	libs := map[string]*LibraryConfig{}
 
 	makefile_uk := filepath.Join(dir, unikraft.Makefile_uk)
 	if _, err := os.Stat(makefile_uk); err != nil {

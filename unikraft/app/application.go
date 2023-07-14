@@ -48,7 +48,7 @@ type Application interface {
 	Template() template.Template
 
 	// Libraries returns the application libraries' configurations
-	Libraries(ctx context.Context) (lib.Libraries, error)
+	Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error)
 
 	// Targets returns the application's targets
 	Targets() []target.Target
@@ -135,7 +135,7 @@ type application struct {
 	outDir        string
 	template      template.TemplateConfig
 	unikraft      core.UnikraftConfig
-	libraries     lib.Libraries
+	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
 	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
@@ -178,7 +178,7 @@ func (app application) Unikraft(ctx context.Context) core.Unikraft {
 	return app.unikraft
 }
 
-func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
+func (app application) Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error) {
 	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
 	if err != nil {
 		return nil, err
@@ -346,7 +346,7 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	// syscall availability from a libc (which should be included first).  Long-term
 	// solution is to determine the library order by generating a DAG via KConfig
 	// parsing.
-	unformattedLibraries := lib.Libraries{}
+	unformattedLibraries := map[string]*lib.LibraryConfig{}
 	for k, v := range app.libraries {
 		unformattedLibraries[k] = v
 	}
