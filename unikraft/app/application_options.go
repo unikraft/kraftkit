@@ -118,7 +118,7 @@ func WithTemplate(template template.TemplateConfig) ApplicationOption {
 }
 
 // WithUnikraft sets the application's core
-func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
+func WithUnikraft(unikraft *core.UnikraftConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.unikraft = unikraft
 		return nil

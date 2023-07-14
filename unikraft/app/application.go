@@ -39,7 +39,7 @@ type Application interface {
 	WorkingDir() string
 
 	// Unikraft returns the application's unikraft configuration
-	Unikraft(context.Context) core.Unikraft
+	Unikraft(context.Context) *core.UnikraftConfig
 
 	// OutDir returns the path to the application's output directory
 	OutDir() string
@@ -134,7 +134,7 @@ type application struct {
 	filename      string
 	outDir        string
 	template      template.TemplateConfig
-	unikraft      core.UnikraftConfig
+	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
 	kraftfile     *Kraftfile
@@ -174,7 +174,7 @@ func (app application) Template() template.Template {
 	return app.template
 }
 
-func (app application) Unikraft(ctx context.Context) core.Unikraft {
+func (app application) Unikraft(ctx context.Context) *core.UnikraftConfig {
 	return app.unikraft
 }
 
@@ -245,7 +245,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 	// Need to first merge the app configuration over the template
 	uk := merge.Unikraft(ctx)
 	uk.KConfig().OverrideBy(app.unikraft.KConfig())
-	app.unikraft = uk.(core.UnikraftConfig)
+	app.unikraft = uk
 
 	return app, nil
 }
