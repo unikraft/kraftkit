@@ -19,6 +19,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/internal/cli/kraft/lib"
 	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
@@ -78,6 +79,9 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(menu.NewCmd())
 	cmd.AddCommand(set.NewCmd())
 	cmd.AddCommand(unset.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "lib", Title: "PROJECT LIBRARY COMMANDS"})
+	cmd.AddCommand(lib.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
 	cmd.AddCommand(pkg.NewCmd())

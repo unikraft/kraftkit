@@ -140,6 +140,9 @@ type Application interface {
 
 	// Volumes to be used during runtime of an application.
 	Volumes() []*volume.VolumeConfig
+
+	// Removes library from the project directory
+	RemoveLibrary(ctx context.Context, libraryName string) error
 }
 
 type application struct {
@@ -984,7 +987,7 @@ func saveNewKraftfile(ctx context.Context, app Application) error {
 	defer kraftfile.Close()
 
 	// Write the schema version to the file
-	_, err = kraftfile.WriteString(fmt.Sprintf("spec: %s\n", schema.SchemaVersionLatest))
+	_, err = kraftfile.WriteString(fmt.Sprintf("spec: '%s'\n", schema.SchemaVersionLatest))
 	if err != nil {
 		return err
 	}
@@ -1029,4 +1032,44 @@ func (app application) Save(ctx context.Context) error {
 // Volumes implemenets Application.
 func (app application) Volumes() []*volume.VolumeConfig {
 	return app.volumes
+}
+
+func (app application) RemoveLibrary(ctx context.Context, libraryName string) error {
+	isLibraryExistInProject := false
+	for libKey, lib := range app.libraries {
+		if lib.Name() == libraryName {
+			isLibraryExistInProject = true
+			delete(app.libraries, libKey)
+
+			yamlFile, err := os.ReadFile(app.kraftfile.path)
+			if err != nil {
+				return err
+			}
+
+			yamlMap := app
+			err = yaml.Unmarshal(yamlFile, &yamlMap)
+			if err != nil {
+				return err
+			}
+
+			delete(yamlMap.libraries, libKey)
+			err = saveNewKraftfile(ctx, yamlMap)
+			if err != nil {
+				return err
+			}
+
+			// Remove library directory from the project directory
+			libPath := filepath.Join(app.WorkingDir(), unikraft.LibsDir, libraryName)
+			if _, err = os.Stat(libPath); err == nil {
+				err = os.RemoveAll(libPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if !isLibraryExistInProject {
+		return fmt.Errorf("library %s does not exist in the project", libraryName)
+	}
+	return nil
 }
