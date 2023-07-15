@@ -103,7 +103,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	// defined state directory.
 	machine.ObjectMeta.UID = uuid.NewUUID()
 	machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
-	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
+	if err := os.MkdirAll(machine.Status.StateDir, 0o775); err != nil {
 		return err
 	}
 

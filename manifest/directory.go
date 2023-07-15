@@ -112,7 +112,7 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 
 	f, err := os.Lstat(local)
 	if err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(local), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(local), 0o775); err != nil {
 			return err
 		}
 	} else if err == nil && f.IsDir() {

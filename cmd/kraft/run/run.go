@@ -305,7 +305,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
 		}
 
-		if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
+		if err := os.MkdirAll(machine.Status.StateDir, 0o775); err != nil {
 			return fmt.Errorf("could not make machine state dir: %w", err)
 		}
 

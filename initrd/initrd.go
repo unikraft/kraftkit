@@ -145,7 +145,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 		Files:   make(map[string]string),
 	}
 
-	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0o664)
 	if err != nil {
 		return nil, fmt.Errorf("could not open initramfs file: %w", err)
 	}

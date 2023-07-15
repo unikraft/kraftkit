@@ -34,7 +34,7 @@ type DirectoryHandler struct {
 }
 
 func NewDirectoryHandler(path string) (*DirectoryHandler, error) {
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.MkdirAll(path, 0o775); err != nil {
 		return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
 	}
 
@@ -64,7 +64,7 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []
 	// Create the manifest directory if it does not exist and return nil, since
 	// there's nothing to return.
 	if _, err := os.Stat(manifestsDir); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(manifestsDir, 0o755); err != nil {
+		if err := os.MkdirAll(manifestsDir, 0o775); err != nil {
 			return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
 		}
 
@@ -157,11 +157,11 @@ func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc
 	}
 
 	// Create the parent directory if it does not exist
-	if err := os.MkdirAll(filepath.Dir(blobPath), 0o644); err != nil {
+	if err := os.MkdirAll(filepath.Dir(blobPath), 0o774); err != nil {
 		return fmt.Errorf("could not make parent directory: %w", err)
 	}
 
-	blob, err := os.OpenFile(blobPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	blob, err := os.OpenFile(blobPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o664)
 	if err != nil {
 		return fmt.Errorf("could not create blob: %w", err)
 	}
@@ -298,7 +298,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	)
 
 	// Recursively create the directory
-	if err = os.MkdirAll(manifestPath[:strings.LastIndex(manifestPath, "/")], 0o755); err != nil {
+	if err = os.MkdirAll(manifestPath[:strings.LastIndex(manifestPath, "/")], 0o775); err != nil {
 		return err
 	}
 
@@ -336,7 +336,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	}
 
 	// Recursively create the directory
-	if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, "/")], 0o755); err != nil {
+	if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, "/")], 0o775); err != nil {
 		return err
 	}
 
@@ -371,7 +371,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		)
 
 		// Recursively create the directory
-		if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, "/")], 0o755); err != nil {
+		if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, "/")], 0o775); err != nil {
 			return err
 		}
 
@@ -449,7 +449,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, des
 
 			// If the file is a directory, create it
 			if hdr.Typeflag == tar.TypeDir {
-				if err := os.MkdirAll(path, 0o755); err != nil {
+				if err := os.MkdirAll(path, 0o775); err != nil {
 					return err
 				}
 				continue
@@ -457,7 +457,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, des
 
 			// If the directory in the path doesn't exist, create it
 			if _, err := os.Stat(path[:strings.LastIndex(path, "/")]); os.IsNotExist(err) {
-				if err := os.MkdirAll(path[:strings.LastIndex(path, "/")], 0o755); err != nil {
+				if err := os.MkdirAll(path[:strings.LastIndex(path, "/")], 0o775); err != nil {
 					return err
 				}
 			}
