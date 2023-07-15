@@ -15,6 +15,7 @@ type QemuConfig struct {
 	Devices    []QemuDevice      `flag:"-device"      json:"device,omitempty"`
 	Display    QemuDisplay       `flag:"-display"     json:"display,omitempty"`
 	EnableKVM  bool              `flag:"-enable-kvm"  json:"enable_kvm,omitempty"`
+	FsDevs     []QemuFsDev       `flag:"-fsdev"       json:"fsdev,omitempty"`
 	InitRd     string            `flag:"-initrd"      json:"initrd,omitempty"`
 	Kernel     string            `flag:"-kernel"      json:"kernel,omitempty"`
 	Machine    QemuMachine       `flag:"-machine"     json:"machine,omitempty"`
@@ -111,6 +112,18 @@ func WithDisplay(display QemuDisplay) QemuOption {
 func WithEnableKVM(enableKVM bool) QemuOption {
 	return func(qc *QemuConfig) error {
 		qc.EnableKVM = enableKVM
+		return nil
+	}
+}
+
+func WithFsDevice(fsdev QemuFsDev) QemuOption {
+	return func(qc *QemuConfig) error {
+		if qc.FsDevs == nil {
+			qc.FsDevs = make([]QemuFsDev, 0)
+		}
+
+		qc.FsDevs = append(qc.FsDevs, fsdev)
+
 		return nil
 	}
 }
