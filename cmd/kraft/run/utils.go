@@ -3,13 +3,16 @@ package run
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/containerd/nerdctl/pkg/strutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	machinename "kraftkit.sh/machine/name"
+	"kraftkit.sh/machine/volume"
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
@@ -109,6 +112,68 @@ func (opts *Run) assignName(ctx context.Context, machine *machineapi.Machine) er
 	}
 
 	machine.ObjectMeta.Name = opts.Name
+
+	return nil
+}
+
+// Was a volume specified? E.g. --volume=path:path
+func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) error {
+	if len(opts.Volumes) == 0 {
+		return nil
+	}
+
+	var err error
+	controllers := map[string]volumeapi.VolumeService{}
+	machine.Spec.Volumes = []volumeapi.Volume{}
+
+	for _, volLine := range opts.Volumes {
+		var hostPath, mountPath string
+		split := strings.Split(volLine, ":")
+		if len(split) == 2 {
+			hostPath = split[0]
+			mountPath = split[1]
+		} else {
+			return fmt.Errorf("invalid syntax for --volume=%s expected --volume=<host>:<machine>", volLine)
+		}
+
+		var driver string
+
+		for sname, strategy := range volume.Strategies() {
+			if ok, _ := strategy.IsCompatible(hostPath, nil); !ok || err != nil {
+				continue
+			}
+
+			if _, ok := controllers[sname]; !ok {
+				controllers[sname], err = strategy.NewVolumeV1alpha1(ctx)
+				if err != nil {
+					return fmt.Errorf("could not prepare %s volume service: %w", sname, err)
+				}
+			}
+
+			driver = sname
+		}
+
+		if len(driver) == 0 {
+			return fmt.Errorf("could not find compatible volume driver for %s", hostPath)
+		}
+
+		vol, err := controllers[driver].Create(ctx, &volumeapi.Volume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: hostPath,
+			},
+			Spec: volumeapi.VolumeSpec{
+				Driver:      driver,
+				Source:      hostPath,
+				Destination: mountPath,
+				ReadOnly:    false, // TODO(nderjung): Options are not yet supported.
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create volume: %w", err)
+		}
+
+		machine.Spec.Volumes = append(machine.Spec.Volumes, *vol)
+	}
 
 	return nil
 }

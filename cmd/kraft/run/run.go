@@ -47,6 +47,7 @@ type Run struct {
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 
 	platform          mplatform.Platform
@@ -276,6 +277,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := opts.parseNetworks(ctx, machine); err != nil {
+		return err
+	}
+
+	if err := opts.parseVolumes(ctx, machine); err != nil {
 		return err
 	}
 
