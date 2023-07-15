@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
+	volumev1alpha1 "kraftkit.sh/api/volume/v1alpha1"
 )
 
 // MachinePort represents a network port in a single container.
@@ -79,6 +80,9 @@ type MachineSpec struct {
 
 	// Networks associated with this machine.
 	Networks []networkv1alpha1.NetworkSpec `json:"networks,omitempty"`
+
+	// Volumes associated with this machine.
+	Volumes []volumev1alpha1.Volume `json:"volumes,omitempty"`
 
 	// Resources describes the compute resources (requests and limits) required by
 	// this machine.
