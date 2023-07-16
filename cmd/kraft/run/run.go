@@ -242,6 +242,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		if capable && err == nil {
 			run = candidate
 			break
+		} else if err != nil {
+			log.G(ctx).
+				WithField("runner", candidate.String()).
+				Debugf("cannot run because: %v", err)
 		}
 	}
 	if run == nil && opts.RunAs != "" {
