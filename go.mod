@@ -17,7 +17,7 @@ require (
 	github.com/cli/cli/v2 v2.32.0
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.15.1
+	github.com/compose-spec/compose-go v1.16.0
 	github.com/containerd/containerd v1.7.2
 	github.com/containerd/nerdctl v1.4.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
