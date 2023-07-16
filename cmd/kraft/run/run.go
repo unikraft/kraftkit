@@ -5,6 +5,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -222,6 +223,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	var run runner
+	var errs []error
 	runners := runners()
 
 	// Iterate through the list of built-in runners which sequentially tests and
@@ -242,12 +244,15 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		if capable && err == nil {
 			run = candidate
 			break
+		} else if err != nil {
+			errs = append(errs, err)
+			log.G(ctx).
+				WithField("runner", candidate.String()).
+				Debugf("cannot run because: %v", err)
 		}
 	}
-	if run == nil && opts.RunAs != "" {
-		return fmt.Errorf("unknown runner: %s", opts.RunAs)
-	} else if run == nil {
-		return fmt.Errorf("could not determine how to run provided input")
+	if run == nil {
+		return fmt.Errorf("could not determine how to run provided input: %w", errors.Join(errs...))
 	}
 
 	log.G(ctx).WithField("runner", run.String()).Debug("using")
