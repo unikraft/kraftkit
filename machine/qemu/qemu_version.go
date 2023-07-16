@@ -63,5 +63,5 @@ func GetQemuVersionFromBin(ctx context.Context, bin string) (*semver.Version, er
 	// Some QEMU versions include the OS distribution that it was compiled for
 	// after the version number (surrounded by brackets).  In every case, just
 	// split the string and gather everything before the first bracket.
-	return semver.NewVersion(strings.TrimSpace(strings.Split(ret, " (")[0]))
+	return semver.NewVersion(strings.TrimSpace(strings.Split(ret, "(")[0]))
 }
