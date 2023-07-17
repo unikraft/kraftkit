@@ -85,11 +85,8 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
 		if opts.platform == "" || opts.platform == "auto" {
-			var mode mplatform.SystemMode
-			platform, mode, err = mplatform.Detect(ctx)
-			if mode == mplatform.SystemGuest {
-				return fmt.Errorf("nested virtualization not supported")
-			} else if err != nil {
+			platform, _, err = mplatform.Detect(ctx)
+			if err != nil {
 				return err
 			}
 		} else {
