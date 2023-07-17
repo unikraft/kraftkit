@@ -817,7 +817,10 @@ func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *mach
 
 	var errs merr.Errors
 
-	errs = append(errs, os.Remove(machine.Status.LogFile))
+	err := os.RemoveAll(machine.Status.StateDir)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("error deleting QEMU's state directory %s: %w", machine.Status.StateDir, err))
+	}
 
 	// Do not throw errors (likely these resources do not exist at this point)
 	// when trying to remove ephemeral files that are controlled by the QEMU
