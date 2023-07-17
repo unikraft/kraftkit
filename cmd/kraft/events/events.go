@@ -74,12 +74,8 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	platform := mplatform.PlatformUnknown
 
 	if opts.platform == "" || opts.platform == "auto" {
-		var mode mplatform.SystemMode
-		platform, mode, err = mplatform.Detect(ctx)
-		if mode == mplatform.SystemGuest {
-			cancel()
-			return fmt.Errorf("nested virtualization not supported")
-		} else if err != nil {
+		platform, _, err = mplatform.Detect(ctx)
+		if err != nil {
 			cancel()
 			return err
 		}

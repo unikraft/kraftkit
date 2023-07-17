@@ -155,7 +155,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	if plat == "" || plat == "auto" {
 		var mode mplatform.SystemMode
 		opts.platform, mode, err = mplatform.Detect(ctx)
-		if mode == mplatform.SystemGuest {
+		if mode == mplatform.SystemGuest && !opts.DisableAccel {
 			return fmt.Errorf("nested virtualization not supported")
 		} else if err != nil {
 			return err
