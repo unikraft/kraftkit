@@ -73,7 +73,7 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("retrieved manifest")
-		return ManifestProvider{
+		return &ManifestProvider{
 			path:     path,
 			manifest: manifest,
 		}, nil
@@ -84,7 +84,7 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("retrieved manifest")
-		return ManifestProvider{
+		return &ManifestProvider{
 			path:     path,
 			manifest: manifest,
 		}, nil
@@ -93,17 +93,17 @@ func NewManifestProvider(ctx context.Context, path string, mopts ...ManifestOpti
 	return nil, fmt.Errorf("provided path is not a manifest: %s", path)
 }
 
-func (mp ManifestProvider) Manifests() ([]*Manifest, error) {
+func (mp *ManifestProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{mp.manifest}, nil
 }
 
-func (mp ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
+func (mp *ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
 	manifest.mopts = mp.manifest.mopts
 
 	return pullArchive(ctx, manifest, opts...)
 }
 
-func (mp ManifestProvider) String() string {
+func (mp *ManifestProvider) String() string {
 	return "manifest"
 }
 

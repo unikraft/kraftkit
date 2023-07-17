@@ -96,12 +96,12 @@ func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (P
 		return nil, fmt.Errorf("could not list remote git repository: %v", err)
 	}
 
-	return provider, nil
+	return &provider, nil
 }
 
 // probeChannels is an internal method which matches Git branches for the
 // repository and uses this as a ManifestChannel
-func (gp GitProvider) probeChannels() []ManifestChannel {
+func (gp *GitProvider) probeChannels() []ManifestChannel {
 	var channels []ManifestChannel
 
 	// This is unikraft-centric ettiquette where there exists two branches:
@@ -150,7 +150,7 @@ func (gp GitProvider) probeChannels() []ManifestChannel {
 
 // probeVersions is an internal method which matches Git tags for the repository
 // and uses this as a ManifestVersion
-func (gp GitProvider) probeVersions() []ManifestVersion {
+func (gp *GitProvider) probeVersions() []ManifestVersion {
 	var versions []ManifestVersion
 
 	for _, ref := range gp.refs {
@@ -183,7 +183,7 @@ func (gp GitProvider) probeVersions() []ManifestVersion {
 	return versions
 }
 
-func (gp GitProvider) Manifests() ([]*Manifest, error) {
+func (gp *GitProvider) Manifests() ([]*Manifest, error) {
 	base := filepath.Base(gp.repo)
 	ext := filepath.Ext(gp.repo)
 	if len(ext) > 0 {
@@ -214,7 +214,7 @@ func (gp GitProvider) Manifests() ([]*Manifest, error) {
 	return []*Manifest{manifest}, nil
 }
 
-func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popts ...pack.PullOption) error {
+func (gp *GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popts ...pack.PullOption) error {
 	if useGit {
 		return pullGit(ctx, manifest, popts...)
 	}
@@ -229,7 +229,7 @@ func (gp GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popt
 	return nil
 }
 
-func (gp GitProvider) String() string {
+func (gp *GitProvider) String() string {
 	return "git"
 }
 

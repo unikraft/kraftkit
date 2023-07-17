@@ -25,7 +25,8 @@ import (
 )
 
 type manifestManager struct {
-	manifests []string
+	manifests  []string
+	indexCache *ManifestIndex
 }
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
@@ -60,7 +61,7 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
 
-	localIndex := &ManifestIndex{
+	index := &ManifestIndex{
 		LastUpdated: time.Now(),
 	}
 
@@ -87,21 +88,26 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 			log.G(ctx).Warnf("%s", err)
 		}
 
-		localIndex.Origin = manipath
-		localIndex.Manifests = append(localIndex.Manifests, manifests...)
+		index.Origin = manipath
+		index.Manifests = append(index.Manifests, manifests...)
 	}
 
-	return localIndex, nil
+	return index, nil
 }
 
 func (m *manifestManager) Update(ctx context.Context) error {
-	// Create parent directories if not present
-	if err := os.MkdirAll(filepath.Dir(m.LocalManifestIndex(ctx)), 0o771); err != nil {
+	index, err := m.update(ctx)
+	if err != nil {
 		return err
 	}
 
-	localIndex, err := m.update(ctx)
-	if err != nil {
+	m.indexCache = new(ManifestIndex)
+	*m.indexCache = *index
+
+	manifests := make([]*Manifest, len(index.Manifests))
+
+	// Create parent directories if not present
+	if err := os.MkdirAll(filepath.Dir(m.LocalManifestIndex(ctx)), 0o771); err != nil {
 		return err
 	}
 
@@ -109,7 +115,7 @@ func (m *manifestManager) Update(ctx context.Context) error {
 	// TODO: Merge manifests of same name and type?
 
 	// Create a file for each manifest
-	for i, manifest := range localIndex.Manifests {
+	for i, manifest := range index.Manifests {
 		filename := manifest.Name + ".yaml"
 
 		if manifest.Type != unikraft.ComponentTypeCore {
@@ -123,21 +129,23 @@ func (m *manifestManager) Update(ctx context.Context) error {
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": fileloc,
-		}).Debugf("saving manifest")
+		}).Tracef("saving manifest")
 
 		if err := manifest.WriteToFile(fileloc); err != nil {
 			log.G(ctx).Errorf("could not save manifest: %s", err)
 		}
 
 		// Replace manifest with relative path
-		localIndex.Manifests[i] = &Manifest{
+		manifests[i] = &Manifest{
 			Name:     manifest.Name,
 			Type:     manifest.Type,
 			Manifest: "./" + filename,
 		}
 	}
 
-	return localIndex.WriteToFile(m.LocalManifestIndex(ctx))
+	index.Manifests = manifests
+
+	return index.WriteToFile(m.LocalManifestIndex(ctx))
 }
 
 func (m *manifestManager) SetSources(_ context.Context, sources ...string) error {
@@ -182,8 +190,7 @@ func (m *manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManag
 
 func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var err error
-	var index *ManifestIndex
-	var allManifests []*Manifest
+	var manifests []*Manifest
 
 	query := packmanager.NewQuery(qopts...)
 	mopts := []ManifestOption{
@@ -199,34 +206,37 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 			return nil, err
 		}
 
-		manifests, err := provider.Manifests()
+		manifests, err = provider.Manifests()
 		if err != nil {
 			return nil, err
 		}
-
-		allManifests = append(allManifests, manifests...)
 	} else if !query.UseCache() {
-		index, err = m.update(ctx)
-		if err != nil {
-			return nil, err
+		// If Catalog is executed in multiple successive calls, which occurs when
+		// searching for multiple packages sequentially, check if the cacheIndex has
+		// been set.  Even if UseCache set has been set, it means that at least once
+		// call to Catalog has properly updated the index.
+		if m.indexCache == nil {
+			indexCache, err := m.update(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			m.indexCache = &ManifestIndex{}
+			*m.indexCache = *indexCache
 		}
 
-		allManifests = append(allManifests, index.Manifests...)
+		manifests = m.indexCache.Manifests
 	} else {
-		index, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
+		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
 		if err != nil {
 			return nil, err
 		}
 
-		manifests, err := FindManifestsFromSource(ctx, index.Origin, mopts...)
+		manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
 		if err != nil {
 			return nil, err
 		}
-
-		allManifests = append(allManifests, manifests...)
 	}
-
-	log.G(ctx).Debugf("found %d manifests in catalog", len(allManifests))
 
 	var packages []pack.Package
 	var g glob.Glob
@@ -252,7 +262,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 
 	g = glob.MustCompile(name)
 
-	for _, manifest := range allManifests {
+	for _, manifest := range manifests {
 		if len(types) > 0 {
 			found := false
 			for _, t := range types {
@@ -319,7 +329,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		} else {
 			more, err := NewPackageFromManifest(manifest, mopts...)
 			if err != nil {
-				log.G(ctx).Debug(err)
+				log.G(ctx).Trace(err)
 				continue
 				// TODO: Config option for fast-fail?
 				// return nil, err
@@ -360,6 +370,8 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		// the shorter string comes first
 		return len(iRunes) < len(jRunes)
 	})
+
+	log.G(ctx).Tracef("found %d/%d matching manifests in catalog", len(packages), len(manifests))
 
 	return packages, nil
 }
