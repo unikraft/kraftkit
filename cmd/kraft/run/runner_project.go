@@ -108,7 +108,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 	// Provide a meaningful name
 	targetName := t.Name()
 	if targetName == project.Name() || targetName == "" {
-		targetName = t.Platform().Name() + "-" + t.Architecture().Name()
+		targetName = t.Platform().Name() + "/" + t.Architecture().Name()
 	}
 
 	machine.Spec.Kernel = "project://" + project.Name() + ":" + targetName
@@ -125,6 +125,10 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 
 	if len(opts.InitRd) > 0 {
 		machine.Status.InitrdPath = opts.InitRd
+	}
+
+	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
+		return fmt.Errorf("cannot run the selected project target '%s' without building the kernel: try running `kraft build` first: %w", targetName, err)
 	}
 
 	return nil
