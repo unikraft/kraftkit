@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"kraftkit.sh/internal/set"
 )
@@ -46,14 +47,20 @@ func getenv(key string, dfault string, combineWith ...string) string {
 }
 
 // hostProc returns the provided procfs path, using environmental variable to
-// allow base bath configuration.
+// allow base path configuration.
 func hostProc(path ...string) string {
 	return getenv("HOST_PROC", "/proc", path...)
 }
 
+// hostProc returns the provided dev path, using environmental variable to
+// allow base path configuration.
+func hostDev(path ...string) string {
+	return getenv("HOST_DEV", "/dev", path...)
+}
+
 // pathExists simply returns whether the provided file path exists.
 func pathExists(file string) bool {
-	if _, err := os.Stat(file); err == nil {
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
 		return true
 	}
 	return false
@@ -146,6 +153,36 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 			} else if set.NewStringSet(contents...).Contains("Common 32-bit KVM processor") {
 				return PlatformKVM, SystemGuest, nil
 			}
+		}
+	}
+
+	file = hostDev("kvm")
+	if pathExists(file) {
+		if kvmFile, err := os.Stat(file); err == nil &&
+			kvmFile.Mode()&os.ModeCharDevice != 0 {
+			// Send ioctl for KVM_GET_API_VERSION
+			file, err := os.Open(file)
+			if err != nil {
+				return PlatformUnknown, SystemUnknown, fmt.Errorf("could not open kvm device: %w", err)
+			}
+			defer file.Close()
+
+			// 0xAE is the magic number for KVM
+			kvmctl := uintptr(0xAE << 8)
+			version, _, err := syscall.Syscall(syscall.SYS_IOCTL, file.Fd(), kvmctl, 0)
+			if err != syscall.Errno(0) {
+				return PlatformUnknown, SystemUnknown, fmt.Errorf("could not send ioctl to kvm device: %w", err)
+			}
+
+			// 12 is the current version of KVM_GET_API_VERSION
+			// specification says to error if the version is not 12
+			if version != 12 {
+				return PlatformUnknown, SystemUnknown, fmt.Errorf("kvm version too old, or malformed, should be 12, but is %d", version)
+			}
+
+			return PlatformKVM, SystemHost, nil
+		} else {
+			return PlatformUnknown, SystemUnknown, fmt.Errorf("kvm exists but is not a character device")
 		}
 	}
 
