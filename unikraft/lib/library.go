@@ -190,7 +190,16 @@ func (lc LibraryConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue)
 func (lc LibraryConfig) KConfig() kconfig.KeyValueMap {
 	values := kconfig.KeyValueMap{}
 	values.OverrideBy(lc.kconfig)
-	values.Set(kconfig.Prefix+"LIB"+strings.ToUpper(lc.name), kconfig.Yes)
+
+	// TODO(craciunoiuc): Temporary check as not all libraries follow the same
+	// naming convention. Will be replaced by the kconfig parser.
+	// See: https://github.com/unikraft/kraftkit/issue/653
+	if strings.HasPrefix(strings.ToUpper(lc.name), "LIB") {
+		values.Set(kconfig.Prefix+strings.ToUpper(lc.name), kconfig.Yes)
+	} else {
+		values.Set(kconfig.Prefix+"LIB"+strings.ToUpper(lc.name), kconfig.Yes)
+	}
+
 	return values
 }
 
