@@ -388,7 +388,7 @@ func init() {
 	// gob.Register(QemuDeviceVhostUserScsiPciNonTransitional{})
 	// gob.Register(QemuDeviceVhostUserScsiPciTransitional{})
 	// gob.Register(QemuDeviceVirtio9pDevice{})
-	// gob.Register(QemuDeviceVirtio9pPci{})
+	gob.Register(QemuDeviceVirtio9pPci{})
 	// gob.Register(QemuDeviceVirtio9pPciNonTransitional{})
 	// gob.Register(QemuDeviceVirtio9pPciTransitional{})
 	// gob.Register(QemuDeviceVirtioBlkDevice{})
@@ -459,6 +459,12 @@ func init() {
 	// gob.Register(QemuNetDevVde{})
 	// gob.Register(QemuNetDevVhostUser{})
 	// gob.Register(QemuNetDevVhostVdpa{})
+
+	// Filesystem Devices
+	gob.Register(QemuFsDevLocal{})
+	// gob.Register(QemuFsDevProxy{})
+	// gob.Register(QemuFsDevSynth{})
+	gob.Register(QemuFsDevLocalSecurityModelPassthrough)
 
 	// CLI configuration
 	gob.Register(QemuConfig{})

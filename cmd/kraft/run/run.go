@@ -48,6 +48,7 @@ type Run struct {
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 
 	platform          mplatform.Platform
@@ -63,46 +64,44 @@ func New() *cobra.Command {
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
 		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
-			Launch a unikernel`),
-		Example: heredoc.Docf(`
+			Run a unikernel virtual machine`),
+		Example: heredoc.Doc(`
 			Run a built target in the current working directory project:
-			%[1]s%[1]s%[1]s
 			$ kraft run
-			%[1]s%[1]s%[1]s
 
-			Run a selected target from multiple in project at the provided
-			working directory:
-			%[1]s%[1]s%[1]s
+			Run a specific target from a multi-target project at the provided project directory:
 			$ kraft run -t TARGET path/to/project
-			%[1]s%[1]s%[1]s
 
 			Run a specific kernel binary:
-			%[1]s%[1]s%[1]s
 			$ kraft run --arch x86_64 --plat qemu path/to/kernel-x86_64-qemu
-			%[1]s%[1]s%[1]s
 
-			Run an OCI-compatible unikernel, mapping port 8080 on the host
-			to port 80 in the unikernel:
-			%[1]s%[1]s%[1]s
+			Run an OCI-compatible unikernel, mapping port 8080 on the host to port 80 in the unikernel:
 			$ kraft run -p 8080:80 unikraft.org/nginx:latest
-			%[1]s%[1]s%[1]s
 
-			Run a Linux userspace binary in POSIX-/binary- compatibility mode:
-			%[1]s%[1]s%[1]s
-			$ kraft run path/to/helloworld
-			%[1]s%[1]s%[1]s
+			Attach the unikernel to an existing network kraft0 backed by the bridge driver:
+			$ kraft run --network bridge:kraft0
 
-			Supply an initramfs file to the unikernel that is instantiated based on 
-			the current project working directory:
-			$ kraft run --initrd ./initramfs.cpio .
+			Run a Linux userspace binary in POSIX-/binary-compatibility mode:
+			$ kraft run a.out
 
-			Supply a path which is dynamically serialized into an initramfs CPIO
-			archive:
-			$ kraft run -i ./path/to/rootfs .
+			Supply an initramfs CPIO archive file to the unikernel for its rootfs:
+			$ kraft run --initrd ./initramfs.cpio
 
-			Specify a specific path inside the initramfs, /root, mapped to the host:
-			$ kraft run -i ./path/to/rootfs:/root .
-			`, "`"),
+			Supply a path which is dynamically serialized into an initramfs CPIO archive:
+			$ kraft run --initrd ./path/to/rootfs
+
+			Specify a specific path which is dynamically serialized into initramfs and map it to /dir in the unikernel:
+			$ kraft run --initrd ./path/to/dir:/dir
+
+			Mount a bi-directional path from on the host to the unikernel mapped to /dir:
+			$ kraft run -v ./path/to/dir:/dir
+
+			Supply a read-only root file system at / via initramfs CPIO archive and mount a bi-directional volume at /dir:
+			$ kraft run --initrd ./initramfs.cpio:/ --volume ./path/to/dir:/dir
+
+			Customize the default content directory of the official Unikraft NGINX OCI-compatible unikernel and map port 8080 to localhost:
+			$ kraft run -v ./path/to/html:/nginx/html -p 8080:80 unikraft.org/nginx:latest
+			`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
@@ -281,6 +280,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := opts.parseNetworks(ctx, machine); err != nil {
+		return err
+	}
+
+	if err := opts.parseVolumes(ctx, machine); err != nil {
 		return err
 	}
 
