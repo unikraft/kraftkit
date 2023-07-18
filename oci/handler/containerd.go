@@ -135,8 +135,8 @@ func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests [
 	return manifests, nil
 }
 
-// PushDigest implements DigestPusher.
-func (handle *ContainerdHandler) PushDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) (err error) {
+// SaveDigest implements DigestSaver.
+func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
