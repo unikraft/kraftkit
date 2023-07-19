@@ -4,11 +4,6 @@
 // You may not use this file except in compliance with the License.
 package oci
 
-var (
-	flagTag           string
-	flagUseMediaTypes bool
-)
-
 const (
 	DefaultRegistry  = "unikraft.org"
 	DefaultNamespace = "default"

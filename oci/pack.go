@@ -73,8 +73,8 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		command: popts.Args(),
 	}
 
-	if flagTag != "" {
-		ocipack.ref, err = name.ParseReference(flagTag,
+	if popts.Name() != "" {
+		ocipack.ref, err = name.ParseReference(popts.Name(),
 			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	} else {
@@ -147,32 +147,18 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		"dest": WellKnownKernelPath,
 	}).Debug("oci: including kernel")
 
-	if flagUseMediaTypes {
-		blob, err := NewBlobFromFile(ctx,
-			MediaTypeImageKernel,
-			ocipack.Kernel(),
-		)
-		if err != nil {
-			return nil, err
-		}
+	layer, err := NewLayerFromFile(ctx,
+		ocispec.MediaTypeImageLayer,
+		ocipack.Kernel(),
+		WellKnownKernelPath,
+		WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
+	)
+	if err != nil {
+		return nil, err
+	}
 
-		if _, err := image.AddBlob(ctx, blob); err != nil {
-			return nil, err
-		}
-	} else {
-		layer, err := NewLayerFromFile(ctx,
-			ocispec.MediaTypeImageLayer,
-			ocipack.Kernel(),
-			WellKnownKernelPath,
-			WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if _, err := image.AddLayer(ctx, layer); err != nil {
-			return nil, err
-		}
+	if _, err := image.AddLayer(ctx, layer); err != nil {
+		return nil, err
 	}
 
 	if popts.Initrd() != "" {
