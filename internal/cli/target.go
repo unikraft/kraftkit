@@ -66,24 +66,39 @@ func FilterTargets(targets []target.Target, arch, plat, targ string) []target.Ta
 			return len(targ) == 0 && len(arch) == 0 && len(plat) == 0
 		},
 
-		// If the `targ` is supplied and the target name match
+		// If only `targ` is supplied and the target name match
 		func(t target.Target, arch, plat, targ string) bool {
-			return len(targ) > 0 && t.Name() == targ
+			return len(targ) > 0 && len(plat) == 0 && len(arch) == 0 && t.Name() == targ
 		},
 
 		// If only `arch` is supplied and the target's arch matches
 		func(t target.Target, arch, plat, targ string) bool {
-			return len(arch) > 0 && len(plat) == 0 && t.Architecture().Name() == arch
+			return len(targ) == 0 && len(plat) == 0 && len(arch) > 0 && t.Architecture().Name() == arch
 		},
 
-		// If only `plat`` is supplied and the target's platform matches
+		// If only `plat` is supplied and the target's platform matches
 		func(t target.Target, arch, plat, targ string) bool {
-			return len(plat) > 0 && len(arch) == 0 && t.Platform().Name() == plat
+			return len(targ) == 0 && len(plat) > 0 && len(arch) == 0 && t.Platform().Name() == plat
 		},
 
 		// If both `arch` and `plat` are supplied and match the target
 		func(t target.Target, arch, plat, targ string) bool {
-			return len(plat) > 0 && len(arch) > 0 && t.Architecture().Name() == arch && t.Platform().Name() == plat
+			return len(targ) == 0 && len(plat) > 0 && len(arch) > 0 && t.Platform().Name() == plat && t.Architecture().Name() == arch
+		},
+
+		// If both `arch` and `targ` are supplied and match the target
+		func(t target.Target, arch, plat, targ string) bool {
+			return len(targ) == 0 && len(targ) > 0 && len(arch) > 0 && t.Name() == targ && t.Architecture().Name() == arch
+		},
+
+		// If both `plat` and `targ` are supplied and match the target
+		func(t target.Target, arch, plat, targ string) bool {
+			return len(targ) > 0 && len(plat) > 0 && len(arch) == 0 && t.Name() == targ && t.Platform().Name() == plat
+		},
+
+		// If all arguments are supplied and match the target
+		func(t target.Target, arch, plat, targ string) bool {
+			return len(targ) > 0 && len(plat) > 0 && len(arch) > 0 && t.Name() == targ && t.Platform().Name() == plat && t.Architecture().Name() == arch
 		},
 	}
 
