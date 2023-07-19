@@ -95,6 +95,7 @@ func FilterTargets(targets []target.Target, arch, plat, targ string) []target.Ta
 			}
 
 			selected = append(selected, t)
+			break
 		}
 	}
 
