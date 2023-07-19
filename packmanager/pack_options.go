@@ -15,6 +15,7 @@ type PackOptions struct {
 	kernelLibraryObjects             bool
 	kernelSourceFiles                bool
 	kernelVersion                    string
+	name                             string
 	output                           string
 }
 
@@ -58,6 +59,11 @@ func (popts *PackOptions) PackKernelSourceFiles() bool {
 // KernelVersion returns the version of the kernel
 func (popts *PackOptions) KernelVersion() string {
 	return popts.kernelVersion
+}
+
+// Name returns the name of the package.
+func (popts *PackOptions) Name() string {
+	return popts.name
 }
 
 // Output returns the location of the package.
@@ -124,6 +130,13 @@ func PackKernelSourceFiles(pack bool) PackOption {
 func PackWithKernelVersion(version string) PackOption {
 	return func(popts *PackOptions) {
 		popts.kernelVersion = version
+	}
+}
+
+// PackName sets the name of the package.
+func PackName(name string) PackOption {
+	return func(popts *PackOptions) {
+		popts.name = name
 	}
 }
 
