@@ -65,7 +65,7 @@ func New() *cobra.Command {
 		`, "`"),
 		Example: heredoc.Doc(`
 			# Package a project as an OCI archive and embed the target's KConfig.
-			$ kraft pkg --as oci --oci-tag unikraft.org/nginx:latest --with-kconfig`),
+			$ kraft pkg --as oci --name unikraft.org/nginx:latest --with-kconfig`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
@@ -201,9 +201,10 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 					popts := []packmanager.PackOption{
 						packmanager.PackArgs(cmdShellArgs...),
-						packmanager.PackKConfig(opts.WithKConfig),
-						packmanager.PackOutput(opts.Output),
 						packmanager.PackInitrd(opts.Initrd),
+						packmanager.PackKConfig(opts.WithKConfig),
+						packmanager.PackName(opts.Name),
+						packmanager.PackOutput(opts.Output),
 					}
 
 					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
