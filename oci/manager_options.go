@@ -3,8 +3,11 @@ package oci
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/genuinetools/reg/repoutils"
@@ -42,6 +45,26 @@ func WithDetectHandler() OCIManagerOption {
 
 		// Fall-back to using a simpler directory/tarball-based OCI handler
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+		if err := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); err != nil {
+			return err
+		}
+
+		group, err := user.LookupGroup(config.G[config.KraftKit](ctx).UserGroup)
+		if err == nil {
+			gid, err := strconv.ParseInt(group.Gid, 10, 32)
+			if err != nil {
+				return fmt.Errorf("could not parse group ID for kraftkit: %w", err)
+			}
+
+			if err := os.Chown(config.G[config.KraftKit](ctx).RuntimeDir, os.Getuid(), int(gid)); err != nil {
+				return fmt.Errorf("could not change group ownership of machine state dir: %w", err)
+			}
+		} else {
+			log.G(ctx).
+				WithField("error", err).
+				Warn("kraftkit group not found, falling back to current user")
+		}
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": ociDir,
