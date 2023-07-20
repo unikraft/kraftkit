@@ -55,6 +55,9 @@ func New() *cobra.Command {
 
 func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
+
+	opts.platform = mplatform.PlatformByName(opts.platform).String()
+
 	return nil
 }
 

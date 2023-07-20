@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
@@ -76,6 +77,8 @@ func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
 	return cmdfactory.MutuallyExclusive(
 		"the `--with-deps` option is not supported with `--no-deps`",

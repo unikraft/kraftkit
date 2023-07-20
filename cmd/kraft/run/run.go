@@ -123,6 +123,8 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	var err error
 	ctx := cmd.Context()
 
+	opts.platform = mplatform.PlatformByName(opts.platform.String())
+
 	// Discover the network controller strategy.
 	if opts.Network == "" && opts.IP != "" {
 		return fmt.Errorf("cannot assign IP address without providing --network")

@@ -39,6 +39,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
@@ -74,7 +75,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Clean) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	pm, err := packmanager.NewUmbrellaManager(ctx)
 	if err != nil {
@@ -82,6 +83,8 @@ func (*Clean) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
 	return nil
 }

@@ -19,6 +19,16 @@ func (ht Platform) String() string {
 	return string(ht)
 }
 
+// PlatformByName returns the platform for a given name.
+// If the name is not known, it returns it unchanged.
+func PlatformByName(name string) Platform {
+	platforms := PlatformsByName()
+	if _, ok := platforms[name]; !ok {
+		return Platform(name)
+	}
+	return platforms[name]
+}
+
 // PlatformsByName returns the list of known platforms and their name alises.
 func PlatformsByName() map[string]Platform {
 	return map[string]Platform{

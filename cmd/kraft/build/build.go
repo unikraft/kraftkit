@@ -18,6 +18,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/cli"
+	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
@@ -116,6 +117,8 @@ func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
 	} else if err != nil {
 		return fmt.Errorf("could not initialize project directory: %w", err)
 	}
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
 	return nil
 }
