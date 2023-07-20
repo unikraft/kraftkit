@@ -17,6 +17,7 @@ import (
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	giturl "github.com/kubescape/go-git-url"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -215,7 +216,7 @@ func (gp *GitProvider) Manifests() ([]*Manifest, error) {
 }
 
 func (gp *GitProvider) PullManifest(ctx context.Context, manifest *Manifest, popts ...pack.PullOption) error {
-	if useGit {
+	if config.G[config.KraftKit](ctx).GitProtocol != "git" {
 		return pullGit(ctx, manifest, popts...)
 	}
 

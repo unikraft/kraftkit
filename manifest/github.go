@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/ghrepo"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
@@ -126,7 +127,7 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 }
 
 func (ghp GitHubProvider) PullManifest(ctx context.Context, manifest *Manifest, popts ...pack.PullOption) error {
-	if useGit {
+	if config.G[config.KraftKit](ctx).GitProtocol == "git" {
 		return pullGit(ctx, manifest, popts...)
 	}
 
