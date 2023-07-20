@@ -39,10 +39,10 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 
 	if dst == "" {
 		return fmt.Errorf("cannot tar file with no specified destination")
-	} else if dst[0] == '/' {
+	} else if dst[0] == filepath.Separator {
 		dst = dst[1:]
 	}
-	if strings.HasSuffix(dst, "/") {
+	if strings.HasSuffix(dst, string(filepath.Separator)) {
 		return fmt.Errorf("attempting to use TarFileWriter with directory")
 	}
 

@@ -119,9 +119,9 @@ func NewFromPath(base string, prefix string, files ...string) (*InitrdConfig, er
 	}
 
 	if prefix == "" {
-		prefix = "/"
+		prefix = string(filepath.Separator)
 	}
-	if !strings.HasPrefix(prefix, "/") {
+	if !strings.HasPrefix(prefix, string(filepath.Separator)) {
 		return nil, fmt.Errorf("must use absolute path in prefix: %s", prefix)
 	}
 

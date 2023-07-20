@@ -298,7 +298,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	)
 
 	// Recursively create the directory
-	if err = os.MkdirAll(manifestPath[:strings.LastIndex(manifestPath, "/")], 0o755); err != nil {
+	if err = os.MkdirAll(manifestPath[:strings.LastIndex(manifestPath, string(filepath.Separator))], 0o755); err != nil {
 		return err
 	}
 
@@ -336,7 +336,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	}
 
 	// Recursively create the directory
-	if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, "/")], 0o755); err != nil {
+	if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, string(filepath.Separator))], 0o755); err != nil {
 		return err
 	}
 
@@ -371,7 +371,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		)
 
 		// Recursively create the directory
-		if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, "/")], 0o755); err != nil {
+		if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, string(filepath.Separator))], 0o755); err != nil {
 			return err
 		}
 
@@ -456,8 +456,8 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, des
 			}
 
 			// If the directory in the path doesn't exist, create it
-			if _, err := os.Stat(path[:strings.LastIndex(path, "/")]); os.IsNotExist(err) {
-				if err := os.MkdirAll(path[:strings.LastIndex(path, "/")], 0o755); err != nil {
+			if _, err := os.Stat(path[:strings.LastIndex(path, string(filepath.Separator))]); os.IsNotExist(err) {
+				if err := os.MkdirAll(path[:strings.LastIndex(path, string(filepath.Separator))], 0o755); err != nil {
 					return err
 				}
 			}

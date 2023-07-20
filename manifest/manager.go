@@ -119,7 +119,7 @@ func (m *manifestManager) Update(ctx context.Context) error {
 		filename := manifest.Name + ".yaml"
 
 		if manifest.Type != unikraft.ComponentTypeCore {
-			filename = manifest.Type.Plural() + "/" + filename
+			filename = manifest.Type.Plural() + string(filepath.Separator) + filename
 		}
 
 		fileloc := filepath.Join(m.LocalManifestsDir(ctx), filename)

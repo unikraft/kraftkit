@@ -54,7 +54,7 @@ func NewFromURL(path string) (Interface, error) {
 		return nil, fmt.Errorf("could not parse url: %s", err)
 	}
 
-	parts := strings.Split(u.Path, "/")
+	parts := strings.Split(u.Path, string(filepath.Separator))
 	if len(parts) != 3 {
 		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
 	}

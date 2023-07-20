@@ -186,7 +186,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 			tree = append(tree, processtree.NewProcessTreeItem(
 				name,
-				targ.Architecture().Name()+"/"+targ.Platform().Name(),
+				targ.Architecture().Name()+string(filepath.Separator)+targ.Platform().Name(),
 				func(ctx context.Context) error {
 					var err error
 					pm := packmanager.G(ctx)
