@@ -112,7 +112,7 @@ func TypeNameVersion(entity Nameable) string {
 	var ret strings.Builder
 	if entity.Type() != ComponentTypeUnknown {
 		ret.WriteString(string(entity.Type()))
-		ret.WriteString("/")
+		ret.WriteString(string(filepath.Separator))
 	}
 
 	ret.WriteString(entity.Name())

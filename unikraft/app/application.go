@@ -304,7 +304,7 @@ func (app application) KConfigTree(ctx context.Context, env ...*kconfig.KeyValue
 		}
 
 		val := strings.Join(parts[2:], " ")
-		val = strings.ReplaceAll(val, "//", "/")
+		val = strings.ReplaceAll(val, "//", string(filepath.Separator))
 
 		if val == "<recursive>" {
 			continue

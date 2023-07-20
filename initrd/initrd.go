@@ -177,7 +177,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 					return nil
 				}
 
-				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), "//", "/")
+				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), "//", string(filepath.Separator))
 
 				info, err := d.Info()
 				if err != nil {

@@ -5,6 +5,7 @@
 package processtree
 
 import (
+	"path/filepath"
 	"strconv"
 
 	"github.com/charmbracelet/lipgloss"
@@ -40,7 +41,7 @@ func (pt ProcessTree) View() string {
 	if len(pt.verb) > 0 {
 		title := tui.TextTitle(
 			pt.verb + " " + utils.HumanizeDuration(pt.timer.Elapsed()) +
-				" (" + strconv.Itoa(finished) + "/" + strconv.Itoa(pt.total) + ")",
+				" (" + strconv.Itoa(finished) + string(filepath.Separator) + strconv.Itoa(pt.total) + ")",
 		)
 		s = title + "\n" + s
 	}

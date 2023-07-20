@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cli/cli/v2/git"
@@ -112,7 +113,7 @@ func FromFullNameWithHost(nwo, fallbackHost string) (Interface, error) {
 		return FromURL(u)
 	}
 
-	parts := strings.SplitN(nwo, "/", 4)
+	parts := strings.SplitN(nwo, string(filepath.Separator), 4)
 	for _, p := range parts {
 		if len(p) == 0 {
 			return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, nwo)
@@ -134,7 +135,7 @@ func FromURL(u *url.URL) (Interface, error) {
 		return nil, fmt.Errorf("no hostname detected")
 	}
 
-	parts := strings.SplitN(strings.Trim(u.Path, "/"), "/", 3)
+	parts := strings.SplitN(strings.Trim(u.Path, "/"), string(filepath.Separator), 3)
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid path: %s", u.Path)
 	}
@@ -162,7 +163,7 @@ func GenerateRepoURL(repo Interface, p string, args ...interface{}) string {
 	)
 	if p != "" {
 		if path := fmt.Sprintf(p, args...); path != "" {
-			return baseURL + "/" + path
+			return baseURL + string(filepath.Separator) + path
 		}
 	}
 	return baseURL
