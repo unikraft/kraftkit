@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 
@@ -96,6 +97,8 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
 	return nil
 }

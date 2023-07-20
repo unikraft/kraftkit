@@ -23,6 +23,7 @@ import (
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/platform"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/machine/qemu/qmp"
 )
@@ -64,6 +65,9 @@ var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
 
 func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
+
+	opts.platform = platform.PlatformByName(opts.platform).String()
+
 	return nil
 }
 
