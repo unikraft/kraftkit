@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -410,8 +411,33 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 }
 
 // PushImage implements ImagePusher.
-func (handle *DirectoryHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
-	return fmt.Errorf("not implemented")
+func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, target *ocispec.Descriptor) error {
+	ref, err := name.ParseReference(fullref)
+	if err != nil {
+		return err
+	}
+
+	err = remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
+	if err != nil {
+		return err
+	}
+
+	image, err := handle.ResolveImage(ctx, fullref)
+	if err != nil {
+		return err
+	}
+
+	return remote.Write(ref,
+		DirectoryImage{
+			image:              image,
+			manifestDescriptor: target,
+			handle:             handle,
+			ref:                ref,
+		},
+		remote.WithContext(ctx),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+	)
 }
 
 // UnpackImage implements ImageUnpacker.
