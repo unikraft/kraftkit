@@ -28,7 +28,7 @@ require (
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/genuinetools/reg v0.16.1
-	github.com/go-git/go-git/v5 v5.7.0
+	github.com/go-git/go-git/v5 v5.8.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.15.2
 	github.com/google/go-github/v32 v32.1.0
