@@ -40,7 +40,10 @@ GIT_SHA     ?= $(shell git update-index -q --refresh && \
 DOCKER      ?= docker
 DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
                -e DOCKER= \
+               -e GOOS=$(GOOS) \
+               -e GOARCH=$(GOARCH) \
                -w /go/src/$(GOMOD) \
+               --platform linux/amd64 \
                -v $(WORKDIR):/go/src/$(GOMOD) \
                $(REGISTRY)/$(2):$(IMAGE_TAG) \
                  $(3)
@@ -55,6 +58,29 @@ CMAKE       ?= cmake
 # Misc
 Q           ?= @
 
+UNAME_OS    ?= $(shell uname -s)
+UNAME_ARCH  ?= $(shell uname -m)
+GOOS        ?= linux
+GOARCH      ?= amd64
+
+# Don't try to pass the path to Darwin host's make into the container
+ifeq ($(UNAME_OS),Darwin)
+	MAKE_COMMAND = make
+endif
+
+# If on Darwin, we want to build a runnable binary.
+# Check the OS and set GOOS/GOARCH flags accordingly.
+# Note that we are still running a linux/amd64 container.
+# TODO: For better performance, build an image for darwin/arm64 and darwin/amd64
+ifeq ($(UNAME_OS),Darwin)
+	GOOS = darwin
+ifeq ($(UNAME_ARCH),arm64)
+	GOARCH = arm64
+else ifeq ($(UNAME_ARCH),x86_64)
+	GOARCH = amd64
+endif
+endif
+
 # If run with DOCKER= or within a container, unset DOCKER_RUN so all commands
 # are not proxied via docker container.
 ifeq ($(DOCKER),)
@@ -68,7 +94,7 @@ ifneq ($(DOCKER_RUN),)
 $(BIN): ENVIRONMENT ?= myself-full
 $(BIN):
 	$(info Running target via Docker...)
-	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) -e $@)
+	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) GOOS=$(GOOS) GOARCH=$(GOARCH) -e $@)
 	$(Q)exit 0
 endif
 
@@ -87,6 +113,8 @@ $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.comm
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
 $(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
+	GOOS=$(GOOS) \
+	GOARCH=$(GOARCH) \
 	$(GO) build \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \

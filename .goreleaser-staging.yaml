@@ -28,20 +28,27 @@ nfpms:
       - apk
 
 builds:
+#@ targets = {
+#@   "linuxu": {"os": "linux", "arch": "amd64"},
+#@   "darwin-arm64": {"os": "darwin", "arch": "arm64"},
+#@   "darwin-amd64": {"os": "darwin", "arch": "amd64"}
+#@ }
 #@ for binary in ["kraft"]:
-  - id: #@ "{}-linuxu".format(binary)
+#@ for target, specs in targets.items():
+  - id: #@ "{}-{}".format(binary, target)
     binary: #@ binary
     main: #@ "./cmd/{}".format(binary)
     env:
       - CGO_ENABLED=0
       - GOMOD=kraftkit.sh
     goos:
-      - linux
+      - #@ specs["os"]
     goarch:
-      - amd64
+      - #@ specs["arch"]
     ldflags:
       - -s -w 
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
+#@ end
 #@ end
