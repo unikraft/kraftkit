@@ -11,9 +11,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"kraftkit.sh/internal/version"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -272,8 +275,15 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	if err != nil {
 		return err
 	}
-
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	img, err := remote.Image(ref,
+		remote.WithContext(ctx),
+		remote.WithPlatform(v1.Platform{
+			OS:           strings.Split(platform, "/")[0],
+			Architecture: strings.Split(platform, "/")[1],
+		}),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+	)
 	if err != nil {
 		return err
 	}
@@ -401,8 +411,33 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 }
 
 // PushImage implements ImagePusher.
-func (handle *DirectoryHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
-	return fmt.Errorf("not implemented")
+func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, target *ocispec.Descriptor) error {
+	ref, err := name.ParseReference(fullref)
+	if err != nil {
+		return err
+	}
+
+	err = remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
+	if err != nil {
+		return err
+	}
+
+	image, err := handle.ResolveImage(ctx, fullref)
+	if err != nil {
+		return err
+	}
+
+	return remote.Write(ref,
+		DirectoryImage{
+			image:              image,
+			manifestDescriptor: target,
+			handle:             handle,
+			ref:                ref,
+		},
+		remote.WithContext(ctx),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+	)
 }
 
 // UnpackImage implements ImageUnpacker.
