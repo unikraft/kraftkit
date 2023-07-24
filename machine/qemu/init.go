@@ -4,7 +4,13 @@
 // You may not use this file except in compliance with the License.
 package qemu
 
-import "encoding/gob"
+import (
+	"encoding/gob"
+
+	"kraftkit.sh/cmdfactory"
+)
+
+var qemuShowSgaBiosPreamble bool
 
 func init() {
 	// Register only used supported interfaces later used for serialization.  To
@@ -468,4 +474,15 @@ func init() {
 
 	// CLI configuration
 	gob.Register(QemuConfig{})
+
+	// Register additional command-line arguments
+	cmdfactory.RegisterFlag(
+		"kraft run",
+		cmdfactory.BoolVar(
+			&qemuShowSgaBiosPreamble,
+			"qemu-sgabios-preamble",
+			false,
+			"Show the QEMU SGABIOS preamble when running a unikernel",
+		),
+	)
 }
