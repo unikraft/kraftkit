@@ -386,18 +386,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 					break loop
 				}
 			}
-
-			// Remove the instance on Ctrl+C if the --rm flag is passed
-			if opts.Remove {
-				if _, err := opts.machineController.Stop(ctx, machine); err != nil {
-					log.G(ctx).Errorf("could not stop: %v", err)
-					return
-				}
-				if _, err := opts.machineController.Delete(ctx, machine); err != nil {
-					log.G(ctx).Errorf("could not remove: %v", err)
-					return
-				}
-			}
 		}()
 	}
 
@@ -429,6 +417,17 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 			case <-ctx.Done():
 				break loop
+			}
+		}
+
+		// Remove the instance on Ctrl+C if the --rm flag is passed
+		if opts.Remove {
+			if _, err := opts.machineController.Stop(ctx, machine); err != nil {
+				log.G(ctx).Errorf("could not stop: %v", err)
+			}
+
+			if _, err := opts.machineController.Delete(ctx, machine); err != nil {
+				log.G(ctx).Errorf("could not remove: %v", err)
 			}
 		}
 	} else {
