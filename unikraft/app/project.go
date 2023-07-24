@@ -142,7 +142,9 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		projectName = normalizeProjectName(projectName)
 	}
 
-	popts.kconfig.OverrideBy(app.unikraft.KConfig())
+	if app.unikraft != nil {
+		popts.kconfig.OverrideBy(app.unikraft.KConfig())
+	}
 
 	for _, library := range app.libraries {
 		popts.kconfig.OverrideBy(library.KConfig())

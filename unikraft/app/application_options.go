@@ -51,7 +51,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 		ac.outDir = filepath.Join(ac.workingDir, unikraft.BuildDir)
 	}
 
-	if len(ac.unikraft.Source()) > 0 {
+	if ac.unikraft != nil && len(ac.unikraft.Source()) > 0 {
 		if p, err := os.Stat(ac.unikraft.Source()); err == nil && p.IsDir() {
 			ac.configuration.Set(unikraft.UK_BASE, ac.unikraft.Source())
 		}
