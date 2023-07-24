@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG GO_VERSION=1.20.2
+ARG GO_VERSION=1.20.6
 
 FROM golang:${GO_VERSION}-bullseye AS kraftkit-full
 
@@ -11,13 +11,13 @@ FROM golang:${GO_VERSION}-bullseye AS kraftkit-full
 RUN set -xe; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      build-essential=12.9 \
-      cmake=3.18.4-2+deb11u1 \
-      libssh2-1-dev=1.9.0-2 \
-      libssl-dev=1.1.1n-0+deb11u4 \
-      make=4.3-4.1 \
-      pkg-config=0.29.2-1 \
-      git=1:2.30.2-1+deb11u2; \
+      build-essential \
+      cmake \
+      libssh2-1-dev \
+      libssl-dev \
+      make \
+      pkg-config \
+      git; \
     apt-get clean; \
     go install mvdan.cc/gofumpt@v0.4.0; \
     git config --global --add safe.directory /go/src/kraftkit.sh;
@@ -31,7 +31,7 @@ RUN set -xe; \
 
 WORKDIR /go/src/kraftkit.sh
 
-COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.20.2 /usr/bin/goreleaser /usr/bin/
+COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.20.6 /usr/bin/goreleaser /usr/bin/
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go
