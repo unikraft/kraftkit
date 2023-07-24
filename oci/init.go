@@ -5,7 +5,6 @@
 package oci
 
 import (
-	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
 )
 
@@ -18,25 +17,5 @@ func init() {
 		WithDefaultAuth(),
 		WithDefaultRegistries(),
 		WithDetectHandler(),
-	)
-
-	// Register additional command-line flags
-	cmdfactory.RegisterFlag(
-		"kraft pkg",
-		cmdfactory.StringVar(
-			&flagTag,
-			"oci-tag",
-			"",
-			"Set the OCI image tag.",
-		),
-	)
-	cmdfactory.RegisterFlag(
-		"kraft pkg",
-		cmdfactory.BoolVar(
-			&flagUseMediaTypes,
-			"oci-use-media-types",
-			false,
-			"Use media types as opposed to well-known paths (experimental).",
-		),
 	)
 }
