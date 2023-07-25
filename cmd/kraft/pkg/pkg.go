@@ -33,19 +33,20 @@ import (
 )
 
 type Pkg struct {
-	Architecture string `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
-	Args         string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
-	Dbg          bool   `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
-	Force        bool   `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
-	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
-	Initrd       string `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
-	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
-	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
-	Name         string `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	Output       string `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
-	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
-	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
+	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Args         string   `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
+	Dbg          bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
+	Force        bool     `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
+	Format       string   `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Initrd       string   `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
+	Kernel       string   `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
+	Kraftfile    string   `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Name         string   `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	Output       string   `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
+	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	Volume       []string `local:"true" long:"volume" short:"v" usage:"Path to volume to bundle within the package (passing a path will automatically generate a CPIO image)"`
+	WithKConfig  bool     `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
 func New() *cobra.Command {
@@ -208,6 +209,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackName(opts.Name),
 						packmanager.PackOutput(opts.Output),
+						packmanager.PackVolumes(opts.Volume...),
 					}
 
 					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
