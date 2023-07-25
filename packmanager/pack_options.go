@@ -17,6 +17,7 @@ type PackOptions struct {
 	kernelVersion                    string
 	name                             string
 	output                           string
+	volumes                          []string
 }
 
 // PackAppSourceFiles returns whether the application source files should be
@@ -69,6 +70,11 @@ func (popts *PackOptions) Name() string {
 // Output returns the location of the package.
 func (popts *PackOptions) Output() string {
 	return popts.output
+}
+
+// Volumes returns the list of volumes to include in the package.
+func (popts *PackOptions) Volumes() []string {
+	return popts.volumes
 }
 
 // PackOption is an option function which is used to modify PackOptions.
@@ -144,5 +150,12 @@ func PackName(name string) PackOption {
 func PackOutput(output string) PackOption {
 	return func(popts *PackOptions) {
 		popts.output = output
+	}
+}
+
+// PackVolumes sets the list of volumes to include in the package.
+func PackVolumes(volumes ...string) PackOption {
+	return func(popts *PackOptions) {
+		popts.volumes = volumes
 	}
 }
