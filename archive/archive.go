@@ -180,6 +180,51 @@ func TarFile(ctx context.Context, src, prefix, out string, opts ...ArchiveOption
 }
 
 // TarDir creates a tarball of a given `root` into the provided `out` path.
+func TarDirTo(ctx context.Context, root, prefix, out string, opts ...ArchiveOption) error {
+	aopts := ArchiveOptions{}
+	for _, opt := range opts {
+		if err := opt(&aopts); err != nil {
+			return err
+		}
+	}
+
+	fp, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
+	if err != nil {
+		return fmt.Errorf("could not create tarball file: %s: %v", out, err)
+	}
+
+	var tw *tar.Writer
+	var gzw *gzip.Writer
+
+	if aopts.gzip {
+		gzw = gzip.NewWriter(fp)
+		tw = tar.NewWriter(gzw)
+	} else {
+		tw = tar.NewWriter(fp)
+	}
+
+	if err := TarDirWriter(ctx, root, prefix, tw, opts...); err != nil {
+		return err
+	}
+
+	if err := tw.Close(); err != nil {
+		return err
+	}
+
+	if aopts.gzip {
+		if err := gzw.Close(); err != nil {
+			return err
+		}
+	}
+
+	if err := fp.Sync(); err != nil {
+		return err
+	}
+
+	return fp.Close()
+}
+
+// TarDir creates a tarball of a given `root` into the provided `out` path.
 func TarDir(ctx context.Context, root, prefix, out string, opts ...ArchiveOption) error {
 	fp, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
@@ -213,6 +258,6 @@ func TarDirWriter(ctx context.Context, root, prefix string, tw *tar.Writer, opts
 
 		dst = filepath.ToSlash(filepath.Join(prefix, dst))
 
-		return TarFileWriter(ctx, filepath.Join(root, path), dst, tw, opts...)
+		return TarFileWriter(ctx, path, dst, tw, opts...)
 	})
 }
