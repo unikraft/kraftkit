@@ -685,7 +685,30 @@ func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machi
 
 // Logs implements kraftkit.sh/api/machine/v1alpha1.MachineService
 func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machinev1alpha1.Machine) (chan string, chan error, error) {
-	return logtail.NewLogTail(ctx, machine.Status.LogFile)
+	out, errOut, err := logtail.NewLogTail(ctx, machine.Status.LogFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Wait and trim the preamble from the logs before returning
+	for {
+		select {
+		case line := <-out:
+			if !qemuShowSgaBiosPreamble {
+				if strings.Contains(line, "Booting from ") {
+					qemuShowSgaBiosPreamble = true
+				}
+				continue
+			}
+			return out, errOut, nil
+
+		case err := <-errOut:
+			return nil, nil, err
+
+		case <-ctx.Done():
+			return out, errOut, nil
+		}
+	}
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1/MachineService.Get
