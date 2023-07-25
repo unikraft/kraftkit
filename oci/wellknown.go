@@ -8,6 +8,7 @@ const (
 	WellKnownKernelPath      = "/unikraft/bin/kernel"
 	WellKnownInitrdPath      = "/unikraft/bin/initrd"
 	WellKnownConfigPath      = "/unikraft/bin/config"
+	WellKnownVolumePath      = "/unikraft/bin/volume"
 	WellKnownKernelSourceDir = "/unikraft/src"
 	WellKnownAppSourceDir    = "/unikraft/app"
 )
