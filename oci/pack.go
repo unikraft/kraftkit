@@ -163,9 +163,31 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	if popts.Initrd() != "" {
 		log.G(ctx).Debug("oci: including initrd")
+		initRdPath := popts.Initrd()
+		if f, err := os.Stat(initRdPath); err == nil && f.IsDir() {
+			cwd, err2 := os.Getwd()
+			if err2 != nil {
+				return nil, err2
+			}
+
+			file, err := os.CreateTemp("", "kraftkit-oci-archive-*")
+			if err != nil {
+				return nil, err
+			}
+			defer os.Remove(file.Name())
+
+			cfg, err2 := initrd.NewFromMapping(cwd,
+				file.Name(),
+				fmt.Sprintf("%s:/", initRdPath))
+			if err2 != nil {
+				return nil, err2
+			}
+
+			initRdPath = cfg.Output
+		}
 		layer, err := NewLayerFromFile(ctx,
 			ocispec.MediaTypeImageLayer,
-			popts.Initrd(),
+			initRdPath,
 			WellKnownInitrdPath,
 			WithLayerAnnotation(AnnotationKernelInitrdPath, WellKnownInitrdPath),
 		)
