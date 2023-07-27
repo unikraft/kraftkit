@@ -9,18 +9,15 @@ import (
 	"path/filepath"
 
 	zip "api.zip"
+
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/set"
-	"kraftkit.sh/machine/firecracker"
+	"kraftkit.sh/machine/qemu"
 	"kraftkit.sh/machine/store"
 )
 
-var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
-	if set.NewStringSet("debug", "trace").Contains(config.G[config.KraftKit](ctx).Log.Level) {
-		opts = append(opts, firecracker.WithDebug(true))
-	}
-	service, err := firecracker.NewMachineV1alpha1Service(ctx, opts...)
+var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
+	service, err := qemu.NewMachineV1alpha1Service(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -39,17 +36,23 @@ var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev
 		ctx,
 		service,
 		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
-		zip.WithBefore(storePlatformFilter(PlatformFirecracker)),
+		zip.WithBefore(storePlatformFilter(PlatformQEMU)),
 	)
 }
 
-func unixVariantStrategies() map[Platform]*Strategy {
-	// TODO(jake-ciolek): The firecracker driver has a dependency on github.com/containernetworking/plugins/pkg/ns via
-	// github.com/firecracker-microvm/firecracker-go-sdk
-	// Unfortunately, it doesn't support darwin.
-	return map[Platform]*Strategy{
-		PlatformFirecracker: {
-			NewMachineV1alpha1: firecrackerV1alpha1Driver,
+// hostSupportedStrategies returns the map of known supported drivers for the
+// given host.
+func hostSupportedStrategies() map[Platform]*Strategy {
+	s := map[Platform]*Strategy{
+		PlatformQEMU: {
+			NewMachineV1alpha1: qemuV1alpha1Driver,
 		},
 	}
+
+	// Merge OS-specific strategies
+	for k, v := range unixVariantStrategies() {
+		s[k] = v
+	}
+
+	return s
 }

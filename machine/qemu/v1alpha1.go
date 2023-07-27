@@ -84,6 +84,8 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		bin = QemuSystemX86
 	case "arm":
 		bin = QemuSystemArm
+	case "arm64":
+		bin = QemuSystemAarch64
 	default:
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
@@ -371,7 +373,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				WithDevice(QemuDeviceSga{}),
 			)
 		}
-	case "arm":
+	case "arm", "arm64":
 		qopts = append(qopts,
 			WithMachine(QemuMachine{
 				Type: QemuMachineTypeVirt,
