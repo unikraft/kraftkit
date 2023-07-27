@@ -11,7 +11,6 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 )
@@ -79,7 +78,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 	}
 
 	// Filter project targets by any provided CLI options
-	targets := cli.FilterTargets(
+	targets := target.Filter(
 		project.Targets(),
 		opts.Architecture,
 		opts.platform.String(),
@@ -99,7 +98,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 		return fmt.Errorf("could not determine what to run based on provided CLI arguments")
 
 	default:
-		t, err = cli.SelectTarget(targets)
+		t, err = target.Select(targets)
 		if err != nil {
 			return fmt.Errorf("could not select target: %v", err)
 		}

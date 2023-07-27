@@ -13,7 +13,6 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -98,7 +97,7 @@ func (opts *Fetch) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter project targets by any provided CLI options
-	targets := cli.FilterTargets(
+	targets := target.Filter(
 		project.Targets(),
 		opts.Architecture,
 		opts.Platform,
@@ -115,7 +114,7 @@ func (opts *Fetch) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not determine which target to prepare")
 
 	default:
-		t, err = cli.SelectTarget(targets)
+		t, err = target.Select(targets)
 		if err != nil {
 			return err
 		}
