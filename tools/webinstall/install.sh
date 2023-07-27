@@ -44,6 +44,8 @@ WGET=${WGET:-wget}
 YUM=${YUM:-yum}
 APT=${APT:-apt-get}
 APK=${APK:-apk}
+MAKEPKG=${MAKEPKG:-makepkg}
+GIT=${GIT:-git}
 TAR=${TAR:-tar}
 INSTALL=${INSTALL:-install}
 RM=${RM:-rm}
@@ -1041,7 +1043,13 @@ install_linux_gnu() {
         do_cmd "$APT --allow-unauthenticated update"
         do_cmd "$APT install -y kraftkit"
     elif check_os_release "arch"; then
-        err "error: 'pacman' not supported yet. Try the manual installation."
+        need_cmd "$GIT"
+        need_cmd "$MAKEPKG"
+        need_cmd "$RM"
+
+        do_cmd "$GIT clone https://aur.archlinux.org/kraftkit-bin.git /tmp/kraftkit-bin"
+        do_cmd "$MAKEPKG -si /tmp/kraftkit-bin"
+        $RM -rf /tmp/kraftkit-bin
     else
         _ilg_msg=$(printf "error: %s%s%s"                               \
             "Unsupported Linux distribution. "                          \
