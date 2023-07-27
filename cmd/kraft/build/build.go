@@ -17,7 +17,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
-	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -360,7 +359,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 	if !opts.All {
-		selected = cli.FilterTargets(
+		selected = target.Filter(
 			selected,
 			opts.Architecture,
 			opts.Platform,
@@ -368,7 +367,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		)
 
 		if !config.G[config.KraftKit](ctx).NoPrompt {
-			res, err := cli.SelectTarget(selected)
+			res, err := target.Select(selected)
 			if err != nil {
 				return err
 			}

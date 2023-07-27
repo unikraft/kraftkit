@@ -38,10 +38,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 )
 
 type Clean struct {
@@ -121,14 +121,14 @@ func (opts *Clean) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter project targets by any provided CLI options
-	targets := cli.FilterTargets(
+	targets := target.Filter(
 		project.Targets(),
 		opts.Architecture,
 		opts.Platform,
 		opts.Target,
 	)
 
-	t, err := cli.SelectTarget(targets)
+	t, err := target.Select(targets)
 	if err != nil {
 		return err
 	}
