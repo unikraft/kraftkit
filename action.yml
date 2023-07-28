@@ -1,0 +1,81 @@
+name: Build unikernel images with Unikraft
+description: Build, push and run unikernel images with Unikraft.
+author: Unikraft
+
+branding:
+  icon: package
+  color: blue
+
+inputs:
+  #
+  # Global flags
+  #
+  loglevel:
+    description: Log-level of the action
+    required: false
+    default: error
+  
+  #
+  # Project flags
+  #
+  workdir:
+    description: Path to the project directory.
+    required: false
+  kraftfile:
+    description: Alternative path for the Kraftfile or inline-Kraftfile.
+    required: false
+
+  #
+  # Build flags
+  #
+  arch:
+    description: Architecture to build for.
+    required: false
+  plat:
+    description: Platform to build for.
+    required: false
+  target:
+    description: Name of the target to build for.
+    required: false
+  
+  #
+  # Running flags
+  #
+  execute:
+    description: If to run the unikernel.
+    required: false
+    default: false
+  timeout:
+    description: Timeout for the unikernel.
+    required: false
+
+  #
+  # Packaging flags
+  #
+  args:
+    description: Arguments to pass to the unikernel.
+    required: false
+  initrd:
+    description: Include an initrd at path.
+    required: false
+  memory:
+    description: Set the memory size. String of format "1M"/"1G"/"1K"
+    required: false
+  name:
+    description: Set the name of the output.
+    required: true
+  output:
+    description: Set the output path.
+    required: false
+  kconfig:
+    description: Include all set KConfig with the output.
+    required: false
+  # If to push the output to a registry
+  push:
+    description: Push the output.
+    required: false
+    default: false
+
+runs:
+  using: docker
+  image: docker://kraftkit.sh/github-action:v0
