@@ -113,3 +113,20 @@ base:
 		$(_WITH_CACHE) \
 		--file $(BUILDENVSDIR)/base.Dockerfile \
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
+
+.PHONY: github-action
+github-action: ENVIRONMENT      ?= github-action
+github-action: GO_VERSION       ?= 1.20.6
+github-action: IMAGE            ?= $(REGISTRY)/github-action:$(IMAGE_TAG)
+ifeq ($(WITH_CACHE),y)
+github-action: _WITH_CACHE      := --cache-from $(IMAGE)
+else
+github-action: _WITH_CACHE      := --no-cache
+endif
+github-action:
+	$(DOCKER) build \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--tag $(IMAGE) \
+		$(_WITH_CACHE) \
+		--file $(BUILDENVSDIR)/github-action.Dockerfile \
+		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
