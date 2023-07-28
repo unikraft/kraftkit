@@ -108,7 +108,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 
 	// Check if a pid has already been enabled
 	if _, err := os.Stat(config.G[config.KraftKit](ctx).EventsPidFile); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(config.G[config.KraftKit](ctx).EventsPidFile), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(config.G[config.KraftKit](ctx).EventsPidFile), 0o775); err != nil {
 			cancel()
 			return err
 		}

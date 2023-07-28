@@ -8,8 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -109,6 +112,26 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace)
 	} else {
+		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
+			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
+		}
+
+		group, gerr := user.LookupGroup(config.G[config.KraftKit](ctx).UserGroup)
+		if gerr == nil {
+			gid, gerr := strconv.ParseInt(group.Gid, 10, 32)
+			if gerr != nil {
+				return nil, fmt.Errorf("could not parse group ID for kraftkit: %w", gerr)
+			}
+
+			if gerr := os.Chown(config.G[config.KraftKit](ctx).RuntimeDir, os.Getuid(), int(gid)); gerr != nil {
+				return nil, fmt.Errorf("could not change group ownership of machine state dir: %w", gerr)
+			}
+		} else {
+			log.G(ctx).
+				WithField("error", err).
+				Warn("kraftkit group not found, falling back to current user")
+		}
+
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
 
 		log.G(ctx).WithFields(logrus.Fields{

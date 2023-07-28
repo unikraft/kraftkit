@@ -7,8 +7,11 @@ package run
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -103,8 +106,24 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	// defined state directory.
 	machine.ObjectMeta.UID = uuid.NewUUID()
 	machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
-	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
+	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
 		return err
+	}
+
+	group, err := user.LookupGroup(config.G[config.KraftKit](ctx).UserGroup)
+	if err == nil {
+		gid, err := strconv.ParseInt(group.Gid, 10, 32)
+		if err != nil {
+			return fmt.Errorf("could not parse group ID for kraftkit: %w", err)
+		}
+
+		if err := os.Chown(machine.Status.StateDir, os.Getuid(), int(gid)); err != nil {
+			return fmt.Errorf("could not change group ownership of machine state dir: %w", err)
+		}
+	} else {
+		log.G(ctx).
+			WithField("error", err).
+			Warn("kraftkit group not found, falling back to current user")
 	}
 
 	// Clean up the package directory if an error occurs before returning.
