@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - QEMU_VERSION: 7.1.0
+          - QEMU_VERSION: 7.2.4
 
     steps:
       - name: Set up QEMU

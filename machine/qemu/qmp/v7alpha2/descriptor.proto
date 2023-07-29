@@ -9,7 +9,7 @@ package qmp.v1alpha;
 import "google/protobuf/any.proto";
 import "google/protobuf/descriptor.proto";
 
-option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+option go_package = "kraftkit.sh/machine/qemu/qmp/v7alpha2;qmpv7alpha2";
 
 extend google.protobuf.MessageOptions {
 	string execute = 51000;

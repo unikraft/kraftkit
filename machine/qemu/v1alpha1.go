@@ -35,7 +35,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/machine/qemu/qmp"
-	qmpv1alpha "kraftkit.sh/machine/qemu/qmp/v1alpha"
+	qmpapi "kraftkit.sh/machine/qemu/qmp/v7alpha2"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
 	"kraftkit.sh/unikraft/export/v0/vfscore"
@@ -507,16 +507,16 @@ func getQEMUConfigFromPlatformConfig(platformConfig interface{}) (*QemuConfig, e
 	return &qcfg, nil
 }
 
-func qmpClientHandshake(conn *net.Conn) (*qmpv1alpha.QEMUMachineProtocolClient, error) {
-	qmpClient := qmpv1alpha.NewQEMUMachineProtocolClient(*conn)
+func qmpClientHandshake(conn *net.Conn) (*qmpapi.QEMUMachineProtocolClient, error) {
+	qmpClient := qmpapi.NewQEMUMachineProtocolClient(*conn)
 
 	greeting, err := qmpClient.Greeting()
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = qmpClient.Capabilities(qmpv1alpha.CapabilitiesRequest{
-		Arguments: qmpv1alpha.CapabilitiesRequestArguments{
+	_, err = qmpClient.Capabilities(qmpapi.CapabilitiesRequest{
+		Arguments: qmpapi.CapabilitiesRequestArguments{
 			Enable: greeting.Qmp.Capabilities,
 		},
 	})
@@ -527,7 +527,7 @@ func qmpClientHandshake(conn *net.Conn) (*qmpv1alpha.QEMUMachineProtocolClient, 
 	return qmpClient, nil
 }
 
-func (service *machineV1alpha1Service) QMPClient(ctx context.Context, machine *machinev1alpha1.Machine) (*qmpv1alpha.QEMUMachineProtocolClient, error) {
+func (service *machineV1alpha1Service) QMPClient(ctx context.Context, machine *machinev1alpha1.Machine) (*qmpapi.QEMUMachineProtocolClient, error) {
 	qcfg, err := getQEMUConfigFromPlatformConfig(machine.Status.PlatformConfig)
 	if err != nil {
 		return nil, err
@@ -584,7 +584,7 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 	}
 
 	monitor, err := qmp.NewQMPEventMonitor(conn,
-		qmpv1alpha.EventTypes(),
+		qmpapi.EventTypes(),
 		nil,
 	)
 	if err != nil {
@@ -627,19 +627,19 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 
 			// Send the event through the channel
 			switch event.Event {
-			case qmpv1alpha.EVENT_STOP, qmpv1alpha.EVENT_SUSPEND, qmpv1alpha.EVENT_POWERDOWN:
+			case qmpapi.EVENT_STOP, qmpapi.EVENT_SUSPEND, qmpapi.EVENT_POWERDOWN:
 				machine.Status.State = machinev1alpha1.MachineStatePaused
 				events <- machine
 
-			case qmpv1alpha.EVENT_RESUME:
+			case qmpapi.EVENT_RESUME:
 				machine.Status.State = machinev1alpha1.MachineStateRunning
 				events <- machine
 
-			case qmpv1alpha.EVENT_RESET, qmpv1alpha.EVENT_WAKEUP:
+			case qmpapi.EVENT_RESET, qmpapi.EVENT_WAKEUP:
 				machine.Status.State = machinev1alpha1.MachineStateRestarting
 				events <- machine
 
-			case qmpv1alpha.EVENT_SHUTDOWN:
+			case qmpapi.EVENT_SHUTDOWN:
 				machine.Status.State = machinev1alpha1.MachineStateExited
 				events <- machine
 
@@ -663,7 +663,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 	}
 
 	defer qmpClient.Close()
-	_, err = qmpClient.Cont(qmpv1alpha.ContRequest{})
+	_, err = qmpClient.Cont(qmpapi.ContRequest{})
 	if err != nil {
 		return machine, err
 	}
@@ -694,7 +694,7 @@ func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machi
 
 	defer qmpClient.Close()
 
-	_, err = qmpClient.Stop(qmpv1alpha.StopRequest{})
+	_, err = qmpClient.Stop(qmpapi.StopRequest{})
 	if err != nil {
 		return machine, err
 	}
@@ -799,7 +799,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 	defer qmpClient.Close()
 
 	// Grab the actual state of the machine by querying QMP
-	status, err := qmpClient.QueryStatus(qmpv1alpha.QueryStatusRequest{})
+	status, err := qmpClient.QueryStatus(qmpapi.QueryStatusRequest{})
 	if err != nil {
 		// We cannot amend the status at this point, even if the process is
 		// alive, since it is not an indicator of the state of the VM, only of the
@@ -809,31 +809,31 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 
 	// Map the QMP status to supported machine states
 	switch status.Return.Status {
-	case qmpv1alpha.RUN_STATE_GUEST_PANICKED, qmpv1alpha.RUN_STATE_INTERNAL_ERROR, qmpv1alpha.RUN_STATE_IO_ERROR:
+	case qmpapi.RUN_STATE_GUEST_PANICKED, qmpapi.RUN_STATE_INTERNAL_ERROR, qmpapi.RUN_STATE_IO_ERROR:
 		state = machinev1alpha1.MachineStateFailed
 		exitCode = 1
 
-	case qmpv1alpha.RUN_STATE_PAUSED:
+	case qmpapi.RUN_STATE_PAUSED:
 		state = machinev1alpha1.MachineStatePaused
 		exitCode = -1
 
-	case qmpv1alpha.RUN_STATE_RUNNING:
+	case qmpapi.RUN_STATE_RUNNING:
 		state = machinev1alpha1.MachineStateRunning
 		exitCode = -1
 
-	case qmpv1alpha.RUN_STATE_SHUTDOWN:
+	case qmpapi.RUN_STATE_SHUTDOWN:
 		state = machinev1alpha1.MachineStateExited
 		exitCode = 0
 
-	case qmpv1alpha.RUN_STATE_SUSPENDED:
+	case qmpapi.RUN_STATE_SUSPENDED:
 		state = machinev1alpha1.MachineStateSuspended
 		exitCode = -1
 
 	default:
-		// qmpv1alpha.RUN_STATE_SAVE_VM,
-		// qmpv1alpha.RUN_STATE_PRELAUNCH,
-		// qmpv1alpha.RUN_STATE_RESTORE_VM,
-		// qmpv1alpha.RUN_STATE_WATCHDOG,
+		// qmpapi.RUN_STATE_SAVE_VM,
+		// qmpapi.RUN_STATE_PRELAUNCH,
+		// qmpapi.RUN_STATE_RESTORE_VM,
+		// qmpapi.RUN_STATE_WATCHDOG,
 		state = machinev1alpha1.MachineStateUnknown
 		exitCode = -1
 	}
@@ -868,7 +868,7 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 	}
 
 	defer qmpClient.Close()
-	_, err = qmpClient.Quit(qmpv1alpha.QuitRequest{})
+	_, err = qmpClient.Quit(qmpapi.QuitRequest{})
 	if err != nil {
 		return machine, err
 	}

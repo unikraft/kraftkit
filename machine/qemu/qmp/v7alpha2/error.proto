@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package qmp.v1alpha;
 
-option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+option go_package = "kraftkit.sh/machine/qemu/qmp/v7alpha2;qmpv7alpha2";
 
 message ErrorResponse {
 	string class       = 1 [ json_name = "class" ];

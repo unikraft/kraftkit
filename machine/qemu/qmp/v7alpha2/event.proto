@@ -8,9 +8,9 @@ package qmp.v1alpha;
 
 import "google/protobuf/any.proto";
 
-import "machine/qemu/qmp/v1alpha/descriptor.proto";
+import "machine/qemu/qmp/v7alpha2/descriptor.proto";
 
-option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+option go_package = "kraftkit.sh/machine/qemu/qmp/v7alpha2;qmpv7alpha2";
 
 enum EventType {
 	EVENT_ACPI_DEVICE_OST           = 0  [ (json_name) = "ACPI_DEVICE_OST" ];
