@@ -119,7 +119,7 @@ RUN set -ex; \
         --disable-libvduse \
         --disable-linux-aio \
         --disable-linux-io-uring \
-        --disable-linux-user \
+        --enable-linux-user \
         --disable-live-block-migration \
         --disable-lzfse \
         --enable-lzo \
@@ -157,12 +157,13 @@ RUN set -ex; \
         --disable-sparse \
         --disable-spice \
         --disable-spice-protocol \
+        --enable-system \
         --enable-tcg \
         --enable-tools \
         --disable-tpm \
         --disable-u2f \
         --disable-usb-redir \
-        --disable-user \
+        --enable-user \
         --disable-vde \
         --disable-vdi \
         --disable-vduse-blk-export \
