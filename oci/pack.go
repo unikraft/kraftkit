@@ -76,8 +76,8 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		command: popts.Args(),
 	}
 
-	if popts.Name() != "" {
-		ocipack.ref, err = name.ParseReference(popts.Name(),
+	if popts.Output() != "" {
+		ocipack.ref, err = name.ParseReference(popts.Output(),
 			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	} else {
@@ -90,8 +90,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		//     arch: x86_64
 		//     plat: kvm
 		// ```
+		n := targ.Name()
+		if popts.Name() != "" {
+			n = popts.Name()
+		}
 		ocipack.ref, err = name.ParseReference(
-			targ.Name(),
+			n,
 			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	}
