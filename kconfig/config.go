@@ -24,7 +24,13 @@ func NewKeyValueMapFromSlice(values ...interface{}) KeyValueMap {
 	mapping := KeyValueMap{}
 
 	for _, value := range values {
-		str := fmt.Sprintf("%s", value)
+		var str string
+		switch t := value.(type) {
+		case string:
+			str = t
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			str = fmt.Sprintf("%d", t)
+		}
 		tokens := strings.SplitN(str, "=", 2)
 		if len(tokens) > 1 {
 			mapping[tokens[0]] = &KeyValue{
@@ -57,6 +63,8 @@ func NewKeyValueMapFromMap(values map[string]interface{}) KeyValueMap {
 				v = "y"
 			}
 			mapping[key].Value = v
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			mapping[key].Value = fmt.Sprintf("%d", casting)
 		default:
 			mapping[key].Value = fmt.Sprintf("%s", casting)
 		}
