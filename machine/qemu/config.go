@@ -8,36 +8,37 @@ import "strings"
 
 type QemuConfig struct {
 	// Command-line arguments for qemu-system-*
-	Append     string            `flag:"-append"      json:"append,omitempty"`
-	CharDevs   []QemuCharDev     `flag:"-chardev"     json:"chardev,omitempty"`
-	CPU        QemuCPU           `flag:"-cpu"         json:"cpu,omitempty"`
-	Daemonize  bool              `flag:"-daemonize"   json:"daemonize,omitempty"`
-	Devices    []QemuDevice      `flag:"-device"      json:"device,omitempty"`
-	Display    QemuDisplay       `flag:"-display"     json:"display,omitempty"`
-	EnableKVM  bool              `flag:"-enable-kvm"  json:"enable_kvm,omitempty"`
-	FsDevs     []QemuFsDev       `flag:"-fsdev"       json:"fsdev,omitempty"`
-	InitRd     string            `flag:"-initrd"      json:"initrd,omitempty"`
-	Kernel     string            `flag:"-kernel"      json:"kernel,omitempty"`
-	Machine    QemuMachine       `flag:"-machine"     json:"machine,omitempty"`
-	Memory     QemuMemory        `flag:"-m"           json:"memory,omitempty"`
-	Monitor    QemuHostCharDev   `flag:"-monitor"     json:"monitor,omitempty"`
-	Name       string            `flag:"-name"        json:"name,omitempty"`
-	NetDevs    []QemuNetDev      `flag:"-netdev"      json:"netdev,omitempty"`
-	NoACPI     bool              `flag:"-no-acpi"     json:"no_acpi,omitempty"`
-	NoDefaults bool              `flag:"-nodefaults"  json:"no_defaults,omitempty"`
-	NoGraphic  bool              `flag:"-nographic"   json:"no_graphic,omitempty"`
-	NoReboot   bool              `flag:"-no-reboot"   json:"no_reboot,omitempty"`
-	NoShutdown bool              `flag:"-no-shutdown" json:"no_shutdown,omitempty"`
-	NoStart    bool              `flag:"-S"           json:"no_start,omitempty"`
-	Parallel   QemuHostCharDev   `flag:"-parallel"    json:"parallel,omitempty"`
-	PidFile    string            `flag:"-pidfile"     json:"pidfile,omitempty"`
-	QMP        []QemuHostCharDev `flag:"-qmp"         json:"qmp,omitempty"`
-	RTC        QemuRTC           `flag:"-rtc"         json:"rtc,omitempty"`
-	Serial     []QemuHostCharDev `flag:"-serial"      json:"serial,omitempty"`
-	SMP        QemuSMP           `flag:"-smp"         json:"smp,omitempty"`
-	TBSize     int               `flag:"-tb-size"     json:"tb_size,omitempty"`
-	VGA        QemuVGA           `flag:"-vga"         json:"vga,omitempty"`
-	Version    bool              `flag:"-version"     json:"-"`
+	Accel      QemuMachineAccelerator `flag:"-accel"       json:"accel,omitempty"`
+	Append     string                 `flag:"-append"      json:"append,omitempty"`
+	CharDevs   []QemuCharDev          `flag:"-chardev"     json:"chardev,omitempty"`
+	CPU        QemuCPU                `flag:"-cpu"         json:"cpu,omitempty"`
+	Daemonize  bool                   `flag:"-daemonize"   json:"daemonize,omitempty"`
+	Devices    []QemuDevice           `flag:"-device"      json:"device,omitempty"`
+	Display    QemuDisplay            `flag:"-display"     json:"display,omitempty"`
+	EnableKVM  bool                   `flag:"-enable-kvm"  json:"enable_kvm,omitempty"`
+	FsDevs     []QemuFsDev            `flag:"-fsdev"       json:"fsdev,omitempty"`
+	InitRd     string                 `flag:"-initrd"      json:"initrd,omitempty"`
+	Kernel     string                 `flag:"-kernel"      json:"kernel,omitempty"`
+	Machine    QemuMachine            `flag:"-machine"     json:"machine,omitempty"`
+	Memory     QemuMemory             `flag:"-m"           json:"memory,omitempty"`
+	Monitor    QemuHostCharDev        `flag:"-monitor"     json:"monitor,omitempty"`
+	Name       string                 `flag:"-name"        json:"name,omitempty"`
+	NetDevs    []QemuNetDev           `flag:"-netdev"      json:"netdev,omitempty"`
+	NoACPI     bool                   `flag:"-no-acpi"     json:"no_acpi,omitempty"`
+	NoDefaults bool                   `flag:"-nodefaults"  json:"no_defaults,omitempty"`
+	NoGraphic  bool                   `flag:"-nographic"   json:"no_graphic,omitempty"`
+	NoReboot   bool                   `flag:"-no-reboot"   json:"no_reboot,omitempty"`
+	NoShutdown bool                   `flag:"-no-shutdown" json:"no_shutdown,omitempty"`
+	NoStart    bool                   `flag:"-S"           json:"no_start,omitempty"`
+	Parallel   QemuHostCharDev        `flag:"-parallel"    json:"parallel,omitempty"`
+	PidFile    string                 `flag:"-pidfile"     json:"pidfile,omitempty"`
+	QMP        []QemuHostCharDev      `flag:"-qmp"         json:"qmp,omitempty"`
+	RTC        QemuRTC                `flag:"-rtc"         json:"rtc,omitempty"`
+	Serial     []QemuHostCharDev      `flag:"-serial"      json:"serial,omitempty"`
+	SMP        QemuSMP                `flag:"-smp"         json:"smp,omitempty"`
+	TBSize     int                    `flag:"-tb-size"     json:"tb_size,omitempty"`
+	VGA        QemuVGA                `flag:"-vga"         json:"vga,omitempty"`
+	Version    bool                   `flag:"-version"     json:"-"`
 
 	// Command-line arguments for qemu-system-i386 and qemu-system-x86_64 only
 	NoHPET bool `flag:"-no-hpet" json:"no_hpet,omitempty"`
@@ -55,6 +56,13 @@ func NewQemuConfig(qopts ...QemuOption) (*QemuConfig, error) {
 	}
 
 	return &qcfg, nil
+}
+
+func WithAccel(accel QemuMachineAccelerator) QemuOption {
+	return func(qc *QemuConfig) error {
+		qc.Accel = accel
+		return nil
+	}
 }
 
 func WithAppend(append ...string) QemuOption {
