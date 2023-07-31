@@ -60,6 +60,10 @@ func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
+	if len(args) == 0 && !opts.All {
+		return fmt.Errorf("no machine(s) specified")
+	}
+
 	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
