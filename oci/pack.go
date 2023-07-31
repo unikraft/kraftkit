@@ -183,6 +183,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(layer.tmp)
 
 	if _, err := image.AddLayer(ctx, layer); err != nil {
 		return nil, err
@@ -221,6 +222,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		if err != nil {
 			return nil, err
 		}
+		defer os.Remove(layer.tmp)
 
 		if _, err := image.AddLayer(ctx, layer); err != nil {
 			return nil, err
