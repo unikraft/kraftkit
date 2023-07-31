@@ -68,7 +68,7 @@ libraries:
 targets:
   - name: default
     architecture: x86_64
-    platform: kvm
+    platform: qemu
 ```
 
 You can also add an additional `Makefile.uk` which specifies any source files:
