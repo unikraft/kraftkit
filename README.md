@@ -53,7 +53,7 @@ Simply type `exit` or Ctrl+D to quit.
 
 ## Quickstart
 
-Building a unikernel with KraftKit is designed to be simple. 
+Building a unikernel with KraftKit is designed to be simple.
 
 Add a `Kraftfile` to your project directory, which specifies the libraries needed for your unikernel:
 
@@ -63,12 +63,12 @@ specification: v0.5
 unikraft: stable
 
 libraries:
-  newlib: stable
+  musl: stable
 
 targets:
   - name: default
     architecture: x86_64
-    platform: kvm
+    platform: qemu
 ```
 
 You can also add an additional `Makefile.uk` which specifies any source files:
