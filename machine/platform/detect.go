@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 
 	"kraftkit.sh/internal/set"
+	"kraftkit.sh/machine/qemu"
 )
 
 type SystemMode string
@@ -184,6 +186,21 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 		} else {
 			return PlatformUnknown, SystemUnknown, fmt.Errorf("kvm exists but is not a character device")
 		}
+	}
+
+	// Check if any QEMU binaries are installed on the host.  Since we could not
+	// determine if virtualization extensions are possible at this point, at least
+	// guest emulation is possible with QEMU.
+	for _, bin := range []string{
+		qemu.QemuSystemX86,
+		qemu.QemuSystemArm,
+		qemu.QemuSystemAarch64,
+	} {
+		if _, err := exec.LookPath(bin); err != nil {
+			continue
+		}
+
+		return PlatformQEMU, SystemGuest, nil
 	}
 
 	return PlatformUnknown, SystemUnknown, fmt.Errorf("could not determine hypervisor and system mode")
