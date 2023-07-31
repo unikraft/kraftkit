@@ -53,7 +53,7 @@ Simply type `exit` or Ctrl+D to quit.
 
 ## Quickstart
 
-Building a unikernel with KraftKit is designed to be simple. 
+Building a unikernel with KraftKit is designed to be simple.
 
 Add a `Kraftfile` to your project directory, which specifies the libraries needed for your unikernel:
 
