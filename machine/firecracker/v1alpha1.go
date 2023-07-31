@@ -81,6 +81,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("cannot create firecracker instance without kernel")
 	}
 
+	if machine.Spec.Emulation {
+		return machine, fmt.Errorf("cannot create firecracker instance with emulation")
+	}
+
 	if machine.ObjectMeta.UID == "" {
 		machine.ObjectMeta.UID = uuid.NewUUID()
 	}

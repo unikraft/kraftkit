@@ -21,6 +21,7 @@ var (
 	QemuVersion5_2_0 = semver.New(5, 2, 0, "", "")
 	QemuVersion6_2_0 = semver.New(6, 2, 0, "", "")
 	QemuVersion7_2_0 = semver.New(7, 2, 0, "", "")
+	QemuVersion7_2_4 = semver.New(7, 2, 4, "", "")
 	QemuVersion8_0_0 = semver.New(8, 0, 0, "", "")
 )
 

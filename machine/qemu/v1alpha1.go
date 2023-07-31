@@ -104,6 +104,38 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("unsupported QEMU version: %s: please upgrade to a newer version", qemuVersion.String())
 	}
 
+	// Determine the QEMU machine type to use
+	qemuAccels, err := GetQemuMachineAccelFromBin(ctx, bin)
+	if err != nil {
+		return machine, err
+	}
+
+	if machine.Spec.Emulation {
+		emulation := false
+		for _, accel := range qemuAccels {
+			if accel == QemuMachineAccelTCG {
+				emulation = true
+				break
+			}
+		}
+
+		if !emulation {
+			return machine, fmt.Errorf("emulation requested but TCG is not available")
+		}
+	} else {
+		platform := false
+		for _, accel := range qemuAccels {
+			if accel == QemuMachineAccelKVM {
+				platform = true
+				break
+			}
+		}
+
+		if !platform {
+			return machine, fmt.Errorf("platform %s requested but it's not available", QemuMachineAccelKVM)
+		}
+	}
+
 	if machine.ObjectMeta.UID == "" {
 		machine.ObjectMeta.UID = uuid.NewUUID()
 	}
