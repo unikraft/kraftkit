@@ -63,7 +63,7 @@ specification: v0.5
 unikraft: stable
 
 libraries:
-  newlib: stable
+  musl: stable
 
 targets:
   - name: default
