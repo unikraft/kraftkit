@@ -21,7 +21,7 @@ DOCKER       ?= docker
 WITH_CACHE   ?= y
 
 .PHONY: qemu
-qemu: QEMU_VERSION ?= 7.1.0
+qemu: QEMU_VERSION ?= 7.2.4
 qemu: MAKE_NPROC   ?= $(shell nproc)
 qemu: ENVIRONMENT  ?= qemu
 qemu: IMAGE        ?= $(REGISTRY)/qemu:$(QEMU_VERSION)
@@ -93,7 +93,7 @@ base: GCC_VERSION      ?= 12.2.0
 base: GO_VERSION       ?= 1.20.6
 base: IMAGE            ?= $(REGISTRY)/base:$(IMAGE_TAG)
 base: KRAFTKIT_VERSION ?= latest
-base: QEMU_VERSION     ?= 7.1.0
+base: QEMU_VERSION     ?= 7.2.4
 base: UK_ARCH          ?= x86_64
 ifeq ($(WITH_CACHE),y)
 base: _WITH_CACHE      := --cache-from $(IMAGE)
@@ -112,4 +112,21 @@ base:
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \
 		--file $(BUILDENVSDIR)/base.Dockerfile \
+		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
+
+.PHONY: github-action
+github-action: ENVIRONMENT      ?= github-action
+github-action: GO_VERSION       ?= 1.20.6
+github-action: IMAGE            ?= $(REGISTRY)/github-action:$(IMAGE_TAG)
+ifeq ($(WITH_CACHE),y)
+github-action: _WITH_CACHE      := --cache-from $(IMAGE)
+else
+github-action: _WITH_CACHE      := --no-cache
+endif
+github-action:
+	$(DOCKER) build \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--tag $(IMAGE) \
+		$(_WITH_CACHE) \
+		--file $(BUILDENVSDIR)/github-action.Dockerfile \
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)

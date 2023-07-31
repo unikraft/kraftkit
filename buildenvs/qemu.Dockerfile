@@ -7,13 +7,13 @@ ARG DEBIAN_VERSION=bullseye-20221114
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 
-ARG QEMU_VERSION=7.1.0
+ARG QEMU_VERSION=7.2.4
 ARG WITH_XEN=disable
 ARG WITH_KVM=enable
 
 ARG WITH_x86_64=enable
-ARG WITH_aarch64=disable
-ARG WITH_arm=disable
+ARG WITH_aarch64=enable
+ARG WITH_arm=enable
 
 ARG MAKE_NPROC=1
 
@@ -54,7 +54,7 @@ RUN set -ex; \
     cd qemu-${QEMU_VERSION}; \
     tlist=""; \
     if [ "${WITH_x86_64}" = "enable" ]; then \
-        tlist="x86_64-softmmu"; \
+        tlist=",x86_64-softmmu"; \
     fi; \
     if [ "${WITH_aarch64}" = "enable" ]; then \
         tlist="${tlist},aarch64-softmmu"; \
@@ -63,7 +63,7 @@ RUN set -ex; \
         tlist="${tlist},arm-softmmu"; \
     fi; \
     ./configure \
-        --target-list=${tlist} \
+        --target-list=$(echo ${tlist} | tail -c +2) \
         --static \
         --prefix=/ \
         --audio-drv-list="" \
@@ -119,7 +119,7 @@ RUN set -ex; \
         --disable-libvduse \
         --disable-linux-aio \
         --disable-linux-io-uring \
-        --disable-linux-user \
+        --enable-linux-user \
         --disable-live-block-migration \
         --disable-lzfse \
         --enable-lzo \
@@ -157,12 +157,13 @@ RUN set -ex; \
         --disable-sparse \
         --disable-spice \
         --disable-spice-protocol \
+        --enable-system \
         --enable-tcg \
         --enable-tools \
         --disable-tpm \
         --disable-u2f \
         --disable-usb-redir \
-        --disable-user \
+        --enable-user \
         --disable-vde \
         --disable-vdi \
         --disable-vduse-blk-export \
@@ -197,14 +198,10 @@ COPY --from=qemu-build /bin/qemu-img \
                        /bin/qemu-io \
                        /bin/qemu-nbd \
                        /bin/qemu-pr-helper \
+                       /bin/qemu-system-aarch64 \
+                       /bin/qemu-system-arm \
                        /bin/qemu-system-x86_64 \
                        /bin/
 
-# COPY --from=qemu-build /bin/qemu-system-aarch64
-#                        /bin/qemu-system-arm \
-#                        /bin/qemu-system-i386 \
-#                        /bin/qemu-ga \
-#                        /bin/
-                       
 COPY --from=qemu-build /share/qemu/ /share/qemu/
 COPY --from=qemu-build /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/

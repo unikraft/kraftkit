@@ -9,14 +9,14 @@ package qmp.v1alpha;
 import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
 
-import "machine/qemu/qmp/v1alpha/control.proto";
-import "machine/qemu/qmp/v1alpha/greeting.proto";
-import "machine/qemu/qmp/v1alpha/machine.proto";
-import "machine/qemu/qmp/v1alpha/misc.proto";
-import "machine/qemu/qmp/v1alpha/run_state.proto";
-import "machine/qemu/qmp/v1alpha/net.proto";
+import "machine/qemu/qmp/v7alpha2/control.proto";
+import "machine/qemu/qmp/v7alpha2/greeting.proto";
+import "machine/qemu/qmp/v7alpha2/machine.proto";
+import "machine/qemu/qmp/v7alpha2/misc.proto";
+import "machine/qemu/qmp/v7alpha2/run_state.proto";
+import "machine/qemu/qmp/v7alpha2/net.proto";
 
-option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+option go_package = "kraftkit.sh/machine/qemu/qmp/v7alpha2;qmpv7alpha2";
 
 service QEMUMachineProtocol {
 	// # QMP Connection Greeting

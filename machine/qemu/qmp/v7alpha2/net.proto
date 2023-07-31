@@ -6,10 +6,10 @@ syntax = "proto3";
 
 package qmp.v1alpha;
 
-import "machine/qemu/qmp/v1alpha/descriptor.proto";
-import "machine/qemu/qmp/v1alpha/sockets.proto";
+import "machine/qemu/qmp/v7alpha2/descriptor.proto";
+import "machine/qemu/qmp/v7alpha2/sockets.proto";
 
-option go_package = "kraftkit.sh/machine/qemu/qmp/v1alpha;qmpv1alpha";
+option go_package = "kraftkit.sh/machine/qemu/qmp/v7alpha2;qmpv7alpha2";
 
 message SetLinkRequest {
 	option (execute) = "set_link";

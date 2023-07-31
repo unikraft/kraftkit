@@ -17,22 +17,24 @@ ENV PREFIX=/out
 RUN set -ex; \
     apt-get update; \
     apt-get install -y \
-        wget \
-        curl \
-        gcc \
-        libgmp3-dev \
-        libmpfr-dev \
-        libisl-dev \
-        libgnutls28-dev \
-        libmpc-dev \
-        texinfo \
         bison \
-        flex \
-        make \
+        build-essential \
         bzip2 \
-        patch \
+        curl \
         file \
-        build-essential; \
+        flex \
+        gcc \
+        libc6-dev \
+        libgmp3-dev \
+        libgnutls28-dev \
+        libisl-dev \
+        libmpc-dev \
+        libmpfr-dev \
+        make \
+        patch \
+        texinfo \
+        wget \
+        ; \
     apt-get clean; \
     mkdir -p ${PREFIX}/src; \
     cd ${PREFIX}/src; \
