@@ -6,36 +6,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/target"
 )
 
 // pack
 func (opts *GithubAction) packAndPush(ctx context.Context) error {
-	// Filter project targets by any provided input arguments
-	targets := target.Filter(
-		opts.project.Targets(),
-		opts.Arch,
-		opts.Plat,
-		opts.Target,
-	)
-
-	if len(targets) != 1 {
-		// TODO(nderjung): We should support building multiple targets in the
-		// future, but for now we disable this ability.  This is largely to do with
-		// package management afterwards which does not yet support multi-target
-		// artifacts.  Once this is supported, we can enable multiple target-builds
-		// (and packaging).  Moreover, since it is possible to also execute the
-		// unikernel after a successful build via this action, multiple targets
-		// would also fail at this step.
-		return fmt.Errorf("cannot build more than one target using action")
-	}
-
 	output := opts.Output
 	var format pack.PackageFormat
 	if strings.Contains(opts.Output, "://") {
@@ -43,7 +22,7 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		format = pack.PackageFormat(split[0])
 		output = split[1]
 	} else {
-		format = targets[0].Format()
+		format = opts.target.Format()
 	}
 
 	var err error
@@ -63,13 +42,13 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		packmanager.PackOutput(output),
 	}
 
-	if ukversion, ok := targets[0].KConfig().Get(unikraft.UK_FULLVERSION); ok {
+	if ukversion, ok := opts.target.KConfig().Get(unikraft.UK_FULLVERSION); ok {
 		popts = append(popts,
 			packmanager.PackWithKernelVersion(ukversion.Value),
 		)
 	}
 
-	packs, err := pm.Pack(ctx, targets[0], popts...)
+	packs, err := pm.Pack(ctx, opts.target, popts...)
 	if err != nil {
 		return err
 	}
