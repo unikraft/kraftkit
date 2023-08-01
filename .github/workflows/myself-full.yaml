@@ -54,7 +54,7 @@ jobs:
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/myself-full:latest
-          target: myself-full
+          target: kraftkit-full
           platforms: linux/amd64
           file: ./buildenvs/myself.Dockerfile
           secrets: |
