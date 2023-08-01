@@ -24,8 +24,6 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
-	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/target"
 )
 
 func (opts *GithubAction) execute(ctx context.Context) error {
@@ -35,7 +33,12 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 		opts.Timeout = 10
 	}
 
-	machineStrategy, ok := mplatform.Strategies()[mplatform.PlatformsByName()[opts.Plat]]
+	plat, ok := mplatform.PlatformsByName()[opts.Plat]
+	if !ok {
+		return fmt.Errorf("unknown platform: %s", opts.Plat)
+	}
+
+	machineStrategy, ok := mplatform.Strategies()[plat]
 	if !ok {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.Plat)
 	}
@@ -55,81 +58,18 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 		},
 	}
 
-	if opts.Workdir == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("getting current working directory: %w", err)
-		}
-
-		if len(opts.Args) == 0 {
-			opts.Workdir = cwd
-		} else {
-			opts.Workdir = cwd
-			if f, err := os.Stat(opts.Args[0]); err == nil && f.IsDir() {
-				opts.Workdir = opts.Args[0]
-				opts.Args = opts.Args[1:]
-			}
-		}
-	}
-
-	if !app.IsWorkdirInitialized(opts.Workdir) {
-		return fmt.Errorf("path is not project: %s", opts.Workdir)
-	}
-
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.Workdir),
-	}
-
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
-
-	project, err := app.NewProjectFromOptions(ctx, popts...)
-	if err != nil {
-		return fmt.Errorf("could not instantiate project directory %s: %v", opts.Workdir, err)
-	}
-
-	// Filter project targets by any provided CLI options
-	targets := target.Filter(
-		project.Targets(),
-		opts.Arch,
-		opts.Plat,
-		opts.Target,
-	)
-
-	var t target.Target
-
-	switch {
-	case len(targets) == 0:
-		return fmt.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.Plat, opts.Arch)
-
-	case len(targets) == 1:
-		t = targets[0]
-
-	case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
-		return fmt.Errorf("could not determine what to run based on provided CLI arguments")
-
-	default:
-		t, err = target.Select(targets)
-		if err != nil {
-			return fmt.Errorf("could not select target: %v", err)
-		}
-	}
-
 	// Provide a meaningful name
-	targetName := t.Name()
-	if targetName == project.Name() || targetName == "" {
-		targetName = t.Platform().Name() + "/" + t.Architecture().Name()
+	targetName := opts.target.Name()
+	if targetName == opts.project.Name() || targetName == "" {
+		targetName = opts.target.Platform().Name() + "/" + opts.target.Architecture().Name()
 	}
 
-	machine.Spec.Kernel = "project://" + project.Name() + ":" + targetName
-	machine.Spec.Architecture = t.Architecture().Name()
-	machine.Spec.Platform = t.Platform().Name()
+	machine.Spec.Kernel = "project://" + opts.project.Name() + ":" + targetName
+	machine.Spec.Architecture = opts.target.Architecture().Name()
+	machine.Spec.Platform = opts.target.Platform().Name()
 	machine.Spec.ApplicationArgs = opts.Args
 
-	machine.Status.KernelPath = t.Kernel()
+	machine.Status.KernelPath = opts.target.Kernel()
 
 	if len(opts.InitRd) > 0 {
 		machine.Status.InitrdPath = opts.InitRd

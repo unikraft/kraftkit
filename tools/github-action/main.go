@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 
 	_ "kraftkit.sh/manifest"
 	_ "kraftkit.sh/oci"
@@ -51,6 +52,7 @@ type GithubAction struct {
 
 	// Internal attributes
 	project app.Application
+	target  target.Target
 }
 
 func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
@@ -120,6 +122,36 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		return fmt.Errorf("cannot build project directory without a Kraftfile")
 	} else if err != nil {
 		return fmt.Errorf("could not initialize project directory: %w", err)
+	}
+
+	// Filter project targets by any provided input arguments
+	targets := target.Filter(
+		opts.project.Targets(),
+		opts.Arch,
+		opts.Plat,
+		opts.Target,
+	)
+
+	if len(targets) != 1 {
+		// TODO(nderjung): We should support building multiple targets in the
+		// future, but for now we disable this ability.  This is largely to do with
+		// package management afterwards which does not yet support multi-target
+		// artifacts.  Once this is supported, we can enable multiple target-builds
+		// (and packaging).  Moreover, since it is possible to also execute the
+		// unikernel after a successful build via this action, multiple targets
+		// would also fail at this step.
+		return fmt.Errorf("cannot build more than one target using action")
+	}
+
+	opts.target = targets[0]
+
+	// Infer arguments implicitly if there is only one target.  If we've made it
+	// this far, `target.Filter` only had one target to choose from.
+	if opts.Plat == "" {
+		opts.Plat = opts.target.Platform().Name()
+	}
+	if opts.Arch == "" {
+		opts.Arch = opts.target.Architecture().Name()
 	}
 
 	return nil
