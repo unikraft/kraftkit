@@ -113,8 +113,9 @@ jobs:
 
       - name: Push OCI Image
         uses: docker/build-push-action@v4
+        if: ${{ github.event_name == 'push' }}
         with:
-          push: ${{ github.event_name == 'push' }}
+          push: true
           tags: index.unikraft.io/kraftkit.sh/github-action:v0
           platforms: linux/amd64
           file: ./buildenvs/github-action.Dockerfile
