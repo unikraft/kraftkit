@@ -2,51 +2,16 @@ name: buildenvs/base
 
 on:
   push:
-    branches:
-      - stable
+    branches: [stable]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - 'buildenvs/qemu.Dockerfile'
+      - 'buildenvs/base.Dockerfile'
+      - '.github/workflows/base.yaml'
 
 jobs:
-  gcc:
-    strategy:
-      matrix:
-        include:
-          - GCC_ARCH: x86_64
-            GCC_VERSION: 12.2.0
-            GCC_SUFFIX: ""
-          # - GCC_ARCH: arm
-          #   GCC_VERSION: 12.2.0
-          #   GCC_SUFFIX: ""
-          # - GCC_ARCH: arm64
-          #   GCC_VERSION: 12.2.0
-          #   GCC_SUFFIX: ""
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to OCI registry
-        uses: docker/login-action@v2
-        with:
-          registry: index.unikraft.io
-          username: ${{ secrets.REG_USERNAME }}
-          password: ${{ secrets.REG_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          file: ./buildenvs/gcc.Dockerfile
-          tags: index.unikraft.io/kraftkit.sh/gcc:${{ matrix.GCC_VERSION }}-${{ matrix.GCC_ARCH }}${{ matrix.GCC_SUFFIX }}
-          platforms: linux/amd64
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-        env:
-          UK_ARCH: ${{ matrix.GCC_ARCH }}
-
   qemu:
     runs-on: ubuntu-latest
     strategy:
@@ -62,19 +27,40 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to OCI registry
+        if: ${{ github.event_name == 'push' }}
         uses: docker/login-action@v2
         with:
           registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
-      - name: Build and push
+      - name: Build OCI image
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: false
           file: ./buildenvs/qemu.Dockerfile
+          tags: kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: oci-images
+          path: /tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
+
+      - name: Push OCI Image
+        uses: docker/build-push-action@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          push: true
           tags: index.unikraft.io/kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
           platforms: linux/amd64
+          file: ./buildenvs/qemu.Dockerfile
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
@@ -88,25 +74,47 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to OCI registry
+        if: ${{ github.event_name == 'push' }}
         uses: docker/login-action@v2
         with:
           registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
-      - name: Build and push
+      - name: Build OCI image
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: false
+          load: true
           file: ./buildenvs/myself.Dockerfile
-          tags: index.unikraft.io/kraftkit.sh/myself:latest
+          tags: kraftkit.sh/myself:latest
           platforms: linux/amd64
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-  
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/myself.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: oci-images
+          path: /tmp/myself.tar
+
+      - name: Push OCI Image
+        uses: docker/build-push-action@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/myself:latest
+          platforms: linux/amd64
+          file: ./buildenvs/myself.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
   base:
     runs-on: ubuntu-latest
-    needs: [gcc, qemu, myself]
+    needs: [qemu, myself]
 
     steps:
       - name: Set up QEMU
@@ -117,16 +125,49 @@ jobs:
 
       - name: Login to OCI registry
         uses: docker/login-action@v2
+        if: ${{ github.event_name == 'push' }}
         with:
           registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
-      - name: Build and push
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: oci-images
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          for I in /tmp/*.tar; do docker load --input "${I}"; done
+
+      - name: Build OCI image
         uses: docker/build-push-action@v4
+        with:
+          push: false
+          load: true
+          file: ./buildenvs/base.Dockerfile
+          tags: kraftkit.sh/base:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/base.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: oci-images
+          path: /tmp/base.tar
+
+      - name: Push OCI Image
+        uses: docker/build-push-action@v4
+        if: ${{ github.event_name == 'push' }}
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/base:latest
           platforms: linux/amd64
+          file: ./buildenvs/base.Dockerfile
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
