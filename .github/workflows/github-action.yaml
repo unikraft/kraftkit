@@ -115,7 +115,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: ${{ github.event_name == 'push' }}
-          load: true
           tags: index.unikraft.io/kraftkit.sh/github-action:v0
           platforms: linux/amd64
           file: ./buildenvs/github-action.Dockerfile
