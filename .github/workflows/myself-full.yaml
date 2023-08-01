@@ -34,7 +34,7 @@ jobs:
           push: false
           file: ./buildenvs/myself.Dockerfile
           tags: kraftkit.sh/myself-full:latest
-          target: myself-full
+          target: kraftkit-full
           platforms: linux/amd64
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
