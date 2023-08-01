@@ -24,6 +24,7 @@ RUN set -xe; \
       bison \
       bzip2 \
       ca-certificates \
+      curl \
       flex \
       gawk \
       gcc-12 \
