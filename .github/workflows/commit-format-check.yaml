@@ -43,7 +43,7 @@ jobs:
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod)(\(\w+\))?!?: '
+          pattern: '^(build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod)(\([\w\-\_\d]+\))?!?: '
           error: 'The PR title must follow the conventional commits format.'
           excludeDescription: 'true'
           excludeTitle: 'false'
