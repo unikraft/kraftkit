@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	DefaultRuntimeDir    = "/var/kraftkit"
-	DefaultEventsPidFile = "/var/kraftkit/events.pid"
 	defaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
@@ -46,6 +44,14 @@ func NewDefaultKraftKitConfig() (*KraftKit, error) {
 
 	if len(c.Unikraft.Manifests) == 0 {
 		c.Unikraft.Manifests = append(c.Unikraft.Manifests, defaultManifestIndex)
+	}
+
+	if len(c.RuntimeDir) == 0 {
+		c.RuntimeDir = filepath.Join(StateDir())
+	}
+
+	if len(c.EventsPidFile) == 0 {
+		c.EventsPidFile = filepath.Join(c.RuntimeDir, "events.pid")
 	}
 
 	return c, nil
