@@ -123,6 +123,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 	qversion := query.Version()
+	qtypes := query.Types()
 
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format
@@ -292,7 +293,24 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		packs = append(packs, pack)
 	}
 
-	return packs, nil
+	var filtered []pack.Package
+	for _, pack := range packs {
+		if len(qtypes) > 0 {
+			found := false
+			for _, t := range qtypes {
+				if pack.Type() == t {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		filtered = append(filtered, pack)
+	}
+
+	return filtered, nil
 }
 
 // SetSources implements packmanager.PackageManager
