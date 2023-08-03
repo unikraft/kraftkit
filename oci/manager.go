@@ -150,7 +150,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		if refErr == nil {
 			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
 			if err != nil {
-				log.G(ctx).Warn(err)
+				log.G(ctx).Trace(err)
 			} else {
 				packs = append(packs, pack)
 			}
