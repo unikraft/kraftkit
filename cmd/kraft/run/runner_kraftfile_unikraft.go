@@ -25,7 +25,6 @@ import (
 //	$ kraft run -t target                  // multiple targets in cwd.
 //	$ kraft run -t target path/to/project  // multiple targets at path.
 type runnerKraftfileUnikraft struct {
-	workdir string
 	args    []string
 	project app.Application
 }
@@ -45,22 +44,22 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, 
 	}
 
 	if len(args) == 0 {
-		runner.workdir = cwd
+		opts.workdir = cwd
 	} else {
-		runner.workdir = cwd
+		opts.workdir = cwd
 		runner.args = args
 		if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
-			runner.workdir = args[0]
+			opts.workdir = args[0]
 			runner.args = args[1:]
 		}
 	}
 
-	if !app.IsWorkdirInitialized(runner.workdir) {
-		return false, fmt.Errorf("path is not project: %s", runner.workdir)
+	if !app.IsWorkdirInitialized(opts.workdir) {
+		return false, fmt.Errorf("path is not project: %s", opts.workdir)
 	}
 
 	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(runner.workdir),
+		app.WithProjectWorkdir(opts.workdir),
 	}
 
 	if len(opts.Kraftfile) > 0 {
@@ -71,7 +70,7 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, 
 
 	runner.project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
-		return false, fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
+		return false, fmt.Errorf("could not instantiate project directory %s: %v", opts.workdir, err)
 	}
 
 	if runner.project.Unikraft(ctx) == nil {

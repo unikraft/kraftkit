@@ -54,6 +54,7 @@ type Run struct {
 	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 
+	workdir           string
 	platform          mplatform.Platform
 	networkDriver     string
 	networkName       string
