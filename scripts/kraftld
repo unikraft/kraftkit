@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+# The KraftKit linker (`kraftld`).
+#
+# This linker transparently encapsulates KraftKit and the Unikraft build system
+# to include the provided object files in a Unikraft build.
+# It is a drop-in replacement for the GNU linker (`ld`).
+#
+# A `Kraftfile` is required to configure the build process.
+# The current target has to be specified via environment variables:
+# - `KRAFTKIT_TARGET` (mandatory) corresponds to `kraft build --target $KRAFTKIT_TARGET`
+# - `KRAFTKIT_ARCH` (optional, if unambiguous) corresponds to `kraft build --arch $KRAFTKIT_ARCH`
+# - `KRAFTKIT_PLAT` (optional, if unambiguous) corresponds to `kraft build --plat $KRAFTKIT_PLAT`
+
+
+# Bash strict mode
+set -euo pipefail
+IFS=$'\n\t'
+
+
+# Prepare `UK_LDFLAGS`
+LDFLAGS="$*"
+
+# Make all relative object paths absolute for make
+# rel_path.o -> $PWD/rel_path.o
+LDFLAGS=$(echo "$LDFLAGS" | sed -Ee 's,(^[^/].*\.o),'"$PWD"'\/\1,g' )
+
+# Remove -nodefaultlibs
+LDFLAGS=${LDFLAGS/-nodefaultlibs/}
+
+export UK_LDFLAGS="$LDFLAGS"
+
+
+# Extract `OUTPUT` and `FILES` from arguments
+FILES=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -o)
+            # Extract output path
+            OUTPUT="$2"
+            shift
+            shift
+            ;;
+        -L)
+            # Ignore other options with arguments
+            shift
+            shift
+            ;;
+        -*)
+            # Ignore other options without arguments
+            shift
+            ;;
+        *)
+            # Collect input files for `UK_LDEPS`
+            # This creates a leading whitespace but that's okay
+            FILES+=" $1"
+            shift
+            ;;
+    esac
+done
+
+export UK_LDEPS="$FILES"
+
+
+# Parse target selection environment variables
+if [[ -z "${KRAFTKIT_TARGET:-}" ]]; then
+    echo "KRAFTKIT_TARGET not set"
+    exit 1
+else
+    KRAFTKIT_ARG_TARG=("--target=$KRAFTKIT_TARGET")
+fi
+if [[ -z "${KRAFTKIT_ARCH:-}" ]]; then
+    KRAFTKIT_ARCH='*'
+    KRAFTKIT_ARG_ARCH=()
+else
+    KRAFTKIT_ARG_ARCH=("--arch=$KRAFTKIT_ARCH")
+fi
+if [[ -z "${KRAFTKIT_PLAT:-}" ]]; then
+    KRAFTKIT_PLAT='*'
+    KRAFTKIT_ARG_PLAT=()
+else
+    KRAFTKIT_ARG_PLAT=("--plat=$KRAFTKIT_PLAT")
+fi
+
+
+# Finally, build the Unikraft image
+kraft build --log-level debug --log-type basic --no-cache "${KRAFTKIT_ARG_TARG[@]}" "${KRAFTKIT_ARG_PLAT[@]}" "${KRAFTKIT_ARG_ARCH[@]}"
+
+
+# Find KraftKit output image
+# Don't match any files with extensions
+mapfile -t kraft_output_list < <(find .unikraft/build -maxdepth 1 -type f ! -name "*.*" -name "${KRAFTKIT_TARGET}_${KRAFTKIT_PLAT}-${KRAFTKIT_ARCH}")
+
+if [[ "${#kraft_output_list[@]}" -ne 1 ]]; then
+    echo "Cannot decide on kraft output file"
+    echo "Found: " "${kraft_output_list[@]}"
+    echo "Specify \$KRAFTKIT_TARGET, \$KRAFTKIT_ARCH, or \$KRAFTKIT_PLAT"
+    exit 1
+fi
+
+kraft_output="${kraft_output_list[0]}"
+
+
+# Copy KraftKit output to linker output
+cp "$kraft_output" "$OUTPUT"
