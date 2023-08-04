@@ -374,6 +374,8 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var exitErr error
+
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
 		go func() {
@@ -392,6 +394,11 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				select {
 				case update := <-events:
 					switch update.Status.State {
+					case machineapi.MachineStateErrored:
+						signals.RequestShutdown()
+						exitErr = fmt.Errorf("machine fatally exited")
+						break loop
+
 					case machineapi.MachineStateExited, machineapi.MachineStateFailed:
 						signals.RequestShutdown()
 						break loop
@@ -483,5 +490,5 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return nil
+	return exitErr
 }
