@@ -133,7 +133,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		} else {
 			log.G(ctx).
 				WithField("error", err).
-				Warn("kraftkit group not found, falling back to current user")
+				Debug("kraftkit group not found, falling back to current user")
 		}
 
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")

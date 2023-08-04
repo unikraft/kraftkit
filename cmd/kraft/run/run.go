@@ -326,7 +326,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		} else {
 			log.G(ctx).
 				WithField("error", err).
-				Warn("kraftkit group not found, falling back to current user")
+				Debug("kraftkit group not found, falling back to current user")
 		}
 
 		var ramfs *initrd.InitrdConfig

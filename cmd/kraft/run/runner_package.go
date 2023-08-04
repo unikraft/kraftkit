@@ -123,7 +123,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	} else {
 		log.G(ctx).
 			WithField("error", err).
-			Warn("kraftkit group not found, falling back to current user")
+			Debug("kraftkit group not found, falling back to current user")
 	}
 
 	// Clean up the package directory if an error occurs before returning.

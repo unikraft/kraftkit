@@ -163,7 +163,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	} else {
 		log.G(ctx).
 			WithField("error", err).
-			Warn("kraftkit group not found, falling back to current user")
+			Debug("kraftkit group not found, falling back to current user")
 	}
 
 	// Set and create the log file for this machine

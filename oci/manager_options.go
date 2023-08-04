@@ -63,7 +63,7 @@ func WithDetectHandler() OCIManagerOption {
 		} else {
 			log.G(ctx).
 				WithField("error", err).
-				Warn("kraftkit group not found, falling back to current user")
+				Debug("kraftkit group not found, falling back to current user")
 		}
 
 		log.G(ctx).WithFields(logrus.Fields{
