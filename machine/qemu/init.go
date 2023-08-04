@@ -267,7 +267,7 @@ func init() {
 	// gob.Register(QemuDevicePcTestdev{})
 	// gob.Register(QemuDevicePciTestdev{})
 	// gob.Register(QemuDevicePcm3680Pci{})
-	// gob.Register(QemuDevicePvpanic{})
+	gob.Register(QemuDevicePvpanic{})
 	// gob.Register(QemuDeviceSmbusIpmi{})
 	// gob.Register(QemuDeviceTpmCrb{})
 	// gob.Register(QemuDeviceUsbRedir{})

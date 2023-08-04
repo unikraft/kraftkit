@@ -240,6 +240,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		}),
 		WithDisplay(QemuDisplayNone{}),
 		WithParallel(QemuHostCharDevNone{}),
+		WithDevice(QemuDevicePvpanic{}),
 	}
 
 	// TODO: Parse Rootfs types
