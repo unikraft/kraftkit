@@ -104,6 +104,7 @@ const (
 	MachineStatePaused     = MachineState("paused")
 	MachineStateSuspended  = MachineState("suspended")
 	MachineStateExited     = MachineState("exited")
+	MachineStateErrored    = MachineState("errored")
 )
 
 // String implements fmt.Stringer
