@@ -1,0 +1,40 @@
+name: tools/dockerfile-llb-frontend
+
+on:
+  push:
+    branches: [stable]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - 'tools/dockerfile-llb-frontend/**'
+      - '.github/workflows/dockerfile-llb-frontend.yaml'
+
+jobs:
+  plugin-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Registry
+        if: ${{ github.event_name == 'push' }}
+        uses: docker/login-action@v2
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build OCI image for the LLB plugin
+        uses: docker/build-push-action@v4
+        with:
+          context: ./tools/dockerfile-llb-frontend
+          file: ./tools/dockerfile-llb-frontend/Dockerfile
+          tags: index.unikraft.io/kraftkit.sh/llb:latest
+          push: ${{ github.event_name == 'push' }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
