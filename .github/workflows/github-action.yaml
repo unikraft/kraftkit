@@ -64,7 +64,7 @@ jobs:
           driver: docker
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: oci-images
           path: /tmp
