@@ -151,6 +151,16 @@ func (popts *ProjectOptions) AddKraftfile(file string) error {
 	return nil
 }
 
+// AddKraftfileFromBytes adds and extracts the file contents from a given byte slice
+// and attaches it to the ProjectOptions.
+func (popts *ProjectOptions) AddKraftfileFromBytes(content []byte) error {
+	popts.kraftfile = &Kraftfile{
+		content: content,
+	}
+
+	return nil
+}
+
 type ProjectOption func(*ProjectOptions) error
 
 // NewProjectOptions creates ProjectOptions
@@ -215,6 +225,13 @@ func WithProjectConfig(config []string) ProjectOption {
 func WithProjectKraftfile(file string) ProjectOption {
 	return func(popts *ProjectOptions) error {
 		return popts.AddKraftfile(file)
+	}
+}
+
+// WithProjectKraftfile adds a kraft file to the project
+func WithProjectKraftfileFromBytes(content []byte) ProjectOption {
+	return func(popts *ProjectOptions) error {
+		return popts.AddKraftfileFromBytes(content)
 	}
 }
 
