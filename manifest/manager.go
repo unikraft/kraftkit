@@ -176,7 +176,7 @@ func (m *manifestManager) RemoveSource(ctx context.Context, source string) error
 	return nil
 }
 
-func (m *manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (m *manifestManager) Pack(ctx context.Context, c []component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	return nil, fmt.Errorf("not implemented manifest.manager.Pack")
 }
 

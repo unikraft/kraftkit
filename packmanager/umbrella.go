@@ -109,14 +109,16 @@ func (u UmbrellaManager) RemoveSource(ctx context.Context, source string) error 
 	return nil
 }
 
-func (u UmbrellaManager) Pack(ctx context.Context, source component.Component, opts ...PackOption) ([]pack.Package, error) {
+func (u UmbrellaManager) Pack(ctx context.Context, source []component.Component, opts ...PackOption) ([]pack.Package, error) {
 	var ret []pack.Package
 
 	for _, manager := range u.packageManagers {
-		log.G(ctx).WithFields(logrus.Fields{
-			"format": manager.Format(),
-			"source": source.Name(),
-		}).Tracef("packing")
+		for _, component := range source {
+			log.G(ctx).WithFields(logrus.Fields{
+				"format": manager.Format(),
+				"source": component.Name(),
+			}).Tracef("packing")
+		}
 		more, err := manager.Pack(ctx, source, opts...)
 		if err != nil {
 			return nil, err

@@ -65,13 +65,19 @@ func (manager *ociManager) Update(ctx context.Context) error {
 }
 
 // Pack implements packmanager.PackageManager
-func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
-	targ, ok := entity.(target.Target)
-	if !ok {
-		return nil, fmt.Errorf("entity is not Unikraft target")
+func (manager *ociManager) Pack(ctx context.Context, entities []component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+	var targets []target.Target
+
+	for _, entity := range entities {
+		targ, ok := entity.(target.Target)
+		if !ok {
+			return nil, fmt.Errorf("entity is not Unikraft target")
+		}
+
+		targets = append(targets, targ)
 	}
 
-	pkg, err := NewPackageFromTarget(ctx, targ, opts...)
+	pkg, err := NewPackageFromTargets(ctx, targets, opts...)
 	if err != nil {
 		return nil, err
 	}

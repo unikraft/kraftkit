@@ -22,11 +22,11 @@ type PackageManager interface {
 	// Update retrieves and stores locally a cache of the upstream registry.
 	Update(context.Context) error
 
-	// Pack turns the provided component into the distributable package.  Since
+	// Pack turns the provided components into the distributable package.  Since
 	// components can comprise of other components, it is possible to return more
 	// than one package.  It is possible to disable this and "flatten" a component
 	// into a single package by setting a relevant `pack.PackOption`.
-	Pack(context.Context, component.Component, ...PackOption) ([]pack.Package, error)
+	Pack(context.Context, []component.Component, ...PackOption) ([]pack.Package, error)
 
 	// Unpack turns a given package into a usable component.  Since a package can
 	// compromise of a multiple components, it is possible to return multiple
