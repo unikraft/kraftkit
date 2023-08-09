@@ -125,6 +125,7 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 	if pm, compatible, err := pmananger.IsCompatible(ctx, ref); err == nil && compatible {
 		packages, err := pm.Catalog(ctx,
 			packmanager.WithCache(true),
+			packmanager.WithAllTargets(true),
 			packmanager.WithName(ref),
 		)
 		if err != nil {
@@ -138,7 +139,6 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		// Call push if it exists
-		// TODO push if it doesn't exist too
 		proc := paraprogress.NewProcess(
 			fmt.Sprintf("pushing %s",
 				ref,
