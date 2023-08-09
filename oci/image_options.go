@@ -22,3 +22,21 @@ func WithAutoSave(autoSave bool) ImageOption {
 		return nil
 	}
 }
+
+type ImageIndexOption func(*ImageIndex) error
+
+// WithIndexAutoSave atomicizes the index as operations occur on its body.
+func WithIndexAutoSave(autoSave bool) ImageIndexOption {
+	return func(index *ImageIndex) error {
+		index.autoSave = autoSave
+		return nil
+	}
+}
+
+// WithIndexWorkdir specifies the working directory of the index.
+func WithIndexWorkdir(workdir string) ImageIndexOption {
+	return func(index *ImageIndex) error {
+		index.workdir = workdir
+		return nil
+	}
+}
