@@ -6,6 +6,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -21,8 +22,6 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
-
-const algorithm = "sha256"
 
 type DirectoryLayer struct {
 	path      string
@@ -155,7 +154,7 @@ func (di DirectoryImage) RawConfigFile() ([]byte, error) {
 	configPath := filepath.Join(
 		di.handle.path,
 		DirectoryHandlerConfigsDir,
-		algorithm,
+		string(di.manifestDescriptor.Digest.Algorithm()),
 		hex.EncodeToString(h.Sum(nil)),
 	)
 
@@ -191,17 +190,11 @@ func (di DirectoryImage) Manifest() (*v1.Manifest, error) {
 // RawManifest returns the manifest of the image in bytes
 // It reads the manifest from the filesystem
 func (di DirectoryImage) RawManifest() ([]byte, error) {
-	var jsonPath string
-	if strings.ContainsRune(di.ref.Name(), '@') {
-		jsonPath = strings.ReplaceAll(di.ref.Name(), "@", string(filepath.Separator)) + ".json"
-	} else {
-		jsonPath = strings.ReplaceAll(di.ref.Name(), ":", string(filepath.Separator)) + ".json"
-	}
-
 	manifestPath := filepath.Join(
 		di.handle.path,
 		DirectoryHandlerManifestsDir,
-		jsonPath,
+		string(di.manifestDescriptor.Digest.Algorithm()),
+		di.manifestDescriptor.Digest.Encoded(),
 	)
 
 	return os.ReadFile(manifestPath)
@@ -258,4 +251,90 @@ func (di DirectoryImage) LayerByDiffID(hash v1.Hash) (v1.Layer, error) {
 		}
 	}
 	return nil, fmt.Errorf("layer not found")
+}
+
+type DirectoryImageIndex struct {
+	handle          *DirectoryHandler
+	index           ocispec.Index
+	indexDescriptor *ocispec.Descriptor
+	ref             name.Reference
+}
+
+// MediaType of this image's manifest.
+func (dix DirectoryImageIndex) MediaType() (types.MediaType, error) {
+	return types.MediaType(dix.index.MediaType), nil
+}
+
+// Digest returns the sha256 of this index's manifest.
+func (dix DirectoryImageIndex) Digest() (v1.Hash, error) {
+	b, err := dix.RawManifest()
+	if err != nil {
+		return v1.Hash{}, err
+	}
+
+	h, _, err := v1.SHA256(bytes.NewReader(b))
+	return h, err
+}
+
+// Size returns the size of the manifest.
+func (dix DirectoryImageIndex) Size() (int64, error) {
+	return dix.indexDescriptor.Size, nil
+}
+
+// IndexManifest returns this image index's manifest object.
+func (dix DirectoryImageIndex) IndexManifest() (*v1.IndexManifest, error) {
+	b, err := dix.RawManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	return v1.ParseIndexManifest(bytes.NewReader(b))
+}
+
+// RawManifest returns the serialized bytes of IndexManifest().
+func (dix DirectoryImageIndex) RawManifest() ([]byte, error) {
+	var jsonPath string
+	if strings.ContainsRune(dix.ref.Name(), '@') {
+		jsonPath = strings.ReplaceAll(dix.ref.Name(), "@", string(filepath.Separator)) + ".json"
+	} else {
+		jsonPath = strings.ReplaceAll(dix.ref.Name(), ":", string(filepath.Separator)) + ".json"
+	}
+
+	indexPath := filepath.Join(
+		dix.handle.path,
+		DirectoryHandlerIndexesDir,
+		jsonPath,
+	)
+
+	return os.ReadFile(indexPath)
+}
+
+// Image returns a v1.Image that this ImageIndex references.
+func (dix DirectoryImageIndex) Image(hash v1.Hash) (v1.Image, error) {
+	var manifest *ocispec.Descriptor
+
+	for _, desc := range dix.index.Manifests {
+		if desc.Digest.Encoded() == hash.Hex {
+			desc := desc
+			manifest = &desc
+		}
+	}
+
+	// Fetch manifest and config from the filesystem
+	image, err := dix.handle.ResolveImage(context.TODO(), manifest.Digest.Encoded())
+	if err != nil {
+		return nil, err
+	}
+
+	return DirectoryImage{
+		image:              image,
+		manifestDescriptor: manifest,
+		handle:             dix.handle,
+		ref:                dix.ref,
+	}, nil
+}
+
+// ImageIndex returns a v1.ImageIndex that this ImageIndex references.
+func (dix DirectoryImageIndex) ImageIndex(hash v1.Hash) (v1.ImageIndex, error) {
+	return nil, fmt.Errorf("mixed image indexes are not supported, contributions welcome")
 }
