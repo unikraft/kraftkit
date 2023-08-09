@@ -31,6 +31,18 @@ type Query struct {
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
+
+	// allTargets indicates that the query should package all targets together
+	allTargets bool
+
+	// Architecture specifies the architecture of the package
+	architecture string
+
+	// Platform specifies the platform of the package
+	platform string
+
+	// KConfig specifies the list of config options of the package
+	kConfig []string
 }
 
 // Source specifies where the origin of the package
@@ -51,6 +63,26 @@ func (query *Query) Name() string {
 // Version specifies the version of the package
 func (query *Query) Version() string {
 	return query.version
+}
+
+// AllTargets indicates that the query should package all targets together
+func (query *Query) AllTargets() bool {
+	return query.allTargets
+}
+
+// Architecture specifies the architecture of the package
+func (query *Query) Architecture() string {
+	return query.architecture
+}
+
+// Platform specifies the platform of the package
+func (query *Query) Platform() string {
+	return query.platform
+}
+
+// KConfig specifies the list of config options of the package
+func (query *Query) KConfig() []string {
+	return query.kConfig
 }
 
 // UseCache indicates whether the package manager should use any existing cache.
@@ -87,6 +119,27 @@ func NewQuery(qopts ...QueryOption) *Query {
 	return &query
 }
 
+// WithArchitecture sets the query parameter for the architecture of the package.
+func WithArchitecture(arch string) QueryOption {
+	return func(query *Query) {
+		query.architecture = arch
+	}
+}
+
+// WithPlatform sets the query parameter for the platform of the package.
+func WithPlatform(platform string) QueryOption {
+	return func(query *Query) {
+		query.platform = platform
+	}
+}
+
+// WithKconfig sets the query parameter for the list of configuration options of the package.
+func WithKConfig(kConfig []string) QueryOption {
+	return func(query *Query) {
+		query.kConfig = kConfig
+	}
+}
+
 // WithSource sets the query parameter for the origin source of the package.
 func WithSource(source string) QueryOption {
 	return func(query *Query) {
@@ -120,6 +173,13 @@ func WithVersion(version string) QueryOption {
 func WithCache(useCache bool) QueryOption {
 	return func(query *Query) {
 		query.useCache = useCache
+	}
+}
+
+// WithAllTargets sets whether to package all targets together.
+func WithAllTargets(allTargets bool) QueryOption {
+	return func(query *Query) {
+		query.allTargets = allTargets
 	}
 }
 
