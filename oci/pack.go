@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	"oras.land/oras-go/v2/content"
@@ -275,6 +276,164 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	ocipack.image = image
 
 	return &ocipack, nil
+}
+
+// NewPackageFromTargets generates an OCI implementation of the pack.Package
+// construct based on an input Application and options.
+func NewPackageFromTargets(ctx context.Context, targ []target.Target, opts ...packmanager.PackOption) (pack.Package, error) {
+	var packages []pack.Package
+	var manifests []ocispec.Manifest
+	var images []ocispec.Image
+	var handle handler.Handler
+	var ref name.Reference
+	var err error
+
+	for _, t := range targ {
+		pkg, err := NewPackageFromTarget(ctx, t, opts...)
+		if err != nil {
+			return nil, err
+		}
+
+		packages = append(packages, pkg)
+		manifests = append(manifests, pkg.(*ociPackage).image.manifest)
+		images = append(images, pkg.(*ociPackage).image.config)
+	}
+
+	popts := &packmanager.PackOptions{}
+	for _, opt := range opts {
+		opt(popts)
+	}
+
+	if popts.Output() != "" {
+		ref, err = name.ParseReference(popts.Output(),
+			name.WithDefaultRegistry(DefaultRegistry),
+		)
+	} else if len(targ) == 1 {
+		// It's possible to pass an OCI artifact reference in the Kraftfile, e.g.:
+		//
+		// ```yaml
+		// [...]
+		// targets:
+		//   - name: unikraft.io/library/helloworld:latest
+		//     arch: x86_64
+		//     plat: kvm
+		// ```
+		n := targ[0].Name()
+		if popts.Name() != "" {
+			n = popts.Name()
+		}
+		ref, err = name.ParseReference(
+			n,
+			name.WithDefaultRegistry(DefaultRegistry),
+		)
+	} else if popts.Name() != "" {
+		ref, err = name.ParseReference(
+			popts.Name(),
+			name.WithDefaultRegistry(DefaultRegistry),
+		)
+	} else {
+		return nil, fmt.Errorf("cannot generate OCI index without a specific name or path")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	auths, err := defaultAuths(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
+		namespace := DefaultNamespace
+		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
+			namespace = n
+		}
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"addr":      contAddr,
+			"namespace": namespace,
+		}).Debug("oci: packaging via containerd")
+
+		ctx, handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, auths)
+	} else {
+		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
+			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
+		}
+
+		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": ociDir,
+		}).Trace("oci: directory handler")
+
+		handle, err = handler.NewDirectoryHandler(ociDir, auths)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := NewImageIndex(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	index.manifests = manifests
+	index.images = images
+
+	index.index.MediaType = ocispec.MediaTypeImageIndex
+
+	// All packages in the index have the same name and version
+	index.SetAnnotation(ctx, AnnotationName, packages[0].Name())
+	index.SetAnnotation(ctx, AnnotationVersion, packages[0].Version())
+	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+	if version := popts.KernelVersion(); len(version) > 0 {
+		index.SetAnnotation(ctx, AnnotationKernelVersion, version)
+	}
+
+	ociindex := ociIndex{
+		handle: handle,
+		index:  index,
+		ref:    ref,
+	}
+
+	_, err = index.Save(ctx, ociindex.imageRef(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ociindex, nil
+}
+
+// NewPackageFromOCIIndexSpec generates a package from a supplied OCI image
+// index specification.
+func NewPackageFromOCIIndexSpec(ctx context.Context, handle handler.Handler, ref string, index ocispec.Index) (pack.Package, error) {
+	// Check if the OCI image has a known annotation which identifies if a
+	// unikernel is contained within
+	if _, ok := index.Annotations[AnnotationKernelVersion]; !ok {
+		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
+	}
+
+	var err error
+
+	ociindex := ociIndex{
+		handle: handle,
+	}
+
+	ociindex.ref, err = name.ParseReference(ref,
+		name.WithDefaultRegistry(DefaultRegistry),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ociindex.index, err = NewImageIndex(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	ociindex.index.index = index
+
+	return &ociindex, nil
 }
 
 // NewPackageFromOCIManifestSpec generates a package from a supplied OCI image
