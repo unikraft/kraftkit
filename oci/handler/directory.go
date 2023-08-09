@@ -28,6 +28,7 @@ import (
 )
 
 const (
+	DirectoryHandlerIndexesDir   = "indexes"
 	DirectoryHandlerManifestsDir = "manifests"
 	DirectoryHandlerConfigsDir   = "configs"
 	DirectoryHandlerLayersDir    = "layers"
@@ -63,6 +64,59 @@ func (handle *DirectoryHandler) DigestExists(ctx context.Context, dgst digest.Di
 	}
 
 	return false, nil
+}
+
+// ListIndexes implements DigestResolver.
+func (handle *DirectoryHandler) ListIndexes(ctx context.Context) (indexes []ocispec.Index, err error) {
+	indexesDir := filepath.Join(handle.path, DirectoryHandlerIndexesDir)
+
+	// Create the manifest directory if it does not exist and return nil, since
+	// there's nothing to return.
+	if _, err := os.Stat(indexesDir); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(indexesDir, 0o775); err != nil {
+			return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
+		}
+
+		return nil, nil
+	}
+
+	// Since the directory structure is nested, recursively walk the manifest
+	// directory to find all manifest entries.
+	if err := filepath.WalkDir(indexesDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories
+		if d.IsDir() {
+			return nil
+		}
+
+		// Skip files that don't end in .json
+		if !strings.HasSuffix(d.Name(), ".json") {
+			return nil
+		}
+
+		// Read the manifest
+		rawIndex, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		index := ocispec.Index{}
+		if err = json.Unmarshal(rawIndex, &index); err != nil {
+			return err
+		}
+
+		// Append the manifest to the list
+		indexes = append(indexes, index)
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return indexes, nil
 }
 
 // ListManifests implements DigestResolver.

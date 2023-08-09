@@ -28,6 +28,10 @@ type ManifestLister interface {
 	ListManifests(context.Context) ([]ocispec.Manifest, error)
 }
 
+type IndexLister interface {
+	ListIndexes(context.Context) ([]ocispec.Index, error)
+}
+
 type ImagePusher interface {
 	PushImage(context.Context, string, *ocispec.Descriptor) error
 }
@@ -41,13 +45,14 @@ type ImageFetcher interface {
 }
 
 type ImageUnpacker interface {
-	UnpackImage(context.Context, string, string) error
+	UnpackImage(context.Context, string, string, string) error
 }
 
 type Handler interface {
 	DigestResolver
 	DigestSaver
 	ManifestLister
+	IndexLister
 	ImagePusher
 	ImageResolver
 	ImageFetcher
