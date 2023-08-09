@@ -108,6 +108,67 @@ func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.D
 	return true, nil
 }
 
+// ListIndexes implements DigestResolver.
+func (handle *ContainerdHandler) ListIndexes(ctx context.Context) (indx []ocispec.Index, err error) {
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
+
+	all, err := handle.client.ImageService().List(
+		namespaces.WithNamespace(ctx, handle.namespace),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, image := range all {
+		found, err := handle.client.GetImage(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			image.Name,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if found.Target().MediaType != ocispec.MediaTypeImageIndex {
+			continue
+		}
+
+		manifest, err := images.Manifest(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			handle.client.ContentStore(), found.Target(), nil,
+		)
+		if err != nil {
+			return nil, err
+		}
+		manifests, err := images.Children(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			handle.client.ContentStore(),
+			found.Target(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		index := ocispec.Index{
+			MediaType:    manifest.MediaType,
+			ArtifactType: manifest.ArtifactType,
+			Manifests:    manifests,
+			Subject:      manifest.Subject,
+			Annotations:  manifest.Annotations,
+		}
+
+		indx = append(indx, index)
+	}
+
+	return indx, nil
+}
+
 // ListManifests implements DigestResolver.
 func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
 	ctx, done, err := handle.lease(ctx)
@@ -141,8 +202,11 @@ func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests [
 	return manifests, nil
 }
 
+// TODO(craciunoiuc): Saving only saves the index and not the manifests themselves
 // SaveDigest implements DigestSaver.
 func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) (err error) {
+	log.G(ctx).Errorf("oci: Packaging not supported for containerd with index manifests. Saving will fail.")
+
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
@@ -169,7 +233,8 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 
 	var tee io.Reader
 	var cache bytes.Buffer
-	if desc.MediaType == ocispec.MediaTypeImageManifest {
+	if desc.MediaType == ocispec.MediaTypeImageManifest ||
+		desc.MediaType == ocispec.MediaTypeImageIndex {
 		tee = io.TeeReader(reader, &cache)
 	} else {
 		tee = reader
@@ -185,9 +250,9 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 	switch desc.MediaType {
 	// case ociimages.MediaTypeDockerSchema2Manifest,
 	// 			ocispec.MediaTypeImageManifest,
-	// 			ociimages.MediaTypeDockerSchema2ManifestList,
-	// 			ocispec.MediaTypeImageIndex:
-	case ocispec.MediaTypeImageManifest:
+	// 			ociimages.MediaTypeDockerSchema2ManifestList:
+	case ocispec.MediaTypeImageIndex,
+		ocispec.MediaTypeImageManifest:
 		// ref, ok := desc.Annotations[ociimages.AnnotationImageName]
 		// if !ok {
 		// 	return fmt.Errorf("cannot push image layer without image annotation")
@@ -211,7 +276,7 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 		labels[fmt.Sprintf("%s.%d", ContainerdGCLayerPrefix, len(manifest.Layers))] = manifest.Config.Digest.String()
 
 		var image images.Image
-		existingImage, err := is.Get(ctx, ref)
+		existingImage, err := is.Get(namespaces.WithNamespace(ctx, handle.namespace), ref)
 
 		if err != nil || existingImage.Target.Digest.String() == "" {
 			log.G(ctx).Trace("oci: creating new image")
@@ -222,7 +287,7 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Time{},
 			}
-			_, err = is.Create(ctx, image)
+			_, err = is.Create(namespaces.WithNamespace(ctx, handle.namespace), image)
 		} else {
 			log.G(ctx).Trace("oci: updating existing image")
 			image = images.Image{
@@ -231,7 +296,7 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 				Target:    desc,
 				UpdatedAt: time.Time{},
 			}
-			_, err = is.Update(ctx, image)
+			_, err = is.Update(namespaces.WithNamespace(ctx, handle.namespace), image)
 		}
 		if err != nil {
 			return err
@@ -260,7 +325,7 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 }
 
 // ResolveImage implements ImageResolver.
-func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (imgspec ocispec.Image, err error) {
+func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref, platform string) (imgspec ocispec.Image, err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return ocispec.Image{}, err
@@ -270,12 +335,56 @@ func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref strin
 		err = combineErrors(err, done(ctx))
 	}()
 
-	image, err := handle.client.GetImage(ctx, fullref)
+	image, err := handle.client.GetImage(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		fullref,
+	)
 	if err != nil {
 		return ocispec.Image{}, err
 	}
 
-	return image.Spec(ctx)
+	if image.Target().MediaType == ocispec.MediaTypeImageIndex {
+		manifests, err := images.Children(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			handle.client.ContentStore(),
+			image.Target(),
+		)
+		if err != nil {
+			return ocispec.Image{}, err
+		}
+
+		// Split on ':'
+		parsed := strings.SplitN(fullref, ":", 2)
+		var base string
+		if len(parsed) == 2 {
+			base = parsed[0]
+		} else if len(parsed) == 1 {
+			base = fullref
+		} else {
+			return ocispec.Image{}, fmt.Errorf("invalid image reference: %s", fullref)
+		}
+
+		for _, manifest := range manifests {
+			if manifest.MediaType == ocispec.MediaTypeImageManifest &&
+				(fmt.Sprintf("%s/%s", manifest.Platform.OS, manifest.Platform.Architecture) == platform ||
+					len(platform) == 0 && len(manifests) == 1) {
+
+				image, err := handle.client.GetImage(
+					namespaces.WithNamespace(ctx, handle.namespace),
+					base+":"+manifest.Digest.String(),
+				)
+				if err != nil {
+					return ocispec.Image{}, err
+				}
+
+				return image.Spec(ctx)
+			}
+		}
+
+		return ocispec.Image{}, fmt.Errorf("no matching platform found")
+	} else {
+		return image.Spec(ctx)
+	}
 }
 
 // FetchImage implements ImageFetcher.
@@ -336,6 +445,50 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, ref, plat strin
 	}
 
 	<-progress
+
+	image, err := handle.client.GetImage(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		ref,
+	)
+	if err != nil {
+		return err
+	}
+	manifests, err := images.Children(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		handle.client.ContentStore(),
+		image.Target(),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Split on ':'
+	parsed := strings.SplitN(ref, ":", 2)
+	var base string
+	if len(parsed) == 2 {
+		base = parsed[0]
+	} else if len(parsed) == 1 {
+		base = ref
+	} else {
+		return fmt.Errorf("invalid image reference: %s", ref)
+	}
+
+	for _, manifest := range manifests {
+		if manifest.MediaType == ocispec.MediaTypeImageManifest &&
+			(fmt.Sprintf("%s/%s", manifest.Platform.OS, manifest.Platform.Architecture) == plat ||
+				len(plat) == 0 && len(manifests) == 1) {
+
+			// Fetch the image
+			_, err = handle.client.Fetch(
+				namespaces.WithNamespace(ctx, handle.namespace),
+				base+":"+manifest.Digest.String(),
+				ropts...,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -497,6 +650,22 @@ outer:
 
 // PushImage implements ImagePusher.
 func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+	img, err := handle.client.ImageService().Get(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		ref,
+	)
+	if err != nil {
+		return err
+	}
+	manifests, err := images.Children(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		handle.client.ContentStore(),
+		img.Target,
+	)
+	if err != nil {
+		return err
+	}
+
 	resolver, err := dockerconfigresolver.New(
 		ctx,
 		strings.Split(ref, "/")[0],
@@ -514,6 +683,36 @@ func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, targ
 		return err
 	}
 
+	// Split on ':'
+	parsed := strings.SplitN(ref, ":", 2)
+	var base string
+	if len(parsed) == 2 {
+		base = parsed[0]
+	} else if len(parsed) == 1 {
+		base = ref
+	} else {
+		return fmt.Errorf("invalid image reference: %s", ref)
+	}
+
+	for _, manifest := range manifests {
+		image, err := handle.client.GetImage(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			base+":"+manifest.Digest.String(),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := handle.client.Push(
+			namespaces.WithNamespace(ctx, handle.namespace),
+			base+":"+manifest.Digest.String(),
+			image.Target(),
+			containerd.WithResolver(resolver),
+		); err != nil {
+			return err
+		}
+	}
+
 	return handle.client.Push(
 		namespaces.WithNamespace(ctx, handle.namespace),
 		ref,
@@ -523,7 +722,7 @@ func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, targ
 }
 
 // UnpackImage implements ImageUnpacker.
-func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dest string) (err error) {
+func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, platform string, dest string) (err error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
@@ -533,12 +732,55 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 		err = combineErrors(err, done(ctx))
 	}()
 
-	img, err := handle.client.ImageService().Get(ctx, ref)
+	img, err := handle.client.ImageService().Get(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		ref,
+	)
+	if err != nil {
+		return err
+	}
+	manifests, err := images.Children(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		handle.client.ContentStore(),
+		img.Target,
+	)
 	if err != nil {
 		return err
 	}
 
-	i := containerd.NewImage(handle.client, img)
+	// Split on ':'
+	parsed := strings.SplitN(ref, ":", 2)
+	var base string
+	if len(parsed) == 2 {
+		base = parsed[0]
+	} else if len(parsed) == 1 {
+		base = ref
+	} else {
+		return fmt.Errorf("invalid image reference: %s", ref)
+	}
+
+	var i containerd.Image
+	for _, manifest := range manifests {
+		if manifest.MediaType == ocispec.MediaTypeImageManifest &&
+			(fmt.Sprintf("%s/%s", manifest.Platform.OS, manifest.Platform.Architecture) == platform ||
+				len(platform) == 0 && len(manifests) == 1) {
+
+			imgBase, err := handle.client.ImageService().Get(
+				namespaces.WithNamespace(ctx, handle.namespace),
+				base+":"+manifest.Digest.String(),
+			)
+			if err != nil {
+				return err
+			}
+			i = containerd.NewImage(handle.client, imgBase)
+
+			break
+		}
+	}
+
+	if i == nil {
+		return fmt.Errorf("no matching platform found")
+	}
 
 	// TODO: We need to pass the architecture, platform and any desired KConfig
 	// values via the platform specifier:
