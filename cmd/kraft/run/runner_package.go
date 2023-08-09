@@ -57,7 +57,11 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 		runner.pm = packmanager.G(ctx)
 	}
 
-	pm, compatible, err := runner.pm.IsCompatible(ctx, runner.packName)
+	pm, compatible, err := runner.pm.IsCompatible(ctx,
+		runner.packName,
+		packmanager.WithArchitecture(opts.Architecture),
+		packmanager.WithPlatform(opts.platform.String()),
+	)
 	if err == nil && compatible {
 		runner.pm = pm
 		return true, nil
@@ -75,6 +79,8 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
 		packmanager.WithCache(true),
+		packmanager.WithPlatform(opts.platform.String()),
+		packmanager.WithArchitecture(opts.Architecture),
 	)
 	if err != nil {
 		return err
@@ -88,6 +94,8 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithName(runner.packName),
 			packmanager.WithCache(false),
+			packmanager.WithPlatform(opts.platform.String()),
+			packmanager.WithArchitecture(opts.Architecture),
 		)
 		if err != nil {
 			return err

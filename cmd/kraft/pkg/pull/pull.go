@@ -160,6 +160,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
 						packmanager.WithCache(!opts.ForceCache),
+						packmanager.WithPlatform(opts.Platform),
+						packmanager.WithArchitecture(opts.Architecture),
 					)
 					if err != nil {
 						return err
@@ -256,6 +258,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					packmanager.WithSource(c.Source()),
 					packmanager.WithTypes(c.Type()),
 					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithPlatform(opts.Platform),
+					packmanager.WithArchitecture(opts.Architecture),
 				},
 			})
 		}
