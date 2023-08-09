@@ -52,6 +52,12 @@ type ociPackage struct {
 	command []string
 }
 
+type ociIndex struct {
+	handle handler.Handler
+	ref    name.Reference
+	index  *ImageIndex
+}
+
 var (
 	_ pack.Package  = (*ociPackage)(nil)
 	_ target.Target = (*ociPackage)(nil)
@@ -482,8 +488,9 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 
 // NewPackageFromRemoteOCIRef generates a new package from a given OCI image
 // reference which is accessed by its remote registry.
-func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref string) (pack.Package, error) {
+func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref string, packPlat *v1.Platform) (pack.Package, error) {
 	var err error
+	var copts []crane.Option
 
 	ocipack := ociPackage{
 		handle: handle,
@@ -512,11 +519,17 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 		authConfig.Username = auth.Username
 	}
 
-	raw, err := crane.Manifest(ref,
+	copts = append(copts,
 		crane.WithAuth(&simpleauth.SimpleAuthenticator{
 			Auth: authConfig,
 		}),
 	)
+
+	if packPlat != nil {
+		copts = append(copts, crane.WithPlatform(packPlat))
+	}
+
+	raw, err := crane.Manifest(ref, copts...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get manifest: %v", err)
 	}
@@ -574,14 +587,29 @@ func (ocipack *ociPackage) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
+// Type implements unikraft.Nameable
+func (ociidx ociIndex) Type() unikraft.ComponentType {
+	return unikraft.ComponentTypeApp
+}
+
 // Name implements unikraft.Nameable
 func (ocipack *ociPackage) Name() string {
 	return ocipack.ref.Context().Name()
 }
 
+// Name implements unikraft.Nameable
+func (ociidx ociIndex) Name() string {
+	return ociidx.ref.Context().Name()
+}
+
 // Version implements unikraft.Nameable
 func (ocipack *ociPackage) Version() string {
 	return ocipack.ref.Identifier()
+}
+
+// Version implements unikraft.Nameable
+func (ociidx ociIndex) Version() string {
+	return ociidx.ref.Identifier()
 }
 
 // imageRef returns the OCI-standard image name in the format `name:tag`
@@ -592,23 +620,41 @@ func (ocipack *ociPackage) imageRef() string {
 	return fmt.Sprintf("%s:%s", ocipack.Name(), ocipack.Version())
 }
 
+// imageRef returns the OCI-standard image name in the format `name:tag`
+func (ociidx ociIndex) imageRef() string {
+	if strings.HasPrefix(ociidx.Version(), "sha256:") {
+		return fmt.Sprintf("%s@%s", ociidx.Name(), ociidx.Version())
+	}
+	return fmt.Sprintf("%s:%s", ociidx.Name(), ociidx.Version())
+}
+
 // Metadata implements pack.Package
 func (ocipack *ociPackage) Metadata() any {
 	return ocipack.image.config
 }
 
+// Metadata implements pack.Package
+func (ociidx ociIndex) Metadata() any {
+	return ociidx.index.index.MediaType
+}
+
 // Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
-	manifestJson, err := json.Marshal(ocipack.image.manifest)
+	return fmt.Errorf("cannot push target without OCI image index")
+}
+
+// Push implements pack.Package
+func (ociidx ociIndex) Push(ctx context.Context, opts ...pack.PushOption) error {
+	indexJson, err := json.Marshal(ociidx.index.index)
 	if err != nil {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	ocipack.image.manifestDesc = content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageManifest,
-		manifestJson,
+	ociidx.index.indexDesc = content.NewDescriptorFromBytes(
+		ocispec.MediaTypeImageIndex,
+		indexJson,
 	)
-	return ocipack.image.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.image.manifestDesc)
+	return ociidx.index.handle.PushImage(ctx, ociidx.imageRef(), &ociidx.index.indexDesc)
 }
 
 // Pull implements pack.Package
@@ -626,9 +672,11 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		}
 	}
 
+	plat := fmt.Sprintf("%s/%s", popts.Platform(), pullArch)
+
 	// If it's possible to resolve the image reference, the image has already been
 	// pulled to the local image store
-	image, err := ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
+	image, err := ocipack.handle.ResolveImage(ctx, ocipack.imageRef(), plat)
 	if err == nil {
 		goto unpack
 	}
@@ -643,7 +691,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 	}
 
 	// Try resolving the image again after pulling it
-	image, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
+	image, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef(), plat)
 	if err != nil {
 		return err
 	}
@@ -654,6 +702,7 @@ unpack:
 		if err := ocipack.image.handle.UnpackImage(
 			ctx,
 			ocipack.imageRef(),
+			fmt.Sprintf("%s/%s", popts.Platform(), pullArch),
 			popts.Workdir(),
 		); err != nil {
 			return err
@@ -679,8 +728,16 @@ unpack:
 	return nil
 }
 
-// Pull implements pack.Package
+func (ociidx ociIndex) Pull(ctx context.Context, opts ...pack.PullOption) error {
+	return fmt.Errorf("cannot pull OCI image index")
+}
+
+// Format implements pack.Package
 func (ocipack *ociPackage) Format() pack.PackageFormat {
+	return OCIFormat
+}
+
+func (ociidx ociIndex) Format() pack.PackageFormat {
 	return OCIFormat
 }
 
