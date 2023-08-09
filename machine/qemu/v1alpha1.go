@@ -171,6 +171,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
 	}
 
+	if machine.Spec.Resources.Requests == nil {
+		machine.Spec.Resources.Requests = make(corev1.ResourceList, 2)
+	}
+
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
 		quantity, err := resource.ParseQuantity("64M")
 		if err != nil {
