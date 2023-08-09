@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"kraftkit.sh/config"
@@ -129,6 +130,19 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 	qversion := query.Version()
+	platform := &v1.Platform{}
+
+	if query.Architecture() != "" {
+		platform.Architecture = query.Architecture()
+	}
+
+	if query.Platform() != "" {
+		platform.OS = query.Platform()
+	}
+
+	if len(query.KConfig()) > 0 {
+		platform.OSFeatures = query.KConfig()
+	}
 
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format
@@ -154,7 +168,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	if !query.UseCache() {
 		// If a direct reference can be made, attempt to generate a package from it
 		if refErr == nil {
-			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
+			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String(), platform)
 			if err != nil {
 				log.G(ctx).Trace(err)
 			} else {
@@ -222,80 +236,177 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 	}
 
-	// Access local images that are available on the host
-	manifests, err := handle.ListManifests(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, manifest := range manifests {
-		// Check if the OCI image has a known annotation which identifies if a
-		// unikernel is contained within
-		if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		// Could not determine name from manifest specification
-		refname, ok := manifest.Annotations[ocispec.AnnotationRefName]
-		if !ok {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		// Skip if querying for the name and the name does not match
-		if len(qname) > 0 && refname != qname {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		// Could not determine name from manifest specification
-		revision, ok := manifest.Annotations[ocispec.AnnotationRevision]
-		if !ok {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		fullref := fmt.Sprintf("%s:%s", refname, revision)
-
-		// Skip direct references from the remote registry
-		if !query.UseCache() && refErr == nil && ref.String() == fullref {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		// Skip if querying for a version and the version does not match
-		if len(qversion) > 0 && revision != qversion {
-			log.G(ctx).
-				WithField("ref", manifest.Config.Digest.String()).
-				Trace("skipping non-unikernel digest")
-			continue
-		}
-
-		log.G(ctx).WithField("ref", fullref).Debug("found")
-
-		pack, err := NewPackageFromOCIManifestSpec(
-			ctx,
-			handle,
-			fullref,
-			manifest,
-		)
+	if !query.AllTargets() {
+		// Access local images that are available on the host
+		manifests, err := handle.ListManifests(ctx)
 		if err != nil {
-			// log.G(ctx).Warn(err)
-			continue
+			return nil, err
 		}
 
-		packs = append(packs, pack)
+		for _, manifest := range manifests {
+			// Check if the OCI image has a known annotation which identifies if a
+			// unikernel is contained within
+			if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Could not determine name from manifest specification
+			refname, ok := manifest.Annotations[ocispec.AnnotationRefName]
+			if !ok {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Skip if querying for the name and the name does not match
+			if len(qname) > 0 && refname != qname {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Could not determine name from manifest specification
+			revision, ok := manifest.Annotations[ocispec.AnnotationRevision]
+			if !ok {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			fullref := fmt.Sprintf("%s:%s", refname, revision)
+
+			// Skip direct references from the remote registry
+			if !query.UseCache() && refErr == nil && ref.String() == fullref {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Skip if querying for a version and the version does not match
+			if len(qversion) > 0 && revision != qversion {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Skip if querying for a platform and the platform does not match
+			if platform != nil && platform.Architecture != manifest.Config.Platform.Architecture {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					WithField("arch", manifest.Config.Platform.Architecture).
+					Trace("skipping not matching digest")
+				continue
+			}
+
+			if platform != nil && platform.OS != manifest.Config.Platform.OS {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					WithField("plat", manifest.Config.Platform.OS).
+					Trace("skipping not matching digest")
+				continue
+			}
+
+			if platform != nil && platform.Variant != manifest.Config.Platform.Variant {
+				log.G(ctx).
+					WithField("ref", manifest.Config.Digest.String()).
+					WithField("variant", manifest.Config.Platform.Variant).
+					Trace("skipping not matching digest")
+				continue
+			}
+
+			log.G(ctx).WithField("ref", fullref).Debug("found")
+
+			pack, err := NewPackageFromOCIManifestSpec(
+				ctx,
+				handle,
+				fullref,
+				manifest,
+			)
+			if err != nil {
+				// log.G(ctx).Warn(err)
+				continue
+			}
+
+			packs = append(packs, pack)
+		}
+	} else {
+		// Access local images that are available on the host
+		indexes, err := handle.ListIndexes(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, index := range indexes {
+			// Check if the OCI image has a known annotation which identifies if a
+			// unikernel is contained within
+			if _, ok := index.Annotations[AnnotationKernelVersion]; !ok {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Could not determine name from manifest specification
+			refname, ok := index.Annotations[ocispec.AnnotationRefName]
+			if !ok {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Skip if querying for the name and the name does not match
+			if len(qname) > 0 && refname != qname {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Could not determine name from manifest specification
+			revision, ok := index.Annotations[ocispec.AnnotationRevision]
+			if !ok {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			fullref := fmt.Sprintf("%s:%s", refname, revision)
+
+			// Skip direct references from the remote registry
+			if !query.UseCache() && refErr == nil && ref.String() == fullref {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			// Skip if querying for a version and the version does not match
+			if len(qversion) > 0 && revision != qversion {
+				log.G(ctx).
+					Trace("skipping non-unikernel digest")
+				continue
+			}
+
+			log.G(ctx).WithField("ref", fullref).Debug("found")
+
+			pack, err := NewPackageFromOCIIndexSpec(
+				ctx,
+				handle,
+				fullref,
+				index,
+			)
+			if err != nil {
+				// log.G(ctx).Warn(err)
+				continue
+			}
+
+			packs = append(packs, pack)
+		}
 	}
 
 	return packs, nil
@@ -334,6 +445,9 @@ func (manager *ociManager) RemoveSource(ctx context.Context, source string) erro
 
 // IsCompatible implements packmanager.PackageManager
 func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
+	query := packmanager.NewQuery(qopts...)
+	plat := fmt.Sprintf("%s/%s", query.Platform(), query.Architecture())
+
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, false, err
@@ -344,7 +458,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		log.G(ctx).WithField("source", source).Debug("checking if source is OCI image")
 
 		// First try without known registries
-		_, err = handle.ResolveImage(ctx, source)
+		_, err = handle.ResolveImage(ctx, source, plat)
 		if err == nil {
 			return true
 		}
@@ -358,7 +472,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 				continue
 			}
 
-			_, err = handle.ResolveImage(ctx, ref.Context().String())
+			_, err = handle.ResolveImage(ctx, ref.Context().String(), plat)
 			if err == nil {
 				return true
 			}
