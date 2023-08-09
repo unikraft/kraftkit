@@ -37,7 +37,7 @@ type ImagePusher interface {
 }
 
 type ImageResolver interface {
-	ResolveImage(context.Context, string) (ocispec.Image, error)
+	ResolveImage(context.Context, string, string) (ocispec.Image, error)
 }
 
 type ImageFetcher interface {

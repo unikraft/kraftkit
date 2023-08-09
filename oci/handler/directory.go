@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"kraftkit.sh/internal/version"
+	"kraftkit.sh/log"
 	"kraftkit.sh/oci/simpleauth"
 
 	regtypes "github.com/docker/docker/api/types/registry"
@@ -145,11 +146,6 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []
 			return nil
 		}
 
-		// Skip files that don't end in .json
-		if !strings.HasSuffix(d.Name(), ".json") {
-			return nil
-		}
-
 		// Read the manifest
 		rawManifest, err := os.ReadFile(path)
 		if err != nil {
@@ -205,6 +201,13 @@ func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc
 		blobPath = filepath.Join(
 			blobPath,
 			DirectoryHandlerManifestsDir,
+			desc.Digest.Algorithm().String(),
+			desc.Digest.Encoded(),
+		)
+	case ocispec.MediaTypeImageIndex:
+		blobPath = filepath.Join(
+			blobPath,
+			DirectoryHandlerIndexesDir,
 			strings.ReplaceAll(ref, ":", string(filepath.Separator))+".json",
 		)
 	case ocispec.MediaTypeImageLayer:
@@ -245,12 +248,10 @@ func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc
 	return nil
 }
 
-// ResolveImage implements ImageResolver.
-func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string) (imgspec ocispec.Image, err error) {
-	// Find the manifest of this image
+func (handle *DirectoryHandler) resolveIndex(_ context.Context, fullref string) (ocispec.Index, error) {
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
-		return ocispec.Image{}, err
+		return ocispec.Index{}, err
 	}
 
 	var jsonPath string
@@ -260,15 +261,53 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 		jsonPath = strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator)) + ".json"
 	}
 
+	// Fetch the index
+	indexPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerIndexesDir,
+		jsonPath,
+	)
+
+	// Check whether the index exists
+	if _, err := os.Stat(indexPath); err != nil {
+		return ocispec.Index{}, fmt.Errorf("index for %s does not exist: %s", ref.Name(), indexPath)
+	}
+
+	// Read the index
+	reader, err := os.Open(indexPath)
+	if err != nil {
+		return ocispec.Index{}, err
+	}
+	defer reader.Close()
+
+	indexRaw, err := io.ReadAll(reader)
+	if err != nil {
+		return ocispec.Index{}, err
+	}
+
+	// Unmarshal the index
+	index := ocispec.Index{}
+	if err = json.Unmarshal(indexRaw, &index); err != nil {
+		return ocispec.Index{}, err
+	}
+
+	return index, nil
+}
+
+// ResolveImage fetches the image config from a given manifest reference.
+// the reference is the manifest sha256 digest.
+// ResolveImage implements ImageResolver.
+func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref, platform string) (imgspec ocispec.Image, err error) {
 	manifestPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerManifestsDir,
-		jsonPath,
+		"sha256",
+		fullref,
 	)
 
 	// Check whether the manifest exists
 	if _, err := os.Stat(manifestPath); err != nil {
-		return ocispec.Image{}, fmt.Errorf("manifest for %s does not exist: %s", ref.Name(), manifestPath)
+		return ocispec.Image{}, fmt.Errorf("manifest for %s does not exist: %s", fullref, manifestPath)
 	}
 
 	// Read the manifest
@@ -276,6 +315,7 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 	if err != nil {
 		return ocispec.Image{}, err
 	}
+	defer reader.Close()
 
 	manifestRaw, err := io.ReadAll(reader)
 	if err != nil {
@@ -304,7 +344,7 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 	// Check whether the config exists
 	if _, err := os.Stat(configDir); err != nil {
-		return ocispec.Image{}, fmt.Errorf("could not access config file for %s: %w", ref.Name(), err)
+		return ocispec.Image{}, fmt.Errorf("could not access config file for %s: %w", fullref, err)
 	}
 
 	// Read the config
@@ -330,6 +370,9 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 // FetchImage implements ImageFetcher.
 func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platform string, onProgress func(float64)) (err error) {
+	plat := strings.Split(platform, "/")[0]
+	arch := strings.Split(platform, "/")[1]
+
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
 		return err
@@ -346,11 +389,11 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		authConfig.Username = auth.Username
 	}
 
-	img, err := remote.Image(ref,
+	idx, err := remote.Index(ref,
 		remote.WithContext(ctx),
 		remote.WithPlatform(v1.Platform{
-			OS:           strings.Split(platform, "/")[0],
-			Architecture: strings.Split(platform, "/")[1],
+			OS:           plat,
+			Architecture: arch,
 		}),
 		remote.WithUserAgent(version.UserAgent()),
 		remote.WithAuth(&simpleauth.SimpleAuthenticator{
@@ -361,8 +404,13 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		return err
 	}
 
-	// Write the manifest
-	manifest, err := img.RawManifest()
+	// Write the index manifest
+	manifest, err := idx.RawManifest()
+	if err != nil {
+		return err
+	}
+
+	digest, err := idx.Digest()
 	if err != nil {
 		return err
 	}
@@ -376,7 +424,7 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 
 	manifestPath := filepath.Join(
 		handle.path,
-		DirectoryHandlerManifestsDir,
+		DirectoryHandlerIndexesDir,
 		jsonPath,
 	)
 
@@ -396,87 +444,153 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 		return err
 	}
 
-	config, err := img.RawConfigFile()
+	parsableManifest, err := idx.IndexManifest()
 	if err != nil {
 		return err
 	}
 
-	configName, err := img.ConfigName()
-	if err != nil {
-		return err
+	var manifests []v1.Descriptor
+	for _, descriptor := range parsableManifest.Manifests {
+		if descriptor.Platform.OS == plat && descriptor.Platform.Architecture == arch {
+			log.G(ctx).
+				WithField("platform", fmt.Sprintf("%s/%s", descriptor.Platform.OS, descriptor.Platform.Architecture)).
+				WithField("digest", descriptor.Digest).
+				Trace("fetching")
+			manifests = append(manifests, descriptor)
+		} else {
+			log.G(ctx).
+				WithField("platform", fmt.Sprintf("%s/%s", descriptor.Platform.OS, descriptor.Platform.Architecture)).
+				WithField("digest", descriptor.Digest).
+				Trace("skip fetching")
+		}
 	}
 
-	configPath := filepath.Join(
-		handle.path,
-		DirectoryHandlerConfigsDir,
-		configName.Algorithm,
-		configName.Hex,
-	)
-
-	// If the config already exists, skip it
-	if _, err := os.Stat(configPath); err == nil {
-		return nil
+	if len(manifests) == 0 {
+		return fmt.Errorf("no manifest found for %s/%s", arch, plat)
 	}
 
-	// Recursively create the directory
-	if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, "/")], 0o775); err != nil {
-		return err
-	}
-
-	writer, err = os.Create(configPath)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-
-	// Write the config
-	if _, err = writer.Write(config); err != nil {
-		return err
-	}
-
-	// Write the layers
-	layers, err := img.Layers()
-	if err != nil {
-		return err
-	}
-
-	for _, layer := range layers {
-		digest, err := layer.Digest()
+	for _, descriptor := range manifests {
+		img, err := idx.Image(descriptor.Digest)
 		if err != nil {
 			return err
 		}
 
-		layerPath := filepath.Join(
+		// Write the manifest
+		manifest, err = img.RawManifest()
+		if err != nil {
+			return err
+		}
+
+		digest, err = img.Digest()
+		if err != nil {
+			return err
+		}
+
+		manifestPath = filepath.Join(
 			handle.path,
-			DirectoryHandlerLayersDir,
+			DirectoryHandlerManifestsDir,
 			digest.Algorithm,
 			digest.Hex,
 		)
 
 		// Recursively create the directory
-		if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, "/")], 0o775); err != nil {
+		if err = os.MkdirAll(manifestPath[:strings.LastIndex(manifestPath, "/")], 0o775); err != nil {
 			return err
 		}
 
-		// If the layer already exists, skip it
-		if _, err := os.Stat(layerPath); err == nil {
-			continue
-		}
-
-		writer, err = os.Create(layerPath)
+		// Open a writer to the specified path
+		writer, err := os.Create(manifestPath)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
 
-		reader, err := layer.Compressed()
+		if _, err := writer.Write(manifest); err != nil {
+			return err
+		}
+
+		config, err := img.RawConfigFile()
 		if err != nil {
 			return err
 		}
-		defer reader.Close()
 
-		if _, err = io.Copy(writer, reader); err != nil {
+		configName, err := img.ConfigName()
+		if err != nil {
 			return err
+		}
+
+		configPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerConfigsDir,
+			configName.Algorithm,
+			configName.Hex,
+		)
+
+		// If the config already exists, skip it
+		if _, err := os.Stat(configPath); err == nil {
+			return nil
+		}
+
+		// Recursively create the directory
+		if err = os.MkdirAll(configPath[:strings.LastIndex(configPath, "/")], 0o775); err != nil {
+			return err
+		}
+
+		writer, err = os.Create(configPath)
+		if err != nil {
+			return err
+		}
+		defer writer.Close()
+
+		// Write the config
+		if _, err = writer.Write(config); err != nil {
+			return err
+		}
+
+		// Write the layers
+		layers, err := img.Layers()
+		if err != nil {
+			return err
+		}
+
+		for _, layer := range layers {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
+
+			layerPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerLayersDir,
+				digest.Algorithm,
+				digest.Hex,
+			)
+
+			// Recursively create the directory
+			if err = os.MkdirAll(layerPath[:strings.LastIndex(layerPath, "/")], 0o775); err != nil {
+				return err
+			}
+
+			// If the layer already exists, skip it
+			if _, err := os.Stat(layerPath); err == nil {
+				continue
+			}
+
+			writer, err = os.Create(layerPath)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+
+			reader, err := layer.Compressed()
+			if err != nil {
+				return err
+			}
+			defer reader.Close()
+
+			if _, err = io.Copy(writer, reader); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -486,11 +600,6 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 // PushImage implements ImagePusher.
 func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, target *ocispec.Descriptor) error {
 	ref, err := name.ParseReference(fullref)
-	if err != nil {
-		return err
-	}
-
-	image, err := handle.ResolveImage(ctx, fullref)
 	if err != nil {
 		return err
 	}
@@ -506,12 +615,17 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 		authConfig.Username = auth.Username
 	}
 
-	return remote.Write(ref,
-		DirectoryImage{
-			image:              image,
-			manifestDescriptor: target,
-			handle:             handle,
-			ref:                ref,
+	index, err := handle.resolveIndex(ctx, fullref)
+	if err != nil {
+		return err
+	}
+
+	return remote.WriteIndex(ref,
+		DirectoryImageIndex{
+			index:           index,
+			indexDescriptor: target,
+			handle:          handle,
+			ref:             ref,
 		},
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
@@ -522,72 +636,104 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 }
 
 // UnpackImage implements ImageUnpacker.
-func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, dest string) (err error) {
-	img, err := handle.ResolveImage(ctx, ref)
+func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, platform string, dest string) (err error) {
+	plat := strings.Split(platform, "/")[0]
+	arch := strings.Split(platform, "/")[1]
+
+	idx, err := handle.resolveIndex(ctx, ref)
 	if err != nil {
 		return err
 	}
 
-	// Iterate over the layers
-	for _, layer := range img.RootFS.DiffIDs {
-		// Get the digest
-		digest, err := v1.NewHash(layer.String())
+	var manifests []digest.Digest
+	for _, descriptor := range idx.Manifests {
+		if descriptor.Platform.Architecture == arch && descriptor.Platform.OS == plat {
+			log.G(ctx).Tracef("Pick for unpacking %s/%s manifest %s",
+				descriptor.Platform.Architecture,
+				descriptor.Platform.OS,
+				descriptor.Digest)
+			manifests = append(manifests, descriptor.Digest)
+		} else {
+			log.G(ctx).Tracef("Skip unpacking %s/%s manifest %s",
+				descriptor.Platform.Architecture,
+				descriptor.Platform.OS,
+				descriptor.Digest)
+		}
+	}
+
+	if len(manifests) == 0 {
+		return fmt.Errorf("no manifest found for platform %s", platform)
+	} else if len(manifests) > 1 {
+		return fmt.Errorf("multiple manifests found for platform %s, unpacking all would overwrite results", platform)
+	}
+
+	for _, manifest := range manifests {
+		img, err := handle.ResolveImage(ctx, manifest.Encoded(), platform)
 		if err != nil {
 			return err
 		}
 
-		// Get the layer path
-		layerPath := filepath.Join(
-			handle.path,
-			DirectoryHandlerLayersDir,
-			digest.Algorithm,
-			digest.Hex,
-		)
-
-		// Layer path is a tarball, so we need to extract it
-		reader, err := os.Open(layerPath)
-		if err != nil {
-			return err
-		}
-
-		defer reader.Close()
-
-		tr := tar.NewReader(reader)
-
-		for {
-			hdr, err := tr.Next()
-			if err != nil {
-				break
-			}
-
-			// Write the file to the destination
-			path := filepath.Join(dest, hdr.Name)
-
-			// If the file is a directory, create it
-			if hdr.Typeflag == tar.TypeDir {
-				if err := os.MkdirAll(path, 0o775); err != nil {
-					return err
-				}
-				continue
-			}
-
-			// If the directory in the path doesn't exist, create it
-			if _, err := os.Stat(path[:strings.LastIndex(path, "/")]); os.IsNotExist(err) {
-				if err := os.MkdirAll(path[:strings.LastIndex(path, "/")], 0o775); err != nil {
-					return err
-				}
-			}
-
-			// Otherwise, create the file
-			writer, err := os.Create(path)
+		// Iterate over the layers
+		for _, layer := range img.RootFS.DiffIDs {
+			// Get the digest
+			digest, err := v1.NewHash(layer.String())
 			if err != nil {
 				return err
 			}
 
-			defer writer.Close()
+			// Get the layer path
+			layerPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerLayersDir,
+				digest.Algorithm,
+				digest.Hex,
+			)
 
-			if _, err = io.Copy(writer, tr); err != nil {
+			// Layer path is a tarball, so we need to extract it
+			reader, err := os.Open(layerPath)
+			if err != nil {
 				return err
+			}
+
+			defer reader.Close()
+
+			tr := tar.NewReader(reader)
+
+			for {
+				hdr, err := tr.Next()
+				if err != nil {
+					break
+				}
+
+				// Write the file to the destination
+				path := filepath.Join(dest, hdr.Name)
+
+				// If the file is a directory, create it
+				if hdr.Typeflag == tar.TypeDir {
+					if err := os.MkdirAll(path, 0o775); err != nil {
+						return err
+					}
+					continue
+				}
+
+				// If the directory in the path doesn't exist, create it
+				if _, err := os.Stat(path[:strings.LastIndex(path, "/")]); os.IsNotExist(err) {
+					if err := os.MkdirAll(path[:strings.LastIndex(path, "/")], 0o775); err != nil {
+						return err
+					}
+				}
+
+				// Otherwise, create the file
+				writer, err := os.Create(path)
+				if err != nil {
+					return err
+				}
+
+				defer writer.Close()
+
+				if _, err = io.Copy(writer, tr); err != nil {
+					return err
+				}
 			}
 		}
 	}

@@ -321,7 +321,7 @@ func (dix DirectoryImageIndex) Image(hash v1.Hash) (v1.Image, error) {
 	}
 
 	// Fetch manifest and config from the filesystem
-	image, err := dix.handle.ResolveImage(context.TODO(), manifest.Digest.Encoded())
+	image, err := dix.handle.ResolveImage(context.TODO(), manifest.Digest.Encoded(), "")
 	if err != nil {
 		return nil, err
 	}
