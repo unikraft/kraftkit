@@ -1,0 +1,12 @@
+*/.vscode*
+test/
+*_test.go
+*.bak
+*.swp
+*.idea
+*.orig
+.DS_Store
+*.md
+.git/
+.gitignore
+Dockerfile
