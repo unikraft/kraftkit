@@ -244,7 +244,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		}),
 		WithDisplay(QemuDisplayNone{}),
 		WithParallel(QemuHostCharDevNone{}),
-		WithDevice(QemuDevicePvpanic{}),
 	}
 
 	// TODO: Parse Rootfs types
@@ -399,6 +398,9 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	switch machine.Spec.Architecture {
 	case "x86_64", "amd64":
+		qopts = append(qopts,
+			WithDevice(QemuDevicePvpanic{}),
+		)
 		if machine.Spec.Emulation {
 			qopts = append(qopts,
 				WithMachine(QemuMachine{
