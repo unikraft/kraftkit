@@ -84,7 +84,13 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if popts.Output() != "" {
-		ocipack.ref, err = name.ParseReference(popts.Output(),
+		output := popts.Output()
+		if strings.HasPrefix(popts.Output(), "oci://") {
+			output = strings.TrimPrefix(popts.Output(), "oci://")
+		}
+
+		ocipack.ref, err = name.ParseReference(
+			output,
 			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	} else {
@@ -311,7 +317,13 @@ func NewPackageFromTargets(ctx context.Context, targ []target.Target, opts ...pa
 	}
 
 	if popts.Output() != "" {
-		ref, err = name.ParseReference(popts.Output(),
+		output := popts.Output()
+		if strings.HasPrefix(popts.Output(), "oci://") {
+			output = strings.TrimPrefix(popts.Output(), "oci://")
+		}
+
+		ref, err = name.ParseReference(
+			output,
 			name.WithDefaultRegistry(DefaultRegistry),
 		)
 	} else if len(targ) == 1 {
