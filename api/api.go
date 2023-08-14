@@ -9,7 +9,6 @@ import (
 
 	zip "api.zip"
 	"k8s.io/apimachinery/pkg/api/resource"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
@@ -17,11 +16,13 @@ import (
 )
 
 func init() {
-	utilruntime.Must(zip.Register(
+	gob.Register(resource.Quantity{})
+}
+
+func RegisterSchemes() error {
+	return zip.Register(
 		machinev1alpha1.AddToScheme,
 		networkv1alpha1.AddToScheme,
 		volumev1alpha1.AddToScheme,
-	))
-
-	gob.Register(resource.Quantity{})
+	)
 }

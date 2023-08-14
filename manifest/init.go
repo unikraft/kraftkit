@@ -14,11 +14,13 @@ import (
 // and is dynamically injected as a CLI option.
 var useGit = false
 
-// FIXME(antoineco): avoid init, initialize things where needed
-func init() {
-	// Register a new pack.Package type
-	_ = packmanager.RegisterPackageManager(ManifestFormat, NewManifestManager)
+func RegisterPackageManager() func(u *packmanager.UmbrellaManager) error {
+	return func(u *packmanager.UmbrellaManager) error {
+		return u.RegisterPackageManager(ManifestFormat, NewManifestManager)
+	}
+}
 
+func RegisterFlags() {
 	// Register additional command-line flags
 	cmdfactory.RegisterFlag(
 		"kraft pkg pull",
