@@ -90,13 +90,12 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
 
-	ctx := cmd.Context()
-	pm, err := packmanager.NewUmbrellaManager(ctx)
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+	cmd.SetContext(ctx)
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 

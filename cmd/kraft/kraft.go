@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/internal/cli"
 	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
@@ -138,6 +139,11 @@ func main() {
 		if err := kitupdate.Check(ctx); err != nil {
 			log.G(ctx).Debugf("could not check for updates: %v", err)
 		}
+	}
+
+	if err := bootstrap.InitKraftkit(ctx); err != nil {
+		log.G(ctx).Errorf("could not init kraftkit: %v", err)
+		os.Exit(1)
 	}
 
 	cmdfactory.Main(ctx, cmd)
