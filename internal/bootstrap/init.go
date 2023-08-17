@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"kraftkit.sh/api"
+	"kraftkit.sh/docker"
 	"kraftkit.sh/machine/qemu"
 	"kraftkit.sh/manifest"
 	"kraftkit.sh/oci"
@@ -44,6 +45,7 @@ func registerPackageManagers(ctx context.Context) error {
 	managerConstructors := []func(u *packmanager.UmbrellaManager) error{
 		oci.RegisterPackageManager(),
 		manifest.RegisterPackageManager(),
+		docker.RegisterPackageManager(),
 	}
 
 	return packmanager.InitUmbrellaManager(ctx, managerConstructors)

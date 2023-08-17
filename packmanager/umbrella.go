@@ -268,7 +268,7 @@ func NewUmbrellaManager(ctx context.Context, constructors []func(*UmbrellaManage
 			log.G(ctx).
 				WithField("format", format).
 				Debugf("could not initialize package manager: %v", err)
-			continue
+			return nil, err
 		}
 
 		if format, ok := u.packageManagers[manager.Format()]; ok {
