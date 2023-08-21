@@ -472,6 +472,12 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
+	// Try resolving the image again after pulling it
+	image, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
+	if err != nil {
+		return err
+	}
+
 unpack:
 	// Unpack the image if a working directory has been provided
 	if len(popts.Workdir()) > 0 {
