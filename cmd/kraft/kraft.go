@@ -137,6 +137,12 @@ func main() {
 	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
 		if err := kitupdate.Check(ctx); err != nil {
 			log.G(ctx).Debugf("could not check for updates: %v", err)
+			log.G(ctx).Debug("")
+			log.G(ctx).Debug("to turn off this check, set:")
+			log.G(ctx).Debug("")
+			log.G(ctx).Debug("\texport KRAFTKIT_NO_CHECK_UPDATES=true")
+			log.G(ctx).Debug("")
+			log.G(ctx).Debug("or use the globally accessible flag '--no-check-updates'")
 		}
 	}
 
