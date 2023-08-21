@@ -17,6 +17,7 @@ import (
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/moby/buildkit/solver/result"
+	"kraftkit.sh/oci"
 	"kraftkit.sh/tools/dockerfile-llb-frontend/image"
 	"kraftkit.sh/unikraft/app"
 )
@@ -213,6 +214,7 @@ var defaultSteps = [...]step{
 	{name: "source kraftkit image", fn: sourceKraftkitImage},
 	{name: "add unikraft app", fn: addUnikraftApp},
 	{name: "run kraftkit build", fn: execKraftkitBuild},
+	{name: "create kernel directory", fn: createKernelDirectory},
 	{name: "copy unikernel image", fn: copyUnikernelImage},
 }
 
@@ -251,11 +253,15 @@ func execKraftkitBuild(base llb.State, config Configuration) llb.State {
 		Root()
 }
 
+// This creates the /unikraft/bin directory (corresponds to our WellKnownKernelPath)
+func createKernelDirectory(base llb.State, _ Configuration) llb.State {
+	return base.File(llb.Mkdir(oci.WellKnownKernelPath, 0o755, llb.WithParents(true)))
+}
+
 // We don't want kraftkit nor the base app files in the final image.
 // We use this to pluck the desired output.
 func copyUnikernelImage(base llb.State, config Configuration) llb.State {
-	return llb.Scratch().
-		File(llb.Copy(base, outputPath(config.AppName, config), outputName(config.AppName, config)))
+	return base.File(llb.Copy(base, outputPath(config.AppName, config), oci.WellKnownKernelPath))
 }
 
 func fileFromResult(ctx context.Context, result *result.Result[client.Reference], filename string) ([]byte, error) {
