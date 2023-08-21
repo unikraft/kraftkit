@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -97,22 +95,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
 		return machine, err
-	}
-
-	group, err := user.LookupGroup(config.G[config.KraftKit](ctx).UserGroup)
-	if err == nil {
-		gid, err := strconv.ParseInt(group.Gid, 10, 32)
-		if err != nil {
-			return machine, fmt.Errorf("could not parse group ID for kraftkit: %w", err)
-		}
-
-		if err := os.Chown(machine.Status.StateDir, os.Getuid(), int(gid)); err != nil {
-			return machine, fmt.Errorf("could not change group ownership of machine state dir: %w", err)
-		}
-	} else {
-		log.G(ctx).
-			WithField("error", err).
-			Warn("kraftkit group not found, falling back to current user")
 	}
 
 	// Set and create the log file for this machine
