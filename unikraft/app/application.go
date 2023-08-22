@@ -347,6 +347,29 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 		unformattedLibraries[k] = v
 	}
 
+	// Add language libraries that we know require a specific ordering.
+	// Currently, these are C++-related libraries. Others may be added as required.
+	if unformattedLibraries["libcxxabi"] != nil {
+		libraries = append(libraries, unformattedLibraries["libcxxabi"].Path())
+		delete(unformattedLibraries, "libcxxabi")
+	}
+	if unformattedLibraries["libcxx"] != nil {
+		libraries = append(libraries, unformattedLibraries["libcxx"].Path())
+		delete(unformattedLibraries, "libcxx")
+	}
+	if unformattedLibraries["libunwind"] != nil {
+		libraries = append(libraries, unformattedLibraries["libunwind"].Path())
+		delete(unformattedLibraries, "libunwind")
+	}
+	if unformattedLibraries["compiler-rt"] != nil {
+		libraries = append(libraries, unformattedLibraries["compiler-rt"].Path())
+		delete(unformattedLibraries, "compiler-rt")
+	}
+	if unformattedLibraries["libgo"] != nil {
+		libraries = append(libraries, unformattedLibraries["libgo"].Path())
+		delete(unformattedLibraries, "libgo")
+	}
+
 	// All supported libCs right now
 	if unformattedLibraries["musl"] != nil {
 		libraries = append(libraries, unformattedLibraries["musl"].Path())
