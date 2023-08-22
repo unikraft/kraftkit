@@ -214,7 +214,6 @@ var defaultSteps = [...]step{
 	{name: "source kraftkit image", fn: sourceKraftkitImage},
 	{name: "add unikraft app", fn: addUnikraftApp},
 	{name: "run kraftkit build", fn: execKraftkitBuild},
-	{name: "create kernel directory", fn: createKernelDirectory},
 	{name: "copy unikernel image", fn: copyUnikernelImage},
 }
 
@@ -253,15 +252,20 @@ func execKraftkitBuild(base llb.State, config Configuration) llb.State {
 		Root()
 }
 
-// This creates the /unikraft/bin directory (corresponds to our WellKnownKernelPath)
-func createKernelDirectory(base llb.State, _ Configuration) llb.State {
-	return base.File(llb.Mkdir(oci.WellKnownKernelPath, 0o755, llb.WithParents(true)))
+// MakeParents makes LLB state copies create parent directories.
+type MakeParents struct{}
+
+// SetCopyOption lets us modify the copying options and enable parent creation.
+func (o MakeParents) SetCopyOption(i *llb.CopyInfo) {
+	i.CreateDestPath = true
 }
+
+var _ llb.CopyOption = (*MakeParents)(nil)
 
 // We don't want kraftkit nor the base app files in the final image.
 // We use this to pluck the desired output.
 func copyUnikernelImage(base llb.State, config Configuration) llb.State {
-	return base.File(llb.Copy(base, outputPath(config.AppName, config), oci.WellKnownKernelPath))
+	return llb.Scratch().File(llb.Copy(base, outputPath(config.AppName, config), oci.WellKnownKernelPath, MakeParents{}))
 }
 
 func fileFromResult(ctx context.Context, result *result.Result[client.Reference], filename string) ([]byte, error) {
