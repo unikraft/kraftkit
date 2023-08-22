@@ -6,6 +6,7 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -51,7 +52,7 @@ type Pkg struct {
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Pkg{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
-		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
+		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR|PACKAGE]",
 		Args:  cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
 			Package and distribute Unikraft unikernels and their dependencies.
@@ -66,7 +67,14 @@ func New() *cobra.Command {
 		`, "`"),
 		Example: heredoc.Doc(`
 			# Package a project as an OCI archive and embed the target's KConfig.
-			$ kraft pkg --as oci --name unikraft.org/nginx:latest --with-kconfig`),
+			$ kraft pkg --as oci --name unikraft.org/nginx:latest --with-kconfig
+
+			# Package a project as an OCI archive and embed an initrd and arguments.
+			$ kraft pkg --as oci --name unikraft.org/nginx:latest --initrd ./fs0 --args "-h"
+
+			# Package an existing OCI archive and embed a different initrd.
+			$ kraft pkg --as oci --initrd ./fs0 unikraft.org/nginx:latest
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
@@ -105,36 +113,111 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	var err error
-	var workdir string
+	var source string
+	var sourcePackage pack.Package
+	popts := []app.ProjectOption{}
+
+	ctx := cmd.Context()
+	var pmananger packmanager.PackageManager
+	if opts.Format != "auto" {
+		pmananger = packmanager.PackageManagers()[pack.PackageFormat(opts.Format)]
+		if pmananger == nil {
+			return errors.New("invalid package format specified")
+		}
+	} else {
+		pmananger = packmanager.G(ctx)
+	}
 
 	if len(args) == 0 {
-		workdir, err = os.Getwd()
+		source, err = os.Getwd()
 		if err != nil {
 			return err
 		}
+		popts = append(popts, app.WithProjectWorkdir(source))
+
+		fmt.Println("Empty ARGS")
 	} else {
-		workdir = args[0]
-	}
+		source = args[0]
 
-	ctx := cmd.Context()
+		fmt.Println(source)
 
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(workdir),
-	}
+		// The provided argument is either a directory or a Kraftfile
+		if fi, err := os.Stat(args[0]); err == nil && fi.IsDir() {
+			popts = append(popts, app.WithProjectWorkdir(source))
+		} else {
+			fmt.Println(source)
+			if pm, compatible, err := pmananger.IsCompatible(ctx, source); err == nil && compatible {
+				packages, err := pm.Catalog(ctx,
+					packmanager.WithCache(true),
+					packmanager.WithName(source),
+				)
+				if err != nil {
+					return err
+				}
 
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
+				if len(packages) == 0 {
+					return fmt.Errorf("no package found for %s", source)
+				} else if len(packages) > 1 {
+					return fmt.Errorf("multiple packages found for %s", source)
+				}
 
-	// Interpret the project directory
-	project, err := app.NewProjectFromOptions(ctx, popts...)
-	if err != nil {
-		return err
+				sourcePackage = packages[0]
+			}
+		}
 	}
 
 	var tree []*processtree.ProcessTreeItem
+	var project app.Application
+
+	if sourcePackage != nil {
+		cmdShellArgs, err := shellwords.Parse(opts.Args)
+		if err != nil {
+			return err
+		}
+
+		tree = append(tree, processtree.NewProcessTreeItem(
+			sourcePackage.Name(),
+			sourcePackage.Version(),
+			func(ctx context.Context) error {
+				var err error
+				pm := packmanager.G(ctx)
+
+				// Switch the package manager the desired format for this target
+				if sourcePackage.Format().String() != "auto" {
+					pm, err = pm.From(sourcePackage.Format())
+					if err != nil {
+						return err
+					}
+				}
+
+				popts := []packmanager.PackOption{
+					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackInitrd(opts.Initrd),
+					packmanager.PackKConfig(opts.WithKConfig),
+					packmanager.PackName(opts.Name),
+					packmanager.PackOutput(opts.Output),
+				}
+
+				if _, err := pm.Pack(ctx, nil, popts...); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		))
+	} else {
+		if len(opts.Kraftfile) > 0 {
+			popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+		} else {
+			popts = append(popts, app.WithProjectDefaultKraftfiles())
+		}
+
+		// Interpret the project directory
+		project, err = app.NewProjectFromOptions(ctx, popts...)
+		if err != nil {
+			return err
+		}
+	}
 
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY

@@ -268,6 +268,167 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	return &ocipack, nil
 }
 
+// NewPackageFromOCIPackage generates a package from a supplied OCI image package.
+func NewPackageFromOCIPackage(ctx context.Context, opts ...packmanager.PackOption) (pack.Package, error) {
+	var err error
+
+	popts := &packmanager.PackOptions{}
+	for _, opt := range opts {
+		opt(popts)
+	}
+
+	ocipack := popts.Source().(*ociPackage)
+
+	if popts.Args() != nil {
+		ocipack.command = popts.Args()
+	}
+
+	if popts.Output() != "" {
+		ocipack.ref, err = name.ParseReference(
+			popts.Output(),
+			name.WithDefaultRegistry(DefaultRegistry),
+		)
+	} else {
+		if popts.Name() != "" {
+			ocipack.ref, err = name.ParseReference(
+				popts.Name(),
+				name.WithDefaultRegistry(DefaultRegistry),
+			)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
+		namespace := DefaultNamespace
+		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
+			namespace = n
+		}
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"addr":      contAddr,
+			"namespace": namespace,
+		}).Debug("oci: packaging via containerd")
+
+		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace)
+	} else {
+		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
+			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
+		}
+
+		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": ociDir,
+		}).Trace("oci: directory handler")
+
+		ocipack.handle, err = handler.NewDirectoryHandler(ociDir)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Remove the existing reference if a --force-remove|--overwrite flag is
+	// provided (which should then translate into an PackOptions attribute).
+	// existingDesc, err := handle.Resolve(ctx, ocipack.Name())
+	// if err == nil && popts.Overwrite() && existingDesc.MediaType == ocispec.MediaTypeImageManifest {
+	// 	reader, err := handle.Fetch(ctx, existingDesc)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	//
+	//  log.G(ctx).WithFields(logrus.Fields{
+	//		"tag": ocipack.Name(),
+	//	}).Warn("removing existing reference")
+	//
+	// 	// TODO: Remove the manifest descriptor
+	//
+	// }
+
+	// If the new kernel version is not empty it means that the user wants a new kernel so refuse
+	// to continue repackaging
+	var image *Image
+	if popts.KernelVersion() == "" {
+		image = ocipack.image
+
+		// If an initrd exists and needs to be replaced, then we need to remove the old one
+		// We remove it directly because we want to keep the old layers intact
+		if popts.Initrd() != "" && len(image.Layers()) > 1 {
+			for i, layer := range image.Layers() {
+				if _, ok := layer.blob.desc.Annotations[AnnotationKernelInitrdPath]; ok {
+					image.layers = append(image.Layers()[:i], image.Layers()[i+1:]...)
+					break
+				}
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("can't replace kernel when repackaging")
+	}
+
+	// If a new initrd is provided we need to remove the old one if it exists and then replace it
+	// Otherwise we don't need to do anything
+	if popts.Initrd() != "" {
+		log.G(ctx).Debug("oci: including initrd")
+		initRdPath := popts.Initrd()
+		if f, err := os.Stat(initRdPath); err == nil && f.IsDir() {
+			cwd, err2 := os.Getwd()
+			if err2 != nil {
+				return nil, err2
+			}
+
+			file, err := os.CreateTemp("", "kraftkit-oci-archive-*")
+			if err != nil {
+				return nil, err
+			}
+			defer os.Remove(file.Name())
+
+			cfg, err2 := initrd.NewFromMapping(cwd,
+				file.Name(),
+				fmt.Sprintf("%s:/", initRdPath))
+			if err2 != nil {
+				return nil, err2
+			}
+
+			initRdPath = cfg.Output
+		}
+		layer, err := NewLayerFromFile(ctx,
+			ocispec.MediaTypeImageLayer,
+			initRdPath,
+			WellKnownInitrdPath,
+			WithLayerAnnotation(AnnotationKernelInitrdPath, WellKnownInitrdPath),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := image.AddLayer(ctx, layer); err != nil {
+			return nil, err
+		}
+	}
+
+	image.SetAnnotation(ctx, AnnotationName, ocipack.Name())
+	image.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
+	image.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+
+	image.SetCmd(ctx, ocipack.Command())
+	image.SetOS(ctx, ocipack.Platform().Name())
+	image.SetArchitecture(ctx, ocipack.Architecture().Name())
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"tag": ocipack.Name(),
+	}).Debug("oci: saving image")
+
+	_, err = image.Save(ctx, ocipack.imageRef(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ocipack.image = image
+
+	return ocipack, nil
+}
+
 // NewPackageFromOCIManifestSpec generates a package from a supplied OCI image
 // manifest specification.
 func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, ref string, manifest ocispec.Manifest) (pack.Package, error) {
