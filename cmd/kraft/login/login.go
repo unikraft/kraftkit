@@ -6,7 +6,11 @@ package login
 
 import (
 	"bufio"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
@@ -14,12 +18,14 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
 type Login struct {
-	User  string `long:"user" short:"u" usage:"Username" env:"KRAFTKIT_LOGIN_USER"`
-	Token string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
+	Registry bool   `long:"registry" short:"r" usage:"Specify whether to login to a registry"`
+	Token    string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
+	User     string `long:"user" short:"u" usage:"Username" env:"KRAFTKIT_LOGIN_USER"`
 }
 
 func New() *cobra.Command {
@@ -82,10 +88,66 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 		authConfig.Token = opts.Token
 	}
 
-	if config.G[config.KraftKit](ctx).Auth == nil {
-		config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
-	}
-	config.G[config.KraftKit](ctx).Auth[host] = authConfig
+	if opts.Registry {
+		home, err := homedir.Dir()
+		if err != nil {
+			return err
+		}
 
-	return config.M[config.KraftKit](ctx).Write(true)
+		// The default path for registry credentials is:
+		defaultPath := filepath.Join(home, ".docker", "config.json")
+
+		// If the DOCKER_CONFIG environment variable is set, use that instead
+		if os.Getenv("DOCKER_CONFIG") != "" {
+			defaultPath = filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json")
+		}
+
+		var bytes []byte
+		var config map[string](map[string]interface{})
+		if _, err := os.Stat(defaultPath); !os.IsNotExist(err) {
+			bytes, err := os.ReadFile(defaultPath)
+			if err != nil {
+				return err
+			}
+
+			err = json.Unmarshal(bytes, &config)
+			if err != nil {
+				return err
+			}
+		} else {
+			config = make(map[string](map[string]interface{}))
+			config["auths"] = make(map[string]interface{})
+		}
+
+		// Add the new auth config
+		auth := make(map[string]interface{})
+
+		var token string
+		if opts.User != "" {
+			token = opts.User + ":" + opts.Token
+
+			// Base64 encode the token
+			token = base64.StdEncoding.EncodeToString([]byte(token))
+		} else {
+			token = opts.Token
+		}
+
+		auth["auth"] = token
+		config["auths"][host] = auth
+
+		// Write it back
+		bytes, err = json.Marshal(config)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(defaultPath, bytes, 0644)
+	} else {
+		if config.G[config.KraftKit](ctx).Auth == nil {
+			config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
+		}
+		config.G[config.KraftKit](ctx).Auth[host] = authConfig
+
+		return config.M[config.KraftKit](ctx).Write(true)
+	}
 }
