@@ -115,6 +115,12 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		} else {
+			// Create parent directories
+			err := os.MkdirAll(filepath.Dir(defaultPath), 0o755)
+			if err != nil {
+				return err
+			}
+
 			config = make(map[string](map[string]interface{}))
 			config["auths"] = make(map[string]interface{})
 		}
