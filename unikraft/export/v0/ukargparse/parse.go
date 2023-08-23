@@ -17,7 +17,12 @@ func Parse(args ...string) (Params, error) {
 	params := []Param{}
 
 	for _, arg := range args {
-		libAndName := strings.SplitN(arg, ".", 1)
+		nameAndValue := strings.Split(arg, "=")
+		if len(nameAndValue) != 2 {
+			return nil, fmt.Errorf("expected param to be in the format 'libname.param=value' but got: '%s'", arg)
+		}
+
+		libAndName := strings.Split(nameAndValue[0], ".")
 		if len(libAndName) != 2 {
 			return nil, fmt.Errorf("expected param to be in the format 'libname.param=value' but got: '%s'", arg)
 		}
@@ -25,11 +30,7 @@ func Parse(args ...string) (Params, error) {
 		param := paramStr{
 			library: libAndName[0],
 			name:    libAndName[1],
-		}
-
-		if strings.Contains(arg, "=") {
-			nameAndValue := strings.SplitN(arg, "=", 1)
-			param.value = nameAndValue[1]
+			value:   nameAndValue[1],
 		}
 
 		params = append(params, &param)
