@@ -141,7 +141,7 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		return os.WriteFile(defaultPath, bytes, 0644)
+		return os.WriteFile(defaultPath, bytes, 0o644)
 	} else {
 		if config.G[config.KraftKit](ctx).Auth == nil {
 			config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
