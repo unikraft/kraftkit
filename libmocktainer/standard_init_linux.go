@@ -21,6 +21,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 
 	"kraftkit.sh/libmocktainer/configs"
+	"kraftkit.sh/libmocktainer/unikraft"
 )
 
 type linuxStandardInit struct {
@@ -148,6 +149,19 @@ func (l *linuxStandardInit) Init() error {
 	if _, err := unix.Write(fd, []byte("0")); err != nil {
 		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
 	}
+
+	// -- BEGIN Unikraft
+
+	// This must happen in the Start phase of the OCI startup flow, right before
+	// exec(), because the setup of the container's network interfaces typically
+	// happens between the Create and the Start phases (e.g. CNI).
+	qemuNetArgs, err := unikraft.SetupQemuNet()
+	if err != nil {
+		return fmt.Errorf("setting up qemu network: %w", err)
+	}
+	l.config.Args = append(l.config.Args, qemuNetArgs...)
+
+	// -- END Unikraft
 
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
