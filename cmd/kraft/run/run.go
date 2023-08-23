@@ -7,10 +7,12 @@ package run
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
@@ -357,6 +359,8 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	var exitErr error
+	requestShutdown := false
+	logsFinished := make(chan bool, 1)
 
 	// Tail the logs if -d|--detach is not provided
 	if !opts.Detach {
@@ -372,6 +376,12 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 		loop:
 			for {
+				if requestShutdown {
+					<-logsFinished
+					signals.RequestShutdown()
+					break loop
+				}
+
 				// Wait on either channel
 				select {
 				case update := <-events:
@@ -379,11 +389,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 					case machineapi.MachineStateErrored:
 						signals.RequestShutdown()
 						exitErr = fmt.Errorf("machine fatally exited")
-						break loop
+						requestShutdown = true
 
 					case machineapi.MachineStateExited, machineapi.MachineStateFailed:
-						signals.RequestShutdown()
-						break loop
+						requestShutdown = true
 					}
 
 				case err := <-errs:
@@ -392,7 +401,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 					break loop
 
 				case <-ctx.Done():
-					break loop
+					requestShutdown = true
 				}
 			}
 		}()
@@ -412,22 +421,35 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("could not listen for machine logs: %v", err)
 		}
 
+		var line string
 	loop:
 		for {
 			// Wait on either channel
 			select {
-			case line := <-logs:
+			case <-time.After(10 * time.Millisecond):
+				if requestShutdown && line == "" {
+					break loop
+				} else if line != "" {
+					line = ""
+				}
+
+			case line = <-logs:
 				fmt.Fprint(iostreams.G(ctx).Out, line)
 
 			case err := <-errs:
-				log.G(ctx).Errorf("received event error: %v", err)
-				signals.RequestShutdown()
-				break loop
+				if errors.Is(err, io.EOF) && requestShutdown {
+					break loop
+				} else if !errors.Is(err, io.EOF) {
+					log.G(ctx).Errorf("received log error: %v", err)
+					signals.RequestShutdown()
+					break loop
+				}
 
 			case <-ctx.Done():
 				break loop
 			}
 		}
+		logsFinished <- true
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
