@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"os"
@@ -752,7 +753,9 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 			return out, errOut, nil
 
 		case err := <-errOut:
-			return nil, nil, err
+			if err != io.EOF {
+				return nil, nil, err
+			}
 
 		case <-ctx.Done():
 			return out, errOut, nil

@@ -112,6 +112,7 @@ func peekAndRead(file *os.File, reader *bufio.Reader, logs *chan string, errs *c
 		}
 
 		reader.Reset(file)
+		*errs <- io.EOF
 		return true
 	}
 
