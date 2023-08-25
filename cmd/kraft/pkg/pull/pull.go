@@ -30,7 +30,7 @@ type Pull struct {
 	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
 	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
-	Manager      string `long:"manager" short:"M" usage:"Force the handler type (Omittion will attempt auto-detect)" default:"auto"`
+	Manager      string `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
@@ -49,7 +49,7 @@ func New() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Pull the dependencies for a project in the current working directory
 			$ kraft pkg pull
-			
+
 			# Pull dependencies for a project at a path
 			$ kraft pkg pull path/to/app
 
@@ -57,7 +57,11 @@ func New() *cobra.Command {
 			$ kraft pkg pull github.com/unikraft/app-nginx.git
 
 			# Pull from a manifest
-			$ kraft pkg pull nginx:1.21.6`),
+			$ kraft pkg pull nginx:1.21.6
+
+			# Pull from a registry
+			$ kraft pkg pull unikraft.org/nginx:1.21.6
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
