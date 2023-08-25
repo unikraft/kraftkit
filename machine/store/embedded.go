@@ -10,6 +10,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	zip "api.zip"
@@ -92,18 +93,23 @@ func NewEmbeddedStore[Spec, Status any](path string) (zip.Store, error) {
 func (store *embedded[_, _]) open() error {
 	var db *badger.DB
 
-	// Perform a continuous re-try to check for the dir lock on the badger
-	// database which may become free during a specified timeout period
-	if err := retrytimeout.RetryTimeout(store.timeout, func() error {
-		var err error
-		db, err = badger.Open(store.bopts)
-		if err != nil {
+	db, err := badger.Open(store.bopts)
+	if err != nil && strings.Contains(err.Error(), "permission denied") {
+		return fmt.Errorf("could not open machine store: %v", err)
+	} else if err != nil {
+		// Perform a continuous re-try to check for the dir lock on the badger
+		// database which may become free during a specified timeout period
+		if err := retrytimeout.RetryTimeout(store.timeout, func() error {
+			var err error
+			db, err = badger.Open(store.bopts)
+			if err != nil {
+				return fmt.Errorf("could not open machine store: %v", err)
+			}
+
+			return nil
+		}); err != nil {
 			return fmt.Errorf("could not open machine store: %v", err)
 		}
-
-		return nil
-	}); err != nil {
-		return fmt.Errorf("could not open machine store: %v", err)
 	}
 
 	store.db = db
