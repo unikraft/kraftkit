@@ -37,6 +37,7 @@ func NewLayerFromFile(ctx context.Context, mediaType, src, dst string, opts ...L
 		if err != nil {
 			return nil, err
 		}
+		defer tmp.Close()
 
 		if err := archive.TarFileTo(ctx,
 			src, dst, tmp.Name(),

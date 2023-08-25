@@ -281,6 +281,7 @@ func (image *Image) Save(ctx context.Context, source string, onProgress func(flo
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
+	defer os.Remove(configBlob.tmp)
 
 	// We check if the blob already exists.  It is possible to have a duplicate
 	// configuration already present if Save() is called repeatedly.
