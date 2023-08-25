@@ -58,6 +58,10 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
+	if len(args) == 0 {
+		return fmt.Errorf("must specify a machine to fetch logs for")
+	}
+
 	if opts.platform == "auto" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
