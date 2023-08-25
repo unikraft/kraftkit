@@ -229,6 +229,19 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if len(tree) == 0 {
+		switch true {
+		case len(opts.Target) > 0:
+			return fmt.Errorf("no matching targets found for: %s", opts.Target)
+		case len(opts.Architecture) > 0 && len(opts.Platform) == 0:
+			return fmt.Errorf("no matching targets found for architecture: %s", opts.Architecture)
+		case len(opts.Architecture) == 0 && len(opts.Platform) > 0:
+			return fmt.Errorf("no matching targets found for platform: %s", opts.Platform)
+		default:
+			return fmt.Errorf("no matching targets found for: %s/%s", opts.Platform, opts.Architecture)
+		}
+	}
+
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{

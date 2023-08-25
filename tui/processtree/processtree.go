@@ -6,6 +6,7 @@ package processtree
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -77,6 +78,10 @@ type ProcessTree struct {
 }
 
 func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
+	if len(tree) == 0 {
+		return nil, fmt.Errorf("cannot instantiate process tree without sub processes")
+	}
+
 	pt := &ProcessTree{
 		tree:     tree,
 		ctx:      ctx,
