@@ -58,7 +58,8 @@ nix:
 
 builds:
 #@ targets = {
-#@   "linuxu": {"os": "linux", "arch": "amd64"},
+#@   "linux-amd64": {"os": "linux", "arch": "amd64"},
+#@   "linux-arm64": {"os": "linux", "arch": "arm64"},
 #@   "darwin-arm64": {"os": "darwin", "arch": "arm64"},
 #@   "darwin-amd64": {"os": "darwin", "arch": "amd64"}
 #@ }
@@ -75,7 +76,7 @@ builds:
     goarch:
       - #@ specs["arch"]
     ldflags:
-      - -s -w 
+      - -s -w
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
       - -X {{ .Env.GOMOD }}/internal/version.commit={{ .Commit }}
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
