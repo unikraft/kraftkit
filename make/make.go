@@ -8,12 +8,19 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime"
 	"strings"
+
+	"github.com/cli/safeexec"
 
 	"kraftkit.sh/exec"
 )
 
-const DefaultBinaryName = "make"
+const (
+	DefaultBinaryName        = "make"
+	DefaultDarwinBinaryName  = "gmake"
+	DefaultWindowsBinaryName = "nmake"
+)
 
 type export struct {
 	export    string
@@ -93,7 +100,21 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 	}
 
 	if len(make.opts.bin) == 0 {
-		make.opts.bin = DefaultBinaryName
+		switch runtime.GOOS {
+		case "darwin":
+			// Check if gmake is installed
+			// If not, fall back to make
+			_, err := safeexec.LookPath(DefaultDarwinBinaryName)
+			if err != nil {
+				make.opts.bin = DefaultBinaryName
+			} else {
+				make.opts.bin = DefaultDarwinBinaryName
+			}
+		case "windows":
+			make.opts.bin = DefaultWindowsBinaryName
+		default:
+			make.opts.bin = DefaultBinaryName
+		}
 	}
 
 	var processes []*exec.Process
