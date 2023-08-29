@@ -170,6 +170,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithOutDir(app.outDir),
 		WithUnikraft(app.unikraft),
 		WithTemplate(app.template),
+		WithCommand(app.command...),
 		WithLibraries(app.libraries),
 		WithTargets(app.targets),
 		WithConfiguration(popts.kconfig.Slice()...),

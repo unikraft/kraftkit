@@ -117,6 +117,14 @@ func WithTemplate(template *template.TemplateConfig) ApplicationOption {
 	}
 }
 
+// WithCommand sets the command-line arguments for the application.
+func WithCommand(command ...string) ApplicationOption {
+	return func(ac *application) error {
+		ac.command = command
+		return nil
+	}
+}
+
 // WithUnikraft sets the application's core
 func WithUnikraft(unikraft *core.UnikraftConfig) ApplicationOption {
 	return func(ac *application) error {

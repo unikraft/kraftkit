@@ -120,7 +120,25 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, m
 	machine.Spec.Kernel = "project://" + runner.project.Name() + ":" + targetName
 	machine.Spec.Architecture = t.Architecture().Name()
 	machine.Spec.Platform = t.Platform().Name()
-	machine.Spec.ApplicationArgs = runner.args
+
+	if len(runner.args) == 0 {
+		runner.args = runner.project.Command()
+	}
+
+	var kernelArgs []string
+	var appArgs []string
+
+	for _, arg := range runner.args {
+		if arg == "--" {
+			kernelArgs = appArgs
+			appArgs = []string{}
+			continue
+		}
+		appArgs = append(appArgs, arg)
+	}
+
+	machine.Spec.KernelArgs = kernelArgs
+	machine.Spec.ApplicationArgs = appArgs
 
 	// Use the symbolic debuggable kernel image?
 	if opts.WithKernelDbg {

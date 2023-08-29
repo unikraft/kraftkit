@@ -53,6 +53,9 @@ type Application interface {
 	// Targets returns the application's targets
 	Targets() []target.Target
 
+	// Command is the list of arguments passed to the application's runtime.
+	Command() []string
+
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
 
@@ -137,6 +140,7 @@ type application struct {
 	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
+	command       []string
 	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
@@ -199,6 +203,10 @@ func (app application) Targets() []target.Target {
 		targets = append(targets, target.Target(t))
 	}
 	return targets
+}
+
+func (app application) Command() []string {
+	return app.command
 }
 
 func (app application) Extensions() component.Extensions {

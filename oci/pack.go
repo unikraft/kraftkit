@@ -693,10 +693,6 @@ func (ocipack *ociPackage) Initrd() *initrd.InitrdConfig {
 
 // Command implements unikraft.target.Target
 func (ocipack *ociPackage) Command() []string {
-	if len(ocipack.command) == 0 {
-		return []string{"--"}
-	}
-
 	return ocipack.command
 }
 
