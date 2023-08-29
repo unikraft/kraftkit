@@ -109,6 +109,14 @@ func WithOutDir(outDir string) ApplicationOption {
 	}
 }
 
+// WithRootfs sets the application's rootfs
+func WithRootfs(rootfs string) ApplicationOption {
+	return func(ac *application) error {
+		ac.rootfs = rootfs
+		return nil
+	}
+}
+
 // WithTemplate sets the application's template
 func WithTemplate(template *template.TemplateConfig) ApplicationOption {
 	return func(ac *application) error {

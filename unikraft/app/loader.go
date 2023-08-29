@@ -54,6 +54,13 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		}
 	}
 
+	if n, ok := iface["rootfs"]; ok {
+		app.rootfs, ok = n.(string)
+		if !ok {
+			return nil, errors.New("rootfs must be a string")
+		}
+	}
+
 	if n, ok := iface["cmd"]; ok {
 		switch v := n.(type) {
 		case string:
