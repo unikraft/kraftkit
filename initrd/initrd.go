@@ -197,15 +197,26 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 
 				initrd.Files[path] = internal
 
-				data, err := os.ReadFile(path)
-				if err != nil {
-					return err
+				var data []byte
+				targetLink := ""
+				if info, err := d.Info(); err == nil && info.Mode()&os.ModeSymlink != 0 {
+					targetLink, err = os.Readlink(path)
+					if err != nil {
+						return err
+					}
+					data = []byte(targetLink)
+				} else if d.Type().IsRegular() {
+					data, err = os.ReadFile(path)
+					if err != nil {
+						return err
+					}
 				}
 
 				if err := writer.WriteHeader(&cpio.Header{
-					Name: internal,
-					Mode: cpio.FileMode(d.Type().Perm()),
-					Size: info.Size(),
+					Name:     internal,
+					Linkname: targetLink,
+					Mode:     cpio.FileMode(d.Type().Perm()),
+					Size:     info.Size(),
 				}); err != nil {
 					return err
 				}
