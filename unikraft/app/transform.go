@@ -30,6 +30,7 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
@@ -90,6 +91,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(target.TargetConfig{}):           target.TransformFromSchema,
 		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
 		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
+		reflect.TypeOf(elfloader.ELFLoader{}):           elfloader.TransformFromSchema,
 	}
 
 	for _, transformer := range additionalTransformers {

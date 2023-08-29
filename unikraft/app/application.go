@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
@@ -46,6 +47,9 @@ type Application interface {
 
 	// Template returns the application's template
 	Template() *template.TemplateConfig
+
+	// Runtime returns the application's runtime (ELFLoader).
+	Runtime() *elfloader.ELFLoader
 
 	// Libraries returns the application libraries' configurations
 	Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error)
@@ -141,6 +145,7 @@ type application struct {
 	filename      string
 	outDir        string
 	template      *template.TemplateConfig
+	elfloader     *elfloader.ELFLoader
 	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
@@ -181,6 +186,10 @@ func (app application) OutDir() string {
 
 func (app application) Template() *template.TemplateConfig {
 	return app.template
+}
+
+func (app application) Runtime() *elfloader.ELFLoader {
+	return app.elfloader
 }
 
 func (app application) Unikraft(ctx context.Context) *core.UnikraftConfig {

@@ -13,6 +13,7 @@ import (
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
@@ -105,6 +106,14 @@ func WithFilename(filename string) ApplicationOption {
 func WithOutDir(outDir string) ApplicationOption {
 	return func(ac *application) error {
 		ac.outDir = outDir
+		return nil
+	}
+}
+
+// WithRuntime sets the application's elfloader runtime
+func WithRuntime(runtime *elfloader.ELFLoader) ApplicationOption {
+	return func(ac *application) error {
+		ac.elfloader = runtime
 		return nil
 	}
 }

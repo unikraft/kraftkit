@@ -169,6 +169,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithFilename(app.filename),
 		WithOutDir(app.outDir),
 		WithUnikraft(app.unikraft),
+		WithRuntime(app.elfloader),
 		WithRootfs(app.rootfs),
 		WithTemplate(app.template),
 		WithCommand(app.command...),
