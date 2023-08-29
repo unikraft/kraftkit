@@ -40,12 +40,6 @@ import (
 	"kraftkit.sh/unikraft/export/v0/vfscore"
 )
 
-const (
-	QemuSystemX86     = "qemu-system-x86_64"
-	QemuSystemArm     = "qemu-system-arm"
-	QemuSystemAarch64 = "qemu-system-aarch64"
-)
-
 // machineV1alpha1Service ...
 type machineV1alpha1Service struct {
 	eopts []exec.ExecOption
