@@ -147,7 +147,13 @@ func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
 }
 
 func (tc *TargetConfig) ConfigFilename() string {
-	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, filepath.Base(tc.kernel))
+	var name string
+	if tc.kernel == "" {
+		name = fmt.Sprintf("%s_%s-%s", tc.Name(), tc.platform.Name(), tc.architecture.Name())
+	} else {
+		name = filepath.Base(tc.kernel)
+	}
+	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, name)
 }
 
 func (tc *TargetConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
