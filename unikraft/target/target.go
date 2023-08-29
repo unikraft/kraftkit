@@ -138,9 +138,10 @@ func (tc *TargetConfig) IsUnpacked() bool {
 func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
 	if tc.kconfig == nil {
 		tc.kconfig = kconfig.KeyValueMap{}
-		tc.kconfig.OverrideBy(tc.architecture.KConfig())
-		tc.kconfig.OverrideBy(tc.platform.KConfig())
 	}
+
+	tc.kconfig.OverrideBy(tc.architecture.KConfig())
+	tc.kconfig.OverrideBy(tc.platform.KConfig())
 
 	return tc.kconfig
 }
