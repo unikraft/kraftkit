@@ -77,5 +77,30 @@ inputs:
     default: false
 
 runs:
-  using: docker
-  image: docker://kraftkit.sh/github-action:v0
+  # Use a composite type so we can execute a bash script before the invocation
+  # of the container image.
+  using: composite
+  steps:
+  - shell: bash
+    run: ${{ github.action_path }}/tools/github-action/pre.sh
+  - uses: docker://kraftkit.sh/github-action:v0
+    # This is a bit of a hack, since we are using a composite-type, the actions
+    # input are not passed when the container image is instantiated.  Instead,
+    # we simply pass all inputs as environmental variables which are already
+    # compatible with the action itself.
+    env:
+      INPUT_LOGLEVEL: ${{ inputs.loglevel }}
+      INPUT_WORKDIR: ${{ inputs.workdir }}
+      INPUT_KRAFTFILE: ${{ inputs.kraftfile }}
+      INPUT_ARCH: ${{ inputs.arch }}
+      INPUT_PLAT: ${{ inputs.plat }}
+      INPUT_TARGET: ${{ inputs.target }}
+      INPUT_EXECUTE: ${{ inputs.execute }}
+      INPUT_TIMEOUT: ${{ inputs.timeout }}
+      INPUT_ARGS: ${{ inputs.args }}
+      INPUT_INITRD: ${{ inputs.initrd }}
+      INPUT_MEMORY: ${{ inputs.memory }}
+      INPUT_NAME: ${{ inputs.name }}
+      INPUT_OUTPUT: ${{ inputs.output }}
+      INPUT_KCONFIG: ${{ inputs.kconfig }}
+      INPUT_PUSH: ${{ inputs.push }}
