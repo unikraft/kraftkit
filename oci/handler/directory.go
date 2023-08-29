@@ -11,13 +11,14 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/internal/version"
+	"kraftkit.sh/oci/simpleauth"
 
+	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -33,15 +34,19 @@ const (
 )
 
 type DirectoryHandler struct {
-	path string
+	path  string
+	auths map[string]regtypes.AuthConfig
 }
 
-func NewDirectoryHandler(path string) (*DirectoryHandler, error) {
+func NewDirectoryHandler(path string, auths map[string]regtypes.AuthConfig) (*DirectoryHandler, error) {
 	if err := os.MkdirAll(path, 0o775); err != nil {
 		return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
 	}
 
-	return &DirectoryHandler{path: path}, nil
+	return &DirectoryHandler{
+		path:  path,
+		auths: auths,
+	}, nil
 }
 
 // DigestExists implements DigestResolver.
@@ -275,6 +280,18 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 	if err != nil {
 		return err
 	}
+
+	authConfig := &authn.AuthConfig{}
+
+	// Annoyingly convert between regtypes and authn.
+	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
+		authConfig.Auth = auth.Auth
+		authConfig.IdentityToken = auth.IdentityToken
+		authConfig.Password = auth.Password
+		authConfig.RegistryToken = auth.RegistryToken
+		authConfig.Username = auth.Username
+	}
+
 	img, err := remote.Image(ref,
 		remote.WithContext(ctx),
 		remote.WithPlatform(v1.Platform{
@@ -282,7 +299,9 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 			Architecture: strings.Split(platform, "/")[1],
 		}),
 		remote.WithUserAgent(version.UserAgent()),
-		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithAuth(&simpleauth.SimpleAuthenticator{
+			Auth: authConfig,
+		}),
 	)
 	if err != nil {
 		return err
@@ -417,14 +436,20 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 		return err
 	}
 
-	err = remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
+	image, err := handle.ResolveImage(ctx, fullref)
 	if err != nil {
 		return err
 	}
 
-	image, err := handle.ResolveImage(ctx, fullref)
-	if err != nil {
-		return err
+	authConfig := &authn.AuthConfig{}
+
+	// Annoyingly convert between regtypes and authn.
+	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
+		authConfig.Auth = auth.Auth
+		authConfig.IdentityToken = auth.IdentityToken
+		authConfig.Password = auth.Password
+		authConfig.RegistryToken = auth.RegistryToken
+		authConfig.Username = auth.Username
 	}
 
 	return remote.Write(ref,
@@ -436,7 +461,9 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 		},
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
-		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithAuth(&simpleauth.SimpleAuthenticator{
+			Auth: authConfig,
+		}),
 	)
 }
 
