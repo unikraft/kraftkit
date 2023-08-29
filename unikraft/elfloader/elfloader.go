@@ -5,6 +5,7 @@
 package elfloader
 
 import (
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -12,20 +13,40 @@ import (
 
 type ELFLoader struct {
 	registry packmanager.PackageManager
-	kernel   string
-	pack     pack.Package
+
+	// Path to the kernel of the ELF loader.
+	kernel string
+
+	// The package representing the ELF Loader.
+	pack pack.Package
+
+	// The name of the elfloader.
+	name string
+
+	// The version of the elfloader.
+	version string
+
+	// The source of the elfloader (can be either remote or local, this attribute
+	// is ultimately handled by the packmanager).
+	source string
+
+	// List of kconfig key-values specific to this core.
+	kconfig kconfig.KeyValueMap
+
+	// The rootfs (initramfs) of the ELF loader.
+	rootfs string
 }
 
 var _ unikraft.Nameable = (*ELFLoader)(nil)
 
 // Type implements kraftkit.sh/unikraft.Nameable
-func (ocipack *ELFLoader) Type() unikraft.ComponentType {
+func (elfloader *ELFLoader) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
 // Name implements kraftkit.sh/unikraft.Nameable
-func (ocipack *ELFLoader) Name() string {
-	return ocipack.pack.Name()
+func (elfloader *ELFLoader) Name() string {
+	return elfloader.name
 }
 
 // String implements fmt.Stringer
@@ -34,6 +55,11 @@ func (ocipack *ELFLoader) String() string {
 }
 
 // Version implements kraftkit.sh/unikraft.Nameable
-func (ocipack *ELFLoader) Version() string {
-	return ocipack.pack.Version()
+func (elfloader *ELFLoader) Version() string {
+	return elfloader.version
+}
+
+// Source of the ELF Loader runtime.
+func (elfloader *ELFLoader) Source() string {
+	return elfloader.source
 }

@@ -116,7 +116,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 
 // Prepare implements Runner.
 func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
-	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx, runner.exePath)
+	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx)
 	if err != nil {
 		return err
 	}

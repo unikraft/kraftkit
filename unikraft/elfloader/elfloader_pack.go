@@ -26,11 +26,9 @@ const (
 	DefaultPrebuilt  = "loaders.unikraft.org/default:latest"
 )
 
-// ELFLoaderPrebuiltOption ...
-type ELFLoaderPrebuiltOption func(*ELFLoader) error
-
-// NewELFLoaderFromPrebuilt ...
-func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFLoaderPrebuiltOption) (*ELFLoader, error) {
+// NewELFLoaderFromPrebuilt prepares a ELF Loader application that has been
+// pre-built and is accessible from a remote registry.
+func NewELFLoaderFromPrebuilt(ctx context.Context, pbopts ...ELFLoaderPrebuiltOption) (*ELFLoader, error) {
 	elfloader := ELFLoader{}
 
 	for _, opt := range pbopts {
@@ -46,8 +44,12 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 			elfloader.kernel = defaultPrebuilt
 			return &elfloader, nil
 		}
-	} else {
-		defaultPrebuilt = DefaultPrebuilt
+
+		elfloader.source = defaultPrebuilt
+	} else if len(elfloader.kernel) > 0 {
+		return &elfloader, nil
+	} else if len(elfloader.name) == 0 {
+		elfloader.name = DefaultPrebuilt
 	}
 
 	var err error
@@ -69,7 +71,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 
 	// First try locally
 	results, err := elfloader.registry.Catalog(ctx,
-		packmanager.WithName(defaultPrebuilt),
+		packmanager.WithName(elfloader.name),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithUpdate(false),
 	)
@@ -79,7 +81,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 
 	if len(results) == 0 {
 		results, err = elfloader.registry.Catalog(ctx,
-			packmanager.WithName(defaultPrebuilt),
+			packmanager.WithName(elfloader.name),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithUpdate(true),
 		)
@@ -99,6 +101,9 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	}
 
 	elfloader.pack = results[0]
+	elfloader.name = results[0].Name()
+	elfloader.version = results[0].Version()
+	elfloader.source = results[0].Name()
 
 	return &elfloader, nil
 }
@@ -144,7 +149,15 @@ func (elfloader *ELFLoader) Platform() plat.Platform {
 
 // Kernel implements kraftkit.sh/unikraft.target.Target
 func (elfloader *ELFLoader) Kernel() string {
-	return elfloader.pack.(target.Target).Kernel()
+	if len(elfloader.kernel) > 0 {
+		return elfloader.kernel
+	}
+
+	if t, ok := elfloader.pack.(target.Target); ok {
+		return t.Kernel()
+	}
+
+	return ""
 }
 
 // KernelDbg implements kraftkit.sh/unikraft.target.Target
