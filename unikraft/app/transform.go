@@ -27,7 +27,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/core"
@@ -89,7 +88,6 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(arch.ArchitectureConfig{}):       arch.TransformFromSchema,
 		reflect.TypeOf(plat.PlatformConfig{}):           plat.TransformFromSchema,
 		reflect.TypeOf(target.TargetConfig{}):           target.TransformFromSchema,
-		reflect.TypeOf(initrd.InitrdConfig{}):           transformInitrd,
 		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
 		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
 	}
@@ -134,23 +132,6 @@ var transformMapStringString TransformerFunc = func(_ context.Context, data inte
 		return value, nil
 	default:
 		return data, errors.Errorf("invalid type %T for map[string]string", value)
-	}
-}
-
-var transformInitrd TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		if format, ok := value["format"]; ok {
-			if typ, ok := initrd.NameToType[format.(string)]; ok {
-				value["format"] = typ
-			} else {
-				return value, errors.Errorf("invalid option for initrd type: %s", format)
-			}
-		}
-
-		return value, nil
-	default:
-		return data, errors.Errorf("invalid type %T for platform", value)
 	}
 }
 

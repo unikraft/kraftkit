@@ -3,16 +3,24 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/containerd/nerdctl/pkg/strutil"
+	"github.com/dustin/go-humanize"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	volumeapi "kraftkit.sh/api/volume/v1alpha1"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
 	"kraftkit.sh/machine/volume"
+	"kraftkit.sh/unikraft"
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
@@ -173,6 +181,48 @@ func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) 
 		}
 
 		machine.Spec.Volumes = append(machine.Spec.Volumes, *vol)
+	}
+
+	return nil
+}
+
+// parse the provided `--rootfs` flag which ultimately is passed into the
+// dynamic Initrd interface which either looks up or constructs the archive
+// based on the value of the flag.
+func (opts *Run) prepareRootfs(ctx context.Context, machine *machineapi.Machine) error {
+	// If the user has supplied an initram path, set this now, this overrides any
+	// preparation and is considered higher priority compared to what has been set
+	// prior to this point.
+	if opts.Rootfs == "" || machine.Status.InitrdPath != "" {
+		return nil
+	}
+
+	ramfs, err := initrd.New(ctx,
+		opts.Rootfs,
+		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
+		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.BuildDir, "rootfs-cache")),
+	)
+	if err != nil {
+		return fmt.Errorf("could not prepare initramfs: %w", err)
+	}
+
+	machine.Status.InitrdPath, err = ramfs.Build(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Warn if the initrd path is greater than allocated memory
+	fi, err := os.Stat(machine.Status.InitrdPath)
+	if err != nil {
+		return err
+	}
+
+	memRequest := machine.Spec.Resources.Requests[corev1.ResourceMemory]
+	if memRequest.Value() < fi.Size() {
+		log.G(ctx).Warnf("requested memory (%s) is less than initramfs (%s)",
+			humanize.Bytes(uint64(memRequest.Value())),
+			humanize.Bytes(uint64(fi.Size())),
+		)
 	}
 
 	return nil

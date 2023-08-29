@@ -63,7 +63,7 @@ func WithKernelDbg(kernelDbg string) TargetOption {
 }
 
 // WithInitrd sets the initrd of the target.
-func WithInitrd(initrd *initrd.InitrdConfig) TargetOption {
+func WithInitrd(initrd initrd.Initrd) TargetOption {
 	return func(tc *TargetConfig) error {
 		tc.initrd = initrd
 		return nil

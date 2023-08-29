@@ -25,6 +25,7 @@ import (
 //	$ kraft run -t target                  // multiple targets in cwd.
 //	$ kraft run -t target path/to/project  // multiple targets at path.
 type runnerKraftfileUnikraft struct {
+	workdir string
 	args    []string
 	project app.Application
 }
@@ -44,22 +45,22 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, 
 	}
 
 	if len(args) == 0 {
-		opts.workdir = cwd
+		runner.workdir = cwd
 	} else {
-		opts.workdir = cwd
+		runner.workdir = cwd
 		runner.args = args
 		if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
-			opts.workdir = args[0]
+			runner.workdir = args[0]
 			runner.args = args[1:]
 		}
 	}
 
-	if !app.IsWorkdirInitialized(opts.workdir) {
-		return false, fmt.Errorf("path is not project: %s", opts.workdir)
+	if !app.IsWorkdirInitialized(runner.workdir) {
+		return false, fmt.Errorf("path is not project: %s", runner.workdir)
 	}
 
 	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.workdir),
+		app.WithProjectWorkdir(runner.workdir),
 	}
 
 	if len(opts.Kraftfile) > 0 {
@@ -70,7 +71,7 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, 
 
 	runner.project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
-		return false, fmt.Errorf("could not instantiate project directory %s: %v", opts.workdir, err)
+		return false, fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
 	}
 
 	if runner.project.Unikraft(ctx) == nil {
@@ -125,6 +126,10 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, m
 		runner.args = runner.project.Command()
 	}
 
+	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = runner.project.Rootfs()
+	}
+
 	var kernelArgs []string
 	var appArgs []string
 
@@ -145,10 +150,6 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, m
 		machine.Status.KernelPath = t.KernelDbg()
 	} else {
 		machine.Status.KernelPath = t.Kernel()
-	}
-
-	if len(opts.InitRd) > 0 {
-		machine.Status.InitrdPath = opts.InitRd
 	}
 
 	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {

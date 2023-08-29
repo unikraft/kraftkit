@@ -38,6 +38,10 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
 
+	if opts.Rootfs == "" {
+		opts.Rootfs = opts.project.Rootfs()
+	}
+
 	return true, nil
 }
 

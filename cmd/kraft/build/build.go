@@ -36,6 +36,7 @@ type Build struct {
 	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
 	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	Rootfs       string `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 
@@ -163,6 +164,10 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	if err := build.Build(ctx, opts, selected, args...); err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
+	}
+
+	if err := opts.buildRootfs(ctx); err != nil {
+		return err
 	}
 
 	return nil

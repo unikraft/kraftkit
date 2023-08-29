@@ -55,8 +55,8 @@ inputs:
   args:
     description: Arguments to pass to the unikernel.
     required: false
-  initrd:
-    description: Include an initrd at path.
+  rootfs:
+    description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
     required: false
   memory:
     description: Set the memory size. String of format "1M"/"1G"/"1K"

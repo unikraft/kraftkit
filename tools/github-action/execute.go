@@ -8,19 +8,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/rancher/wrangler/pkg/signals"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	"kraftkit.sh/config"
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
@@ -71,10 +66,6 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 
 	machine.Status.KernelPath = opts.target.Kernel()
 
-	if len(opts.InitRd) > 0 {
-		machine.Status.InitrdPath = opts.InitRd
-	}
-
 	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
 		return fmt.Errorf("cannot run the selected project target '%s' without building the kernel: try running `kraft build` first: %w", targetName, err)
 	}
@@ -90,58 +81,8 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 
 	machine.ObjectMeta.Name = "github-action"
 
-	// If the user has supplied an initram path, set this now, this overrides any
-	// preparation and is considered higher priority compared to what has been set
-	// prior to this point.
-	if opts.InitRd != "" {
-		if machine.ObjectMeta.UID == "" {
-			machine.ObjectMeta.UID = uuid.NewUUID()
-		}
-
-		if len(machine.Status.StateDir) == 0 {
-			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
-		}
-
-		if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
-			return fmt.Errorf("could not make machine state dir: %w", err)
-		}
-
-		var ramfs *initrd.InitrdConfig
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("could not get current working directory: %w", err)
-		}
-
-		if strings.Contains(opts.InitRd, initrd.InputDelimeter) {
-			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
-
-			log.G(ctx).
-				WithField("output", output).
-				Debug("serializing initramfs cpio archive")
-
-			ramfs, err = initrd.NewFromMapping(cwd, output, opts.InitRd)
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		} else if f, err := os.Stat(opts.InitRd); err == nil && f.IsDir() {
-			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
-
-			log.G(ctx).
-				WithField("output", output).
-				Debug("serializing initramfs cpio archive")
-
-			ramfs, err = initrd.NewFromMapping(cwd, output, fmt.Sprintf("%s:/", opts.InitRd))
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		} else {
-			ramfs, err = initrd.NewFromFile(cwd, opts.InitRd)
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		}
-
-		machine.Status.InitrdPath = ramfs.Output
+	if opts.Rootfs != "" {
+		machine.Status.InitrdPath = opts.initrdPath
 	}
 
 	// Create the machine

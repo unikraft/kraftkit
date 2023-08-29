@@ -33,7 +33,7 @@ type Target interface {
 	KernelDbg() string
 
 	// Initrd contains the initramfs configuration for this target.
-	Initrd() *initrd.InitrdConfig
+	Initrd() initrd.Initrd
 
 	// Command is the command-line arguments set for this target.
 	Command() []string
@@ -64,7 +64,7 @@ type TargetConfig struct {
 	kernelDbg string
 
 	// initrd is the configuration for the initrd.
-	initrd *initrd.InitrdConfig
+	initrd initrd.Initrd
 
 	// command is the command-line arguments set for this target.
 	command []string
@@ -115,7 +115,7 @@ func (tc *TargetConfig) KernelDbg() string {
 	return tc.kernelDbg
 }
 
-func (tc *TargetConfig) Initrd() *initrd.InitrdConfig {
+func (tc *TargetConfig) Initrd() initrd.Initrd {
 	return tc.initrd
 }
 

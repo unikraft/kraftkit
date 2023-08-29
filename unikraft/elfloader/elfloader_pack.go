@@ -153,7 +153,7 @@ func (elfloader *ELFLoader) KernelDbg() string {
 }
 
 // Initrd implements kraftkit.sh/unikraft.target.Target
-func (elfloader *ELFLoader) Initrd() *initrd.InitrdConfig {
+func (elfloader *ELFLoader) Initrd() initrd.Initrd {
 	return elfloader.pack.(target.Target).Initrd()
 }
 
