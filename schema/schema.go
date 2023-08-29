@@ -27,14 +27,18 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// Schema is the kraft-spec JSON schema
-//
-//go:embed kraft-spec.json
-var Schema string
+// Schema is the Kraftfile specification in JSON schema.
+var (
+	//go:embed v0.5.json
+	SchemaV_05 string
+
+	//go:embed v0.6.json
+	SchemaV_06 string
+)
 
 // Validate uses the jsonschema to validate the configuration
 func Validate(config map[string]interface{}) error {
-	schemaLoader := gojsonschema.NewStringLoader(Schema)
+	schemaLoader := gojsonschema.NewStringLoader(SchemaV_06)
 	dataLoader := gojsonschema.NewGoLoader(config)
 
 	result, err := gojsonschema.Validate(schemaLoader, dataLoader)
@@ -146,6 +150,7 @@ func specificity(err gojsonschema.ResultError) int {
 type SchemaVersion string
 
 const (
-	SchemaVersionV0_5   = "0.5"
-	SchemaVersionLatest = SchemaVersionV0_5
+	SchemaVersionV0_5   = SchemaVersion("0.5")
+	SchemaVersionV0_6   = SchemaVersion("0.6")
+	SchemaVersionLatest = SchemaVersionV0_6
 )

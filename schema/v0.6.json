@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "kraft-spec.json",
+  "type": "object",
+
+  "patternProperties": {
+    "/^spec(ification)?$/": {
+      "type": [ "string", "number" ],
+      "description": "declared for backward compatibility, ignored."
+    },
+
+    "/^name$/": { "type": "string" },
+
+    "/^outdir$/": { "type": "string" },
+
+    "/^template$/": {
+      "id": "#/properties/template",
+      "$ref": "#/definitions/template",
+      "additionalProperties": true
+    },
+
+    "/^runtime$/": {
+      "id": "#/properties/runtime",
+      "$ref": "#/definitions/runtime",
+      "additionalProperties": true
+    },
+
+    "/^rootfs$/": { "type": ["string", "array"] },
+
+    "/^volumes$/": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/volume"
+          }
+        }
+      ]
+    },
+
+    "/^unikraft$/": {
+      "id": "#/properties/unikraft",
+      "$ref": "#/definitions/unikraft",
+      "additionalProperties": true
+    },
+
+    "/^targets$/": {
+      "id": "#/properties/targets",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/target"
+      },
+      "additionalProperties": true
+    },
+
+    "/^libraries$/": {
+      "id": "#/properties/libraries",
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9._-]+$": {
+          "$ref": "#/definitions/library"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+
+  "additionalProperties": true,
+
+  "definitions": {
+    "unikraft": {
+      "id": "#/definitions/unikraft",
+      "type": [ "object", "string", "number" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      },
+      "additionalProperties": true
+    },
+
+    "template": {
+      "id": "#/definitions/template",
+      "type": [ "string", "object" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      },
+      "additionalProperties": true
+    },
+
+    "runtime": {
+      "id": "#/definitions/loader",
+      "type": [ "string", "object" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      },
+      "additionalProperties": true
+    },
+
+    "target": {
+      "id": "#/definitions/target",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "name": { "type": "string" },
+            "/^arch(itecture)?$/": {
+              "$ref": "#/definitions/platform"
+            },
+            "/^plat(form)?$/": {
+              "$ref": "#/definitions/platform"
+            }
+          }
+        }
+      ],
+      "additionalProperties": true
+    },
+
+    "architecture": {
+      "id": "#/definitions/architecture",
+      "type": [ "object", "boolean", "number", "string", "null" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      }
+    },
+
+    "platform": {
+      "id": "#/definitions/platform",
+      "type": [ "object", "boolean", "number", "string", "null" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      }
+    },
+
+    "library": {
+      "id": "#/definitions/library",
+      "type": [ "object", "boolean", "number", "string", "null" ],
+      "properties": {
+        "source": { "type": "string" },
+        "version": { "type": [ "string", "number" ] },
+        "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      }
+    },
+
+    "volume": {
+      "id": "#/definitions/volume",
+      "type": [ "object" ],
+      "properties": {
+        "driver": { "type": "string" },
+        "source": { "type": "string" },
+        "destination": { "type": "string" },
+        "mode": { "type": [ "string", "number" ] },
+        "readonly": { "type": "boolean" }
+      }
+    },
+
+    "command": {
+      "type": [ "string", "array" ],
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+
+    "list_or_dict": {
+      "type": [ "object", "array" ],
+      "oneOf": [
+        {
+          "type": "object",
+          "patternProperties": {
+            ".+": {
+              "type": ["string", "number", "boolean", "null"]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    }
+  }
+}
