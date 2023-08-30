@@ -6,15 +6,16 @@ package login
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
+
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
-
-	"github.com/spf13/cobra"
 )
 
 type Login struct {
@@ -69,6 +70,21 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(iostreams.G(ctx).Out, "\n")
 
 		opts.Token = string(btoken)
+	}
+
+	// Check if the provided token is a base64 encoded string containing both the
+	// username and token
+	if decoded, err := base64.StdEncoding.DecodeString(opts.Token); err == nil && len(decoded) > 0 {
+		split := strings.SplitN(string(decoded), ":", 2)
+
+		if len(split) == 2 {
+			if len(opts.User) > 0 {
+				return fmt.Errorf("cannot specify -u|--username with a -t|--token that contains a base64 encoding of a username and token")
+			}
+
+			opts.User = split[0]
+			opts.Token = split[1]
+		}
 	}
 
 	authConfig := config.AuthConfig{
