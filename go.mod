@@ -22,7 +22,7 @@ require (
 	github.com/containerd/nerdctl v1.4.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v24.0.1+incompatible
-	github.com/docker/docker v24.0.4+incompatible
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.8.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
