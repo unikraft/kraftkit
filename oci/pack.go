@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -25,6 +26,7 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
+	"kraftkit.sh/oci/simpleauth"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -101,6 +103,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, err
 	}
 
+	auths, err := defaultAuths(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
 		namespace := DefaultNamespace
 		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
@@ -112,7 +119,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			"namespace": namespace,
 		}).Debug("oci: packaging via containerd")
 
-		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace)
+		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, auths)
 	} else {
 		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
 			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
@@ -124,7 +131,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			"path": ociDir,
 		}).Trace("oci: directory handler")
 
-		ocipack.handle, err = handler.NewDirectoryHandler(ociDir)
+		ocipack.handle, err = handler.NewDirectoryHandler(ociDir, auths)
 	}
 	if err != nil {
 		return nil, err
@@ -330,7 +337,27 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 		return nil, fmt.Errorf("cannot parse OCI image name reference: %v", err)
 	}
 
-	raw, err := crane.Manifest(ref)
+	auths, err := defaultAuths(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	authConfig := &authn.AuthConfig{}
+
+	// Annoyingly convert between regtypes and authn.
+	if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
+		authConfig.Auth = auth.Auth
+		authConfig.IdentityToken = auth.IdentityToken
+		authConfig.Password = auth.Password
+		authConfig.RegistryToken = auth.RegistryToken
+		authConfig.Username = auth.Username
+	}
+
+	raw, err := crane.Manifest(ref,
+		crane.WithAuth(&simpleauth.SimpleAuthenticator{
+			Auth: authConfig,
+		}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get manifest: %v", err)
 	}
