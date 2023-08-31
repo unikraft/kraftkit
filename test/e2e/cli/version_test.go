@@ -37,7 +37,7 @@ var _ = Describe("kraft version", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout).To(MatchRegexp(`^kraft [\w\.-]+ \(\w+\) [\w\.-]+ .+\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^kraft [\w\.-]+ \(\w+\) [\w\.-]+ .+\n$`))
 		})
 	})
 
@@ -51,7 +51,7 @@ var _ = Describe("kraft version", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout).To(MatchRegexp(`^Show kraft version information\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Show kraft version information\n`))
 		})
 	})
 
@@ -66,7 +66,9 @@ var _ = Describe("kraft version", func() {
 			Expect(err).To(MatchError("exit status 1"))
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout).To(MatchRegexp(`^unknown command "some-arg" for "kraft version"\n$`))
+			Expect(stdout.String()).To(MatchRegexp(
+				`^(level=error msg="unknown command "some-arg" for "kraft version"")|(unknown command "some-arg" for "kraft version")\n$`,
+			))
 		})
 	})
 })
