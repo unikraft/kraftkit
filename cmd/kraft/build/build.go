@@ -472,7 +472,7 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(
 							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
 						),
 					)...),
 					app.WithBuildLogFile(opts.SaveBuildLog),
