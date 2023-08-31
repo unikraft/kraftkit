@@ -37,6 +37,18 @@ release:
     This is a stable release of kraftkit.
   name_template: 'v{{ .Version }}'
 
+signs:
+  - id: cosign
+    cmd: cosign
+    stdin: '{{ .Env.COSIGN_PASSWORD }}'
+    args:
+      - sign-blob
+      - "--key=cosign.key"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: all
+
 nfpms:
   - vendor: Unikraft
     id: nfpm-default
