@@ -30,6 +30,7 @@ DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
 
 # Commands as variables to make them easier to override
+BREW=${BREW:-brew}
 GREP=${GREP:-grep}
 CAT=${CAT:-cat}
 SUDO=${SUDO:-sudo}
@@ -1102,17 +1103,15 @@ install_linux_musl() {
 }
 
 # install_darwin installs the kraftkit package for MacOS distributions.
-# Currently not implemented.
 # $1: the architecture of the download
 # Returns:
-# Code: 1
+# Code: 0 on success, 1 on error
 install_darwin() {
     _ind_arch="$1"
-    _ind_url="https://github.com/unikraft/kraftkit/issues/266"
-    _ind_ext=".dmg"
 
-    err "error: MacOS architecture unsupported: $_ind_arch."\
-    "You can contribute at $_ind_url"
+    need_cmd "$BREW"
+
+    do_cmd "$BREW" install unikraft/cli/kraftkit
 }
 
 # install_windows installs the kraftkit package for windows distributions.
@@ -1200,6 +1199,8 @@ install_kraftkit() {
                 ;;
             *"darwin"*)
                 install_darwin "$_ikk_arch"
+                # not needed as dependencies are installed by brew
+                # install_dependencies_darwin
                 ;;
             *"windows"*)
                 install_windows "$_ikk_arch"
