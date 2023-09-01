@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	"kraftkit.sh/kconfig"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/elfloader"
@@ -92,6 +93,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
 		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
 		reflect.TypeOf(elfloader.ELFLoader{}):           elfloader.TransformFromSchema,
+		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 	}
 
 	for _, transformer := range additionalTransformers {

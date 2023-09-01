@@ -25,6 +25,7 @@ import (
 	"kraftkit.sh/make"
 	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/elfloader"
@@ -134,6 +135,9 @@ type Application interface {
 
 	// Serialize and save the application to the kraftfile
 	Save() error
+
+	// Volumes to be used during runtime of an application.
+	Volumes() []*volume.VolumeConfig
 }
 
 type application struct {
@@ -149,6 +153,7 @@ type application struct {
 	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
+	volumes       []*volume.VolumeConfig
 	command       []string
 	rootfs        string
 	kraftfile     *Kraftfile
@@ -838,4 +843,9 @@ func (app application) Save() error {
 	}
 
 	return nil
+}
+
+// Volumes implemenets Application.
+func (app application) Volumes() []*volume.VolumeConfig {
+	return app.volumes
 }

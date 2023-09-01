@@ -234,5 +234,9 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *Run, ma
 		}
 	}
 
+	if err := opts.parseKraftfileVolumes(ctx, runner.project, machine); err != nil {
+		return err
+	}
+
 	return nil
 }

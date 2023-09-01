@@ -156,5 +156,9 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, m
 		return fmt.Errorf("cannot run the selected project target '%s' without building the kernel: try running `kraft build` first: %w", targetName, err)
 	}
 
+	if err := opts.parseKraftfileVolumes(ctx, runner.project, machine); err != nil {
+		return err
+	}
+
 	return nil
 }

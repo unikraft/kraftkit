@@ -11,6 +11,7 @@ import (
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
 	"kraftkit.sh/unikraft/elfloader"
@@ -190,6 +191,14 @@ func WithConfiguration(config ...*kconfig.KeyValue) ApplicationOption {
 		}
 
 		ac.configuration.Override(config...)
+		return nil
+	}
+}
+
+// WithVolumes sets the list of volumes to be supplied to the unikernel
+func WithVolumes(volumes ...*volume.VolumeConfig) ApplicationOption {
+	return func(ac *application) error {
+		ac.volumes = volumes
 		return nil
 	}
 }
