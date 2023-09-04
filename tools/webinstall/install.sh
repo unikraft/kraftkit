@@ -45,6 +45,7 @@ YUM=${YUM:-yum}
 APT=${APT:-apt-get}
 APK=${APK:-apk}
 MAKEPKG=${MAKEPKG:-makepkg}
+MKDIR=${MKDIR:-mkdir}
 GIT=${GIT:-git}
 TAR=${TAR:-tar}
 PACMAN=${PACMAN:-pacman}
@@ -1160,6 +1161,19 @@ install_linux_manual() {
         PREFIX="$_RETVAL"
     else
         err "fatal: choose either yes or no."
+    fi
+
+    if [ ! -d "$PREFIX" ]; then
+        get_user_response "prefix does not exist, create? [y/N]: " "n"
+        _ill_answer="$_RETVAL"
+
+        if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            err "fatal: prefix does not exist."
+        elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            do_cmd "$MKDIR -p $PREFIX"
+        else
+            err "fatal: choose either yes or no."
+        fi
     fi
 
     _ill_binary="kraft"
