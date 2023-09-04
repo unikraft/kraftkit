@@ -28,11 +28,10 @@ type KraftKit struct {
 	DefaultArch    string `yaml:"default_arch" env:"KRAFTKIT_DEFAULT_ARCH" usage:"The default architecture to use when invoking architecture-specific code" noattribute:"true"`
 	ContainerdAddr string `yaml:"containerd_addr,omitempty" env:"KRAFTKIT_CONTAINERD_ADDR" long:"containerd-addr" usage:"Address of containerd daemon socket" default:""`
 	EventsPidFile  string `yaml:"events_pidfile" env:"KRAFTKIT_EVENTS_PIDFILE" long:"events-pid-file" usage:"Events process ID used when running multiple unikernels"`
-	UserGroup      string `yaml:"user_group" env:"KRAFTKIT_USER_GROUP" long:"user-group" usage:"Group to use for common files" default:"kraftkit"`
 
 	Paths struct {
 		Plugins   string `yaml:"plugins,omitempty" env:"KRAFTKIT_PATHS_PLUGINS" long:"plugins-dir" usage:"Path to KraftKit plugin directory"`
-		Config    string `yaml:"config,omitempty" env:"KRAFTKIT_PATHS_CONFIG" long:"config-dir" usage:"Path to KraftKit config directory"`
+		Config    string `yaml:"-" env:"KRAFTKIT_PATHS_CONFIG" long:"config-dir" usage:"Path to KraftKit config directory"`
 		Manifests string `yaml:"manifests,omitempty" env:"KRAFTKIT_PATHS_MANIFESTS" long:"manifests-dir" usage:"Path to Unikraft manifest cache"`
 		Sources   string `yaml:"sources,omitempty" env:"KRAFTKIT_PATHS_SOURCES" long:"sources-dir" usage:"Path to Unikraft component cache"`
 	} `yaml:"paths,omitempty"`
