@@ -20,6 +20,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"kraftkit.sh/log"
 )
 
 var (
@@ -318,7 +320,7 @@ func Main(ctx context.Context, cmd *cobra.Command) {
 	cmd.SetContext(ctx)
 
 	if _, err := executeC(cmd); err != nil {
-		fmt.Println(err)
+		log.G(ctx).Error(err)
 		os.Exit(1)
 	}
 }

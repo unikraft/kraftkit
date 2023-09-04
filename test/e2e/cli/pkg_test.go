@@ -75,7 +75,7 @@ var _ = Describe("kraft pkg", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stderr.String()).To(BeEmpty())
-					Expect(stdout).To(MatchRegexp(`^Retrieve new lists of Unikraft components, libraries and packages.\n`))
+					Expect(stdout.String()).To(MatchRegexp(`^Retrieve new lists of Unikraft components, libraries and packages.\n`))
 				})
 			})
 		})

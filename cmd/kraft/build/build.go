@@ -465,18 +465,22 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 			func(ctx context.Context, w func(progress float64)) error {
-				return opts.project.Build(
+				err := opts.project.Build(
 					ctx,
 					targ, // Target-specific options
 					app.WithBuildProgressFunc(w),
 					app.WithBuildMakeOptions(append(mopts,
 						make.WithExecOptions(
 							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
 						),
 					)...),
 					app.WithBuildLogFile(opts.SaveBuildLog),
 				)
+				if err != nil {
+					return fmt.Errorf("build failed: %w", err)
+				}
+				return nil
 			},
 		))
 	}
