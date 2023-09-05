@@ -30,7 +30,6 @@ import (
 	"kraftkit.sh/cmd/kraft/menu"
 	"kraftkit.sh/cmd/kraft/net"
 	"kraftkit.sh/cmd/kraft/pkg"
-	"kraftkit.sh/cmd/kraft/prepare"
 	"kraftkit.sh/cmd/kraft/properclean"
 	"kraftkit.sh/cmd/kraft/ps"
 	"kraftkit.sh/cmd/kraft/rm"
@@ -72,7 +71,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(clean.New())
 	cmd.AddCommand(fetch.New())
 	cmd.AddCommand(menu.New())
-	cmd.AddCommand(prepare.New())
 	cmd.AddCommand(properclean.New())
 	cmd.AddCommand(set.New())
 	cmd.AddCommand(unset.New())
