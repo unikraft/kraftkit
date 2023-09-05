@@ -38,7 +38,7 @@ type Build struct {
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFast       bool   `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`

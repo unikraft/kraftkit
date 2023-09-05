@@ -23,7 +23,7 @@ import (
 )
 
 type List struct {
-	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
 	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`

@@ -29,7 +29,7 @@ type Pull struct {
 	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
 	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
-	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Manager      string `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
