@@ -370,6 +370,13 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	if len(args) > 0 {
 		args = append(args, "--")
 	}
+
+	// We do not need to append the kernel path since it is already provided
+	// by default by QEMU. QEMU sets arg[0] to the absolute path of the kernel
+	// image. If people want to change this they need to modify this script
+	// 'qemu-binfmt-conf.sh' when installing QEMU.
+	// args = append(args, filepath.Base(machine.Status.KernelPath))
+
 	args = append(args, machine.Spec.ApplicationArgs...)
 	qopts = append(qopts, WithAppend(args...))
 
