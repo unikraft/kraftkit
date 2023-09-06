@@ -36,8 +36,9 @@ import (
 )
 
 const (
-	FirecrackerBin      = "firecracker"
-	DefaultClientTimout = time.Second * 5
+	FirecrackerBin         = "firecracker"
+	DefaultClientTimout    = time.Second * 5
+	FirecrackerMemoryScale = 1024 * 1024
 )
 
 // machineV1alpha1Service ...
@@ -103,7 +104,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
-		quantity, err := resource.ParseQuantity("64M")
+		quantity, err := resource.ParseQuantity("64Mi")
 		if err != nil {
 			machine.Status.State = machinev1alpha1.MachineStateFailed
 			return machine, err
@@ -278,7 +279,7 @@ watch:
 	// Set the machine's resource configuration.
 	if _, err := client.PutMachineConfiguration(ctx, &models.MachineConfiguration{
 		VcpuCount:  firecracker.Int64(machine.Spec.Resources.Requests.Cpu().Value()),
-		MemSizeMib: firecracker.Int64(machine.Spec.Resources.Requests.Memory().Value() / 1000000),
+		MemSizeMib: firecracker.Int64(machine.Spec.Resources.Requests.Memory().Value() / FirecrackerMemoryScale),
 	}); err != nil {
 		return machine, err
 	}

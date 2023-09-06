@@ -25,6 +25,7 @@ type QemuMemory struct {
 
 const (
 	QemuMemoryDefault = 64
+	QemuMemoryScale   = 1024 * 1024
 )
 
 func (qm QemuMemory) String() string {

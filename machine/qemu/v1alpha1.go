@@ -153,7 +153,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
-		quantity, err := resource.ParseQuantity("64M")
+		quantity, err := resource.ParseQuantity("64Mi")
 		if err != nil {
 			machine.Status.State = machinev1alpha1.MachineStateFailed
 			return machine, err
@@ -183,7 +183,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		WithVGA(QemuVGANone),
 		WithMemory(QemuMemory{
 			// The value returned from Memory() is in bytes
-			Size: uint64(machine.Spec.Resources.Requests.Memory().Value() / 1000000),
+			Size: uint64(machine.Spec.Resources.Requests.Memory().Value() / QemuMemoryScale),
 			Unit: QemuMemoryUnitMB,
 		}),
 		// Create a QMP connection solely for manipulating the machine
