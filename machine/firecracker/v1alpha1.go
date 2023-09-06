@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	zip "api.zip"
@@ -29,6 +28,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/logtail"
+	"kraftkit.sh/internal/run"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
@@ -287,7 +287,7 @@ watch:
 	if _, err := client.PutGuestBootSource(ctx, &models.BootSource{
 		KernelImagePath: &machine.Status.KernelPath,
 		InitrdPath:      machine.Status.InitrdPath,
-		BootArgs:        strings.Join(args, " "),
+		BootArgs:        run.BootArgsPrepare(args...),
 	}); err != nil {
 		return machine, err
 	}

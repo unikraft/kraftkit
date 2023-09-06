@@ -4,7 +4,7 @@
 // You may not use this file except in compliance with the License.
 package qemu
 
-import "strings"
+import "kraftkit.sh/internal/run"
 
 type QemuConfig struct {
 	// Command-line arguments for qemu-system-*
@@ -67,7 +67,7 @@ func WithAccel(accel QemuMachineAccelerator) QemuOption {
 
 func WithAppend(append ...string) QemuOption {
 	return func(qc *QemuConfig) error {
-		qc.Append = strings.Join(append, " ")
+		qc.Append = run.BootArgsPrepare(append...)
 		return nil
 	}
 }
