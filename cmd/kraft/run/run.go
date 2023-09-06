@@ -44,7 +44,7 @@ type Run struct {
 	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
 	Kraftfile     string   `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
-	Memory        string   `long:"memory" short:"M" usage:"Assign MB memory to the unikernel" default:"64M"`
+	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
@@ -77,6 +77,12 @@ func New() *cobra.Command {
 
 			Run a specific kernel binary:
 			$ kraft run --arch x86_64 --plat qemu path/to/kernel-x86_64-qemu
+
+			Run a specific kernel binary with 1000 megabytes of memory:
+			$ kraft run --arch x86_64 --plat qemu --memory 1G path/to/kernel-x86_64-qemu
+
+			Run a specific kernel binary with 1024 megabytes of memory:
+			$ kraft run --arch x86_64 --plat qemu --memory 1Gi path/to/kernel-x86_64-qemu
 
 			Run an OCI-compatible unikernel, mapping port 8080 on the host to port 80 in the unikernel:
 			$ kraft run -p 8080:80 unikraft.org/nginx:latest
