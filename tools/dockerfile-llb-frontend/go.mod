@@ -3,7 +3,6 @@ module kraftkit.sh/tools/dockerfile-llb-frontend
 go 1.20
 
 require (
-	github.com/containerd/containerd v1.7.2
 	github.com/moby/buildkit v0.12.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc4
@@ -35,6 +34,7 @@ require (
 	github.com/compose-spec/compose-go v1.17.0 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
+	github.com/containerd/containerd v1.7.2 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect
