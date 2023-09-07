@@ -9,7 +9,6 @@ import (
 	"debug/elf"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
@@ -172,7 +171,7 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *mac
 	machine.Spec.Architecture = loader.Architecture().Name()
 	machine.Spec.Platform = loader.Platform().Name()
 	machine.Spec.Kernel = fmt.Sprintf("elfloader://%s:%s", loader.Name(), loader.Version())
-	machine.Spec.ApplicationArgs = append([]string{filepath.Base(runner.exePath)}, runner.args...)
+	machine.Spec.ApplicationArgs = runner.args
 	machine.Status.InitrdPath = runner.exePath
 
 	// Use the symbolic debuggable kernel image?
