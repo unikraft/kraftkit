@@ -454,6 +454,8 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 	values.OverrideBy(app.KConfig())
 
 	if tc != nil {
+		values.OverrideBy(tc.Architecture().KConfig())
+		values.OverrideBy(tc.Platform().KConfig())
 		values.OverrideBy(tc.KConfig())
 	}
 
