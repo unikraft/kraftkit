@@ -77,30 +77,109 @@ inputs:
     default: false
 
 runs:
-  # Use a composite type so we can execute a bash script before the invocation
-  # of the container image.
+  # Use a composite type so we can set up BuildKit beforehand so that
+  # `Dockerfile`s can be built as root filesystems.  Next, run KraftKit's GitHub
+  # Action program via Docker which has been built as a container image so that
+  # all the necessary dependencies for building, packaging and excuting the
+  # unikernel are available.  Attach all known environmental variables and the
+  # declared input variables to this action.  Finally, include the Docker
+  # authentication config which may have been used prior via the
+  # `docker/login-action` action, mount the buildkit socket, and mount
+  # additional paths which are specific to the action including the workspace.
   using: composite
   steps:
-  - shell: bash
-    run: ${{ github.action_path }}/tools/github-action/pre.sh
-  - uses: docker://kraftkit.sh/github-action:v0
-    # This is a bit of a hack, since we are using a composite-type, the actions
-    # input are not passed when the container image is instantiated.  Instead,
-    # we simply pass all inputs as environmental variables which are already
-    # compatible with the action itself.
-    env:
-      INPUT_LOGLEVEL: ${{ inputs.loglevel }}
-      INPUT_WORKDIR: ${{ inputs.workdir }}
-      INPUT_KRAFTFILE: ${{ inputs.kraftfile }}
-      INPUT_ARCH: ${{ inputs.arch }}
-      INPUT_PLAT: ${{ inputs.plat }}
-      INPUT_TARGET: ${{ inputs.target }}
-      INPUT_EXECUTE: ${{ inputs.execute }}
-      INPUT_TIMEOUT: ${{ inputs.timeout }}
-      INPUT_ARGS: ${{ inputs.args }}
-      INPUT_INITRD: ${{ inputs.initrd }}
-      INPUT_MEMORY: ${{ inputs.memory }}
-      INPUT_NAME: ${{ inputs.name }}
-      INPUT_OUTPUT: ${{ inputs.output }}
-      INPUT_KCONFIG: ${{ inputs.kconfig }}
-      INPUT_PUSH: ${{ inputs.push }}
+  - name: Set up BuildKit
+    shell: bash
+    run: |
+      docker run \
+        --rm \
+        -itd \
+        --privileged \
+        --name buildkitd_${GITHUB_RUN_ID} \
+        -v /run/buildkit:/run/buildkit:rw \
+        moby/buildkit:v0.12.1
+  - name: Pull KraftKit GitHub Action
+    shell: bash
+    run: docker pull kraftkit.sh/github-action:v0
+  - name: Run kraft
+    shell: bash
+    run: |
+      docker run \
+        --workdir /github/workspace \
+        --rm \
+        -e "ACTIONS_CACHE_URL" \
+        -e "ACTIONS_RUNTIME_TOKEN" \
+        -e "ACTIONS_RUNTIME_URL" \
+        -e "CI=true" \
+        -e "GITHUB_ACTION_PATH" \
+        -e "GITHUB_ACTION_REF" \
+        -e "GITHUB_ACTION_REPOSITORY" \
+        -e "GITHUB_ACTION" \
+        -e "GITHUB_ACTIONS=true" \
+        -e "GITHUB_ACTOR_ID" \
+        -e "GITHUB_ACTOR" \
+        -e "GITHUB_API_URL" \
+        -e "GITHUB_BASE_REF" \
+        -e "GITHUB_ENV" \
+        -e "GITHUB_EVENT_NAME" \
+        -e "GITHUB_EVENT_PATH" \
+        -e "GITHUB_GRAPHQL_URL" \
+        -e "GITHUB_HEAD_REF" \
+        -e "GITHUB_JOB" \
+        -e "GITHUB_OUTPUT" \
+        -e "GITHUB_PATH" \
+        -e "GITHUB_REF_NAME" \
+        -e "GITHUB_REF_PROTECTED" \
+        -e "GITHUB_REF_TYPE" \
+        -e "GITHUB_REF" \
+        -e "GITHUB_REPOSITORY_ID" \
+        -e "GITHUB_REPOSITORY_OWNER_ID" \
+        -e "GITHUB_REPOSITORY_OWNER" \
+        -e "GITHUB_REPOSITORY" \
+        -e "GITHUB_RETENTION_DAYS" \
+        -e "GITHUB_RUN_ATTEMPT" \
+        -e "GITHUB_RUN_ID" \
+        -e "GITHUB_RUN_NUMBER" \
+        -e "GITHUB_SERVER_URL" \
+        -e "GITHUB_SHA" \
+        -e "GITHUB_STATE" \
+        -e "GITHUB_STEP_SUMMARY" \
+        -e "GITHUB_TRIGGERING_ACTOR" \
+        -e "GITHUB_WORKFLOW_REF" \
+        -e "GITHUB_WORKFLOW_SHA" \
+        -e "GITHUB_WORKFLOW" \
+        -e "GITHUB_WORKSPACE" \
+        -e "HOME" \
+        -e "INPUT_ARCH=${{ inputs.arch }}" \
+        -e "INPUT_ARGS=${{ inputs.args }}" \
+        -e "INPUT_EXECUTE=${{ inputs.execute }}" \
+        -e "INPUT_INITRD=${{ inputs.initrd }}" \
+        -e "INPUT_KCONFIG=${{ inputs.kconfig }}" \
+        -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
+        -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
+        -e "INPUT_MEMORY=${{ inputs.memory }}" \
+        -e "INPUT_NAME=${{ inputs.name }}" \
+        -e "INPUT_OUTPUT=${{ inputs.output }}" \
+        -e "INPUT_PLAT=${{ inputs.plat }}" \
+        -e "INPUT_PUSH=${{ inputs.push }}" \
+        -e "INPUT_TARGET=${{ inputs.target }}" \
+        -e "INPUT_TIMEOUT=${{ inputs.timeout }}" \
+        -e "INPUT_WORKDIR=${{ inputs.workdir }}" \
+        -e "RUNNER_ARCH" \
+        -e "RUNNER_ENVIRONMENT" \
+        -e "RUNNER_NAME" \
+        -e "RUNNER_OS" \
+        -e "RUNNER_TEMP" \
+        -e "RUNNER_TOOL_CACHE" \
+        -e "RUNNER_WORKSPACE" \
+        -v "${HOME}/.docker/config.json":"${HOME}/.docker/config.json" \
+        -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
+        -v "/home/runner/work/_temp/_github_home":"/github/home" \
+        -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" \
+        -v "/home/runner/work/_temp/_runner_file_commands":"/github/file_commands" \
+        -v "${GITHUB_WORKSPACE}":"/github/workspace" \
+        kraftkit.sh/github-action:v0
+  - name: Stop BuildKit
+    if: always()
+    shell: bash
+    run: docker stop buildkitd_${GITHUB_RUN_ID}
