@@ -474,7 +474,9 @@ func init() {
 
 	// CLI configuration
 	gob.Register(QemuConfig{})
+}
 
+func RegisterFlags() {
 	// Register additional command-line arguments
 	cmdfactory.RegisterFlag(
 		"kraft run",

@@ -82,13 +82,12 @@ func New() *cobra.Command {
 }
 
 func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	pm, err := packmanager.NewUmbrellaManager(ctx)
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+	cmd.SetContext(ctx)
 
 	if len(args) == 0 {
 		opts.workdir, err = os.Getwd()

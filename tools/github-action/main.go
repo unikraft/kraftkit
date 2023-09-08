@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -69,12 +70,12 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		log.G(ctx).SetLevel(logrus.TraceLevel)
 	}
 
-	pm, err := packmanager.NewUmbrellaManager(ctx)
+	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+	cmd.SetContext(ctx)
 
 	if len(opts.Workdir) == 0 {
 		opts.Workdir, err = os.Getwd()
@@ -230,6 +231,11 @@ func main() {
 
 	// Set up the logger in the context if it is available
 	ctx = log.WithLogger(ctx, logger)
+
+	if err := bootstrap.InitKraftkit(ctx); err != nil {
+		log.G(ctx).Errorf("could not init kraftkit: %v", err)
+		os.Exit(1)
+	}
 
 	cmdfactory.Main(ctx, cmd)
 }

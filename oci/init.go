@@ -8,14 +8,14 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-// FIXME(antoineco): avoid init, initialize things where needed
-func init() {
-	// Register a new pkg.Package type
-	_ = packmanager.RegisterPackageManager(
-		OCIFormat,
-		NewOCIManager,
-		WithDefaultAuth(),
-		WithDefaultRegistries(),
-		WithDetectHandler(),
-	)
+func RegisterPackageManager() func(u *packmanager.UmbrellaManager) error {
+	return func(u *packmanager.UmbrellaManager) error {
+		return u.RegisterPackageManager(
+			OCIFormat,
+			NewOCIManager,
+			WithDefaultAuth(),
+			WithDefaultRegistries(),
+			WithDetectHandler(),
+		)
+	}
 }

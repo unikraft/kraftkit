@@ -56,13 +56,12 @@ func New() *cobra.Command {
 }
 
 func (opts *Push) Pre(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-	pm, err := packmanager.NewUmbrellaManager(ctx)
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+	cmd.SetContext(ctx)
 
 	return nil
 }
@@ -111,7 +110,11 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 
 	var pmananger packmanager.PackageManager
 	if opts.Format != "auto" {
-		pmananger = packmanager.PackageManagers()[pack.PackageFormat(opts.Format)]
+		umbrella, err := packmanager.PackageManagers()
+		if err != nil {
+			return err
+		}
+		pmananger = umbrella[pack.PackageFormat(opts.Format)]
 		if pmananger == nil {
 			return errors.New("invalid package format specified")
 		}

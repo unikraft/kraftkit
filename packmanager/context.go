@@ -16,7 +16,7 @@ var (
 	G = FromContext
 
 	// PM is the system-access umbrella package manager.
-	PM = umbrella{}
+	PM = UmbrellaManager{}
 )
 
 // contextKey is used to retrieve the package manager from the context.

@@ -193,16 +193,19 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
 		// Set use of the global package manager.
-		pm, err := packmanager.NewUmbrellaManager(ctx)
+		ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+		cmd.SetContext(ctx)
 	}
 
 	if opts.RunAs != "" {
-		runners := runnersByName()
+		runners, err := runnersByName()
+		if err != nil {
+			return err
+		}
 		if _, ok = runners[opts.RunAs]; !ok {
 			choices := make([]string, len(runners))
 			i := 0
@@ -235,7 +238,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 
 	var run runner
 	var errs []error
-	runners := runners()
+	runners, err := runners()
+	if err != nil {
+		return err
+	}
 
 	// Iterate through the list of built-in runners which sequentially tests and
 	// first test whether the --as flag has been set to force a specific runner or
