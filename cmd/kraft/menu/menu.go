@@ -34,6 +34,7 @@ import (
 
 type Menu struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	Frontend     string `long:"frontend" short:"f" usage:"Alternative frontend to use for the configuration editor" default:"menuconfig"`
 	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" usage:"Do not use the cache when pulling dependencies"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
@@ -440,7 +441,7 @@ func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
 	return opts.project.Make(
 		ctx,
 		selected[0],
-		make.WithTarget("menuconfig"),
+		make.WithTarget(opts.Frontend),
 		make.WithExecOptions(
 			exec.WithStdout(iostreams.G(ctx).Out),
 			exec.WithStdin(iostreams.G(ctx).In),
