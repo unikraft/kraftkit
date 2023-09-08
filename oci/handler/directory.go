@@ -249,6 +249,11 @@ func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc
 }
 
 func (handle *DirectoryHandler) resolveIndex(_ context.Context, fullref string) (ocispec.Index, error) {
+	// Check whether the reference is a digest
+	if !strings.ContainsRune(fullref, '/') {
+		return ocispec.Index{}, fmt.Errorf("invalid reference: %s", fullref)
+	}
+
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
 		return ocispec.Index{}, err
@@ -298,12 +303,55 @@ func (handle *DirectoryHandler) resolveIndex(_ context.Context, fullref string) 
 // the reference is the manifest sha256 digest.
 // ResolveImage implements ImageResolver.
 func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref, platform string) (imgspec ocispec.Image, err error) {
-	manifestPath := filepath.Join(
-		handle.path,
-		DirectoryHandlerManifestsDir,
-		"sha256",
-		fullref,
-	)
+	var manifestPath string
+
+	idx, err := handle.resolveIndex(ctx, fullref)
+	if err == nil {
+		var manifestDesc ocispec.Descriptor
+
+		arch := strings.Split(platform, "/")[1]
+		plat := strings.Split(platform, "/")[0]
+
+		if arch == "" || plat == "" {
+			return ocispec.Image{}, fmt.Errorf("incomplete platform: %s", platform)
+		}
+
+		for _, descriptor := range idx.Manifests {
+			if descriptor.Platform.OS == plat && descriptor.Platform.Architecture == arch {
+				manifestDesc = descriptor
+				break
+			}
+		}
+
+		if manifestDesc.Digest == "" {
+			return ocispec.Image{}, fmt.Errorf("no manifest found for %s/%s", strings.Split(platform, "/")[0], strings.Split(platform, "/")[1])
+		}
+
+		// Split the digest into algorithm and hex
+		manifestHash := v1.Hash{
+			Algorithm: manifestDesc.Digest.Algorithm().String(),
+			Hex:       manifestDesc.Digest.Encoded(),
+		}
+
+		manifestPath = filepath.Join(
+			handle.path,
+			DirectoryHandlerManifestsDir,
+			manifestHash.Algorithm,
+			manifestHash.Hex,
+		)
+	} else {
+		// Check whether the reference is a digest
+		if strings.ContainsRune(fullref, '/') {
+			return ocispec.Image{}, fmt.Errorf("invalid reference: %s", fullref)
+		}
+
+		manifestPath = filepath.Join(
+			handle.path,
+			DirectoryHandlerManifestsDir,
+			"sha256",
+			fullref,
+		)
+	}
 
 	// Check whether the manifest exists
 	if _, err := os.Stat(manifestPath); err != nil {
