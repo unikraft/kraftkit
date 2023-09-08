@@ -218,6 +218,45 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 	}
 
+	if popts.Volumes() != nil {
+		for vidx, volume := range popts.Volumes() {
+			var layerOptionList []LayerOption
+
+			volumePathId := fmt.Sprintf("%s-%d", WellKnownVolumePath, vidx)
+			volumeAnnotationPathId := fmt.Sprintf(AnnotationKernelVolumePath, vidx)
+			volumeAnnotationMountId := fmt.Sprintf(AnnotationKernelVolumeMount, vidx)
+
+			parse := strings.Split(volume, ":")
+			switch len(parse) {
+			case 2:
+				layerOptionList = append(layerOptionList,
+					WithLayerAnnotation(volumeAnnotationPathId, volumePathId),
+					WithLayerAnnotation(volumeAnnotationMountId, parse[1]),
+				)
+			case 1:
+				layerOptionList = append(layerOptionList,
+					WithLayerAnnotation(volumeAnnotationPathId, volumePathId),
+				)
+			default:
+				return nil, fmt.Errorf("invalid volume format: %s", volume)
+			}
+
+			layer, err := NewLayerFromDirectory(ctx,
+				ocispec.MediaTypeImageLayer,
+				parse[0],
+				volumePathId,
+				layerOptionList...,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, err := image.AddLayer(ctx, layer); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// TODO(nderjung): See below.
 
 	// if popts.PackKernelLibraryObjects() {

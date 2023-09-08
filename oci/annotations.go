@@ -17,6 +17,8 @@ const (
 	AnnotationKernelKConfig        = "org.unikraft.kernel.kconfig."
 	AnnotationKernelArch           = "org.unikraft.kernel.arch"
 	AnnotationKernelPlat           = "org.unikraft.kernel.plat"
+	AnnotationKernelVolumePath     = "org.unikraft.kernel.volume-%d.path"
+	AnnotationKernelVolumeMount    = "org.unikraft.kernel.volume-%d.mount"
 	AnnotationFilesystemPath       = "org.unikraft.filesystem"
 	AnnotationDiskIndexPathPattern = "org.unikraft.disk-%d"
 	AnnotationKraftKitVersion      = "sh.kraftkit.version"
