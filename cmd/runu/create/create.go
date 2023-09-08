@@ -93,6 +93,11 @@ const (
 // figure this out.
 const plat = mplatform.PlatformQEMU
 
+const (
+	specAnnotCRIContainerType = "io.kubernetes.cri.container-type"
+	specAnnotUnikernel        = "org.unikraft.kernel"
+)
+
 func (opts *Create) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
@@ -136,11 +141,33 @@ func (opts *Create) Run(cmd *cobra.Command, args []string) (retErr error) {
 
 	cID := args[0]
 
-	cArgs, err := genMachineArgs(ctx, cID, rootDir, spec.Root.Path)
-	if err != nil {
-		return fmt.Errorf("generating machine args: %w", err)
+	if isCRISandbox(spec) {
+		// NOTE(antoineco): alternatively we could start the sandbox container
+		// using (upstream) libcontainer, providing that we are willing to import
+		// it as a dependency additionally to libmocktainer.
+		if len(spec.Process.Args) == 0 {
+			return fmt.Errorf("sandbox container has no process arg")
+		}
+		cArgPath, err := securejoin.SecureJoin(spec.Root.Path, spec.Process.Args[0])
+		if err != nil {
+			return fmt.Errorf("joining path components: %w", err)
+		}
+		if cArgPath, err = filepath.Abs(cArgPath); err != nil {
+			return err
+		}
+		spec.Process.Args[0] = cArgPath
+	} else {
+		cArgs, err := genMachineArgs(ctx, cID, rootDir, spec.Root.Path)
+		if err != nil {
+			return fmt.Errorf("generating machine args: %w", err)
+		}
+		spec.Process.Args = cArgs
+
+		if spec.Annotations == nil {
+			spec.Annotations = make(map[string]string, 1)
+		}
+		spec.Annotations[specAnnotUnikernel] = ""
 	}
-	spec.Process.Args = cArgs
 
 	c, err := createContainer(cID, rootDir, spec)
 	if err != nil {
@@ -170,6 +197,12 @@ func loadSpec() (*rtspec.Spec, error) {
 	}
 
 	return spec, nil
+}
+
+// isCRISandbox returns whether the current container is a CRI sandbox
+// (Kubernetes "pause" container).
+func isCRISandbox(spec *rtspec.Spec) bool {
+	return spec.Annotations[specAnnotCRIContainerType] == "sandbox"
 }
 
 // genMachineArgs returns the command-line arguments for starting a unikernel machine.

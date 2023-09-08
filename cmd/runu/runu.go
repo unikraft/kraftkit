@@ -23,6 +23,7 @@ import (
 	"kraftkit.sh/cmd/runu/create"
 	"kraftkit.sh/cmd/runu/delete"
 	"kraftkit.sh/cmd/runu/kill"
+	"kraftkit.sh/cmd/runu/ps"
 	"kraftkit.sh/cmd/runu/start"
 	"kraftkit.sh/cmd/runu/state"
 )
@@ -55,6 +56,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(start.New())
 	cmd.AddCommand(kill.New())
 	cmd.AddCommand(delete.New())
+	cmd.AddCommand(ps.New())
 
 	return cmd
 }

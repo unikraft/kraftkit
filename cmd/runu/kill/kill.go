@@ -5,6 +5,7 @@
 package kill
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,7 +23,12 @@ const (
 )
 
 // Kill implements the OCI "kill" command.
-type Kill struct{}
+type Kill struct {
+	// This flag is being deprecated (opencontainers/runc#3864) but needs to be
+	// retained for backwards compatibility with containerd's CRI implementation
+	// (Kubernetes).
+	All bool `long:"all" short:"a" usage:"send the specified signal to all processes"`
+}
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Kill{}, cobra.Command{
@@ -69,7 +75,11 @@ func (opts *Kill) Run(cmd *cobra.Command, args []string) (retErr error) {
 		return fmt.Errorf("loading container from saved state: %w", err)
 	}
 
-	if err = c.Signal(sig); err != nil {
+	err = c.Signal(sig)
+	switch {
+	case errors.Is(err, libcontainer.ErrNotRunning) && opts.All:
+		// no op
+	case err != nil:
 		return fmt.Errorf("signaling machine process: %w", err)
 	}
 

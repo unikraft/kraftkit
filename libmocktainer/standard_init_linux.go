@@ -152,14 +152,24 @@ func (l *linuxStandardInit) Init() error {
 
 	// -- BEGIN Unikraft
 
-	// This must happen in the Start phase of the OCI startup flow, right before
-	// exec(), because the setup of the container's network interfaces typically
-	// happens between the Create and the Start phases (e.g. CNI).
-	qemuNetArgs, err := unikraft.SetupQemuNet()
-	if err != nil {
-		return fmt.Errorf("setting up qemu network: %w", err)
+	var isUnikernel bool
+	for _, lbl := range l.config.Config.Labels {
+		if lbl == "org.unikraft.kernel=" { // injected by `runu create`
+			isUnikernel = true
+			break
+		}
 	}
-	l.config.Args = append(l.config.Args, qemuNetArgs...)
+
+	if isUnikernel {
+		// This must happen in the Start phase of the OCI startup flow, right
+		// before exec(), because the setup of the container's network interfaces
+		// typically happens between the Create and the Start phases (e.g. CNI).
+		qemuNetArgs, err := unikraft.SetupQemuNet()
+		if err != nil {
+			return fmt.Errorf("setting up qemu network: %w", err)
+		}
+		l.config.Args = append(l.config.Args, qemuNetArgs...)
+	}
 
 	// -- END Unikraft
 
