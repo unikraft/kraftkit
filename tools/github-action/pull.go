@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -20,6 +21,19 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 	if err := packmanager.G(ctx).Update(ctx); err != nil {
 		return fmt.Errorf("could not update package index: %w", err)
 	}
+
+	// FIXME: This is a temporary workaround for incorporating multiple processes in
+	// a command. After calling processtree the original output writer is lost
+	// so writing will no longer work. To fix this we temporarily save it
+	// beforehand.
+
+	// A proper fix would ensure in the tui package that this writer is
+	// preserved. Thankfully, this is the only place where it manifests right
+	// now.
+	oldOut := iostreams.G(ctx).Out
+	defer func() {
+		iostreams.G(ctx).Out = oldOut
+	}()
 
 	components, err := opts.project.Components(ctx)
 	if err != nil {

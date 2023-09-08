@@ -116,6 +116,19 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	auths := config.G[config.KraftKit](ctx).Auth
 
+	// FIXME: This is a temporary workaround for incorporating multiple processes in
+	// a command. After calling processtree the original output writer is lost
+	// so writing will no longer work. To fix this we temporarily save it
+	// beforehand.
+
+	// A proper fix would ensure in the tui package that this writer is
+	// preserved. Thankfully, this is the only place where it manifests right
+	// now.
+	oldOut := iostreams.G(ctx).Out
+	defer func() {
+		iostreams.G(ctx).Out = oldOut
+	}()
+
 	if _, err := opts.project.Components(ctx); err != nil && opts.project.Template().Name() != "" {
 		var packages []pack.Package
 		search := processtree.NewProcessTreeItem(
