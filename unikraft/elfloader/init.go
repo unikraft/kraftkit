@@ -8,7 +8,7 @@ import "kraftkit.sh/cmdfactory"
 
 var defaultPrebuilt string
 
-func init() {
+func RegisterFlags() {
 	// Register additional command-line arguments
 	cmdfactory.RegisterFlag(
 		"kraft run",

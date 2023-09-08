@@ -76,13 +76,12 @@ func New() *cobra.Command {
 }
 
 func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-	pm, err := packmanager.NewUmbrellaManager(ctx)
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(packmanager.WithPackageManager(ctx, pm))
+	cmd.SetContext(ctx)
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
