@@ -24,7 +24,7 @@ import (
 
 type Push struct {
 	Format    string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
-	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
 func New() *cobra.Command {

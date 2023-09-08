@@ -46,7 +46,7 @@ import (
 
 type Clean struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
-	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }

@@ -45,7 +45,7 @@ import (
 )
 
 type Set struct {
-	Kraftfile string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 

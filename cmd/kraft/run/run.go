@@ -42,7 +42,7 @@ type Run struct {
 	InitRd        string   `long:"initrd" usage:"Use the specified initrd"`
 	IP            string   `long:"ip" usage:"Assign the provided IP address"`
 	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
-	Kraftfile     string   `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile     string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`

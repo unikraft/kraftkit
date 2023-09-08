@@ -34,7 +34,7 @@ import (
 
 type Fetch struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
-	Kraftfile    string `long:"kraftfile" usage:"Set an alternative path of the Kraftfile"`
+	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" usage:"Do not use the cache when pulling dependencies"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoPull       bool   `long:"no-pull" usage:"Do not pull the dependencies of the project"`
