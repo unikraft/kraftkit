@@ -9,43 +9,48 @@ import (
 	"strings"
 )
 
-type EnumFlag struct {
-	Allowed []string
-	Value   string
+type EnumFlag[T fmt.Stringer] struct {
+	Allowed []T
+	Value   T
 }
 
 // NewEnumFlag give a list of allowed flag parameters, where the second argument
 // is the default
-func NewEnumFlag(allowed []string, d string) *EnumFlag {
-	return &EnumFlag{
+func NewEnumFlag[T fmt.Stringer](allowed []T, d T) *EnumFlag[T] {
+	return &EnumFlag[T]{
 		Allowed: allowed,
 		Value:   d,
 	}
 }
 
-func (a *EnumFlag) String() string {
-	return a.Value
+func (a *EnumFlag[T]) String() string {
+	return a.Value.String()
 }
 
-func (a *EnumFlag) Set(p string) error {
-	isIncluded := func(opts []string, val string) bool {
+func (a *EnumFlag[T]) Set(p string) error {
+	isIncluded := func(opts []T, val string) (bool, *T) {
 		for _, opt := range opts {
-			if val == opt {
-				return true
+			if val == opt.String() {
+				return true, &opt
 			}
 		}
 
-		return false
+		return false, nil
 	}
 
-	if !isIncluded(a.Allowed, p) {
-		return fmt.Errorf("%s is not included in: %s", p, strings.Join(a.Allowed, ", "))
+	ok, t := isIncluded(a.Allowed, p)
+	if !ok {
+		allowed := make([]string, len(a.Allowed))
+		for i := range a.Allowed {
+			allowed[i] = a.Allowed[i].String()
+		}
+		return fmt.Errorf("%s is not included in: %s", p, strings.Join(allowed, ", "))
 	}
 
-	a.Value = p
+	a.Value = *t
 	return nil
 }
 
-func (a *EnumFlag) Type() string {
+func (a *EnumFlag[T]) Type() string {
 	return "string"
 }

@@ -120,7 +120,10 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		cmdfactory.NewEnumFlag[mplatform.Platform](
+			mplatform.Platforms(),
+			mplatform.Platform("auto"),
+		),
 		"plat",
 		"Set the platform virtual machine monitor driver.",
 	)

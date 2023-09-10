@@ -10,7 +10,6 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -48,7 +47,10 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("all").ToSlice(), "all"),
+		cmdfactory.NewEnumFlag[mplatform.Platform](
+			mplatform.Platforms(),
+			mplatform.Platform("all"),
+		),
 		"plat",
 		"p",
 		"Set the platform virtual machine monitor driver.",
@@ -59,9 +61,6 @@ func New() *cobra.Command {
 
 func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
-
-	opts.platform = mplatform.PlatformByName(opts.platform).String()
-
 	return nil
 }
 
