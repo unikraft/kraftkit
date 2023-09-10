@@ -77,31 +77,15 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		command: popts.Args(),
 	}
 
-	if popts.Output() != "" {
-		ocipack.ref, err = name.ParseReference(popts.Output(),
-			name.WithDefaultRegistry(DefaultRegistry),
-		)
-	} else {
-		// It's possible to pass an OCI artifact reference in the Kraftfile, e.g.:
-		//
-		// ```yaml
-		// [...]
-		// targets:
-		//   - name: unikraft.io/library/helloworld:latest
-		//     arch: x86_64
-		//     plat: kvm
-		// ```
-		n := targ.Name()
-		if popts.Name() != "" {
-			n = popts.Name()
-		}
-		ocipack.ref, err = name.ParseReference(
-			n,
-			name.WithDefaultRegistry(DefaultRegistry),
-		)
+	if popts.Name() == "" {
+		return nil, fmt.Errorf("cannot create package without name")
 	}
+	ocipack.ref, err = name.ParseReference(
+		popts.Name(),
+		name.WithDefaultRegistry(""),
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse image reference: %w", err)
 	}
 
 	auths, err := defaultAuths(ctx)

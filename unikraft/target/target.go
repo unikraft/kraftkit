@@ -11,7 +11,6 @@ import (
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/component"
@@ -26,9 +25,6 @@ type Target interface {
 
 	// Platform is the component platform for this target.
 	Platform() plat.Platform
-
-	// Format is the desired package implementation for this target.
-	Format() pack.PackageFormat
 
 	// Kernel is the path to the kernel for this target.
 	Kernel() string
@@ -60,9 +56,6 @@ type TargetConfig struct {
 
 	// kconfig list of kconfig key-values specific to this library.
 	kconfig kconfig.KeyValueMap
-
-	// format is the desired packaging format.
-	format pack.PackageFormat
 
 	// kernel is the path to the kernel for this target.
 	kernel string
@@ -120,10 +113,6 @@ func (tc *TargetConfig) KernelDbg() string {
 
 func (tc *TargetConfig) Initrd() *initrd.InitrdConfig {
 	return tc.initrd
-}
-
-func (tc *TargetConfig) Format() pack.PackageFormat {
-	return tc.format
 }
 
 func (tc *TargetConfig) Type() unikraft.ComponentType {

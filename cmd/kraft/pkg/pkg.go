@@ -38,7 +38,7 @@ type Pkg struct {
 	Args         string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Dbg          bool   `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
 	Force        bool   `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
-	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
 	Initrd       string `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
 	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -47,6 +47,8 @@ type Pkg struct {
 	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
+
+	format pack.PackageFormat
 }
 
 func New() *cobra.Command {
@@ -101,6 +103,24 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
+	umbrella, err := packmanager.PackageManagers()
+	if err != nil {
+		return fmt.Errorf("could not get umbrella package manager: %w", err)
+	}
+
+	found := false
+	formats := []string{}
+	for _, pm := range umbrella {
+		formats = append(formats, pm.Format().String())
+		if pm.Format().String() == opts.Format {
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("unknown packaging format '%s' from choice of %v", opts.Format, formats)
+	}
+
 	return nil
 }
 
@@ -118,6 +138,13 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
+	pm := packmanager.G(ctx)
+
+	// Switch the package manager the desired format for this target
+	pm, err = pm.From(opts.format)
+	if err != nil {
+		return err
+	}
 
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
@@ -172,16 +199,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				targ.Architecture().Name() == opts.Architecture &&
 				targ.Platform().Name() == opts.Platform:
 
-			var format pack.PackageFormat
-			name := "packaging " + targ.Name()
-			if opts.Format != "auto" {
-				format = pack.PackageFormat(opts.Format)
-			} else if targ.Format().String() != "" {
-				format = targ.Format()
-			}
-			if format.String() != "auto" {
-				name += " (" + format.String() + ")"
-			}
+			name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
 			cmdShellArgs, err := shellwords.Parse(opts.Args)
 			if err != nil {
@@ -192,17 +210,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				name,
 				targ.Architecture().Name()+"/"+targ.Platform().Name(),
 				func(ctx context.Context) error {
-					var err error
-					pm := packmanager.G(ctx)
-
-					// Switch the package manager the desired format for this target
-					if format != "auto" {
-						pm, err = pm.From(format)
-						if err != nil {
-							return err
-						}
-					}
-
 					popts := []packmanager.PackOption{
 						packmanager.PackArgs(cmdShellArgs...),
 						packmanager.PackInitrd(opts.Initrd),
