@@ -88,8 +88,9 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	authConfig := config.AuthConfig{
-		Token:    opts.Token,
-		Endpoint: host,
+		Token:     opts.Token,
+		Endpoint:  host,
+		VerifySSL: true,
 	}
 
 	if opts.User != "" {
