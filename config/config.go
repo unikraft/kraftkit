@@ -11,7 +11,7 @@ type AuthConfig struct {
 	User      string `yaml:"user" env:"KRAFTKIT_AUTH_%s_USER" long:"auth-%s-user"`
 	Token     string `yaml:"token" env:"KRAFTKIT_AUTH_%s_TOKEN" long:"auth-%s-token"`
 	Endpoint  string `yaml:"endpoint" env:"KRAFTKIT_AUTH_%s_ENDPOINT" long:"auth-%s-endpoint"`
-	VerifySSL bool   `yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" long:"auth-%s-verify-ssl"`
+	VerifySSL bool   `yaml:"verify_ssl" env:"KRAFTKIT_AUTH_%s_VERIFY_SSL" long:"auth-%s-verify-ssl" default:"true"`
 }
 
 type KraftKit struct {
