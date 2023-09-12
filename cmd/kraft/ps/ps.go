@@ -29,6 +29,10 @@ type Ps struct {
 	Output       string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
+const (
+	MemoryMiB = 1024 * 1024
+)
+
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
 		Short: "List running unikernels",
@@ -123,7 +127,7 @@ func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
 			args:    strings.Join(machine.Spec.ApplicationArgs, " "),
 			kernel:  machine.Spec.Kernel,
 			status:  machine.Status.State,
-			mem:     fmt.Sprintf("%dM", machine.Spec.Resources.Requests.Memory().Value()/1000000),
+			mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
 			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
 			ports:   machine.Spec.Ports.String(),
 			arch:    machine.Spec.Architecture,
