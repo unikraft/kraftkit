@@ -28,8 +28,11 @@ jobs:
       - name: Generate GoReleaser configuration
         run: |
           ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
+
       - name: Run GoReleaser
         run: |
+          GORELEASER_PREVIOUS_TAG=$(curl -s "https://get.kraftkit.sh/latest.txt")
+          export GORELEASER_PREVIOUS_TAG
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
           goreleaser build \
             --config goreleaser-stable.yaml \
