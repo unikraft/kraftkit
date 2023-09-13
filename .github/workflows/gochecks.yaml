@@ -47,6 +47,7 @@ jobs:
             ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Check that go.mod is tidy
+        if: startsWith(github.ref_name, 'dependabot/') == false
         uses: protocol/multiple-go-modules@v1.4
         with:
           run: |
