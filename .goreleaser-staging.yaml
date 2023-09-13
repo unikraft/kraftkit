@@ -1,6 +1,28 @@
 #! .goreleaser.yaml
 changelog:
+  sort: asc
   use: github
+  filters:
+    exclude:
+      - '^.*#[[:digit:]]+.*$'
+  groups:
+    - title: ⚠️ Breaking Changes
+      regexp: '^[[:xdigit:]]{7}: [[:lower:]]+(\(.*\))?!:.*$'
+      order: 1
+    - title: 🚀 New Features
+      regexp: '^[[:xdigit:]]{7}: feat(\(.*\))?:.*$'
+      order: 2
+    - title: 🐛 Bug Fixes
+      regexp: '^[[:xdigit:]]{7}: fix(\(.*\))?:.*$'
+      order: 3
+    - title: 📖 Docs
+      regexp: '^[[:xdigit:]]{7}: docs(\(.*\))?:.*$'
+      order: 4
+    - title: 🤖 Bumps
+      regexp: '^[[:xdigit:]]{7}: (gomod|build)\(deps\):.*$'
+      order: 5
+    - title: 🐒 Miscellaneous
+      order: 999
 
 release:
   github:
