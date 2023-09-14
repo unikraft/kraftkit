@@ -25,6 +25,7 @@ import (
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/target"
 )
@@ -123,7 +124,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 	qversion := query.Version()
-
+	types := query.Types()
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format
 	ref, refErr := name.ParseReference(qname,
@@ -223,6 +224,18 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	for _, manifest := range manifests {
+		if len(types) > 0 {
+			found := false
+			for _, t := range types {
+				if unikraft.ComponentTypeApp == t {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
 		// Check if the OCI image has a known annotation which identifies if a
 		// unikernel is contained within
 		if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
