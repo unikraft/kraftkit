@@ -31,6 +31,7 @@ RUN set -xe; \
       gcc-12-aarch64-linux-gnu \
       gcc-12-arm-linux-gnueabihf \
       git \
+      libarchive-tools \
       libncursesw5 \
       libncursesw5-dev \
       make \
