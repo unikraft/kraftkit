@@ -63,7 +63,7 @@ publishers:
     ids:
       - nfpm-default
     dir: "{{ dir .ArtifactPath }}"
-    cmd: curl -s -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_USER }}/
+    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_USER }}/
 aurs:
   - homepage: https://kraftkit.sh
     description: Build and use highly customized and ultra-lightweight unikernels
