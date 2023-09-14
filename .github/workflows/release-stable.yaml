@@ -24,6 +24,13 @@ jobs:
           git config --global --add safe.directory /__w/kraftkit/kraftkit
           git fetch --force --tags
 
+      - name: Install release tools
+        run: |
+          echo "deb [trusted=yes] https://apt.fury.io/cli/ * *" > /etc/apt/sources.list.d/fury-cli.list
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            fury-cli
+
       - name: Generate GoReleaser configuration
         run: |
           ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
@@ -45,6 +52,13 @@ jobs:
             --config goreleaser-stable.yaml \
             --clean \
             --skip-validate
+          fury push "$(ls ./dist/kraftkit_*_linux_amd64.deb)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          fury push "$(ls ./dist/kraftkit_*_linux_arm64.deb)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          fury push "$(ls ./dist/kraftkit_*_linux_amd64.rpm)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          fury push "$(ls ./dist/kraftkit_*_linux_arm64.rpm)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          # Enable this back when the archive format is no longer malformed
+          # fury push "$(ls ./dist/kraftkit_*_linux_amd64.apk)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
+          # fury push "$(ls ./dist/kraftkit_*_linux_arm64.apk)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}

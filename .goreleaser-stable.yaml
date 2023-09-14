@@ -77,12 +77,6 @@ nfpms:
     contents:
       - src: scripts/kraftld
         dst: /usr/local/bin/kraftld
-publishers:
-  - name: fury.io
-    ids:
-      - nfpm-default
-    dir: "{{ dir .ArtifactPath }}"
-    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_USER }}/
 aurs:
   - homepage: https://kraftkit.sh
     ids:
