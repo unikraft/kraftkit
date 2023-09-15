@@ -14,7 +14,8 @@ VENDORDIR   ?= $(WORKDIR)/third_party
 REGISTRY    ?= kraftkit.sh
 ORG         ?= unikraft
 REPO        ?= kraftkit
-BIN         ?= kraft
+BIN         ?= kraft \
+               runu
 TOOLS       ?= github-action \
                go-generate-qemu-devices \
                protoc-gen-go-netconn \
@@ -213,3 +214,4 @@ buildenv-qemu: ## OCI image containing a Unikraft-centric build of QEMU.
 buildenv-github-action: ## OCI image used when building Unikraft unikernels in GitHub Actions.
 tools: ## Build all tools.
 kraft: ## The kraft binary.
+runu: ## The runu binary.

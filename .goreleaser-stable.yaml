@@ -119,3 +119,20 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
 #@ end
 #@ end
+#@ targets = {
+#@   "linux-amd64": {"os": "linux", "arch": "amd64"},
+#@   "linux-arm64": {"os": "linux", "arch": "arm64"}
+#@ }
+#@ for binary in ["runu"]:
+#@ for target, specs in targets.items():
+  - id: #@ "{}-{}".format(binary, target)
+    binary: #@ binary
+    main: #@ "./cmd/{}".format(binary)
+    goos:
+      - #@ specs["os"]
+    goarch:
+      - #@ specs["arch"]
+    ldflags:
+      - -s -w
+#@ end
+#@ end
