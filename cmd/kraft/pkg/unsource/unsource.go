@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 )
 
@@ -66,10 +67,18 @@ func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
 
 		manifests := []string{}
 
+		var manifestRemoved bool
 		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 			if source != manifest {
 				manifests = append(manifests, manifest)
+			} else {
+				manifestRemoved = true
 			}
+		}
+
+		if !manifestRemoved {
+			log.G(ctx).Warnf("manifest not found: %s", source)
+			return nil
 		}
 
 		config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
