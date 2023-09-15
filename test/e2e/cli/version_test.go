@@ -28,7 +28,7 @@ var _ = Describe("kraft version", func() {
 		cfg = fcfg.NewTempConfig()
 
 		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
-		cmd.Args = append(cmd.Args, "version")
+		cmd.Args = append(cmd.Args, "version", "--log-level", "info", "--log-type", "json")
 	})
 
 	When("invoked without flags or positional arguments", func() {
@@ -67,7 +67,7 @@ var _ = Describe("kraft version", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(
-				`^(level=error msg="unknown command "some-arg" for "kraft version"")|(unknown command "some-arg" for "kraft version")\n$`,
+				`^{"level":"error","msg":"unknown command \\"some-arg\\" for \\"kraft version\\""}\n$`,
 			))
 		})
 	})
