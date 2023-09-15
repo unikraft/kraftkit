@@ -28,7 +28,7 @@ var _ = Describe("kraft version", func() {
 		cfg = fcfg.NewTempConfig()
 
 		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
-		cmd.Args = append(cmd.Args, "version", "--no-check-updates", "--log-level", "info", "--log-type", "json")
+		cmd.Args = append(cmd.Args, "version", "--log-level", "info", "--log-type", "json")
 	})
 
 	When("invoked without flags or positional arguments", func() {

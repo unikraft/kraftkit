@@ -38,7 +38,7 @@ var _ = Describe("kraft pkg", func() {
 		var manifestsPath string
 
 		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "update")
+			cmd.Args = append(cmd.Args, "update", "--log-level", "info", "--log-type", "json")
 
 			manifestsPath = yaml.GetValue(cfg.Read("paths", "manifests"))
 			Expect(manifestsPath).To(SatisfyAny(
@@ -54,11 +54,7 @@ var _ = Describe("kraft pkg", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stderr.String()).To(BeEmpty())
-					// The command sends ANSI escape sequences while updating, such as `\e[2K` (erase entire line).
-					// References:
-					//   https://www.regular-expressions.info/nonprint.html
-					//   https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
-					Expect(stdout.String()).To(MatchRegexp(`\x1b\[2K\[\+\] Updating\.\.\. \[\d+\.\d+s\]\r\n`), "Quoted output: %q", stdout)
+					Expect(stdout.String()).To(MatchRegexp(`^{"level":"info","msg":"Updating..."}\n$`))
 
 					Expect(manifestsPath).To(ContainFiles("index.yaml", "unikraft.yaml"))
 					Expect(manifestsPath).To(ContainDirectories("libs"))
