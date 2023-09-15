@@ -420,7 +420,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start the machine
-	machine, err = opts.machineController.Start(ctx, machine)
+	_, err = opts.machineController.Start(ctx, machine)
 	if err != nil {
 		signals.RequestShutdown()
 		return err
@@ -461,7 +461,6 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 				break loop
 			}
 		}
-		logsFinished <- true
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
@@ -504,6 +503,10 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		if _, err = opts.networkController.Update(ctx, found); err != nil {
 			return fmt.Errorf("could not update network %s: %v", opts.networkName, err)
 		}
+	}
+
+	if !opts.Detach {
+		logsFinished <- true
 	}
 
 	return exitErr
