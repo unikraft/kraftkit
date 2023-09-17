@@ -19,7 +19,7 @@ jobs:
 
       - name: Login to Registry
         if: ${{ github.event_name == 'push' }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
