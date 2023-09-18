@@ -27,7 +27,7 @@ var _ = Describe("kraft net up", func() {
 
 		cfg = fcfg.NewTempConfig()
 
-		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
+		cmd = fcmd.NewKraftPrivileged(stdout, stderr, cfg.Path())
 		cmd.Args = append(cmd.Args, "net", "up", "--log-level", "info", "--log-type", "json")
 	})
 
@@ -63,7 +63,7 @@ var _ = Describe("kraft net up", func() {
 			// Create the network
 			stdoutCreate := fcmd.NewIOStream()
 			stderrCreate := fcmd.NewIOStream()
-			cmdCreate := fcmd.NewKraft(stdoutCreate, stderrCreate, cfg.Path())
+			cmdCreate := fcmd.NewKraftPrivileged(stdoutCreate, stderrCreate, cfg.Path())
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.49.0.1/24")
@@ -81,7 +81,7 @@ var _ = Describe("kraft net up", func() {
 		AfterEach(func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
-			cmdRm := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
+			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-up-1")
 			err := cmdRm.Run()
 			Expect(err).ToNot(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("kraft net up", func() {
 			// Bring the network down
 			stdoutDown := fcmd.NewIOStream()
 			stderrDown := fcmd.NewIOStream()
-			cmdDown := fcmd.NewKraft(stdoutDown, stderrDown, cfg.Path())
+			cmdDown := fcmd.NewKraftPrivileged(stdoutDown, stderrDown, cfg.Path())
 			cmdDown.Args = append(cmdDown.Args, "net", "down", "--log-level", "info", "--log-type", "json")
 			cmdDown.Args = append(cmdDown.Args, "--driver", "bridge")
 			cmdDown.Args = append(cmdDown.Args, "test-up-1")
@@ -105,7 +105,7 @@ var _ = Describe("kraft net up", func() {
 			// Check if the network is down
 			stdoutLs := fcmd.NewIOStream()
 			stderrLs := fcmd.NewIOStream()
-			cmdLs := fcmd.NewKraft(stdoutLs, stderrLs, cfg.Path())
+			cmdLs := fcmd.NewKraftPrivileged(stdoutLs, stderrLs, cfg.Path())
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()
@@ -124,7 +124,7 @@ var _ = Describe("kraft net up", func() {
 			// Check if the network is up
 			stdoutLs = fcmd.NewIOStream()
 			stderrLs = fcmd.NewIOStream()
-			cmdLs = fcmd.NewKraft(stdoutLs, stderrLs, cfg.Path())
+			cmdLs = fcmd.NewKraftPrivileged(stdoutLs, stderrLs, cfg.Path())
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()

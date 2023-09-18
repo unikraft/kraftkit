@@ -27,7 +27,7 @@ var _ = Describe("kraft net rm", func() {
 
 		cfg = fcfg.NewTempConfig()
 
-		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
+		cmd = fcmd.NewKraftPrivileged(stdout, stderr, cfg.Path())
 		cmd.Args = append(cmd.Args, "net", "rm", "--log-level", "info", "--log-type", "json")
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("kraft net rm", func() {
 		BeforeEach(func() {
 			stdoutCreate := fcmd.NewIOStream()
 			stderrCreate := fcmd.NewIOStream()
-			cmdCreate := fcmd.NewKraft(stdoutCreate, stderrCreate, cfg.Path())
+			cmdCreate := fcmd.NewKraftPrivileged(stdoutCreate, stderrCreate, cfg.Path())
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.46.0.1/24")
@@ -100,7 +100,7 @@ var _ = Describe("kraft net rm", func() {
 			// Check that the network no longer exists
 			stdoutLs := fcmd.NewIOStream()
 			stderrLs := fcmd.NewIOStream()
-			cmdLs := fcmd.NewKraft(stdoutLs, stderrLs, cfg.Path())
+			cmdLs := fcmd.NewKraftPrivileged(stdoutLs, stderrLs, cfg.Path())
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()

@@ -27,7 +27,7 @@ var _ = Describe("kraft net ls", func() {
 
 		cfg = fcfg.NewTempConfig()
 
-		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
+		cmd = fcmd.NewKraftPrivileged(stdout, stderr, cfg.Path())
 		cmd.Args = append(cmd.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 	})
 
@@ -50,7 +50,7 @@ var _ = Describe("kraft net ls", func() {
 		BeforeEach(func() {
 			stdoutCreate := fcmd.NewIOStream()
 			stderrCreate := fcmd.NewIOStream()
-			cmdCreate := fcmd.NewKraft(stdoutCreate, stderrCreate, cfg.Path())
+			cmdCreate := fcmd.NewKraftPrivileged(stdoutCreate, stderrCreate, cfg.Path())
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.47.0.1/24")
@@ -61,14 +61,14 @@ var _ = Describe("kraft net ls", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 
-			cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cmd = fcmd.NewKraftPrivileged(stdout, stderr, cfg.Path())
 			cmd.Args = append(cmd.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 		})
 
 		AfterEach(func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
-			cmdRm := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
+			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "--log-level", "info", "--log-type", "json")
 			cmdRm.Args = append(cmdRm.Args, "test-ls-0")
 
