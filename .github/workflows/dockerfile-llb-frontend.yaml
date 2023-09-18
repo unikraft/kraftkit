@@ -29,7 +29,7 @@ jobs:
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build OCI image for the LLB plugin
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./tools/dockerfile-llb-frontend
           file: ./tools/dockerfile-llb-frontend/Dockerfile
