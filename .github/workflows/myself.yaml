@@ -26,7 +26,7 @@ jobs:
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build OCI image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: false
           file: ./buildenvs/myself.Dockerfile
@@ -45,7 +45,7 @@ jobs:
           path: /tmp/myself.tar
 
       - name: Push OCI Image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         if: ${{ github.event_name == 'push' }}
         with:
           push: true
