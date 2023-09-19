@@ -39,6 +39,7 @@ release:
 
 nfpms:
   - vendor: Unikraft
+    id: nfpm-default
     maintainer: Alexander Jung <alex@unikraft.io>
     description: Build and use highly customized and ultra-lightweight unikernels.
     license: BSD 3-clause
