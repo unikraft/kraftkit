@@ -120,20 +120,13 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		if err != nil {
 			return err
 		}
-		cfgm, err := config.NewConfigManager(
-			cfg,
-			config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
-		)
-		if err != nil {
-			return err
-		}
 
 		// Attribute all configuration flags and command-line argument values
 		cmd, args, err := cmd.Find(os.Args[1:])
 		if err != nil {
 			return err
 		}
-		if err := cmdfactory.AttributeFlags(cmd, cfgm.Config, args...); err != nil {
+		if err := cmdfactory.AttributeFlags(cmd, cfg, args...); err != nil {
 			return err
 		}
 
@@ -142,10 +135,19 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		// If a flag specifies changing the config directory, we must
 		// re-instantiate the ConfigManager with the configuration from that
 		// directory.
+		var cfgm *config.ConfigManager[config.KraftKit]
 		if cpath := cfg.Paths.Config; cpath != "" && cpath != config.ConfigDir() {
 			cfgm, err = config.NewConfigManager(
 				cfg,
 				config.WithFile[config.KraftKit](filepath.Join(cpath, "config.yaml"), true),
+			)
+			if err != nil {
+				return err
+			}
+		} else {
+			cfgm, err = config.NewConfigManager(
+				cfg,
+				config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
 			)
 			if err != nil {
 				return err
