@@ -6,6 +6,8 @@
 package cli_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -51,6 +53,9 @@ var _ = Describe("kraft pkg", func() {
 			When("invoked without flags or positional arguments", func() {
 				It("should retrieve the list of components, libraries and packages", func() {
 					err := cmd.Run()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stderr.String()).To(BeEmpty())
@@ -68,6 +73,9 @@ var _ = Describe("kraft pkg", func() {
 
 				It("should print the command's help", func() {
 					err := cmd.Run()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stderr.String()).To(BeEmpty())

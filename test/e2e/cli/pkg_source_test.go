@@ -7,6 +7,7 @@ package cli_test
 
 import (
 	"crypto/sha1"
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
@@ -46,27 +47,41 @@ var _ = Describe("kraft pkg", func() {
 				BeforeEach(func() {
 					// Save the config file by moving it to a temporary location
 					err := os.Rename(cfg.Path(), cfg.Path()+".tmp")
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 				})
 
 				AfterEach(func() {
 					// Restore the config file
 					err := os.Rename(cfg.Path()+".tmp", cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 				})
 				It("should create the config file, add the default manifests, and the new link, and print nothing", func() {
 					cmd.Args = append(cmd.Args, "https://example.com")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file is not empty
@@ -77,11 +92,17 @@ var _ = Describe("kraft pkg", func() {
 
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Marshal the yaml file into a map
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file contains the default manifests
@@ -111,7 +132,9 @@ var _ = Describe("kraft pkg", func() {
 
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
@@ -126,16 +149,24 @@ var _ = Describe("kraft pkg", func() {
 				It("should leave the config file intact, add the new link, and print nothing", func() {
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file is not empty
@@ -146,11 +177,17 @@ var _ = Describe("kraft pkg", func() {
 
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Marshal the yaml file into a map
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file contains the default manifests
@@ -182,12 +219,17 @@ var _ = Describe("kraft pkg", func() {
 					// Generate a clean config file
 					cmd.Args = append(cmd.Args, "https://manifests.kraftkit.sh/index.yaml")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
 					// Calculate config file hash
 					bytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Calculate sha1 hash of bytes
@@ -203,6 +245,9 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://manifests.kraftkit.sh/index.yaml")
 					err = cmd.Run()
 
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
@@ -211,6 +256,9 @@ var _ = Describe("kraft pkg", func() {
 
 					// Check if the config file was not modified
 					newBytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					newSha1Hash := sha1.Sum(newBytes)
@@ -226,16 +274,24 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					cmd.Args = append(cmd.Args, "https://example3.com")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file is not empty
@@ -246,11 +302,17 @@ var _ = Describe("kraft pkg", func() {
 
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Marshal the yaml file into a map
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file contains the default manifests
@@ -281,16 +343,24 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example.com")
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					err := cmd.Run()
-
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
 
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file is not empty
@@ -301,11 +371,17 @@ var _ = Describe("kraft pkg", func() {
 
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Marshal the yaml file into a map
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
+					if err != nil {
+						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+					}
 					Expect(err).ToNot(HaveOccurred())
 
 					// Check if the config file contains the default manifests

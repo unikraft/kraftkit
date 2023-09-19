@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 
 	gomegafmt "github.com/onsi/gomega/format"
@@ -25,6 +26,38 @@ func NewKraft(stdout, stderr *IOStream, cfgPath string) *Cmd {
 	}
 
 	cmd := exec.Command("kraft", args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	return &Cmd{Cmd: cmd}
+}
+
+// NewKraftPrivileged returns a kraft OS command that uses the given IO streams and has
+// pre-set flags to use the given paths, with a sudo prefix if user is not already root.
+func NewKraftPrivileged(stdout, stderr *IOStream, cfgPath string) *Cmd {
+	var args []string
+	// Get uid of current user
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	if usr.Uid != "0" {
+		kraftPath, _ := exec.LookPath("kraft")
+
+		args = append(args, kraftPath)
+	}
+
+	if cfgPath != "" {
+		args = append(args, "--config-dir="+filepath.Dir(cfgPath))
+	}
+
+	var cmd *exec.Cmd
+	if usr.Uid != "0" {
+		cmd = exec.Command("sudo", args...)
+	} else {
+		cmd = exec.Command("kraft", args...)
+	}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
