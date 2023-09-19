@@ -93,3 +93,32 @@ builds:
       - -s -w
 #@ end
 #@ end
+
+archives:
+#@ targets = [
+#@   "linux-amd64",
+#@   "linux-arm64",
+#@   "darwin-arm64",
+#@   "darwin-amd64"
+#@ ]
+#@ for binary in ["kraft"]:
+#@ for target in targets:
+  - id: #@ "archive-{}-{}".format(binary, target)
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - #@ "{}-{}".format(binary, target)
+#@ end
+#@ end
+#@ targets = [
+#@   "linux-amd64"
+#@ ]
+#@ for binary in ["runu"]:
+#@ for target in targets:
+  - id: #@ "archive-{}-{}".format(binary, target)
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_runu_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - #@ "{}-{}".format(binary, target)
+#@ end
+#@ end
