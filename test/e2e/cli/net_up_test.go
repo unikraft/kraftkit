@@ -6,6 +6,8 @@
 package cli_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -70,7 +72,9 @@ var _ = Describe("kraft net up", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "test-up-1")
 
 			err := cmdCreate.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
 
@@ -84,6 +88,9 @@ var _ = Describe("kraft net up", func() {
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-up-1")
 			err := cmdRm.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -97,7 +104,9 @@ var _ = Describe("kraft net up", func() {
 			cmdDown.Args = append(cmdDown.Args, "test-up-1")
 
 			err := cmdDown.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrDown.String()).To(BeEmpty())
 			Expect(stdoutDown.String()).To(MatchRegexp(`^test-up-1\n$`))
@@ -110,6 +119,9 @@ var _ = Describe("kraft net up", func() {
 
 			err = cmdLs.Run()
 
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
@@ -118,6 +130,9 @@ var _ = Describe("kraft net up", func() {
 			// Bring the network back up
 			err = cmd.Run()
 
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 
@@ -129,6 +144,9 @@ var _ = Describe("kraft net up", func() {
 
 			err = cmdLs.Run()
 
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
@@ -143,6 +161,9 @@ var _ = Describe("kraft net up", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())

@@ -7,6 +7,7 @@ package cli_test
 
 import (
 	"encoding/json"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
@@ -72,7 +73,9 @@ var _ = Describe("kraft net inspect", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "test-inspect-1")
 
 			err := cmdCreate.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
 			Expect(stdoutCreate.String()).To(MatchRegexp(`^test-inspect-1\n$`))
@@ -87,18 +90,26 @@ var _ = Describe("kraft net inspect", func() {
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-inspect-1")
 			err := cmdRm.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should print a detailed, valid, json for the interface", func() {
 			err := cmd.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 
 			// Unmarshal stdout to json
 			inspectData := make(map[string]interface{})
 			err = json.Unmarshal([]byte(stdout.String()), &inspectData)
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if network is correct
@@ -115,6 +126,9 @@ var _ = Describe("kraft net inspect", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())

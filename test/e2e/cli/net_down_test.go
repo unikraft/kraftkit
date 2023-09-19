@@ -6,6 +6,8 @@
 package cli_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -70,7 +72,9 @@ var _ = Describe("kraft net down", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "test-down-1")
 
 			err := cmdCreate.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
 
@@ -85,13 +89,17 @@ var _ = Describe("kraft net down", func() {
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-down-1")
 
 			err := cmdRm.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should bring the network down and print its name", func() {
 			err := cmd.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`^test-down-1\n$`))
@@ -104,6 +112,9 @@ var _ = Describe("kraft net down", func() {
 
 			err = cmdLs.Run()
 
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
@@ -118,6 +129,9 @@ var _ = Describe("kraft net down", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())

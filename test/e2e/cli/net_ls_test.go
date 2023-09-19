@@ -6,6 +6,8 @@
 package cli_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -57,7 +59,9 @@ var _ = Describe("kraft net ls", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "test-ls-0")
 
 			err := cmdCreate.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 
@@ -73,14 +77,18 @@ var _ = Describe("kraft net ls", func() {
 			cmdRm.Args = append(cmdRm.Args, "test-ls-0")
 
 			err := cmdRm.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrRm.String()).To(BeEmpty())
 		})
 
 		It("should print a table of networks and exit", func() {
 			err := cmd.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
@@ -95,6 +103,9 @@ var _ = Describe("kraft net ls", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())

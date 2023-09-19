@@ -6,6 +6,8 @@
 package cli_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
 
@@ -48,6 +50,9 @@ var _ = Describe("kraft net create", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -161,13 +166,17 @@ var _ = Describe("kraft net create", func() {
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-create-4")
 
 			err := cmdRm.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should create the network, print the network name, and exit", func() {
 			err := cmd.Run()
-
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`^test-create-4\n$`))
@@ -179,6 +188,9 @@ var _ = Describe("kraft net create", func() {
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 			err = cmdLs.Run()
 
+			if err != nil {
+				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
