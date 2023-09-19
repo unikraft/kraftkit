@@ -58,6 +58,9 @@ nfpms:
       - socat
       - unzip
       - wget
+    suggests:
+      - gcc-x86-64-linux-gnu
+      - g++-x86-64-linux-gnu
 publishers:
   - name: fury.io
     ids:
