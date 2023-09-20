@@ -22,13 +22,8 @@ COPY . /go/src/webinstall
 RUN set -xe; \
     go build -tags static -a -ldflags='-s -w' -ldflags '-extldflags "-static"' .
 
-FROM alpine:3.17.2 as ca-certificates
+FROM gcr.io/distroless/static:nonroot AS prod
 
-RUN apk add -U --no-cache ca-certificates
-
-FROM scratch AS prod
-
-COPY --from=ca-certificates /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=base /go/src/webinstall/webinstall /webinstall
 
 EXPOSE 8080
