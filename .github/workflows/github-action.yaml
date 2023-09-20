@@ -53,7 +53,7 @@ jobs:
     needs: [qemu]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -93,7 +93,7 @@ jobs:
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch helloworld
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         if: ${{ github.event_name != 'push' }}
         with:
           repository: unikraft/app-helloworld
