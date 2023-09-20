@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -18,9 +19,12 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/apiserver/pkg/storage"
 
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
+	"kraftkit.sh/config"
 	"kraftkit.sh/machine/network/macaddr"
+	"kraftkit.sh/machine/store"
 )
 
 type v1alpha1Network struct{}
@@ -356,25 +360,56 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 
 // Delete implements kraftkit.sh/api/network/v1alpha1.Delete
 func (service *v1alpha1Network) Delete(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+	embeddedStore, err := store.NewEmbeddedStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](
+		filepath.Join(
+			config.G[config.KraftKit](ctx).RuntimeDir,
+			"networkv1alpha1",
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var existingNetwork networkv1alpha1.Network
+	err = embeddedStore.Get(ctx, network.Name, storage.GetOptions{}, &existingNetwork)
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return nil, err
+	}
+	knownBridge := existingNetwork.Name != ""
+
 	// Remove any interfaces.
 	for _, iface := range network.Spec.Interfaces {
 		// Get the link.
 		link, err := netlink.LinkByName(iface.Spec.IfName)
 		if err != nil {
+			// If the link is not found, but it's in the list of known bridges,
+			// then it's already been removed by an external process.
+			if strings.Contains(err.Error(), "Link not found") && knownBridge {
+				return nil, nil
+			}
 			return network, fmt.Errorf("could not get %s link: %v", iface.Spec.IfName, err)
 		}
 
 		if ping.Ping(&net.IPAddr{IP: net.ParseIP(iface.Spec.IP), Zone: ""}, 150*time.Millisecond) {
+			if strings.Contains(err.Error(), "Link not found") && knownBridge {
+				return nil, nil
+			}
 			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
 		}
 
 		// Bring down the bridge link
 		if err := netlink.LinkSetDown(link); err != nil {
+			if strings.Contains(err.Error(), "Link not found") && knownBridge {
+				return nil, nil
+			}
 			return network, fmt.Errorf("could not bring %s link down: %v", iface.Spec.IfName, err)
 		}
 
 		// Delete the bridge link.
 		if err := netlink.LinkDel(link); err != nil {
+			if strings.Contains(err.Error(), "Link not found") && knownBridge {
+				return nil, nil
+			}
 			return network, fmt.Errorf("could not delete %s link: %v", iface.Spec.IfName, err)
 		}
 	}
@@ -382,16 +417,25 @@ func (service *v1alpha1Network) Delete(ctx context.Context, network *networkv1al
 	// Get the bridge link.
 	link, err := netlink.LinkByName(network.Name)
 	if err != nil {
+		if strings.Contains(err.Error(), "Link not found") && knownBridge {
+			return nil, nil
+		}
 		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
 	}
 
 	// Bring down the bridge link
 	if err := netlink.LinkSetDown(link); err != nil {
+		if strings.Contains(err.Error(), "Link not found") && knownBridge {
+			return nil, nil
+		}
 		return network, fmt.Errorf("could not bring %s link down: %v", network.Name, err)
 	}
 
 	// Delete the bridge link.
 	if err := netlink.LinkDel(link); err != nil {
+		if strings.Contains(err.Error(), "Link not found") && knownBridge {
+			return nil, nil
+		}
 		return network, fmt.Errorf("could not delete %s link: %v", network.Name, err)
 	}
 
