@@ -39,6 +39,7 @@ release:
 
 nfpms:
   - vendor: Unikraft
+    id: nfpm-default
     maintainer: Alexander Jung <alex@unikraft.io>
     description: Build and use highly customized and ultra-lightweight unikernels.
     license: BSD 3-clause
@@ -66,6 +67,16 @@ publishers:
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_USER }}/
 aurs:
   - homepage: https://kraftkit.sh
+    ids:
+#@ targets = [
+#@   "linux-amd64",
+#@   "linux-arm64"
+#@ ]
+#@ for binary in ["kraft"]:
+#@ for target in targets:
+      - #@ "archive-{}-{}".format(binary, target)
+#@ end
+#@ end
     description: Build and use highly customized and ultra-lightweight unikernels
     maintainers:
       - "Alexander Jung <alex at unikraft dot io>"
@@ -82,6 +93,16 @@ aurs:
       email: monkey+aur@unikraft.io
 nix:
   - name: kraftkit
+    ids:
+#@ targets = [
+#@   "linux-amd64",
+#@   "linux-arm64"
+#@ ]
+#@ for binary in ["kraft"]:
+#@ for target in targets:
+      - #@ "archive-{}-{}".format(binary, target)
+#@ end
+#@ end
     repository:
       owner: unikraft
       name: nur
@@ -120,19 +141,49 @@ builds:
 #@ end
 #@ end
 #@ targets = {
-#@   "linux-amd64": {"os": "linux", "arch": "amd64"},
-#@   "linux-arm64": {"os": "linux", "arch": "arm64"}
+#@   "linux-amd64": {"os": "linux", "arch": "amd64"}
 #@ }
 #@ for binary in ["runu"]:
 #@ for target, specs in targets.items():
   - id: #@ "{}-{}".format(binary, target)
     binary: #@ binary
     main: #@ "./cmd/{}".format(binary)
+    env:
+      - CGO_ENABLED=1
     goos:
       - #@ specs["os"]
     goarch:
       - #@ specs["arch"]
     ldflags:
       - -s -w
+#@ end
+#@ end
+
+archives:
+#@ targets = [
+#@   "linux-amd64",
+#@   "linux-arm64",
+#@   "darwin-arm64",
+#@   "darwin-amd64"
+#@ ]
+#@ for binary in ["kraft"]:
+#@ for target in targets:
+  - id: #@ "archive-{}-{}".format(binary, target)
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - #@ "{}-{}".format(binary, target)
+#@ end
+#@ end
+#@ targets = [
+#@   "linux-amd64"
+#@ ]
+#@ for binary in ["runu"]:
+#@ for target in targets:
+  - id: #@ "archive-{}-{}".format(binary, target)
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_runu_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - #@ "{}-{}".format(binary, target)
 #@ end
 #@ end
