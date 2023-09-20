@@ -446,6 +446,10 @@ func (service *v1alpha1Network) Get(ctx context.Context, network *networkv1alpha
 		return network, err
 	}
 
+	if len(addrs) == 0 {
+		return network, fmt.Errorf("bridge %s has no ip address", network.Name)
+	}
+
 	network.Spec.Driver = "bridge"
 	network.Spec.Gateway = addrs[0].IP.String()
 	network.Spec.Netmask = net.IP(addrs[0].Mask).String()
