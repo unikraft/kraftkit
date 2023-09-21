@@ -354,7 +354,7 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 	return nil
 }
 
-func (opts *Menu) Run(cmd *cobra.Command, args []string) error {
+func (opts *Menu) Run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	// Filter project targets by any provided CLI options

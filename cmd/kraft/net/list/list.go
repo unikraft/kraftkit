@@ -46,7 +46,7 @@ func (opts *List) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *List) Run(cmd *cobra.Command, args []string) error {
+func (opts *List) Run(cmd *cobra.Command, _ []string) error {
 	var err error
 
 	ctx := cmd.Context()
