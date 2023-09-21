@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/containerd/containerd/platforms"
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/gateway/client"
@@ -113,7 +112,6 @@ func (driver *DefaultBuildkitDriver) Run(ctx context.Context) (*client.Result, e
 
 	// We then annotate the result with additional metadata.
 	// BuildKit will pick it up from the returned client.Result.
-	// (todo) This section shall be expanded once we focus on the run part.
 	return driver.annotateBuildResult(result)
 }
 
@@ -138,17 +136,13 @@ func (driver DefaultBuildkitDriver) annotateBuildResult(result *result.Result[cl
 		return nil, fmt.Errorf("failed to get the referece to BuildKit's result: %w", err)
 	}
 
-	result.SetRef(ref)
-
-	config, err := json.Marshal(image.NewImageConfig())
+	config, err := json.Marshal(image.UnikraftImageConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal the base image config: %w", err)
 	}
 
-	// This annotates the image with values from the client's runtime.GOOS and runtime.GOARCH.
-	platformSpec := platforms.Format(platforms.DefaultSpec())
-
-	result.AddMeta(fmt.Sprintf("%s/%s", exptypes.ExporterImageConfigKey, platformSpec), config)
+	result.AddMeta(exptypes.ExporterImageConfigKey, config)
+	result.SetRef(ref)
 
 	return result, nil
 }

@@ -7,20 +7,25 @@
 package image
 
 import (
-	"github.com/moby/buildkit/util/system"
+	"runtime"
+
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
+	"kraftkit.sh/oci"
 )
 
-func emptyImage() *specs.Image {
-	image := &specs.Image{}
-	image.RootFS.Type = "layers"
-	image.Config.WorkingDir = "/"
-	image.Config.Env = []string{"PATH=" + system.DefaultPathEnv("linux")}
-	return image
-}
-
-// NewImageConfig returns empty container image metadata.
-func NewImageConfig() *specs.Image {
-	// (todo): We might decide what else to set here once we get to the run part.
-	return emptyImage()
+// UnikraftImageConfig provided metadata enables running unikraft images through docker run.
+func UnikraftImageConfig() *specs.Image {
+	return &specs.Image{
+		Platform: specs.Platform{
+			Architecture: runtime.GOARCH,
+			OS:           runtime.GOOS,
+		},
+		RootFS: specs.RootFS{
+			Type: "layers",
+		},
+		Config: specs.ImageConfig{
+			WorkingDir: "/",
+			Entrypoint: []string{oci.WellKnownKernelPath},
+		},
+	}
 }
