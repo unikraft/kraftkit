@@ -58,6 +58,6 @@ func (opts *Net) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Net) Run(cmd *cobra.Command, args []string) error {
+func (opts *Net) Run(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
 }

@@ -33,7 +33,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Version) Run(cmd *cobra.Command, args []string) error {
+func (opts *Version) Run(cmd *cobra.Command, _ []string) error {
 	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
 	return nil
 }

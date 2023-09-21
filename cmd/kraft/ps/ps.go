@@ -65,7 +65,7 @@ func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Ps) Run(cmd *cobra.Command, args []string) error {
+func (opts *Ps) Run(cmd *cobra.Command, _ []string) error {
 	var err error
 
 	type psTable struct {
