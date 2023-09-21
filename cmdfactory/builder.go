@@ -508,7 +508,7 @@ func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
 		c.RunE = obj.Run
 
 		// Parse the attributes of this object into addressable flags for this command
-		if err := AttributeFlags(&c, obj); err != nil {
+		if err := AttributeFlags(&c, obj, os.Args[1:]...); err != nil {
 			return nil, err
 		}
 	}
