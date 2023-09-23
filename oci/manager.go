@@ -67,6 +67,26 @@ func (manager *ociManager) Update(ctx context.Context) error {
 
 // Pack implements packmanager.PackageManager
 func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+
+	// If the provided entity is empty, then check the options
+	if entity == nil {
+		popts := &packmanager.PackOptions{}
+		for _, opt := range opts {
+			opt(popts)
+		}
+
+		if popts.Source() != nil {
+			pkg, err := NewPackageFromOCIPackage(ctx, opts...)
+			if err != nil {
+				return nil, err
+			}
+
+			return []pack.Package{pkg}, nil
+		} else {
+			return nil, fmt.Errorf("cannot repack OCI package without source")
+		}
+	}
+
 	targ, ok := entity.(target.Target)
 	if !ok {
 		return nil, fmt.Errorf("entity is not Unikraft target")

@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package packmanager
 
+import "kraftkit.sh/pack"
+
 // PackOptions contains the list of options which can be set when packaging a
 // component.
 type PackOptions struct {
@@ -17,6 +19,7 @@ type PackOptions struct {
 	kernelVersion                    string
 	name                             string
 	output                           string
+	source                           pack.Package
 }
 
 // PackAppSourceFiles returns whether the application source files should be
@@ -69,6 +72,11 @@ func (popts *PackOptions) Name() string {
 // Output returns the location of the package.
 func (popts *PackOptions) Output() string {
 	return popts.output
+}
+
+// Source returns the source package to use as a base.
+func (popts *PackOptions) Source() pack.Package {
+	return popts.source
 }
 
 // PackOption is an option function which is used to modify PackOptions.
@@ -144,5 +152,12 @@ func PackName(name string) PackOption {
 func PackOutput(output string) PackOption {
 	return func(popts *PackOptions) {
 		popts.output = output
+	}
+}
+
+// PackSource provides a way to specify a source package as a base.
+func PackSource(source pack.Package) PackOption {
+	return func(popts *PackOptions) {
+		popts.source = source
 	}
 }
