@@ -8,6 +8,7 @@ package cli_test
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
@@ -25,6 +26,10 @@ var _ = Describe("kraft net inspect", func() {
 	var cfg *fcfg.Config
 
 	BeforeEach(func() {
+		if runtime.GOOS != "linux" {
+			Skip("This test only supports Linux. See here for more information: https://github.com/unikraft/kraftkit/issues/840")
+		}
+
 		stdout = fcmd.NewIOStream()
 		stderr = fcmd.NewIOStream()
 
