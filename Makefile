@@ -163,13 +163,13 @@ cicheck: ## Run CI checks.
 test: test-unit test-e2e ## Run all tests.
 
 .PHONY: test-unit
-test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/
+test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/ tools/
 test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
 test-unit: ## Run unit tests.
 	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all $(GOTEST_PKGS)
 
 .PHONY: test-e2e
-test-e2e: $(BIN) ## Run CLI end-to-end tests.
+test-e2e: kraft ## Run CLI end-to-end tests.
 	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all test/e2e/cli/...
 
 .PHONY: install-golangci-lint
