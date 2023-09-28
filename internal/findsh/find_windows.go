@@ -24,14 +24,11 @@
 package findsh
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/cli/safeexec"
 )
 
 func Find() (string, error) {
-	shPath, err := safeexec.LookPath("sh")
+	shPath, err := safeexec.LookPath("cmd")
 	if err != nil {
 		return "", err
 	}
