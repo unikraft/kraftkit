@@ -111,17 +111,16 @@ func (i *InitrdConfig) NewReader(w io.Reader) (*cpio.Reader, error) {
 
 // NewFromPath accepts a positional argument base which is the directory that
 // the provided files should be serialized from.  The prefix positional argument
-// is used to affix all embedded files to the provided location.  Left empty,
-// the defeault prefix is "/".
+// is used to affix all embedded files to the provided location.
 func NewFromPath(base string, prefix string, files ...string) (*InitrdConfig, error) {
 	initrd := &InitrdConfig{
 		Format: NEWC,
 	}
 
 	if prefix == "" {
-		prefix = "/"
+		prefix = string(filepath.Separator)
 	}
-	if !strings.HasPrefix(prefix, "/") {
+	if !strings.HasPrefix(prefix, string(filepath.Separator)) {
 		return nil, fmt.Errorf("must use absolute path in prefix: %s", prefix)
 	}
 
@@ -177,7 +176,7 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 					return nil
 				}
 
-				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), "//", "/")
+				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), string(filepath.Separator)+string(filepath.Separator), string(filepath.Separator))
 
 				info, err := d.Info()
 				if err != nil {
