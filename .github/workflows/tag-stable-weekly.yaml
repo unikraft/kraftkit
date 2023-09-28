@@ -44,9 +44,18 @@ jobs:
           # Rebase stable on staging
           git checkout stable
           git rebase staging
-          git push origin stable
+
+          # Create PR with current branch
+          NEW_BRANCH="unikraft-bot/weekly-tag-${NEW_TAG}"
+          git checkout -b "${NEW_BRANCH}"
+          git push origin "${NEW_BRANCH}"
+          gh pr create --title "chore(bump): KraftKit ${NEW_TAG} bump" --body "Weekly tag: ${NEW_TAG}" --base stable --head "${NEW_BRANCH}" --repo unikraft/kraftkit
+
+          # Merge PR and delete branch
+          gh pr merge --admin --author-email "monkey@unikraft.io" --delete-branch --rebase --repo unikraft/kraftkit
 
           # Tag and push new tag
+          git checkout stable
           git tag -a "$NEW_TAG" -m "KraftKit $NEW_TAG"
           git push origin "$NEW_TAG"
         env:
