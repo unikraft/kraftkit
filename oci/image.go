@@ -143,14 +143,11 @@ func (image *Image) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor
 		return ocispec.Descriptor{}, err
 	}
 
-	defer func() {
-		closeErr := fp.Close()
-		if err == nil {
-			err = closeErr
-		}
-	}()
-
 	if err := image.handle.SaveDigest(ctx, "", blob.desc, fp, nil); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
+	if err := fp.Close(); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
