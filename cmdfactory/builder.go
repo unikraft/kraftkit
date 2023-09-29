@@ -390,9 +390,6 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 		switch fieldType.Type.Kind() {
 		case reflect.Int, reflect.Int64:
 			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
-			if err := flags.Set(name, strValue); err != nil {
-				return err
-			}
 		case reflect.String:
 			flags.StringVarP((*string)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defValue, usage)
 			if err := flags.Set(name, strValue); err != nil {
