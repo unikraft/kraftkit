@@ -88,6 +88,27 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 	}
 }
 
+// WithDirectory forces the use of a directory handler by providing a path to
+// the directory to use as the OCI root.
+func WithDirectory(ctx context.Context, path string) OCIManagerOption {
+	return func(ctx context.Context, manager *ociManager) error {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("using oci directory handler")
+
+		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
+			handle, err := handler.NewDirectoryHandler(path, manager.auths)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return ctx, handle, nil
+		}
+
+		return nil
+	}
+}
+
 // WithDefaultRegistries sets the list of KraftKit-set registries which is
 // defined through its configuration.
 func WithDefaultRegistries() OCIManagerOption {
