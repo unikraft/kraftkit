@@ -39,26 +39,29 @@ func TestNewFromMapping(t *testing.T) {
 	}
 
 	expectHeaders := map[string]cpio.Header{
-		"./entrypoint.sh": {
-			Mode: cpio.TypeReg,
+		".": {
+			Mode: cpio.ModeDir,
+		},
+		"entrypoint.sh": {
+			Mode: cpio.ModeRegular,
 			Size: 25,
 		},
-		"./etc": {
-			Mode: cpio.TypeDir,
+		"etc": {
+			Mode: cpio.ModeDir,
 		},
-		"./etc/app.conf": {
-			Mode: cpio.TypeReg,
+		"etc/app.conf": {
+			Mode: cpio.ModeRegular,
 			Size: 16,
 		},
-		"./lib": {
-			Mode: cpio.TypeDir,
+		"lib": {
+			Mode: cpio.ModeDir,
 		},
-		"./lib/libtest.so.1": {
-			Mode:     cpio.TypeSymlink,
+		"lib/libtest.so.1": {
+			Mode:     cpio.ModeSymlink,
 			Linkname: "libtest.so.1.0.0",
 		},
-		"./lib/libtest.so.1.0.0": {
-			Mode: cpio.TypeReg,
+		"lib/libtest.so.1.0.0": {
+			Mode: cpio.ModeRegular,
 			Size: 9,
 		},
 	}

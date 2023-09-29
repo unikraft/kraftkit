@@ -2,6 +2,9 @@ module kraftkit.sh
 
 go 1.20
 
+// Fix for writing symlinks: https://github.com/cavaliergopher/cpio/pull/16
+replace github.com/cavaliergopher/cpio v1.0.1 => github.com/antoineco/cavaliergopher-cpio v1.0.2-0
+
 require (
 	api.zip v0.1.5
 	github.com/AlecAivazis/survey/v2 v2.3.7

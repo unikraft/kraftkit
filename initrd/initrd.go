@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"kraftkit.sh/utils"
-
 	"github.com/cavaliergopher/cpio"
+
+	"kraftkit.sh/utils"
 )
 
 const InputDelimeter = ":"
@@ -174,77 +174,60 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 
 				internal := strings.TrimPrefix(path, hostPath)
 				if internal == "" {
-					return nil
+					internal = "/"
 				}
-
-				internal = "." + strings.ReplaceAll(filepath.Join(initrdPath, internal), "//", "/")
+				if internal, err = filepath.Rel("/", internal); err != nil {
+					return fmt.Errorf("trimming leading separator from path %q: %w", internal, err)
+				}
 
 				info, err := d.Info()
 				if err != nil {
 					return err
 				}
 
-				if d.Type().IsDir() {
-					if err := writer.WriteHeader(&cpio.Header{
-						Name: internal,
-						Mode: cpio.TypeDir,
-					}); err != nil {
-						return err
-					}
-
-					return nil
-				}
-
-				initrd.Files[path] = internal
-
-				var data []byte
-				targetLink := ""
-				if info, err := d.Info(); err == nil && info.Mode()&os.ModeSymlink != 0 {
-					targetLink, err = os.Readlink(path)
-					if err != nil {
-						return err
-					}
-					data = []byte(targetLink)
-				} else if d.Type().IsRegular() {
-					data, err = os.ReadFile(path)
-					if err != nil {
+				var link string
+				if info.Mode()&os.ModeSymlink != 0 {
+					if link, err = os.Readlink(path); err != nil {
 						return err
 					}
 				}
 
-				if err := writer.WriteHeader(&cpio.Header{
-					Name:     internal,
-					Linkname: targetLink,
-					Mode:     cpio.FileMode(d.Type().Perm()),
-					Size:     info.Size(),
-				}); err != nil {
-					return err
+				header, err := cpio.FileInfoHeader(info, link)
+				if err != nil {
+					return fmt.Errorf("generating cpio file info header: %w", err)
+				}
+				header.Name = internal
+
+				if err := writer.WriteHeader(header); err != nil {
+					return fmt.Errorf("writing cpio header for %q: %w", internal, err)
 				}
 
-				if _, err := writer.Write(data); err != nil {
-					return err
+				switch {
+				case info.Mode()&fs.ModeSymlink != 0:
+					initrd.Files[path] = internal
+				case info.Mode().IsRegular():
+					if err := copyData(func() (io.ReadCloser, error) { return os.Open(path) }, writer); err != nil {
+						return fmt.Errorf("copying file %q to cpio archive: %w", path, err)
+					}
+					initrd.Files[path] = internal
 				}
 
 				return nil
 			}); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("walking host path %s: %w", hostPath, err)
 			}
 		} else {
-			data, err := os.ReadFile(hostPath)
+			header, err := cpio.FileInfoHeader(f, "")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("generating cpio file info header: %w", err)
 			}
 
-			if err := writer.WriteHeader(&cpio.Header{
-				Name: initrdPath,
-				Mode: cpio.FileMode(f.Mode().Perm()),
-				Size: f.Size(),
-			}); err != nil {
-				return nil, err
+			if err := writer.WriteHeader(header); err != nil {
+				return nil, fmt.Errorf("writing cpio header for %q: %w", initrdPath, err)
 			}
 
-			if _, err := writer.Write(data); err != nil {
-				return nil, err
+			if err := copyData(func() (io.ReadCloser, error) { return os.Open(hostPath) }, writer); err != nil {
+				return nil, fmt.Errorf("copying file %q to cpio archive: %w", hostPath, err)
 			}
 
 			initrd.Files[initrdPath] = hostPath
@@ -252,4 +235,19 @@ func NewFromMapping(workdir, output string, maps ...string) (*InitrdConfig, erro
 	}
 
 	return &initrd, nil
+}
+
+// opener can return an arbitrary ReadCloser.
+type opener func() (io.ReadCloser, error)
+
+// copyData performs a copy from an io.Reader to the given io.Writer.
+func copyData(open opener, w io.Writer) error {
+	src, err := open()
+	if err != nil {
+		return fmt.Errorf("opening source: %w", err)
+	}
+	defer src.Close()
+
+	_, err = io.Copy(w, src)
+	return err
 }
