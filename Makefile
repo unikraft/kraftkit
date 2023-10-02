@@ -207,6 +207,7 @@ help: ## Show this help menu and exit.
 
 # Additional help entries
 buildenv-base: ## OCI image used for building Unikraft unikernels with kraft.
+buildenv-base-golang: ## OCI image used for building Unikraft unikernels with kraft and golang included.
 buildenv-gcc: ## OCI image containing a Unikraft-centric build of gcc.
 buildenv-myself-full: ## OCI image containing the build environment for KraftKit.
 buildenv-myself: ## OCI image containing KraftKit binaries.

@@ -84,6 +84,28 @@ base:
 		--file $(BUILDENVSDIR)/base.Dockerfile \
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
 
+.PHONY: base-golang
+base-golang: ENVIRONMENT      ?= base-golang
+base-golang: GO_VERSION       ?= 1.20.6
+base-golang: IMAGE            ?= $(REGISTRY)/base-golang:$(IMAGE_TAG)
+base-golang: KRAFTKIT_VERSION ?= latest
+base-golang: QEMU_VERSION     ?= 7.2.4
+ifeq ($(WITH_CACHE),y)
+base-golang: _WITH_CACHE      := --cache-from $(IMAGE)
+else
+base-golang: _WITH_CACHE      := --no-cache
+endif
+base-golang:
+	$(DOCKER) build \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
+		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
+		--build-arg REGISTRY=$(REGISTRY) \
+		--tag $(IMAGE) \
+		$(_WITH_CACHE) \
+		--file $(BUILDENVSDIR)/base-golang.Dockerfile \
+		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
+
 .PHONY: github-action
 github-action: ENVIRONMENT      ?= github-action
 github-action: GO_VERSION       ?= 1.20.6

@@ -1,10 +1,39 @@
 {
   "name": "Kraftkit development environment",
-  "image": "kraftkit.sh/myself-full:latest",
+  "build": { "dockerfile": "../buildenvs/devcontainer.Dockerfile" },
   "remoteUser": "root",
   "hostRequirements": {
       "cpus": 2,
       "memory": "8gb",
       "storage": "32gb"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "Gruntfuggly.todo-tree",
+        "shardulm94.trailing-spaces"
+      ],
+      "settings": {
+        "files.eol": "\n",
+        "editor.formatOnSave": true,
+        "go.lintOnSave": "package",
+        "files.insertFinalNewline": true,
+        "go.toolsEnvVars": {
+            "CGO_ENABLED": "0"
+        },
+        "gopls": {
+            "usePlaceholders": false,
+            "staticcheck": true,
+            "vulncheck": "Imports"
+        },
+        "[go]": {
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": true
+            }
+        },
+        "go.useLanguageServer": true
+      }
+    }
   }
 }
