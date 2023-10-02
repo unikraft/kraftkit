@@ -1,6 +1,8 @@
 #! .goreleaser.yaml
 #@ binaries = {
 #@   "kraft": {
+#@     "netbsd": ["amd64", "arm64"],
+#@     "openbsd": ["amd64", "arm64"],
 #@     "darwin": ["amd64", "arm64"],
 #@     "freebsd": ["amd64", "arm64"],
 #@     "linux": ["amd64", "arm64"],
