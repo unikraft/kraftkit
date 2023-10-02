@@ -110,11 +110,7 @@ func (e *Process) Start(ctx context.Context) error {
 	log.G(ctx).Debug(e.Cmdline())
 
 	if e.opts.detach {
-		// the Setpgid flag is used to prevent the child process from exiting when
-		// the parent is killed
-		e.cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setpgid: true,
-		}
+		e.cmd.SysProcAttr = hostAttributes()
 		e.cmd.Stdin = nil
 	}
 

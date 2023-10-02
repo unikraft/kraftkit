@@ -75,6 +75,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
+replace github.com/vishvananda/netlink => github.com/craciunoiuc/netlink v1.2.1-beta.2
+
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect

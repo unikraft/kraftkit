@@ -241,7 +241,7 @@ func findRegularFile(p string) string {
 			return p
 		}
 		newPath := filepath.Dir(p)
-		if newPath == p || newPath == "/" || newPath == "." {
+		if newPath == p || newPath == string(filepath.Separator) || newPath == "." {
 			break
 		}
 		p = newPath

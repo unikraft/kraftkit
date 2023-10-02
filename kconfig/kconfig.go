@@ -370,7 +370,7 @@ func (kp *kconfigParser) includeSource(file string) {
 		return
 	}
 	kp.newCurrent(nil)
-	if file[0] != '/' {
+	if file[0] != filepath.Separator {
 		file = filepath.Join(kp.baseDir, file)
 	}
 	data, err := os.ReadFile(file)
