@@ -1064,9 +1064,10 @@ install_linux_gnu() {
         need_cmd "$GIT"
         need_cmd "$MAKEPKG"
         need_cmd "$RM"
-
         do_cmd "$GIT clone https://aur.archlinux.org/kraftkit-bin.git /tmp/kraftkit-bin"
-        do_cmd "$MAKEPKG -si /tmp/kraftkit-bin"
+        cd /tmp/kraftkit-bin
+        do_cmd "$MAKEPKG -si"
+        cd - 1> /dev/null
         $RM -rf /tmp/kraftkit-bin
     else
         _ilg_msg=$(printf "error: %s%s%s"                               \
