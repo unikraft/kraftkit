@@ -123,6 +123,10 @@ builds:
 #@   "linux-arm64": {"os": "linux", "arch": "arm64"},
 #@   "freebsd-amd64": {"os": "freebsd", "arch": "amd64"},
 #@   "freebsd-arm64": {"os": "freebsd", "arch": "arm64"},
+#@   "netbsd-amd64": {"os": "netbsd", "arch": "amd64"},
+#@   "netbsd-arm64": {"os": "netbsd", "arch": "arm64"},
+#@   "openbsd-amd64": {"os": "openbsd", "arch": "amd64"},
+#@   "openbsd-arm64": {"os": "openbsd", "arch": "arm64"},
 #@   "darwin-arm64": {"os": "darwin", "arch": "arm64"},
 #@   "darwin-amd64": {"os": "darwin", "arch": "amd64"}
 #@ }
@@ -170,6 +174,10 @@ archives:
 #@   "linux-arm64",
 #@   "freebsd-amd64",
 #@   "freebsd-arm64",
+#@   "netbsd-amd64",
+#@   "netbsd-arm64",
+#@   "openbsd-amd64",
+#@   "openbsd-arm64",
 #@   "darwin-arm64",
 #@   "darwin-amd64"
 #@ ]
