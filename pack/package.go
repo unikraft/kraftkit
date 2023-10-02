@@ -31,6 +31,9 @@ type Package interface {
 	// Pull retreives the package from a remotely retrievable location.
 	Pull(context.Context, ...PullOption) error
 
+	// Deletes package available locally.
+	Delete(context.Context, string) error
+
 	// Format returns the name of the implementation.
 	Format() PackageFormat
 }

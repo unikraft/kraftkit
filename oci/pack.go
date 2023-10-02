@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -517,6 +518,59 @@ unpack:
 		}
 	}
 
+	return nil
+}
+
+// Delete deletes OCI package from the host machine.
+func (ocipack *ociPackage) Delete(ctx context.Context, version string) error {
+	ociDir := path.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+
+	// Removing config layer
+	typeAndId := strings.Split(string(ocipack.image.manifest.Config.Digest), ":")
+	if err := os.RemoveAll(path.Join(ociDir, "configs", typeAndId[0], typeAndId[1])); err != nil {
+		return err
+	}
+
+	// Removing image layers
+	for _, layer := range ocipack.image.manifest.Layers {
+		typeAndId = strings.Split(string(layer.Digest), ":")
+		if err := os.RemoveAll(path.Join(ociDir, "layers", typeAndId[0], typeAndId[1])); err != nil {
+			return err
+		}
+	}
+	if _, err := os.Stat(path.Join(ociDir, "manifests", ocipack.Name())); !os.IsNotExist(err) {
+		if err := deleteManifests(ocipack.Name(), ocipack.Version(), ociDir); err != nil {
+			return err
+		}
+	}
+
+	if strings.HasPrefix(ocipack.Name(), DefaultRegistry) {
+		if err := deleteManifests(path.Join("index.unikraft.io", ocipack.Name()),
+			ocipack.Version(), ociDir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteManifests(name string, version string, ociDir string) error {
+	// Removing manifest file
+	if err := os.RemoveAll(path.Join(ociDir,
+		"manifests",
+		name,
+		version+".json")); err != nil {
+		return err
+	}
+
+	files, err := os.ReadDir(path.Join(ociDir, "manifests", name))
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		if err = os.RemoveAll(path.Join(ociDir, "manifests", name)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
