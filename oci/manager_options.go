@@ -198,14 +198,16 @@ func defaultAuths(ctx context.Context) (map[string]regtypes.AuthConfig, error) {
 
 	if cf != nil {
 		for domain, config := range cf.AuthConfigs {
-			auths[domain] = regtypes.AuthConfig{
-				Auth:          config.Auth,
-				Email:         config.Email,
-				IdentityToken: config.IdentityToken,
-				Password:      config.Password,
-				RegistryToken: config.RegistryToken,
-				ServerAddress: config.ServerAddress,
-				Username:      config.Username,
+			if _, ok := auths[domain]; !ok {
+				auths[domain] = regtypes.AuthConfig{
+					Auth:          config.Auth,
+					Email:         config.Email,
+					IdentityToken: config.IdentityToken,
+					Password:      config.Password,
+					RegistryToken: config.RegistryToken,
+					ServerAddress: config.ServerAddress,
+					Username:      config.Username,
+				}
 			}
 		}
 	}
