@@ -541,6 +541,38 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, ref string, des
 	return nil
 }
 
+func (handle *DirectoryHandler) RemoveImage(ctx context.Context, fullref, platform string) error {
+	ref, err := name.ParseReference(fullref)
+	if err != nil {
+		return err
+	}
+
+	authConfig := &authn.AuthConfig{}
+
+	// Annoyingly convert between regtypes and authn.
+	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
+		authConfig.Auth = auth.Auth
+		authConfig.IdentityToken = auth.IdentityToken
+		authConfig.Password = auth.Password
+		authConfig.RegistryToken = auth.RegistryToken
+		authConfig.Username = auth.Username
+	}
+
+	err = remote.Delete(ref,
+		remote.WithContext(ctx),
+		remote.WithPlatform(v1.Platform{
+			OS:           strings.Split(platform, "/")[0],
+			Architecture: strings.Split(platform, "/")[1],
+		}),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithAuth(&simpleauth.SimpleAuthenticator{
+			Auth: authConfig,
+		}),
+	)
+
+	return err
+}
+
 // FinalizeImage implements ImageFinalizer.
 func (handle *DirectoryHandler) FinalizeImage(ctx context.Context, image ocispec.Image) error {
 	return fmt.Errorf("not implemented: oci.handler.DirectoryHandler.FinalizeImage")

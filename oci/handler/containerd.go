@@ -589,6 +589,15 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 	return nil
 }
 
+// RemoveImage implemente ImageRemover.
+func (handle *ContainerdHandler) RemoveImage(ctx context.Context, ref, platform string) error {
+	// TODO(craciunoiuc): Does not remove remote references also
+	return handle.client.ImageService().Delete(ctx,
+		ref,
+		images.SynchronousDelete(),
+	)
+}
+
 // FinalizeImage implements ImageFinalizer.
 func (handle *ContainerdHandler) FinalizeImage(ctx context.Context, image ocispec.Image) error {
 	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.FinalizeImage")

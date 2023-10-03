@@ -44,6 +44,10 @@ type ImageUnpacker interface {
 	UnpackImage(context.Context, string, string) error
 }
 
+type ImageRemover interface {
+	RemoveImage(context.Context, string, string) error
+}
+
 type Handler interface {
 	DigestResolver
 	DigestSaver
@@ -52,4 +56,5 @@ type Handler interface {
 	ImageResolver
 	ImageFetcher
 	ImageUnpacker
+	ImageRemover
 }
