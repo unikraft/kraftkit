@@ -94,6 +94,9 @@ type Application interface {
 	// Delete the build folder of the application
 	Properclean(context.Context, target.Target, ...make.MakeOption) error
 
+	// Printloc builds the image and prints the lines of code of the resulting binary
+	Printloc(context.Context, target.Target, ...BuildOption) error
+
 	// Fetch component sources for the applications
 	Fetch(context.Context, target.Target, ...make.MakeOption) error
 
@@ -535,6 +538,45 @@ func (app application) Properclean(ctx context.Context, tc target.Target, mopts 
 		tc,
 		append(mopts,
 			make.WithTarget("properclean"),
+		)...,
+	)
+}
+
+func (app application) Printloc(ctx context.Context, tc target.Target, opts ...BuildOption) error {
+	bopts := &BuildOptions{}
+	for _, o := range opts {
+		err := o(bopts)
+		if err != nil {
+			return fmt.Errorf("could not apply build option: %v", err)
+		}
+	}
+
+	if !app.unikraft.IsUnpacked() {
+		// TODO: Produce better error messages (see #34).  In this case, we should
+		// indicate that `kraft pkg pull` needs to occur
+		return fmt.Errorf("cannot build without Unikraft core component source")
+	}
+
+	bopts.mopts = append(bopts.mopts, []make.MakeOption{
+		make.WithProgressFunc(bopts.onProgress),
+	}...)
+
+	if !bopts.noPrepare {
+		if err := app.Prepare(
+			ctx,
+			tc,
+			append(
+				bopts.mopts,
+				make.WithProgressFunc(nil),
+			)...); err != nil {
+			return err
+		}
+	}
+
+	return app.Make(ctx,
+		tc,
+		append(bopts.mopts,
+			make.WithTarget("print-loc"),
 		)...,
 	)
 }
