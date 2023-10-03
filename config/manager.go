@@ -157,6 +157,28 @@ func AllowedValues(key string) []string {
 	return []string{}
 }
 
+// FetchConfigDirFromArgs returns the path to the alternate config directory
+// that can be set via the --config-dir flag. This needs to be fetched before flags
+// are populated with AttributeFlags to ensure that the function is called only once.
+func FetchConfigDirFromArgs(args []string) (path string) {
+	for idx, arg := range args {
+		if !strings.HasPrefix(arg, "--config-dir") {
+			continue
+		}
+		if strings.Contains(arg, "=") {
+			if split := strings.Split(arg, "="); len(split) == 2 {
+				path = split[1]
+			}
+		} else {
+			if !strings.HasPrefix(args[idx+1], "-") {
+				path = args[idx+1]
+			}
+		}
+		break
+	}
+	return
+}
+
 func Default[C any](key string) string {
 	found, _, def, _, err := findConfigDefault[C](key, "", "", reflect.ValueOf(new([0]C)))
 	if err != nil || found != key {
