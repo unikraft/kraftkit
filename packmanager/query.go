@@ -31,6 +31,18 @@ type Query struct {
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
+
+	// Selects all the packages
+	// (Currently, being used to prune all the packages on the host machine)
+	all bool
+
+	// If set to true then no manifest package will be deleted
+	// (Currently, being used to prune all the packages on the host machine)
+	noManifestPackage bool
+
+	// If set to true then no OCI package will be deleted
+	// (Currently, being used to prune all the packages on the host machine)
+	noOCIPackage bool
 }
 
 // Source specifies where the origin of the package
@@ -62,6 +74,19 @@ func (query *Query) UseCache() bool {
 // domain does not have (or require) any authentication.
 func (query *Query) Auths() map[string]config.AuthConfig {
 	return query.auths
+}
+
+// All returns the value set for all.
+func (query *Query) All() bool {
+	return query.all
+}
+
+func (query *Query) NoManifestPackage() bool {
+	return query.noManifestPackage
+}
+
+func (query *Query) NoOCIPackage() bool {
+	return query.noOCIPackage
 }
 
 func (query *Query) Fields() map[string]interface{} {
@@ -127,6 +152,24 @@ func WithCache(useCache bool) QueryOption {
 func WithAuthConfig(auths map[string]config.AuthConfig) QueryOption {
 	return func(query *Query) {
 		query.auths = auths
+	}
+}
+
+func WithAll(all bool) QueryOption {
+	return func(query *Query) {
+		query.all = all
+	}
+}
+
+func WithNoManifestPackage(noManifestPackage bool) QueryOption {
+	return func(query *Query) {
+		query.noManifestPackage = noManifestPackage
+	}
+}
+
+func WithNoOCIPackage(noOCIPackage bool) QueryOption {
+	return func(query *Query) {
+		query.noOCIPackage = noOCIPackage
 	}
 }
 

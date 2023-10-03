@@ -110,7 +110,7 @@ func NewProviderFromString(ctx context.Context, provider, path string, entity an
 		return NewGitHubProvider(ctx, path, mopts...)
 	case "git":
 		return NewGitProvider(ctx, path, mopts...)
-	case "directory":
+	case "directory", "dir":
 		return NewDirectoryProvider(ctx, path, mopts...)
 	}
 

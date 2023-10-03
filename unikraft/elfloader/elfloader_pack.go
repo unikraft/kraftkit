@@ -117,6 +117,10 @@ func (elfloader *ELFLoader) Pull(ctx context.Context, opts ...pack.PullOption) e
 	return elfloader.pack.Pull(ctx, opts...)
 }
 
+func (elfloader *ELFLoader) Delete(ctx context.Context, version string) error {
+	return elfloader.pack.Delete(ctx, version)
+}
+
 // Format implements kraftkit.sh/unikraft.component.Component
 func (elfloader *ELFLoader) Format() pack.PackageFormat {
 	return elfloader.pack.Format()
