@@ -47,6 +47,7 @@ type Build struct {
 	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Stats        bool   `long:"stats" short:"s" usage:"Print statistics about the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 
 	project app.Application
@@ -474,27 +475,52 @@ func (opts *Build) Run(cmd *cobra.Command, _ []string) error {
 			))
 		}
 
-		processes = append(processes, paraprogress.NewProcess(
-			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
-			func(ctx context.Context, w func(progress float64)) error {
-				err := opts.project.Build(
-					ctx,
-					targ, // Target-specific options
-					app.WithBuildProgressFunc(w),
-					app.WithBuildMakeOptions(append(mopts,
-						make.WithExecOptions(
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
-						),
-					)...),
-					app.WithBuildLogFile(opts.SaveBuildLog),
-				)
-				if err != nil {
-					return fmt.Errorf("build failed: %w", err)
-				}
-				return nil
-			},
-		))
+		if opts.Stats {
+			// Print lines of code
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("building loc %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
+				func(ctx context.Context, w func(progress float64)) error {
+					err := opts.project.Printloc(
+						ctx,
+						targ, // Target-specific options
+						app.WithBuildProgressFunc(w),
+						app.WithBuildMakeOptions(append(mopts,
+							make.WithExecOptions(
+								exec.WithStdout(log.G(ctx).Writer()),
+								exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
+							),
+						)...),
+						app.WithBuildLogFile(opts.SaveBuildLog),
+					)
+					if err != nil {
+						return fmt.Errorf("build failed: %w", err)
+					}
+					return nil
+				},
+			))
+		} else {
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
+				func(ctx context.Context, w func(progress float64)) error {
+					err := opts.project.Build(
+						ctx,
+						targ, // Target-specific options
+						app.WithBuildProgressFunc(w),
+						app.WithBuildMakeOptions(append(mopts,
+							make.WithExecOptions(
+								exec.WithStdout(log.G(ctx).Writer()),
+								exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
+							),
+						)...),
+						app.WithBuildLogFile(opts.SaveBuildLog),
+					)
+					if err != nil {
+						return fmt.Errorf("build failed: %w", err)
+					}
+					return nil
+				},
+			))
+		}
 	}
 
 	paramodel, err := paraprogress.NewParaProgress(
@@ -508,6 +534,7 @@ func (opts *Build) Run(cmd *cobra.Command, _ []string) error {
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(norender),
 		paraprogress.WithFailFast(true),
+		paraprogress.WithNoCollapse(opts.Stats),
 	)
 	if err != nil {
 		return err
