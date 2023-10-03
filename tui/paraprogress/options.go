@@ -33,3 +33,10 @@ func WithNameWidth(width int) ParaProgressOption {
 		return nil
 	}
 }
+
+func WithNoCollapse(noCollapse bool) ParaProgressOption {
+	return func(pp *ParaProgress) error {
+		pp.noCollapse = noCollapse
+		return nil
+	}
+}

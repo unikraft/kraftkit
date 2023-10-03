@@ -34,6 +34,7 @@ type ParaProgress struct {
 	errChan       chan error
 	failFast      bool
 	nameWidth     int
+	noCollapse    bool
 }
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -70,6 +71,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 
 	for i := range processes {
 		processes[i].norender = md.norender
+		processes[i].noCollapse = md.noCollapse
 		processes[i].NameWidth = maxNameLen
 
 		pctx, err := deepcopy.Anything(ctx)

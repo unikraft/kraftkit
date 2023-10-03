@@ -77,6 +77,7 @@ type Process struct {
 	logs        []string
 	err         error
 	norender    bool
+	noCollapse  bool
 	ctx         context.Context
 
 	Name      string
@@ -282,7 +283,7 @@ func (p Process) View() string {
 	)
 
 	// Print the logs for this item
-	if p.Status != StatusSuccess && p.percent < 1 {
+	if p.Status != StatusSuccess && p.percent < 1 || (p.Status == StatusSuccess && p.noCollapse) {
 		// Newline for the logs
 		if len(p.logs) > 0 {
 			s += "\n"
