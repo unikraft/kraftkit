@@ -15,6 +15,7 @@ type Prune struct {
 	All               bool   `long:"all" short:"a" usage:"Prunes all the packages available on the host machine"`
 	NoManifestPackage bool   `long:"no-manifest-package" usage:"Prevent package manager from pruning manifest packages"`
 	NoOCIPackage      bool   `long:"no-oci-package" usage:"Prevent package manager from pruning oci packages"`
+	Remote            bool   `long:"remote" short:"r" usage:"Delete a package from remote reference"`
 }
 
 func New() *cobra.Command {
@@ -82,6 +83,7 @@ func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
 		packmanager.WithAll(opts.All),
 		packmanager.WithNoManifestPackage(opts.NoManifestPackage),
 		packmanager.WithNoOCIPackage(opts.NoOCIPackage),
+		packmanager.WithRemote(opts.Remote),
 	); err != nil {
 		return err
 	}

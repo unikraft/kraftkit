@@ -43,6 +43,10 @@ type Query struct {
 	// If set to true then no OCI package will be deleted
 	// (Currently, being used to prune all the packages on the host machine)
 	noOCIPackage bool
+
+	// If set to true then remote references will also be deleted
+	// Does not work with `all` flag to avoid deleting all sensitive data
+	remote bool
 }
 
 // Source specifies where the origin of the package
@@ -87,6 +91,10 @@ func (query *Query) NoManifestPackage() bool {
 
 func (query *Query) NoOCIPackage() bool {
 	return query.noOCIPackage
+}
+
+func (query *Query) Remote() bool {
+	return query.remote
 }
 
 func (query *Query) Fields() map[string]interface{} {
@@ -170,6 +178,12 @@ func WithNoManifestPackage(noManifestPackage bool) QueryOption {
 func WithNoOCIPackage(noOCIPackage bool) QueryOption {
 	return func(query *Query) {
 		query.noOCIPackage = noOCIPackage
+	}
+}
+
+func WithRemote(remote bool) QueryOption {
+	return func(query *Query) {
+		query.remote = remote
 	}
 }
 

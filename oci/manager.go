@@ -340,29 +340,64 @@ func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.Query
 		return nil
 	}
 
+	qname := query.Name()
+	qversion := query.Version()
+	// Adjust for the version being suffixed in a prototypical OCI reference
+	// format
+	ref, refErr := name.ParseReference(qname+":"+qversion,
+		name.WithDefaultRegistry(DefaultRegistry),
+	)
+	if refErr == nil {
+		if ref.Identifier() != "latest" && qversion != "" && ref.Identifier() != qversion {
+			return fmt.Errorf("cannot determine which version as name contains version and version query paremeter set")
+		}
+	}
+
 	if query.All() {
+		if query.Remote() {
+			return fmt.Errorf("can't remove all remote images")
+		}
+
 		// Removes all OCI packages
 		if err := os.RemoveAll(ociDir); err != nil {
 			return err
 		}
 	} else {
-		packages, err := manager.Catalog(
-			ctx,
-			packmanager.WithCache(true),
-			packmanager.WithName(query.Name()),
-			packmanager.WithVersion(query.Version()),
-		)
-		if err != nil {
-			return err
-		}
-		if len(packages) == 0 {
-			return fmt.Errorf("oci package not found locally")
-		}
-		for _, pack := range packages {
-			if pack.Name() == query.Name() &&
-				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
-					return err
+		if query.Remote() {
+			ctx, handle, err := manager.handle(ctx)
+			if err != nil {
+				return err
+			}
+
+			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
+			if err != nil {
+				return err
+			}
+			spec := pack.Metadata().(ocispec.Image)
+
+			return handle.RemoveImage(ctx,
+				ref.String(),
+				spec.Platform.OS+"/"+spec.Platform.Architecture,
+			)
+		} else {
+			packages, err := manager.Catalog(
+				ctx,
+				packmanager.WithCache(true),
+				packmanager.WithName(query.Name()),
+				packmanager.WithVersion(query.Version()),
+			)
+			if err != nil {
+				return err
+			}
+			if len(packages) == 0 {
+				return fmt.Errorf("oci package not found locally")
+			}
+			for _, pack := range packages {
+				if pack.Name() == query.Name() &&
+					(query.Version() == "" || query.Version() == pack.Version()) {
+					if err = pack.Delete(ctx, pack.Version()); err != nil {
+						return err
+					}
 				}
 			}
 		}
