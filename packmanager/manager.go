@@ -7,6 +7,7 @@ package packmanager
 import (
 	"context"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/component"
 )
@@ -16,17 +17,17 @@ import (
 // and output during "construction", particularly providing access to a
 // referenceable context with which they can access (within the context of
 // KraftKit) the logging, IOStreams and Config subsystems.
-type NewManagerConstructor func(context.Context, ...any) (PackageManager, error)
+type NewManagerConstructor func(context.Context, *config.KraftKit, ...any) (PackageManager, error)
 
 type PackageManager interface {
 	// Update retrieves and stores locally a cache of the upstream registry.
-	Update(context.Context) error
+	Update(context.Context, *config.KraftKit) error
 
 	// Pack turns the provided component into the distributable package.  Since
 	// components can comprise of other components, it is possible to return more
 	// than one package.  It is possible to disable this and "flatten" a component
 	// into a single package by setting a relevant `pack.PackOption`.
-	Pack(context.Context, component.Component, ...PackOption) ([]pack.Package, error)
+	Pack(context.Context, component.Component, *config.KraftKit, ...PackOption) ([]pack.Package, error)
 
 	// Unpack turns a given package into a usable component.  Since a package can
 	// compromise of a multiple components, it is possible to return multiple
@@ -34,7 +35,7 @@ type PackageManager interface {
 	Unpack(context.Context, pack.Package, ...UnpackOption) ([]component.Component, error)
 
 	// Catalog returns all packages known to the manager via given query
-	Catalog(context.Context, ...QueryOption) ([]pack.Package, error)
+	Catalog(context.Context, *config.KraftKit, ...QueryOption) ([]pack.Package, error)
 
 	// Set the list of sources for the package manager
 	SetSources(context.Context, ...string) error
@@ -43,14 +44,14 @@ type PackageManager interface {
 	AddSource(context.Context, string) error
 
 	// Prune packages from the host machine
-	Prune(context.Context, ...QueryOption) error
+	Prune(context.Context, *config.KraftKit, ...QueryOption) error
 
 	// Remove a source from the package manager
 	RemoveSource(context.Context, string) error
 
 	// IsCompatible checks whether the provided source is compatible with the
 	// package manager
-	IsCompatible(context.Context, string, ...QueryOption) (PackageManager, bool, error)
+	IsCompatible(context.Context, string, *config.KraftKit, ...QueryOption) (PackageManager, bool, error)
 
 	// From is used to retrieve a sub-package manager.  For now, this is a small
 	// hack used for the umbrella.

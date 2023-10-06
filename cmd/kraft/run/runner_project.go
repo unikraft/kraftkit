@@ -34,7 +34,7 @@ func (runner *runnerProject) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, cfg *config.KraftKit, args ...string) (bool, error) {
 	var err error
 
 	cwd, err := os.Getwd()
@@ -61,7 +61,7 @@ func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...st
 }
 
 // Prepare implements Runner.
-func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, cfg *config.KraftKit, args ...string) error {
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(runner.workdir),
 	}
@@ -94,7 +94,7 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 	case len(targets) == 1:
 		t = targets[0]
 
-	case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
+	case cfg.NoPrompt && len(targets) > 1:
 		return fmt.Errorf("could not determine what to run based on provided CLI arguments")
 
 	default:

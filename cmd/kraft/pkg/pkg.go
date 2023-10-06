@@ -49,7 +49,7 @@ type Pkg struct {
 	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Pkg{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
@@ -71,23 +71,23 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(pull.New())
-	cmd.AddCommand(push.New())
-	cmd.AddCommand(source.New())
-	cmd.AddCommand(unsource.New())
-	cmd.AddCommand(update.New())
-	cmd.AddCommand(prune.New())
+	cmd.AddCommand(list.New(cfg))
+	cmd.AddCommand(pull.New(cfg))
+	cmd.AddCommand(push.New(cfg))
+	cmd.AddCommand(source.New(cfg))
+	cmd.AddCommand(unsource.New(cfg))
+	cmd.AddCommand(update.New(cfg))
+	cmd.AddCommand(prune.New(cfg))
 
 	return cmd
 }
 
-func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Pkg) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
@@ -104,9 +104,10 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
+func (opts *Pkg) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	var workdir string
+	cfg := cfgMgr.Config
 
 	if len(args) == 0 {
 		workdir, err = os.Getwd()
@@ -137,8 +138,8 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 	var tree []*processtree.ProcessTreeItem
 
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	parallel := !cfg.NoParallel
+	norender := log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY
 
 	// Generate a package for every matching requested target
 	for _, targ := range project.Targets() {
@@ -217,7 +218,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 						)
 					}
 
-					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
+					if _, err := pm.Pack(ctx, targ, cfg, popts...); err != nil {
 						return err
 					}
 

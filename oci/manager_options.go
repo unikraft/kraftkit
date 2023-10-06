@@ -24,9 +24,9 @@ type OCIManagerOption func(context.Context, *ociManager) error
 // underlying OCI handler implementation should be used. Ultimately, this is
 // done by checking whether set configuration can ultimately invoke a relative
 // client to enable the handler.
-func WithDetectHandler() OCIManagerOption {
+func WithDetectHandler(cfg *config.KraftKit) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
-		if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
+		if contAddr := cfg.ContainerdAddr; len(contAddr) > 0 {
 			namespace := DefaultNamespace
 			if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
 				namespace = n
@@ -45,7 +45,7 @@ func WithDetectHandler() OCIManagerOption {
 		}
 
 		// Fall-back to using a simpler directory/tarball-based OCI handler
-		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+		ociDir := filepath.Join(cfg.RuntimeDir, "oci")
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": ociDir,
@@ -111,11 +111,11 @@ func WithDirectory(ctx context.Context, path string) OCIManagerOption {
 
 // WithDefaultRegistries sets the list of KraftKit-set registries which is
 // defined through its configuration.
-func WithDefaultRegistries() OCIManagerOption {
+func WithDefaultRegistries(cfg *config.KraftKit) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
 		manager.registries = make([]string, 0)
 
-		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		for _, manifest := range cfg.Unikraft.Manifests {
 			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
@@ -137,10 +137,10 @@ func fileExists(path string) bool {
 
 // defaultAuths uses the provided context to locate possible authentication
 // values which can be used when speaking with remote registries.
-func defaultAuths(ctx context.Context) (map[string]regtypes.AuthConfig, error) {
+func defaultAuths(cfg *config.KraftKit) (map[string]regtypes.AuthConfig, error) {
 	auths := make(map[string]regtypes.AuthConfig)
 
-	for domain, auth := range config.G[config.KraftKit](ctx).Auth {
+	for domain, auth := range cfg.Auth {
 		auth, err := repoutils.GetAuthConfig(auth.User, auth.Token, domain)
 		if err != nil {
 			return nil, err
@@ -217,11 +217,11 @@ func defaultAuths(ctx context.Context) (map[string]regtypes.AuthConfig, error) {
 
 // WithDefaultAuth uses the KraftKit-set configuration for authentication
 // against remote registries.
-func WithDefaultAuth() OCIManagerOption {
-	return func(ctx context.Context, manager *ociManager) error {
+func WithDefaultAuth(cfg *config.KraftKit) OCIManagerOption {
+	return func(_ context.Context, manager *ociManager) error {
 		var err error
 
-		manager.auths, err = defaultAuths(ctx)
+		manager.auths, err = defaultAuths(cfg)
 		if err != nil {
 			return err
 		}

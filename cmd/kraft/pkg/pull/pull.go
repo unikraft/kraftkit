@@ -38,7 +38,7 @@ type Pull struct {
 	Workdir      string `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Pull{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
@@ -65,7 +65,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +73,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Pull) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -90,10 +90,11 @@ func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
 	)
 }
 
-func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
+func (opts *Pull) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	var project app.Application
 	var processes []*paraprogress.Process
+	cfg := cfgMgr.Config
 
 	workdir := opts.Workdir
 	if len(workdir) == 0 {
@@ -109,8 +110,8 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	parallel := !cfg.NoParallel
+	norender := log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
@@ -156,6 +157,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 				), "",
 				func(ctx context.Context) error {
 					packages, err = pm.Catalog(ctx,
+						cfgMgr.Config,
 						packmanager.WithName(project.Template().Name()),
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
@@ -263,7 +265,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
-			pm, compatible, err := pm.IsCompatible(ctx, arg)
+			pm, compatible, err := pm.IsCompatible(ctx, arg, cfgMgr.Config)
 			if err != nil || !compatible {
 				continue
 			}
@@ -280,7 +282,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 
 	for _, c := range queries {
 		query := packmanager.NewQuery(c.query...)
-		next, err := c.pm.Catalog(ctx, c.query...)
+		next, err := c.pm.Catalog(ctx, cfgMgr.Config, c.query...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", pm.Format().String()).

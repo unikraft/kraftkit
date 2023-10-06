@@ -45,7 +45,7 @@ func (runner *runnerPackage) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, cfg *config.KraftKit, args ...string) (bool, error) {
 	if len(args) == 0 {
 		return false, fmt.Errorf("no arguments supplied")
 	}
@@ -57,7 +57,7 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 		runner.pm = packmanager.G(ctx)
 	}
 
-	pm, compatible, err := runner.pm.IsCompatible(ctx, runner.packName)
+	pm, compatible, err := runner.pm.IsCompatible(ctx, runner.packName, cfg)
 	if err == nil && compatible {
 		runner.pm = pm
 		return true, nil
@@ -69,9 +69,10 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 }
 
 // Prepare implements Runner.
-func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, cfg *config.KraftKit, args ...string) error {
 	// First try the local cache of the catalog
 	packs, err := runner.pm.Catalog(ctx,
+		cfg,
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
 		packmanager.WithCache(true),
@@ -85,6 +86,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	} else if len(packs) == 0 {
 		// Second, try accessing the remote catalog
 		packs, err = runner.pm.Catalog(ctx,
+			cfg,
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithName(runner.packName),
 			packmanager.WithCache(false),
@@ -103,7 +105,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	// Pre-emptively prepare the UID so that we can extract the kernel to the
 	// defined state directory.
 	machine.ObjectMeta.UID = uuid.NewUUID()
-	machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+	machine.Status.StateDir = filepath.Join(cfg.RuntimeDir, string(machine.ObjectMeta.UID))
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
 		return err
 	}
@@ -130,7 +132,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		)},
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(
-			log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY,
 		),
 		paraprogress.WithFailFast(true),
 	)

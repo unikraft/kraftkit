@@ -16,8 +16,9 @@ import (
 	"kraftkit.sh/machine/store"
 )
 
-var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
-	if set.NewStringSet("debug", "trace").Contains(config.G[config.KraftKit](ctx).Log.Level) {
+var firecrackerV1alpha1Driver = func(ctx context.Context, cfg *config.KraftKit, opts ...any) (machinev1alpha1.MachineService, error) {
+	// cfg := cli.GetConfig()
+	if set.NewStringSet("debug", "trace").Contains(cfg.Log.Level) {
 		opts = append(opts, firecracker.WithDebug(true))
 	}
 	service, err := firecracker.NewMachineV1alpha1Service(ctx, opts...)
@@ -27,7 +28,7 @@ var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev
 
 	embeddedStore, err := store.NewEmbeddedStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](
 		filepath.Join(
-			config.G[config.KraftKit](ctx).RuntimeDir,
+			cfg.RuntimeDir,
 			"machinev1alpha1",
 		),
 	)
@@ -38,6 +39,7 @@ var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev
 	return machinev1alpha1.NewMachineServiceHandler(
 		ctx,
 		service,
+		cfg,
 		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
 		zip.WithBefore(storePlatformFilter(PlatformFirecracker)),
 	)

@@ -38,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
@@ -46,7 +47,7 @@ type ProperClean struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&ProperClean{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
@@ -63,7 +64,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +72,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*ProperClean) Pre(cmd *cobra.Command, _ []string) error {
+func (*ProperClean) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func (*ProperClean) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
+func (opts *ProperClean) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()

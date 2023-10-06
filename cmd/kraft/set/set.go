@@ -40,6 +40,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
@@ -49,7 +50,7 @@ type Set struct {
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Set{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Hidden:  true,
@@ -66,7 +67,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +75,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Set) Pre(cmd *cobra.Command, _ []string) error {
+func (*Set) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -85,7 +86,7 @@ func (*Set) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Set) Run(cmd *cobra.Command, args []string) error {
+func (opts *Set) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()

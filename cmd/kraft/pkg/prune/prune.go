@@ -7,6 +7,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 )
 
@@ -17,7 +18,7 @@ type Prune struct {
 	NoOCIPackage      bool   `long:"no-oci-package" usage:"Prevent package manager from pruning oci packages"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Prune{}, cobra.Command{
 		Short:   "Prunes a packages locally on the host",
 		Use:     "prune [FLAGS] [PACKAGE]",
@@ -33,7 +34,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +42,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Prune) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Prune) Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	if len(args) == 0 && opts.Name == "" && !opts.All {
 		return fmt.Errorf("package name is not specified to prune")
 	} else if opts.All && (len(args) > 0 || opts.Name != "") {
@@ -57,7 +58,7 @@ func (opts *Prune) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
+func (opts *Prune) Run(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	var userPackage string
 	if len(args) == 0 {
 		userPackage = opts.Name
@@ -77,6 +78,7 @@ func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	if err := packmanager.G(ctx).Prune(ctx,
+		cfg.Config,
 		packmanager.WithName(packName),
 		packmanager.WithVersion(version),
 		packmanager.WithAll(opts.All),
@@ -86,5 +88,5 @@ func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return packmanager.G(ctx).Update(ctx)
+	return packmanager.G(ctx).Update(ctx, cfg.Config)
 }

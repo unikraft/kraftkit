@@ -19,7 +19,7 @@ import (
 	"kraftkit.sh/machine/store"
 )
 
-var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
+var qemuV1alpha1Driver = func(ctx context.Context, cfg *config.KraftKit, opts ...any) (machinev1alpha1.MachineService, error) {
 	service, err := qemu.NewMachineV1alpha1Service(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1
 
 	embeddedStore, err := store.NewEmbeddedStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](
 		filepath.Join(
-			config.G[config.KraftKit](ctx).RuntimeDir,
+			cfg.RuntimeDir,
 			"machinev1alpha1",
 		),
 	)
@@ -38,6 +38,7 @@ var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1
 	return machinev1alpha1.NewMachineServiceHandler(
 		ctx,
 		service,
+		cfg,
 		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
 		zip.WithBefore(storePlatformFilter(PlatformQEMU)),
 	)

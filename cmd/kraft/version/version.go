@@ -10,13 +10,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
 )
 
 type Version struct{}
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Version{}, cobra.Command{
 		Short:   "Show kraft version information",
 		Use:     "version",
@@ -25,7 +26,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +34,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Version) Run(cmd *cobra.Command, _ []string) error {
+func (opts *Version) Run(cmd *cobra.Command, _ []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
 	return nil
 }

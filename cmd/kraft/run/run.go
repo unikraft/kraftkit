@@ -61,7 +61,7 @@ type Run struct {
 	machineController machineapi.MachineService
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
@@ -114,7 +114,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +128,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Run) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	ctx := cmd.Context()
 
@@ -147,7 +147,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		parts := strings.SplitN(opts.Network, ":", 2)
 		opts.networkDriver, opts.networkName = parts[0], parts[1]
 
-		networkStrategy, ok := network.Strategies()[opts.networkDriver]
+		networkStrategy, ok := network.Strategies(cfg.Config)[opts.networkDriver]
 		if !ok {
 			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
 		}
@@ -186,7 +186,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 
 	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
 
-	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
+	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx, cfg.Config)
 	if err != nil {
 		return err
 	}
@@ -222,9 +222,10 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Run) Run(cmd *cobra.Command, args []string) error {
+func (opts *Run) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	ctx := cmd.Context()
+	cfg := cfgMgr.Config
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
@@ -257,7 +258,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 			WithField("runner", candidate.String()).
 			Trace("checking runnability")
 
-		capable, err := candidate.Runnable(ctx, opts, args...)
+		capable, err := candidate.Runnable(ctx, opts, cfg, args...)
 		if capable && err == nil {
 			run = candidate
 			break
@@ -275,7 +276,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	log.G(ctx).WithField("runner", run.String()).Debug("using")
 
 	// Prepare the machine specification based on the compatible runner.
-	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
+	if err := run.Prepare(ctx, opts, machine, cfg, args...); err != nil {
 		return err
 	}
 
@@ -301,7 +302,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := opts.parseVolumes(ctx, machine); err != nil {
+	if err := opts.parseVolumes(ctx, machine, cfg); err != nil {
 		return err
 	}
 
@@ -318,7 +319,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if len(machine.Status.StateDir) == 0 {
-			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+			machine.Status.StateDir = filepath.Join(cfg.RuntimeDir, string(machine.ObjectMeta.UID))
 		}
 
 		if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
@@ -365,7 +366,7 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create the machine
-	machine, err = opts.machineController.Create(ctx, machine)
+	machine, err = opts.machineController.Create(ctx, cfg, machine)
 	if err != nil {
 		return err
 	}

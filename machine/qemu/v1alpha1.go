@@ -64,7 +64,7 @@ func NewMachineV1alpha1Service(ctx context.Context, opts ...any) (machinev1alpha
 }
 
 // Create implements kraftkit.sh/api/machine/v1alpha1.MachineService.Create
-func (service *machineV1alpha1Service) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+func (service *machineV1alpha1Service) Create(ctx context.Context, cfg *config.KraftKit, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	if machine.Status.KernelPath == "" {
 		return machine, fmt.Errorf("empty kernel path")
 	}
@@ -136,7 +136,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	machine.Status.State = machinev1alpha1.MachineStateUnknown
 
 	if len(machine.Status.StateDir) == 0 {
-		machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+		machine.Status.StateDir = filepath.Join(cfg.RuntimeDir, string(machine.ObjectMeta.UID))
 	}
 
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {

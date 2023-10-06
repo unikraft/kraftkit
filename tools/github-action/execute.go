@@ -26,7 +26,7 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-func (opts *GithubAction) execute(ctx context.Context) error {
+func (opts *GithubAction) execute(ctx context.Context, cfg *config.KraftKit) error {
 	var err error
 
 	if opts.Timeout == 0 {
@@ -43,7 +43,7 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.Plat)
 	}
 
-	controller, err := machineStrategy.NewMachineV1alpha1(ctx)
+	controller, err := machineStrategy.NewMachineV1alpha1(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 		}
 
 		if len(machine.Status.StateDir) == 0 {
-			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
+			machine.Status.StateDir = filepath.Join(cfg.RuntimeDir, string(machine.ObjectMeta.UID))
 		}
 
 		if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
@@ -145,7 +145,7 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 	}
 
 	// Create the machine
-	machine, err = controller.Create(ctx, machine)
+	machine, err = controller.Create(ctx, cfg, machine)
 	if err != nil {
 		return err
 	}

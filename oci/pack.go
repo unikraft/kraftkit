@@ -59,7 +59,7 @@ var (
 
 // NewPackageFromTarget generates an OCI implementation of the pack.Package
 // construct based on an input Application and options.
-func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packmanager.PackOption) (pack.Package, error) {
+func NewPackageFromTarget(ctx context.Context, targ target.Target, cfg *config.KraftKit, opts ...packmanager.PackOption) (pack.Package, error) {
 	var err error
 
 	popts := &packmanager.PackOptions{}
@@ -104,12 +104,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, err
 	}
 
-	auths, err := defaultAuths(ctx)
+	auths, err := defaultAuths(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
+	if contAddr := cfg.ContainerdAddr; len(contAddr) > 0 {
 		namespace := DefaultNamespace
 		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
 			namespace = n
@@ -122,11 +122,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, auths)
 	} else {
-		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
+		if gerr := os.MkdirAll(cfg.RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
 			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
 		}
 
-		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+		ociDir := filepath.Join(cfg.RuntimeDir, "oci")
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": ociDir,
@@ -324,7 +324,7 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 
 // NewPackageFromRemoteOCIRef generates a new package from a given OCI image
 // reference which is accessed by its remote registry.
-func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref string) (pack.Package, error) {
+func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref string, cfg *config.KraftKit) (pack.Package, error) {
 	var err error
 
 	ocipack := ociPackage{
@@ -338,7 +338,7 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 		return nil, fmt.Errorf("cannot parse OCI image name reference: %v", err)
 	}
 
-	auths, err := defaultAuths(ctx)
+	auths, err := defaultAuths(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -522,8 +522,8 @@ unpack:
 }
 
 // Delete deletes OCI package from the host machine.
-func (ocipack *ociPackage) Delete(ctx context.Context, version string) error {
-	ociDir := path.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+func (ocipack *ociPackage) Delete(ctx context.Context, version string, cfg *config.KraftKit) error {
+	ociDir := path.Join(cfg.RuntimeDir, "oci")
 
 	// Removing config layer
 	typeAndId := strings.Split(string(ocipack.image.manifest.Config.Digest), ":")

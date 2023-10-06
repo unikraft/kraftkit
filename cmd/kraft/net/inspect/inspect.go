@@ -13,6 +13,7 @@ import (
 
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/network"
 )
@@ -21,7 +22,7 @@ type Inspect struct {
 	Driver string `noattribute:"true"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Inspect{}, cobra.Command{
 		Short:   "Inspect a machine network",
 		Use:     "inspect NETWORK",
@@ -30,7 +31,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -38,17 +39,17 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Inspect) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Inspect) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.Driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
-func (opts *Inspect) Run(cmd *cobra.Command, args []string) error {
+func (opts *Inspect) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
 
-	strategy, ok := network.Strategies()[opts.Driver]
+	strategy, ok := network.Strategies(cfgMgr.Config)[opts.Driver]
 	if !ok {
 		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
 	}

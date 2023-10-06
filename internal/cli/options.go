@@ -36,7 +36,7 @@ type CliOption func(*CliOptions) error
 
 // WithDefaultLogger sets up the built in logger based on provided conifg found
 // from the ConfigManager.
-func WithDefaultLogger() CliOption {
+func WithDefaultLogger(cfg *config.KraftKit) CliOption {
 	return func(copts *CliOptions) error {
 		if copts.Logger != nil {
 			return nil
@@ -52,7 +52,7 @@ func WithDefaultLogger() CliOption {
 		// Set up a default logger based on the internal TextFormatter
 		logger := logrus.New()
 
-		switch log.LoggerTypeFromString(copts.ConfigManager.Config.Log.Type) {
+		switch log.LoggerTypeFromString(cfg.Log.Type) {
 		case log.QUIET:
 			formatter := new(logrus.TextFormatter)
 			logger.Formatter = formatter
@@ -62,7 +62,7 @@ func WithDefaultLogger() CliOption {
 			formatter.FullTimestamp = true
 			formatter.DisableTimestamp = true
 
-			if copts.ConfigManager.Config.Log.Timestamps {
+			if cfg.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			} else {
 				formatter.TimestampFormat = ">"
@@ -75,7 +75,7 @@ func WithDefaultLogger() CliOption {
 			formatter.FullTimestamp = true
 			formatter.DisableTimestamp = true
 
-			if copts.ConfigManager.Config.Log.Timestamps {
+			if cfg.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			} else {
 				formatter.TimestampFormat = ">"
@@ -87,14 +87,14 @@ func WithDefaultLogger() CliOption {
 			formatter := new(logrus.JSONFormatter)
 			formatter.DisableTimestamp = true
 
-			if copts.ConfigManager.Config.Log.Timestamps {
+			if cfg.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			}
 
 			logger.Formatter = formatter
 		}
 
-		level, ok := log.Levels()[copts.ConfigManager.Config.Log.Level]
+		level, ok := log.Levels()[cfg.Log.Level]
 		if !ok {
 			logger.Level = logrus.InfoLevel
 		} else {
@@ -162,9 +162,64 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 	}
 }
 
+func WithConfigManager(cmd *cobra.Command, cfgMgr *config.ConfigManager[config.KraftKit]) CliOption {
+	return func(copts *CliOptions) error {
+		// Attribute all configuration flags and command-line argument values
+		// TODO(jake-ciolek): Passing the args externally or relying on the injected cmd
+		//                    breaks flag attribution. So we do the cmd, args dance here again.
+		//                    Figure out why.
+		cmd, args, err := cmd.Find(os.Args[1:])
+		if err != nil {
+			return err
+		}
+
+		if err := cmdfactory.AttributeFlags(cmd, cfgMgr.Config, args...); err != nil {
+			return err
+		}
+		copts.ConfigManager = cfgMgr
+
+		return nil
+	}
+}
+
+func ConfigManagerFromArgs(args []string) (*config.ConfigManager[config.KraftKit], error) {
+	cfg, err := config.NewDefaultKraftKitConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	configDir := config.FetchConfigDirFromArgs(args)
+
+	// Did the user specify a non-standard config directory?  The following
+	// check is possible thanks to the attribution of flags to the config file.
+	// If a flag specifies changing the config directory, we must
+	// re-instantiate the ConfigManager with the configuration from that
+	// directory.
+	var cfgm *config.ConfigManager[config.KraftKit]
+	if configDir != "" && configDir != config.ConfigDir() {
+		cfgm, err = config.NewConfigManager(
+			cfg,
+			config.WithFile[config.KraftKit](filepath.Join(configDir, "config.yaml"), true),
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		cfgm, err = config.NewConfigManager(
+			cfg,
+			config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cfgm, nil
+}
+
 // WithDefaultIOStreams instantiates ta new IO streams using environmental
 // variables and host-provided configuration.
-func WithDefaultIOStreams() CliOption {
+func WithDefaultIOStreams(cfg *config.KraftKit) CliOption {
 	return func(copts *CliOptions) error {
 		if copts.IOStreams != nil {
 			return nil
@@ -172,12 +227,12 @@ func WithDefaultIOStreams() CliOption {
 
 		io := iostreams.System()
 
-		if copts.ConfigManager != nil {
-			if copts.ConfigManager.Config.NoPrompt {
+		if cfg != nil {
+			if cfg.NoPrompt {
 				io.SetNeverPrompt(true)
 			}
 
-			if pager := copts.ConfigManager.Config.Pager; pager != "" {
+			if pager := cfg.Pager; pager != "" {
 				io.SetPager(pager)
 			}
 		}
@@ -207,14 +262,10 @@ func WithHTTPClient(httpClient *http.Client) CliOption {
 
 // WithDefaultHTTPClient initializes a HTTP client using host-provided
 // configuration.
-func WithDefaultHTTPClient() CliOption {
+func WithDefaultHTTPClient(cfg *config.KraftKit) CliOption {
 	return func(copts *CliOptions) error {
 		if copts.HTTPClient != nil {
 			return nil
-		}
-
-		if copts.ConfigManager == nil {
-			return fmt.Errorf("cannot access config manager")
 		}
 
 		if copts.IOStreams == nil {
@@ -223,7 +274,7 @@ func WithDefaultHTTPClient() CliOption {
 
 		httpClient, err := httpclient.NewHTTPClient(
 			copts.IOStreams,
-			copts.ConfigManager.Config.HTTPUnixSocket,
+			cfg.HTTPUnixSocket,
 		)
 		if err != nil {
 			return err
@@ -237,17 +288,17 @@ func WithDefaultHTTPClient() CliOption {
 
 // WithDefaultPluginManager returns an initialized plugin manager using the
 // host-provided configuration plugin path.
-func WithDefaultPluginManager() CliOption {
+func WithDefaultPluginManager(cfg *config.KraftKit) CliOption {
 	return func(copts *CliOptions) error {
 		if copts.PluginManager != nil {
 			return nil
 		}
 
-		if copts.ConfigManager == nil {
-			return fmt.Errorf("cannot access config manager")
+		if cfg == nil {
+			return fmt.Errorf("cannot access config")
 		}
 
-		copts.PluginManager = plugins.NewPluginManager(copts.ConfigManager.Config.Paths.Plugins, nil)
+		copts.PluginManager = plugins.NewPluginManager(cfg.Paths.Plugins, nil)
 
 		return nil
 	}

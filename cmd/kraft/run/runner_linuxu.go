@@ -39,7 +39,7 @@ func (runner *runnerLinuxu) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, cfg *config.KraftKit, args ...string) (bool, error) {
 	if len(args) == 0 {
 		return false, fmt.Errorf("no arguments supplied")
 	}
@@ -115,8 +115,8 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 }
 
 // Prepare implements Runner.
-func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
-	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx, runner.exePath)
+func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, cfg *config.KraftKit, args ...string) error {
+	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx, runner.exePath, cfg)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *mac
 					pack.WithPullWorkdir(dir),
 					pack.WithPullPlatform(opts.platform.String()),
 				}
-				if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+				if log.LoggerTypeFromString(cfg.Log.Type) == log.FANCY {
 					popts = append(popts, pack.WithPullProgressFunc(w))
 				}
 
@@ -156,7 +156,7 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *mac
 		)},
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(
-			log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY,
 		),
 		paraprogress.WithFailFast(true),
 	)

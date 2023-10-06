@@ -19,7 +19,7 @@ import (
 
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
-func hostSupportedStrategies() map[string]*Strategy {
+func hostSupportedStrategies(cfg *config.KraftKit) map[string]*Strategy {
 	return map[string]*Strategy{
 		"9pfs": {
 			IsCompatible: func(source string, _ kconfig.KeyValueMap) (bool, error) {
@@ -38,7 +38,7 @@ func hostSupportedStrategies() map[string]*Strategy {
 
 				embeddedStore, err := store.NewEmbeddedStore[volumev1alpha1.VolumeSpec, volumev1alpha1.VolumeStatus](
 					filepath.Join(
-						config.G[config.KraftKit](ctx).RuntimeDir,
+						cfg.RuntimeDir,
 						"volumev1alpha1",
 					),
 				)

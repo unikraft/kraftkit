@@ -26,6 +26,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/set"
 	libcontainer "kraftkit.sh/libmocktainer"
@@ -43,7 +44,7 @@ type Create struct {
 	PidFile       string `long:"pid-file" usage:"specify a file where the process ID will be written"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Create{}, cobra.Command{
 		Short: "Create a new unikernel",
 		Args:  cobra.ExactArgs(1),
@@ -57,7 +58,7 @@ func New() *cobra.Command {
 			The specification file includes an args parameter. The args parameter is used
 			to specify command(s) that get run when the unikernel is started. To change the
 			command(s) that get executed on start, edit the args parameter of the spec`),
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +66,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Create) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Create) Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	if opts.Bundle == "" {
 		return fmt.Errorf("--bundle is required")
 	}
@@ -98,7 +99,7 @@ const (
 	specAnnotUnikernel        = "org.unikraft.kernel"
 )
 
-func (opts *Create) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *Create) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {
@@ -157,7 +158,7 @@ func (opts *Create) Run(cmd *cobra.Command, args []string) (retErr error) {
 		}
 		spec.Process.Args[0] = cArgPath
 	} else {
-		cArgs, err := genMachineArgs(ctx, cID, rootDir, spec.Root.Path)
+		cArgs, err := genMachineArgs(ctx, cID, rootDir, spec.Root.Path, cfgMgr.Config)
 		if err != nil {
 			return fmt.Errorf("generating machine args: %w", err)
 		}
@@ -206,13 +207,13 @@ func isCRISandbox(spec *rtspec.Spec) bool {
 }
 
 // genMachineArgs returns the command-line arguments for starting a unikernel machine.
-func genMachineArgs(ctx context.Context, cID, rootDir, bundleRoot string) (args []string, retErr error) {
+func genMachineArgs(ctx context.Context, cID, rootDir, bundleRoot string, cfg *config.KraftKit) (args []string, retErr error) {
 	m, err := newMachine(cID, rootDir, bundleRoot)
 	if err != nil {
 		return nil, fmt.Errorf("creating machine: %w", err)
 	}
 
-	mSvc, err := newMachineService(ctx)
+	mSvc, err := newMachineService(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("instantiating machine service: %w", err)
 	}
@@ -240,7 +241,7 @@ func genMachineArgs(ctx context.Context, cID, rootDir, bundleRoot string) (args 
 	// HACK: this starts a QEMU process without starting the guest (-S flag, "freeze CPU at startup").
 	// We only do that for the sake of cloning the machine's startup command and
 	// arguments, and set those same arguments inside the OCI container's config.
-	m, err = mSvc.Create(ctx, m)
+	m, err = mSvc.Create(ctx, cfg, m)
 	if err != nil {
 		return nil, fmt.Errorf("creating machine: %w", err)
 	}
@@ -391,13 +392,13 @@ func fileAbsPath(bundleRoot, relPath string) (string, error) {
 }
 
 // newMachineService returns a new MachineService.
-func newMachineService(ctx context.Context) (machineapi.MachineService, error) {
+func newMachineService(ctx context.Context, cfg *config.KraftKit) (machineapi.MachineService, error) {
 	ms, ok := mplatform.Strategies()[plat]
 	if !ok {
 		return nil, fmt.Errorf("unsupported platform driver: %s", plat)
 	}
 
-	return ms.NewMachineV1alpha1(ctx)
+	return ms.NewMachineV1alpha1(ctx, cfg)
 }
 
 // kernelArchitecture returns the architecture of the given kernel file.

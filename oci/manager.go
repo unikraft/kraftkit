@@ -41,7 +41,7 @@ type ociManager struct {
 const OCIFormat pack.PackageFormat = "oci"
 
 // NewOCIManager instantiates a new package manager based on OCI archives.
-func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager, error) {
+func NewOCIManager(ctx context.Context, cfg *config.KraftKit, opts ...any) (packmanager.PackageManager, error) {
 	manager := ociManager{}
 
 	for _, mopt := range opts {
@@ -63,18 +63,18 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 }
 
 // Update implements packmanager.PackageManager
-func (manager *ociManager) Update(ctx context.Context) error {
+func (manager *ociManager) Update(ctx context.Context, cfg *config.KraftKit) error {
 	return nil
 }
 
 // Pack implements packmanager.PackageManager
-func (manager *ociManager) Pack(ctx context.Context, entity component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (manager *ociManager) Pack(ctx context.Context, entity component.Component, cfg *config.KraftKit, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	targ, ok := entity.(target.Target)
 	if !ok {
 		return nil, fmt.Errorf("entity is not Unikraft target")
 	}
 
-	pkg, err := NewPackageFromTarget(ctx, targ, opts...)
+	pkg, err := NewPackageFromTarget(ctx, targ, cfg, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 }
 
 // Catalog implements packmanager.PackageManager
-func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+func (manager *ociManager) Catalog(ctx context.Context, cfg *config.KraftKit, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var packs []pack.Package
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
@@ -151,7 +151,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	if !query.UseCache() {
 		// If a direct reference can be made, attempt to generate a package from it
 		if refErr == nil {
-			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
+			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String(), cfg)
 			if err != nil {
 				log.G(ctx).Trace(err)
 			} else {
@@ -328,8 +328,8 @@ func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 }
 
 // Prune removes OCI packages.
-func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
-	ociDir := path.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
+func (manager *ociManager) Prune(ctx context.Context, cfg *config.KraftKit, qopts ...packmanager.QueryOption) error {
+	ociDir := path.Join(cfg.RuntimeDir, "oci")
 	var query packmanager.Query
 
 	for _, qopt := range qopts {
@@ -348,6 +348,7 @@ func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.Query
 	} else {
 		packages, err := manager.Catalog(
 			ctx,
+			cfg,
 			packmanager.WithCache(true),
 			packmanager.WithName(query.Name()),
 			packmanager.WithVersion(query.Version()),
@@ -361,7 +362,7 @@ func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.Query
 		for _, pack := range packages {
 			if pack.Name() == query.Name() &&
 				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
+				if err = pack.Delete(ctx, pack.Version(), cfg); err != nil {
 					return err
 				}
 			}
@@ -386,7 +387,7 @@ func (manager *ociManager) RemoveSource(ctx context.Context, source string) erro
 }
 
 // IsCompatible implements packmanager.PackageManager
-func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
+func (manager *ociManager) IsCompatible(ctx context.Context, source string, cfg *config.KraftKit, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, false, err
@@ -437,7 +438,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 			crane.WithUserAgent(version.UserAgent()),
 		}
 
-		if auth, ok := config.G[config.KraftKit](ctx).Auth[source]; ok {
+		if auth, ok := cfg.Auth[source]; ok {
 			// We split up the options for authenticating and the option for "verifying
 			// ssl" such that a user can simply disable secure connection to a registry
 			// which is publically accessible.

@@ -39,29 +39,29 @@ type Runu struct {
 	SystemdCgroup bool   `long:"systemd-cgroup" usage:"enable systemd cgroup support"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Runu{}, cobra.Command{
 		Short: "Run OCI-compatible unikernels",
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
 			HiddenDefaultCmd:  true,
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	cmd.AddCommand(state.New())
-	cmd.AddCommand(create.New())
-	cmd.AddCommand(start.New())
-	cmd.AddCommand(kill.New())
-	cmd.AddCommand(delete.New())
-	cmd.AddCommand(ps.New())
+	cmd.AddCommand(state.New(cfg))
+	cmd.AddCommand(create.New(cfg))
+	cmd.AddCommand(start.New(cfg))
+	cmd.AddCommand(kill.New(cfg))
+	cmd.AddCommand(delete.New(cfg))
+	cmd.AddCommand(ps.New(cfg))
 
 	return cmd
 }
 
-func (opts *Runu) PersistentPre(cmd *cobra.Command, _ []string) error {
+func (opts *Runu) PersistentPre(cmd *cobra.Command, _ []string, _ *config.ConfigManager[config.KraftKit]) error {
 	ctx := cmd.Context()
 
 	if opts.Root == "" {
@@ -84,36 +84,47 @@ func (opts *Runu) PersistentPre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (*Runu) Run(cmd *cobra.Command, args []string) error {
+func (*Runu) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	return cmd.Help()
 }
 
 func main() {
-	cmd := New()
-
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	copts := &cli.CliOptions{}
 
+	// TODO(jake-ciolek): We use the command tree to hydrate config.
+	//                    We use config to hydrate the command tree.
+	//                    This results in a circulard initialization dependency.
+	//                    Right now, we'll instantiate a short-lived, unhydrated
+	//                    command tree to initialize a config manager.
+	//                    Then, we'll use that to obtain the final hydrated command tree.
+	//                    This will do for now, but spend some time thinking about how to make it nicer.
+	cmdInit := New(nil)
+	_, args, err := cmdInit.Find(os.Args[1:])
+	if err != nil {
+		log.G(ctx).Error(err)
+	}
+
+	cfgMgr, err := cli.ConfigManagerFromArgs(args)
+	if err != nil {
+		log.G(ctx).Error(err)
+	}
+	cmd := New(cfgMgr)
+
 	for _, o := range []cli.CliOption{
-		cli.WithDefaultConfigManager(cmd),
-		cli.WithDefaultIOStreams(),
-		cli.WithDefaultPluginManager(),
-		cli.WithDefaultLogger(),
-		cli.WithDefaultHTTPClient(),
+		cli.WithConfigManager(cmd, cfgMgr),
+		cli.WithDefaultIOStreams(cfgMgr.Config),
+		cli.WithDefaultPluginManager(cfgMgr.Config),
+		cli.WithDefaultLogger(cfgMgr.Config),
+		cli.WithDefaultHTTPClient(cfgMgr.Config),
 	} {
 		if err := o(copts); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
-
-	// Set up the config manager in the context if it is available
-	if copts.ConfigManager != nil {
-		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
-	}
-
 	// Set up the logger in the context if it is available
 	if copts.Logger != nil {
 		ctx = log.WithLogger(ctx, copts.Logger)

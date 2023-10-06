@@ -27,7 +27,7 @@ type Push struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Push{}, cobra.Command{
 		Short:   "Push a Unikraft unikernel package to registry",
 		Use:     "push [FLAGS] [PACKAGE]",
@@ -47,7 +47,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Push) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Push) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -66,10 +66,10 @@ func (opts *Push) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Push) Run(cmd *cobra.Command, args []string) error {
+func (opts *Push) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	var workdir string
-
+	cfg := cfgMgr.Config
 	if len(args) == 0 {
 		workdir, err = os.Getwd()
 		if err != nil {
@@ -82,7 +82,7 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	norender := log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY
 	ref := ""
 	if workdir != "" {
 		popts := []app.ProjectOption{
@@ -122,8 +122,9 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 		pmananger = packmanager.G(ctx)
 	}
 
-	if pm, compatible, err := pmananger.IsCompatible(ctx, ref); err == nil && compatible {
+	if pm, compatible, err := pmananger.IsCompatible(ctx, ref, cfgMgr.Config); err == nil && compatible {
 		packages, err := pm.Catalog(ctx,
+			cfgMgr.Config,
 			packmanager.WithCache(true),
 			packmanager.WithName(ref),
 		)

@@ -38,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
@@ -51,7 +52,7 @@ type Clean struct {
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Clean{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",
@@ -67,7 +68,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +76,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Clean) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -88,7 +89,7 @@ func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Clean) Run(cmd *cobra.Command, args []string) error {
+func (opts *Clean) Run(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
