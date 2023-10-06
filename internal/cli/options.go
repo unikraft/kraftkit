@@ -126,9 +126,7 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		if err != nil {
 			return err
 		}
-		if err := cmdfactory.AttributeFlags(cmd, cfg, args...); err != nil {
-			return err
-		}
+		configDir := config.FetchConfigDirFromArgs(args)
 
 		// Did the user specify a non-standard config directory?  The following
 		// check is possible thanks to the attribution of flags to the config file.
@@ -136,10 +134,10 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		// re-instantiate the ConfigManager with the configuration from that
 		// directory.
 		var cfgm *config.ConfigManager[config.KraftKit]
-		if cpath := cfg.Paths.Config; cpath != "" && cpath != config.ConfigDir() {
+		if configDir != "" && configDir != config.ConfigDir() {
 			cfgm, err = config.NewConfigManager(
 				cfg,
-				config.WithFile[config.KraftKit](filepath.Join(cpath, "config.yaml"), true),
+				config.WithFile[config.KraftKit](filepath.Join(configDir, "config.yaml"), true),
 			)
 			if err != nil {
 				return err
@@ -152,6 +150,10 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 			if err != nil {
 				return err
 			}
+		}
+
+		if err := cmdfactory.AttributeFlags(cmd, cfg, args...); err != nil {
+			return err
 		}
 
 		copts.ConfigManager = cfgm
