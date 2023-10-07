@@ -16,6 +16,7 @@ import (
 )
 
 func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, error) {
+	var err error
 	switch value := data.(type) {
 	case map[string]interface{}:
 		uk := unikraft.FromContext(ctx)
@@ -52,9 +53,12 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 			case "kconfig":
 				switch tprop := prop.(type) {
 				case map[string]interface{}:
-					t.kconfig = kconfig.NewKeyValueMapFromMap(tprop)
+					t.kconfig, err = kconfig.NewKeyValueMapFromMap(tprop)
 				case []interface{}:
-					t.kconfig = kconfig.NewKeyValueMapFromSlice(tprop...)
+					t.kconfig, err = kconfig.NewKeyValueMapFromSlice(tprop...)
+				}
+				if err != nil {
+					return nil, err
 				}
 			}
 		}
