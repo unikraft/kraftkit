@@ -139,7 +139,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	//
 	// }
 
-	manifest, err := NewManifest(ctx, ocipack.handle)
+	ocipack.manifest, err = NewManifest(ctx, ocipack.handle)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 	defer os.Remove(layer.tmp)
 
-	if _, err := manifest.AddLayer(ctx, layer); err != nil {
+	if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
 		return nil, err
 	}
 
@@ -198,7 +198,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 		defer os.Remove(layer.tmp)
 
-		if _, err := manifest.AddLayer(ctx, layer); err != nil {
+		if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
 			return nil, err
 		}
 	}
@@ -221,12 +221,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// 	log.G(ctx).Debug("oci: including application source files")
 	// }
 
-	manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
-	manifest.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
-	manifest.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
+	ocipack.manifest.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
+	ocipack.manifest.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 	if version := popts.KernelVersion(); len(version) > 0 {
-		manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
-		manifest.SetOSVersion(ctx, version)
+		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
+		ocipack.manifest.SetOSVersion(ctx, version)
 	}
 
 	if popts.PackKConfig() {
@@ -240,24 +240,22 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 				continue
 			}
 
-			manifest.SetOSFeature(ctx, k.String())
+			ocipack.manifest.SetOSFeature(ctx, k.String())
 		}
 	}
 
-	manifest.SetCmd(ctx, ocipack.Command())
-	manifest.SetOS(ctx, ocipack.Platform().Name())
-	manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
+	ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
+	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"tag": ocipack.Name(),
 	}).Debug("oci: saving image")
 
-	_, err = manifest.Save(ctx, ocipack.imageRef(), nil)
+	_, err = ocipack.manifest.Save(ctx, ocipack.imageRef(), nil)
 	if err != nil {
 		return nil, err
 	}
-
-	ocipack.manifest = manifest
 
 	return &ocipack, nil
 }
