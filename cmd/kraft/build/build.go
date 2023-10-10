@@ -152,7 +152,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 					packmanager.WithName(opts.project.Template().Name()),
 					packmanager.WithTypes(unikraft.ComponentTypeApp),
 					packmanager.WithVersion(opts.project.Template().Version()),
-					packmanager.WithCache(!opts.NoCache),
+					packmanager.WithUpdate(opts.NoCache),
 					packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 				)
 				if err != nil {
@@ -282,7 +282,7 @@ func (opts *Build) pull(ctx context.Context, project app.Application, workdir st
 					packmanager.WithTypes(component.Type()),
 					packmanager.WithVersion(component.Version()),
 					packmanager.WithSource(component.Source()),
-					packmanager.WithCache(!opts.NoCache),
+					packmanager.WithUpdate(opts.NoCache),
 					packmanager.WithAuthConfig(auths),
 				)
 				if err != nil {

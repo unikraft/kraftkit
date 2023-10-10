@@ -70,7 +70,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	results, err := elfloader.registry.Catalog(ctx,
 		packmanager.WithName(defaultPrebuilt),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
-		packmanager.WithCache(true),
+		packmanager.WithUpdate(false),
 	)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 		results, err = elfloader.registry.Catalog(ctx,
 			packmanager.WithName(defaultPrebuilt),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithCache(false),
+			packmanager.WithUpdate(true),
 		)
 		if err != nil {
 			return nil, err

@@ -124,7 +124,7 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 
 	if pm, compatible, err := pmananger.IsCompatible(ctx, ref); err == nil && compatible {
 		packages, err := pm.Catalog(ctx,
-			packmanager.WithCache(true),
+			packmanager.WithUpdate(false),
 			packmanager.WithName(ref),
 		)
 		if err != nil {

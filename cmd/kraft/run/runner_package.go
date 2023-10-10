@@ -78,7 +78,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	packs, err := runner.pm.Catalog(ctx,
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
-		packmanager.WithCache(true),
+		packmanager.WithUpdate(false),
 		packmanager.WithPlatform(opts.platform.String()),
 		packmanager.WithArchitecture(opts.Architecture),
 	)
@@ -93,7 +93,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		packs, err = runner.pm.Catalog(ctx,
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithName(runner.packName),
-			packmanager.WithCache(false),
+			packmanager.WithUpdate(true),
 			packmanager.WithPlatform(opts.platform.String()),
 			packmanager.WithArchitecture(opts.Architecture),
 		)

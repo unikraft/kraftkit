@@ -25,9 +25,8 @@ type Query struct {
 	// Version specifies the version of the package
 	version string
 
-	// useCache forces the package manager to update values using what it has
-	// locally.
-	useCache bool
+	// update forces the package manager to update values from remote manifests.
+	update bool
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
@@ -97,9 +96,10 @@ func (query *Query) KConfig() []string {
 	return query.kConfig
 }
 
-// UseCache indicates whether the package manager should use any existing cache.
-func (query *Query) UseCache() bool {
-	return query.useCache
+// Update indicates whether the package manager should use use remote manifests
+// when making its query.
+func (query *Query) Update() bool {
+	return query.update
 }
 
 // Auth returns authentication configuration for a given domain or nil if the
@@ -127,7 +127,7 @@ func (query *Query) Fields() map[string]interface{} {
 		"version": query.version,
 		"source":  query.source,
 		"types":   query.types,
-		"cache":   query.useCache,
+		"update":  query.update,
 		"auth":    query.auths != nil,
 	}
 }
@@ -194,10 +194,10 @@ func WithVersion(version string) QueryOption {
 	}
 }
 
-// WithCache sets whether to use local caching when making the query.
-func WithCache(useCache bool) QueryOption {
+// WithUpdate sets whether to use remote manifests when making the query.
+func WithUpdate(update bool) QueryOption {
 	return func(query *Query) {
-		query.useCache = useCache
+		query.update = update
 	}
 }
 

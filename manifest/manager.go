@@ -196,7 +196,7 @@ func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryO
 	} else {
 		packages, err := m.Catalog(
 			ctx,
-			packmanager.WithCache(true),
+			packmanager.WithUpdate(false),
 			packmanager.WithName(query.Name()),
 			packmanager.WithVersion(query.Version()),
 		)
@@ -252,6 +252,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	mopts := []ManifestOption{
 		WithAuthConfig(query.Auths()),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithUpdate(query.Update()),
 	}
 
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
@@ -266,7 +267,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		if err != nil {
 			return nil, err
 		}
-	} else if !query.UseCache() {
+	} else if query.Update() {
 		// If Catalog is executed in multiple successive calls, which occurs when
 		// searching for multiple packages sequentially, check if the cacheIndex has
 		// been set.  Even if UseCache set has been set, it means that at least once

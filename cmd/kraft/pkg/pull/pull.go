@@ -159,7 +159,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						packmanager.WithName(project.Template().Name()),
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
-						packmanager.WithCache(!opts.ForceCache),
+						packmanager.WithUpdate(opts.ForceCache),
 						packmanager.WithPlatform(opts.Platform),
 						packmanager.WithArchitecture(opts.Architecture),
 					)
@@ -257,7 +257,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					packmanager.WithVersion(c.Version()),
 					packmanager.WithSource(c.Source()),
 					packmanager.WithTypes(c.Type()),
-					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithUpdate(!opts.ForceCache),
 					packmanager.WithPlatform(opts.Platform),
 					packmanager.WithArchitecture(opts.Architecture),
 				},
@@ -275,7 +275,7 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			queries = append(queries, pmQuery{
 				pm: pm,
 				query: []packmanager.QueryOption{
-					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithUpdate(!opts.ForceCache),
 					packmanager.WithName(arg),
 				},
 			})

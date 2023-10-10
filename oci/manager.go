@@ -148,7 +148,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		return nil, err
 	}
 
-	if !query.UseCache() {
+	if query.Update() {
 		// If a direct reference can be made, attempt to generate a package from it
 		if refErr == nil {
 			pack, err := NewPackageFromRemoteOCIRef(ctx, handle, ref.String())
@@ -182,7 +182,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 			for _, fullref := range catalog {
 				// Skip direct references from the remote registry
-				if !query.UseCache() && refErr == nil && ref.String() == fullref {
+				if refErr == nil && ref.String() == fullref {
 					continue
 				}
 
@@ -276,7 +276,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		fullref := fmt.Sprintf("%s:%s", refname, revision)
 
 		// Skip direct references from the remote registry
-		if !query.UseCache() && refErr == nil && ref.String() == fullref {
+		if query.Update() && refErr == nil && ref.String() == fullref {
 			log.G(ctx).
 				WithField("ref", manifest.Config.Digest.String()).
 				Trace("skipping non-unikernel digest")
@@ -348,7 +348,7 @@ func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.Query
 	} else {
 		packages, err := manager.Catalog(
 			ctx,
-			packmanager.WithCache(true),
+			packmanager.WithUpdate(false),
 			packmanager.WithName(query.Name()),
 			packmanager.WithVersion(query.Version()),
 		)

@@ -121,7 +121,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(ctx,
-			packmanager.WithCache(!opts.Update),
+			packmanager.WithUpdate(opts.Update),
 			packmanager.WithTypes(types...),
 		)
 		if err != nil {

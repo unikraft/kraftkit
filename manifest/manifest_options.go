@@ -20,6 +20,10 @@ type ManifestOptions struct {
 	// resource
 	auths map[string]config.AuthConfig
 
+	// update is a switch to enable or prevent remote connections when
+	// instantiating a Manifest(Index) or when probing sources, versions, etc.
+	update bool
+
 	// opts saves the options that were used to instantiated this ManifestOptions
 	// struct.
 	opts []ManifestOption
@@ -53,5 +57,14 @@ func WithAuthConfig(auths map[string]config.AuthConfig) ManifestOption {
 func WithCacheDir(dir string) ManifestOption {
 	return func(mopts *ManifestOptions) {
 		mopts.cacheDir = dir
+	}
+}
+
+// WithUpdate is an option to indicate that remote network connections
+// can be made when instantiating a Manifest(Index) or to allow probing remote
+// sources to determine versions, etc.
+func WithUpdate(update bool) ManifestOption {
+	return func(mopts *ManifestOptions) {
+		mopts.update = update
 	}
 }
