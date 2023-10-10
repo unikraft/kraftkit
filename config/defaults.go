@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
+	DefaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
 func NewDefaultKraftKitConfig() (*KraftKit, error) {
@@ -53,7 +53,7 @@ func NewDefaultKraftKitConfig() (*KraftKit, error) {
 	}
 
 	if len(c.Unikraft.Manifests) == 0 {
-		c.Unikraft.Manifests = append(c.Unikraft.Manifests, defaultManifestIndex)
+		c.Unikraft.Manifests = append(c.Unikraft.Manifests, DefaultManifestIndex)
 	}
 
 	return c, nil

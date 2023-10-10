@@ -48,6 +48,14 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 
 	// Populate the internal list of manifests with locally saved manifests
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		// Use implicit knowledge about the fact that by default the official
+		// manifest is a well-known manifest and does not need the `IsCompatible`
+		// check, speeding up the general initialization of this method.
+		if manifest == config.DefaultManifestIndex {
+			manager.manifests = append(manager.manifests, manifest)
+			continue
+		}
+
 		if _, compatible, _ := manager.IsCompatible(ctx, manifest); compatible {
 			manager.manifests = append(manager.manifests, manifest)
 		}
