@@ -21,6 +21,7 @@ jobs:
 
       - name: Tag new patch version
         run: |
+          set -xe
           LATEST_TAG=$(curl -s "https://get.kraftkit.sh/latest.txt")
 
           # Check if LATEST_TAG has semver format
