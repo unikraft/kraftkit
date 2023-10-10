@@ -430,11 +430,11 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	ocipack.manifest.manifestDesc = content.NewDescriptorFromBytes(
+	ocipack.manifest.desc = content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageManifest,
 		manifestJson,
 	)
-	return ocipack.manifest.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.manifest.manifestDesc)
+	return ocipack.manifest.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.manifest.desc)
 }
 
 // Pull implements pack.Package

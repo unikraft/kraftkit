@@ -31,11 +31,11 @@ import (
 type Manifest struct {
 	handle handler.Handler
 
-	config       ocispec.Image
-	manifest     ocispec.Manifest
-	manifestDesc ocispec.Descriptor
-	layers       []*Layer
-	pushed       sync.Map // wraps map[digest.Digest]bool
+	config   ocispec.Image
+	manifest ocispec.Manifest
+	desc     ocispec.Descriptor
+	layers   []*Layer
+	pushed   sync.Map // wraps map[digest.Digest]bool
 
 	annotations map[string]string
 }
@@ -298,23 +298,23 @@ func (manifest *Manifest) Save(ctx context.Context, source string, onProgress fu
 		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	manifest.manifestDesc = content.NewDescriptorFromBytes(
+	manifest.desc = content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageManifest,
 		manifestJson,
 	)
-	manifest.manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
-	manifest.manifestDesc.Annotations = manifest.manifest.Annotations
+	manifest.desc.ArtifactType = manifest.manifest.Config.MediaType
+	manifest.desc.Annotations = manifest.manifest.Annotations
 
 	// save the manifest digest
 	if err := manifest.handle.SaveDigest(
 		ctx,
 		source,
-		manifest.manifestDesc,
+		manifest.desc,
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
 	}
 
-	return manifest.manifestDesc, nil
+	return manifest.desc, nil
 }
