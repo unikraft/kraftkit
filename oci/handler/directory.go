@@ -192,11 +192,11 @@ func (handle *DirectoryHandler) SaveDigest(ctx context.Context, ref string, desc
 }
 
 // ResolveImage implements ImageResolver.
-func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string) (imgspec ocispec.Image, err error) {
+func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string) (*ocispec.Image, error) {
 	// Find the manifest of this image
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	var jsonPath string
@@ -214,24 +214,24 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 	// Check whether the manifest exists
 	if _, err := os.Stat(manifestPath); err != nil {
-		return ocispec.Image{}, fmt.Errorf("manifest for %s does not exist: %s", ref.Name(), manifestPath)
+		return nil, fmt.Errorf("manifest for %s does not exist: %s", ref.Name(), manifestPath)
 	}
 
 	// Read the manifest
 	reader, err := os.Open(manifestPath)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	manifestRaw, err := io.ReadAll(reader)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	// Unmarshal the manifest
 	manifest := ocispec.Manifest{}
 	if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	// Split the digest into algorithm and hex
@@ -250,28 +250,28 @@ func (handle *DirectoryHandler) ResolveImage(ctx context.Context, fullref string
 
 	// Check whether the config exists
 	if _, err := os.Stat(configDir); err != nil {
-		return ocispec.Image{}, fmt.Errorf("could not access config file for %s: %w", ref.Name(), err)
+		return nil, fmt.Errorf("could not access config file for %s: %w", ref.Name(), err)
 	}
 
 	// Read the config
 	reader, err = os.Open(configDir)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	configRaw, err := io.ReadAll(reader)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	// Unmarshal the config
-	config := ocispec.Image{}
-	if err = json.Unmarshal(configRaw, &config); err != nil {
-		return ocispec.Image{}, err
+	var image ocispec.Image
+	if err = json.Unmarshal(configRaw, &image); err != nil {
+		return nil, err
 	}
 
 	// Return the image
-	return config, nil
+	return &image, nil
 }
 
 // FetchImage implements ImageFetcher.

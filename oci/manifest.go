@@ -31,9 +31,9 @@ import (
 type Manifest struct {
 	handle handler.Handler
 
-	config   ocispec.Image
-	manifest ocispec.Manifest
-	desc     ocispec.Descriptor
+	config   *ocispec.Image
+	manifest *ocispec.Manifest
+	desc     *ocispec.Descriptor
 	layers   []*Layer
 	pushed   sync.Map // wraps map[digest.Digest]bool
 
@@ -50,7 +50,7 @@ func NewManifest(ctx context.Context, handle handler.Handler) (*Manifest, error)
 	manifest := Manifest{
 		layers: make([]*Layer, 0),
 		handle: handle,
-		config: ocispec.Image{
+		config: &ocispec.Image{
 			Config: ocispec.ImageConfig{},
 		},
 	}
@@ -66,7 +66,7 @@ func NewManifestFromSpec(ctx context.Context, handle handler.Handler, spec ocisp
 		return nil, err
 	}
 
-	manifest.manifest = spec
+	manifest.manifest = &spec
 
 	return manifest, nil
 }
@@ -283,7 +283,7 @@ func (manifest *Manifest) Save(ctx context.Context, source string, onProgress fu
 	manifest.annotations[images.AnnotationImageName] = ref.String()
 
 	// Generate the final manifest
-	manifest.manifest = ocispec.Manifest{
+	manifest.manifest = &ocispec.Manifest{
 		Versioned: specs.Versioned{
 			SchemaVersion: 2, // historical value. does not pertain to OCI or docker version
 		},
@@ -298,23 +298,25 @@ func (manifest *Manifest) Save(ctx context.Context, source string, onProgress fu
 		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	manifest.desc = content.NewDescriptorFromBytes(
+	manifestDesc := content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageManifest,
 		manifestJson,
 	)
-	manifest.desc.ArtifactType = manifest.manifest.Config.MediaType
-	manifest.desc.Annotations = manifest.manifest.Annotations
+	manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
+	manifestDesc.Annotations = manifest.manifest.Annotations
 
 	// save the manifest digest
 	if err := manifest.handle.SaveDigest(
 		ctx,
 		source,
-		manifest.desc,
+		manifestDesc,
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
 	}
 
-	return manifest.desc, nil
+	manifest.desc = &manifestDesc
+
+	return manifestDesc, nil
 }

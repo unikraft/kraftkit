@@ -77,7 +77,7 @@ func (dl DirectoryLayer) MediaType() (types.MediaType, error) {
 
 type DirectoryImage struct {
 	handle             *DirectoryHandler
-	image              ocispec.Image
+	image              *ocispec.Image
 	manifestDescriptor *ocispec.Descriptor
 	ref                name.Reference
 }

@@ -260,22 +260,27 @@ func (handle *ContainerdHandler) SaveDigest(ctx context.Context, ref string, des
 }
 
 // ResolveImage implements ImageResolver.
-func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (imgspec ocispec.Image, err error) {
+func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (*ocispec.Image, error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
 	defer func() {
 		err = combineErrors(err, done(ctx))
 	}()
 
-	image, err := handle.client.GetImage(ctx, fullref)
+	containerdImage, err := handle.client.GetImage(ctx, fullref)
 	if err != nil {
-		return ocispec.Image{}, err
+		return nil, err
 	}
 
-	return image.Spec(ctx)
+	image, err := containerdImage.Spec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &image, nil
 }
 
 // FetchImage implements ImageFetcher.
