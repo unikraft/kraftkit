@@ -331,11 +331,8 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 
 	// Annoyingly convert between regtypes and authn.
 	if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
-		authConfig.Auth = auth.Auth
-		authConfig.IdentityToken = auth.IdentityToken
-		authConfig.Password = auth.Password
-		authConfig.RegistryToken = auth.RegistryToken
-		authConfig.Username = auth.Username
+		authConfig.Username = auth.User
+		authConfig.Password = auth.Token
 	}
 
 	raw, err := crane.Manifest(ref,

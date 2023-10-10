@@ -34,7 +34,7 @@ import (
 
 type ociManager struct {
 	registries []string
-	auths      map[string]regtypes.AuthConfig
+	auths      map[string]config.AuthConfig
 	handle     func(ctx context.Context) (context.Context, handler.Handler, error)
 }
 
@@ -97,7 +97,11 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 		log.G(ctx).
 			WithField("registry", domain).
 			Debug("authenticating")
-		auth = a
+
+		auth = regtypes.AuthConfig{
+			Username: a.User,
+			Password: a.Token,
+		}
 	} else {
 		auth, err = repoutils.GetAuthConfig("", "", domain)
 		if err != nil {

@@ -21,12 +21,12 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
-	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/archive"
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 )
 
@@ -38,12 +38,12 @@ const (
 type ContainerdHandler struct {
 	client    *containerd.Client
 	namespace string
-	auths     map[string]regtypes.AuthConfig
+	auths     map[string]config.AuthConfig
 }
 
 // NewContainerdHandler creates a Resolver-compatible interface given the
 // containerd address and namespace.
-func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]regtypes.AuthConfig, opts ...containerd.ClientOpt) (context.Context, *ContainerdHandler, error) {
+func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]config.AuthConfig, opts ...containerd.ClientOpt) (context.Context, *ContainerdHandler, error) {
 	client, err := containerd.New(address, opts...)
 	if err != nil {
 		return nil, nil, err
@@ -307,7 +307,7 @@ func (handle *ContainerdHandler) FetchImage(ctx context.Context, ref, plat strin
 				return "", "", nil
 			}
 
-			return auth.Username, auth.Password, nil
+			return auth.User, auth.Token, nil
 		}),
 	)
 	if err != nil {
@@ -507,7 +507,7 @@ func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, targ
 				return "", "", nil
 			}
 
-			return auth.Username, auth.Password, nil
+			return auth.User, auth.Token, nil
 		}),
 	)
 	if err != nil {

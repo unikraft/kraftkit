@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/oci/simpleauth"
 
-	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -35,10 +35,10 @@ const (
 
 type DirectoryHandler struct {
 	path  string
-	auths map[string]regtypes.AuthConfig
+	auths map[string]config.AuthConfig
 }
 
-func NewDirectoryHandler(path string, auths map[string]regtypes.AuthConfig) (*DirectoryHandler, error) {
+func NewDirectoryHandler(path string, auths map[string]config.AuthConfig) (*DirectoryHandler, error) {
 	if err := os.MkdirAll(path, 0o775); err != nil {
 		return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
 	}
@@ -285,11 +285,8 @@ func (handle *DirectoryHandler) FetchImage(ctx context.Context, fullref, platfor
 
 	// Annoyingly convert between regtypes and authn.
 	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
-		authConfig.Auth = auth.Auth
-		authConfig.IdentityToken = auth.IdentityToken
-		authConfig.Password = auth.Password
-		authConfig.RegistryToken = auth.RegistryToken
-		authConfig.Username = auth.Username
+		authConfig.Username = auth.User
+		authConfig.Password = auth.Token
 	}
 
 	img, err := remote.Image(ref,
@@ -445,11 +442,8 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 
 	// Annoyingly convert between regtypes and authn.
 	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
-		authConfig.Auth = auth.Auth
-		authConfig.IdentityToken = auth.IdentityToken
-		authConfig.Password = auth.Password
-		authConfig.RegistryToken = auth.RegistryToken
-		authConfig.Username = auth.Username
+		authConfig.Username = auth.User
+		authConfig.Password = auth.Token
 	}
 
 	return remote.Write(ref,
