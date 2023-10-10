@@ -29,8 +29,7 @@ import (
 )
 
 type Image struct {
-	workdir  string
-	autoSave bool
+	workdir string
 
 	handle handler.Handler
 
@@ -51,9 +50,8 @@ func NewImage(_ context.Context, handle handler.Handler, opts ...ImageOption) (*
 	}
 
 	image := Image{
-		layers:   make([]*Layer, 0),
-		handle:   handle,
-		autoSave: true,
+		layers: make([]*Layer, 0),
+		handle: handle,
 		config: ocispec.Image{
 			Config: ocispec.ImageConfig{},
 		},
@@ -104,18 +102,7 @@ func (image *Image) AddLayer(ctx context.Context, layer *Layer) (ocispec.Descrip
 		"mediaType": layer.blob.desc.MediaType,
 	}).Trace("oci: layering")
 
-	if image.autoSave {
-		if exists, _ := image.handle.DigestExists(ctx, layer.blob.desc.Digest); !exists {
-			if _, err := image.AddBlob(ctx, layer.blob); err != nil {
-				return ocispec.Descriptor{}, err
-			}
-		}
-
-		image.pushed.Store(layer.blob.desc.Digest, true)
-
-	} else {
-		image.pushed.Store(layer.blob.desc.Digest, false)
-	}
+	image.pushed.Store(layer.blob.desc.Digest, false)
 
 	image.layers = append(image.layers, layer)
 

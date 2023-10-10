@@ -14,11 +14,3 @@ func WithWorkdir(workdir string) ImageOption {
 		return nil
 	}
 }
-
-// WithAutoSave atomicizes the image as operations occur on its body.
-func WithAutoSave(autoSave bool) ImageOption {
-	return func(image *Image) error {
-		image.autoSave = autoSave
-		return nil
-	}
-}
