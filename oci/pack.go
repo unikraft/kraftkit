@@ -39,9 +39,9 @@ import (
 const ConfigFilename = "config.json"
 
 type ociPackage struct {
-	handle handler.Handler
-	ref    name.Reference
-	image  *Image
+	handle   handler.Handler
+	ref      name.Reference
+	manifest *Manifest
 
 	// Embedded attributes which represent target.Target
 	arch    arch.Architecture
@@ -139,7 +139,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	//
 	// }
 
-	image, err := NewImage(ctx, ocipack.handle)
+	manifest, err := NewManifest(ctx, ocipack.handle)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 	defer os.Remove(layer.tmp)
 
-	if _, err := image.AddLayer(ctx, layer); err != nil {
+	if _, err := manifest.AddLayer(ctx, layer); err != nil {
 		return nil, err
 	}
 
@@ -198,7 +198,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 		defer os.Remove(layer.tmp)
 
-		if _, err := image.AddLayer(ctx, layer); err != nil {
+		if _, err := manifest.AddLayer(ctx, layer); err != nil {
 			return nil, err
 		}
 	}
@@ -221,12 +221,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// 	log.G(ctx).Debug("oci: including application source files")
 	// }
 
-	image.SetAnnotation(ctx, AnnotationName, ocipack.Name())
-	image.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
-	image.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+	manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
+	manifest.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
+	manifest.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 	if version := popts.KernelVersion(); len(version) > 0 {
-		image.SetAnnotation(ctx, AnnotationKernelVersion, version)
-		image.SetOSVersion(ctx, version)
+		manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
+		manifest.SetOSVersion(ctx, version)
 	}
 
 	if popts.PackKConfig() {
@@ -240,24 +240,24 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 				continue
 			}
 
-			image.SetOSFeature(ctx, k.String())
+			manifest.SetOSFeature(ctx, k.String())
 		}
 	}
 
-	image.SetCmd(ctx, ocipack.Command())
-	image.SetOS(ctx, ocipack.Platform().Name())
-	image.SetArchitecture(ctx, ocipack.Architecture().Name())
+	manifest.SetCmd(ctx, ocipack.Command())
+	manifest.SetOS(ctx, ocipack.Platform().Name())
+	manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
 	log.G(ctx).WithFields(logrus.Fields{
 		"tag": ocipack.Name(),
 	}).Debug("oci: saving image")
 
-	_, err = image.Save(ctx, ocipack.imageRef(), nil)
+	_, err = manifest.Save(ctx, ocipack.imageRef(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	ocipack.image = image
+	ocipack.manifest = manifest
 
 	return &ocipack, nil
 }
@@ -284,19 +284,19 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 		return nil, err
 	}
 
-	ocipack.image, err = NewImageFromManifestSpec(ctx, handle, manifest)
+	ocipack.manifest, err = NewManifestFromSpec(ctx, handle, manifest)
 	if err != nil {
 		return nil, err
 	}
 
-	architecture, err := arch.TransformFromSchema(ctx, ocipack.image.manifest.Config.Platform.Architecture)
+	architecture, err := arch.TransformFromSchema(ctx, ocipack.manifest.manifest.Config.Platform.Architecture)
 	if err != nil {
 		return nil, err
 	}
 
 	ocipack.arch = architecture.(arch.Architecture)
 
-	platform, err := plat.TransformFromSchema(ctx, ocipack.image.manifest.Config.Platform.OS)
+	platform, err := plat.TransformFromSchema(ctx, ocipack.manifest.manifest.Config.Platform.OS)
 	if err != nil {
 		return nil, err
 	}
@@ -359,7 +359,7 @@ func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref
 		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
 	}
 
-	ocipack.image, err = NewImageFromManifestSpec(ctx, handle, manifest)
+	ocipack.manifest, err = NewManifestFromSpec(ctx, handle, manifest)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate image from manifest: %v", err)
 	}
@@ -420,21 +420,21 @@ func (ocipack *ociPackage) imageRef() string {
 
 // Metadata implements pack.Package
 func (ocipack *ociPackage) Metadata() any {
-	return ocipack.image.config
+	return ocipack.manifest.config
 }
 
 // Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
-	manifestJson, err := json.Marshal(ocipack.image.manifest)
+	manifestJson, err := json.Marshal(ocipack.manifest.manifest)
 	if err != nil {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	ocipack.image.manifestDesc = content.NewDescriptorFromBytes(
+	ocipack.manifest.manifestDesc = content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageManifest,
 		manifestJson,
 	)
-	return ocipack.image.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.image.manifestDesc)
+	return ocipack.manifest.handle.PushImage(ctx, ocipack.imageRef(), &ocipack.manifest.manifestDesc)
 }
 
 // Pull implements pack.Package
@@ -451,7 +451,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		goto unpack
 	}
 
-	if err := ocipack.image.handle.FetchImage(
+	if err := ocipack.manifest.handle.FetchImage(
 		ctx,
 		ocipack.imageRef(),
 		fmt.Sprintf("%s/%s", ocipack.plat.Name(), ocipack.arch.Name()),
@@ -469,7 +469,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 unpack:
 	// Unpack the image if a working directory has been provided
 	if len(popts.Workdir()) > 0 {
-		if err := ocipack.image.handle.UnpackImage(
+		if err := ocipack.manifest.handle.UnpackImage(
 			ctx,
 			ocipack.imageRef(),
 			popts.Workdir(),
@@ -482,7 +482,7 @@ unpack:
 
 		// Set the command
 		ocipack.command = image.Config.Cmd
-		ocipack.image.config = image
+		ocipack.manifest.config = image
 
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
@@ -502,13 +502,13 @@ func (ocipack *ociPackage) Delete(ctx context.Context, version string) error {
 	ociDir := path.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
 
 	// Removing config layer
-	typeAndId := strings.Split(string(ocipack.image.manifest.Config.Digest), ":")
+	typeAndId := strings.Split(string(ocipack.manifest.manifest.Config.Digest), ":")
 	if err := os.RemoveAll(path.Join(ociDir, "configs", typeAndId[0], typeAndId[1])); err != nil {
 		return err
 	}
 
 	// Removing image layers
-	for _, layer := range ocipack.image.manifest.Layers {
+	for _, layer := range ocipack.manifest.manifest.Layers {
 		typeAndId = strings.Split(string(layer.Digest), ":")
 		if err := os.RemoveAll(path.Join(ociDir, "layers", typeAndId[0], typeAndId[1])); err != nil {
 			return err
