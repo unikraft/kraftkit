@@ -309,8 +309,6 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullWorkdir(workdir),
 						pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(opts.ForceCache),
-						pack.WithPullPlatform(opts.Platform),
-						pack.WithPullArchitecture(opts.Architecture),
 					)
 				},
 			))

@@ -12,8 +12,6 @@ import (
 // package.
 type PullOptions struct {
 	auths             map[string]config.AuthConfig
-	architecture      string
-	platform          string
 	version           string
 	calculateChecksum bool
 	onProgress        func(progress float64)
@@ -29,16 +27,6 @@ func (ppo *PullOptions) Auths(domain string) *config.AuthConfig {
 	}
 
 	return nil
-}
-
-// Architecture to pull.
-func (ppo *PullOptions) Architecture() string {
-	return ppo.architecture
-}
-
-// Platform to pull.
-func (ppo *PullOptions) Platform() string {
-	return ppo.platform
 }
 
 // OnProgress calls (if set) an embedded progress function which can be used to
@@ -99,24 +87,6 @@ func WithPullAuthConfig(auth map[string]config.AuthConfig) PullOption {
 		for k, v := range auth {
 			opts.auths[k] = v
 		}
-
-		return nil
-	}
-}
-
-// WithPullArchitecture requests a given architecture (if applicable)
-func WithPullArchitecture(arch string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.architecture = arch
-
-		return nil
-	}
-}
-
-// WithPullPlatform requests a given platform (if applicable).
-func WithPullPlatform(plat string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.platform = plat
 
 		return nil
 	}

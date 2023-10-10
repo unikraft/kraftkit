@@ -444,14 +444,6 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
-	pullArch := popts.Architecture()
-	if pullArch == "" {
-		pullArch, err = arch.HostArchitecture()
-		if err != nil {
-			return err
-		}
-	}
-
 	// If it's possible to resolve the image reference, the image has already been
 	// pulled to the local image store
 	image, err := ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
@@ -462,7 +454,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 	if err := ocipack.image.handle.FetchImage(
 		ctx,
 		ocipack.imageRef(),
-		fmt.Sprintf("%s/%s", popts.Platform(), pullArch),
+		fmt.Sprintf("%s/%s", ocipack.plat.Name(), ocipack.arch.Name()),
 		popts.OnProgress,
 	); err != nil {
 		return err
