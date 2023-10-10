@@ -26,6 +26,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/set"
 	libcontainer "kraftkit.sh/libmocktainer"
@@ -269,6 +270,10 @@ func genMachineArgs(ctx context.Context, cID, rootDir, bundleRoot string) (args 
 		bin = qemu.QemuSystemAarch64
 	default:
 		return nil, fmt.Errorf("unsupported machine architecture: %s", mArch)
+	}
+
+	if config.G[config.KraftKit](ctx).Qemu != "" {
+		bin = config.G[config.KraftKit](ctx).Qemu
 	}
 
 	exe, err := exec.NewExecutable(bin, qCfg)
