@@ -29,8 +29,6 @@ import (
 )
 
 type Image struct {
-	workdir string
-
 	handle handler.Handler
 
 	config       ocispec.Image
@@ -44,7 +42,7 @@ type Image struct {
 
 // NewImage instantiates a new image based in a handler and any provided
 // options.
-func NewImage(_ context.Context, handle handler.Handler, opts ...ImageOption) (*Image, error) {
+func NewImage(_ context.Context, handle handler.Handler) (*Image, error) {
 	if handle == nil {
 		return nil, fmt.Errorf("cannot use `NewImage` without handler")
 	}
@@ -57,19 +55,13 @@ func NewImage(_ context.Context, handle handler.Handler, opts ...ImageOption) (*
 		},
 	}
 
-	for _, opt := range opts {
-		if err := opt(&image); err != nil {
-			return nil, err
-		}
-	}
-
 	return &image, nil
 }
 
 // NewImageFromManifestSpec instantiates a new image based in a handler and with
 // the provided Manifest specification and options.
-func NewImageFromManifestSpec(ctx context.Context, handle handler.Handler, manifest ocispec.Manifest, opts ...ImageOption) (*Image, error) {
-	image, err := NewImage(ctx, handle, opts...)
+func NewImageFromManifestSpec(ctx context.Context, handle handler.Handler, manifest ocispec.Manifest) (*Image, error) {
+	image, err := NewImage(ctx, handle)
 	if err != nil {
 		return nil, err
 	}
