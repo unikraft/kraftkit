@@ -13,9 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
@@ -75,18 +73,17 @@ func (dl DirectoryLayer) MediaType() (types.MediaType, error) {
 	return dl.mediatype, nil
 }
 
-type DirectoryImage struct {
-	handle             *DirectoryHandler
-	image              *ocispec.Image
-	manifestDescriptor *ocispec.Descriptor
-	ref                name.Reference
+type DirectoryManifest struct {
+	handle *DirectoryHandler
+	image  *ocispec.Image
+	desc   *ocispec.Descriptor
 }
 
 // Layers returns the layers of the image
-func (di DirectoryImage) Layers() ([]v1.Layer, error) {
+func (dm DirectoryManifest) Layers() ([]v1.Layer, error) {
 	var layers []v1.Layer
 
-	manifest, err := di.Manifest()
+	manifest, err := dm.Manifest()
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +91,9 @@ func (di DirectoryImage) Layers() ([]v1.Layer, error) {
 	// Only works if the order is the same in the rootfs and the manifest
 	for idx, layer := range manifest.Layers {
 		dlayer := DirectoryLayer{
-			path:      di.handle.path,
+			path:      dm.handle.path,
 			digest:    layer.Digest,
-			diffID:    di.image.RootFS.DiffIDs[idx],
+			diffID:    dm.image.RootFS.DiffIDs[idx],
 			size:      layer.Size,
 			mediatype: layer.MediaType,
 		}
@@ -108,18 +105,18 @@ func (di DirectoryImage) Layers() ([]v1.Layer, error) {
 }
 
 // MediaType returns the mediatype of the image
-func (di DirectoryImage) MediaType() (types.MediaType, error) {
-	return types.MediaType(di.manifestDescriptor.MediaType), nil
+func (dm DirectoryManifest) MediaType() (types.MediaType, error) {
+	return types.OCIManifestSchema1, nil
 }
 
 // Size returns the size of the image manifest
-func (di DirectoryImage) Size() (int64, error) {
-	return di.manifestDescriptor.Size, nil
+func (dm DirectoryManifest) Size() (int64, error) {
+	return dm.desc.Size, nil
 }
 
 // ConfigName returns the hash of the image config
-func (di DirectoryImage) ConfigName() (v1.Hash, error) {
-	b, err := di.RawConfigFile()
+func (dm DirectoryManifest) ConfigName() (v1.Hash, error) {
+	b, err := dm.RawConfigFile()
 	if err != nil {
 		return v1.Hash{}, err
 	}
@@ -129,8 +126,8 @@ func (di DirectoryImage) ConfigName() (v1.Hash, error) {
 }
 
 // ConfigFile returns the structured config file of the image
-func (di DirectoryImage) ConfigFile() (*v1.ConfigFile, error) {
-	b, err := di.RawConfigFile()
+func (dm DirectoryManifest) ConfigFile() (*v1.ConfigFile, error) {
+	b, err := dm.RawConfigFile()
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +137,8 @@ func (di DirectoryImage) ConfigFile() (*v1.ConfigFile, error) {
 
 // RawConfigFile returns the config file of the image in bytes
 // It reads the config file from the filesystem
-func (di DirectoryImage) RawConfigFile() ([]byte, error) {
-	bytes, err := json.Marshal(di.image)
+func (dm DirectoryManifest) RawConfigFile() ([]byte, error) {
+	bytes, err := json.Marshal(dm.image)
 	if err != nil {
 		return nil, err
 	}
@@ -153,10 +150,10 @@ func (di DirectoryImage) RawConfigFile() ([]byte, error) {
 	}
 
 	configPath := filepath.Join(
-		di.handle.path,
+		dm.handle.path,
 		DirectoryHandlerConfigsDir,
 		algorithm,
-		hex.EncodeToString(h.Sum(nil)),
+		hex.EncodeToString(h.Sum(nil))+".json",
 	)
 
 	// Check if the config file exists
@@ -168,8 +165,8 @@ func (di DirectoryImage) RawConfigFile() ([]byte, error) {
 }
 
 // Digest returns the hash of the image manifest
-func (di DirectoryImage) Digest() (v1.Hash, error) {
-	b, err := di.RawManifest()
+func (dm DirectoryManifest) Digest() (v1.Hash, error) {
+	b, err := dm.RawManifest()
 	if err != nil {
 		return v1.Hash{}, err
 	}
@@ -179,8 +176,8 @@ func (di DirectoryImage) Digest() (v1.Hash, error) {
 }
 
 // Manifest returns the structured manifest of the image
-func (di DirectoryImage) Manifest() (*v1.Manifest, error) {
-	b, err := di.RawManifest()
+func (dm DirectoryManifest) Manifest() (*v1.Manifest, error) {
+	b, err := dm.RawManifest()
 	if err != nil {
 		return nil, err
 	}
@@ -190,27 +187,19 @@ func (di DirectoryImage) Manifest() (*v1.Manifest, error) {
 
 // RawManifest returns the manifest of the image in bytes
 // It reads the manifest from the filesystem
-func (di DirectoryImage) RawManifest() ([]byte, error) {
-	var jsonPath string
-	if strings.ContainsRune(di.ref.Name(), '@') {
-		jsonPath = strings.ReplaceAll(di.ref.Name(), "@", string(filepath.Separator)) + ".json"
-	} else {
-		jsonPath = strings.ReplaceAll(di.ref.Name(), ":", string(filepath.Separator)) + ".json"
-	}
-
-	manifestPath := filepath.Join(
-		di.handle.path,
+func (dm DirectoryManifest) RawManifest() ([]byte, error) {
+	return os.ReadFile(filepath.Join(
+		dm.handle.path,
 		DirectoryHandlerManifestsDir,
-		jsonPath,
-	)
-
-	return os.ReadFile(manifestPath)
+		dm.desc.Digest.Algorithm().String(),
+		dm.desc.Digest.Encoded()+".json",
+	))
 }
 
 // LayerByDigest returns the layer with the given hash
 // Unused by push
-func (di DirectoryImage) LayerByDigest(hash v1.Hash) (v1.Layer, error) {
-	manifest, err := di.Manifest()
+func (dm DirectoryManifest) LayerByDigest(hash v1.Hash) (v1.Layer, error) {
+	manifest, err := dm.Manifest()
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +208,8 @@ func (di DirectoryImage) LayerByDigest(hash v1.Hash) (v1.Layer, error) {
 		if layer.Digest == hash {
 			// Only works if the order is the same in the rootfs and the manifest
 			dlayer := DirectoryLayer{
-				path:      di.handle.path,
-				diffID:    di.image.RootFS.DiffIDs[idx],
+				path:      dm.handle.path,
+				diffID:    dm.image.RootFS.DiffIDs[idx],
 				digest:    layer.Digest,
 				size:      layer.Size,
 				mediatype: layer.MediaType,
@@ -228,18 +217,19 @@ func (di DirectoryImage) LayerByDigest(hash v1.Hash) (v1.Layer, error) {
 			return dlayer, nil
 		}
 	}
+
 	return nil, fmt.Errorf("layer not found")
 }
 
 // LayerByDiffID returns the layer with the given hash
 // Unused by push
-func (di DirectoryImage) LayerByDiffID(hash v1.Hash) (v1.Layer, error) {
-	manifest, err := di.Manifest()
+func (dm DirectoryManifest) LayerByDiffID(hash v1.Hash) (v1.Layer, error) {
+	manifest, err := dm.Manifest()
 	if err != nil {
 		return nil, err
 	}
 
-	for idx, digest := range di.image.RootFS.DiffIDs {
+	for idx, digest := range dm.image.RootFS.DiffIDs {
 		hashStep, err := v1.NewHash(digest.String())
 		if err != nil {
 			return nil, err
@@ -248,8 +238,8 @@ func (di DirectoryImage) LayerByDiffID(hash v1.Hash) (v1.Layer, error) {
 		if hashStep == hash {
 			// Only works if the order is the same in the rootfs and the manifest
 			dlayer := DirectoryLayer{
-				path:      di.handle.path,
-				diffID:    di.image.RootFS.DiffIDs[idx],
+				path:      dm.handle.path,
+				diffID:    dm.image.RootFS.DiffIDs[idx],
 				digest:    manifest.Layers[idx].Digest,
 				size:      manifest.Layers[idx].Size,
 				mediatype: manifest.Layers[idx].MediaType,

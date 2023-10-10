@@ -447,11 +447,10 @@ func (handle *DirectoryHandler) PushImage(ctx context.Context, fullref string, t
 	}
 
 	return remote.Write(ref,
-		DirectoryImage{
-			image:              image,
-			manifestDescriptor: target,
-			handle:             handle,
-			ref:                ref,
+		DirectoryManifest{
+			image:  image,
+			desc:   target,
+			handle: handle,
 		},
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
