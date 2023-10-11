@@ -77,6 +77,7 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	mopts := []ManifestOption{
 		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithUpdate(true),
 	}
 
 	for _, manipath := range m.manifests {
