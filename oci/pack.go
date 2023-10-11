@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -68,7 +70,7 @@ var (
 func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packmanager.PackOption) (pack.Package, error) {
 	var err error
 
-	popts := &packmanager.PackOptions{}
+	popts := packmanager.NewPackOptions()
 	for _, opt := range opts {
 		opt(popts)
 	}
@@ -127,16 +129,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	if err != nil {
 		return nil, err
 	}
-
-	index, err := NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
-	if err != nil {
-		index, err = NewIndex(ctx, ocipack.handle)
-		if err != nil {
-			return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
-		}
-	}
-
-	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 
 	// Prepare a new manifest which contains the individual components of the
 	// target, including the kernel image.
@@ -248,6 +240,95 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	ocipack.manifest.SetCmd(ctx, ocipack.Command())
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
+
+	var index *Index
+
+	switch popts.MergeStrategy() {
+	case packmanager.StrategyMerge, packmanager.StrategyExit:
+		index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
+		if err != nil {
+			index, err = NewIndex(ctx, ocipack.handle)
+			if err != nil {
+				return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
+			}
+		} else if popts.MergeStrategy() == packmanager.StrategyExit {
+			return nil, fmt.Errorf("cannot overwrite existing manifest as merge strategy is set to exit on conflict")
+		}
+
+	case packmanager.StrategyOverwrite:
+		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.String()); err != nil {
+			return nil, fmt.Errorf("could not remove existing index: %w", err)
+		}
+
+		index, err = NewIndex(ctx, ocipack.handle)
+		if err != nil {
+			return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
+		}
+	}
+
+	if popts.MergeStrategy() == packmanager.StrategyExit && len(index.manifests) > 0 {
+		return nil, fmt.Errorf("cannot continue: reference already exists and merge strategy set to none")
+	}
+
+	if len(index.manifests) > 0 {
+		// Sort the features alphabetically.  This ensures that comparisons between
+		// versions are symmetric.
+		sort.Slice(ocipack.manifest.config.OSFeatures, func(i, j int) bool {
+			// Check if we have numbers, sort them accordingly
+			if z, err := strconv.Atoi(ocipack.manifest.config.OSFeatures[i]); err == nil {
+				if y, err := strconv.Atoi(ocipack.manifest.config.OSFeatures[j]); err == nil {
+					return y < z
+				}
+				// If we get only one number, alway say its greater than letter
+				return true
+			}
+			// Compare letters normally
+			return ocipack.manifest.config.OSFeatures[j] > ocipack.manifest.config.OSFeatures[i]
+		})
+
+		newManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+			Architecture: ocipack.manifest.config.Architecture,
+			OS:           ocipack.manifest.config.OS,
+			OSVersion:    ocipack.manifest.config.OSVersion,
+			OSFeatures:   ocipack.manifest.config.OSFeatures,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not generate manifest platform checksum: %w", err)
+		}
+
+		var manifests []*Manifest
+
+		for _, existingManifest := range index.manifests {
+			existingManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+				Architecture: existingManifest.config.Architecture,
+				OS:           existingManifest.config.OS,
+				OSVersion:    existingManifest.config.OSVersion,
+				OSFeatures:   existingManifest.config.OSFeatures,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("could not generate manifest platform checksum for '%s': %w", existingManifest.desc.Digest.String(), err)
+			}
+			if existingManifestChecksum == newManifestChecksum {
+				switch popts.MergeStrategy() {
+				case packmanager.StrategyExit:
+					return nil, fmt.Errorf("cannot overwrite existing manifest as merge strategy is set to exit on conflict")
+
+				// A manifest with the same configuration has been detected, in
+				// both cases,
+				case packmanager.StrategyOverwrite, packmanager.StrategyMerge:
+					if err := ocipack.handle.DeleteManifest(ctx, ocipack.ref.Name(), existingManifest.desc.Digest); err != nil {
+						return nil, fmt.Errorf("could not overwrite existing manifest: %w", err)
+					}
+				}
+			} else {
+				manifests = append(manifests, existingManifest)
+			}
+		}
+
+		index.manifests = manifests
+	}
+
+	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 
 	if err := index.AddManifest(ctx, ocipack.manifest); err != nil {
 		return nil, fmt.Errorf("could not add manifest to index: %w", err)

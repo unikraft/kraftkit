@@ -17,6 +17,15 @@ type PackOptions struct {
 	kernelVersion                    string
 	name                             string
 	output                           string
+	mergeStrategy                    MergeStrategy
+}
+
+// NewPackOptions returns an instantiated *NewPackOptions with default
+// configuration options values.
+func NewPackOptions() *PackOptions {
+	return &PackOptions{
+		mergeStrategy: StrategyExit,
+	}
 }
 
 // PackAppSourceFiles returns whether the application source files should be
@@ -69,6 +78,11 @@ func (popts *PackOptions) Name() string {
 // Output returns the location of the package.
 func (popts *PackOptions) Output() string {
 	return popts.output
+}
+
+// MergeStrategy ...
+func (popts *PackOptions) MergeStrategy() MergeStrategy {
+	return popts.mergeStrategy
 }
 
 // PackOption is an option function which is used to modify PackOptions.
@@ -144,5 +158,13 @@ func PackName(name string) PackOption {
 func PackOutput(output string) PackOption {
 	return func(popts *PackOptions) {
 		popts.output = output
+	}
+}
+
+// PackMergeStrategy sets the mechanism to use when an existing package of the
+// same name exists.
+func PackMergeStrategy(strategy MergeStrategy) PackOption {
+	return func(popts *PackOptions) {
+		popts.mergeStrategy = strategy
 	}
 }

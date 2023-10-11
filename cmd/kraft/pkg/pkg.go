@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
@@ -48,7 +49,7 @@ type Pkg struct {
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 
-	format pack.PackageFormat
+	strategy packmanager.MergeStrategy
 }
 
 func New() *cobra.Command {
@@ -86,6 +87,15 @@ func New() *cobra.Command {
 	cmd.AddCommand(unsource.New())
 	cmd.AddCommand(update.New())
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
+			append(packmanager.MergeStrategies(), packmanager.StrategyPrompt),
+			packmanager.StrategyPrompt,
+		),
+		"strategy",
+		"When a package of the same name exists, use this strategy when applying targets.",
+	)
+
 	return cmd
 }
 
@@ -94,7 +104,15 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
 
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	ctx := cmd.Context()
+
+	opts.strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+
+	if config.G[config.KraftKit](ctx).NoPrompt && opts.strategy == "prompt" {
+		return fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
+	}
+
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -141,7 +159,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	pm := packmanager.G(ctx)
 
 	// Switch the package manager the desired format for this target
-	pm, err = pm.From(opts.format)
+	pm, err = pm.From(pack.PackageFormat(opts.Format))
 	if err != nil {
 		return err
 	}
@@ -167,10 +185,47 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
+	exists, err := pm.Catalog(ctx,
+		packmanager.WithName(opts.Name),
+	)
+	baseopts := []packmanager.PackOption{}
+	if err == nil && len(exists) >= 1 {
+		if opts.strategy == packmanager.StrategyPrompt {
+			strategy, err := selection.Select[packmanager.MergeStrategy](
+				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
+				packmanager.MergeStrategies()...,
+			)
+			if err != nil {
+				return err
+			}
+
+			opts.strategy = *strategy
+		}
+
+		switch opts.strategy {
+		case packmanager.StrategyExit:
+			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
+
+		// Set the merge strategy as an option that is then passed to the
+		// package manager.
+		default:
+			baseopts = append(baseopts,
+				packmanager.PackMergeStrategy(opts.strategy),
+			)
+		}
+	} else {
+		baseopts = append(baseopts,
+			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+		)
+	}
+
+	i := 0
+
 	// Generate a package for every matching requested target
 	for _, targ := range project.Targets() {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
+		baseopts := baseopts
 
 		switch true {
 		case
@@ -206,17 +261,26 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
+			// When i > 0, we have already applied the merge strategy.  Now, for all
+			// targets, we actually do wish to merge these because they are part of
+			// the same execution lifecycle.
+			if i > 0 {
+				baseopts = []packmanager.PackOption{
+					packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+				}
+			}
+
 			tree = append(tree, processtree.NewProcessTreeItem(
 				name,
 				targ.Architecture().Name()+"/"+targ.Platform().Name(),
 				func(ctx context.Context) error {
-					popts := []packmanager.PackOption{
+					popts := append(baseopts,
 						packmanager.PackArgs(cmdShellArgs...),
 						packmanager.PackInitrd(opts.Initrd),
 						packmanager.PackKConfig(opts.WithKConfig),
 						packmanager.PackName(opts.Name),
 						packmanager.PackOutput(opts.Output),
-					}
+					)
 
 					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
 						popts = append(popts,
@@ -231,6 +295,8 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 					return nil
 				},
 			))
+
+			i++
 
 		default:
 			continue
