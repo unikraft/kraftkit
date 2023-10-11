@@ -71,6 +71,37 @@ func NewManifestFromSpec(ctx context.Context, handle handler.Handler, spec ocisp
 	return manifest, nil
 }
 
+// NewManifestFromDigest instantiates a new Manifest structure from a given
+// digest.
+func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest digest.Digest) (*Manifest, error) {
+	manifest, err := NewManifest(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	spec, err := handle.ResolveManifest(ctx, "", digest)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve manifest from digest: %w", err)
+	}
+
+	manifest.saved = true
+	manifest.desc = &ocispec.Descriptor{
+		MediaType:   ocispec.MediaTypeImageManifest,
+		Digest:      digest,
+		Size:        int64(digest.Algorithm().Size()),
+		Annotations: spec.Annotations,
+		Platform:    spec.Config.Platform,
+	}
+	manifest.manifest = spec
+	manifest.config.Architecture = spec.Config.Platform.Architecture
+	manifest.config.OS = spec.Config.Platform.OS
+	manifest.config.OSVersion = spec.Config.Platform.OSVersion
+	manifest.config.Variant = spec.Config.Platform.Variant
+	manifest.annotations = spec.Annotations
+
+	return manifest, nil
+}
+
 // Layers returns the layers of this OCI image.
 func (manifest *Manifest) Layers() []*Layer {
 	return manifest.layers
