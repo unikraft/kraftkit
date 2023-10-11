@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -96,25 +95,17 @@ func (u UmbrellaManager) AddSource(ctx context.Context, source string) error {
 }
 
 func (u UmbrellaManager) Delete(ctx context.Context, qopts ...QueryOption) error {
-	var errs []error
 	for _, manager := range u.packageManagers {
-		log.G(ctx).WithFields(logrus.Fields{
-			"format": manager.Format(),
-		}).Tracef("pruning")
-		err := manager.Delete(ctx, qopts...)
-		if err != nil {
-			if strings.Contains(err.Error(), "package not found") {
-				errs = append(errs, err)
-			}
-			log.G(ctx).
-				WithField("format", manager.Format()).
-				Debugf("could not run Prune:  %v", err)
+		log.G(ctx).
+			WithField("format", manager.Format()).
+			WithFields(NewQuery(qopts...).Fields()).
+			Tracef("deleting")
+
+		if err := manager.Delete(ctx, qopts...); err != nil {
+			return err
 		}
 	}
 
-	if len(errs) == len(u.packageManagers) {
-		return fmt.Errorf("package not found locally")
-	}
 	return nil
 }
 
