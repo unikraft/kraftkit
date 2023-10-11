@@ -50,6 +50,7 @@ func NameAndVersion(component Component) string {
 // primarily used by other components internally which follow a similar format
 // of specifying a version, source and list of KConfig options.
 func TranslateFromSchema(props interface{}) (map[string]interface{}, error) {
+	var err error
 	component := make(map[string]interface{})
 
 	switch entry := props.(type) {
@@ -79,9 +80,12 @@ func TranslateFromSchema(props interface{}) (map[string]interface{}, error) {
 			case "kconfig":
 				switch tprop := prop.(type) {
 				case map[string]interface{}:
-					component["kconfig"] = kconfig.NewKeyValueMapFromMap(tprop)
+					component["kconfig"], err = kconfig.NewKeyValueMapFromMap(tprop)
 				case []interface{}:
-					component["kconfig"] = kconfig.NewKeyValueMapFromSlice(tprop...)
+					component["kconfig"], err = kconfig.NewKeyValueMapFromSlice(tprop...)
+				}
+				if err != nil {
+					return nil, err
 				}
 			}
 		}

@@ -20,7 +20,7 @@ const DotConfigFileName = ".config"
 type KeyValueMap map[string]*KeyValue
 
 // NewKeyValueMapFromSlice build a new Mapping from a set of KEY=VALUE strings
-func NewKeyValueMapFromSlice(values ...interface{}) KeyValueMap {
+func NewKeyValueMapFromSlice(values ...interface{}) (KeyValueMap, error) {
 	mapping := KeyValueMap{}
 
 	for _, value := range values {
@@ -32,26 +32,29 @@ func NewKeyValueMapFromSlice(values ...interface{}) KeyValueMap {
 			str = fmt.Sprintf("%d", t)
 		}
 		tokens := strings.SplitN(str, "=", 2)
-		if len(tokens) > 1 {
+		if len(tokens) > 1 && tokens[1] != "" {
 			mapping[tokens[0]] = &KeyValue{
 				Key:   tokens[0],
 				Value: tokens[1],
 			}
 		} else {
-			mapping[str] = nil
+			return nil, fmt.Errorf("kconfig option must be a key-value pair(key=value), found: %v", str)
 		}
 	}
 
-	return mapping
+	return mapping, nil
 }
 
 // NewKeyValueMapFromMap build a new Mapping from a set of KEY=VALUE strings
-func NewKeyValueMapFromMap(values map[string]interface{}) KeyValueMap {
+func NewKeyValueMapFromMap(values map[string]interface{}) (KeyValueMap, error) {
 	mapping := KeyValueMap{}
-
 	for key, value := range values {
 		mapping[key] = &KeyValue{
 			Key: key,
+		}
+
+		if value == nil {
+			return nil, fmt.Errorf("kconfig option must have a value, on key: %v", key)
 		}
 
 		switch casting := value.(type) {
@@ -70,7 +73,7 @@ func NewKeyValueMapFromMap(values map[string]interface{}) KeyValueMap {
 		}
 	}
 
-	return mapping
+	return mapping, nil
 }
 
 // Override accepts a list of key value pairs and overrides the key in the map
