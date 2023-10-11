@@ -330,8 +330,8 @@ func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-// Prune implements packmanager.PackageManager.
-func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
+// Delete implements packmanager.PackageManager.
+func (manager *ociManager) Delete(ctx context.Context, qopts ...packmanager.QueryOption) error {
 	packs, err := manager.Catalog(ctx, qopts...)
 	if err != nil {
 		return err

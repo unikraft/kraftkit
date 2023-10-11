@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package prune
+package rm
 
 import (
 	"fmt"
@@ -14,18 +14,18 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type Prune struct {
+type Rm struct {
 	Name   string `long:"name" short:"n" usage:"Specify the package name that has to be pruned" default:""`
 	All    bool   `long:"all" short:"a" usage:"Prunes all the packages available on the host machine"`
 	Format string `long:"format" short:"f" usage:"Set the package format." default:"any"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Prune{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
 		Short:   "Removes selected local packages",
-		Use:     "prune [FLAGS] [PACKAGE]",
+		Use:     "rm [FLAGS] [PACKAGE]",
 		Args:    cobra.ArbitraryArgs,
-		Aliases: []string{"pr", "rm"},
+		Aliases: []string{"prune", "remove"},
 		Example: heredoc.Doc(`
 			# Remove all packages
 			kraft pkg rm --all
@@ -43,9 +43,9 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Prune) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Rm) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 && opts.Name == "" && !opts.All {
-		return fmt.Errorf("package name is not specified to prune or --all flag")
+		return fmt.Errorf("package name is not specified to remove or --all flag")
 	} else if opts.All && (len(args) > 0 || opts.Name != "") {
 		return fmt.Errorf("package name and --all flags cannot be specified at once")
 	}
@@ -81,7 +81,7 @@ func (opts *Prune) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
+func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	umbrella, err := packmanager.PackageManagers()
@@ -95,7 +95,7 @@ func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if opts.All {
-			if err = pm.Prune(ctx,
+			if err = pm.Delete(ctx,
 				packmanager.WithAll(opts.All),
 				packmanager.WithUpdate(false),
 			); err != nil {
@@ -103,7 +103,7 @@ func (opts *Prune) Run(cmd *cobra.Command, args []string) error {
 			}
 		} else {
 			for _, arg := range args {
-				if err := pm.Prune(ctx,
+				if err := pm.Delete(ctx,
 					packmanager.WithName(arg),
 					packmanager.WithUpdate(false),
 				); err != nil {

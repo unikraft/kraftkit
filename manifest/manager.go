@@ -177,8 +177,8 @@ func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-// Prune implements packmanager.PackageManager.
-func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
+// Delete implements packmanager.PackageManager.
+func (m *manifestManager) Delete(ctx context.Context, qopts ...packmanager.QueryOption) error {
 	packs, err := m.Catalog(ctx, qopts...)
 	if err != nil {
 		return err
