@@ -504,7 +504,7 @@ unpack:
 }
 
 // Delete implements pack.Package.
-func (ocipack *ociPackage) Delete(ctx context.Context, _ string) error {
+func (ocipack *ociPackage) Delete(ctx context.Context) error {
 	if err := ocipack.handle.DeleteManifest(ctx, ocipack.imageRef(), ocipack.manifest.desc.Digest); err != nil {
 		return fmt.Errorf("could not delete package manifest: %w", err)
 	}

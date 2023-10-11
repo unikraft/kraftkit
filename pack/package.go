@@ -37,7 +37,7 @@ type Package interface {
 	Pull(context.Context, ...PullOption) error
 
 	// Deletes package available locally.
-	Delete(context.Context, string) error
+	Delete(context.Context) error
 
 	// Format returns the name of the implementation.
 	Format() PackageFormat

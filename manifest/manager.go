@@ -6,9 +6,9 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"time"
@@ -111,6 +111,10 @@ func (m *manifestManager) Update(ctx context.Context) error {
 		return err
 	}
 
+	return m.saveIndex(ctx, index)
+}
+
+func (m *manifestManager) saveIndex(ctx context.Context, index *ManifestIndex) error {
 	m.indexCache = new(ManifestIndex)
 	*m.indexCache = *index
 
@@ -173,51 +177,44 @@ func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-// Prune removes the manifest packages available on the host machine.
+// Prune implements packmanager.PackageManager.
 func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
-	sourcesDir := path.Join(config.G[config.KraftKit](ctx).Paths.Sources)
-	manifestsDir := path.Join(config.G[config.KraftKit](ctx).Paths.Manifests)
-	var query packmanager.Query
-
-	for _, qopt := range qopts {
-		qopt(&query)
+	packs, err := m.Catalog(ctx, qopts...)
+	if err != nil {
+		return err
 	}
 
-	if query.NoManifestPackage() {
-		return nil
+	var errs []error
+
+	for _, pack := range packs {
+		if err := pack.Delete(ctx); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	if query.All() {
-		if err := os.RemoveAll(sourcesDir); err != nil {
-			return err
-		}
-		if err := os.RemoveAll(manifestsDir); err != nil {
-			return err
-		}
-	} else {
-		packages, err := m.Catalog(
-			ctx,
-			packmanager.WithUpdate(false),
-			packmanager.WithName(query.Name()),
-			packmanager.WithVersion(query.Version()),
+	// Since the package has been deleted by the underlying package provider (i.e.
+	// manifest), update the cache index and save this to disk.
+	m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
+	if err == nil {
+		query := packmanager.NewQuery(qopts...)
+		manifests, err := FindManifestsFromSource(ctx,
+			m.indexCache.Origin,
+			WithAuthConfig(query.Auths()),
+			WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+			WithUpdate(query.Update()),
 		)
 		if err != nil {
 			return err
 		}
-		if len(packages) == 0 {
-			return fmt.Errorf("package not found locally")
-		}
-		for _, pack := range packages {
-			if query.Name() == pack.Name() &&
-				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
-					return err
-				}
-			}
-		}
+
+		m.indexCache.Manifests = manifests
 	}
 
-	return nil
+	if err := m.saveIndex(ctx, m.indexCache); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (m *manifestManager) RemoveSource(ctx context.Context, source string) error {
@@ -286,13 +283,11 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		manifests = m.indexCache.Manifests
 	} else {
 		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
-		if err != nil {
-			return nil, err
-		}
-
-		manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

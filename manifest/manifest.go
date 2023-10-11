@@ -357,7 +357,8 @@ func findManifestsFromSource(ctx context.Context, lastSource, source string, mop
 
 	provider, err := NewProvider(ctx, source, mopts...)
 	if err != nil {
-		return nil, err
+		log.G(ctx).Debug(err)
+		return nil, nil
 	}
 
 	newManifests, err := provider.Manifests()

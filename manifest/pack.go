@@ -117,7 +117,7 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 }
 
 // Delete implements pack.Package.
-func (mp mpack) Delete(ctx context.Context, _ string) error {
+func (mp mpack) Delete(ctx context.Context) error {
 	return mp.manifest.Provider.DeleteManifest(ctx)
 }
 

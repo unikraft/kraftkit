@@ -8,10 +8,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
@@ -331,48 +330,22 @@ func (manager *ociManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-// Prune removes OCI packages.
+// Prune implements packmanager.PackageManager.
 func (manager *ociManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
-	ociDir := path.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
-	var query packmanager.Query
-
-	for _, qopt := range qopts {
-		qopt(&query)
+	packs, err := manager.Catalog(ctx, qopts...)
+	if err != nil {
+		return err
 	}
 
-	if query.NoOCIPackage() {
-		return nil
-	}
+	var errs []error
 
-	if query.All() {
-		// Removes all OCI packages
-		if err := os.RemoveAll(ociDir); err != nil {
-			return err
-		}
-	} else {
-		packages, err := manager.Catalog(
-			ctx,
-			packmanager.WithUpdate(false),
-			packmanager.WithName(query.Name()),
-			packmanager.WithVersion(query.Version()),
-		)
-		if err != nil {
-			return err
-		}
-		if len(packages) == 0 {
-			return fmt.Errorf("oci package not found locally")
-		}
-		for _, pack := range packages {
-			if pack.Name() == query.Name() &&
-				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
-					return err
-				}
-			}
+	for _, pack := range packs {
+		if err := pack.Delete(ctx); err != nil {
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // RemoveSource implements packmanager.PackageManager
