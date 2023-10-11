@@ -300,7 +300,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			ctx,
 			handle,
 			fullref,
-			manifest,
+			*manifest,
 		)
 		if err != nil {
 			// log.G(ctx).Warn(err)

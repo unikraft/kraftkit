@@ -38,7 +38,7 @@ type DescriptorSaver interface {
 }
 
 type ManifestLister interface {
-	ListManifests(context.Context) ([]ocispec.Manifest, error)
+	ListManifests(context.Context) (map[string]*ocispec.Manifest, error)
 }
 
 type ManifestResolver interface {

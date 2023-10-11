@@ -54,14 +54,14 @@ func NewDirectoryHandler(path string, auths map[string]config.AuthConfig) (*Dire
 }
 
 // DigestExists implements DigestResolver.
-func (handle *DirectoryHandler) DigestExists(ctx context.Context, dgst digest.Digest) (exists bool, err error) {
+func (handle *DirectoryHandler) DigestExists(ctx context.Context, needle digest.Digest) (exists bool, err error) {
 	manifests, err := handle.ListManifests(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	for _, manifest := range manifests {
-		if manifest.Config.Digest == dgst {
+	for haystack := range manifests {
+		if haystack == needle.String() {
 			return true, nil
 		}
 	}
@@ -402,8 +402,9 @@ func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref str
 }
 
 // ListManifests implements DigestResolver.
-func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
+func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*ocispec.Manifest, error) {
 	manifestsDir := filepath.Join(handle.path, DirectoryHandlerManifestsDir)
+	manifests := map[string]*ocispec.Manifest{}
 
 	// Create the manifest directory if it does not exist and return nil, since
 	// there's nothing to return.
@@ -444,7 +445,7 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []
 		}
 
 		// Append the manifest to the list
-		manifests = append(manifests, manifest)
+		manifests[digest.FromBytes(rawManifest).String()] = &manifest
 
 		return nil
 	}); err != nil {

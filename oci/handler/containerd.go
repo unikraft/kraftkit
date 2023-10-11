@@ -280,36 +280,8 @@ func (handle *ContainerdHandler) ResolveManifest(ctx context.Context, _ string, 
 }
 
 // ListManifests implements DigestResolver.
-func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
-	ctx, done, err := handle.lease(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		err = combineErrors(err, done(ctx))
-	}()
-
-	all, err := handle.client.ImageService().List(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, image := range all {
-		found, err := handle.client.GetImage(ctx, image.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		manifest, err := images.Manifest(ctx, handle.client.ContentStore(), found.Target(), nil)
-		if err != nil {
-			continue
-		}
-
-		manifests = append(manifests, manifest)
-	}
-
-	return manifests, nil
+func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests map[string]*ocispec.Manifest, err error) {
+	return ListContainerdObjectsByType[ocispec.Manifest](ctx, ocispec.MediaTypeImageManifest, handle)
 }
 
 func (handle *ContainerdHandler) DeleteManifest(ctx context.Context, fullref string, dgst digest.Digest) error {
@@ -880,4 +852,58 @@ func ResolveContainerdObjectFromDigest[T any](ctx context.Context, handle *Conta
 	}
 
 	return t, nil
+}
+
+// ListContainerdObjectsByType is a utility method which iterates across all
+// containerd objects in the store and attempts to typecast the object to the
+// type T.  A successful type conversion is added to the hashmap which is
+// ordered by digest.
+func ListContainerdObjectsByType[T any](ctx context.Context, mediaType string, handle *ContainerdHandler) (map[string]*T, error) {
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = errors.Join(err, done(ctx))
+	}()
+
+	cs := handle.client.ContentStore()
+	objects := make(map[string]*T, 0)
+
+	if err := cs.Walk(ctx, func(info content.Info) error {
+		if mediaType != "" {
+			if labelMediaType, ok := info.Labels[KraftKitLabelMediaType]; !ok || labelMediaType != mediaType {
+				return nil // Do not return an error, simply "continue"
+			}
+		}
+
+		readerAt, err := cs.ReaderAt(ctx, ocispec.Descriptor{
+			Digest: info.Digest,
+		})
+		if err != nil {
+			return err
+		}
+
+		defer readerAt.Close()
+
+		blob, err := readBlob(readerAt)
+		if err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		var t *T
+
+		if err := json.Unmarshal(blob, &t); err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		objects[info.Digest.String()] = t
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return objects, nil
 }
