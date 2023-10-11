@@ -27,6 +27,16 @@ type DigestSaver interface {
 	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
 }
 
+type DescriptorSaver interface {
+	// SaveDescriptor accepts an optional name reference which represents
+	// descriptor (but this is not always necessary and can be left blank if the
+	// descriptor is unnamed, e.g. an untagged config, a layer, etc) as well as an
+	// io.Reader which is prepared to pass in the byte slice of the descriptor.
+	// An optional progress method callback can be provided which is used to
+	// deliver the progress of writing the descriptor by the implementing method.
+	SaveDescriptor(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
+}
+
 type ManifestLister interface {
 	ListManifests(context.Context) ([]ocispec.Manifest, error)
 }
@@ -59,6 +69,7 @@ type Handler interface {
 	DigestResolver
 	DigestPuller
 	DigestSaver
+	DescriptorSaver
 	ManifestLister
 	ManifestResolver
 	ManifestDeleter

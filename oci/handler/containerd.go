@@ -18,10 +18,12 @@ import (
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/labels"
 	clog "github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -34,6 +36,8 @@ import (
 const (
 	ContainerdGCLayerPrefix   = "containerd.io/gc.ref.content.l"
 	ContainerdGCContentPrefix = "containerd.io/gc.ref.content"
+	KraftKitLabelPrefix       = "kraftkit.sh/oci."
+	KraftKitLabelMediaType    = KraftKitLabelPrefix + "mediaType"
 )
 
 type ContainerdHandler struct {
@@ -137,6 +141,137 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 		},
 		containerd.WithResolver(resolver),
 	)
+}
+
+// SaveDescriptor implements DescriptorSaver.
+func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) (err error) {
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return err
+	}
+
+	cs := handle.client.ContentStore()
+
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
+
+	writer, err := content.OpenWriter(
+		ctx,
+		cs,
+		content.WithDescriptor(desc),
+		content.WithRef(desc.Digest.String()),
+	)
+	if err != nil {
+		return err
+	}
+
+	defer writer.Close()
+
+	log.G(ctx).WithFields(logrus.Fields{
+		"mediaType": desc.MediaType,
+		"digest":    desc.Digest.String(),
+	}).Tracef("oci: copying")
+
+	var tee io.Reader
+	var cache bytes.Buffer
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageManifest, ocispec.MediaTypeImageIndex:
+		tee = io.TeeReader(reader, &cache)
+	default:
+		tee = reader
+	}
+
+	if err := content.Copy(ctx,
+		writer,
+		tee,
+		desc.Size,
+		desc.Digest,
+		// The use of this label is a hack to prevent containerd's garbage collector
+		// from picking up and removing unreferenced content.
+		content.WithLabels(map[string]string{
+			"containerd.io/gc.root": "true",
+		}),
+	); err != nil {
+		return err
+	}
+
+	// Post-processing for special media types which have additional metadata
+	// associated with the digest.
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageManifest:
+		log.G(ctx).WithFields(logrus.Fields{
+			"ref": fullref,
+		}).Trace("oci: saving manifest")
+
+		manifest := ocispec.Manifest{}
+		if err := json.NewDecoder(&cache).Decode(&manifest); err != nil {
+			return err
+		}
+
+		ref, err := name.ParseReference(fullref)
+		if err != nil {
+			return err
+		}
+
+		labels := map[string]string{
+			KraftKitLabelMediaType: desc.MediaType,
+			fmt.Sprintf("%s.%s", labels.LabelDistributionSource, ref.Context().RegistryStr()): ref.Context().RepositoryStr(),
+		}
+
+		// Add garbage collection prevention tags, reference all layers that are
+		// part of this manifest.  See [0] for reference.
+		//
+		// [0]: https://github.com/containerd/containerd/blob/v1.7.6/docs/content-flow.md#manifest-labels
+		for i, l := range manifest.Layers {
+			labels[fmt.Sprintf("%s.%d", ContainerdGCLayerPrefix, i)] = l.Digest.String()
+		}
+
+		labels[fmt.Sprintf("%s.%d", ContainerdGCLayerPrefix, len(manifest.Layers))] = manifest.Config.Digest.String()
+
+		updatedFields := make([]string, 0)
+
+		for k, v := range labels {
+			log.G(ctx).WithFields(logrus.Fields{
+				k:     v,
+				"ref": desc.Digest,
+			}).Trace("oci: labelling")
+
+			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
+		}
+
+		if _, err := handle.client.ContentStore().Update(ctx, content.Info{
+			Digest: digest.Digest(desc.Digest),
+			Labels: labels,
+		}, updatedFields...); err != nil {
+			return err
+		}
+
+	default:
+		labels := map[string]string{
+			KraftKitLabelMediaType: desc.MediaType,
+		}
+
+		updatedFields := make([]string, 0)
+
+		for k, v := range labels {
+			log.G(ctx).WithFields(logrus.Fields{
+				k:     v,
+				"ref": desc.Digest,
+			}).Trace("oci: labelling")
+
+			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
+		}
+
+		if _, err := handle.client.ContentStore().Update(ctx, content.Info{
+			Digest: digest.Digest(desc.Digest),
+			Labels: labels,
+		}, updatedFields...); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ResolveManifest implements ManifestResolver.

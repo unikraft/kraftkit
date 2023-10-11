@@ -306,6 +306,65 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 	return nil
 }
 
+// SaveDescriptor implements DescriptorSaver.
+func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
+	blobPath := handle.path
+
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageConfig:
+		blobPath = filepath.Join(
+			blobPath,
+			DirectoryHandlerConfigsDir,
+			desc.Digest.Algorithm().String(),
+			desc.Digest.Encoded()+".json",
+		)
+	case ocispec.MediaTypeImageManifest:
+		blobPath = filepath.Join(
+			blobPath,
+			DirectoryHandlerManifestsDir,
+			desc.Digest.Algorithm().String(),
+			desc.Digest.Encoded()+".json",
+		)
+	case ocispec.MediaTypeImageLayer:
+		fallthrough
+	default:
+		blobPath = filepath.Join(
+			blobPath,
+			DirectoryHandlerLayersDir,
+			desc.Digest.Algorithm().String(),
+			desc.Digest.Encoded(),
+		)
+	}
+
+	// Create the parent directory if it does not exist
+	if err := os.MkdirAll(filepath.Dir(blobPath), 0o774); err != nil {
+		return fmt.Errorf("could not make parent directory: %w", err)
+	}
+
+	blob, err := os.OpenFile(blobPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o664)
+	if err != nil {
+		return fmt.Errorf("could not create blob: %w", err)
+	}
+
+	defer blob.Close()
+
+	var progresReader io.Reader
+	if onProgress != nil {
+		progresReader = &progressWriter{
+			Reader:     reader,
+			onProgress: onProgress,
+		}
+	} else {
+		progresReader = reader
+	}
+
+	if _, err := io.Copy(blob, progresReader); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ResolveManifest implements ManifestResolver.
 func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Manifest, error) {
 	manifestPath := filepath.Join(
