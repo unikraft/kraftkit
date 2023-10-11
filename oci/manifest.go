@@ -29,6 +29,8 @@ import (
 )
 
 type Manifest struct {
+	saved bool
+
 	handle handler.Handler
 
 	config   *ocispec.Image
@@ -50,23 +52,21 @@ func NewManifest(ctx context.Context, handle handler.Handler) (*Manifest, error)
 	manifest := Manifest{
 		layers: make([]*Layer, 0),
 		handle: handle,
+		saved:  false,
 		config: &ocispec.Image{
 			Config: ocispec.ImageConfig{},
 		},
+		manifest: &ocispec.Manifest{},
 	}
 
 	return &manifest, nil
 }
 
-// NewManifestFromSpec instantiates a new image based in a handler and with
-// the provided Manifest specification and options.
 func NewManifestFromSpec(ctx context.Context, handle handler.Handler, spec ocispec.Manifest) (*Manifest, error) {
 	manifest, err := NewManifest(ctx, handle)
 	if err != nil {
 		return nil, err
 	}
-
-	manifest.manifest = &spec
 
 	return manifest, nil
 }
@@ -91,6 +91,7 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 
 	manifest.pushed.Store(layer.blob.desc.Digest, false)
 
+	manifest.saved = false
 	manifest.layers = append(manifest.layers, layer)
 
 	return layer.blob.desc, nil
@@ -104,7 +105,7 @@ func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Desc
 			"digest":    blob.desc.Digest.String(),
 		}).Trace("oci: blob already exists")
 
-		return blob.desc, err
+		return blob.desc, nil
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
@@ -117,11 +118,14 @@ func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Desc
 		return ocispec.Descriptor{}, err
 	}
 
-	if err := manifest.handle.SaveDigest(ctx, "", blob.desc, fp, nil); err != nil {
-		return ocispec.Descriptor{}, err
-	}
+	defer func() {
+		closeErr := fp.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
-	if err := fp.Close(); err != nil {
+	if err := manifest.handle.SaveDigest(ctx, "", blob.desc, fp, nil); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -134,65 +138,175 @@ func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Desc
 	return blob.desc, nil
 }
 
-// SetLabel sets a label of the manifest with the provided key.
+// SetLabel sets a label of the image with the provided key.
 func (manifest *Manifest) SetLabel(_ context.Context, key, val string) {
 	if manifest.config.Config.Labels == nil {
 		manifest.config.Config.Labels = make(map[string]string)
 	}
 
+	manifest.saved = false
 	manifest.config.Config.Labels[key] = val
 }
 
-// SetAnnotation sets an anootation of the manifest with the provided key.
+// SetAnnotation sets an anootation of the image with the provided key.
 func (manifest *Manifest) SetAnnotation(_ context.Context, key, val string) {
 	if manifest.annotations == nil {
 		manifest.annotations = make(map[string]string)
 	}
 
+	manifest.saved = false
 	manifest.annotations[key] = val
 }
 
-// SetArchitecture sets the architecture of the manifest.
+// SetArchitecture sets the architecture of the image.
 func (manifest *Manifest) SetArchitecture(_ context.Context, architecture string) {
+	manifest.saved = false
 	manifest.config.Architecture = architecture
 }
 
-// SetOS sets the OS of the manifest.
+// SetOS sets the OS of the image.
 func (manifest *Manifest) SetOS(_ context.Context, os string) {
+	manifest.saved = false
 	manifest.config.OS = os
 }
 
-// SetOSVersion sets the version of the OS of the manifest.
+// SetOSVersion sets the version of the OS of the image.
 func (manifest *Manifest) SetOSVersion(_ context.Context, osversion string) {
+	manifest.saved = false
 	manifest.config.OSVersion = osversion
 }
 
-// SetOSFeature sets any OS features of the manifest.
+// SetOSFeature sets any OS features of the image.
 func (manifest *Manifest) SetOSFeature(_ context.Context, feature ...string) {
 	if manifest.config.OSFeatures == nil {
 		manifest.config.OSFeatures = make([]string, 0)
 	}
 
+	manifest.saved = false
 	manifest.config.OSFeatures = append(manifest.config.OSFeatures, feature...)
 }
 
-// Set the command of the manifest.
+// Set the command of the image.
 func (manifest *Manifest) SetCmd(_ context.Context, cmd []string) {
 	manifest.config.Config.Cmd = cmd
 }
 
-// Save the manifest.
-func (manifest *Manifest) Save(ctx context.Context, source string, onProgress func(float64)) (ocispec.Descriptor, error) {
-	ref, err := name.ParseReference(source,
-		name.WithDefaultRegistry(DefaultRegistry),
+// Save the image.
+func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress func(float64)) (*ocispec.Descriptor, error) {
+	ref, err := name.ParseReference(fullref,
+		name.WithDefaultRegistry(""),
 	)
 	if err != nil {
-		return ocispec.Descriptor{}, err
+		return nil, err
 	}
 
-	// Push any outstanding layers
+	// Copy the current set of layers, this will make up the manifest.
+	var layers []ocispec.Descriptor
+	var diffIds []digest.Digest
+
+	for _, layer := range manifest.layers {
+		layers = append(layers, layer.blob.desc)
+		diffIds = append(diffIds, layer.blob.desc.Digest)
+	}
+
+	if len(diffIds) > 0 {
+		manifest.config.RootFS = ocispec.RootFS{
+			Type:    "layers",
+			DiffIDs: diffIds,
+		}
+	}
+
+	configJson, err := json.Marshal(manifest.config)
+	if err != nil {
+		return nil, err
+	}
+
+	platform := &ocispec.Platform{
+		Architecture: manifest.config.Architecture,
+		OS:           manifest.config.OS,
+		OSVersion:    manifest.config.OSVersion,
+		OSFeatures:   manifest.config.OSFeatures,
+	}
+
+	configBlob, err := NewBlob(
+		ctx,
+		ocispec.MediaTypeImageConfig,
+		configJson,
+		WithBlobPlatform(platform),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(configBlob.tmp)
+
+	// Pack the given blobs which generates an image manifest for the pack, and
+	// pushes it to a content storage.
+	if manifest.annotations == nil {
+		manifest.annotations = make(map[string]string)
+	}
+
+	// General annotations
+	manifest.annotations[ocispec.AnnotationRefName] = ref.Context().String()
+	manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
+	manifest.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+
+	// containerd compatibility annotations
+	manifest.annotations[images.AnnotationImageName] = ref.String()
+
+	// Generate the final manifest
+	manifest.manifest = &ocispec.Manifest{
+		Versioned: specs.Versioned{
+			SchemaVersion: 2,
+		},
+		Config:      configBlob.desc,
+		MediaType:   ocispec.MediaTypeImageManifest,
+		Layers:      layers,
+		Annotations: manifest.annotations,
+	}
+
+	manifestJson, err := json.Marshal(manifest.manifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	manifestDesc := content.NewDescriptorFromBytes(
+		ocispec.MediaTypeImageManifest,
+		manifestJson,
+	)
+	// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
+	manifestDesc.Annotations = manifest.manifest.Annotations
+	manifestDesc.Platform = platform
+
+	// save the manifest descriptor
+	if err := manifest.handle.SaveDigest(
+		ctx,
+		fullref,
+		manifestDesc,
+		bytes.NewReader(manifestJson),
+		onProgress,
+	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
+		return nil, fmt.Errorf("failed to push manifest: %w", err)
+	}
+
+	// We check if the config blob already exists now after saving the manifest.
+	// It is possible to have a duplicate configuration already present if Save()
+	// is called repeatedly.  It's done now to prevent containerd's garbage
+	// collector from removing it before the manifest has been written (which
+	// references this blob).
+	if exists, _ := manifest.handle.DigestExists(ctx, configBlob.desc.Digest); !exists {
+		if _, err := manifest.AddBlob(ctx, configBlob); err != nil {
+			return nil, err
+		}
+	}
+
+	manifest.saved = true
+	manifest.desc = &manifestDesc
+
+	// Push any outstanding layers last.
 	eg, egCtx := errgroup.WithContext(ctx)
 
+	// The same applies to layers with containerd's garbage collector, save these
+	// now after the manifest has been saved.
 	for i := range manifest.layers {
 		eg.Go(func(i int) func() error {
 			return func() error {
@@ -214,109 +328,8 @@ func (manifest *Manifest) Save(ctx context.Context, source string, onProgress fu
 		}(i))
 	}
 	if err := eg.Wait(); err != nil {
-		return ocispec.Descriptor{}, err
+		return nil, err
 	}
 
-	// Copy the current set of layers, this will make up the manifest.
-	var layers []ocispec.Descriptor
-	var diffIds []digest.Digest
-
-	for _, layer := range manifest.layers {
-		layers = append(layers, layer.blob.desc)
-		diffIds = append(diffIds, layer.blob.desc.Digest)
-	}
-
-	if len(diffIds) > 0 {
-		manifest.config.RootFS = ocispec.RootFS{
-			Type:    "layers",
-			DiffIDs: diffIds,
-		}
-	}
-
-	configJson, err := json.Marshal(manifest.config)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-
-	configBlob, err := NewBlob(
-		ctx,
-		ocispec.MediaTypeImageConfig,
-		configJson,
-		WithBlobPlatform(&ocispec.Platform{
-			Architecture: manifest.config.Architecture,
-			OS:           manifest.config.OS,
-			OSVersion:    manifest.config.OSVersion,
-			OSFeatures:   manifest.config.OSFeatures,
-		}),
-	)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-	defer os.Remove(configBlob.tmp)
-
-	// We check if the blob already exists.  It is possible to have a duplicate
-	// configuration already present if Save() is called repeatedly.
-	if exists, _ := manifest.handle.DigestExists(ctx, configBlob.desc.Digest); !exists {
-		log.G(ctx).WithFields(logrus.Fields{
-			"digest": configBlob.desc.Digest,
-		}).Trace("oci: saving config")
-
-		if _, err := manifest.AddBlob(ctx, configBlob); err != nil {
-			return ocispec.Descriptor{}, err
-		}
-	}
-
-	log.G(ctx).Trace("oci: packing image manifest")
-
-	// Pack the given blobs which generates an image manifest for the pack, and
-	// pushes it to a content storage.
-	if manifest.annotations == nil {
-		manifest.annotations = make(map[string]string)
-	}
-
-	// General annotations
-	manifest.annotations[ocispec.AnnotationRefName] = ref.Context().String()
-	manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
-	manifest.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
-
-	// containerd compatibility annotations
-	manifest.annotations[images.AnnotationImageName] = ref.String()
-
-	// Generate the final manifest
-	manifest.manifest = &ocispec.Manifest{
-		Versioned: specs.Versioned{
-			SchemaVersion: 2, // historical value. does not pertain to OCI or docker version
-		},
-		Config:      configBlob.desc,
-		MediaType:   ocispec.MediaTypeImageManifest,
-		Layers:      layers,
-		Annotations: manifest.annotations,
-	}
-
-	manifestJson, err := json.Marshal(manifest.manifest)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
-	}
-
-	manifestDesc := content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageManifest,
-		manifestJson,
-	)
-	manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
-	manifestDesc.Annotations = manifest.manifest.Annotations
-
-	// save the manifest digest
-	if err := manifest.handle.SaveDigest(
-		ctx,
-		source,
-		manifestDesc,
-		bytes.NewReader(manifestJson),
-		onProgress,
-	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
-	}
-
-	manifest.desc = &manifestDesc
-
-	return manifestDesc, nil
+	return &manifestDesc, nil
 }
