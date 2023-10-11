@@ -96,10 +96,14 @@ func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts
 func (manager *ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
 	var err error
 	var auth regtypes.AuthConfig
+	insecure := false
 
 	if a, ok := manager.auths[domain]; ok {
+		insecure = !a.VerifySSL
+
 		log.G(ctx).
 			WithField("registry", domain).
+			WithField("insecure", insecure).
 			Debug("authenticating")
 
 		auth = regtypes.AuthConfig{
@@ -117,6 +121,7 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 		Domain:   domain,
 		Debug:    false,
 		SkipPing: true,
+		Insecure: insecure,
 		Headers: map[string]string{
 			"User-Agent": version.UserAgent(),
 		},
@@ -327,6 +332,12 @@ searchRemoteIndexes:
 			if auth, ok := auths[reg.Domain]; ok {
 				authConfig.Username = auth.User
 				authConfig.Password = auth.Token
+
+				if !auth.VerifySSL {
+					transport.TLSClientConfig = &tls.Config{
+						InsecureSkipVerify: true,
+					}
+				}
 			}
 
 			if refErr == nil && ref.Context().RegistryStr() != "" && ref.Context().RegistryStr() != domain {
