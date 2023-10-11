@@ -295,7 +295,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 
 	// General annotations
 	manifest.annotations[ocispec.AnnotationRefName] = ref.Context().String()
-	manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
+	// manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
 	manifest.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
 
 	// containerd compatibility annotations

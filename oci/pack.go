@@ -6,19 +6,20 @@ package oci
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/tls"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
-	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
@@ -38,9 +39,14 @@ import (
 
 const ConfigFilename = "config.json"
 
+// ociPackage works by referencing a specific manifest which represents the
+// "package" as well as the index that manifest should be part of.  When
+// when internally referencing the packaged entity, this is the manifest and its
+// representation is presented via the index.
 type ociPackage struct {
 	handle   handler.Handler
 	ref      name.Reference
+	index    *Index
 	manifest *Manifest
 
 	// Embedded attributes which represent target.Target
@@ -122,26 +128,21 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, err
 	}
 
-	// TODO: Remove the existing reference if a --force-remove|--overwrite flag is
-	// provided (which should then translate into an PackOptions attribute).
-	// existingDesc, err := handle.Resolve(ctx, ocipack.Name())
-	// if err == nil && popts.Overwrite() && existingDesc.MediaType == ocispec.MediaTypeImageManifest {
-	// 	reader, err := handle.Fetch(ctx, existingDesc)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	//
-	//  log.G(ctx).WithFields(logrus.Fields{
-	//		"tag": ocipack.Name(),
-	//	}).Warn("removing existing reference")
-	//
-	// 	// TODO: Remove the manifest descriptor
-	//
-	// }
+	index, err := NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
+	if err != nil {
+		index, err = NewIndex(ctx, ocipack.handle)
+		if err != nil {
+			return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
+		}
+	}
 
+	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+
+	// Prepare a new manifest which contains the individual components of the
+	// target, including the kernel image.
 	ocipack.manifest, err = NewManifest(ctx, ocipack.handle)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not instantiate new manifest structure: %w", err)
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
@@ -248,27 +249,21 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"tag": ocipack.Name(),
-	}).Debug("oci: saving image")
+	if err := index.AddManifest(ctx, ocipack.manifest); err != nil {
+		return nil, fmt.Errorf("could not add manifest to index: %w", err)
+	}
 
-	_, err = ocipack.manifest.Save(ctx, ocipack.imageRef(), nil)
-	if err != nil {
-		return nil, err
+	if _, err = index.Save(ctx, ocipack.ref.String(), nil); err != nil {
+		return nil, fmt.Errorf("could not save index: %w", err)
 	}
 
 	return &ocipack, nil
 }
 
-// NewPackageFromOCIManifestSpec generates a package from a supplied OCI image
-// manifest specification.
-func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, ref string, manifest ocispec.Manifest) (pack.Package, error) {
-	// Check if the OCI image has a known annotation which identifies if a
-	// unikernel is contained within
-	if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
-		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
-	}
-
+// NewPackageFromOCIManifestDigest is a constructor method which
+// instantiates a package based on the OCI format based on a provided OCI
+// Image manifest digest.
+func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler, ref string, dgst digest.Digest) (pack.Package, error) {
 	var err error
 
 	ocipack := ociPackage{
@@ -276,116 +271,128 @@ func NewPackageFromOCIManifestSpec(ctx context.Context, handle handler.Handler, 
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultRegistry(""),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	ocipack.manifest, err = NewManifestFromSpec(ctx, handle, manifest)
-	if err != nil {
-		return nil, err
+	// First, check if the digest exists locally, this determines whether we
+	// continue to instantiate it from the local host or from from a remote
+	// registry.
+	if exists, err := handle.DigestExists(ctx, dgst); err == nil && exists {
+		ocipack.index, err = NewIndexFromRef(ctx, handle, ref)
+		if err != nil {
+			return nil, fmt.Errorf("could not instantiate index from reference: %w", err)
+		}
+
+		manifest, err := NewManifestFromDigest(ctx, handle, dgst)
+		if err != nil {
+			return nil, fmt.Errorf("could not instantiate manifest from digest: %w", err)
+		}
+
+		if err := ocipack.index.AddManifest(ctx, manifest); err != nil {
+			return nil, fmt.Errorf("could not add manifest to index: %w", err)
+		}
+		ocipack.manifest = manifest
+	} else {
+		if ocipack.ref.Context().RegistryStr() == "" {
+			ocipack.ref, err = name.ParseReference(ref,
+				name.WithDefaultRegistry(DefaultRegistry),
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		auths, err := defaultAuths(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not gather authentication details")
+		}
+
+		authConfig := &authn.AuthConfig{}
+		// var transport *http.Transport
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+
+		// Annoyingly convert between regtypes and authn.
+		if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
+			authConfig.Username = auth.User
+			authConfig.Password = auth.Token
+
+			if !auth.VerifySSL {
+				// transport = http.DefaultTransport.(*http.Transport).Clone()
+				transport.TLSClientConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+			}
+		}
+
+		v1ImageIndex, err := remote.Index(ocipack.ref,
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+			remote.WithTransport(transport),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not get index from registry: %v", err)
+		}
+
+		ocipack.index, err = NewIndex(ctx, handle)
+		if err != nil {
+			return nil, err
+		}
+
+		v1ImageIndexManifest, err := v1ImageIndex.IndexManifest()
+		if err != nil {
+			return nil, fmt.Errorf("could not access index manifest: %w", err)
+		}
+
+		index, err := FromGoogleV1IndexManifestToOCISpec(*v1ImageIndexManifest)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert index manifest: %w", err)
+		}
+
+		for _, descriptor := range index.Manifests {
+			descriptor := descriptor
+
+			manifest, err := NewManifest(ctx, handle)
+			if err != nil {
+				return nil, fmt.Errorf("could not instantiate new manifest: %w", err)
+			}
+
+			manifest.desc = &descriptor
+			manifest.config.Architecture = descriptor.Platform.Architecture
+			manifest.config.Platform = *descriptor.Platform
+			manifest.manifest.Config.Platform = descriptor.Platform
+			ocipack.index.manifests = append(ocipack.index.manifests, manifest)
+
+			if manifest.desc.Digest.String() == dgst.String() {
+				ocipack.manifest = manifest
+			}
+		}
+
+		if ocipack.manifest == nil {
+			return nil, fmt.Errorf("remote index does not contain digest '%s'", dgst.String())
+		}
 	}
 
-	architecture, err := arch.TransformFromSchema(ctx, ocipack.manifest.manifest.Config.Platform.Architecture)
+	architecture, err := arch.TransformFromSchema(ctx,
+		ocipack.manifest.manifest.Config.Platform.Architecture,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	ocipack.arch = architecture.(arch.Architecture)
 
-	platform, err := plat.TransformFromSchema(ctx, ocipack.manifest.manifest.Config.Platform.OS)
+	platform, err := plat.TransformFromSchema(ctx,
+		ocipack.manifest.manifest.Config.Platform.OS,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	ocipack.plat = platform.(plat.Platform)
-
-	return &ocipack, nil
-}
-
-// NewPackageFromRemoteOCIRef generates a new package from a given OCI image
-// reference which is accessed by its remote registry.
-func NewPackageFromRemoteOCIRef(ctx context.Context, handle handler.Handler, ref string) (pack.Package, error) {
-	var err error
-
-	ocipack := ociPackage{
-		handle: handle,
-	}
-
-	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(DefaultRegistry),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse OCI image name reference: %v", err)
-	}
-
-	auths, err := defaultAuths(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	authConfig := &authn.AuthConfig{}
-
-	// Annoyingly convert between regtypes and authn.
-	if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
-		authConfig.Username = auth.User
-		authConfig.Password = auth.Token
-	}
-
-	raw, err := crane.Manifest(ref,
-		crane.WithAuth(&simpleauth.SimpleAuthenticator{
-			Auth: authConfig,
-		}),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not get manifest: %v", err)
-	}
-
-	var manifest ocispec.Manifest
-
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return nil, fmt.Errorf("could not unmarshal manifest: %v", err)
-	}
-
-	// Check if the OCI image has a known annotation which identifies if a
-	// unikernel is contained within
-	if _, ok := manifest.Annotations[AnnotationKernelVersion]; !ok {
-		return nil, fmt.Errorf("OCI image does not contain a Unikraft unikernel")
-	}
-
-	ocipack.manifest, err = NewManifestFromSpec(ctx, handle, manifest)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate image from manifest: %v", err)
-	}
-
-	if manifest.Config.Platform == nil {
-		return nil, fmt.Errorf("remote image platform is unknown")
-	}
-
-	// TODO(nderjung): Setting the architecture and platform are a bit of a hack
-	// at the moment.  A nicer mechanism should be used.
-	architecture, err := arch.TransformFromSchema(ctx, manifest.Config.Platform.Architecture)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert architecture string")
-	}
-
-	var ok bool
-
-	ocipack.arch, ok = architecture.(arch.Architecture)
-	if !ok {
-		return nil, fmt.Errorf("could not convert architecture string")
-	}
-
-	platform, err := plat.TransformFromSchema(ctx, manifest.Config.Platform.OS)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert platform string")
-	}
-
-	ocipack.plat, ok = platform.(plat.Platform)
-	if !ok {
-		return nil, fmt.Errorf("could not convert platform string")
-	}
 
 	return &ocipack, nil
 }
@@ -428,19 +435,16 @@ func (ocipack *ociPackage) Columns() []tableprinter.Column {
 
 // Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
-	manifestJson, err := json.Marshal(ocipack.manifest.manifest)
+	desc, err := ocipack.index.Descriptor()
 	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
+		return err
 	}
 
-	manifestDesc := content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageManifest,
-		manifestJson,
-	)
+	if err := ocipack.handle.PushDescriptor(ctx, ocipack.imageRef(), desc); err != nil {
+		return err
+	}
 
-	ocipack.manifest.desc = &manifestDesc
-
-	return ocipack.manifest.handle.PushImage(ctx, ocipack.imageRef(), ocipack.manifest.desc)
+	return nil
 }
 
 // Pull implements pack.Package
@@ -450,36 +454,34 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
-	// If it's possible to resolve the image reference, the image has already been
-	// pulled to the local image store
-	image, err := ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
-	if err == nil {
-		goto unpack
-	}
-
-	if err := ocipack.manifest.handle.FetchImage(
-		ctx,
+	// Check that the manifest has been fully resolved or pull the descriptor
+	// which will fetch all associated descriptors.
+	if _, err := ocipack.handle.ResolveManifest(ctx,
 		ocipack.imageRef(),
-		fmt.Sprintf("%s/%s", ocipack.plat.Name(), ocipack.arch.Name()),
-		popts.OnProgress,
+		ocipack.manifest.desc.Digest,
 	); err != nil {
-		return err
+		// Pull the index but set the platform such that the relevant manifests can
+		// be retrieved as well.
+		if err := ocipack.handle.PullDigest(
+			ctx,
+			ocispec.MediaTypeImageIndex,
+			ocipack.imageRef(),
+			ocipack.manifest.desc.Digest,
+			ocipack.manifest.desc.Platform,
+			popts.OnProgress,
+		); err != nil {
+			return err
+		}
 	}
 
-	// Try resolving the image again after pulling it
-	image, err = ocipack.handle.ResolveImage(ctx, ocipack.imageRef())
-	if err != nil {
-		return err
-	}
-
-unpack:
 	// Unpack the image if a working directory has been provided
 	if len(popts.Workdir()) > 0 {
-		if err := ocipack.manifest.handle.UnpackImage(
-			ctx,
+		image, err := ocipack.handle.UnpackImage(ctx,
 			ocipack.imageRef(),
+			ocipack.manifest.desc.Digest,
 			popts.Workdir(),
-		); err != nil {
+		)
+		if err != nil {
 			return err
 		}
 
@@ -488,7 +490,6 @@ unpack:
 
 		// Set the command
 		ocipack.command = image.Config.Cmd
-		ocipack.manifest.config = image
 
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
@@ -509,7 +510,36 @@ func (ocipack *ociPackage) Delete(ctx context.Context) error {
 		return fmt.Errorf("could not delete package manifest: %w", err)
 	}
 
-	return nil
+	indexDesc, err := ocipack.handle.ResolveIndex(ctx, ocipack.imageRef())
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return fmt.Errorf("could not resolve index: %w", err)
+	} else if indexDesc == nil {
+		return nil
+	}
+
+	var manifests []ocispec.Descriptor
+
+	for _, manifest := range indexDesc.Manifests {
+		if manifest.Digest.String() == ocipack.manifest.desc.Digest.String() {
+			continue
+		}
+
+		manifests = append(manifests, manifest)
+	}
+
+	if len(manifests) == 0 {
+		return ocipack.handle.DeleteIndex(ctx, ocipack.imageRef())
+	}
+
+	indexDesc.Manifests = manifests
+
+	newIndex, err := NewIndexFromSpec(ctx, ocipack.handle, indexDesc)
+	if err != nil {
+		return fmt.Errorf("could not prepare new index: %w", err)
+	}
+
+	_, err = newIndex.Save(ctx, ocipack.imageRef(), nil)
+	return err
 }
 
 // Pull implements pack.Package

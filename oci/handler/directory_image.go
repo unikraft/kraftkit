@@ -6,6 +6,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,11 +14,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 )
 
 const algorithm = "sha256"
@@ -248,4 +251,92 @@ func (dm DirectoryManifest) LayerByDiffID(hash v1.Hash) (v1.Layer, error) {
 		}
 	}
 	return nil, fmt.Errorf("layer not found")
+}
+
+type DirectoryIndex struct {
+	desc    *ocispec.Descriptor
+	handle  *DirectoryHandler
+	fullref string
+	ctx     context.Context
+}
+
+// MediaType implements v1.ImageIndex
+func (di *DirectoryIndex) MediaType() (types.MediaType, error) {
+	return types.OCIImageIndex, nil
+}
+
+// Digest implements v1.ImageIndex
+func (di *DirectoryIndex) Digest() (v1.Hash, error) {
+	return v1.Hash{
+		Algorithm: di.desc.Digest.Algorithm().String(),
+		Hex:       di.desc.Digest.Hex(),
+	}, nil
+}
+
+// Size implements v1.ImageIndex
+func (di *DirectoryIndex) Size() (int64, error) {
+	return di.desc.Size, nil
+}
+
+// IndexManifest implements v1.ImageIndex
+func (di *DirectoryIndex) IndexManifest() (*v1.IndexManifest, error) {
+	b, err := di.RawManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	return v1.ParseIndexManifest(bytes.NewReader(b))
+}
+
+// RawManifest implements v1.ImageIndex
+func (di *DirectoryIndex) RawManifest() ([]byte, error) {
+	return os.ReadFile(filepath.Join(
+		di.handle.path,
+		DirectoryHandlerIndexesDir,
+		strings.ReplaceAll(di.fullref, ":", string(filepath.Separator))+".json",
+	))
+}
+
+// Image implements v1.ImageIndex
+func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
+	dgst := digest.NewDigestFromHex(manifestDigest.Algorithm, manifestDigest.Hex)
+
+	image, err := di.handle.resolveImage(
+		di.ctx,
+		di.fullref,
+		dgst,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := di.handle.ResolveManifest(
+		di.ctx,
+		di.fullref,
+		dgst,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	indexJson, err := json.Marshal(manifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	desc := content.NewDescriptorFromBytes(
+		ocispec.MediaTypeImageIndex,
+		indexJson,
+	)
+
+	return &DirectoryManifest{
+		handle: di.handle,
+		image:  image,
+		desc:   &desc,
+	}, nil
+}
+
+// ImageIndex implements v1.ImageIndex
+func (di *DirectoryIndex) ImageIndex(v1.Hash) (v1.ImageIndex, error) {
+	return nil, fmt.Errorf("not implemented: oci.handler.DirectoryIndex.ImageIndex")
 }

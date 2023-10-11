@@ -33,6 +33,13 @@ type DescriptorSaver interface {
 	SaveDescriptor(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
 }
 
+type DescriptorPusher interface {
+	// PushDescriptor accepts an input descriptor and an optional canonical name
+	// for the descriptor (such as a tag) and uses the handler to push this to a
+	// remote registry.
+	PushDescriptor(context.Context, string, *ocispec.Descriptor) error
+}
+
 type ManifestLister interface {
 	ListManifests(context.Context) (map[string]*ocispec.Manifest, error)
 }
@@ -45,31 +52,32 @@ type ManifestDeleter interface {
 	DeleteManifest(context.Context, string, digest.Digest) error
 }
 
-type ImagePusher interface {
-	PushImage(context.Context, string, *ocispec.Descriptor) error
+type IndexLister interface {
+	ListIndexes(context.Context) (map[string]*ocispec.Index, error)
 }
 
-type ImageResolver interface {
-	ResolveImage(context.Context, string) (*ocispec.Image, error)
+type IndexResolver interface {
+	ResolveIndex(context.Context, string) (*ocispec.Index, error)
 }
 
-type ImageFetcher interface {
-	FetchImage(context.Context, string, string, func(float64)) error
+type IndexDeleter interface {
+	DeleteIndex(context.Context, string) error
 }
 
 type ImageUnpacker interface {
-	UnpackImage(context.Context, string, string) error
+	UnpackImage(context.Context, string, digest.Digest, string) (*ocispec.Image, error)
 }
 
 type Handler interface {
 	DigestResolver
 	DigestPuller
 	DescriptorSaver
+	DescriptorPusher
 	ManifestLister
 	ManifestResolver
 	ManifestDeleter
-	ImagePusher
-	ImageResolver
-	ImageFetcher
+	IndexResolver
+	IndexLister
+	IndexDeleter
 	ImageUnpacker
 }

@@ -10,6 +10,27 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// IsOCIIndexKraftKitCompatible is a utility method that is used to determine
+// whether the provided OCI Specification Index structure is compatible with
+// KraftKit.  Ultimately, this is achieved by testing whether the annotation
+// "sh.kraftkit.version" has been set.  The value of this annotation is
+// discarded.
+func IsOCIIndexKraftKitCompatible(index *ocispec.Index) (bool, error) {
+	if index == nil {
+		return false, fmt.Errorf("provided index is nil")
+	}
+
+	if index.Annotations == nil {
+		return false, fmt.Errorf("index does not contain any annotations")
+	}
+
+	if _, ok := index.Annotations[AnnotationKraftKitVersion]; !ok {
+		return false, fmt.Errorf("index does not contain '%s' annotation", AnnotationKraftKitVersion)
+	}
+
+	return true, nil
+}
+
 // IsOCIManifestKraftKitCompatible is a utility method that is used to determine
 // whether the provided OCI Specification Manifest structure is compatible with
 // KraftKit.  Ultimately, this is achieved by testing whether the annotation

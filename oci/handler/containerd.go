@@ -21,6 +21,7 @@ import (
 	"github.com/containerd/containerd/labels"
 	clog "github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -34,10 +35,10 @@ import (
 )
 
 const (
-	ContainerdGCLayerPrefix   = "containerd.io/gc.ref.content.l"
-	ContainerdGCContentPrefix = "containerd.io/gc.ref.content"
-	KraftKitLabelPrefix       = "kraftkit.sh/oci."
-	KraftKitLabelMediaType    = KraftKitLabelPrefix + "mediaType"
+	ContainerdGCLayerPrefix    = "containerd.io/gc.ref.content.l"
+	ContainerdGCManifestPrefix = "containerd.io/gc.ref.content.m"
+	KraftKitLabelPrefix        = "kraftkit.sh/oci."
+	KraftKitLabelMediaType     = KraftKitLabelPrefix + "mediaType"
 )
 
 type ContainerdHandler struct {
@@ -115,6 +116,14 @@ func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.D
 
 // PullDigest implements DigestPuller.
 func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error {
+	progress := make(chan struct{})
+	ongoing := newJobs(fullref)
+
+	go func() {
+		handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), onProgress)
+		close(progress)
+	}()
+
 	resolver, err := dockerconfigresolver.New(
 		ctx,
 		strings.Split(fullref, "/")[0],
@@ -132,7 +141,7 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 		return err
 	}
 
-	return handle.client.Push(
+	if err := handle.client.Push(
 		namespaces.WithNamespace(ctx, handle.namespace),
 		fullref,
 		ocispec.Descriptor{
@@ -140,7 +149,20 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 			MediaType: mediaType,
 		},
 		containerd.WithResolver(resolver),
-	)
+		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
+				ongoing.Add(desc)
+			}
+
+			return nil, nil
+		})),
+	); err != nil {
+		return err
+	}
+
+	<-progress
+
+	return nil
 }
 
 // SaveDescriptor implements DescriptorSaver.
@@ -196,9 +218,99 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		return err
 	}
 
+	// Write the image and the various parentage tags
+	is := handle.client.ImageService()
+
 	// Post-processing for special media types which have additional metadata
 	// associated with the digest.
 	switch desc.MediaType {
+	case ocispec.MediaTypeImageIndex:
+		log.G(ctx).WithFields(logrus.Fields{
+			"ref": fullref,
+		}).Trace("oci: saving index")
+
+		index := ocispec.Index{}
+		if err := json.NewDecoder(&cache).Decode(&index); err != nil {
+			return err
+		}
+
+		ref, err := name.ParseReference(fullref)
+		if err != nil {
+			return err
+		}
+
+		if existingIndex, err := handle.ResolveIndex(ctx, fullref); err == nil {
+			existingIndexJson, err := json.Marshal(existingIndex)
+			if err != nil {
+				return fmt.Errorf("could not marshal existing index: %w", err)
+			}
+
+			existingIndexDigest := digest.FromBytes(existingIndexJson)
+
+			// Attempt to delete the existing digest, if it does not
+			if err := cs.Delete(ctx, existingIndexDigest); err != nil && !strings.Contains(err.Error(), "not found") {
+				return fmt.Errorf("could not delete existing index: %w", err)
+			}
+		}
+
+		// Add garbage collection prevention tags which references all manifests
+		// which are part of this index.  See [0] for reference.
+		//
+		// [0]: https://github.com/containerd/containerd/blob/v1.7.6/docs/content-flow.md#index-labels
+		labels := map[string]string{
+			KraftKitLabelMediaType: desc.MediaType,
+			fmt.Sprintf("%s.%s", labels.LabelDistributionSource, ref.Context().RegistryStr()): ref.Context().RepositoryStr(),
+		}
+
+		for i, l := range index.Manifests {
+			labels[fmt.Sprintf("%s.%d", ContainerdGCManifestPrefix, i)] = l.Digest.String()
+		}
+
+		var image images.Image
+		existingImage, err := is.Get(ctx, fullref)
+
+		if err != nil || existingImage.Target.Digest.String() == "" {
+			log.G(ctx).Trace("oci: creating new image")
+			image = images.Image{
+				Name:      fullref,
+				Labels:    labels,
+				Target:    desc,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Time{},
+			}
+			_, err = is.Create(ctx, image)
+		} else {
+			log.G(ctx).Trace("oci: updating existing image")
+			image = images.Image{
+				Name:      fullref,
+				Labels:    labels,
+				Target:    desc,
+				UpdatedAt: time.Time{},
+			}
+			_, err = is.Update(ctx, image)
+		}
+		if err != nil {
+			return err
+		}
+
+		updatedFields := make([]string, 0)
+
+		for k, v := range labels {
+			log.G(ctx).WithFields(logrus.Fields{
+				k:     v,
+				"ref": desc.Digest,
+			}).Trace("oci: labelling")
+
+			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
+		}
+
+		if _, err := cs.Update(ctx, content.Info{
+			Digest: digest.Digest(desc.Digest),
+			Labels: labels,
+		}, updatedFields...); err != nil {
+			return err
+		}
+
 	case ocispec.MediaTypeImageManifest:
 		log.G(ctx).WithFields(logrus.Fields{
 			"ref": fullref,
@@ -314,90 +426,144 @@ func (handle *ContainerdHandler) DeleteManifest(ctx context.Context, fullref str
 	return cs.Delete(ctx, dgst)
 }
 
-// ResolveImage implements ImageResolver.
-func (handle *ContainerdHandler) ResolveImage(ctx context.Context, fullref string) (*ocispec.Image, error) {
+// ResolveIndex implements IndexResolver.
+func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		err = combineErrors(err, done(ctx))
+		err = errors.Join(err, done(ctx))
 	}()
 
-	containerdImage, err := handle.client.GetImage(ctx, fullref)
+	images, err := handle.client.ImageService().List(ctx)
 	if err != nil {
+		return nil, fmt.Errorf("could not get list of images: %w", err)
+	}
+
+	var indexDigest *digest.Digest
+	for _, image := range images {
+		if image.Name != fullref {
+			continue
+		}
+
+		indexDigest = &image.Target.Digest
+		break
+	}
+
+	if indexDigest == nil {
+		return nil, fmt.Errorf("index '%s' not found", fullref)
+	}
+
+	cs := handle.client.ContentStore()
+
+	var index ocispec.Index
+
+	if err := cs.Walk(ctx, func(info content.Info) error {
+		if info.Digest.String() != indexDigest.String() {
+			return nil
+		}
+
+		readerAt, err := cs.ReaderAt(ctx, ocispec.Descriptor{
+			Digest: info.Digest,
+		})
+		if err != nil {
+			return err
+		}
+
+		defer readerAt.Close()
+
+		blob, err := readBlob(readerAt)
+		if err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		if err := json.Unmarshal(blob, &index); err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	image, err := containerdImage.Spec(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &image, nil
+	return &index, nil
 }
 
-// FetchImage implements ImageFetcher.
-func (handle *ContainerdHandler) FetchImage(ctx context.Context, ref, plat string, onProgress func(float64)) (err error) {
+// ListIndexes implements IndexLister.
+func (handle *ContainerdHandler) ListIndexes(ctx context.Context) (map[string]*ocispec.Index, error) {
+	digestIndexes, err := ListContainerdObjectsByType[ocispec.Index](ctx, ocispec.MediaTypeImageIndex, handle)
+	if err != nil {
+		return nil, fmt.Errorf("could not gather list of indexes: %w", err)
+	}
+
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = errors.Join(err, done(ctx))
+	}()
+
+	images, err := handle.client.ImageService().List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get list of images: %w", err)
+	}
+
+	indexes := make(map[string]*ocispec.Index)
+
+	for _, image := range images {
+		index, ok := digestIndexes[image.Target.Digest.String()]
+		if !ok {
+			// TODO(nderjung): Throw an error?
+			log.G(ctx).Debugf("could not find index '%s'", image.Target.Digest.String())
+			continue
+		}
+
+		indexes[image.Name] = index
+	}
+
+	return indexes, nil
+}
+
+func (handle *ContainerdHandler) DeleteIndex(ctx context.Context, fullref string) error {
+	digestIndexes, err := ListContainerdObjectsByType[ocispec.Index](ctx, ocispec.MediaTypeImageIndex, handle)
+	if err != nil {
+		return fmt.Errorf("could not gather list of indexes: %w", err)
+	}
+
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		err = combineErrors(err, done(ctx))
+		err = errors.Join(err, done(ctx))
 	}()
 
-	progress := make(chan struct{})
-	ongoing := newJobs(ref)
-
-	go func() {
-		handle.reportProgress(ctx, ongoing, handle.client.ContentStore(), onProgress)
-		close(progress)
-	}()
-
-	resolver, err := dockerconfigresolver.New(
-		ctx,
-		strings.Split(ref, "/")[0],
-		dockerconfigresolver.WithSkipVerifyCerts(true),
-		dockerconfigresolver.WithAuthCreds(func(domain string) (string, string, error) {
-			auth, ok := handle.auths[domain]
-			if !ok {
-				return "", "", nil
-			}
-
-			return auth.User, auth.Token, nil
-		}),
-	)
+	images, err := handle.client.ImageService().List(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get list of images: %w", err)
 	}
 
-	ropts := []containerd.RemoteOpt{
-		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
-				ongoing.Add(desc)
+	for _, image := range images {
+		index, ok := digestIndexes[image.Target.Digest.String()]
+		if !ok {
+			continue
+		}
+
+		for _, manifest := range index.Manifests {
+			if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil && !strings.Contains(err.Error(), "not found") {
+				return fmt.Errorf("could not delete manifest from index '%s': %w", fullref, err)
 			}
+		}
 
-			return nil, nil
-		})),
-		containerd.WithResolver(resolver),
+		return handle.client.ContentStore().Delete(ctx, image.Target.Digest)
 	}
 
-	if plat != "" {
-		ropts = append(ropts, containerd.WithPlatform(plat))
-	}
-
-	// Fetch the image
-	_, err = handle.client.Fetch(ctx, ref, ropts...)
-	if err != nil {
-		return err
-	}
-
-	<-progress
-
-	return nil
+	return nil // Could not find index
 }
 
 // statusInfo holds the status info for an upload or download
@@ -555,8 +721,8 @@ outer:
 	}
 }
 
-// PushImage implements ImagePusher.
-func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+// PushDescriptor implements DescriptorPusher.
+func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor) error {
 	resolver, err := dockerconfigresolver.New(
 		ctx,
 		strings.Split(ref, "/")[0],
@@ -583,44 +749,43 @@ func (handle *ContainerdHandler) PushImage(ctx context.Context, ref string, targ
 }
 
 // UnpackImage implements ImageUnpacker.
-func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dest string) (err error) {
+func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dgst digest.Digest, dest string) (*ocispec.Image, error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer func() {
 		err = combineErrors(err, done(ctx))
 	}()
 
-	img, err := handle.client.ImageService().Get(ctx, ref)
+	manifest, err := ResolveContainerdObjectFromDigest[ocispec.Manifest](ctx, handle, dgst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i := containerd.NewImage(handle.client, img)
+	img, err := handle.client.ImageService().Get(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO: We need to pass the architecture, platform and any desired KConfig
-	// values via the platform specifier:
-	// i := containerd.NewImageWithPlatform(
-	// 	handle.client,
-	// 	img,
-	// 	platforms.Only(ocispec.Platform{
-	// 	// TODO!
-	// 	})),
-	// )
+	i := containerd.NewImageWithPlatform(
+		handle.client,
+		img,
+		platforms.Only(*manifest.Config.Platform),
+	)
 
 	if err = i.Unpack(ctx, containerd.DefaultSnapshotter); err != nil {
-		return err
+		return nil, err
 	}
 
 	isUnpacked, err := i.IsUnpacked(ctx, containerd.DefaultSnapshotter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if !isUnpacked {
-		return fmt.Errorf("empty image")
+		return nil, fmt.Errorf("empty image")
 	}
 
 	// TODO(nderjung): This is where we could used media-types to extract the
@@ -628,7 +793,7 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 
 	layers, err := i.RootFS(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, layer := range layers {
@@ -636,17 +801,17 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, de
 
 		ra, err := i.ContentStore().ReaderAt(ctx, ocispec.Descriptor{Digest: layer})
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if err := archive.Untar(content.NewReader(ra), dest); err != nil {
-			return err
+			return nil, err
 		}
 
 		ra.Close()
 	}
 
-	return nil
+	return ResolveContainerdObjectFromDigest[ocispec.Image](ctx, handle, manifest.Config.Digest)
 }
 
 // FinalizeImage implements ImageFinalizer.
