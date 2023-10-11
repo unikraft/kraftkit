@@ -158,7 +158,7 @@ func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Desc
 		}
 	}()
 
-	if err := manifest.handle.SaveDigest(ctx, "", blob.desc, fp, nil); err != nil {
+	if err := manifest.handle.SaveDescriptor(ctx, "", blob.desc, fp, nil); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -326,7 +326,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	manifestDesc.Platform = platform
 
 	// save the manifest descriptor
-	if err := manifest.handle.SaveDigest(
+	if err := manifest.handle.SaveDescriptor(
 		ctx,
 		fullref,
 		manifestDesc,

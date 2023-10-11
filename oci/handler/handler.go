@@ -23,10 +23,6 @@ type DigestPuller interface {
 	PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error
 }
 
-type DigestSaver interface {
-	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
-}
-
 type DescriptorSaver interface {
 	// SaveDescriptor accepts an optional name reference which represents
 	// descriptor (but this is not always necessary and can be left blank if the
@@ -68,7 +64,6 @@ type ImageUnpacker interface {
 type Handler interface {
 	DigestResolver
 	DigestPuller
-	DigestSaver
 	DescriptorSaver
 	ManifestLister
 	ManifestResolver
