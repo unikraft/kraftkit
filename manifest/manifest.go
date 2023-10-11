@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -101,6 +102,60 @@ func (mp *ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest
 	manifest.mopts = mp.manifest.mopts
 
 	return pullArchive(ctx, manifest, opts...)
+}
+
+func (mp *ManifestProvider) DeleteManifest(ctx context.Context) error {
+	var errs []error
+
+	for _, channel := range mp.manifest.Channels {
+		ext := filepath.Ext(channel.Resource)
+		if ext == ".gz" {
+			ext = ".tar.gz"
+		}
+
+		resource := filepath.Join(
+			mp.manifest.mopts.cacheDir, mp.manifest.Name+"-"+channel.Name+ext,
+		)
+
+		if _, err := os.Stat(resource); err == nil {
+			log.G(ctx).
+				WithField("file", resource).
+				Debug("deleting")
+			if err := os.Remove(resource); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	for _, version := range mp.manifest.Versions {
+		ext := filepath.Ext(version.Resource)
+		if ext == ".gz" {
+			ext = ".tar.gz"
+		}
+
+		resource := filepath.Join(
+			mp.manifest.mopts.cacheDir, mp.manifest.Name+"-"+version.Version+ext,
+		)
+
+		if _, err := os.Stat(resource); err == nil {
+			log.G(ctx).
+				WithField("file", resource).
+				Debug("deleting")
+			if err := os.Remove(resource); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	log.G(ctx).
+		WithField("file", mp.path).
+		Debug("deleting")
+
+	if err := os.Remove(mp.path); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (mp *ManifestProvider) String() string {

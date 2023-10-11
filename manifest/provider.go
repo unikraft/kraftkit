@@ -22,6 +22,9 @@ type Provider interface {
 	// PullManifest from the provider.
 	PullManifest(context.Context, *Manifest, ...pack.PullOption) error
 
+	// DeleteManifest deletes the artifact based on the provider's implementation.
+	DeleteManifest(context.Context) error
+
 	// String returns the name of the provider
 	fmt.Stringer
 }

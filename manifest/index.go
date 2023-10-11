@@ -79,6 +79,10 @@ func (mip *ManifestIndexProvider) PullManifest(ctx context.Context, manifest *Ma
 	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.PullManifest")
 }
 
+func (mip *ManifestIndexProvider) DeleteManifest(context.Context) error {
+	return fmt.Errorf("not implemented: manifest.ManifestIndexProvider.DeleteManifest")
+}
+
 func (mip *ManifestIndexProvider) String() string {
 	return "index"
 }
