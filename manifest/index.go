@@ -55,17 +55,19 @@ func NewManifestIndexProvider(ctx context.Context, path string, mopts ...Manifes
 		}, nil
 	}
 
-	index, err = NewManifestIndexFromURL(ctx, path, mopts...)
-	if err == nil {
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("retrieved index")
-		return &ManifestIndexProvider{
-			path:  path,
-			index: index,
-			mopts: mopts,
-			ctx:   ctx,
-		}, nil
+	if NewManifestOptions(mopts...).update {
+		index, err = NewManifestIndexFromURL(ctx, path, mopts...)
+		if err == nil {
+			log.G(ctx).WithFields(logrus.Fields{
+				"path": path,
+			}).Trace("retrieved index")
+			return &ManifestIndexProvider{
+				path:  path,
+				index: index,
+				mopts: mopts,
+				ctx:   ctx,
+			}, nil
+		}
 	}
 
 	return nil, fmt.Errorf("provided path is not a manifest index: %s", path)
