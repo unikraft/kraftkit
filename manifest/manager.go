@@ -57,7 +57,11 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 			continue
 		}
 
-		if _, compatible, _ := manager.IsCompatible(ctx, manifest); compatible {
+		if _, compatible, _ := manager.IsCompatible(ctx, manifest,
+			// During initialization, do not perform a remote check to determine
+			// whether the provided source is compatible.
+			packmanager.WithUpdate(false),
+		); compatible {
 			manager.manifests = append(manager.manifests, manifest)
 		}
 	}
@@ -68,7 +72,22 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 // update retrieves and returns a cache of the upstream manifest registry
 func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	if len(m.manifests) == 0 {
-		return nil, fmt.Errorf("no manifests specified in config")
+		// In this scenario, re-attempt all manifests provided within the config
+		// space which were not remotely probed during initialization.
+		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			if _, compatible, _ := m.IsCompatible(ctx, manifest,
+				// During initialization, do not perform a remote check to determine
+				// whether the provided source is compatible.
+				packmanager.WithUpdate(true),
+			); compatible {
+				m.manifests = append(m.manifests, manifest)
+			}
+		}
+
+		// If the list of manifests is still zero, then there are really no configs.
+		if len(m.manifests) == 0 {
+			return nil, fmt.Errorf("no manifests specified in config")
+		}
 	}
 
 	index := &ManifestIndex{
@@ -454,8 +473,10 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 		return m, true, nil
 	}
 
-	if _, err := NewProvider(ctx, source); err != nil {
-		return nil, false, fmt.Errorf("incompatible source")
+	if _, err := NewProvider(ctx, source,
+		WithUpdate(packmanager.NewQuery(qopts...).Update()),
+	); err != nil {
+		return nil, false, fmt.Errorf("incompatible source: %w", err)
 	}
 
 	return m, true, nil
