@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -246,6 +248,21 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 			DiffIDs: diffIds,
 		}
 	}
+
+	// Sort the features alphabetically.  This ensures that comparisons between
+	// versions are symmetric.
+	sort.Slice(manifest.config.OSFeatures, func(i, j int) bool {
+		// Check if we have numbers, sort them accordingly
+		if z, err := strconv.Atoi(manifest.config.OSFeatures[i]); err == nil {
+			if y, err := strconv.Atoi(manifest.config.OSFeatures[j]); err == nil {
+				return y < z
+			}
+			// If we get only one number, alway say its greater than letter
+			return true
+		}
+		// Compare letters normally
+		return manifest.config.OSFeatures[j] > manifest.config.OSFeatures[i]
+	})
 
 	configJson, err := json.Marshal(manifest.config)
 	if err != nil {
