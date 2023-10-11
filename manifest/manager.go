@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 	"unicode"
 
@@ -158,6 +159,21 @@ func (m *manifestManager) saveIndex(ctx context.Context, index *ManifestIndex) e
 	}
 
 	index.Manifests = manifests
+
+	// Sort the names of packages alphabetically.
+	sort.Slice(index.Manifests, func(i, j int) bool {
+		// Check if we have numbers, sort them accordingly
+		if z, err := strconv.Atoi(index.Manifests[i].Name); err == nil {
+			if y, err := strconv.Atoi(index.Manifests[j].Name); err == nil {
+				return y < z
+			}
+			// If we get only one number, alway say its greater than letter
+			return true
+		}
+
+		// Compare letters normally
+		return index.Manifests[j].Name > index.Manifests[i].Name
+	})
 
 	return index.WriteToFile(m.LocalManifestIndex(ctx))
 }
