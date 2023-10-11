@@ -27,10 +27,6 @@ type DigestSaver interface {
 	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
 }
 
-type DescriptorResolver interface {
-	ResolveDescriptor(context.Context, string) (ocispec.Descriptor, error)
-}
-
 type ManifestLister interface {
 	ListManifests(context.Context) ([]ocispec.Manifest, error)
 }
