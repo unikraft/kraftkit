@@ -22,6 +22,7 @@ type KraftKit struct {
 	Editor         string `yaml:"editor" env:"KRAFTKIT_EDITOR" long:"editor" usage:"Set the text editor to open when prompt to edit a file"`
 	GitProtocol    string `yaml:"git_protocol" env:"KRAFTKIT_GIT_PROTOCOL" long:"git-protocol" usage:"Preferred Git protocol to use" default:"https"`
 	Pager          string `yaml:"pager,omitempty" env:"KRAFTKIT_PAGER" long:"pager" usage:"System pager to pipe output to"`
+	Qemu           string `yaml:"qemu,omitempty" env:"KRAFTKIT_QEMU" long:"qemu" usage:"Path to QEMU executable" default:""`
 	HTTPUnixSocket string `yaml:"http_unix_socket,omitempty" env:"KRAFTKIT_HTTP_UNIX_SOCKET" long:"http-unix-sock" usage:"When making HTTP(S) connections, pipe requests via this shared socket"`
 	RuntimeDir     string `yaml:"runtime_dir" env:"KRAFTKIT_RUNTIME_DIR" long:"runtime-dir" usage:"Directory for placing runtime files (e.g. pidfiles)"`
 	DefaultPlat    string `yaml:"default_plat" env:"KRAFTKIT_DEFAULT_PLAT" usage:"The default platform to use when invoking platform-specific code" noattribute:"true"`

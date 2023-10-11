@@ -86,6 +86,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
 
+	if config.G[config.KraftKit](ctx).Qemu != "" {
+		bin = config.G[config.KraftKit](ctx).Qemu
+	}
+
 	// Determine the version of QEMU so as to both determine whether it is a
 	// suitable version and to adjust the supplied command-line arguments.
 	qemuVersion, err := GetQemuVersionFromBin(ctx, bin)

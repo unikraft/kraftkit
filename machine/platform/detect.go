@@ -18,6 +18,7 @@ import (
 	"strings"
 	"syscall"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/qemu"
 )
@@ -194,10 +195,16 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 	// Check if any QEMU binaries are installed on the host.  Since we could not
 	// determine if virtualization extensions are possible at this point, at least
 	// guest emulation is possible with QEMU.
+	var customBin string
+	if config.G[config.KraftKit](ctx).Qemu != "" {
+		customBin = config.G[config.KraftKit](ctx).Qemu
+	}
+
 	for _, bin := range []string{
 		qemu.QemuSystemX86,
 		qemu.QemuSystemArm,
 		qemu.QemuSystemAarch64,
+		customBin,
 	} {
 		if _, err := exec.LookPath(bin); err != nil {
 			continue
