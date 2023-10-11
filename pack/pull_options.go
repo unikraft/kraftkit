@@ -12,7 +12,6 @@ import (
 // package.
 type PullOptions struct {
 	auths             map[string]config.AuthConfig
-	version           string
 	calculateChecksum bool
 	onProgress        func(progress float64)
 	workdir           string
@@ -40,11 +39,6 @@ func (ppo *PullOptions) OnProgress(progress float64) {
 // Workdir returns the set working directory as part of the pull request
 func (ppo *PullOptions) Workdir() string {
 	return ppo.workdir
-}
-
-// Version returns
-func (ppo *PullOptions) Version() string {
-	return ppo.version
 }
 
 // CalculateChecksum returns whether the pull request should perform a check of
@@ -123,14 +117,6 @@ func WithPullChecksum(calc bool) PullOption {
 func WithPullCache(cache bool) PullOption {
 	return func(opts *PullOptions) error {
 		opts.useCache = cache
-		return nil
-	}
-}
-
-// WithPullVersion sets the version that should be pulled.
-func WithPullVersion(version string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.version = version
 		return nil
 	}
 }

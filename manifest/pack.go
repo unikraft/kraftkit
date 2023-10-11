@@ -115,8 +115,6 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 		return fmt.Errorf("uninitialized manifest provider")
 	}
 
-	opts = append(opts, pack.WithPullVersion(mp.version))
-
 	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
 }
 
