@@ -188,12 +188,12 @@ func (u UmbrellaManager) IsCompatible(ctx context.Context, source string, qopts 
 		log.G(ctx).WithFields(logrus.Fields{
 			"format": manager.Format(),
 			"source": source,
-		}).Tracef("checking compatibility")
+		}).Debugf("checking compatibility")
 
 		pm, compatible, err := manager.IsCompatible(ctx, source, qopts...)
 		if err == nil && compatible {
 			return pm, true, nil
-		} else if err != nil {
+		} else {
 			log.G(ctx).
 				WithField("format", manager.Format()).
 				Debugf("package manager is not compatible because: %v", err)
