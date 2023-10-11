@@ -98,14 +98,34 @@ func (query *Query) All() bool {
 }
 
 func (query *Query) Fields() map[string]interface{} {
-	return map[string]interface{}{
-		"name":    query.name,
-		"version": query.version,
-		"source":  query.source,
-		"types":   query.types,
-		"update":  query.update,
-		"auth":    query.auths != nil,
+	fields := map[string]interface{}{}
+
+	if len(query.name) > 0 {
+		fields["name"] = query.name
 	}
+	if len(query.version) > 0 {
+		fields["version"] = query.version
+	}
+	if len(query.types) > 0 {
+		fields["types"] = query.types
+	}
+
+	fields["update"] = query.update
+
+	if len(query.auths) > 0 {
+		fields["auths"] = "true"
+	}
+	if len(query.architecture) > 0 {
+		fields["arch"] = query.architecture
+	}
+	if len(query.platform) > 0 {
+		fields["plat"] = query.platform
+	}
+	if len(query.kConfig) > 0 {
+		fields["kConfig"] = query.kConfig
+	}
+
+	return fields
 }
 
 // QueryOption is a method-option which sets a specific query parameter.
