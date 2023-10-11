@@ -148,12 +148,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create new layer structure from file: %w", err)
 	}
 	defer os.Remove(layer.tmp)
 
 	if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not add layer to manifest: %w", err)
 	}
 
 	if popts.Initrd() != "" {
@@ -162,12 +162,12 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		if f, err := os.Stat(initRdPath); err == nil && f.IsDir() {
 			cwd, err2 := os.Getwd()
 			if err2 != nil {
-				return nil, err2
+				return nil, fmt.Errorf("could not get current working directory: %w", err)
 			}
 
 			file, err := os.CreateTemp("", "kraftkit-oci-archive-*")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not create new temporary file: %w", err)
 			}
 			defer os.Remove(file.Name())
 
