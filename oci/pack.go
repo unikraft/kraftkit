@@ -25,6 +25,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/tableprinter"
 	kraftkitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/kconfig"
@@ -222,15 +223,23 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if popts.PackKConfig() {
-		log.G(ctx).Debug("oci: including .config")
-		for _, k := range ocipack.KConfig() {
-			// TODO(nderjung): Not sure if these filters are best placed here or
-			// elsewhere.
+		log.G(ctx).Debug("oci: including list of kconfig as features")
 
-			// Filter out host-specific KConfig options
-			if k.Key == "CONFIG_UK_BASE" {
+		// TODO(nderjung): Not sure if these filters are best placed here or
+		// elsewhere.
+		skippable := set.NewStringSet(
+			"CONFIG_UK_APP",
+			"CONFIG_UK_BASE",
+		)
+		for _, k := range ocipack.KConfig() {
+			// Filter out host-specific KConfig options.
+			if skippable.Contains(k.Key) {
 				continue
 			}
+
+			log.G(ctx).
+				WithField(k.Key, k.Value).
+				Trace("oci: feature")
 
 			ocipack.manifest.SetOSFeature(ctx, k.String())
 		}
