@@ -553,27 +553,27 @@ func (ocipack *ociPackage) Format() pack.PackageFormat {
 	return OCIFormat
 }
 
-// Source implements unikraft.component.Component
+// Source implements unikraft.target.Target
 func (ocipack *ociPackage) Source() string {
 	return ""
 }
 
-// Path implements unikraft.component.Component
+// Path implements unikraft.target.Target
 func (ocipack *ociPackage) Path() string {
 	return ""
 }
 
-// KConfigTree implements unikraft.component.Component
+// KConfigTree implements unikraft.target.Target
 func (ocipack *ociPackage) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, fmt.Errorf("not implemented: oci.ociPackage.KConfigTree")
 }
 
-// KConfig implements unikraft.component.Component
+// KConfig implements unikraft.target.Target
 func (ocipack *ociPackage) KConfig() kconfig.KeyValueMap {
 	return ocipack.kconfig
 }
 
-// PrintInfo implements unikraft.component.Component
+// PrintInfo implements unikraft.target.Target
 func (ocipack *ociPackage) PrintInfo(context.Context) string {
 	return "not implemented: oci.ociPackage.PrintInfo"
 }
