@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -108,69 +109,74 @@ func (opts *Push) Run(cmd *cobra.Command, args []string) error {
 		ref = args[0]
 	}
 
-	var pmananger packmanager.PackageManager
+	var pm packmanager.PackageManager
 	if opts.Format != "auto" {
 		umbrella, err := packmanager.PackageManagers()
 		if err != nil {
 			return err
 		}
-		pmananger = umbrella[pack.PackageFormat(opts.Format)]
-		if pmananger == nil {
+		pm = umbrella[pack.PackageFormat(opts.Format)]
+		if pm == nil {
 			return errors.New("invalid package format specified")
 		}
 	} else {
-		pmananger = packmanager.G(ctx)
+		pm = packmanager.G(ctx)
 	}
 
-	if pm, compatible, err := pmananger.IsCompatible(ctx, ref); err == nil && compatible {
-		packages, err := pm.Catalog(ctx,
-			packmanager.WithUpdate(false),
-			packmanager.WithName(ref),
-		)
-		if err != nil {
-			return err
+	pm, compatible, err := pm.IsCompatible(ctx, ref)
+	if err != nil {
+		return fmt.Errorf("package manager is not compatible: %w", err)
+	} else if !compatible {
+		return fmt.Errorf("package manager is not compatible")
+	}
+
+	packages, err := pm.Catalog(ctx,
+		packmanager.WithUpdate(false),
+		packmanager.WithName(ref),
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(packages) == 0 {
+		return errors.New("no packages found")
+	}
+
+	var processes []*paraprogress.Process
+
+	for _, p := range packages {
+		p := p
+
+		var title []string
+		for _, column := range p.Columns() {
+			if len(column.Value) > 12 {
+				continue
+			}
+
+			title = append(title, column.Value)
 		}
 
-		if len(packages) == 0 {
-			return errors.New("no packages found")
-		} else if len(packages) > 1 {
-			return errors.New("multiple packages found")
-		}
-
-		// Call push if it exists
-		// TODO push if it doesn't exist too
-		proc := paraprogress.NewProcess(
-			fmt.Sprintf("pushing %s",
-				ref,
-			),
+		processes = append(processes, paraprogress.NewProcess(
+			fmt.Sprintf("pushing %s:%s (%s)", p.Name(), p.Version(), strings.Join(title, ", ")),
 			func(ctx context.Context, w func(progress float64)) error {
-				return packages[0].Push(
+				return p.Push(
 					ctx,
 					pack.WithPushProgressFunc(w),
 				)
 			},
-		)
+		))
+	}
 
-		var processes []*paraprogress.Process
-		processes = append(processes, proc)
-
-		paramodel, err := paraprogress.NewParaProgress(
-			ctx,
-			processes,
-			paraprogress.IsParallel(false),
-			paraprogress.WithRenderer(norender),
-			paraprogress.WithFailFast(true),
-		)
-		if err != nil {
-			return err
-		}
-
-		if err := paramodel.Start(); err != nil {
-			return err
-		}
-	} else {
+	paramodel, err := paraprogress.NewParaProgress(
+		ctx,
+		processes,
+		paraprogress.IsParallel(false),
+		paraprogress.WithRenderer(norender),
+		paraprogress.WithFailFast(true),
+	)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return paramodel.Start()
 }
