@@ -109,6 +109,36 @@ func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.D
 	return true, nil
 }
 
+// PullDigest implements DigestPuller.
+func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error {
+	resolver, err := dockerconfigresolver.New(
+		ctx,
+		strings.Split(fullref, "/")[0],
+		dockerconfigresolver.WithSkipVerifyCerts(true),
+		dockerconfigresolver.WithAuthCreds(func(domain string) (string, string, error) {
+			auth, ok := handle.auths[domain]
+			if !ok {
+				return "", "", nil
+			}
+
+			return auth.User, auth.Token, nil
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	return handle.client.Push(
+		namespaces.WithNamespace(ctx, handle.namespace),
+		fullref,
+		ocispec.Descriptor{
+			Digest:    dgst,
+			MediaType: mediaType,
+		},
+		containerd.WithResolver(resolver),
+	)
+}
+
 // ResolveManifest implements ManifestResolver.
 func (handle *ContainerdHandler) ResolveManifest(ctx context.Context, _ string, digest digest.Digest) (*ocispec.Manifest, error) {
 	return ResolveContainerdObjectFromDigest[ocispec.Manifest](ctx, handle, digest)

@@ -7,22 +7,26 @@ package handler
 import (
 	"archive/tar"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/version"
+	"kraftkit.sh/log"
 	"kraftkit.sh/oci/simpleauth"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -63,6 +67,243 @@ func (handle *DirectoryHandler) DigestExists(ctx context.Context, dgst digest.Di
 	}
 
 	return false, nil
+}
+
+// PullDigest implements DigestPuller.
+func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error {
+	ref, err := name.ParseReference(fullref)
+	if err != nil {
+		return err
+	}
+
+	authConfig := &authn.AuthConfig{}
+
+	ropts := []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithUserAgent(version.UserAgent()),
+		remote.WithPlatform(v1.Platform{
+			Architecture: plat.Architecture,
+			OS:           plat.OS,
+			OSFeatures:   plat.OSFeatures,
+		}),
+	}
+
+	// Annoyingly convert between regtypes and authn.
+	if auth, ok := handle.auths[ref.Context().RegistryStr()]; ok {
+		authConfig.Username = auth.User
+		authConfig.Password = auth.Token
+
+		ropts = append(ropts,
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+		)
+
+		if !auth.VerifySSL {
+			transport := remote.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+
+			ropts = append(ropts, remote.WithTransport(transport))
+		}
+	}
+
+	switch mediaType {
+	case ocispec.MediaTypeImageManifest:
+		log.G(ctx).
+			WithField("digest", dgst.String()).
+			Debugf("pulling manifest")
+
+		image, err := remote.Image(ref, ropts...)
+		if err != nil {
+			return fmt.Errorf("could not retrieve remote manifest: %w", err)
+		}
+
+		manifestRaw, err := image.RawManifest()
+		if err != nil {
+			return fmt.Errorf("could not get raw manifest: %w", err)
+		}
+
+		manifest := ocispec.Manifest{}
+		if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
+			return fmt.Errorf("could not unmarshal raw manifest: %w", err)
+		}
+
+		manifestPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerManifestsDir,
+			dgst.Algorithm().String(),
+			dgst.Encoded()+".json",
+		)
+
+		if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
+			return fmt.Errorf("could not make manifest parent directories: %w", err)
+		}
+
+		manifestWriter, err := os.Create(manifestPath)
+		if err != nil {
+			return fmt.Errorf("could not get manifest file descriptor: %w", err)
+		}
+
+		defer manifestWriter.Close()
+
+		if _, err = manifestWriter.Write(manifestRaw); err != nil {
+			return fmt.Errorf("could not write manifest: %w", err)
+		}
+
+		configDgst, err := image.ConfigName()
+		if err != nil {
+			return fmt.Errorf("could not get config digest: %w", err)
+		}
+
+		log.G(ctx).
+			WithField("digest", configDgst.String()).
+			Debugf("pulling config")
+
+		configRaw, err := image.RawConfigFile()
+		if err != nil {
+			return fmt.Errorf("could not get raw config: %w", err)
+		}
+
+		config := ocispec.Image{}
+		if err = json.Unmarshal(configRaw, &config); err != nil {
+			return fmt.Errorf("could not unmarshal raw config: %w", err)
+		}
+
+		configPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerConfigsDir,
+			configDgst.Algorithm,
+			configDgst.Hex+".json",
+		)
+
+		if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
+			return fmt.Errorf("could not create config parent directories: %w", err)
+		}
+
+		configWriter, err := os.Create(configPath)
+		if err != nil {
+			return fmt.Errorf("could not get config file descriptor: %w", err)
+		}
+
+		defer configWriter.Close()
+
+		if _, err = configWriter.Write(configRaw); err != nil {
+			return fmt.Errorf("could not write raw config: %w", err)
+		}
+
+		layers, err := image.Layers()
+		if err != nil {
+			return fmt.Errorf("could not get manifest layers: %w", err)
+		}
+
+		// First calculate the total size of all layers.  This is done so that the
+		// onProgress callback correctly reports
+		var totalSize int64
+		for _, layer := range layers {
+			size, err := layer.Size()
+			if err != nil {
+				return fmt.Errorf("could not get layer size: %w", err)
+			}
+
+			totalSize += size
+		}
+
+		for _, layer := range layers {
+			layerDgst, err := layer.Digest()
+			if err != nil {
+				return fmt.Errorf("could not get layer digest: %w", err)
+			}
+
+			if err := handle.PullDigest(ctx,
+				ocispec.MediaTypeImageLayer,
+				fullref,
+				digest.NewDigestFromHex(layerDgst.Algorithm, layerDgst.Hex),
+				plat,
+				func(size float64) {
+					onProgress(size / float64(totalSize))
+				},
+			); err != nil {
+				return fmt.Errorf("could not pull layer from digest: %w", err)
+			}
+		}
+
+	case ocispec.MediaTypeImageLayer, ocispec.MediaTypeImageLayerGzip:
+		log.G(ctx).
+			WithField("digest", dgst.String()).
+			Debugf("pulling layer")
+
+		fullref = fmt.Sprintf("%s/%s@%s",
+			ref.Context().RegistryStr(),
+			ref.Context().RepositoryStr(),
+			dgst.String(),
+		)
+
+		layerV1Dgst, err := name.NewDigest(fullref)
+		if err != nil {
+			return fmt.Errorf("could not generate full digest: %w", err)
+		}
+
+		layer, err := remote.Layer(layerV1Dgst, ropts...)
+		if err != nil {
+			return fmt.Errorf("could not get remote layer: %w", err)
+		}
+
+		mediaType, err := layer.MediaType()
+		if err != nil {
+			return fmt.Errorf("could not get media type of layer: %w", err)
+		}
+
+		var reader io.ReadCloser
+
+		switch mediaType {
+		case ocispec.MediaTypeImageLayer, types.DockerUncompressedLayer:
+			reader, err = layer.Uncompressed()
+		case ocispec.MediaTypeImageLayerGzip, types.DockerLayer:
+			reader, err = layer.Compressed()
+		default:
+			return fmt.Errorf("unsupported layer mediatype '%s'", mediaType)
+		}
+		if err != nil {
+			return fmt.Errorf("could not open layer reader: %w", err)
+		}
+
+		var progresReader io.Reader
+		if onProgress != nil {
+			progresReader = &progressWriter{
+				Reader:     reader,
+				onProgress: onProgress,
+			}
+		} else {
+			progresReader = reader
+		}
+
+		layerPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerLayersDir,
+			dgst.Algorithm().String(),
+			dgst.Encoded(),
+		)
+
+		if err = os.MkdirAll(filepath.Dir((layerPath)), 0o775); err != nil {
+			return fmt.Errorf("could not make directory: %w", err)
+		}
+
+		blob, err := os.OpenFile(layerPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o664)
+		if err != nil {
+			return fmt.Errorf("could not create layer: %w", err)
+		}
+
+		if _, err := io.Copy(blob, progresReader); err != nil {
+			return fmt.Errorf("could not write layer: %w", err)
+		}
+
+	default:
+		return fmt.Errorf("cannot push descriptor: unsupported mediatype: %s", mediaType)
+	}
+
+	return nil
 }
 
 // ResolveManifest implements ManifestResolver.

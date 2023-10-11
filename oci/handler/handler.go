@@ -16,6 +16,13 @@ type DigestResolver interface {
 	DigestExists(context.Context, digest.Digest) (bool, error)
 }
 
+type DigestPuller interface {
+	// PullDigest retrieves the provided mediaType, full canonically referencable
+	// image and its digest for the given platform and returns the progress of
+	// retrieving said digest via the onProgress callback.
+	PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error
+}
+
 type DigestSaver interface {
 	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
 }
@@ -54,6 +61,7 @@ type ImageUnpacker interface {
 
 type Handler interface {
 	DigestResolver
+	DigestPuller
 	DigestSaver
 	ManifestLister
 	ManifestResolver
