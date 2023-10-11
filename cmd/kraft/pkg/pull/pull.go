@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -81,6 +82,15 @@ func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	cmd.SetContext(ctx)
+
+	if strings.ContainsRune(opts.Platform, '/') && opts.Architecture == "" {
+		split := strings.SplitN(opts.Platform, "/", 2)
+		if len(split) != 2 {
+			return fmt.Errorf("expected the flag in the form --plat=<plat>/<arch>")
+		}
+		opts.Platform = split[0]
+		opts.Architecture = split[1]
+	}
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
