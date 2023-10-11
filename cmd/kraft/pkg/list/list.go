@@ -6,7 +6,9 @@ package list
 
 import (
 	"fmt"
+	"os"
 	"sort"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -98,10 +100,10 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		types = append(types, unikraft.ComponentTypeApp)
 	}
 
-	var packages []pack.Package
+	packages := make(map[string][]pack.Package)
 
 	// List pacakges part of a project
-	if len(workdir) > 0 {
+	if f, err := os.Stat(workdir); len(workdir) > 0 && err == nil && f.IsDir() {
 		popts := []app.ProjectOption{
 			app.WithProjectWorkdir(workdir),
 		}
@@ -118,33 +120,43 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
-
 	} else {
-		packages, err = packmanager.G(ctx).Catalog(ctx,
+		found, err := packmanager.G(ctx).Catalog(ctx,
 			packmanager.WithUpdate(opts.Update),
 			packmanager.WithTypes(types...),
 		)
 		if err != nil {
 			return err
 		}
+
+		for _, p := range found {
+			format := p.Format().String()
+			if _, ok := packages[format]; !ok {
+				packages[format] = make([]pack.Package, 0)
+			}
+
+			packages[format] = append(packages[format], p)
+		}
 	}
 
-	// Sort packages by type, name, version, format
-	sort.Slice(packages, func(i, j int) bool {
-		if packages[i].Type() != packages[j].Type() {
-			return packages[i].Type() < packages[j].Type()
-		}
+	for format, packs := range packages {
+		// Sort packages by type, name, version, format
+		sort.Slice(packs, func(i, j int) bool {
+			if packages[format][i].Type() != packages[format][j].Type() {
+				return packages[format][i].Type() < packages[format][j].Type()
+			}
 
-		if packages[i].Name() != packages[j].Name() {
-			return packages[i].Name() < packages[j].Name()
-		}
+			if packages[format][i].Name() != packages[format][j].Name() {
+				return packages[format][i].Name() < packages[format][j].Name()
+			}
 
-		if packages[i].Version() != packages[j].Version() {
-			return packages[i].Version() < packages[j].Version()
-		}
+			if packages[format][i].Version() != packages[format][j].Version() {
+				return packages[format][i].Version() < packages[format][j].Version()
+			}
 
-		return packages[i].Format() < packages[j].Format()
-	})
+			return packages[format][i].Format() < packages[format][j].Format()
+		})
+	}
 
 	err = iostreams.G(ctx).StartPager()
 	if err != nil {
@@ -154,28 +166,50 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
-	table, err := tableprinter.NewTablePrinter(ctx,
-		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
-		tableprinter.WithOutputFormatFromString(opts.Output),
-	)
-	if err != nil {
-		return err
-	}
 
-	// Header row
-	table.AddField("TYPE", cs.Bold)
-	table.AddField("PACKAGE", cs.Bold)
-	table.AddField("LATEST", cs.Bold)
-	table.AddField("FORMAT", cs.Bold)
-	table.EndRow()
+	for _, packs := range packages {
+		table, err := tableprinter.NewTablePrinter(ctx,
+			tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+			tableprinter.WithOutputFormatFromString(opts.Output),
+		)
+		if err != nil {
+			return err
+		}
 
-	for _, pack := range packages {
-		table.AddField(string(pack.Type()), nil)
-		table.AddField(pack.Name(), nil)
-		table.AddField(pack.Version(), nil)
-		table.AddField(pack.Format().String(), nil)
+		// Header row
+		table.AddField("TYPE", cs.Bold)
+		table.AddField("NAME", cs.Bold)
+		table.AddField("VERSION", cs.Bold)
+		table.AddField("FORMAT", cs.Bold)
+
+		if len(packs) == 0 {
+			continue
+		}
+
+		metadata := packs[0].Columns()
+		for _, k := range metadata {
+			table.AddField(strings.ToUpper(k.Name), cs.Bold)
+		}
+
 		table.EndRow()
+
+		for _, pack := range packs {
+			table.AddField(string(pack.Type()), nil)
+			table.AddField(pack.Name(), nil)
+			table.AddField(pack.Version(), nil)
+			table.AddField(pack.Format().String(), nil)
+
+			for _, v := range pack.Columns() {
+				table.AddField(v.Value, nil)
+			}
+
+			table.EndRow()
+		}
+
+		if err := table.Render(iostreams.G(ctx).Out); err != nil {
+			return err
+		}
 	}
 
-	return table.Render(iostreams.G(ctx).Out)
+	return nil
 }

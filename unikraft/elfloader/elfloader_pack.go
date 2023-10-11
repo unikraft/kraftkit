@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -102,8 +103,13 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	return &elfloader, nil
 }
 
+// Columns implements kraftkit.sh/pack.Package
+func (elfloader *ELFLoader) Columns() []tableprinter.Column {
+	return elfloader.pack.Columns()
+}
+
 // Metadata implements kraftkit.sh/pack.Package
-func (elfloader *ELFLoader) Metadata() any {
+func (elfloader *ELFLoader) Metadata() interface{} {
 	return elfloader.pack.Metadata()
 }
 

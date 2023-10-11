@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -79,8 +80,26 @@ func (mp mpack) Version() string {
 	return mp.version
 }
 
-func (mp mpack) Metadata() any {
+func (mp mpack) Metadata() interface{} {
 	return mp.manifest
+}
+
+func (mp mpack) Columns() []tableprinter.Column {
+	channels := []string{}
+	for _, channel := range mp.manifest.Channels {
+		channels = append(channels, channel.Name)
+	}
+
+	versions := []string{}
+	for _, version := range mp.manifest.Versions {
+		versions = append(versions, version.Version)
+	}
+
+	return []tableprinter.Column{
+		{Name: "description", Value: mp.manifest.Description},
+		{Name: "channels", Value: strings.Join(channels, ", ")},
+		{Name: "versions", Value: strings.Join(versions, ", ")},
+	}
 }
 
 func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {

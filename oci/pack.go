@@ -23,6 +23,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/internal/tableprinter"
 	kraftkitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
@@ -414,8 +415,16 @@ func (ocipack *ociPackage) imageRef() string {
 }
 
 // Metadata implements pack.Package
-func (ocipack *ociPackage) Metadata() any {
-	return ocipack.manifest.config
+func (ocipack *ociPackage) Metadata() interface{} {
+	return ocipack.manifest.manifest
+}
+
+// Columns implements pack.Package
+func (ocipack *ociPackage) Columns() []tableprinter.Column {
+	return []tableprinter.Column{
+		{Name: "digest", Value: ocipack.manifest.desc.Digest.String()[7:14]},
+		{Name: "plat", Value: fmt.Sprintf("%s/%s", ocipack.Platform().Name(), ocipack.Architecture().Name())},
+	}
 }
 
 // Push implements pack.Package
