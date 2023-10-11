@@ -215,7 +215,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// }
 
 	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
-	ocipack.manifest.SetAnnotation(ctx, AnnotationVersion, ocipack.ref.Identifier())
 	ocipack.manifest.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 	if version := popts.KernelVersion(); len(version) > 0 {
 		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
