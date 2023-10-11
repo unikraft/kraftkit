@@ -65,6 +65,42 @@ func (handle *DirectoryHandler) DigestExists(ctx context.Context, dgst digest.Di
 	return false, nil
 }
 
+// ResolveManifest implements ManifestResolver.
+func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Manifest, error) {
+	manifestPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerManifestsDir,
+		dgst.Algorithm().String(),
+		dgst.Encoded()+".json",
+	)
+
+	// Check whether the manifest exists
+	if _, err := os.Stat(manifestPath); err != nil {
+		return nil, fmt.Errorf("manifest for '%s' does not exist: %s", dgst.String(), manifestPath)
+	}
+
+	// Read the manifest
+	reader, err := os.Open(manifestPath)
+	if err != nil {
+		return nil, err
+	}
+
+	defer reader.Close()
+
+	manifestRaw, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the manifest
+	manifest := ocispec.Manifest{}
+	if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
+		return nil, err
+	}
+
+	return &manifest, nil
+}
+
 // ListManifests implements DigestResolver.
 func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
 	manifestsDir := filepath.Join(handle.path, DirectoryHandlerManifestsDir)
@@ -116,6 +152,64 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (manifests []
 	}
 
 	return manifests, nil
+}
+
+func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref string, dgst digest.Digest) error {
+	manifestPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerManifestsDir,
+		dgst.Algorithm().String(),
+		dgst.Hex()+".json",
+	)
+
+	if _, err := os.Stat(manifestPath); err != nil {
+		return fmt.Errorf("manifest '%s' does not exist at '%s'", dgst.String(), manifestPath)
+	}
+
+	manifestReader, err := os.Open(manifestPath)
+	if err != nil {
+		return err
+	}
+
+	defer manifestReader.Close()
+
+	manifestRaw, err := io.ReadAll(manifestReader)
+	if err != nil {
+		return err
+	}
+
+	manifest := ocispec.Manifest{}
+	if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
+		return err
+	}
+
+	for _, layer := range manifest.Layers {
+		layerPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerLayersDir,
+			layer.Digest.Algorithm().String(),
+			layer.Digest.Hex(),
+		)
+
+		if err := os.RemoveAll(layerPath); err != nil {
+			return fmt.Errorf("could not delete layer digest from manifest '%s': %w", dgst.String(), err)
+		}
+	}
+
+	configPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerConfigsDir,
+		manifest.Config.Digest.Algorithm().String(),
+		manifest.Config.Digest.Hex()+".json",
+	)
+
+	if err := os.RemoveAll(configPath); err != nil {
+		return fmt.Errorf("could not delete config digest from manifest '%s': %w", dgst.String(), err)
+	}
+
+	// TODO(nderjung): Remove empty parent directories up until
+	// DirectoryHandlerManifestsDir.
+	return os.RemoveAll(manifestPath)
 }
 
 // progressWriter wraps an existing io.Reader and reports how much content has

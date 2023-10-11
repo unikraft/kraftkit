@@ -28,6 +28,14 @@ type ManifestLister interface {
 	ListManifests(context.Context) ([]ocispec.Manifest, error)
 }
 
+type ManifestResolver interface {
+	ResolveManifest(context.Context, string, digest.Digest) (*ocispec.Manifest, error)
+}
+
+type ManifestDeleter interface {
+	DeleteManifest(context.Context, string, digest.Digest) error
+}
+
 type ImagePusher interface {
 	PushImage(context.Context, string, *ocispec.Descriptor) error
 }
@@ -48,6 +56,8 @@ type Handler interface {
 	DigestResolver
 	DigestSaver
 	ManifestLister
+	ManifestResolver
+	ManifestDeleter
 	ImagePusher
 	ImageResolver
 	ImageFetcher

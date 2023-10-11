@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -108,6 +109,11 @@ func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.D
 	return true, nil
 }
 
+// ResolveManifest implements ManifestResolver.
+func (handle *ContainerdHandler) ResolveManifest(ctx context.Context, _ string, digest digest.Digest) (*ocispec.Manifest, error) {
+	return ResolveContainerdObjectFromDigest[ocispec.Manifest](ctx, handle, digest)
+}
+
 // ListManifests implements DigestResolver.
 func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests []ocispec.Manifest, err error) {
 	ctx, done, err := handle.lease(ctx)
@@ -139,6 +145,36 @@ func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests [
 	}
 
 	return manifests, nil
+}
+
+func (handle *ContainerdHandler) DeleteManifest(ctx context.Context, fullref string, dgst digest.Digest) error {
+	manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
+	if err != nil {
+		return fmt.Errorf("could not resolve manifest: %w", err)
+	}
+
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = errors.Join(err, done(ctx))
+	}()
+
+	cs := handle.client.ContentStore()
+
+	if err := cs.Delete(ctx, manifest.Config.Digest); err != nil {
+		return fmt.Errorf("could not delete config from manifest '%s': %w", dgst.String(), err)
+	}
+
+	for _, layer := range manifest.Layers {
+		if err := cs.Delete(ctx, layer.Digest); err != nil {
+			return fmt.Errorf("could not delete layer from manifest '%s': %w", dgst.String(), err)
+		}
+	}
+
+	return cs.Delete(ctx, dgst)
 }
 
 // SaveDigest implements DigestSaver.
@@ -610,4 +646,73 @@ func combineErrors(original, additional error) error {
 	default:
 		return additional
 	}
+}
+
+// readBlob accepts containerd's content readerAt and returns the byte slice
+// data or an error.
+func readBlob(readerAt content.ReaderAt) ([]byte, error) {
+	blob := make([]byte, readerAt.Size())
+
+	n, err := readerAt.ReadAt(blob, 0)
+	if err == io.EOF {
+		if int64(n) != readerAt.Size() {
+			err = io.ErrUnexpectedEOF
+		} else {
+			err = nil
+		}
+	}
+
+	return blob, err
+}
+
+// ResolveContainerdObjectFromDigest is a generic method that traverses
+// containerd's content store and attempts to retrieve an object from the store
+// based on its type and digest.  This is accomplished by attempting to
+// type-cast the object into the relevant generic T.
+func ResolveContainerdObjectFromDigest[T any](ctx context.Context, handle *ContainerdHandler, digest digest.Digest) (*T, error) {
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = errors.Join(err, done(ctx))
+	}()
+
+	cs := handle.client.ContentStore()
+	var t *T
+
+	if err := cs.Walk(ctx, func(info content.Info) error {
+		if digest.String() != info.Digest.String() {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		readerAt, err := cs.ReaderAt(ctx, ocispec.Descriptor{
+			Digest: info.Digest,
+		})
+		if err != nil {
+			return err
+		}
+
+		defer readerAt.Close()
+
+		blob, err := readBlob(readerAt)
+		if err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		if err := json.Unmarshal(blob, &t); err != nil {
+			return nil // Do not return an error, simply "continue"
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if t == nil {
+		return nil, fmt.Errorf("digest '%s' not found", digest.String())
+	}
+
+	return t, nil
 }
