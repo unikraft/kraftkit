@@ -121,7 +121,7 @@ func createBridgeMacvtap(name string, parentIdx int) (*netlink.Macvtap, error) {
 // defaultRoute returns the default route for the current namespace.
 func defaultRoute() (*netlink.Route, error) {
 	defaultRouteFilter := &netlink.Route{Dst: nil}
-	routes, err := netlink.RouteListFiltered(netlink.FAMILY_ALL, defaultRouteFilter, netlink.RT_FILTER_DST)
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, defaultRouteFilter, netlink.RT_FILTER_DST)
 	if err != nil {
 		return nil, fmt.Errorf("listing default net routes: %w", err)
 	}
