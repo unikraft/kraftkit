@@ -40,7 +40,7 @@ qemu:
 		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
 
 .PHONY: myself
-myself: GO_VERSION  ?= 1.20.6
+myself: GO_VERSION  ?= 1.21.2
 myself: ENVIRONMENT ?= myself
 myself: IMAGE       ?= $(REGISTRY)/myself:$(IMAGE_TAG)
 myself: TARGET      ?= kraftkit
@@ -64,7 +64,7 @@ myself-full:
 
 .PHONY: base
 base: ENVIRONMENT      ?= base
-base: GO_VERSION       ?= 1.20.6
+base: GO_VERSION       ?= 1.21.2
 base: IMAGE            ?= $(REGISTRY)/base:$(IMAGE_TAG)
 base: KRAFTKIT_VERSION ?= latest
 base: QEMU_VERSION     ?= 7.2.4
@@ -86,7 +86,7 @@ base:
 
 .PHONY: base-golang
 base-golang: ENVIRONMENT      ?= base-golang
-base-golang: GO_VERSION       ?= 1.20.6
+base-golang: GO_VERSION       ?= 1.21.2
 base-golang: IMAGE            ?= $(REGISTRY)/base-golang:$(IMAGE_TAG)
 base-golang: KRAFTKIT_VERSION ?= latest
 base-golang: QEMU_VERSION     ?= 7.2.4
@@ -108,7 +108,7 @@ base-golang:
 
 .PHONY: github-action
 github-action: ENVIRONMENT      ?= github-action
-github-action: GO_VERSION       ?= 1.20.6
+github-action: GO_VERSION       ?= 1.21.2
 github-action: IMAGE            ?= $(REGISTRY)/github-action:$(IMAGE_TAG)
 ifeq ($(WITH_CACHE),y)
 github-action: _WITH_CACHE      := --cache-from $(IMAGE)

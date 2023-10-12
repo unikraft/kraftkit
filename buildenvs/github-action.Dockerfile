@@ -2,7 +2,7 @@
 # Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
-ARG GO_VERSION=1.20.6
+ARG GO_VERSION=1.21.2
 ARG DEBIAN_VERSION=bookworm-20230725
 ARG KRAFTKIT_VERSION=latest
 ARG QEMU_VERSION=7.2.4

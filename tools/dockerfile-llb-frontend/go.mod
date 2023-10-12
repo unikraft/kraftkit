@@ -1,6 +1,6 @@
 module kraftkit.sh/tools/dockerfile-llb-frontend
 
-go 1.20
+go 1.21
 
 require (
 	github.com/moby/buildkit v0.12.0

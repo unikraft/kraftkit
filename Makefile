@@ -22,7 +22,7 @@ TOOLS       ?= github-action \
                webinstall
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
-GO_VERSION  ?= 1.20
+GO_VERSION  ?= 1.21
 
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
