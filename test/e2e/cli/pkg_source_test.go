@@ -62,6 +62,7 @@ var _ = Describe("kraft pkg", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 				It("should create the config file, add the default manifests, and the new link, and print nothing", func() {
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example.com")
 					err := cmd.Run()
 					if err != nil {
@@ -130,6 +131,7 @@ var _ = Describe("kraft pkg", func() {
 					oldArgs := make([]string, len(cmd.Args))
 					copy(oldArgs, cmd.Args)
 
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					err := cmd.Run()
 					if err != nil {
@@ -147,6 +149,7 @@ var _ = Describe("kraft pkg", func() {
 				})
 
 				It("should leave the config file intact, add the new link, and print nothing", func() {
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					err := cmd.Run()
 					if err != nil {
@@ -270,6 +273,7 @@ var _ = Describe("kraft pkg", func() {
 		Context("sourcing multiple links in the config file", func() {
 			When("the config file was already present, and all links are unique", func() {
 				It("should add all links and print nothing", func() {
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					cmd.Args = append(cmd.Args, "https://example3.com")
@@ -339,6 +343,7 @@ var _ = Describe("kraft pkg", func() {
 
 			When("the config file was already present, and a link is duplicate", func() {
 				It("should add links until the first error is met", func() {
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example.com")
 					cmd.Args = append(cmd.Args, "https://example.com")
 					cmd.Args = append(cmd.Args, "https://example2.com")

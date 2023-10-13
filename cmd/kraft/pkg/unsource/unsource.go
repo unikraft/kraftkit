@@ -7,8 +7,6 @@
 package unsource
 
 import (
-	"errors"
-
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -58,13 +56,6 @@ func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	for _, source := range args {
-		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
-		if err != nil {
-			return err
-		} else if !compatible {
-			return errors.New("incompatible package manager")
-		}
-
 		manifests := []string{}
 
 		var manifestRemoved bool

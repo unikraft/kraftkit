@@ -16,7 +16,9 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type Source struct{}
+type Source struct {
+	Force bool `short:"F" long:"force" usage:"Do not run a compatibility test before sourcing."`
+}
 
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&Source{}, cobra.Command{
@@ -58,11 +60,13 @@ func (opts *Source) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	for _, source := range args {
-		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
-		if err != nil {
-			return err
-		} else if !compatible {
-			return errors.New("incompatible package manager")
+		if !opts.Force {
+			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+			if err != nil {
+				return err
+			} else if !compatible {
+				return errors.New("incompatible package manager")
+			}
 		}
 
 		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {

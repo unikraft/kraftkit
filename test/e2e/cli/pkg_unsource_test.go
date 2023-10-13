@@ -271,6 +271,8 @@ var _ = Describe("kraft pkg", func() {
 							break
 						}
 					}
+
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					cmd.Args = append(cmd.Args, "https://example3.com")
@@ -363,6 +365,8 @@ var _ = Describe("kraft pkg", func() {
 							break
 						}
 					}
+
+					cmd.Args = append(cmd.Args, "--force")
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					cmd.Args = append(cmd.Args, "https://example3.com")
