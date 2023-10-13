@@ -54,7 +54,7 @@ var _ = Describe("kraft pkg", func() {
 				It("should retrieve the list of components, libraries and packages", func() {
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -74,7 +74,7 @@ var _ = Describe("kraft pkg", func() {
 				It("should print the command's help", func() {
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 

@@ -56,7 +56,7 @@ var _ = Describe("kraft net create", func() {
 		It("should print the command's help", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
@@ -172,7 +172,7 @@ var _ = Describe("kraft net create", func() {
 
 			err := cmdRm.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -180,7 +180,7 @@ var _ = Describe("kraft net create", func() {
 		It("should create the network, print the network name, and exit", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
@@ -194,7 +194,7 @@ var _ = Describe("kraft net create", func() {
 			err = cmdLs.Run()
 
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())

@@ -37,7 +37,7 @@ var _ = Describe("kraft version", func() {
 		It("should print the version and exit gracefully", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
@@ -54,7 +54,7 @@ var _ = Describe("kraft version", func() {
 		It("should print the command's help", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 

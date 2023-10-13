@@ -48,7 +48,7 @@ var _ = Describe("kraft pkg", func() {
 					// Save the config file by moving it to a temporary location
 					err := os.Rename(cfg.Path(), cfg.Path()+".tmp")
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 				})
@@ -57,7 +57,7 @@ var _ = Describe("kraft pkg", func() {
 					// Restore the config file
 					err := os.Rename(cfg.Path()+".tmp", cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 				})
@@ -65,7 +65,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example.com")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -73,14 +73,14 @@ var _ = Describe("kraft pkg", func() {
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -93,7 +93,7 @@ var _ = Describe("kraft pkg", func() {
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -101,7 +101,7 @@ var _ = Describe("kraft pkg", func() {
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -133,7 +133,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example1.com")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -150,7 +150,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -158,14 +158,14 @@ var _ = Describe("kraft pkg", func() {
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -178,7 +178,7 @@ var _ = Describe("kraft pkg", func() {
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -186,7 +186,7 @@ var _ = Describe("kraft pkg", func() {
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -220,7 +220,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://manifests.kraftkit.sh/index.yaml")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -228,7 +228,7 @@ var _ = Describe("kraft pkg", func() {
 					// Calculate config file hash
 					bytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -246,7 +246,7 @@ var _ = Describe("kraft pkg", func() {
 					err = cmd.Run()
 
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -257,7 +257,7 @@ var _ = Describe("kraft pkg", func() {
 					// Check if the config file was not modified
 					newBytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -275,7 +275,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example3.com")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -283,14 +283,14 @@ var _ = Describe("kraft pkg", func() {
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -303,7 +303,7 @@ var _ = Describe("kraft pkg", func() {
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -311,7 +311,7 @@ var _ = Describe("kraft pkg", func() {
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -344,7 +344,7 @@ var _ = Describe("kraft pkg", func() {
 					cmd.Args = append(cmd.Args, "https://example2.com")
 					err := cmd.Run()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stderr.String()).To(BeEmpty())
@@ -352,14 +352,14 @@ var _ = Describe("kraft pkg", func() {
 					// Read the config file
 					osFile, err := os.Open(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 					defer osFile.Close()
 
 					osFileInfo, err := osFile.Stat()
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -372,7 +372,7 @@ var _ = Describe("kraft pkg", func() {
 					// Read file content
 					readBytes, err := os.ReadFile(cfg.Path())
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
@@ -380,7 +380,7 @@ var _ = Describe("kraft pkg", func() {
 					var cfgMap map[string]interface{}
 					err = yaml.Unmarshal([]byte(readBytes), &cfgMap)
 					if err != nil {
-						fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}
 					Expect(err).ToNot(HaveOccurred())
 
