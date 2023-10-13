@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	gomegafmt "github.com/onsi/gomega/format"
 )
@@ -89,6 +90,39 @@ func (c *Cmd) Run() error {
 	}
 
 	return nil
+}
+
+// DumpError is a common method used across command executions which is
+// used to standardize the output display of the command which was invoked
+// along with the stdout and stderr.
+func (c *Cmd) DumpError(stdoutio, stderrio *IOStream, err error) string {
+	var builder strings.Builder
+
+	builder.WriteString("\n")
+	builder.WriteString(strings.Join(c.Args, " "))
+	builder.WriteString("\n")
+
+	stdout := strings.Split(stdoutio.String(), "\n")
+	if !(len(stdout) == 1 && stdout[0] == "") {
+		for _, line := range stdout {
+			builder.WriteString("stdout > ")
+			builder.WriteString(line)
+			builder.WriteString("\n")
+		}
+	}
+
+	builder.WriteString("\n")
+
+	stderr := strings.Split(stderrio.String(), "\n")
+	if !(len(stdout) == 1 && stdout[0] == "") {
+		for _, line := range stderr {
+			builder.WriteString("stderr > ")
+			builder.WriteString(line)
+			builder.WriteString("\n")
+		}
+	}
+
+	return builder.String()
 }
 
 // IOStream represents an IO stream to be used by OS commands and suitable

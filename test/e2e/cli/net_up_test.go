@@ -78,7 +78,7 @@ var _ = Describe("kraft net up", func() {
 
 			err := cmdCreate.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
@@ -94,7 +94,7 @@ var _ = Describe("kraft net up", func() {
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-up-1")
 			err := cmdRm.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -110,7 +110,7 @@ var _ = Describe("kraft net up", func() {
 
 			err := cmdDown.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrDown.String()).To(BeEmpty())
@@ -125,7 +125,7 @@ var _ = Describe("kraft net up", func() {
 			err = cmdLs.Run()
 
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
@@ -136,7 +136,7 @@ var _ = Describe("kraft net up", func() {
 			err = cmd.Run()
 
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
@@ -150,7 +150,7 @@ var _ = Describe("kraft net up", func() {
 			err = cmdLs.Run()
 
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
@@ -167,7 +167,7 @@ var _ = Describe("kraft net up", func() {
 		It("should print the command's help", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 

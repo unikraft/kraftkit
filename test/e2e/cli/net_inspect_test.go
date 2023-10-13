@@ -79,7 +79,7 @@ var _ = Describe("kraft net inspect", func() {
 
 			err := cmdCreate.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
@@ -96,7 +96,7 @@ var _ = Describe("kraft net inspect", func() {
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-inspect-1")
 			err := cmdRm.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -104,7 +104,7 @@ var _ = Describe("kraft net inspect", func() {
 		It("should print a detailed, valid, json for the interface", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
@@ -113,7 +113,7 @@ var _ = Describe("kraft net inspect", func() {
 			inspectData := make(map[string]interface{})
 			err = json.Unmarshal([]byte(stdout.String()), &inspectData)
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
@@ -132,7 +132,7 @@ var _ = Describe("kraft net inspect", func() {
 		It("should print the command's help", func() {
 			err := cmd.Run()
 			if err != nil {
-				fmt.Printf("Error running command, dumping output:\n%s\n%s\n%s\n", err, stderr, stdout)
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
