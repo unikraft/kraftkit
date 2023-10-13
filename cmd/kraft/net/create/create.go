@@ -14,6 +14,7 @@ import (
 
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/network"
 )
@@ -23,7 +24,7 @@ type Create struct {
 	Network string `long:"network" short:"n" usage:"Set the gateway IP address and the subnet of the network in CIDR format."`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Create{}, cobra.Command{
 		Short:   "Create a new machine network",
 		Use:     "create [FLAGS] NETWORK",
@@ -32,7 +33,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +41,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Create) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.driver = cmd.Flag("driver").Value.String()
 
 	// TODO(nderjung): A future implementation can list existing networks and
@@ -59,12 +60,12 @@ func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Create) Run(cmd *cobra.Command, args []string) error {
+func (opts *Create) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
 
-	strategy, ok := network.Strategies()[opts.driver]
+	strategy, ok := network.Strategies(cfgMgr.Config)[opts.driver]
 	if !ok {
 		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
 	}

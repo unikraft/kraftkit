@@ -22,7 +22,7 @@ type Update struct {
 	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Update{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",
@@ -35,7 +35,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Update) Pre(cmd *cobra.Command, _ []string) error {
+func (*Update) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -54,11 +54,12 @@ func (*Update) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Update) Run(cmd *cobra.Command, args []string) error {
+func (opts *Update) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
+	cfg := cfgMgr.Config
 
 	// Force a particular package manager
 	if len(opts.Manager) > 0 && opts.Manager != "auto" {
@@ -68,8 +69,8 @@ func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	parallel := !cfg.NoParallel
+	norender := log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY
 
 	model, err := processtree.NewProcessTree(
 		ctx,
@@ -83,7 +84,7 @@ func (opts *Update) Run(cmd *cobra.Command, args []string) error {
 				"Updating...",
 				"",
 				func(ctx context.Context) error {
-					return pm.Update(ctx)
+					return pm.Update(ctx, cfg)
 				},
 			),
 		}...,

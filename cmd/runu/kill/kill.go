@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -30,13 +31,13 @@ type Kill struct {
 	All bool `long:"all" short:"a" usage:"send the specified signal to all processes"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Kill{}, cobra.Command{
 		Short: "Send a signal to a unikernel",
 		Args:  cobra.RangeArgs(1, 2),
 		Use:   "kill <unikernel-id> [signal]",
 		Long:  "The kill command sends a signal to a unikernel.  If the signal is not specified, SIGTERM is sent.",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +45,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Kill) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *Kill) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

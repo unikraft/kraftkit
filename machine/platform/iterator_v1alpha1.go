@@ -12,6 +12,7 @@ import (
 	"github.com/acorn-io/baaah/pkg/merr"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	"kraftkit.sh/config"
 )
 
 type machineV1alpha1ServiceIterator struct {
@@ -23,14 +24,14 @@ type machineV1alpha1ServiceIterator struct {
 // each supported host platform and calls the representing method.  This is
 // useful in circumstances where the platform is not supplied.  The first
 // platform strategy to succeed is returned in all circumstances.
-func NewMachineV1alpha1ServiceIterator(ctx context.Context) (machinev1alpha1.MachineService, error) {
+func NewMachineV1alpha1ServiceIterator(ctx context.Context, cfg *config.KraftKit) (machinev1alpha1.MachineService, error) {
 	var err error
 	iterator := machineV1alpha1ServiceIterator{
 		strategies: map[Platform]machinev1alpha1.MachineService{},
 	}
 
 	for platform, strategy := range hostSupportedStrategies() {
-		iterator.strategies[platform], err = strategy.NewMachineV1alpha1(ctx)
+		iterator.strategies[platform], err = strategy.NewMachineV1alpha1(ctx, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -40,11 +41,11 @@ func NewMachineV1alpha1ServiceIterator(ctx context.Context) (machinev1alpha1.Mac
 }
 
 // Create implements kraftkit.sh/api/machine/v1alpha1.MachineService
-func (iterator *machineV1alpha1ServiceIterator) Create(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
+func (iterator *machineV1alpha1ServiceIterator) Create(ctx context.Context, cfg *config.KraftKit, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, machine)
+		ret, err := strategy.Create(ctx, cfg, machine)
 		if err != nil {
 			errs = append(errs, err)
 			continue

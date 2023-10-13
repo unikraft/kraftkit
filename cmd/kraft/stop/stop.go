@@ -12,6 +12,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -23,7 +24,7 @@ type Stop struct {
 	platform string
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
@@ -32,7 +33,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +48,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Stop) Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
@@ -56,7 +57,7 @@ func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
+func (opts *Stop) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
@@ -68,7 +69,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 	var controller machineapi.MachineService
 
 	if opts.All || opts.platform == "auto" {
-		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx, cfgMgr.Config)
 	} else {
 		if opts.platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
@@ -88,7 +89,7 @@ func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
-		controller, err = strategy.NewMachineV1alpha1(ctx)
+		controller, err = strategy.NewMachineV1alpha1(ctx, cfgMgr.Config)
 	}
 	if err != nil {
 		return err

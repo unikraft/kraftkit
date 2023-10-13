@@ -11,6 +11,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
@@ -35,7 +36,7 @@ type List struct {
 	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&List{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "ls [FLAGS] [DIR]",
@@ -49,7 +50,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +58,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*List) Pre(cmd *cobra.Command, _ []string) error {
+func (*List) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -68,7 +69,7 @@ func (*List) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *List) Run(cmd *cobra.Command, args []string) error {
+func (opts *List) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
@@ -121,6 +122,7 @@ func (opts *List) Run(cmd *cobra.Command, args []string) error {
 
 	} else {
 		packages, err = packmanager.G(ctx).Catalog(ctx,
+			cfgMgr.Config,
 			packmanager.WithCache(!opts.Update),
 			packmanager.WithTypes(types...),
 		)

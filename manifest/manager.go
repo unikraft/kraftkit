@@ -32,7 +32,7 @@ type manifestManager struct {
 
 // NewManifestManager returns a `packmanager.PackageManager` which manipulates
 // Unikraft manifests.
-func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageManager, error) {
+func NewManifestManager(ctx context.Context, cfg *config.KraftKit, opts ...any) (packmanager.PackageManager, error) {
 	manager := manifestManager{}
 
 	for _, mopt := range opts {
@@ -47,8 +47,8 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 	}
 
 	// Populate the internal list of manifests with locally saved manifests
-	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if _, compatible, _ := manager.IsCompatible(ctx, manifest); compatible {
+	for _, manifest := range cfg.Unikraft.Manifests {
+		if _, compatible, _ := manager.IsCompatible(ctx, manifest, cfg); compatible {
 			manager.manifests = append(manager.manifests, manifest)
 		}
 	}
@@ -57,7 +57,7 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 }
 
 // update retrieves and returns a cache of the upstream manifest registry
-func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
+func (m *manifestManager) update(ctx context.Context, cfg *config.KraftKit) (*ManifestIndex, error) {
 	if len(m.manifests) == 0 {
 		return nil, fmt.Errorf("no manifests specified in config")
 	}
@@ -67,8 +67,8 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	}
 
 	mopts := []ManifestOption{
-		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
-		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithAuthConfig(cfg.Auth),
+		WithCacheDir(cfg.Paths.Sources),
 	}
 
 	for _, manipath := range m.manifests {
@@ -96,8 +96,8 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	return index, nil
 }
 
-func (m *manifestManager) Update(ctx context.Context) error {
-	index, err := m.update(ctx)
+func (m *manifestManager) Update(ctx context.Context, cfg *config.KraftKit) error {
+	index, err := m.update(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (m *manifestManager) Update(ctx context.Context) error {
 	manifests := make([]*Manifest, len(index.Manifests))
 
 	// Create parent directories if not present
-	if err := os.MkdirAll(filepath.Dir(m.LocalManifestIndex(ctx)), 0o771); err != nil {
+	if err := os.MkdirAll(filepath.Dir(m.LocalManifestIndex(ctx, cfg)), 0o771); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (m *manifestManager) Update(ctx context.Context) error {
 			filename = manifest.Type.Plural() + string(filepath.Separator) + filename
 		}
 
-		fileloc := filepath.Join(m.LocalManifestsDir(ctx), filename)
+		fileloc := filepath.Join(m.LocalManifestsDir(ctx, cfg), filename)
 		if err := os.MkdirAll(filepath.Dir(fileloc), 0o771); err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (m *manifestManager) Update(ctx context.Context) error {
 
 	index.Manifests = manifests
 
-	return index.WriteToFile(m.LocalManifestIndex(ctx))
+	return index.WriteToFile(m.LocalManifestIndex(ctx, cfg))
 }
 
 func (m *manifestManager) SetSources(_ context.Context, sources ...string) error {
@@ -165,9 +165,9 @@ func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 }
 
 // Prune removes the manifest packages available on the host machine.
-func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
-	sourcesDir := path.Join(config.G[config.KraftKit](ctx).Paths.Sources)
-	manifestsDir := path.Join(config.G[config.KraftKit](ctx).Paths.Manifests)
+func (m *manifestManager) Prune(ctx context.Context, cfg *config.KraftKit, qopts ...packmanager.QueryOption) error {
+	sourcesDir := path.Join(cfg.Paths.Sources)
+	manifestsDir := path.Join(cfg.Paths.Manifests)
 	var query packmanager.Query
 
 	for _, qopt := range qopts {
@@ -188,6 +188,7 @@ func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryO
 	} else {
 		packages, err := m.Catalog(
 			ctx,
+			cfg,
 			packmanager.WithCache(true),
 			packmanager.WithName(query.Name()),
 			packmanager.WithVersion(query.Version()),
@@ -201,7 +202,7 @@ func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryO
 		for _, pack := range packages {
 			if query.Name() == pack.Name() &&
 				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
+				if err = pack.Delete(ctx, pack.Version(), cfg); err != nil {
 					return err
 				}
 			}
@@ -224,7 +225,7 @@ func (m *manifestManager) RemoveSource(ctx context.Context, source string) error
 	return nil
 }
 
-func (m *manifestManager) Pack(ctx context.Context, c component.Component, opts ...packmanager.PackOption) ([]pack.Package, error) {
+func (m *manifestManager) Pack(ctx context.Context, c component.Component, cfg *config.KraftKit, opts ...packmanager.PackOption) ([]pack.Package, error) {
 	return nil, fmt.Errorf("not implemented manifest.manager.Pack")
 }
 
@@ -236,14 +237,14 @@ func (m *manifestManager) From(sub pack.PackageFormat) (packmanager.PackageManag
 	return nil, fmt.Errorf("method not applicable to manifest manager")
 }
 
-func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+func (m *manifestManager) Catalog(ctx context.Context, cfg *config.KraftKit, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var err error
 	var manifests []*Manifest
 
 	query := packmanager.NewQuery(qopts...)
 	mopts := []ManifestOption{
 		WithAuthConfig(query.Auths()),
-		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithCacheDir(cfg.Paths.Sources),
 	}
 
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
@@ -264,7 +265,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		// been set.  Even if UseCache set has been set, it means that at least once
 		// call to Catalog has properly updated the index.
 		if m.indexCache == nil {
-			indexCache, err := m.update(ctx)
+			indexCache, err := m.update(ctx, cfg)
 			if err != nil {
 				return nil, err
 			}
@@ -275,7 +276,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 
 		manifests = m.indexCache.Manifests
 	} else {
-		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
+		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx, cfg))
 		if err != nil {
 			return nil, err
 		}
@@ -424,7 +425,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	return packages, nil
 }
 
-func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
+func (m *manifestManager) IsCompatible(ctx context.Context, source string, cfg *config.KraftKit, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	log.G(ctx).WithFields(logrus.Fields{
 		"source": source,
 	}).Trace("checking if source is compatible with the manifest manager")
@@ -441,17 +442,17 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 }
 
 // LocalManifestDir returns the user configured path to all the manifests
-func (m *manifestManager) LocalManifestsDir(ctx context.Context) string {
-	if len(config.G[config.KraftKit](ctx).Paths.Manifests) > 0 {
-		return config.G[config.KraftKit](ctx).Paths.Manifests
+func (m *manifestManager) LocalManifestsDir(ctx context.Context, cfg *config.KraftKit) string {
+	if len(cfg.Paths.Manifests) > 0 {
+		return cfg.Paths.Manifests
 	}
 
 	return filepath.Join(config.DataDir(), "manifests")
 }
 
 // LocalManifestIndex returns the user configured path to the manifest index
-func (m *manifestManager) LocalManifestIndex(ctx context.Context) string {
-	return filepath.Join(m.LocalManifestsDir(ctx), "index.yaml")
+func (m *manifestManager) LocalManifestIndex(ctx context.Context, cfg *config.KraftKit) string {
+	return filepath.Join(m.LocalManifestsDir(ctx, cfg), "index.yaml")
 }
 
 func (m *manifestManager) Format() pack.PackageFormat {

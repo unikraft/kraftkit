@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"kraftkit.sh/api"
+	"kraftkit.sh/config"
 	"kraftkit.sh/machine/qemu"
 	"kraftkit.sh/manifest"
 	"kraftkit.sh/oci"
@@ -20,14 +21,14 @@ import (
 // InitKraftkit performs a set of kraftkit setup steps.
 // It allows us to move away from in-package init() magic.
 // It also allows us to propagate initialization errors easily.
-func InitKraftkit(ctx context.Context) error {
+func InitKraftkit(ctx context.Context, cfg *config.KraftKit) error {
 	registerAdditionalFlags()
 
 	if err := registerSchemes(); err != nil {
 		return err
 	}
 
-	return registerPackageManagers(ctx)
+	return registerPackageManagers(ctx, cfg)
 }
 
 func registerAdditionalFlags() {
@@ -40,11 +41,11 @@ func registerSchemes() error {
 	return api.RegisterSchemes()
 }
 
-func registerPackageManagers(ctx context.Context) error {
+func registerPackageManagers(ctx context.Context, cfg *config.KraftKit) error {
 	managerConstructors := []func(u *packmanager.UmbrellaManager) error{
-		oci.RegisterPackageManager(),
+		oci.RegisterPackageManager(cfg),
 		manifest.RegisterPackageManager(),
 	}
 
-	return packmanager.InitUmbrellaManager(ctx, managerConstructors)
+	return packmanager.InitUmbrellaManager(ctx, cfg, managerConstructors)
 }

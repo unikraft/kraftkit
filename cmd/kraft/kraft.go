@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -46,7 +45,7 @@ import (
 
 type Kraft struct{}
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Kraft{}, cobra.Command{
 		Short: "Build and use highly customized and ultra-lightweight unikernels",
 		Long: heredoc.Docf(`
@@ -61,66 +60,81 @@ func New() *cobra.Command {
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
 
 	cmd.AddGroup(&cobra.Group{ID: "build", Title: "BUILD COMMANDS"})
-	cmd.AddCommand(build.New())
-	cmd.AddCommand(clean.New())
-	cmd.AddCommand(fetch.New())
-	cmd.AddCommand(menu.New())
-	cmd.AddCommand(properclean.New())
-	cmd.AddCommand(set.New())
-	cmd.AddCommand(unset.New())
+	cmd.AddCommand(build.New(cfg))
+	cmd.AddCommand(clean.New(cfg))
+	cmd.AddCommand(fetch.New(cfg))
+	cmd.AddCommand(menu.New(cfg))
+	cmd.AddCommand(properclean.New(cfg))
+	cmd.AddCommand(set.New(cfg))
+	cmd.AddCommand(unset.New(cfg))
 
 	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
-	cmd.AddCommand(pkg.New())
+	cmd.AddCommand(pkg.New(cfg))
 
 	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
-	cmd.AddCommand(events.New())
-	cmd.AddCommand(logs.New())
-	cmd.AddCommand(ps.New())
-	cmd.AddCommand(rm.New())
-	cmd.AddCommand(run.New())
-	cmd.AddCommand(stop.New())
+	cmd.AddCommand(events.New(cfg))
+	cmd.AddCommand(logs.New(cfg))
+	cmd.AddCommand(ps.New(cfg))
+	cmd.AddCommand(rm.New(cfg))
+	cmd.AddCommand(run.New(cfg))
+	cmd.AddCommand(stop.New(cfg))
 
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
-	cmd.AddCommand(net.New())
+	cmd.AddCommand(net.New(cfg))
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
-	cmd.AddCommand(login.New())
-	cmd.AddCommand(version.New())
+	cmd.AddCommand(login.New(cfg))
+	cmd.AddCommand(version.New(cfg))
 
 	return cmd
 }
 
-func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
+func (k *Kraft) Run(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	return cmd.Help()
 }
 
 func main() {
-	cmd := New()
 	ctx := signals.SetupSignalContext()
 	copts := &cli.CliOptions{}
 
-	for _, o := range []cli.CliOption{
-		cli.WithDefaultConfigManager(cmd),
-		cli.WithDefaultIOStreams(),
-		cli.WithDefaultPluginManager(),
-		cli.WithDefaultLogger(),
-		cli.WithDefaultHTTPClient(),
-	} {
-		if err := o(copts); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	// TODO(jake-ciolek): We use the command tree to hydrate config.
+	//                    We use config to hydrate the command tree.
+	//                    This results in a circular initialization dependency.
+	//                    Right now, we'll instantiate a short-lived, unhydrated
+	//                    command tree to initialize a config manager.
+	//                    Then, we'll use that to obtain the final hydrated command tree.
+	//                    This will do for now, but spend some time thinking about how to make it nicer.
+	cmdInit := New(nil)
+	_, args, err := cmdInit.Find(os.Args[1:])
+	if err != nil {
+		log.G(ctx).Error(err)
+		os.Exit(1)
 	}
 
-	// Set up the config manager in the context if it is available
-	if copts.ConfigManager != nil {
-		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
+	cfgMgr, err := cli.ConfigManagerFromArgs(args)
+	if err != nil {
+		log.G(ctx).Error(err)
+		os.Exit(1)
+	}
+	cmd := New(cfgMgr)
+
+	for _, o := range []cli.CliOption{
+		cli.WithConfigManager(cmd, cfgMgr),
+		cli.WithDefaultIOStreams(cfgMgr.Config),
+		cli.WithDefaultPluginManager(cfgMgr.Config),
+		cli.WithDefaultLogger(cfgMgr.Config),
+		cli.WithDefaultHTTPClient(cfgMgr.Config),
+	} {
+		if err := o(copts); err != nil {
+			log.G(ctx).Error(err)
+			os.Exit(1)
+		}
 	}
 
 	// Set up the logger in the context if it is available
@@ -133,7 +147,7 @@ func main() {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
-	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
+	if !cfgMgr.Config.NoCheckUpdates {
 		if err := kitupdate.Check(ctx); err != nil {
 			log.G(ctx).Debugf("could not check for updates: %v", err)
 			log.G(ctx).Debug("")
@@ -145,7 +159,7 @@ func main() {
 		}
 	}
 
-	if err := bootstrap.InitKraftkit(ctx); err != nil {
+	if err := bootstrap.InitKraftkit(ctx, cfgMgr.Config); err != nil {
 		log.G(ctx).Errorf("could not init kraftkit: %v", err)
 		os.Exit(1)
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -31,13 +32,13 @@ type Ps struct {
 	Format string `long:"format" short:"f" usage:"format of the output (table or json)" default:"table"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
 		Short: "Displays the VMM process of a unikernel",
 		Args:  cobra.MinimumNArgs(1),
 		Use:   "ps <unikernel-id> [ps options]",
 		Long:  "The ps command displays the VMM process that runs a unikernel.",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +46,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Ps) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *Ps) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft"
 )
 
@@ -29,7 +30,7 @@ func (runner *runnerKernel) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerKernel) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerKernel) Runnable(ctx context.Context, opts *Run, cfg *config.KraftKit, args ...string) (bool, error) {
 	if len(args) == 0 {
 		return false, fmt.Errorf("no arguments supplied")
 	}
@@ -45,7 +46,7 @@ func (runner *runnerKernel) Runnable(ctx context.Context, opts *Run, args ...str
 }
 
 // Prepare implements Runner.
-func (runner *runnerKernel) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerKernel) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, cfg *config.KraftKit, args ...string) error {
 	filename := filepath.Base(runner.kernelPath)
 	machine.Spec.Platform = opts.platform.String()
 	machine.Spec.Kernel = "kernel://" + filename

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 )
 
@@ -22,11 +23,11 @@ type runner interface {
 	fmt.Stringer
 
 	// Runnable checks whether the provided configuration is runnable.
-	Runnable(context.Context, *Run, ...string) (bool, error)
+	Runnable(context.Context, *Run, *config.KraftKit, ...string) (bool, error)
 
 	// Prepare the provided configuration into a machine specification ready for
 	// execution by the controller.
-	Prepare(context.Context, *Run, *machineapi.Machine, ...string) error
+	Prepare(context.Context, *Run, *machineapi.Machine, *config.KraftKit, ...string) error
 }
 
 // runners is the list of built-in runners which are checked sequentially for

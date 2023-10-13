@@ -34,7 +34,7 @@ type Events struct {
 	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Events{}, cobra.Command{
 		Short:   "Follow the events of a unikernel",
 		Hidden:  true,
@@ -46,7 +46,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +63,7 @@ func New() *cobra.Command {
 
 var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
 
-func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Events) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 
 	opts.platform = platform.PlatformByName(opts.platform).String()
@@ -71,11 +71,12 @@ func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Events) Run(cmd *cobra.Command, args []string) error {
+func (opts *Events) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx, cancel := context.WithCancel(cmd.Context())
 	platform := mplatform.PlatformUnknown
+	cfg := cfgMgr.Config
 
 	if opts.platform == "" || opts.platform == "auto" {
 		platform, _, err = mplatform.Detect(ctx)
@@ -98,7 +99,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 	}
 
-	controller, err := strategy.NewMachineV1alpha1(ctx)
+	controller, err := strategy.NewMachineV1alpha1(ctx, cfgMgr.Config)
 	if err != nil {
 		cancel()
 		return err
@@ -107,13 +108,13 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 	var pidfile *os.File
 
 	// Check if a pid has already been enabled
-	if _, err := os.Stat(config.G[config.KraftKit](ctx).EventsPidFile); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(config.G[config.KraftKit](ctx).EventsPidFile), 0o775); err != nil {
+	if _, err := os.Stat(cfg.EventsPidFile); err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(cfg.EventsPidFile), 0o775); err != nil {
 			cancel()
 			return err
 		}
 
-		pidfile, err = os.OpenFile(config.G[config.KraftKit](ctx).EventsPidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666)
+		pidfile, err = os.OpenFile(cfg.EventsPidFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666)
 		if err != nil {
 			cancel()
 			return fmt.Errorf("could not create pidfile: %v", err)
@@ -123,7 +124,7 @@ func (opts *Events) Run(cmd *cobra.Command, args []string) error {
 			_ = pidfile.Close()
 
 			log.G(ctx).Info("removing pid file")
-			if err := os.Remove(config.G[config.KraftKit](ctx).EventsPidFile); err != nil {
+			if err := os.Remove(cfg.EventsPidFile); err != nil {
 				log.G(ctx).Errorf("could not remove pid file: %v", err)
 			}
 		}()

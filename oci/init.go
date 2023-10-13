@@ -5,17 +5,18 @@
 package oci
 
 import (
+	"kraftkit.sh/config"
 	"kraftkit.sh/packmanager"
 )
 
-func RegisterPackageManager() func(u *packmanager.UmbrellaManager) error {
+func RegisterPackageManager(cfg *config.KraftKit) func(u *packmanager.UmbrellaManager) error {
 	return func(u *packmanager.UmbrellaManager) error {
 		return u.RegisterPackageManager(
 			OCIFormat,
 			NewOCIManager,
-			WithDefaultAuth(),
-			WithDefaultRegistries(),
-			WithDetectHandler(),
+			WithDefaultAuth(cfg),
+			WithDefaultRegistries(cfg),
+			WithDetectHandler(cfg),
 		)
 	}
 }

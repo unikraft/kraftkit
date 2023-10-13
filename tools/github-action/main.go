@@ -56,7 +56,7 @@ type GithubAction struct {
 	target  target.Target
 }
 
-func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
+func (opts *GithubAction) Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) (err error) {
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
 	}
@@ -158,10 +158,10 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	return nil
 }
 
-func (opts *GithubAction) Run(cmd *cobra.Command, args []string) error {
+func (opts *GithubAction) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	ctx := cmd.Context()
 
-	if err := opts.pull(ctx); err != nil {
+	if err := opts.pull(ctx, cfgMgr.Config); err != nil {
 		return fmt.Errorf("could not pull project components: %w", err)
 	}
 
@@ -170,13 +170,13 @@ func (opts *GithubAction) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if opts.Execute {
-		if err := opts.execute(ctx); err != nil {
+		if err := opts.execute(ctx, cfgMgr.Config); err != nil {
 			return fmt.Errorf("could not run unikernel: %w", err)
 		}
 	}
 
 	if opts.Output != "" {
-		if err := opts.packAndPush(ctx); err != nil {
+		if err := opts.packAndPush(ctx, cfgMgr.Config); err != nil {
 			return fmt.Errorf("could not package unikernel: %w", err)
 		}
 	}
@@ -185,12 +185,6 @@ func (opts *GithubAction) Run(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
-	cmd, err := cmdfactory.New(&GithubAction{}, cobra.Command{})
-	if err != nil {
-		fmt.Printf("prepare command: %w", err)
-		os.Exit(1)
-	}
-
 	ctx := signals.SetupSignalContext()
 
 	cfg, err := config.NewDefaultKraftKitConfig()
@@ -199,14 +193,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfgm, err := config.NewConfigManager(cfg)
+	cfgMgr, err := config.NewConfigManager(cfg)
 	if err != nil {
 		fmt.Printf("could initialize config manager: %w", err)
 		os.Exit(1)
 	}
 
+	cmd, err := cmdfactory.New(&GithubAction{}, cobra.Command{}, cfgMgr)
+	if err != nil {
+		fmt.Printf("prepare command: %w", err)
+		os.Exit(1)
+	}
+
 	// Set up the config manager in the context if it is available
-	ctx = config.WithConfigManager(ctx, cfgm)
+	ctx = config.WithConfigManager(ctx, cfgMgr)
 
 	cmd, args, err := cmd.Find(os.Args[1:])
 	if err != nil {
@@ -232,7 +232,7 @@ func main() {
 	// Set up the logger in the context if it is available
 	ctx = log.WithLogger(ctx, logger)
 
-	if err := bootstrap.InitKraftkit(ctx); err != nil {
+	if err := bootstrap.InitKraftkit(ctx, cfgMgr.Config); err != nil {
 		log.G(ctx).Errorf("could not init kraftkit: %v", err)
 		os.Exit(1)
 	}

@@ -23,7 +23,7 @@ type Login struct {
 	Token string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Login{}, cobra.Command{
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",
@@ -31,7 +31,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -39,10 +39,11 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Login) Run(cmd *cobra.Command, args []string) error {
+func (opts *Login) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 	host := args[0]
 	ctx := cmd.Context()
+	cfg := cfgMgr.Config
 
 	// Prompt the user from stdin for a username if neither a username nor a token
 	// was provided
@@ -99,10 +100,10 @@ func (opts *Login) Run(cmd *cobra.Command, args []string) error {
 		authConfig.Token = opts.Token
 	}
 
-	if config.G[config.KraftKit](ctx).Auth == nil {
-		config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
+	if cfg.Auth == nil {
+		cfg.Auth = make(map[string]config.AuthConfig)
 	}
-	config.G[config.KraftKit](ctx).Auth[host] = authConfig
+	cfg.Auth[host] = authConfig
 
-	return config.M[config.KraftKit](ctx).Write(true)
+	return cfgMgr.Write(true)
 }

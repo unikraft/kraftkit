@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -21,13 +22,13 @@ const (
 // Start implements the OCI "start" command.
 type Start struct{}
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Start{}, cobra.Command{
 		Short: "Start a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "start <unikernel-id>",
 		Long:  "The start command starts a created unikernel.",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +36,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Start) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *Start) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

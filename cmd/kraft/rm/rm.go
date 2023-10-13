@@ -14,6 +14,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -26,7 +27,7 @@ type Rm struct {
 	platform string
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
@@ -37,7 +38,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -52,12 +53,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Rm) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
+func (opts *Rm) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	if len(args) == 0 && !opts.All {
@@ -69,7 +70,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 	var controller machineapi.MachineService
 
 	if opts.All || opts.platform == "auto" {
-		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx, cfgMgr.Config)
 	} else {
 		if opts.platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
@@ -89,7 +90,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
-		controller, err = strategy.NewMachineV1alpha1(ctx)
+		controller, err = strategy.NewMachineV1alpha1(ctx, cfgMgr.Config)
 	}
 	if err != nil {
 		return err
@@ -126,7 +127,7 @@ func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
 
 			// Store the instantiation of the network controller strategy.
 			if !ok {
-				strategy, ok := network.Strategies()[net.Driver]
+				strategy, ok := network.Strategies(cfgMgr.Config)[net.Driver]
 				if !ok {
 					return fmt.Errorf("unknown machine network driver: %s", net.Driver)
 				}

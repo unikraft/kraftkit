@@ -18,7 +18,7 @@ import (
 
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
-func hostSupportedStrategies() map[string]*Strategy {
+func hostSupportedStrategies(cfg *config.KraftKit) map[string]*Strategy {
 	return map[string]*Strategy{
 		"bridge": {
 			NewNetworkV1alpha1: func(ctx context.Context, opts ...any) (networkv1alpha1.NetworkService, error) {
@@ -29,7 +29,7 @@ func hostSupportedStrategies() map[string]*Strategy {
 
 				embeddedStore, err := store.NewEmbeddedStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](
 					filepath.Join(
-						config.G[config.KraftKit](ctx).RuntimeDir,
+						cfg.RuntimeDir,
 						"networkv1alpha1",
 					),
 				)

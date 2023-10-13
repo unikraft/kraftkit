@@ -14,6 +14,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -25,13 +26,13 @@ type Logs struct {
 	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Logs{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
 		Args:    cobra.MaximumNArgs(1),
 		GroupID: "run",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -46,12 +47,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Logs) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Logs) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
+func (opts *Logs) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	ctx := cmd.Context()
@@ -63,7 +64,7 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if opts.platform == "auto" {
-		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx, cfgMgr.Config)
 	} else {
 		if opts.platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
@@ -83,7 +84,7 @@ func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
-		controller, err = strategy.NewMachineV1alpha1(ctx)
+		controller, err = strategy.NewMachineV1alpha1(ctx, cfgMgr.Config)
 	}
 	if err != nil {
 		return err

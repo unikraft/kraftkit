@@ -11,6 +11,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	volumeapi "kraftkit.sh/api/volume/v1alpha1"
+	"kraftkit.sh/config"
 	machinename "kraftkit.sh/machine/name"
 	"kraftkit.sh/machine/volume"
 )
@@ -117,7 +118,7 @@ func (opts *Run) assignName(ctx context.Context, machine *machineapi.Machine) er
 }
 
 // Was a volume specified? E.g. --volume=path:path
-func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) error {
+func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine, cfg *config.KraftKit) error {
 	if len(opts.Volumes) == 0 {
 		return nil
 	}
@@ -138,7 +139,7 @@ func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) 
 
 		var driver string
 
-		for sname, strategy := range volume.Strategies() {
+		for sname, strategy := range volume.Strategies(cfg) {
 			if ok, _ := strategy.IsCompatible(hostPath, nil); !ok || err != nil {
 				continue
 			}

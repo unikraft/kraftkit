@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -102,7 +103,7 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 }
 
 // Delete deletes the manifest package from host machine.
-func (mp mpack) Delete(ctx context.Context, version string) error {
+func (mp mpack) Delete(ctx context.Context, version string, cfg *config.KraftKit) error {
 	for _, channel := range mp.manifest.Channels {
 		if channel.Name == version && !strings.HasPrefix(channel.Resource, "http") {
 			err := os.RemoveAll(channel.Resource)

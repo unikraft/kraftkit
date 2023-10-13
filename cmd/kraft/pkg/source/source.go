@@ -18,7 +18,7 @@ import (
 
 type Source struct{}
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Source{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",
@@ -35,7 +35,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Source) Pre(cmd *cobra.Command, _ []string) error {
+func (*Source) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -54,30 +54,30 @@ func (*Source) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Source) Run(cmd *cobra.Command, args []string) error {
+func (opts *Source) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	ctx := cmd.Context()
-
+	cfg := cfgMgr.Config
 	for _, source := range args {
-		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source, cfgMgr.Config)
 		if err != nil {
 			return err
 		} else if !compatible {
 			return errors.New("incompatible package manager")
 		}
 
-		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		for _, manifest := range cfg.Unikraft.Manifests {
 			if source == manifest {
 				log.G(ctx).Warnf("manifest already saved: %s", source)
 				return nil
 			}
 		}
 
-		config.G[config.KraftKit](ctx).Unikraft.Manifests = append(
-			config.G[config.KraftKit](ctx).Unikraft.Manifests,
+		cfg.Unikraft.Manifests = append(
+			cfg.Unikraft.Manifests,
 			source,
 		)
 
-		if err := config.M[config.KraftKit](ctx).Write(true); err != nil {
+		if err := cfgMgr.Write(true); err != nil {
 			return err
 		}
 	}

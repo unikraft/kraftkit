@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -25,13 +26,13 @@ const (
 // State implements the OCI "state" command.
 type State struct{}
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&State{}, cobra.Command{
 		Short: "Output the state of a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "state <unikernel-id>",
 		Long:  "The state command outputs current state information for a unikernel.",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +40,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *State) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *State) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

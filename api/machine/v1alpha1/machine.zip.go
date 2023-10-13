@@ -13,6 +13,7 @@ import (
 
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 	volumev1alpha1 "kraftkit.sh/api/volume/v1alpha1"
+	"kraftkit.sh/config"
 )
 
 // MachinePort represents a network port in a single container.
@@ -149,7 +150,7 @@ type MachineStatus struct {
 // MachineService is the interface of available methods which can be performed
 // by an implementing machine platform driver.
 type MachineService interface {
-	Create(context.Context, *Machine) (*Machine, error)
+	Create(context.Context, *config.KraftKit, *Machine) (*Machine, error)
 	Start(context.Context, *Machine) (*Machine, error)
 	Pause(context.Context, *Machine) (*Machine, error)
 	Stop(context.Context, *Machine) (*Machine, error)
@@ -177,7 +178,7 @@ type MachineServiceHandler struct {
 }
 
 // Create implements MachineService
-func (client *MachineServiceHandler) Create(ctx context.Context, req *Machine) (*Machine, error) {
+func (client *MachineServiceHandler) Create(ctx context.Context, cfg *config.KraftKit, req *Machine) (*Machine, error) {
 	return client.create.Do(ctx, req)
 }
 
@@ -232,8 +233,8 @@ func (client *MachineServiceHandler) Logs(ctx context.Context, req *Machine) (ch
 // example, a cache, error handlers, etc.  Simultaneously, it enables access to
 // the service via inline code without having to make invocations to an external
 // handler.
-func NewMachineServiceHandler(ctx context.Context, impl MachineService, opts ...zip.ClientOption) (MachineService, error) {
-	create, err := zip.NewMethodClient(ctx, impl.Create, opts...)
+func NewMachineServiceHandler(ctx context.Context, impl MachineService, cfg *config.KraftKit, opts ...zip.ClientOption) (MachineService, error) {
+	create, err := zip.NewMethodClient(ctx, func(c context.Context, m *Machine) (*Machine, error) { return impl.Create(c, cfg, m) }, opts...)
 	if err != nil {
 		return nil, err
 	}

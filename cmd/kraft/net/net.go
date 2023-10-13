@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/cmd/kraft/net/remove"
 	"kraftkit.sh/cmd/kraft/net/up"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/network"
 )
@@ -24,7 +25,7 @@ type Net struct {
 	Driver string `local:"false" long:"driver" short:"d" usage:"Set the network driver." default:"bridge"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Net{}, cobra.Command{
 		Short:   "Manage machine networks",
 		Use:     "net SUBCOMMAND",
@@ -33,31 +34,31 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	cmd.AddCommand(create.New())
-	cmd.AddCommand(down.New())
-	cmd.AddCommand(inspect.New())
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(up.New())
+	cmd.AddCommand(create.New(cfg))
+	cmd.AddCommand(down.New(cfg))
+	cmd.AddCommand(inspect.New(cfg))
+	cmd.AddCommand(list.New(cfg))
+	cmd.AddCommand(remove.New(cfg))
+	cmd.AddCommand(up.New(cfg))
 
 	return cmd
 }
 
-func (opts *Net) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Net) Pre(cmd *cobra.Command, _ []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	if opts.Driver == "" {
 		return fmt.Errorf("network driver must be set")
-	} else if !set.NewStringSet(network.DriverNames()...).Contains(opts.Driver) {
+	} else if !set.NewStringSet(network.DriverNames(cfgMgr.Config)...).Contains(opts.Driver) {
 		return fmt.Errorf("unsupported network driver strategy: %s", opts.Driver)
 	}
 
 	return nil
 }
 
-func (opts *Net) Run(cmd *cobra.Command, _ []string) error {
+func (opts *Net) Run(cmd *cobra.Command, _ []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	return cmd.Help()
 }

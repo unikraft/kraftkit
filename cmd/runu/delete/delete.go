@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -25,13 +26,13 @@ type Delete struct {
 	Force bool `long:"force" short:"f" usage:"forcibly delete the unikernel if it is still running"`
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Delete{}, cobra.Command{
 		Short: "Delete a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "delete <unikernel-id>",
 		Long:  "The delete command deletes any resources held by a unikernel.",
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +40,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Delete) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *Delete) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

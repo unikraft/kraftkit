@@ -22,7 +22,7 @@ import (
 type Unsource struct{}
 
 // New returns a new unsource command
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Unsource{}, cobra.Command{
 		Short: "Remove Unikraft component manifests",
 		Use:   "unsource [FLAGS] [SOURCE]",
@@ -35,7 +35,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
+func (*Unsource) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -55,10 +55,12 @@ func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 // Run executes the unsource command
-func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
+func (opts *Unsource) Run(cmd *cobra.Command, args []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	ctx := cmd.Context()
+	cfg := cfgMgr.Config
+
 	for _, source := range args {
-		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+		_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source, cfgMgr.Config)
 		if err != nil {
 			return err
 		} else if !compatible {
@@ -68,7 +70,7 @@ func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
 		manifests := []string{}
 
 		var manifestRemoved bool
-		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+		for _, manifest := range cfg.Unikraft.Manifests {
 			if source != manifest {
 				manifests = append(manifests, manifest)
 			} else {
@@ -81,9 +83,9 @@ func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 
-		config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
+		cfg.Unikraft.Manifests = manifests
 
-		if err := config.M[config.KraftKit](ctx).Write(false); err != nil {
+		if err := cfgMgr.Write(false); err != nil {
 			return err
 		}
 	}

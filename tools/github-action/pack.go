@@ -8,13 +8,14 @@ import (
 	"context"
 	"strings"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 )
 
 // pack
-func (opts *GithubAction) packAndPush(ctx context.Context) error {
+func (opts *GithubAction) packAndPush(ctx context.Context, cfg *config.KraftKit) error {
 	output := opts.Output
 	var format pack.PackageFormat
 	if strings.Contains(opts.Output, "://") {
@@ -48,7 +49,7 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		)
 	}
 
-	packs, err := pm.Pack(ctx, opts.target, popts...)
+	packs, err := pm.Pack(ctx, opts.target, cfg, popts...)
 	if err != nil {
 		return err
 	}

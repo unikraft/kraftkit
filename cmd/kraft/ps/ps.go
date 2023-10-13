@@ -10,6 +10,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
@@ -33,7 +34,7 @@ const (
 	MemoryMiB = 1024 * 1024
 )
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",
@@ -42,7 +43,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +58,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Ps) Pre(cmd *cobra.Command, _ []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 
 	opts.platform = mplatform.PlatformByName(opts.platform).String()
@@ -65,7 +66,7 @@ func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Ps) Run(cmd *cobra.Command, _ []string) error {
+func (opts *Ps) Run(cmd *cobra.Command, _ []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	var err error
 
 	type psTable struct {
@@ -89,7 +90,7 @@ func (opts *Ps) Run(cmd *cobra.Command, _ []string) error {
 	var controller machineapi.MachineService
 
 	if opts.platform == "all" {
-		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx, cfgMgr.Config)
 	} else {
 		if opts.platform == "" || opts.platform == "auto" {
 			platform, _, err = mplatform.Detect(ctx)
@@ -109,7 +110,7 @@ func (opts *Ps) Run(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
-		controller, err = strategy.NewMachineV1alpha1(ctx)
+		controller, err = strategy.NewMachineV1alpha1(ctx, cfgMgr.Config)
 	}
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 
 	_ "kraftkit.sh/api"
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	"kraftkit.sh/config"
 )
 
 // strategies contains the map of registered strategies, whether provided as
@@ -18,7 +19,7 @@ var strategies = make(map[Platform]*Strategy)
 
 // NewStrategyConstructor is a prototype for the instantiation function of a
 // platform driver implementation.
-type NewStrategyConstructor[T any] func(context.Context, ...any) (T, error)
+type NewStrategyConstructor[T any] func(context.Context, *config.KraftKit, ...any) (T, error)
 
 // Strategy represents canonical reference of a machine driver and their
 // platform.

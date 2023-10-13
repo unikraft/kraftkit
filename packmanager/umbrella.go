@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/component"
@@ -30,12 +31,12 @@ type UmbrellaManager struct {
 
 // InitUmbrellaManager creates the instance of the umbrella manager singleton.
 // It allows us to do dependency injection for package manager constructors.
-func InitUmbrellaManager(ctx context.Context, constructors []func(*UmbrellaManager) error) error {
+func InitUmbrellaManager(ctx context.Context, cfg *config.KraftKit, constructors []func(*UmbrellaManager) error) error {
 	if UmbrellaInstance != nil {
 		return errors.New("tried to reinitialize the umbrella manager but it already exists")
 	}
 
-	umbrellaInstance, err := NewUmbrellaManager(ctx, constructors)
+	umbrellaInstance, err := NewUmbrellaManager(ctx, cfg, constructors)
 	if err != nil {
 		return err
 	}
@@ -55,12 +56,12 @@ func (u UmbrellaManager) From(sub pack.PackageFormat) (PackageManager, error) {
 	return nil, fmt.Errorf("unknown package manager: %s", sub)
 }
 
-func (u UmbrellaManager) Update(ctx context.Context) error {
+func (u UmbrellaManager) Update(ctx context.Context, cfg *config.KraftKit) error {
 	for _, manager := range u.packageManagers {
 		log.G(ctx).WithFields(logrus.Fields{
 			"format": manager.Format(),
 		}).Tracef("updating")
-		err := manager.Update(ctx)
+		err := manager.Update(ctx, cfg)
 		if err != nil {
 			return err
 		}
@@ -95,13 +96,13 @@ func (u UmbrellaManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-func (u UmbrellaManager) Prune(ctx context.Context, qopts ...QueryOption) error {
+func (u UmbrellaManager) Prune(ctx context.Context, cfg *config.KraftKit, qopts ...QueryOption) error {
 	var errs []error
 	for _, manager := range u.packageManagers {
 		log.G(ctx).WithFields(logrus.Fields{
 			"format": manager.Format(),
 		}).Tracef("pruning")
-		err := manager.Prune(ctx, qopts...)
+		err := manager.Prune(ctx, cfg, qopts...)
 		if err != nil {
 			if strings.Contains(err.Error(), "package not found") {
 				errs = append(errs, err)
@@ -133,7 +134,7 @@ func (u UmbrellaManager) RemoveSource(ctx context.Context, source string) error 
 	return nil
 }
 
-func (u UmbrellaManager) Pack(ctx context.Context, source component.Component, opts ...PackOption) ([]pack.Package, error) {
+func (u UmbrellaManager) Pack(ctx context.Context, source component.Component, cfg *config.KraftKit, opts ...PackOption) ([]pack.Package, error) {
 	var ret []pack.Package
 
 	for _, manager := range u.packageManagers {
@@ -141,7 +142,7 @@ func (u UmbrellaManager) Pack(ctx context.Context, source component.Component, o
 			"format": manager.Format(),
 			"source": source.Name(),
 		}).Tracef("packing")
-		more, err := manager.Pack(ctx, source, opts...)
+		more, err := manager.Pack(ctx, source, cfg, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -171,10 +172,10 @@ func (u UmbrellaManager) Unpack(ctx context.Context, source pack.Package, opts .
 	return ret, nil
 }
 
-func (u UmbrellaManager) Catalog(ctx context.Context, qopts ...QueryOption) ([]pack.Package, error) {
+func (u UmbrellaManager) Catalog(ctx context.Context, cfg *config.KraftKit, qopts ...QueryOption) ([]pack.Package, error) {
 	var packages []pack.Package
 	for _, manager := range u.packageManagers {
-		pack, err := manager.Catalog(ctx, qopts...)
+		pack, err := manager.Catalog(ctx, cfg, qopts...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", manager.Format()).
@@ -188,7 +189,7 @@ func (u UmbrellaManager) Catalog(ctx context.Context, qopts ...QueryOption) ([]p
 	return packages, nil
 }
 
-func (u UmbrellaManager) IsCompatible(ctx context.Context, source string, qopts ...QueryOption) (PackageManager, bool, error) {
+func (u UmbrellaManager) IsCompatible(ctx context.Context, source string, cfg *config.KraftKit, qopts ...QueryOption) (PackageManager, bool, error) {
 	if source == "" {
 		return nil, false, fmt.Errorf("cannot determine compatibility of empty source")
 	}
@@ -199,7 +200,7 @@ func (u UmbrellaManager) IsCompatible(ctx context.Context, source string, qopts 
 			"source": source,
 		}).Tracef("checking compatibility")
 
-		pm, compatible, err := manager.IsCompatible(ctx, source, qopts...)
+		pm, compatible, err := manager.IsCompatible(ctx, source, cfg, qopts...)
 		if err == nil && compatible {
 			return pm, true, nil
 		} else if err != nil {
@@ -271,7 +272,7 @@ func WithManagerInContext(ctx context.Context, pm PackageManager) context.Contex
 // search and generally manipulate packages of multiple types simultaneously.
 // The user can pass a slice of constructors to determine which package managers
 // are to be included.
-func NewUmbrellaManager(ctx context.Context, constructors []func(*UmbrellaManager) error) (*UmbrellaManager, error) {
+func NewUmbrellaManager(ctx context.Context, cfg *config.KraftKit, constructors []func(*UmbrellaManager) error) (*UmbrellaManager, error) {
 	u := &UmbrellaManager{}
 	for _, reg := range constructors {
 		if err := reg(u); err != nil {
@@ -287,7 +288,7 @@ func NewUmbrellaManager(ctx context.Context, constructors []func(*UmbrellaManage
 			opts = pmopts
 		}
 
-		manager, err := constructor(ctx, opts...)
+		manager, err := constructor(ctx, cfg, opts...)
 		if err != nil {
 			log.G(ctx).
 				WithField("format", format).

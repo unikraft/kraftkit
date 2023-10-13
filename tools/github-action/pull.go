@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -17,8 +18,8 @@ import (
 
 // pull updates the package index and retrieves missing components necessary for
 // performing the build.
-func (opts *GithubAction) pull(ctx context.Context) error {
-	if err := packmanager.G(ctx).Update(ctx); err != nil {
+func (opts *GithubAction) pull(ctx context.Context, cfg *config.KraftKit) error {
+	if err := packmanager.G(ctx).Update(ctx, cfg); err != nil {
 		return fmt.Errorf("could not update package index: %w", err)
 	}
 
@@ -56,6 +57,7 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 		}
 
 		p, err := packmanager.G(ctx).Catalog(ctx,
+			cfg,
 			packmanager.WithName(component.Name()),
 			packmanager.WithTypes(component.Type()),
 			packmanager.WithVersion(component.Version()),

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/pack"
@@ -29,7 +30,7 @@ const (
 type ELFLoaderPrebuiltOption func(*ELFLoader) error
 
 // NewELFLoaderFromPrebuilt ...
-func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFLoaderPrebuiltOption) (*ELFLoader, error) {
+func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, cfg *config.KraftKit, pbopts ...ELFLoaderPrebuiltOption) (*ELFLoader, error) {
 	elfloader := ELFLoader{}
 
 	for _, opt := range pbopts {
@@ -53,7 +54,8 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	elfloader.registry = packmanager.G(ctx)
 	if elfloader.registry == nil {
 		elfloader.registry, err = oci.NewOCIManager(ctx,
-			oci.WithDetectHandler(),
+			cfg,
+			oci.WithDetectHandler(cfg),
 		)
 	} else {
 		elfloader.registry, err = elfloader.registry.From(oci.OCIFormat)
@@ -68,6 +70,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 
 	// First try locally
 	results, err := elfloader.registry.Catalog(ctx,
+		cfg,
 		packmanager.WithName(defaultPrebuilt),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithCache(true),
@@ -78,6 +81,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 
 	if len(results) == 0 {
 		results, err = elfloader.registry.Catalog(ctx,
+			cfg,
 			packmanager.WithName(defaultPrebuilt),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithCache(false),
@@ -117,8 +121,8 @@ func (elfloader *ELFLoader) Pull(ctx context.Context, opts ...pack.PullOption) e
 	return elfloader.pack.Pull(ctx, opts...)
 }
 
-func (elfloader *ELFLoader) Delete(ctx context.Context, version string) error {
-	return elfloader.pack.Delete(ctx, version)
+func (elfloader *ELFLoader) Delete(ctx context.Context, version string, cfg *config.KraftKit) error {
+	return elfloader.pack.Delete(ctx, version, cfg)
 }
 
 // Format implements kraftkit.sh/unikraft.component.Component

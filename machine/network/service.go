@@ -8,6 +8,7 @@ import (
 	"context"
 
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
+	"kraftkit.sh/config"
 )
 
 // NewStrategyConstructor is a prototype for the instantiation function of a
@@ -27,8 +28,8 @@ type Strategy struct {
 }
 
 // Strategies returns the list of registered platform implementations.
-func Strategies() map[string]*Strategy {
-	base := hostSupportedStrategies()
+func Strategies(cfg *config.KraftKit) map[string]*Strategy {
+	base := hostSupportedStrategies(cfg)
 	for name, driverInfo := range strategies {
 		base[name] = driverInfo
 	}
@@ -38,9 +39,9 @@ func Strategies() map[string]*Strategy {
 
 // DriverNames returns the list of registered platform driver implementation
 // names.
-func DriverNames() []string {
+func DriverNames(cfg *config.KraftKit) []string {
 	ret := []string{}
-	for plat := range Strategies() {
+	for plat := range Strategies(cfg) {
 		ret = append(ret, plat)
 	}
 

@@ -46,7 +46,7 @@ type Menu struct {
 	workdir string
 }
 
-func New() *cobra.Command {
+func New(cfg *config.ConfigManager[config.KraftKit]) *cobra.Command {
 	cmd, err := cmdfactory.New(&Menu{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [FLAGS] [DIR]",
@@ -62,7 +62,7 @@ func New() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
-	})
+	}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Menu) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Menu) Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -110,12 +110,12 @@ func (opts *Menu) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Menu) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
+func (opts *Menu) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int, cfg *config.KraftKit) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	auths := config.G[config.KraftKit](ctx).Auth
+	parallel := !cfg.NoParallel
+	auths := cfg.Auth
 
 	// FIXME: This is a temporary workaround for incorporating multiple processes in
 	// a command. After calling processtree the original output writer is lost
@@ -138,11 +138,12 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 			), "",
 			func(ctx context.Context) error {
 				packages, err = packmanager.G(ctx).Catalog(ctx,
+					cfg,
 					packmanager.WithName(opts.project.Template().Name()),
 					packmanager.WithTypes(unikraft.ComponentTypeApp),
 					packmanager.WithVersion(opts.project.Template().Version()),
 					packmanager.WithCache(!opts.NoCache),
-					packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+					packmanager.WithAuthConfig(cfg.Auth),
 				)
 				if err != nil {
 					return err
@@ -267,6 +268,7 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 			), "",
 			func(ctx context.Context) error {
 				p, err := packmanager.G(ctx).Catalog(ctx,
+					cfg,
 					packmanager.WithName(component.Name()),
 					packmanager.WithTypes(component.Type()),
 					packmanager.WithVersion(component.Version()),
@@ -354,8 +356,9 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 	return nil
 }
 
-func (opts *Menu) Run(cmd *cobra.Command, _ []string) error {
+func (opts *Menu) Run(cmd *cobra.Command, _ []string, cfgMgr *config.ConfigManager[config.KraftKit]) error {
 	ctx := cmd.Context()
+	cfg := cfgMgr.Config
 
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
@@ -364,7 +367,7 @@ func (opts *Menu) Run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("no targets selected to fetch")
 	}
 
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	norender := log.LoggerTypeFromString(cfg.Log.Type) != log.FANCY
 	nameWidth := -1
 
 	// Calculate the width of the longest process name so that we can align the
@@ -383,7 +386,7 @@ func (opts *Menu) Run(cmd *cobra.Command, _ []string) error {
 	}
 
 	if !opts.NoPull {
-		if err := opts.pull(ctx, opts.project, opts.workdir, norender, nameWidth); err != nil {
+		if err := opts.pull(ctx, opts.project, opts.workdir, norender, nameWidth, cfg); err != nil {
 			return err
 		}
 	}

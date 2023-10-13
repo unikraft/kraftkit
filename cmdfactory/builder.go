@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 )
 
@@ -38,11 +39,11 @@ type PersistentPreRunnable interface {
 }
 
 type PreRunnable interface {
-	Pre(cmd *cobra.Command, args []string) error
+	Pre(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error
 }
 
 type Runnable interface {
-	Run(cmd *cobra.Command, args []string) error
+	Run(cmd *cobra.Command, args []string, cfg *config.ConfigManager[config.KraftKit]) error
 }
 
 type fieldInfo struct {
@@ -481,7 +482,7 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 // New populates a cobra.Command object by extracting args from struct tags of the
 // Runnable obj passed.  Also the Run method is assigned to the RunE of the command.
 // name = Override the struct field with
-func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
+func New(obj Runnable, cmd cobra.Command, cfg *config.ConfigManager[config.KraftKit]) (*cobra.Command, error) {
 	c := cmd
 	if c.Use == "" {
 		c.Use = fmt.Sprintf("%s [SUBCOMMAND] [FLAGS]", Name(obj))
@@ -492,7 +493,9 @@ func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
 	}
 
 	if p, ok := obj.(PreRunnable); ok {
-		c.PreRunE = p.Pre
+		c.PreRunE = func(cmd *cobra.Command, args []string) error {
+			return p.Pre(cmd, args, cfg)
+		}
 	}
 
 	c.SilenceErrors = true
@@ -502,7 +505,9 @@ func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
 	c.InitDefaultCompletionCmd()
 
 	if obj != nil {
-		c.RunE = obj.Run
+		c.RunE = func(cmd *cobra.Command, args []string) error {
+			return obj.Run(cmd, args, cfg)
+		}
 
 		// Parse the attributes of this object into addressable flags for this command
 		if err := AttributeFlags(&c, obj); err != nil {
