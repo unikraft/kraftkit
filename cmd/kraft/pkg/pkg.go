@@ -182,7 +182,6 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 	var tree []*processtree.ProcessTreeItem
 
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	exists, err := pm.Catalog(ctx,
@@ -319,7 +318,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(parallel),
+			processtree.IsParallel(false),
 			processtree.WithRenderer(norender),
 		},
 		tree...,
