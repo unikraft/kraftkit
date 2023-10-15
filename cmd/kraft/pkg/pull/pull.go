@@ -24,10 +24,11 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/arch"
 )
 
 type Pull struct {
-	AllVersions  bool     `long:"all-versions" short:"A" usage:"Pull all versions"`
+	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -134,6 +135,26 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 	type pmQuery struct {
 		pm    packmanager.PackageManager
 		query []packmanager.QueryOption
+	}
+
+	// If `--all` is not set and either `--plat` or `--arch` are not set,
+	// use the host platform and architecture, as the user is likely trying
+	// to pull for their system by using "sensible defaults".
+	if !opts.All {
+		if opts.Architecture == "" {
+			opts.Architecture, err = arch.HostArchitecture()
+			if err != nil {
+				return fmt.Errorf("could not determine host architecture: %w", err)
+			}
+		}
+
+		if opts.Platform == "" {
+			platform, _, err := platform.Detect(ctx)
+			if err != nil {
+				return fmt.Errorf("could not detect host platform: %w", err)
+			}
+			opts.Platform = platform.String()
+		}
 	}
 
 	var queries []pmQuery
