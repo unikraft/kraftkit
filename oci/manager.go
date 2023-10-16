@@ -138,7 +138,9 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 // Manifest from an Index.  Based on the provided criterium from the query,
 // identify the Descriptor that is compatible and instantiate a pack.Package
 // structure from it.
-func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullref string, query *packmanager.Query, manifests []ocispec.Descriptor) (packs []pack.Package) {
+func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullref string, query *packmanager.Query, manifests []ocispec.Descriptor) (map[string]pack.Package, error) {
+	packs := make(map[string]pack.Package)
+
 checkManifest:
 	for _, descriptor := range manifests {
 		if ok, err := IsOCIDescriptorKraftKitCompatible(&descriptor); !ok {
@@ -208,17 +210,22 @@ checkManifest:
 			continue
 		}
 
-		packs = append(packs, pack)
+		checksum, err := PlatformChecksum(descriptor.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate platform digest for '%s': %w", descriptor.Digest.String(), err)
+		}
+
+		packs[checksum] = pack
 	}
 
-	return packs
+	return packs, nil
 }
 
 // Catalog implements packmanager.PackageManager
 func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
 	var qglob glob.Glob
 	var err error
-	var packs []pack.Package
+	packs := make(map[string]pack.Package)
 	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 
@@ -302,12 +309,22 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			goto searchRemoteIndexes
 		}
 
-		packs = append(packs, processV1IndexManifests(ctx,
+		v1ManifestPackages, err := processV1IndexManifests(ctx,
 			handle,
 			ref.String(),
 			query,
 			FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
-		)...)
+		)
+		if err != nil {
+			log.G(ctx).
+				WithField("ref", ref).
+				Tracef("could not get manifests from index: %v", err)
+			goto searchRemoteIndexes
+		}
+
+		for checksum, pack := range v1ManifestPackages {
+			packs[checksum] = pack
+		}
 	}
 
 searchRemoteIndexes:
@@ -409,12 +426,22 @@ searchRemoteIndexes:
 					continue
 				}
 
-				packs = append(packs, processV1IndexManifests(ctx,
+				v1ManifestPackages, err := processV1IndexManifests(ctx,
 					handle,
 					fullref,
 					query,
 					FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
-				)...)
+				)
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						Tracef("could not get manifest packages: %s", err.Error())
+					continue
+				}
+
+				for checksum, pack := range v1ManifestPackages {
+					packs[checksum] = pack
+				}
 			}
 		}
 	}
@@ -449,15 +476,31 @@ searchRemoteIndexes:
 			}
 		}
 
-		packs = append(packs, processV1IndexManifests(ctx,
+		v1ManifestPackages, err := processV1IndexManifests(ctx,
 			handle,
 			fullref,
 			query,
 			index.Manifests,
-		)...)
+		)
+		if err != nil {
+			log.G(ctx).
+				WithField("ref", fullref).
+				Tracef("could not get manifest packages: %s", err.Error())
+			continue
+		}
+
+		for checksum, pack := range v1ManifestPackages {
+			packs[checksum] = pack
+		}
 	}
 
-	return packs, nil
+	var ret []pack.Package
+
+	for _, pack := range packs {
+		ret = append(ret, pack)
+	}
+
+	return ret, nil
 }
 
 // SetSources implements packmanager.PackageManager
