@@ -20,7 +20,7 @@ jobs:
         if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^(?!(?:.|\n)*(?:^|\n).{74,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$'
+          pattern: '((^(?=(?:.|\n)*(?:^|\n)\[\d\]: .{69,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$)|(^(?!(?:.|\n)*(?:^|\n).{74,}(?:$|\n)(?:.|\n)*)(?:.|\n)*$))'
           flags: ''
           error: 'The maximum line length of 74 characters is exceeded.'
           excludeDescription: 'true'
