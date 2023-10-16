@@ -268,9 +268,6 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
-			remote.WithAuth(&simpleauth.SimpleAuthenticator{
-				Auth: authConfig,
-			}),
 			remote.WithPlatform(v1.Platform{
 				OS:           query.Platform(),
 				Architecture: query.Architecture(),
@@ -292,6 +289,12 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 					remote.WithTransport(rt),
 				)
 			}
+
+			ropts = append(ropts,
+				remote.WithAuth(&simpleauth.SimpleAuthenticator{
+					Auth: authConfig,
+				}),
+			)
 		}
 
 		v1ImageIndex, err := remote.Index(ref, ropts...)
