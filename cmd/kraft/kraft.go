@@ -23,6 +23,7 @@ import (
 
 	"kraftkit.sh/cmd/kraft/build"
 	"kraftkit.sh/cmd/kraft/clean"
+	"kraftkit.sh/cmd/kraft/cloud"
 	"kraftkit.sh/cmd/kraft/events"
 	"kraftkit.sh/cmd/kraft/fetch"
 	"kraftkit.sh/cmd/kraft/login"
@@ -56,7 +57,7 @@ func New() *cobra.Command {
       | = |    Version:          %s
      /|/=\|\   Documentation:    https://kraftkit.sh/
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-       v v
+       v v     Platform:         https://kraft.cloud/ (Join the beta!)
        ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
@@ -78,7 +79,7 @@ func New() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
 	cmd.AddCommand(pkg.New())
 
-	cmd.AddGroup(&cobra.Group{ID: "run", Title: "RUNTIME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "run", Title: "LOCAL RUNTIME COMMANDS"})
 	cmd.AddCommand(events.New())
 	cmd.AddCommand(logs.New())
 	cmd.AddCommand(ps.New())
@@ -88,6 +89,12 @@ func New() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
 	cmd.AddCommand(net.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "KRAFT CLOUD COMMANDS"})
+	cmd.AddCommand(cloud.New())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "KRAFT CLOUD IMAGE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "KRAFT CLOUD INSTANCE COMMANDS"})
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.New())
