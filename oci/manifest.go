@@ -98,7 +98,7 @@ func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest d
 	manifest.config.Architecture = spec.Config.Platform.Architecture
 	manifest.config.OS = spec.Config.Platform.OS
 	manifest.config.OSVersion = spec.Config.Platform.OSVersion
-	manifest.config.Variant = spec.Config.Platform.Variant
+	manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
 	manifest.annotations = spec.Annotations
 
 	return manifest, nil
