@@ -147,10 +147,7 @@ func fileExists(path string) bool {
 // defaultAuths uses the provided context to locate possible authentication
 // values which can be used when speaking with remote registries.
 func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
-	auths := config.G[config.KraftKit](ctx).Auth
-	if auths == nil {
-		auths = make(map[string]config.AuthConfig)
-	}
+	auths := make(map[string]config.AuthConfig)
 
 	// Podman users may have their container registry auth configured in a
 	// different location, that Docker packages aren't aware of.
@@ -201,12 +198,19 @@ func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
 
 	if cf != nil {
 		for domain, cfg := range cf.AuthConfigs {
+			if cfg.Username == "" && cfg.Password == "" {
+				continue
+			}
 			auths[domain] = config.AuthConfig{
 				Endpoint: cfg.ServerAddress,
 				User:     cfg.Username,
 				Token:    cfg.Password,
 			}
 		}
+	}
+
+	for domain, auth := range config.G[config.KraftKit](ctx).Auth {
+		auths[domain] = auth
 	}
 
 	return auths, nil
