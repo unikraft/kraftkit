@@ -21,9 +21,11 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/multiselect"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
@@ -218,88 +220,69 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 		)
 	}
 
+	var selected []target.Target
+	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 && !config.G[config.KraftKit](ctx).NoPrompt {
+		selected = target.Filter(project.Targets(), opts.Architecture, opts.Platform, opts.Target)
+	} else {
+		selected, err = multiselect.MultiSelect[target.Target]("select what to package", project.Targets()...)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(selected) == 0 {
+		return fmt.Errorf("nothing selected to package")
+	}
+
 	i := 0
 
-	// Generate a package for every matching requested target
-	for _, targ := range project.Targets() {
+	for _, targ := range selected {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
 		baseopts := baseopts
+		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
-		switch true {
-		case
-			// If no arguments are supplied
-			len(opts.Target) == 0 &&
-				len(opts.Architecture) == 0 &&
-				len(opts.Platform) == 0,
-
-			// If the --target flag is supplied and the target name match
-			len(opts.Target) > 0 &&
-				targ.Name() == opts.Target,
-
-			// If only the --arch flag is supplied and the target's arch matches
-			len(opts.Architecture) > 0 &&
-				len(opts.Platform) == 0 &&
-				targ.Architecture().Name() == opts.Architecture,
-
-			// If only the --plat flag is supplied and the target's platform matches
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) == 0 &&
-				targ.Platform().Name() == opts.Platform,
-
-			// If both the --arch and --plat flag are supplied and match the target
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) > 0 &&
-				targ.Architecture().Name() == opts.Architecture &&
-				targ.Platform().Name() == opts.Platform:
-
-			name := "packaging " + targ.Name() + " (" + opts.Format + ")"
-
-			cmdShellArgs, err := shellwords.Parse(opts.Args)
-			if err != nil {
-				return err
-			}
-
-			// When i > 0, we have already applied the merge strategy.  Now, for all
-			// targets, we actually do wish to merge these because they are part of
-			// the same execution lifecycle.
-			if i > 0 {
-				baseopts = []packmanager.PackOption{
-					packmanager.PackMergeStrategy(packmanager.StrategyMerge),
-				}
-			}
-
-			tree = append(tree, processtree.NewProcessTreeItem(
-				name,
-				targ.Architecture().Name()+"/"+targ.Platform().Name(),
-				func(ctx context.Context) error {
-					popts := append(baseopts,
-						packmanager.PackArgs(cmdShellArgs...),
-						packmanager.PackInitrd(opts.Initrd),
-						packmanager.PackKConfig(!opts.NoKConfig),
-						packmanager.PackName(opts.Name),
-						packmanager.PackOutput(opts.Output),
-					)
-
-					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
-						popts = append(popts,
-							packmanager.PackWithKernelVersion(ukversion.Value),
-						)
-					}
-
-					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
-						return err
-					}
-
-					return nil
-				},
-			))
-
-			i++
-
-		default:
-			continue
+		cmdShellArgs, err := shellwords.Parse(opts.Args)
+		if err != nil {
+			return err
 		}
+
+		// When i > 0, we have already applied the merge strategy.  Now, for all
+		// targets, we actually do wish to merge these because they are part of
+		// the same execution lifecycle.
+		if i > 0 {
+			baseopts = []packmanager.PackOption{
+				packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+			}
+		}
+
+		tree = append(tree, processtree.NewProcessTreeItem(
+			name,
+			targ.Architecture().Name()+"/"+targ.Platform().Name(),
+			func(ctx context.Context) error {
+				popts := append(baseopts,
+					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackInitrd(opts.Initrd),
+					packmanager.PackKConfig(!opts.NoKConfig),
+					packmanager.PackName(opts.Name),
+					packmanager.PackOutput(opts.Output),
+				)
+
+				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
+					popts = append(popts,
+						packmanager.PackWithKernelVersion(ukversion.Value),
+					)
+				}
+
+				if _, err := pm.Pack(ctx, targ, popts...); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		))
+
+		i++
 	}
 
 	if len(tree) == 0 {
