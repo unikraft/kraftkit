@@ -61,6 +61,7 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 		runner.packName,
 		packmanager.WithArchitecture(opts.Architecture),
 		packmanager.WithPlatform(opts.platform.String()),
+		packmanager.WithUpdate(true),
 	)
 	if err == nil && compatible {
 		runner.pm = pm
@@ -81,6 +82,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		packmanager.WithUpdate(false),
 		packmanager.WithPlatform(opts.platform.String()),
 		packmanager.WithArchitecture(opts.Architecture),
+		packmanager.WithUpdate(true),
 	)
 	if err != nil {
 		return err
