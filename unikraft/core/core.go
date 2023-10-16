@@ -62,6 +62,10 @@ func (uc UnikraftConfig) Name() string {
 	return "unikraft"
 }
 
+func (uc UnikraftConfig) String() string {
+	return "unikraft"
+}
+
 func (uc UnikraftConfig) Source() string {
 	return uc.source
 }

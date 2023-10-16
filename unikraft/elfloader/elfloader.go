@@ -28,6 +28,11 @@ func (ocipack *ELFLoader) Name() string {
 	return ocipack.pack.Name()
 }
 
+// String implements fmt.Stringer
+func (ocipack *ELFLoader) String() string {
+	return ocipack.pack.Name()
+}
+
 // Version implements kraftkit.sh/unikraft.Nameable
 func (ocipack *ELFLoader) Version() string {
 	return ocipack.pack.Version()

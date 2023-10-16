@@ -54,6 +54,10 @@ func (ac ArchitectureConfig) Name() string {
 	return ac.name
 }
 
+func (ac ArchitectureConfig) String() string {
+	return ac.name
+}
+
 func (ac ArchitectureConfig) Source() string {
 	return ac.source
 }

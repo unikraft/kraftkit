@@ -52,6 +52,10 @@ func (tc TemplateConfig) Name() string {
 	return tc.name
 }
 
+func (tc TemplateConfig) String() string {
+	return tc.name
+}
+
 // Source returns the source of the template
 func (tc TemplateConfig) Source() string {
 	return tc.source

@@ -56,6 +56,10 @@ func (pc PlatformConfig) Name() string {
 	return pc.name
 }
 
+func (pc PlatformConfig) String() string {
+	return pc.name
+}
+
 func (pc PlatformConfig) Source() string {
 	return pc.source
 }

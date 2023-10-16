@@ -57,6 +57,9 @@ type Nameable interface {
 
 	// Version returns the entity version.
 	Version() string
+
+	// String returns a string representation of the component.
+	fmt.Stringer
 }
 
 // GuessNameAndType attempts to parse the input string, which could be formatted

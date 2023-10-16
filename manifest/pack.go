@@ -74,6 +74,11 @@ func (mp mpack) Name() string {
 	return mp.manifest.Name
 }
 
+// Name implements fmt.Stringer
+func (mp mpack) String() string {
+	return mp.manifest.Name
+}
+
 func (mp mpack) Version() string {
 	return mp.version
 }

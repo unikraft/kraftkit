@@ -496,6 +496,11 @@ func (ocipack *ociPackage) Name() string {
 	return ocipack.ref.Context().Name()
 }
 
+// Name implements fmt.Stringer
+func (ocipack *ociPackage) String() string {
+	return ocipack.ref.Context().Name()
+}
+
 // Version implements unikraft.Nameable
 func (ocipack *ociPackage) Version() string {
 	return ocipack.ref.Identifier()

@@ -146,6 +146,10 @@ func (app application) Name() string {
 	return app.name
 }
 
+func (app application) String() string {
+	return app.name
+}
+
 func (app application) Source() string {
 	return app.source
 }

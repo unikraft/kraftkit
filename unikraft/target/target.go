@@ -83,6 +83,10 @@ func NewTargetFromOptions(opts ...TargetOption) (Target, error) {
 	return &tc, nil
 }
 
+func (tc *TargetConfig) String() string {
+	return fmt.Sprintf("%s (%s/%s)", tc.name, tc.platform.String(), tc.architecture.String())
+}
+
 func (tc *TargetConfig) Name() string {
 	return tc.name
 }
