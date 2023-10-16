@@ -44,10 +44,10 @@ type Pkg struct {
 	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Name         string `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	NoKConfig    bool   `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	Output       string `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
 	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
-	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
 
 	strategy packmanager.MergeStrategy
 }
@@ -276,7 +276,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 					popts := append(baseopts,
 						packmanager.PackArgs(cmdShellArgs...),
 						packmanager.PackInitrd(opts.Initrd),
-						packmanager.PackKConfig(opts.WithKConfig),
+						packmanager.PackKConfig(!opts.NoKConfig),
 						packmanager.PackName(opts.Name),
 						packmanager.PackOutput(opts.Output),
 					)
