@@ -25,9 +25,8 @@ type Query struct {
 	// Version specifies the version of the package
 	version string
 
-	// useCache forces the package manager to update values using what it has
-	// locally.
-	useCache bool
+	// update forces the package manager to update values from remote manifests.
+	update bool
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
@@ -36,13 +35,14 @@ type Query struct {
 	// (Currently, being used to prune all the packages on the host machine)
 	all bool
 
-	// If set to true then no manifest package will be deleted
-	// (Currently, being used to prune all the packages on the host machine)
-	noManifestPackage bool
+	// Architecture specifies the architecture of the package
+	architecture string
 
-	// If set to true then no OCI package will be deleted
-	// (Currently, being used to prune all the packages on the host machine)
-	noOCIPackage bool
+	// Platform specifies the platform of the package
+	platform string
+
+	// KConfig specifies the list of config options of the package
+	kConfig []string
 }
 
 // Source specifies where the origin of the package
@@ -65,9 +65,25 @@ func (query *Query) Version() string {
 	return query.version
 }
 
-// UseCache indicates whether the package manager should use any existing cache.
-func (query *Query) UseCache() bool {
-	return query.useCache
+// Architecture specifies the architecture of the package
+func (query *Query) Architecture() string {
+	return query.architecture
+}
+
+// Platform specifies the platform of the package
+func (query *Query) Platform() string {
+	return query.platform
+}
+
+// KConfig specifies the list of config options of the package
+func (query *Query) KConfig() []string {
+	return query.kConfig
+}
+
+// Update indicates whether the package manager should use use remote manifests
+// when making its query.
+func (query *Query) Update() bool {
+	return query.update
 }
 
 // Auth returns authentication configuration for a given domain or nil if the
@@ -81,23 +97,35 @@ func (query *Query) All() bool {
 	return query.all
 }
 
-func (query *Query) NoManifestPackage() bool {
-	return query.noManifestPackage
-}
-
-func (query *Query) NoOCIPackage() bool {
-	return query.noOCIPackage
-}
-
 func (query *Query) Fields() map[string]interface{} {
-	return map[string]interface{}{
-		"name":    query.name,
-		"version": query.version,
-		"source":  query.source,
-		"types":   query.types,
-		"cache":   query.useCache,
-		"auth":    query.auths != nil,
+	fields := map[string]interface{}{}
+
+	if len(query.name) > 0 {
+		fields["name"] = query.name
 	}
+	if len(query.version) > 0 {
+		fields["version"] = query.version
+	}
+	if len(query.types) > 0 {
+		fields["types"] = query.types
+	}
+
+	fields["update"] = query.update
+
+	if len(query.auths) > 0 {
+		fields["auths"] = "true"
+	}
+	if len(query.architecture) > 0 {
+		fields["arch"] = query.architecture
+	}
+	if len(query.platform) > 0 {
+		fields["plat"] = query.platform
+	}
+	if len(query.kConfig) > 0 {
+		fields["kConfig"] = query.kConfig
+	}
+
+	return fields
 }
 
 // QueryOption is a method-option which sets a specific query parameter.
@@ -110,6 +138,27 @@ func NewQuery(qopts ...QueryOption) *Query {
 		qopt(&query)
 	}
 	return &query
+}
+
+// WithArchitecture sets the query parameter for the architecture of the package.
+func WithArchitecture(arch string) QueryOption {
+	return func(query *Query) {
+		query.architecture = arch
+	}
+}
+
+// WithPlatform sets the query parameter for the platform of the package.
+func WithPlatform(platform string) QueryOption {
+	return func(query *Query) {
+		query.platform = platform
+	}
+}
+
+// WithKconfig sets the query parameter for the list of configuration options of the package.
+func WithKConfig(kConfig []string) QueryOption {
+	return func(query *Query) {
+		query.kConfig = kConfig
+	}
 }
 
 // WithSource sets the query parameter for the origin source of the package.
@@ -141,10 +190,10 @@ func WithVersion(version string) QueryOption {
 	}
 }
 
-// WithCache sets whether to use local caching when making the query.
-func WithCache(useCache bool) QueryOption {
+// WithUpdate sets whether to use remote manifests when making the query.
+func WithUpdate(update bool) QueryOption {
 	return func(query *Query) {
-		query.useCache = useCache
+		query.update = update
 	}
 }
 
@@ -158,18 +207,6 @@ func WithAuthConfig(auths map[string]config.AuthConfig) QueryOption {
 func WithAll(all bool) QueryOption {
 	return func(query *Query) {
 		query.all = all
-	}
-}
-
-func WithNoManifestPackage(noManifestPackage bool) QueryOption {
-	return func(query *Query) {
-		query.noManifestPackage = noManifestPackage
-	}
-}
-
-func WithNoOCIPackage(noOCIPackage bool) QueryOption {
-	return func(query *Query) {
-		query.noOCIPackage = noOCIPackage
 	}
 }
 

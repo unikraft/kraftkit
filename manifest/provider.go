@@ -22,6 +22,9 @@ type Provider interface {
 	// PullManifest from the provider.
 	PullManifest(context.Context, *Manifest, ...pack.PullOption) error
 
+	// DeleteManifest deletes the artifact based on the provider's implementation.
+	DeleteManifest(context.Context) error
+
 	// String returns the name of the provider
 	fmt.Stringer
 }
@@ -65,22 +68,24 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 		return provider, nil
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"path": path,
-	}).Trace("trying github provider")
-	provider, err = NewGitHubProvider(ctx, path, mopts...)
-	if err == nil {
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("using github provider")
-		return provider, nil
-	}
-
+	// First attempt to detect whether the provided input is a Git repository.  If
+	// it is, it could potentially be from GitHub as well.
 	log.G(ctx).WithFields(logrus.Fields{
 		"path": path,
 	}).Trace("trying git provider")
 	provider, err = NewGitProvider(ctx, path, mopts...)
 	if err == nil {
+		log.G(ctx).WithFields(logrus.Fields{
+			"path": path,
+		}).Trace("trying github provider")
+		ghProvider, err := NewGitHubProvider(ctx, path, mopts...)
+		if err == nil {
+			log.G(ctx).WithFields(logrus.Fields{
+				"path": path,
+			}).Trace("using github provider")
+			return ghProvider, nil
+		}
+
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("using git provider")

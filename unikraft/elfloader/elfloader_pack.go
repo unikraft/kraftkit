@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -70,7 +71,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	results, err := elfloader.registry.Catalog(ctx,
 		packmanager.WithName(defaultPrebuilt),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
-		packmanager.WithCache(true),
+		packmanager.WithUpdate(false),
 	)
 	if err != nil {
 		return nil, err
@@ -80,7 +81,7 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 		results, err = elfloader.registry.Catalog(ctx,
 			packmanager.WithName(defaultPrebuilt),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithCache(false),
+			packmanager.WithUpdate(true),
 		)
 		if err != nil {
 			return nil, err
@@ -102,8 +103,13 @@ func NewELFLoaderFromPrebuilt(ctx context.Context, linuxu string, pbopts ...ELFL
 	return &elfloader, nil
 }
 
+// Columns implements kraftkit.sh/pack.Package
+func (elfloader *ELFLoader) Columns() []tableprinter.Column {
+	return elfloader.pack.Columns()
+}
+
 // Metadata implements kraftkit.sh/pack.Package
-func (elfloader *ELFLoader) Metadata() any {
+func (elfloader *ELFLoader) Metadata() interface{} {
 	return elfloader.pack.Metadata()
 }
 
@@ -117,8 +123,8 @@ func (elfloader *ELFLoader) Pull(ctx context.Context, opts ...pack.PullOption) e
 	return elfloader.pack.Pull(ctx, opts...)
 }
 
-func (elfloader *ELFLoader) Delete(ctx context.Context, version string) error {
-	return elfloader.pack.Delete(ctx, version)
+func (elfloader *ELFLoader) Delete(ctx context.Context) error {
+	return elfloader.pack.Delete(ctx)
 }
 
 // Format implements kraftkit.sh/unikraft.component.Component

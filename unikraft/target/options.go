@@ -7,7 +7,6 @@ package target
 import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
 )
@@ -43,14 +42,6 @@ func WithPlatform(platform plat.PlatformConfig) TargetOption {
 func WithKConfig(kconfig kconfig.KeyValueMap) TargetOption {
 	return func(tc *TargetConfig) error {
 		tc.kconfig = kconfig
-		return nil
-	}
-}
-
-// WithFormat sets the format of the target.
-func WithFormat(format pack.PackageFormat) TargetOption {
-	return func(tc *TargetConfig) error {
-		tc.format = format
 		return nil
 	}
 }

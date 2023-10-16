@@ -14,7 +14,6 @@ import (
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	regtypes "github.com/docker/docker/api/types/registry"
-	"github.com/genuinetools/reg/repoutils"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -116,6 +115,16 @@ func WithDefaultRegistries() OCIManagerOption {
 		manager.registries = make([]string, 0)
 
 		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			// Use internal KraftKit knowledge of the fact that the config often lists
+			// the well-known path of the Manifest package manager's remote index.
+			// This is obviously not an OCI image registry so we can safely skip it.
+			// Doing this speeds up the kraft CLI and the instantiation of the OCI
+			// Package Manager in general by a noticeable amount, especially with
+			// limited internet connectivity (as none is subsequently required).
+			if manifest == config.DefaultManifestIndex {
+				continue
+			}
+
 			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
@@ -137,17 +146,8 @@ func fileExists(path string) bool {
 
 // defaultAuths uses the provided context to locate possible authentication
 // values which can be used when speaking with remote registries.
-func defaultAuths(ctx context.Context) (map[string]regtypes.AuthConfig, error) {
-	auths := make(map[string]regtypes.AuthConfig)
-
-	for domain, auth := range config.G[config.KraftKit](ctx).Auth {
-		auth, err := repoutils.GetAuthConfig(auth.User, auth.Token, domain)
-		if err != nil {
-			return nil, err
-		}
-
-		auths[domain] = auth
-	}
+func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
+	auths := make(map[string]config.AuthConfig)
 
 	// Podman users may have their container registry auth configured in a
 	// different location, that Docker packages aren't aware of.
@@ -197,19 +197,20 @@ func defaultAuths(ctx context.Context) (map[string]regtypes.AuthConfig, error) {
 	}
 
 	if cf != nil {
-		for domain, config := range cf.AuthConfigs {
-			if _, ok := auths[domain]; !ok {
-				auths[domain] = regtypes.AuthConfig{
-					Auth:          config.Auth,
-					Email:         config.Email,
-					IdentityToken: config.IdentityToken,
-					Password:      config.Password,
-					RegistryToken: config.RegistryToken,
-					ServerAddress: config.ServerAddress,
-					Username:      config.Username,
-				}
+		for domain, cfg := range cf.AuthConfigs {
+			if cfg.Username == "" && cfg.Password == "" {
+				continue
+			}
+			auths[domain] = config.AuthConfig{
+				Endpoint: cfg.ServerAddress,
+				User:     cfg.Username,
+				Token:    cfg.Password,
 			}
 		}
+	}
+
+	for domain, auth := range config.G[config.KraftKit](ctx).Auth {
+		auths[domain] = auth
 	}
 
 	return auths, nil
@@ -248,10 +249,14 @@ func WithDockerConfig(auth regtypes.AuthConfig) OCIManagerOption {
 		}
 
 		if manager.auths == nil {
-			manager.auths = make(map[string]regtypes.AuthConfig, 1)
+			manager.auths = make(map[string]config.AuthConfig, 1)
 		}
 
-		manager.auths[auth.ServerAddress] = auth
+		manager.auths[auth.ServerAddress] = config.AuthConfig{
+			Endpoint: auth.ServerAddress,
+			User:     auth.Username,
+			Token:    auth.Password,
+		}
 		return nil
 	}
 }

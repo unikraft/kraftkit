@@ -61,7 +61,10 @@ func (opts *Source) Run(cmd *cobra.Command, args []string) error {
 
 	for _, source := range args {
 		if !opts.Force {
-			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx, source)
+			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx,
+				source,
+				packmanager.WithUpdate(true),
+			)
 			if err != nil {
 				return err
 			} else if !compatible {

@@ -7,11 +7,10 @@ package manifest
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/unikraft"
@@ -75,12 +74,35 @@ func (mp mpack) Name() string {
 	return mp.manifest.Name
 }
 
+// Name implements fmt.Stringer
+func (mp mpack) String() string {
+	return mp.manifest.Name
+}
+
 func (mp mpack) Version() string {
 	return mp.version
 }
 
-func (mp mpack) Metadata() any {
+func (mp mpack) Metadata() interface{} {
 	return mp.manifest
+}
+
+func (mp mpack) Columns() []tableprinter.Column {
+	channels := []string{}
+	for _, channel := range mp.manifest.Channels {
+		channels = append(channels, channel.Name)
+	}
+
+	versions := []string{}
+	for _, version := range mp.manifest.Versions {
+		versions = append(versions, version.Version)
+	}
+
+	return []tableprinter.Column{
+		{Name: "description", Value: mp.manifest.Description},
+		{Name: "channels", Value: strings.Join(channels, ", ")},
+		{Name: "versions", Value: strings.Join(versions, ", ")},
+	}
 }
 
 func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
@@ -96,40 +118,12 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 		return fmt.Errorf("uninitialized manifest provider")
 	}
 
-	opts = append(opts, pack.WithPullVersion(mp.version))
-
 	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
 }
 
-// Delete deletes the manifest package from host machine.
-func (mp mpack) Delete(ctx context.Context, version string) error {
-	for _, channel := range mp.manifest.Channels {
-		if channel.Name == version && !strings.HasPrefix(channel.Resource, "http") {
-			err := os.RemoveAll(channel.Resource)
-			return err
-		}
-	}
-	for _, verObj := range mp.manifest.Versions {
-		if verObj.Version == version && !strings.HasPrefix(verObj.Resource, "http") {
-			err := os.RemoveAll(verObj.Resource)
-			return err
-		}
-	}
-
-	cacheDir := mp.manifest.mopts.cacheDir
-	localAvailablePackages, err := os.ReadDir(cacheDir)
-	if err != nil {
-		return err
-	}
-	for _, localPackage := range localAvailablePackages {
-		if strings.Contains(localPackage.Name(), mp.Name()) &&
-			strings.Contains(localPackage.Name(), mp.Version()) {
-			if err = os.Remove(path.Join(cacheDir, localPackage.Name())); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+// Delete implements pack.Package.
+func (mp mpack) Delete(ctx context.Context) error {
+	return mp.manifest.Provider.DeleteManifest(ctx)
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

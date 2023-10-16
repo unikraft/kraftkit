@@ -162,6 +162,10 @@ func (lc LibraryConfig) Name() string {
 	return lc.name
 }
 
+func (lc LibraryConfig) String() string {
+	return lc.name
+}
+
 func (lc LibraryConfig) Source() string {
 	return lc.source
 }

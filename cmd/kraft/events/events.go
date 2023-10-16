@@ -20,10 +20,8 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine/platform"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/machine/qemu/qmp"
 )
@@ -52,7 +50,10 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		cmdfactory.NewEnumFlag[mplatform.Platform](
+			mplatform.Platforms(),
+			mplatform.Platform("auto"),
+		),
 		"plat",
 		"p",
 		"Set the platform virtual machine monitor driver.",
@@ -65,9 +66,6 @@ var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
 
 func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
-
-	opts.platform = platform.PlatformByName(opts.platform).String()
-
 	return nil
 }
 

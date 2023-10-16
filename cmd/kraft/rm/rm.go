@@ -14,7 +14,6 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network"
@@ -43,7 +42,10 @@ func New() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag(set.NewStringSet(mplatform.DriverNames()...).Add("auto").ToSlice(), "auto"),
+		cmdfactory.NewEnumFlag[mplatform.Platform](
+			mplatform.Platforms(),
+			mplatform.Platform("auto"),
+		),
 		"plat",
 		"p",
 		"Set the platform virtual machine monitor driver.  Set to 'auto' to detect the guest's platform and 'host' to use the host platform.",

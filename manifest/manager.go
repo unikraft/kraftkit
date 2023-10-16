@@ -6,11 +6,12 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 	"unicode"
 
@@ -48,7 +49,19 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 
 	// Populate the internal list of manifests with locally saved manifests
 	for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
-		if _, compatible, _ := manager.IsCompatible(ctx, manifest); compatible {
+		// Use implicit knowledge about the fact that by default the official
+		// manifest is a well-known manifest and does not need the `IsCompatible`
+		// check, speeding up the general initialization of this method.
+		if manifest == config.DefaultManifestIndex {
+			manager.manifests = append(manager.manifests, manifest)
+			continue
+		}
+
+		if _, compatible, _ := manager.IsCompatible(ctx, manifest,
+			// During initialization, do not perform a remote check to determine
+			// whether the provided source is compatible.
+			packmanager.WithUpdate(false),
+		); compatible {
 			manager.manifests = append(manager.manifests, manifest)
 		}
 	}
@@ -59,7 +72,22 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 // update retrieves and returns a cache of the upstream manifest registry
 func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	if len(m.manifests) == 0 {
-		return nil, fmt.Errorf("no manifests specified in config")
+		// In this scenario, re-attempt all manifests provided within the config
+		// space which were not remotely probed during initialization.
+		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
+			if _, compatible, _ := m.IsCompatible(ctx, manifest,
+				// During initialization, do not perform a remote check to determine
+				// whether the provided source is compatible.
+				packmanager.WithUpdate(true),
+			); compatible {
+				m.manifests = append(m.manifests, manifest)
+			}
+		}
+
+		// If the list of manifests is still zero, then there are really no configs.
+		if len(m.manifests) == 0 {
+			return nil, fmt.Errorf("no manifests specified in config")
+		}
 	}
 
 	index := &ManifestIndex{
@@ -69,6 +97,7 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 	mopts := []ManifestOption{
 		WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithUpdate(true),
 	}
 
 	for _, manipath := range m.manifests {
@@ -102,6 +131,10 @@ func (m *manifestManager) Update(ctx context.Context) error {
 		return err
 	}
 
+	return m.saveIndex(ctx, index)
+}
+
+func (m *manifestManager) saveIndex(ctx context.Context, index *ManifestIndex) error {
 	m.indexCache = new(ManifestIndex)
 	*m.indexCache = *index
 
@@ -146,6 +179,21 @@ func (m *manifestManager) Update(ctx context.Context) error {
 
 	index.Manifests = manifests
 
+	// Sort the names of packages alphabetically.
+	sort.Slice(index.Manifests, func(i, j int) bool {
+		// Check if we have numbers, sort them accordingly
+		if z, err := strconv.Atoi(index.Manifests[i].Name); err == nil {
+			if y, err := strconv.Atoi(index.Manifests[j].Name); err == nil {
+				return y < z
+			}
+			// If we get only one number, alway say its greater than letter
+			return true
+		}
+
+		// Compare letters normally
+		return index.Manifests[j].Name > index.Manifests[i].Name
+	})
+
 	return index.WriteToFile(m.LocalManifestIndex(ctx))
 }
 
@@ -164,51 +212,44 @@ func (m *manifestManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-// Prune removes the manifest packages available on the host machine.
-func (m *manifestManager) Prune(ctx context.Context, qopts ...packmanager.QueryOption) error {
-	sourcesDir := path.Join(config.G[config.KraftKit](ctx).Paths.Sources)
-	manifestsDir := path.Join(config.G[config.KraftKit](ctx).Paths.Manifests)
-	var query packmanager.Query
-
-	for _, qopt := range qopts {
-		qopt(&query)
+// Delete implements packmanager.PackageManager.
+func (m *manifestManager) Delete(ctx context.Context, qopts ...packmanager.QueryOption) error {
+	packs, err := m.Catalog(ctx, qopts...)
+	if err != nil {
+		return err
 	}
 
-	if query.NoManifestPackage() {
-		return nil
+	var errs []error
+
+	for _, pack := range packs {
+		if err := pack.Delete(ctx); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	if query.All() {
-		if err := os.RemoveAll(sourcesDir); err != nil {
-			return err
-		}
-		if err := os.RemoveAll(manifestsDir); err != nil {
-			return err
-		}
-	} else {
-		packages, err := m.Catalog(
-			ctx,
-			packmanager.WithCache(true),
-			packmanager.WithName(query.Name()),
-			packmanager.WithVersion(query.Version()),
+	// Since the package has been deleted by the underlying package provider (i.e.
+	// manifest), update the cache index and save this to disk.
+	m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
+	if err == nil {
+		query := packmanager.NewQuery(qopts...)
+		manifests, err := FindManifestsFromSource(ctx,
+			m.indexCache.Origin,
+			WithAuthConfig(query.Auths()),
+			WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+			WithUpdate(query.Update()),
 		)
 		if err != nil {
 			return err
 		}
-		if len(packages) == 0 {
-			return fmt.Errorf("package not found locally")
-		}
-		for _, pack := range packages {
-			if query.Name() == pack.Name() &&
-				(query.Version() == "" || query.Version() == pack.Version()) {
-				if err = pack.Delete(ctx, pack.Version()); err != nil {
-					return err
-				}
-			}
-		}
+
+		m.indexCache.Manifests = manifests
 	}
 
-	return nil
+	if err := m.saveIndex(ctx, m.indexCache); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (m *manifestManager) RemoveSource(ctx context.Context, source string) error {
@@ -244,6 +285,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	mopts := []ManifestOption{
 		WithAuthConfig(query.Auths()),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
+		WithUpdate(query.Update()),
 	}
 
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
@@ -258,7 +300,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		if err != nil {
 			return nil, err
 		}
-	} else if !query.UseCache() {
+	} else if query.Update() {
 		// If Catalog is executed in multiple successive calls, which occurs when
 		// searching for multiple packages sequentially, check if the cacheIndex has
 		// been set.  Even if UseCache set has been set, it means that at least once
@@ -276,13 +318,11 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		manifests = m.indexCache.Manifests
 	} else {
 		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
-		if err != nil {
-			return nil, err
-		}
-
-		manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -433,8 +473,10 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 		return m, true, nil
 	}
 
-	if _, err := NewProvider(ctx, source); err != nil {
-		return nil, false, fmt.Errorf("incompatible source")
+	if _, err := NewProvider(ctx, source,
+		WithUpdate(packmanager.NewQuery(qopts...).Update()),
+	); err != nil {
+		return nil, false, fmt.Errorf("incompatible source: %w", err)
 	}
 
 	return m, true, nil

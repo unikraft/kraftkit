@@ -54,6 +54,11 @@ func NewFromURL(path string) (Interface, error) {
 		return nil, fmt.Errorf("could not parse url: %s", err)
 	}
 
+	hostname := normalizeHostname(u.Host)
+	if hostname != "github.com" {
+		return nil, fmt.Errorf("host is not github.com")
+	}
+
 	parts := strings.Split(u.Path, "/")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
@@ -62,7 +67,7 @@ func NewFromURL(path string) (Interface, error) {
 	owner := parts[1]
 	repo := strings.TrimSuffix(parts[2], ".git")
 
-	return NewWithHost(owner, repo, u.Host), nil
+	return NewWithHost(owner, repo, hostname), nil
 }
 
 // NewWithHost is like New with an explicit host name

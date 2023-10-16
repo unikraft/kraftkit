@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/unikraft"
 )
 
@@ -23,7 +24,11 @@ type Package interface {
 	unikraft.Nameable
 
 	// Metadata returns any additional metadata associated with this package.
-	Metadata() any
+	Metadata() interface{}
+
+	// Columns is a subset of Metadata that is displayed to the user and can be
+	// also collated or parsed to made easier-to-read.
+	Columns() []tableprinter.Column
 
 	// Push the package to a remotely retrievable destination.
 	Push(context.Context, ...PushOption) error
@@ -32,7 +37,7 @@ type Package interface {
 	Pull(context.Context, ...PullOption) error
 
 	// Deletes package available locally.
-	Delete(context.Context, string) error
+	Delete(context.Context) error
 
 	// Format returns the name of the implementation.
 	Format() PackageFormat

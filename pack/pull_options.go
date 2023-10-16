@@ -12,9 +12,6 @@ import (
 // package.
 type PullOptions struct {
 	auths             map[string]config.AuthConfig
-	architecture      string
-	platform          string
-	version           string
 	calculateChecksum bool
 	onProgress        func(progress float64)
 	workdir           string
@@ -31,16 +28,6 @@ func (ppo *PullOptions) Auths(domain string) *config.AuthConfig {
 	return nil
 }
 
-// Architecture to pull.
-func (ppo *PullOptions) Architecture() string {
-	return ppo.architecture
-}
-
-// Platform to pull.
-func (ppo *PullOptions) Platform() string {
-	return ppo.platform
-}
-
 // OnProgress calls (if set) an embedded progress function which can be used to
 // update an external progress bar, for example.
 func (ppo *PullOptions) OnProgress(progress float64) {
@@ -52,11 +39,6 @@ func (ppo *PullOptions) OnProgress(progress float64) {
 // Workdir returns the set working directory as part of the pull request
 func (ppo *PullOptions) Workdir() string {
 	return ppo.workdir
-}
-
-// Version returns
-func (ppo *PullOptions) Version() string {
-	return ppo.version
 }
 
 // CalculateChecksum returns whether the pull request should perform a check of
@@ -104,24 +86,6 @@ func WithPullAuthConfig(auth map[string]config.AuthConfig) PullOption {
 	}
 }
 
-// WithPullArchitecture requests a given architecture (if applicable)
-func WithPullArchitecture(arch string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.architecture = arch
-
-		return nil
-	}
-}
-
-// WithPullPlatform requests a given platform (if applicable).
-func WithPullPlatform(plat string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.platform = plat
-
-		return nil
-	}
-}
-
 // WithPullProgressFunc set an optional progress function which is used as a
 // callback during the transmission of the package and the host.
 func WithPullProgressFunc(onProgress func(progress float64)) PullOption {
@@ -153,14 +117,6 @@ func WithPullChecksum(calc bool) PullOption {
 func WithPullCache(cache bool) PullOption {
 	return func(opts *PullOptions) error {
 		opts.useCache = cache
-		return nil
-	}
-}
-
-// WithPullVersion sets the version that should be pulled.
-func WithPullVersion(version string) PullOption {
-	return func(opts *PullOptions) error {
-		opts.version = version
 		return nil
 	}
 }

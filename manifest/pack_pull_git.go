@@ -168,8 +168,16 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	}
 	copts.URL = path
 
-	if popts.Version() != "" {
-		copts.ReferenceName = gitplumbing.NewBranchReferenceName(popts.Version())
+	version := ""
+
+	if len(manifest.Channels) == 1 {
+		version = manifest.Channels[0].Name
+	} else if len(manifest.Versions) == 1 {
+		version = manifest.Versions[0].Version
+	}
+
+	if version != "" {
+		copts.ReferenceName = gitplumbing.NewBranchReferenceName(version)
 	}
 
 	local, err := unikraft.PlaceComponent(
@@ -184,7 +192,7 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 	log.G(ctx).
 		WithField("from", path).
 		WithField("to", local).
-		WithField("branch", popts.Version()).
+		WithField("branch", version).
 		Infof("git clone")
 
 	_, err = git.PlainCloneContext(ctx, local, false, copts)

@@ -16,40 +16,68 @@ type DigestResolver interface {
 	DigestExists(context.Context, digest.Digest) (bool, error)
 }
 
-type DigestSaver interface {
-	SaveDigest(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
+type DigestPuller interface {
+	// PullDigest retrieves the provided mediaType, full canonically referencable
+	// image and its digest for the given platform and returns the progress of
+	// retrieving said digest via the onProgress callback.
+	PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error
 }
 
-type DescriptorResolver interface {
-	ResolveDescriptor(context.Context, string) (ocispec.Descriptor, error)
+type DescriptorSaver interface {
+	// SaveDescriptor accepts an optional name reference which represents
+	// descriptor (but this is not always necessary and can be left blank if the
+	// descriptor is unnamed, e.g. an untagged config, a layer, etc) as well as an
+	// io.Reader which is prepared to pass in the byte slice of the descriptor.
+	// An optional progress method callback can be provided which is used to
+	// deliver the progress of writing the descriptor by the implementing method.
+	SaveDescriptor(context.Context, string, ocispec.Descriptor, io.Reader, func(float64)) error
+}
+
+type DescriptorPusher interface {
+	// PushDescriptor accepts an input descriptor and an optional canonical name
+	// for the descriptor (such as a tag) and uses the handler to push this to a
+	// remote registry.
+	PushDescriptor(context.Context, string, *ocispec.Descriptor) error
 }
 
 type ManifestLister interface {
-	ListManifests(context.Context) ([]ocispec.Manifest, error)
+	ListManifests(context.Context) (map[string]*ocispec.Manifest, error)
 }
 
-type ImagePusher interface {
-	PushImage(context.Context, string, *ocispec.Descriptor) error
+type ManifestResolver interface {
+	ResolveManifest(context.Context, string, digest.Digest) (*ocispec.Manifest, error)
 }
 
-type ImageResolver interface {
-	ResolveImage(context.Context, string) (ocispec.Image, error)
+type ManifestDeleter interface {
+	DeleteManifest(context.Context, string, digest.Digest) error
 }
 
-type ImageFetcher interface {
-	FetchImage(context.Context, string, string, func(float64)) error
+type IndexLister interface {
+	ListIndexes(context.Context) (map[string]*ocispec.Index, error)
+}
+
+type IndexResolver interface {
+	ResolveIndex(context.Context, string) (*ocispec.Index, error)
+}
+
+type IndexDeleter interface {
+	DeleteIndex(context.Context, string) error
 }
 
 type ImageUnpacker interface {
-	UnpackImage(context.Context, string, string) error
+	UnpackImage(context.Context, string, digest.Digest, string) (*ocispec.Image, error)
 }
 
 type Handler interface {
 	DigestResolver
-	DigestSaver
+	DigestPuller
+	DescriptorSaver
+	DescriptorPusher
 	ManifestLister
-	ImagePusher
-	ImageResolver
-	ImageFetcher
+	ManifestResolver
+	ManifestDeleter
+	IndexResolver
+	IndexLister
+	IndexDeleter
 	ImageUnpacker
 }

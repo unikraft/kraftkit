@@ -57,7 +57,12 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 		runner.pm = packmanager.G(ctx)
 	}
 
-	pm, compatible, err := runner.pm.IsCompatible(ctx, runner.packName)
+	pm, compatible, err := runner.pm.IsCompatible(ctx,
+		runner.packName,
+		packmanager.WithArchitecture(opts.Architecture),
+		packmanager.WithPlatform(opts.platform.String()),
+		packmanager.WithUpdate(true),
+	)
 	if err == nil && compatible {
 		runner.pm = pm
 		return true, nil
@@ -74,7 +79,10 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	packs, err := runner.pm.Catalog(ctx,
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
-		packmanager.WithCache(true),
+		packmanager.WithUpdate(false),
+		packmanager.WithPlatform(opts.platform.String()),
+		packmanager.WithArchitecture(opts.Architecture),
+		packmanager.WithUpdate(true),
 	)
 	if err != nil {
 		return err
@@ -87,7 +95,9 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 		packs, err = runner.pm.Catalog(ctx,
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithName(runner.packName),
-			packmanager.WithCache(false),
+			packmanager.WithUpdate(true),
+			packmanager.WithPlatform(opts.platform.String()),
+			packmanager.WithArchitecture(opts.Architecture),
 		)
 		if err != nil {
 			return err
@@ -124,7 +134,6 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 					ctx,
 					pack.WithPullProgressFunc(w),
 					pack.WithPullWorkdir(machine.Status.StateDir),
-					pack.WithPullPlatform(opts.platform.String()),
 				)
 			},
 		)},

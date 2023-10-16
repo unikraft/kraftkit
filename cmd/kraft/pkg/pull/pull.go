@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -23,19 +24,21 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/arch"
 )
 
 type Pull struct {
-	AllVersions  bool   `long:"all-versions" short:"A" usage:"Pull all versions"`
-	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
-	ForceCache   bool   `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
-	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Manager      string `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
-	NoChecksum   bool   `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
-	NoDeps       bool   `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
-	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
-	WithDeps     bool   `long:"with-deps" short:"d" usage:"Pull dependencies"`
-	Workdir      string `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
+	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
+	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
+	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Manager      string   `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
+	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
+	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
+	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
+	WithDeps     bool     `long:"with-deps" short:"d" usage:"Pull dependencies"`
+	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
+	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 }
 
 func New() *cobra.Command {
@@ -81,6 +84,15 @@ func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
 
 	cmd.SetContext(ctx)
 
+	if strings.ContainsRune(opts.Platform, '/') && opts.Architecture == "" {
+		split := strings.SplitN(opts.Platform, "/", 2)
+		if len(split) != 2 {
+			return fmt.Errorf("expected the flag in the form --plat=<plat>/<arch>")
+		}
+		opts.Platform = split[0]
+		opts.Architecture = split[1]
+	}
+
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
 	return cmdfactory.MutuallyExclusive(
@@ -125,6 +137,26 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		query []packmanager.QueryOption
 	}
 
+	// If `--all` is not set and either `--plat` or `--arch` are not set,
+	// use the host platform and architecture, as the user is likely trying
+	// to pull for their system by using "sensible defaults".
+	if !opts.All {
+		if opts.Architecture == "" {
+			opts.Architecture, err = arch.HostArchitecture()
+			if err != nil {
+				return fmt.Errorf("could not determine host architecture: %w", err)
+			}
+		}
+
+		if opts.Platform == "" {
+			platform, _, err := platform.Detect(ctx)
+			if err != nil {
+				return fmt.Errorf("could not detect host platform: %w", err)
+			}
+			opts.Platform = platform.String()
+		}
+	}
+
 	var queries []pmQuery
 
 	// Are we pulling an application directory?  If so, interpret the application
@@ -159,7 +191,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						packmanager.WithName(project.Template().Name()),
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
-						packmanager.WithCache(!opts.ForceCache),
+						packmanager.WithUpdate(opts.ForceCache),
+						packmanager.WithPlatform(opts.Platform),
+						packmanager.WithArchitecture(opts.Architecture),
 					)
 					if err != nil {
 						return err
@@ -255,7 +289,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 					packmanager.WithVersion(c.Version()),
 					packmanager.WithSource(c.Source()),
 					packmanager.WithTypes(c.Type()),
-					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithUpdate(!opts.ForceCache),
+					packmanager.WithPlatform(opts.Platform),
+					packmanager.WithArchitecture(opts.Architecture),
 				},
 			})
 		}
@@ -263,7 +299,9 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
-			pm, compatible, err := pm.IsCompatible(ctx, arg)
+			pm, compatible, err := pm.IsCompatible(ctx, arg,
+				packmanager.WithUpdate(!opts.ForceCache),
+			)
 			if err != nil || !compatible {
 				continue
 			}
@@ -271,8 +309,11 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 			queries = append(queries, pmQuery{
 				pm: pm,
 				query: []packmanager.QueryOption{
-					packmanager.WithCache(opts.ForceCache),
+					packmanager.WithUpdate(!opts.ForceCache),
 					packmanager.WithName(arg),
+					packmanager.WithArchitecture(opts.Architecture),
+					packmanager.WithPlatform(opts.Platform),
+					packmanager.WithKConfig(opts.KConfig),
 				},
 			})
 		}
@@ -305,8 +346,6 @@ func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
 						pack.WithPullWorkdir(workdir),
 						pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(opts.ForceCache),
-						pack.WithPullPlatform(opts.Platform),
-						pack.WithPullArchitecture(opts.Architecture),
 					)
 				},
 			))

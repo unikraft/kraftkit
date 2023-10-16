@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -95,26 +94,18 @@ func (u UmbrellaManager) AddSource(ctx context.Context, source string) error {
 	return nil
 }
 
-func (u UmbrellaManager) Prune(ctx context.Context, qopts ...QueryOption) error {
-	var errs []error
+func (u UmbrellaManager) Delete(ctx context.Context, qopts ...QueryOption) error {
 	for _, manager := range u.packageManagers {
-		log.G(ctx).WithFields(logrus.Fields{
-			"format": manager.Format(),
-		}).Tracef("pruning")
-		err := manager.Prune(ctx, qopts...)
-		if err != nil {
-			if strings.Contains(err.Error(), "package not found") {
-				errs = append(errs, err)
-			}
-			log.G(ctx).
-				WithField("format", manager.Format()).
-				Debugf("could not run Prune:  %v", err)
+		log.G(ctx).
+			WithField("format", manager.Format()).
+			WithFields(NewQuery(qopts...).Fields()).
+			Tracef("deleting")
+
+		if err := manager.Delete(ctx, qopts...); err != nil {
+			return err
 		}
 	}
 
-	if len(errs) == len(u.packageManagers) {
-		return fmt.Errorf("package not found locally")
-	}
 	return nil
 }
 
@@ -197,12 +188,12 @@ func (u UmbrellaManager) IsCompatible(ctx context.Context, source string, qopts 
 		log.G(ctx).WithFields(logrus.Fields{
 			"format": manager.Format(),
 			"source": source,
-		}).Tracef("checking compatibility")
+		}).Debugf("checking compatibility")
 
 		pm, compatible, err := manager.IsCompatible(ctx, source, qopts...)
 		if err == nil && compatible {
 			return pm, true, nil
-		} else if err != nil {
+		} else {
 			log.G(ctx).
 				WithField("format", manager.Format()).
 				Debugf("package manager is not compatible because: %v", err)

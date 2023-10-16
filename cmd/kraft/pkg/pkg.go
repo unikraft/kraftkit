@@ -21,13 +21,16 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/multiselect"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
-	"kraftkit.sh/cmd/kraft/pkg/prune"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
 	"kraftkit.sh/cmd/kraft/pkg/push"
+	"kraftkit.sh/cmd/kraft/pkg/rm"
 	"kraftkit.sh/cmd/kraft/pkg/source"
 	"kraftkit.sh/cmd/kraft/pkg/unsource"
 	"kraftkit.sh/cmd/kraft/pkg/update"
@@ -38,15 +41,17 @@ type Pkg struct {
 	Args         string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Dbg          bool   `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
 	Force        bool   `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
-	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
 	Initrd       string `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
 	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Name         string `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	NoKConfig    bool   `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	Output       string `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
 	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
-	WithKConfig  bool   `local:"true" long:"with-kconfig" usage:"Include the target .config"`
+
+	strategy packmanager.MergeStrategy
 }
 
 func New() *cobra.Command {
@@ -79,20 +84,41 @@ func New() *cobra.Command {
 	cmd.AddCommand(list.New())
 	cmd.AddCommand(pull.New())
 	cmd.AddCommand(push.New())
+	cmd.AddCommand(rm.New())
 	cmd.AddCommand(source.New())
 	cmd.AddCommand(unsource.New())
 	cmd.AddCommand(update.New())
-	cmd.AddCommand(prune.New())
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
+			append(packmanager.MergeStrategies(), packmanager.StrategyPrompt),
+			packmanager.StrategyPrompt,
+		),
+		"strategy",
+		"When a package of the same name exists, use this strategy when applying targets.",
+	)
 
 	return cmd
 }
 
 func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
+	if opts.Name == "" {
+		return fmt.Errorf("cannot package without setting --name")
+	}
+
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
 
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	ctx := cmd.Context()
+
+	opts.strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+
+	if config.G[config.KraftKit](ctx).NoPrompt && opts.strategy == "prompt" {
+		return fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
+	}
+
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -100,6 +126,24 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 	cmd.SetContext(ctx)
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
+
+	umbrella, err := packmanager.PackageManagers()
+	if err != nil {
+		return fmt.Errorf("could not get umbrella package manager: %w", err)
+	}
+
+	found := false
+	formats := []string{}
+	for _, pm := range umbrella {
+		formats = append(formats, pm.Format().String())
+		if pm.Format().String() == opts.Format {
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("unknown packaging format '%s' from choice of %v", opts.Format, formats)
+	}
 
 	return nil
 }
@@ -118,6 +162,13 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := cmd.Context()
+	pm := packmanager.G(ctx)
+
+	// Switch the package manager the desired format for this target
+	pm, err = pm.From(pack.PackageFormat(opts.Format))
+	if err != nil {
+		return err
+	}
 
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
@@ -137,97 +188,105 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 	var tree []*processtree.ProcessTreeItem
 
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
-	// Generate a package for every matching requested target
-	for _, targ := range project.Targets() {
-		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		targ := targ
-
-		switch true {
-		case
-			// If no arguments are supplied
-			len(opts.Target) == 0 &&
-				len(opts.Architecture) == 0 &&
-				len(opts.Platform) == 0,
-
-			// If the --target flag is supplied and the target name match
-			len(opts.Target) > 0 &&
-				targ.Name() == opts.Target,
-
-			// If only the --arch flag is supplied and the target's arch matches
-			len(opts.Architecture) > 0 &&
-				len(opts.Platform) == 0 &&
-				targ.Architecture().Name() == opts.Architecture,
-
-			// If only the --plat flag is supplied and the target's platform matches
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) == 0 &&
-				targ.Platform().Name() == opts.Platform,
-
-			// If both the --arch and --plat flag are supplied and match the target
-			len(opts.Platform) > 0 &&
-				len(opts.Architecture) > 0 &&
-				targ.Architecture().Name() == opts.Architecture &&
-				targ.Platform().Name() == opts.Platform:
-
-			var format pack.PackageFormat
-			name := "packaging " + targ.Name()
-			if opts.Format != "auto" {
-				format = pack.PackageFormat(opts.Format)
-			} else if targ.Format().String() != "" {
-				format = targ.Format()
-			}
-			if format.String() != "auto" {
-				name += " (" + format.String() + ")"
-			}
-
-			cmdShellArgs, err := shellwords.Parse(opts.Args)
+	exists, err := pm.Catalog(ctx,
+		packmanager.WithName(opts.Name),
+	)
+	baseopts := []packmanager.PackOption{}
+	if err == nil && len(exists) >= 1 {
+		if opts.strategy == packmanager.StrategyPrompt {
+			strategy, err := selection.Select[packmanager.MergeStrategy](
+				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
+				packmanager.MergeStrategies()...,
+			)
 			if err != nil {
 				return err
 			}
 
-			tree = append(tree, processtree.NewProcessTreeItem(
-				name,
-				targ.Architecture().Name()+"/"+targ.Platform().Name(),
-				func(ctx context.Context) error {
-					var err error
-					pm := packmanager.G(ctx)
-
-					// Switch the package manager the desired format for this target
-					if format != "auto" {
-						pm, err = pm.From(format)
-						if err != nil {
-							return err
-						}
-					}
-
-					popts := []packmanager.PackOption{
-						packmanager.PackArgs(cmdShellArgs...),
-						packmanager.PackInitrd(opts.Initrd),
-						packmanager.PackKConfig(opts.WithKConfig),
-						packmanager.PackName(opts.Name),
-						packmanager.PackOutput(opts.Output),
-					}
-
-					if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
-						popts = append(popts,
-							packmanager.PackWithKernelVersion(ukversion.Value),
-						)
-					}
-
-					if _, err := pm.Pack(ctx, targ, popts...); err != nil {
-						return err
-					}
-
-					return nil
-				},
-			))
-
-		default:
-			continue
+			opts.strategy = *strategy
 		}
+
+		switch opts.strategy {
+		case packmanager.StrategyExit:
+			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
+
+		// Set the merge strategy as an option that is then passed to the
+		// package manager.
+		default:
+			baseopts = append(baseopts,
+				packmanager.PackMergeStrategy(opts.strategy),
+			)
+		}
+	} else {
+		baseopts = append(baseopts,
+			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+		)
+	}
+
+	var selected []target.Target
+	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 && !config.G[config.KraftKit](ctx).NoPrompt {
+		selected = target.Filter(project.Targets(), opts.Architecture, opts.Platform, opts.Target)
+	} else {
+		selected, err = multiselect.MultiSelect[target.Target]("select what to package", project.Targets()...)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(selected) == 0 {
+		return fmt.Errorf("nothing selected to package")
+	}
+
+	i := 0
+
+	for _, targ := range selected {
+		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
+		targ := targ
+		baseopts := baseopts
+		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
+
+		cmdShellArgs, err := shellwords.Parse(opts.Args)
+		if err != nil {
+			return err
+		}
+
+		// When i > 0, we have already applied the merge strategy.  Now, for all
+		// targets, we actually do wish to merge these because they are part of
+		// the same execution lifecycle.
+		if i > 0 {
+			baseopts = []packmanager.PackOption{
+				packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+			}
+		}
+
+		tree = append(tree, processtree.NewProcessTreeItem(
+			name,
+			targ.Architecture().Name()+"/"+targ.Platform().Name(),
+			func(ctx context.Context) error {
+				popts := append(baseopts,
+					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackInitrd(opts.Initrd),
+					packmanager.PackKConfig(!opts.NoKConfig),
+					packmanager.PackName(opts.Name),
+					packmanager.PackOutput(opts.Output),
+				)
+
+				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
+					popts = append(popts,
+						packmanager.PackWithKernelVersion(ukversion.Value),
+					)
+				}
+
+				if _, err := pm.Pack(ctx, targ, popts...); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		))
+
+		i++
 	}
 
 	if len(tree) == 0 {
@@ -246,7 +305,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	model, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(parallel),
+			processtree.IsParallel(false),
 			processtree.WithRenderer(norender),
 		},
 		tree...,
