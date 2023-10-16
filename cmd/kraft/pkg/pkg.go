@@ -102,6 +102,10 @@ func New() *cobra.Command {
 }
 
 func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
+	if opts.Name == "" {
+		return fmt.Errorf("cannot package without setting --name")
+	}
+
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
