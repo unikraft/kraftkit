@@ -30,7 +30,7 @@ func TestAttributeFlags_StructFields(t *testing.T) {
 
 		// Execute command to invoke cmd.RunE. This executes all middlewares injected
 		// by bind(), which role is to assign parsed flag values to struct fields.
-		if _, err := executeC(cmd); err != nil {
+		if _, err := cmd.ExecuteC(); err != nil {
 			t.Fatal("Failed to execute command:", err)
 		}
 	}
