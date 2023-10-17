@@ -18,7 +18,6 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -31,22 +30,10 @@ func (p *packagerKraftfileUnikraft) String() string {
 
 // Buildable implements packager.
 func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *Pkg, args ...string) (bool, error) {
-	var err error
-
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.workdir),
-	}
-
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
-
-	// Interpret the project directory
-	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
-	if err != nil {
-		return false, err
+	if opts.project == nil {
+		if err := opts.initProject(ctx); err != nil {
+			return false, err
+		}
 	}
 
 	if opts.project.Unikraft(ctx) == nil {
