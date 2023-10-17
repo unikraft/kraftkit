@@ -158,7 +158,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if popts.Initrd() != "" {
-		log.G(ctx).Debug("oci: including initrd")
+		log.G(ctx).
+			WithField("src", popts.Initrd()).
+			WithField("dest", WellKnownInitrdPath).
+			Debug("oci: including initrd")
+
 		layer, err := NewLayerFromFile(ctx,
 			ocispec.MediaTypeImageLayer,
 			popts.Initrd(),
