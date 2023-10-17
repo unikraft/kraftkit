@@ -72,7 +72,7 @@ func New() *cobra.Command {
 		`, "`"),
 		Example: heredoc.Doc(`
 			# Package a project as an OCI archive and embed the target's KConfig.
-			$ kraft pkg --as oci --name unikraft.org/nginx:latest --with-kconfig`),
+			$ kraft pkg --as oci --name unikraft.org/nginx:latest`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
