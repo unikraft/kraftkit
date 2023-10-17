@@ -51,6 +51,7 @@ type Pkg struct {
 	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 
+	workdir  string
 	strategy packmanager.MergeStrategy
 }
 
@@ -101,7 +102,17 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
+	var err error
+	if len(args) == 0 {
+		opts.workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else {
+		opts.workdir = args[0]
+	}
+
 	if opts.Name == "" {
 		return fmt.Errorf("cannot package without setting --name")
 	}
@@ -118,7 +129,7 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
 	}
 
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(ctx)
+	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -150,16 +161,6 @@ func (opts *Pkg) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	var err error
-	var workdir string
-
-	if len(args) == 0 {
-		workdir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	} else {
-		workdir = args[0]
-	}
 
 	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
@@ -171,7 +172,7 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(workdir),
+		app.WithProjectWorkdir(opts.workdir),
 	}
 
 	if len(opts.Kraftfile) > 0 {
