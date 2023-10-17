@@ -141,6 +141,13 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 	}
 	helpEntries = append(helpEntries, helpEntry{"USAGE", cmd.UseLine()})
 
+	if len(cmd.Aliases) > 0 {
+		helpEntries = append(helpEntries, helpEntry{
+			title: "ALIASES",
+			body:  strings.Join(cmd.Aliases, " "),
+		})
+	}
+
 	if len(cmd.Groups()) > 0 {
 		maxPad := 0
 		mapping := make(map[string][]*cobra.Command)
