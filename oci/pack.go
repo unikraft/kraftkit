@@ -487,7 +487,7 @@ func (ocipack *ociPackage) Name() string {
 
 // Name implements fmt.Stringer
 func (ocipack *ociPackage) String() string {
-	return ocipack.ref.Context().Name()
+	return ocipack.imageRef()
 }
 
 // Version implements unikraft.Nameable
