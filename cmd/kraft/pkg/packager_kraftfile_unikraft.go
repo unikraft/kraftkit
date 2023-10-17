@@ -8,6 +8,7 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
@@ -71,7 +72,13 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ..
 		baseopts := opts.packopts
 		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
-		cmdShellArgs, err := shellwords.Parse(opts.Args)
+		// If no arguments have been specified, use the ones which are default and
+		// that have been included in the package.
+		if len(opts.Args) == 0 {
+			opts.Args = targ.Command()
+		}
+
+		cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
 		if err != nil {
 			return err
 		}
