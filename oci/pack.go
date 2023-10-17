@@ -139,6 +139,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
+		"src":  ocipack.Kernel(),
 		"dest": WellKnownKernelPath,
 	}).Debug("oci: including kernel")
 
