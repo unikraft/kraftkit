@@ -33,5 +33,6 @@ type packager interface {
 func packagers() []packager {
 	return []packager{
 		&packagerKraftfileUnikraft{},
+		&packagerKraftfileRuntime{},
 	}
 }
