@@ -7,8 +7,6 @@ package cmdfactory
 
 import (
 	"context"
-	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"reflect"
@@ -177,149 +175,12 @@ func isSameCommand(cmd *cobra.Command, cmdline string) bool {
 	return par.Name() == cmdFields[len(cmdFields)-2] && cmd.Name() == cmdFields[len(cmdFields)-1]
 }
 
-func execute(c *cobra.Command, a []string) (err error) {
-	if len(c.Deprecated) > 0 {
-		c.Printf("command %q is deprecated, %s\n", c.Name(), c.Deprecated)
-	}
-
-	// If help is called, regardless of other flags, return we want help.
-	// Also say we need help if the command isn't runnable.
-	if helpVal, err := c.Flags().GetBool("help"); err == nil && helpVal {
-		return flag.ErrHelp
-	}
-
-	if !c.Runnable() {
-		return flag.ErrHelp
-	}
-
-	argWoFlags := c.Flags().Args()
-	if c.DisableFlagParsing {
-		argWoFlags = a
-	}
-
-	if err := c.ValidateArgs(argWoFlags); err != nil {
-		return err
-	}
-
-	for p := c; p != nil; p = p.Parent() {
-		if p.PersistentPreRunE != nil {
-			if err := p.PersistentPreRunE(c, argWoFlags); err != nil {
-				return err
-			}
-			break
-		} else if p.PersistentPreRun != nil {
-			p.PersistentPreRun(c, argWoFlags)
-			break
-		}
-	}
-	if c.PreRunE != nil {
-		if err := c.PreRunE(c, argWoFlags); err != nil {
-			return err
-		}
-	} else if c.PreRun != nil {
-		c.PreRun(c, argWoFlags)
-	}
-
-	if err := c.ValidateRequiredFlags(); err != nil {
-		return err
-	}
-	if err := c.ValidateFlagGroups(); err != nil {
-		return err
-	}
-
-	if c.RunE != nil {
-		if err := c.RunE(c, argWoFlags); err != nil {
-			return err
-		}
-	} else {
-		c.Run(c, argWoFlags)
-	}
-	if c.PostRunE != nil {
-		if err := c.PostRunE(c, argWoFlags); err != nil {
-			return err
-		}
-	} else if c.PostRun != nil {
-		c.PostRun(c, argWoFlags)
-	}
-	for p := c; p != nil; p = p.Parent() {
-		if p.PersistentPostRunE != nil {
-			if err := p.PersistentPostRunE(c, argWoFlags); err != nil {
-				return err
-			}
-			break
-		} else if p.PersistentPostRun != nil {
-			p.PersistentPostRun(c, argWoFlags)
-			break
-		}
-	}
-
-	return nil
-}
-
-func executeC(c *cobra.Command) (cmd *cobra.Command, err error) {
-	// Regardless of what command execute is called on, run on Root only
-	if c.HasParent() {
-		return executeC(c.Root())
-	}
-
-	args := os.Args[1:]
-
-	var flags []string
-	if c.TraverseChildren {
-		cmd, flags, err = c.Traverse(args)
-	} else {
-		cmd, flags, err = c.Find(args)
-	}
-	if err != nil {
-		// If found parse to a subcommand and then failed, talk about the subcommand
-		if cmd != nil {
-			c = cmd
-		}
-		if !c.SilenceErrors {
-			c.PrintErrln("Error:", err.Error())
-			c.PrintErrf("Run '%v --help' for usage.\n", c.CommandPath())
-		}
-		return c, err
-	}
-
-	// We have to pass global context to children command
-	// if context is present on the parent command.
-	if cmd.Context() == nil {
-		cmd.SetContext(c.Context())
-	}
-
-	if err = execute(cmd, flags); err != nil {
-		// Always show help if requested, even if SilenceErrors is in
-		// effect
-		if errors.Is(err, flag.ErrHelp) {
-			cmd.HelpFunc()(cmd, args)
-			return cmd, nil
-		}
-
-		// If root command has SilenceErrors flagged,
-		// all subcommands should respect it
-		if !cmd.SilenceErrors && !c.SilenceErrors {
-			c.PrintErrln("Error:", err.Error())
-		}
-
-		// If root command has SilenceUsage flagged,
-		// all subcommands should respect it
-		if !cmd.SilenceUsage && !c.SilenceUsage {
-			c.Println(cmd.UsageString())
-		}
-	}
-
-	return cmd, err
-}
-
 // Main executes the given command
 func Main(ctx context.Context, cmd *cobra.Command) {
 	// Expand flag all dynamically registered flag overrides.
 	expandRegisteredFlags(cmd)
 
-	cmd.SetContext(ctx)
-
-	if _, err := executeC(cmd); err != nil {
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		log.G(ctx).Error(err)
 		os.Exit(1)
 	}
@@ -457,17 +318,6 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 		default:
 			// Unknown kind on field " + fieldType.Name + " on " + objValue.Type().Name()
 			continue
-		}
-	}
-
-	// If any arguments are passed, parse them immediately
-	if len(args) > 0 {
-		// Expand all registered flags pre-emptively such that they can be correctly
-		// parsed.
-		expandRegisteredFlags(c)
-
-		if err := c.ParseFlags(args); err != nil && !errors.Is(err, pflag.ErrHelp) {
-			return err
 		}
 	}
 

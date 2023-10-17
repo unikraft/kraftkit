@@ -122,11 +122,7 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 		}
 
 		// Attribute all configuration flags and command-line argument values
-		cmd, args, err := cmd.Find(os.Args[1:])
-		if err != nil {
-			return err
-		}
-		configDir := config.FetchConfigDirFromArgs(args)
+		configDir := config.FetchConfigDirFromArgs(os.Args[1:])
 
 		// Did the user specify a non-standard config directory?  The following
 		// check is possible thanks to the attribution of flags to the config file.
@@ -152,8 +148,12 @@ func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 			}
 		}
 
-		if err := cmdfactory.AttributeFlags(cmd, cfg, args...); err != nil {
+		if err := cmdfactory.AttributeFlags(cmd, cfg, os.Args[1:]...); err != nil {
 			return err
+		}
+
+		if err := cmd.ParseFlags(os.Args[1:]); err == nil {
+			cmd.DisableFlagParsing = true
 		}
 
 		copts.ConfigManager = cfgm
