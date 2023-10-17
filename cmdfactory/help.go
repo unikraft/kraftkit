@@ -104,12 +104,12 @@ func traverse(cmd *cobra.Command) []*cobra.Command {
 	return cmds
 }
 
-func fullname(cmd *cobra.Command) string {
+func fullname(parent, cmd *cobra.Command) string {
 	name := ""
 
 	for {
 		name = cmd.Name() + " " + name
-		if !cmd.HasParent() || isRootCmd(cmd.Parent()) {
+		if !cmd.HasParent() || cmd.Parent() == parent {
 			break
 		}
 		cmd = cmd.Parent()
@@ -141,7 +141,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 	}
 	helpEntries = append(helpEntries, helpEntry{"USAGE", cmd.UseLine()})
 
-	if isRootCmd(cmd) {
+	if len(cmd.Groups()) > 0 {
 		maxPad := 0
 		mapping := make(map[string][]*cobra.Command)
 
@@ -158,7 +158,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-			pad := len(fullname(c))
+			pad := len(fullname(cmd, c))
 			if pad > maxPad {
 				maxPad = pad
 			}
@@ -167,11 +167,10 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		}
 
 		for _, group := range cmd.Groups() {
-
 			var usages []string
 
 			for _, c := range mapping[group.ID] {
-				usages = append(usages, rpad(fullname(c), maxPad+2)+c.Short)
+				usages = append(usages, rpad(fullname(cmd, c), maxPad+2)+c.Short)
 			}
 
 			if len(usages) > 0 {
