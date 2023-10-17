@@ -5,27 +5,19 @@
 package pkg
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/mattn/go-shellwords"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
-	"kraftkit.sh/pack"
-	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/multiselect"
-	"kraftkit.sh/tui/processtree"
-	"kraftkit.sh/tui/selection"
-	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/target"
 
 	"kraftkit.sh/cmd/kraft/pkg/list"
 	"kraftkit.sh/cmd/kraft/pkg/pull"
@@ -53,6 +45,7 @@ type Pkg struct {
 
 	workdir  string
 	strategy packmanager.MergeStrategy
+	project  app.Application
 }
 
 func New() *cobra.Command {
@@ -160,160 +153,37 @@ func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
-	var err error
-
+	var pack packager
 	ctx := cmd.Context()
-	pm := packmanager.G(ctx)
+	packagers := packagers()
 
-	// Switch the package manager the desired format for this target
-	pm, err = pm.From(pack.PackageFormat(opts.Format))
-	if err != nil {
-		return err
-	}
+	// Iterate through the list of built-in builders which sequentially tests
+	// the current context and Kraftfile match specific requirements towards
+	// performing a type of build.
+	for _, candidate := range packagers {
+		log.G(ctx).
+			WithField("packager", candidate.String()).
+			Trace("checking compatibility")
 
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.workdir),
-	}
-
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
-
-	// Interpret the project directory
-	project, err := app.NewProjectFromOptions(ctx, popts...)
-	if err != nil {
-		return err
-	}
-
-	var tree []*processtree.ProcessTreeItem
-
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
-
-	exists, err := pm.Catalog(ctx,
-		packmanager.WithName(opts.Name),
-	)
-	baseopts := []packmanager.PackOption{}
-	if err == nil && len(exists) >= 1 {
-		if opts.strategy == packmanager.StrategyPrompt {
-			strategy, err := selection.Select[packmanager.MergeStrategy](
-				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
-				packmanager.MergeStrategies()...,
-			)
-			if err != nil {
-				return err
-			}
-
-			opts.strategy = *strategy
+		capable, err := candidate.Packagable(ctx, opts, args...)
+		if capable && err == nil {
+			pack = candidate
+			break
 		}
 
-		switch opts.strategy {
-		case packmanager.StrategyExit:
-			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
-
-		// Set the merge strategy as an option that is then passed to the
-		// package manager.
-		default:
-			baseopts = append(baseopts,
-				packmanager.PackMergeStrategy(opts.strategy),
-			)
-		}
-	} else {
-		baseopts = append(baseopts,
-			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
-		)
+		log.G(ctx).
+			WithError(err).
+			WithField("packager", candidate.String()).
+			Trace("incompatbile")
 	}
 
-	var selected []target.Target
-	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 && !config.G[config.KraftKit](ctx).NoPrompt {
-		selected = target.Filter(project.Targets(), opts.Architecture, opts.Platform, opts.Target)
-	} else {
-		selected, err = multiselect.MultiSelect[target.Target]("select what to package", project.Targets()...)
-		if err != nil {
-			return err
-		}
+	if pack == nil {
+		return fmt.Errorf("could not determine what or how to package from the given context")
 	}
 
-	if len(selected) == 0 {
-		return fmt.Errorf("nothing selected to package")
+	if err := pack.Pack(ctx, opts, args...); err != nil {
+		return fmt.Errorf("could not package: %w", err)
 	}
 
-	i := 0
-
-	for _, targ := range selected {
-		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		targ := targ
-		baseopts := baseopts
-		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
-
-		cmdShellArgs, err := shellwords.Parse(opts.Args)
-		if err != nil {
-			return err
-		}
-
-		// When i > 0, we have already applied the merge strategy.  Now, for all
-		// targets, we actually do wish to merge these because they are part of
-		// the same execution lifecycle.
-		if i > 0 {
-			baseopts = []packmanager.PackOption{
-				packmanager.PackMergeStrategy(packmanager.StrategyMerge),
-			}
-		}
-
-		tree = append(tree, processtree.NewProcessTreeItem(
-			name,
-			targ.Architecture().Name()+"/"+targ.Platform().Name(),
-			func(ctx context.Context) error {
-				popts := append(baseopts,
-					packmanager.PackArgs(cmdShellArgs...),
-					packmanager.PackInitrd(opts.Initrd),
-					packmanager.PackKConfig(!opts.NoKConfig),
-					packmanager.PackName(opts.Name),
-					packmanager.PackOutput(opts.Output),
-				)
-
-				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
-					popts = append(popts,
-						packmanager.PackWithKernelVersion(ukversion.Value),
-					)
-				}
-
-				if _, err := pm.Pack(ctx, targ, popts...); err != nil {
-					return err
-				}
-
-				return nil
-			},
-		))
-
-		i++
-	}
-
-	if len(tree) == 0 {
-		switch true {
-		case len(opts.Target) > 0:
-			return fmt.Errorf("no matching targets found for: %s", opts.Target)
-		case len(opts.Architecture) > 0 && len(opts.Platform) == 0:
-			return fmt.Errorf("no matching targets found for architecture: %s", opts.Architecture)
-		case len(opts.Architecture) == 0 && len(opts.Platform) > 0:
-			return fmt.Errorf("no matching targets found for platform: %s", opts.Platform)
-		default:
-			return fmt.Errorf("no matching targets found for: %s/%s", opts.Platform, opts.Architecture)
-		}
-	}
-
-	model, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(norender),
-		},
-		tree...,
-	)
-	if err != nil {
-		return err
-	}
-
-	return model.Start()
+	return nil
 }
