@@ -36,13 +36,13 @@ type Pkg struct {
 	Dbg          bool   `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
 	Force        bool   `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
 	Format       string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
-	Initrd       string `local:"true" long:"initrd" short:"i" usage:"Path to init ramdisk to bundle within the package (passing a path will automatically generate a CPIO image)"`
 	Kernel       string `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Name         string `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	NoKConfig    bool   `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	Output       string `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
 	Platform     string `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Rootfs       string `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	Target       string `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 
 	workdir  string
@@ -207,6 +207,10 @@ func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
 
 	if pack == nil {
 		return fmt.Errorf("could not determine what or how to package from the given context")
+	}
+
+	if err := opts.buildRootfs(ctx); err != nil {
+		return fmt.Errorf("could not build rootfs: %w", err)
 	}
 
 	if err := pack.Pack(ctx, opts, args...); err != nil {

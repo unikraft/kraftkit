@@ -7,7 +7,11 @@ package pkg
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
 
@@ -28,6 +32,32 @@ func (opts *Pkg) initProject(ctx context.Context) error {
 
 	// Interpret the project directory
 	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// buildRootfs generates a rootfs based on the provided
+func (opts *Pkg) buildRootfs(ctx context.Context) error {
+	if opts.Rootfs == "" {
+		if opts.project != nil && opts.project.Rootfs() != "" {
+			opts.Rootfs = opts.project.Rootfs()
+		} else {
+			return nil
+		}
+	}
+
+	ramfs, err := initrd.New(ctx, opts.Rootfs,
+		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
+		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.VendorDir, "rootfs-cache")),
+	)
+	if err != nil {
+		return fmt.Errorf("could not prepare initramfs: %w", err)
+	}
+
+	opts.Rootfs, err = ramfs.Build(ctx)
 	if err != nil {
 		return err
 	}

@@ -91,7 +91,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ..
 			func(ctx context.Context) error {
 				popts := append(baseopts,
 					packmanager.PackArgs(cmdShellArgs...),
-					packmanager.PackInitrd(opts.Initrd),
+					packmanager.PackInitrd(opts.Rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
