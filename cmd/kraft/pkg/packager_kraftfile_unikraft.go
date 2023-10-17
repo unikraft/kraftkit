@@ -50,10 +50,12 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ..
 
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
-	var selected []target.Target
-	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 && !config.G[config.KraftKit](ctx).NoPrompt {
+	selected := opts.project.Targets()
+	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 {
 		selected = target.Filter(opts.project.Targets(), opts.Architecture, opts.Platform, opts.Target)
-	} else {
+	}
+
+	if len(selected) > 1 && !config.G[config.KraftKit](ctx).NoPrompt {
 		selected, err = multiselect.MultiSelect[target.Target]("select what to package", opts.project.Targets()...)
 		if err != nil {
 			return err
