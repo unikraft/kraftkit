@@ -42,6 +42,16 @@ type Kraftfile struct {
 	config map[string]interface{}
 }
 
+func KraftfileWithPath(path string) *Kraftfile {
+	return &Kraftfile{
+		path: path,
+	}
+}
+
+func (k *Kraftfile) Path() string {
+	return k.path
+}
+
 // ProjectOptions group configuration options used to instantiate a new
 // ApplicationConfig from a working directory and a kraftfile
 type ProjectOptions struct {
