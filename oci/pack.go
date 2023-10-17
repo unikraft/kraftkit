@@ -200,29 +200,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		ocipack.manifest.SetOSVersion(ctx, version)
 	}
 
-	if popts.PackKConfig() {
-		log.G(ctx).Debug("oci: including list of kconfig as features")
-
-		// TODO(nderjung): Not sure if these filters are best placed here or
-		// elsewhere.
-		skippable := set.NewStringSet(
-			"CONFIG_UK_APP",
-			"CONFIG_UK_BASE",
-		)
-		for _, k := range ocipack.KConfig() {
-			// Filter out host-specific KConfig options.
-			if skippable.Contains(k.Key) {
-				continue
-			}
-
-			log.G(ctx).
-				WithField(k.Key, k.Value).
-				Trace("oci: feature")
-
-			ocipack.manifest.SetOSFeature(ctx, k.String())
-		}
-	}
-
 	ocipack.manifest.SetCmd(ctx, ocipack.Command())
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
@@ -315,6 +292,29 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+
+	if popts.PackKConfig() {
+		log.G(ctx).Debug("oci: including list of kconfig as features")
+
+		// TODO(nderjung): Not sure if these filters are best placed here or
+		// elsewhere.
+		skippable := set.NewStringSet(
+			"CONFIG_UK_APP",
+			"CONFIG_UK_BASE",
+		)
+		for _, k := range ocipack.KConfig() {
+			// Filter out host-specific KConfig options.
+			if skippable.Contains(k.Key) {
+				continue
+			}
+
+			log.G(ctx).
+				WithField(k.Key, k.Value).
+				Trace("oci: feature")
+
+			ocipack.manifest.SetOSFeature(ctx, k.String())
+		}
+	}
 
 	if err := index.AddManifest(ctx, ocipack.manifest); err != nil {
 		return nil, fmt.Errorf("could not add manifest to index: %w", err)
