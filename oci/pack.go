@@ -465,6 +465,12 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 
 	ocipack.plat = platform.(plat.Platform)
 
+	ocipack.kconfig = kconfig.KeyValueMap{}
+	for _, feature := range ocipack.manifest.config.OSFeatures {
+		_, kval := kconfig.NewKeyValue(feature)
+		ocipack.kconfig.Override(kval)
+	}
+
 	return &ocipack, nil
 }
 
