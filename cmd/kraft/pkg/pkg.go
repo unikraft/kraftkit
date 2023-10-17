@@ -14,6 +14,8 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
+	"kraftkit.sh/pack"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
@@ -46,6 +48,8 @@ type Pkg struct {
 	workdir  string
 	strategy packmanager.MergeStrategy
 	project  app.Application
+	packopts []packmanager.PackOption
+	pm       packmanager.PackageManager
 }
 
 func New() *cobra.Command {
@@ -131,30 +135,54 @@ func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	umbrella, err := packmanager.PackageManagers()
+	// Switch the package manager the desired format for this target
+	opts.pm, err = packmanager.G(ctx).From(pack.PackageFormat(opts.Format))
 	if err != nil {
-		return fmt.Errorf("could not get umbrella package manager: %w", err)
-	}
-
-	found := false
-	formats := []string{}
-	for _, pm := range umbrella {
-		formats = append(formats, pm.Format().String())
-		if pm.Format().String() == opts.Format {
-			found = true
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("unknown packaging format '%s' from choice of %v", opts.Format, formats)
+		return err
 	}
 
 	return nil
 }
 
 func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
-	var pack packager
+	var err error
 	ctx := cmd.Context()
+
+	exists, err := opts.pm.Catalog(ctx,
+		packmanager.WithName(opts.Name),
+	)
+	if err == nil && len(exists) > 0 {
+		if opts.strategy == packmanager.StrategyPrompt {
+			strategy, err := selection.Select[packmanager.MergeStrategy](
+				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
+				packmanager.MergeStrategies()...,
+			)
+			if err != nil {
+				return err
+			}
+
+			opts.strategy = *strategy
+		}
+
+		switch opts.strategy {
+		case packmanager.StrategyExit:
+			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
+
+		// Set the merge strategy as an option that is then passed to the
+		// package manager.
+		default:
+			opts.packopts = append(opts.packopts,
+				packmanager.PackMergeStrategy(opts.strategy),
+			)
+		}
+	} else {
+		opts.packopts = append(opts.packopts,
+			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+		)
+	}
+
+	var pack packager
+
 	packagers := packagers()
 
 	// Iterate through the list of built-in builders which sequentially tests

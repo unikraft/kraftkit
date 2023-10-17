@@ -12,11 +12,9 @@ import (
 	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
-	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/multiselect"
 	"kraftkit.sh/tui/processtree"
-	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/target"
 )
@@ -47,51 +45,9 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *Pkg, a
 func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ...string) error {
 	var err error
 
-	pm := packmanager.G(ctx)
-
-	// Switch the package manager the desired format for this target
-	pm, err = pm.From(pack.PackageFormat(opts.Format))
-	if err != nil {
-		return err
-	}
-
 	var tree []*processtree.ProcessTreeItem
 
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
-
-	exists, err := pm.Catalog(ctx,
-		packmanager.WithName(opts.Name),
-	)
-	baseopts := []packmanager.PackOption{}
-	if err == nil && len(exists) >= 1 {
-		if opts.strategy == packmanager.StrategyPrompt {
-			strategy, err := selection.Select[packmanager.MergeStrategy](
-				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
-				packmanager.MergeStrategies()...,
-			)
-			if err != nil {
-				return err
-			}
-
-			opts.strategy = *strategy
-		}
-
-		switch opts.strategy {
-		case packmanager.StrategyExit:
-			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
-
-		// Set the merge strategy as an option that is then passed to the
-		// package manager.
-		default:
-			baseopts = append(baseopts,
-				packmanager.PackMergeStrategy(opts.strategy),
-			)
-		}
-	} else {
-		baseopts = append(baseopts,
-			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
-		)
-	}
 
 	var selected []target.Target
 	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 && !config.G[config.KraftKit](ctx).NoPrompt {
@@ -112,7 +68,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ..
 	for _, targ := range selected {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
-		baseopts := baseopts
+		baseopts := opts.packopts
 		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
 		cmdShellArgs, err := shellwords.Parse(opts.Args)
@@ -147,7 +103,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ..
 					)
 				}
 
-				if _, err := pm.Pack(ctx, targ, popts...); err != nil {
+				if _, err := opts.pm.Pack(ctx, targ, popts...); err != nil {
 					return err
 				}
 
