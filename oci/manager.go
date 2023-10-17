@@ -242,10 +242,10 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		name.WithDefaultRegistry(""),
 	)
 	if refErr == nil {
+		qname = ref.Context().Name()
 		if ref.Identifier() != "latest" && qversion != "" && ref.Identifier() != qversion {
 			return nil, fmt.Errorf("cannot determine which version as name contains version and version query paremeter set")
 		} else if qversion == "" {
-			qname = ref.String()
 			qversion = ref.Identifier()
 		}
 	}
@@ -469,7 +469,15 @@ searchRemoteIndexes:
 				Trace("skipping index: glob does not match")
 			continue
 		} else if qglob == nil {
-			if len(qname) > 0 && fullref != qname {
+			if len(qversion) > 0 && len(qname) > 0 {
+				if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+					log.G(ctx).
+						WithField("want", fullref).
+						WithField("got", fmt.Sprintf("%s:%s", qname, qversion)).
+						Trace("skipping index: name does not match")
+					continue
+				}
+			} else if len(qname) > 0 && fullref != qname {
 				log.G(ctx).
 					WithField("want", fullref).
 					WithField("got", qname).
