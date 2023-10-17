@@ -171,7 +171,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			WithLayerAnnotation(AnnotationKernelInitrdPath, WellKnownInitrdPath),
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could build layer from file: %w", err)
 		}
 		defer os.Remove(layer.tmp)
 
