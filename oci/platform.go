@@ -15,13 +15,14 @@ import (
 
 // PlatformChecksum accepts an input manifest and generates a
 // checksum based on the platform
-func PlatformChecksum(manifest *ocispec.Platform) (string, error) {
+func PlatformChecksum(seed string, manifest *ocispec.Platform) (string, error) {
 	b, err := json.Marshal(manifest)
 	if err != nil {
 		return "", err
 	}
 
 	h := sha256.New()
+	h.Write([]byte(seed))
 	h.Write(b)
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }

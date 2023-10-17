@@ -272,7 +272,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			return ocipack.manifest.config.OSFeatures[j] > ocipack.manifest.config.OSFeatures[i]
 		})
 
-		newManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+		newManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 			Architecture: ocipack.manifest.config.Architecture,
 			OS:           ocipack.manifest.config.OS,
 			OSVersion:    ocipack.manifest.config.OSVersion,
@@ -285,7 +285,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		var manifests []*Manifest
 
 		for _, existingManifest := range index.manifests {
-			existingManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+			existingManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 				Architecture: existingManifest.config.Architecture,
 				OS:           existingManifest.config.OS,
 				OSVersion:    existingManifest.config.OSVersion,

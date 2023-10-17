@@ -209,7 +209,7 @@ checkManifest:
 			continue
 		}
 
-		checksum, err := PlatformChecksum(descriptor.Platform)
+		checksum, err := PlatformChecksum(pack.String(), descriptor.Platform)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate platform digest for '%s': %w", descriptor.Digest.String(), err)
 		}
