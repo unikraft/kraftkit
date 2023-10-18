@@ -34,7 +34,7 @@ func (build *builderKraftfileUnikraft) String() string {
 
 // Buildable implements builder.
 func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Build, args ...string) (bool, error) {
-	if opts.project.Unikraft(ctx) == nil {
+	if opts.project.Unikraft(ctx) == nil && opts.project.Template() == nil {
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
 
@@ -65,7 +65,103 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *Build, no
 		iostreams.G(ctx).Out = oldOut
 	}()
 
-	// Overwrite template with user options
+	if template := opts.project.Template(); template != nil {
+		var templatePack pack.Package
+
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
+				processtree.WithFailFast(true),
+			},
+			processtree.NewProcessTreeItem(
+				fmt.Sprintf("finding %s",
+					unikraft.TypeNameVersion(template),
+				), "",
+				func(ctx context.Context) error {
+					p, err := packmanager.G(ctx).Catalog(ctx,
+						packmanager.WithName(template.Name()),
+						packmanager.WithTypes(template.Type()),
+						packmanager.WithVersion(template.Version()),
+						packmanager.WithSource(template.Source()),
+						packmanager.WithUpdate(opts.NoCache),
+						packmanager.WithAuthConfig(auths),
+					)
+					if err != nil {
+						return err
+					}
+
+					if len(p) == 0 {
+						return fmt.Errorf("could not find: %s",
+							unikraft.TypeNameVersion(template),
+						)
+					} else if len(p) > 1 {
+						return fmt.Errorf("too many options for %s",
+							unikraft.TypeNameVersion(template),
+						)
+					}
+
+					templatePack = p[0]
+					return nil
+				},
+			),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := treemodel.Start(); err != nil {
+			return fmt.Errorf("could not complete search: %v", err)
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{
+				paraprogress.NewProcess(
+					fmt.Sprintf("pulling %s",
+						unikraft.TypeNameVersion(template),
+					),
+					func(ctx context.Context, w func(progress float64)) error {
+						return templatePack.Pull(
+							ctx,
+							pack.WithPullProgressFunc(w),
+							pack.WithPullWorkdir(opts.workdir),
+							// pack.WithPullChecksum(!opts.NoChecksum),
+							pack.WithPullCache(!opts.NoCache),
+							pack.WithPullAuthConfig(auths),
+						)
+					},
+				),
+			},
+			paraprogress.IsParallel(parallel),
+			paraprogress.WithRenderer(norender),
+			paraprogress.WithFailFast(true),
+			paraprogress.WithNameWidth(nameWidth),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return fmt.Errorf("could not pull all components: %v", err)
+		}
+
+		templateProject, err := app.NewProjectFromOptions(ctx,
+			app.WithProjectWorkdir(template.Path()),
+			app.WithProjectDefaultKraftfiles(),
+		)
+		if err != nil {
+			return err
+		}
+
+		// Overwrite template with user options
+		opts.project, err = opts.project.MergeTemplate(ctx, templateProject)
+		if err != nil {
+			return err
+		}
+	}
+
 	components, err := opts.project.Components(ctx)
 	if err != nil {
 		return err
@@ -198,6 +294,19 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *Build, t
 				nameWidth = newLen
 			}
 		}
+
+		components, err := opts.project.Components(ctx)
+		if err != nil {
+			return fmt.Errorf("could not get list of components: %w", err)
+		}
+
+		// The longest word is "pulling" (which is 7 characters long),plus
+		// additional space characters (1 character).
+		for _, component := range components {
+			if newLen := len(unikraft.TypeNameVersion(component)) + 8; newLen > nameWidth {
+				nameWidth = newLen
+			}
+		}
 	}
 
 	if !(opts.NoPull || opts.NoUpdate) {
@@ -298,6 +407,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *Build, t
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(norender),
 		paraprogress.WithFailFast(true),
+		paraprogress.WithNameWidth(nameWidth),
 	)
 	if err != nil {
 		return err

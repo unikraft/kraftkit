@@ -241,13 +241,18 @@ func (app application) Kraftfile() *Kraftfile {
 }
 
 func (app application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
-	app.name = merge.Name()
-	app.source = merge.Source()
-	app.version = merge.Version()
-	app.path = merge.Path()
-	app.workingDir = merge.WorkingDir()
-	app.outDir = merge.OutDir()
-	app.template = merge.Template()
+	if app.name == "" {
+		app.name = merge.Name()
+	}
+	if app.source == "" {
+		app.source = merge.Source()
+	}
+	if app.version == "" {
+		app.version = merge.Version()
+	}
+
+	// TODO(nderjung): Recursive templates?
+	// app.template = merge.Template()
 
 	libs, err := merge.Libraries(ctx)
 	if err != nil {
@@ -275,8 +280,24 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 
 	// Need to first merge the app configuration over the template
 	uk := merge.Unikraft(ctx)
-	uk.KConfig().OverrideBy(app.unikraft.KConfig())
-	app.unikraft = uk
+	if app.unikraft != nil {
+		uk.KConfig().OverrideBy(app.unikraft.KConfig())
+		app.unikraft.KConfig().OverrideBy(uk.KConfig())
+	} else {
+		app.unikraft, err = core.NewUnikraftFromOptions(
+			unikraft.WithContext(ctx, &unikraft.Context{
+				UK_NAME:   app.name,
+				UK_BASE:   app.workingDir,
+				BUILD_DIR: app.outDir,
+			}),
+			core.WithSource(uk.Source()),
+			core.WithKConfig(uk.KConfig()),
+			core.WithVersion(uk.Version()),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return app, nil
 }
@@ -356,7 +377,11 @@ func (app application) KConfig() kconfig.KeyValueMap {
 		app.configuration = kconfig.KeyValueMap{}
 	}
 
-	all := app.configuration.OverrideBy(app.unikraft.KConfig())
+	all := kconfig.KeyValueMap{}
+
+	if app.unikraft != nil {
+		all = app.configuration.OverrideBy(app.unikraft.KConfig())
+	}
 
 	for _, library := range app.libraries {
 		all = all.OverrideBy(library.KConfig())
@@ -697,12 +722,26 @@ func (app application) TargetNames() []string {
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
 func (app application) Components(ctx context.Context) ([]component.Component, error) {
-	components := []component.Component{
-		app.Unikraft(ctx),
+	components := []component.Component{}
+
+	if unikraft := app.Unikraft(ctx); unikraft != nil {
+		components = append(components, unikraft)
 	}
 
-	if app.template != nil {
-		components = append(components, app.template)
+	if app.template != nil && len(app.template.Path()) > 0 {
+		template, err := NewApplicationFromOptions(
+			WithWorkingDir(app.template.Path()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not read template application: %w", err)
+		}
+
+		templateComponents, err := template.Components(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get template components: %w", err)
+		}
+
+		components = append(components, templateComponents...)
 	}
 
 	for _, library := range app.libraries {

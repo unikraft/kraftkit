@@ -35,6 +35,7 @@ import (
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
+	"kraftkit.sh/unikraft/template"
 )
 
 // TransformerFunc defines a function to perform the actual transformation
@@ -93,6 +94,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
 		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
 		reflect.TypeOf(elfloader.ELFLoader{}):           elfloader.TransformFromSchema,
+		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
 		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 	}
 

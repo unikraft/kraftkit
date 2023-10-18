@@ -46,8 +46,17 @@ type UnikraftConfig struct {
 }
 
 // NewUnikraftFromOptions is a constructor that configures a core configuration.
-func NewUnikraftFromOptions(opts ...UnikraftOption) (Unikraft, error) {
+func NewUnikraftFromOptions(ctx context.Context, opts ...UnikraftOption) (*UnikraftConfig, error) {
 	uc := UnikraftConfig{}
+
+	uk := unikraft.FromContext(ctx)
+	if uk != nil && uk.UK_BASE != "" {
+		uc.path, _ = unikraft.PlaceComponent(
+			uk.UK_BASE,
+			unikraft.ComponentTypeCore,
+			"unikraft",
+		)
+	}
 
 	for _, opt := range opts {
 		if err := opt(&uc); err != nil {
@@ -100,6 +109,10 @@ func (uc UnikraftConfig) KConfigTree(ctx context.Context, extra ...*kconfig.KeyV
 }
 
 func (uc UnikraftConfig) KConfig() kconfig.KeyValueMap {
+	if uc.kconfig == nil {
+		uc.kconfig = kconfig.KeyValueMap{}
+	}
+
 	return uc.kconfig
 }
 

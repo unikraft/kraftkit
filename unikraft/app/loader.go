@@ -80,6 +80,10 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		return nil, err
 	}
 
+	if err := Transform(ctx, getSection(iface, "template"), &app.template); err != nil {
+		return nil, err
+	}
+
 	if err := Transform(ctx, getSection(iface, "volumes"), &app.volumes); err != nil {
 		return nil, err
 	}
