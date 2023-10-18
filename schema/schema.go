@@ -18,13 +18,16 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	// Enable support for embedded static resources
 	_ "embed"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/xeipuuv/gojsonschema"
+	"kraftkit.sh/log"
 )
 
 // Schema is the Kraftfile specification in JSON schema.
@@ -37,7 +40,27 @@ var (
 )
 
 // Validate uses the jsonschema to validate the configuration
-func Validate(config map[string]interface{}) error {
+func Validate(ctx context.Context, config map[string]interface{}) error {
+	var spec string
+	if s, ok := config["specification"].(string); ok {
+		spec = s
+	} else if s, ok := config["spec"].(string); ok {
+		spec = s
+	} else {
+		return fmt.Errorf("missing 'spec' version attribute")
+	}
+
+	specVer, err := semver.NewVersion(spec)
+	if err != nil {
+		return fmt.Errorf("could not parse specification version: %w", err)
+	}
+
+	latestVer := semver.MustParse(string(SchemaVersionLatest))
+
+	if specVer.LessThan(latestVer) {
+		log.G(ctx).Warnf("specification in Kraftfile (v%s) version is not latest (v%s)", spec, SchemaVersionLatest)
+	}
+
 	schemaLoader := gojsonschema.NewStringLoader(SchemaV_06)
 	dataLoader := gojsonschema.NewGoLoader(config)
 

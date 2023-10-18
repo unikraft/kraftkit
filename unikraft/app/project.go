@@ -91,7 +91,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if !popts.skipValidation {
-		if err := schema.Validate(iface); err != nil {
+		if err := schema.Validate(ctx, iface); err != nil {
 			return nil, err
 		}
 	}

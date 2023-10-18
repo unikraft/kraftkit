@@ -134,7 +134,7 @@ type Application interface {
 	WithTarget(target.Target) (Application, error)
 
 	// Serialize and save the application to the kraftfile
-	Save() error
+	Save(context.Context) error
 
 	// Volumes to be used during runtime of an application.
 	Volumes() []*volume.VolumeConfig
@@ -791,7 +791,7 @@ func (app application) MarshalYAML() (interface{}, error) {
 	return ret, nil
 }
 
-func (app application) Save() error {
+func (app application) Save(ctx context.Context) error {
 	// Marshal the app object to YAML
 	yamlData, err := yaml.Marshal(app)
 	if err != nil {
@@ -804,7 +804,7 @@ func (app application) Save() error {
 	if err != nil {
 		return err
 	}
-	err = schema.Validate(yamlMap)
+	err = schema.Validate(ctx, yamlMap)
 	if err != nil {
 		return err
 	}
