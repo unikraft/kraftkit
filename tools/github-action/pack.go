@@ -25,7 +25,7 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		format = pack.PackageFormat(split[0])
 		output = split[1]
 	} else {
-		format = opts.target.Format()
+		format = "oci"
 	}
 
 	var err error
