@@ -34,10 +34,8 @@ import (
 )
 
 const (
-	DirectoryHandlerManifestsDir = "manifests"
-	DirectoryHandlerConfigsDir   = "configs"
-	DirectoryHandlerIndexesDir   = "indexes"
-	DirectoryHandlerLayersDir    = "layers"
+	DirectoryHandlerDigestsDir = "digests"
+	DirectoryHandlerIndexesDir = "indexes"
 )
 
 type DirectoryHandler struct {
@@ -123,29 +121,49 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			return fmt.Errorf("could not retrieve remote index: %w", err)
 		}
 
-		indexPath := filepath.Join(
-			handle.path,
-			DirectoryHandlerIndexesDir,
-			strings.ReplaceAll(fullref, ":", string(filepath.Separator))+".json",
-		)
-
 		manifests := []ocispec.Descriptor{}
+		var indexTagPath string
 
-		// Check if a local index already exists, if it does we will append the
-		// requested manifest to it.
-		if _, err := os.Stat(indexPath); err == nil {
-			localIndexRaw, err := lockedfile.Read(indexPath)
-			if err != nil {
-				return fmt.Errorf("could not read existing index: %w", err)
+		if !strings.ContainsRune(fullref, '@') && len(strings.SplitN(fullref, ":", 2)) == 2 {
+			indexTagPath = filepath.Join(
+				handle.path,
+				DirectoryHandlerIndexesDir,
+				strings.ReplaceAll(fullref, ":", string(filepath.Separator)),
+			)
+
+			if indexFi, err := os.Stat(indexTagPath); err == nil {
+				if indexFi.Mode()&fs.ModeSymlink == 0 {
+					oldIndexDigestPath, err := filepath.EvalSymlinks(indexTagPath)
+					if err != nil {
+						return err
+					}
+
+					if err := os.RemoveAll(indexTagPath); err != nil {
+						return fmt.Errorf("could not remove index symbolic link: %w", err)
+					}
+
+					// Check if a local index already exists, if it does we will append the
+					// requested manifest to it.
+					if _, err := os.Stat(oldIndexDigestPath); err == nil {
+						localIndexRaw, err := lockedfile.Read(oldIndexDigestPath)
+						if err != nil {
+							return fmt.Errorf("could not read existing index: %w", err)
+						}
+
+						localIndex := ocispec.Index{}
+						if err = json.Unmarshal(localIndexRaw, &localIndex); err != nil {
+							return fmt.Errorf("could not unmarshal raw index: %w", err)
+						}
+
+						// Save the existing local manifests
+						manifests = localIndex.Manifests
+
+						if err := os.RemoveAll(oldIndexDigestPath); err != nil {
+							return fmt.Errorf("could not remove existing index: %w", err)
+						}
+					}
+				}
 			}
-
-			localIndex := ocispec.Index{}
-			if err = json.Unmarshal(localIndexRaw, &localIndex); err != nil {
-				return fmt.Errorf("could not unmarshal raw index: %w", err)
-			}
-
-			// Save the existing local manifests
-			manifests = localIndex.Manifests
 		}
 
 		var indexRaw []byte
@@ -159,17 +177,6 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		if err = json.Unmarshal(indexRaw, &index); err != nil {
 			return fmt.Errorf("could not unmarshal raw index: %w", err)
 		}
-
-		if err = os.MkdirAll(filepath.Dir(indexPath), 0o775); err != nil {
-			return fmt.Errorf("could not make manifest parent directories: %w", err)
-		}
-
-		indexWriter, err := lockedfile.Edit(indexPath)
-		if err != nil {
-			return fmt.Errorf("could not get manifest file descriptor: %w", err)
-		}
-
-		defer indexWriter.Close()
 
 		// Remove manifests that do not match the platform selector.
 	checkManifest:
@@ -214,8 +221,38 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			return fmt.Errorf("could not marshal raw index: %w", err)
 		}
 
+		newIndexDigest := digest.FromBytes(indexRaw)
+		newIndexDigestPath := filepath.Join(
+			handle.path,
+			DirectoryHandlerDigestsDir,
+			newIndexDigest.Algorithm().String(),
+			newIndexDigest.Encoded(),
+		)
+
+		if err = os.MkdirAll(filepath.Dir(newIndexDigestPath), 0o775); err != nil {
+			return fmt.Errorf("could not make manifest parent directories: %w", err)
+		}
+
+		indexWriter, err := lockedfile.Edit(newIndexDigestPath)
+		if err != nil {
+			return fmt.Errorf("could not get manifest file descriptor: %w", err)
+		}
+
+		defer indexWriter.Close()
+
 		if _, err = indexWriter.Write(indexRaw); err != nil {
 			return fmt.Errorf("could not write manifest: %w", err)
+		}
+
+		if len(indexTagPath) > 0 {
+			// Create the parent directory if it does not exist
+			if err := os.MkdirAll(filepath.Dir(indexTagPath), 0o774); err != nil {
+				return fmt.Errorf("could not make parent directory: %w", err)
+			}
+
+			if err := os.Symlink(newIndexDigestPath, indexTagPath); err != nil {
+				return err
+			}
 		}
 
 	case ocispec.MediaTypeImageManifest:
@@ -240,9 +277,9 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 		manifestPath := filepath.Join(
 			handle.path,
-			DirectoryHandlerManifestsDir,
+			DirectoryHandlerDigestsDir,
 			dgst.Algorithm().String(),
-			dgst.Encoded()+".json",
+			dgst.Encoded(),
 		)
 
 		if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
@@ -281,9 +318,9 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 		configPath := filepath.Join(
 			handle.path,
-			DirectoryHandlerConfigsDir,
+			DirectoryHandlerDigestsDir,
 			configDgst.Algorithm,
-			configDgst.Hex+".json",
+			configDgst.Hex,
 		)
 
 		if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
@@ -389,7 +426,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 		layerPath := filepath.Join(
 			handle.path,
-			DirectoryHandlerLayersDir,
+			DirectoryHandlerDigestsDir,
 			dgst.Algorithm().String(),
 			dgst.Encoded(),
 		)
@@ -416,39 +453,12 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 // SaveDescriptor implements DescriptorSaver.
 func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
-	blobPath := handle.path
-
-	switch desc.MediaType {
-	case ocispec.MediaTypeImageConfig:
-		blobPath = filepath.Join(
-			blobPath,
-			DirectoryHandlerConfigsDir,
-			desc.Digest.Algorithm().String(),
-			desc.Digest.Encoded()+".json",
-		)
-	case ocispec.MediaTypeImageManifest:
-		blobPath = filepath.Join(
-			blobPath,
-			DirectoryHandlerManifestsDir,
-			desc.Digest.Algorithm().String(),
-			desc.Digest.Encoded()+".json",
-		)
-	case ocispec.MediaTypeImageIndex:
-		blobPath = filepath.Join(
-			blobPath,
-			DirectoryHandlerIndexesDir,
-			strings.ReplaceAll(ref, ":", string(filepath.Separator))+".json",
-		)
-	case ocispec.MediaTypeImageLayer:
-		fallthrough
-	default:
-		blobPath = filepath.Join(
-			blobPath,
-			DirectoryHandlerLayersDir,
-			desc.Digest.Algorithm().String(),
-			desc.Digest.Encoded(),
-		)
-	}
+	blobPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerDigestsDir,
+		desc.Digest.Algorithm().String(),
+		desc.Digest.Encoded(),
+	)
 
 	// Create the parent directory if it does not exist
 	if err := os.MkdirAll(filepath.Dir(blobPath), 0o774); err != nil {
@@ -459,8 +469,6 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 	if err != nil {
 		return fmt.Errorf("could not create blob: %w", err)
 	}
-
-	defer blob.Close()
 
 	var progresReader io.Reader
 	if onProgress != nil {
@@ -474,6 +482,33 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 
 	if _, err := io.Copy(blob, progresReader); err != nil {
 		return err
+	}
+
+	// Create a symbolic representing the tag if this is an index.
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageIndex:
+		if !strings.ContainsRune(ref, '@') && len(strings.SplitN(ref, ":", 2)) == 2 {
+			indexTagPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerIndexesDir,
+				strings.ReplaceAll(ref, ":", string(filepath.Separator)),
+			)
+
+			if _, err := os.Stat(indexTagPath); err == nil {
+				if err := os.RemoveAll(indexTagPath); err != nil {
+					return fmt.Errorf("could not create symbolic link to new index: %w", err)
+				}
+			}
+
+			// Create the parent directory if it does not exist
+			if err := os.MkdirAll(filepath.Dir(indexTagPath), 0o774); err != nil {
+				return fmt.Errorf("could not make parent directory: %w", err)
+			}
+
+			if err := os.Symlink(blobPath, indexTagPath); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -569,9 +604,9 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Manifest, error) {
 	manifestPath := filepath.Join(
 		handle.path,
-		DirectoryHandlerManifestsDir,
+		DirectoryHandlerDigestsDir,
 		dgst.Algorithm().String(),
-		dgst.Encoded()+".json",
+		dgst.Encoded(),
 	)
 
 	// Check whether the manifest exists
@@ -603,7 +638,7 @@ func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref str
 
 // ListManifests implements DigestResolver.
 func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*ocispec.Manifest, error) {
-	manifestsDir := filepath.Join(handle.path, DirectoryHandlerManifestsDir)
+	manifestsDir := filepath.Join(handle.path, DirectoryHandlerDigestsDir)
 	manifests := map[string]*ocispec.Manifest{}
 
 	// Create the manifest directory if it does not exist and return nil, since
@@ -628,20 +663,15 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*
 			return nil
 		}
 
-		// Skip files that don't end in .json
-		if !strings.HasSuffix(d.Name(), ".json") {
-			return nil
-		}
-
 		// Read the manifest
 		rawManifest, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return nil
 		}
 
 		manifest := ocispec.Manifest{}
 		if err = json.Unmarshal(rawManifest, &manifest); err != nil {
-			return err
+			return nil
 		}
 
 		// Append the manifest to the list
@@ -649,7 +679,7 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*
 
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not walk manifests directory: %w", err)
 	}
 
 	return manifests, nil
@@ -658,9 +688,9 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*
 func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref string, dgst digest.Digest) error {
 	manifestPath := filepath.Join(
 		handle.path,
-		DirectoryHandlerManifestsDir,
+		DirectoryHandlerDigestsDir,
 		dgst.Algorithm().String(),
-		dgst.Hex()+".json",
+		dgst.Hex(),
 	)
 
 	if _, err := os.Stat(manifestPath); err != nil {
@@ -687,7 +717,7 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 	for _, layer := range manifest.Layers {
 		layerPath := filepath.Join(
 			handle.path,
-			DirectoryHandlerLayersDir,
+			DirectoryHandlerDigestsDir,
 			layer.Digest.Algorithm().String(),
 			layer.Digest.Hex(),
 		)
@@ -699,9 +729,9 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 
 	configPath := filepath.Join(
 		handle.path,
-		DirectoryHandlerConfigsDir,
+		DirectoryHandlerDigestsDir,
 		manifest.Config.Digest.Algorithm().String(),
-		manifest.Config.Digest.Hex()+".json",
+		manifest.Config.Digest.Hex(),
 	)
 
 	if err := os.RemoveAll(configPath); err != nil {
@@ -728,12 +758,29 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 	indexPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerIndexesDir,
-		strings.ReplaceAll(fullref, ":", string(filepath.Separator))+".json",
+		strings.ReplaceAll(fullref, ":", string(filepath.Separator)),
 	)
 
 	if len(manifests) == 0 {
+		indexFi, err := os.Stat(indexPath)
+		if err != nil {
+			return fmt.Errorf("could not stat index: %w", err)
+		}
+
+		if indexFi.Mode()&fs.ModeSymlink == 0 {
+			indexDigest, err := filepath.EvalSymlinks(indexPath)
+			if err != nil {
+				return err
+			}
+
+			if err := os.RemoveAll(indexDigest); err != nil {
+				return err
+			}
+		}
+
 		// TODO(nderjung): Remove empty parent directories up until
 		// DirectoryHandlerIndexesDir.
+
 		if err := os.RemoveAll(indexPath); err != nil {
 			return fmt.Errorf("could not delete index '%s': %w", fullref, err)
 		}
@@ -772,11 +819,21 @@ func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string
 		return nil, err
 	}
 
-	indexPath := filepath.Join(
-		handle.path,
-		DirectoryHandlerIndexesDir,
-		strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator))+".json",
-	)
+	var indexPath string
+	if strings.Contains(fullref, "@") {
+		indexPath = filepath.Join(
+			handle.path,
+			DirectoryHandlerIndexesDir,
+			// TODO: Do not hardcode
+			strings.ReplaceAll(ref.Name(), "@"+digest.SHA256.String()+":", string(filepath.Separator)),
+		)
+	} else {
+		indexPath = filepath.Join(
+			handle.path,
+			DirectoryHandlerIndexesDir,
+			strings.ReplaceAll(ref.Name(), ":", string(filepath.Separator)),
+		)
+	}
 
 	// Check whether the index exists
 	if _, err := os.Stat(indexPath); err != nil {
@@ -832,24 +889,31 @@ func (handle *DirectoryHandler) ListIndexes(ctx context.Context) (map[string]*oc
 			return nil
 		}
 
-		// Skip files that don't end in .json
-		if !strings.HasSuffix(d.Name(), ".json") {
+		info, err := d.Info()
+		if err != nil {
 			return nil
+		}
+
+		imageName := strings.TrimPrefix(path, filepath.Join(handle.path, DirectoryHandlerIndexesDir)+"/")
+
+		if info.Mode()&fs.ModeSymlink == 0 {
+			path, err = filepath.EvalSymlinks(path)
+			if err != nil {
+				return nil
+			}
 		}
 
 		// Read the manifest
 		rawIndex, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return nil
 		}
 
 		index := ocispec.Index{}
 		if err = json.Unmarshal(rawIndex, &index); err != nil {
-			return err
+			return nil
 		}
 
-		imageName := strings.TrimSuffix(path, ".json")
-		imageName = strings.TrimPrefix(imageName, filepath.Join(handle.path, DirectoryHandlerIndexesDir)+"/")
 		split := strings.Split(imageName, "/")
 		identifier := split[len(split)-1]
 		imageName = fmt.Sprintf("%s:%s", strings.Join(split[:len(split)-1], "/"), identifier)
@@ -867,12 +931,13 @@ func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string)
 	indexPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerIndexesDir,
-		strings.ReplaceAll(fullref, ":", string(filepath.Separator))+".json",
+		strings.ReplaceAll(fullref, ":", string(filepath.Separator)),
 	)
 
 	// Check whether the index exists
-	if _, err := os.Stat(indexPath); err != nil {
-		return fmt.Errorf("index '%s' does not exist at '%s'", fullref, indexPath)
+	indexFi, err := os.Stat(indexPath)
+	if err != nil {
+		return nil
 	}
 
 	// Read the index
@@ -901,7 +966,23 @@ func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string)
 
 	// TODO(nderjung): Remove empty parent directories up until
 	// DirectoryHandlerIndexesDir.
-	return os.RemoveAll(indexPath)
+
+	if _, err := os.Stat(indexPath); err == nil {
+		if indexFi.Mode()&fs.ModeSymlink == 0 {
+			indexDigest, err := filepath.EvalSymlinks(indexPath)
+			if err != nil {
+				return err
+			}
+
+			if err := os.RemoveAll(indexDigest); err != nil {
+				return err
+			}
+		}
+
+		return os.RemoveAll(indexPath)
+	}
+
+	return nil
 }
 
 // progressWriter wraps an existing io.Reader and reports how much content has
@@ -942,9 +1023,9 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 	// Find the config file at the specified directory
 	configDir := filepath.Join(
 		handle.path,
-		DirectoryHandlerConfigsDir,
+		DirectoryHandlerDigestsDir,
 		configHash.Algorithm,
-		configHash.Hex+".json",
+		configHash.Hex,
 	)
 
 	// Check whether the config exists
@@ -993,7 +1074,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 		// Get the layer path
 		layerPath := filepath.Join(
 			handle.path,
-			DirectoryHandlerLayersDir,
+			DirectoryHandlerDigestsDir,
 			digest.Algorithm,
 			digest.Hex,
 		)

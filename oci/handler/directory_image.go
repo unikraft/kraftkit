@@ -48,7 +48,7 @@ func (dl DirectoryLayer) DiffID() (v1.Hash, error) {
 func (dl DirectoryLayer) Compressed() (io.ReadCloser, error) {
 	layerPath := filepath.Join(
 		dl.path,
-		DirectoryHandlerLayersDir,
+		DirectoryHandlerDigestsDir,
 		dl.digest.Algorithm,
 		dl.digest.Hex,
 	)
@@ -154,9 +154,9 @@ func (dm DirectoryManifest) RawConfigFile() ([]byte, error) {
 
 	configPath := filepath.Join(
 		dm.handle.path,
-		DirectoryHandlerConfigsDir,
+		DirectoryHandlerDigestsDir,
 		algorithm,
-		hex.EncodeToString(h.Sum(nil))+".json",
+		hex.EncodeToString(h.Sum(nil)),
 	)
 
 	// Check if the config file exists
@@ -193,9 +193,9 @@ func (dm DirectoryManifest) Manifest() (*v1.Manifest, error) {
 func (dm DirectoryManifest) RawManifest() ([]byte, error) {
 	return os.ReadFile(filepath.Join(
 		dm.handle.path,
-		DirectoryHandlerManifestsDir,
+		DirectoryHandlerDigestsDir,
 		dm.desc.Digest.Algorithm().String(),
-		dm.desc.Digest.Encoded()+".json",
+		dm.desc.Digest.Encoded(),
 	))
 }
 
@@ -293,7 +293,7 @@ func (di *DirectoryIndex) RawManifest() ([]byte, error) {
 	return os.ReadFile(filepath.Join(
 		di.handle.path,
 		DirectoryHandlerIndexesDir,
-		strings.ReplaceAll(di.fullref, ":", string(filepath.Separator))+".json",
+		strings.ReplaceAll(di.fullref, ":", string(filepath.Separator)),
 	))
 }
 
