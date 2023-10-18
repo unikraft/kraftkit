@@ -21,7 +21,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"kraftkit.sh/config"
@@ -569,14 +568,6 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		// First try without known registries
 		if _, err := handle.ResolveIndex(ctx, source); err == nil {
 			return true
-		}
-
-		if strings.ContainsRune(source, '@') {
-			if dgst, err := digest.Parse(strings.SplitN(source, "@", 2)[1]); err == nil {
-				if _, err := handle.ResolveManifest(ctx, source, dgst); err == nil {
-					return true
-				}
-			}
 		}
 
 		// Now try with known registries
