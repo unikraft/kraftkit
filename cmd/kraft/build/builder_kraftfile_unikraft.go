@@ -66,85 +66,87 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *Build, no
 	}()
 
 	if template := opts.project.Template(); template != nil {
-		var templatePack pack.Package
+		if stat, err := os.Stat(template.Path()); err != nil || !stat.IsDir() || opts.ForcePull {
+			var templatePack pack.Package
 
-		treemodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(parallel),
-				processtree.WithRenderer(norender),
-				processtree.WithFailFast(true),
-			},
-			processtree.NewProcessTreeItem(
-				fmt.Sprintf("finding %s",
-					unikraft.TypeNameVersion(template),
-				), "",
-				func(ctx context.Context) error {
-					p, err := packmanager.G(ctx).Catalog(ctx,
-						packmanager.WithName(template.Name()),
-						packmanager.WithTypes(template.Type()),
-						packmanager.WithVersion(template.Version()),
-						packmanager.WithSource(template.Source()),
-						packmanager.WithUpdate(opts.NoCache),
-						packmanager.WithAuthConfig(auths),
-					)
-					if err != nil {
-						return err
-					}
-
-					if len(p) == 0 {
-						return fmt.Errorf("could not find: %s",
-							unikraft.TypeNameVersion(template),
-						)
-					} else if len(p) > 1 {
-						return fmt.Errorf("too many options for %s",
-							unikraft.TypeNameVersion(template),
-						)
-					}
-
-					templatePack = p[0]
-					return nil
+			treemodel, err := processtree.NewProcessTree(
+				ctx,
+				[]processtree.ProcessTreeOption{
+					processtree.IsParallel(parallel),
+					processtree.WithRenderer(norender),
+					processtree.WithFailFast(true),
 				},
-			),
-		)
-		if err != nil {
-			return err
-		}
-
-		if err := treemodel.Start(); err != nil {
-			return fmt.Errorf("could not complete search: %v", err)
-		}
-
-		paramodel, err := paraprogress.NewParaProgress(
-			ctx,
-			[]*paraprogress.Process{
-				paraprogress.NewProcess(
-					fmt.Sprintf("pulling %s",
+				processtree.NewProcessTreeItem(
+					fmt.Sprintf("finding %s",
 						unikraft.TypeNameVersion(template),
-					),
-					func(ctx context.Context, w func(progress float64)) error {
-						return templatePack.Pull(
-							ctx,
-							pack.WithPullProgressFunc(w),
-							pack.WithPullWorkdir(opts.workdir),
-							// pack.WithPullChecksum(!opts.NoChecksum),
-							pack.WithPullCache(!opts.NoCache),
-							pack.WithPullAuthConfig(auths),
+					), "",
+					func(ctx context.Context) error {
+						p, err := packmanager.G(ctx).Catalog(ctx,
+							packmanager.WithName(template.Name()),
+							packmanager.WithTypes(template.Type()),
+							packmanager.WithVersion(template.Version()),
+							packmanager.WithSource(template.Source()),
+							packmanager.WithUpdate(opts.NoCache),
+							packmanager.WithAuthConfig(auths),
 						)
+						if err != nil {
+							return err
+						}
+
+						if len(p) == 0 {
+							return fmt.Errorf("could not find: %s",
+								unikraft.TypeNameVersion(template),
+							)
+						} else if len(p) > 1 {
+							return fmt.Errorf("too many options for %s",
+								unikraft.TypeNameVersion(template),
+							)
+						}
+
+						templatePack = p[0]
+						return nil
 					},
 				),
-			},
-			paraprogress.IsParallel(parallel),
-			paraprogress.WithRenderer(norender),
-			paraprogress.WithFailFast(true),
-			paraprogress.WithNameWidth(nameWidth),
-		)
-		if err != nil {
-			return err
-		}
+			)
+			if err != nil {
+				return err
+			}
 
-		if err := paramodel.Start(); err != nil {
-			return fmt.Errorf("could not pull all components: %v", err)
+			if err := treemodel.Start(); err != nil {
+				return fmt.Errorf("could not complete search: %v", err)
+			}
+
+			paramodel, err := paraprogress.NewParaProgress(
+				ctx,
+				[]*paraprogress.Process{
+					paraprogress.NewProcess(
+						fmt.Sprintf("pulling %s",
+							unikraft.TypeNameVersion(template),
+						),
+						func(ctx context.Context, w func(progress float64)) error {
+							return templatePack.Pull(
+								ctx,
+								pack.WithPullProgressFunc(w),
+								pack.WithPullWorkdir(opts.workdir),
+								// pack.WithPullChecksum(!opts.NoChecksum),
+								pack.WithPullCache(!opts.NoCache),
+								pack.WithPullAuthConfig(auths),
+							)
+						},
+					),
+				},
+				paraprogress.IsParallel(parallel),
+				paraprogress.WithRenderer(norender),
+				paraprogress.WithFailFast(true),
+				paraprogress.WithNameWidth(nameWidth),
+			)
+			if err != nil {
+				return err
+			}
+
+			if err := paramodel.Start(); err != nil {
+				return fmt.Errorf("could not pull all components: %v", err)
+			}
 		}
 
 		templateProject, err := app.NewProjectFromOptions(ctx,
@@ -172,6 +174,12 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *Build, no
 		// disk.  In this scenario, the developer is likely hacking the particular
 		// microlibrary/component.
 		if component.Path() == component.Source() {
+			continue
+		}
+
+		// Only continue to find and pull the component if it does not exist
+		// locally or the user has requested to --force-pull.
+		if stat, err := os.Stat(component.Path()); err == nil && stat.IsDir() && !opts.ForcePull {
 			continue
 		}
 
@@ -309,7 +317,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *Build, t
 		}
 	}
 
-	if !(opts.NoPull || opts.NoUpdate) {
+	if opts.ForcePull || !opts.NoUpdate {
 		model, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -335,10 +343,8 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *Build, t
 		}
 	}
 
-	if !opts.NoPull {
-		if err := build.pull(ctx, opts, norender, nameWidth); err != nil {
-			return err
-		}
+	if err := build.pull(ctx, opts, norender, nameWidth); err != nil {
+		return err
 	}
 
 	var mopts []make.MakeOption

@@ -26,6 +26,7 @@ type Build struct {
 	All          bool   `long:"all" usage:"Build all targets"`
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	ForcePull    bool   `long:"force-pull" usage:"Force pulling packages before building"`
 	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -33,7 +34,6 @@ type Build struct {
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFast       bool   `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
 	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoPull       bool   `long:"no-pull" usage:"Do not pull packages before invoking Unikraft's build system"`
 	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	Rootfs       string `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
