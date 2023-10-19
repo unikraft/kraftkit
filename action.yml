@@ -150,7 +150,7 @@ runs:
         -e "INPUT_ARCH=${{ inputs.arch }}" \
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_EXECUTE=${{ inputs.execute }}" \
-        -e "INPUT_INITRD=${{ inputs.initrd }}" \
+        -e "INPUT_ROOTFS=${{ inputs.rootfs }}" \
         -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
         -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
         -e "INPUT_MEMORY=${{ inputs.memory }}" \
