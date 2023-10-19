@@ -62,6 +62,7 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 			packmanager.WithVersion(component.Version()),
 			packmanager.WithSource(component.Source()),
 			packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+			packmanager.WithUpdate(true),
 		)
 		if err != nil {
 			return err
