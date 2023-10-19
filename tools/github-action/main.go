@@ -76,6 +76,21 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 
+	cfg, err := config.NewDefaultKraftKitConfig()
+	if err != nil {
+		return err
+	}
+
+	cfgm, err := config.NewConfigManager(
+		cfg,
+		config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
+	)
+	if err != nil {
+		return err
+	}
+
+	ctx = config.WithConfigManager(ctx, cfgm)
+
 	cmd.SetContext(ctx)
 
 	if len(opts.Workdir) == 0 {
