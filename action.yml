@@ -67,9 +67,6 @@ inputs:
   output:
     description: Set the output path.
     required: false
-  kconfig:
-    description: Include all set KConfig with the output.
-    required: false
   # If to push the output to a registry
   push:
     description: Push the output.
@@ -154,7 +151,6 @@ runs:
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_EXECUTE=${{ inputs.execute }}" \
         -e "INPUT_INITRD=${{ inputs.initrd }}" \
-        -e "INPUT_KCONFIG=${{ inputs.kconfig }}" \
         -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
         -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
         -e "INPUT_MEMORY=${{ inputs.memory }}" \

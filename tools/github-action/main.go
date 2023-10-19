@@ -43,13 +43,12 @@ type GithubAction struct {
 	Timeout uint64 `long:"timeout" env:"INPUT_TIMEOUT" usage:"Timeout for the unikernel"`
 
 	// Packaging flags
-	Args    []string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
-	Rootfs  string   `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
-	Memory  string   `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
-	Name    string   `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
-	Output  string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
-	Kconfig bool     `long:"kconfig" env:"INPUT_KCONFIG" usage:"Include all set KConfig with the output"`
-	Push    bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
+	Args   []string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
+	Rootfs string   `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
+	Memory string   `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
+	Name   string   `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
+	Output string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
+	Push   bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
 
 	// Internal attributes
 	project    app.Application

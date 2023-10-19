@@ -61,7 +61,7 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 
 	popts := []packmanager.PackOption{
 		packmanager.PackInitrd(opts.initrdPath),
-		packmanager.PackKConfig(opts.Kconfig),
+		packmanager.PackKConfig(true),
 		packmanager.PackName(output),
 	}
 
