@@ -27,7 +27,8 @@ import (
 type GithubAction struct {
 	// Input arguments for the action
 	// Global flags
-	Loglevel string `long:"loglevel" env:"INPUT_LOGLEVEL" usage:"" default:"info"`
+	Loglevel   string `long:"loglevel" env:"INPUT_LOGLEVEL" usage:"" default:"info"`
+	RuntimeDir string `long:"runtimedir" env:"INPUT_RUNTIMEDIR" usage:"Path to store runtime artifacts"`
 
 	// Project flags
 	Workdir   string `long:"workdir" env:"INPUT_WORKDIR" usage:"Path to working directory (default is cwd)"`
@@ -86,6 +87,10 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	)
 	if err != nil {
 		return err
+	}
+
+	if opts.RuntimeDir != "" {
+		cfgm.Config.RuntimeDir = opts.RuntimeDir
 	}
 
 	ctx = config.WithConfigManager(ctx, cfgm)
