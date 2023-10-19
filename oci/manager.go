@@ -257,9 +257,14 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		return nil, err
 	}
 
-	auths, err := defaultAuths(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not access credentials: %w", err)
+	var auths map[string]config.AuthConfig
+	if query.Auths() == nil {
+		auths, err = defaultAuths(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not access credentials: %w", err)
+		}
+	} else {
+		auths = query.Auths()
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
