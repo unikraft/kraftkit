@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 	"kraftkit.sh/kconfig"
@@ -123,11 +124,24 @@ func parseStringProp(entry string) map[string]interface{} {
 			component["version"] = v
 		}
 
-	} else if u, err := url.Parse(entry); err == nil && u.Host != "" {
-		component["source"] = entry
+		// Remove known extensions
+		u.Path = strings.TrimSuffix(u.Path, ".git")
+		u.Path = strings.TrimSuffix(u.Path, ".tar.gz")
 
-		if v := urlHasVersion(u); len(v) > 0 {
-			component["version"] = v
+		// Remove any leading /
+		u.Path = strings.TrimPrefix(u.Path, "/")
+
+		split := strings.Split(u.Path, "/")
+		var name string
+		if len(split) > 1 {
+			name = split[len(split)-1]
+		} else {
+			name = u.Path
+		}
+
+		_, name, _, err = unikraft.GuessTypeNameVersion(name)
+		if err == nil {
+			component["name"] = name
 		}
 
 	} else {
