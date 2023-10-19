@@ -85,7 +85,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: false
-          load: true
           tags: kraftkit.sh/github-action:v0
           platforms: linux/amd64
           file: ./buildenvs/github-action.Dockerfile

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -60,7 +61,8 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 			packmanager.WithTypes(component.Type()),
 			packmanager.WithVersion(component.Version()),
 			packmanager.WithSource(component.Source()),
-			// packmanager.WithAuthConfig(auths),
+			packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+			packmanager.WithUpdate(true),
 		)
 		if err != nil {
 			return err
@@ -83,7 +85,7 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 		if err := p.Pull(
 			ctx,
 			pack.WithPullWorkdir(opts.Workdir),
-			// pack.WithPullAuthConfig(auths),
+			pack.WithPullAuthConfig(config.G[config.KraftKit](ctx).Auth),
 		); err != nil {
 			return err
 		}

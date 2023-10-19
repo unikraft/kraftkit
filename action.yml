@@ -15,6 +15,10 @@ inputs:
     required: false
     default: error
   
+  runtimedir:
+    description: Path to store runtime artifacts
+    required: false
+  
   #
   # Project flags
   #
@@ -67,9 +71,6 @@ inputs:
   output:
     description: Set the output path.
     required: false
-  kconfig:
-    description: Include all set KConfig with the output.
-    required: false
   # If to push the output to a registry
   push:
     description: Push the output.
@@ -98,9 +99,6 @@ runs:
         --name buildkitd_${GITHUB_RUN_ID} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.12.1
-  - name: Pull KraftKit GitHub Action
-    shell: bash
-    run: docker pull kraftkit.sh/github-action:v0
   - name: Run kraft
     shell: bash
     run: |
@@ -153,8 +151,7 @@ runs:
         -e "INPUT_ARCH=${{ inputs.arch }}" \
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_EXECUTE=${{ inputs.execute }}" \
-        -e "INPUT_INITRD=${{ inputs.initrd }}" \
-        -e "INPUT_KCONFIG=${{ inputs.kconfig }}" \
+        -e "INPUT_ROOTFS=${{ inputs.rootfs }}" \
         -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
         -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
         -e "INPUT_MEMORY=${{ inputs.memory }}" \
@@ -162,6 +159,7 @@ runs:
         -e "INPUT_OUTPUT=${{ inputs.output }}" \
         -e "INPUT_PLAT=${{ inputs.plat }}" \
         -e "INPUT_PUSH=${{ inputs.push }}" \
+        -e "INPUT_RUNTIMEDIR=${{ inputs.runtimedir }}" \
         -e "INPUT_TARGET=${{ inputs.target }}" \
         -e "INPUT_TIMEOUT=${{ inputs.timeout }}" \
         -e "INPUT_WORKDIR=${{ inputs.workdir }}" \
@@ -182,4 +180,4 @@ runs:
   - name: Stop BuildKit
     if: always()
     shell: bash
-    run: docker stop buildkitd_${GITHUB_RUN_ID}
+    run: docker stop buildkitd_${GITHUB_RUN_ID} || true

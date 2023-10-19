@@ -26,7 +26,7 @@ func (opts *GithubAction) build(ctx context.Context) error {
 		make.WithExecOptions(
 			exec.WithStdin(iostreams.G(ctx).In),
 			exec.WithStdout(log.G(ctx).Writer()),
-			exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+			exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
 		),
 	); err != nil {
 		return fmt.Errorf("could not configure project: %w", err)
@@ -39,7 +39,7 @@ func (opts *GithubAction) build(ctx context.Context) error {
 			make.WithMaxJobs(true),
 			make.WithExecOptions(
 				exec.WithStdout(log.G(ctx).Writer()),
-				exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+				exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
 			),
 		),
 	)

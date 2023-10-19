@@ -8,10 +8,8 @@ require (
 	github.com/spf13/cobra v1.7.0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.4
-	kraftkit.sh v0.6.4-108-g28b7051
+	kraftkit.sh v0.6.7-251-gbb138e4
 )
-
-replace kraftkit.sh => ../..
 
 require (
 	api.zip v0.1.5 // indirect
