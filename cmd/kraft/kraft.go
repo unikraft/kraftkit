@@ -140,6 +140,9 @@ func main() {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
+	// Add the kraftkit version to the debug logs
+	log.G(ctx).Debugf("kraftkit %s", kitversion.Version())
+
 	if !config.G[config.KraftKit](ctx).NoCheckUpdates {
 		if err := kitupdate.Check(ctx); err != nil {
 			log.G(ctx).Debugf("could not check for updates: %v", err)
