@@ -31,4 +31,14 @@ func RegisterFlags() {
 			"Use Git when pulling sources",
 		),
 	)
+
+	cmdfactory.RegisterFlag(
+		"kraft build",
+		cmdfactory.BoolVarP(
+			&useGit,
+			"git", "g",
+			false,
+			"Use Git when pulling sources",
+		),
+	)
 }
