@@ -117,6 +117,9 @@ func (opts *Build) Run(cmd *cobra.Command, args []string) error {
 
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
+	if len(selected) == 0 {
+		return fmt.Errorf("no targets to build")
+	}
 	if !opts.All {
 		selected = target.Filter(
 			selected,
