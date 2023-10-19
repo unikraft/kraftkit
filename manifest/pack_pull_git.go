@@ -123,7 +123,6 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		SingleBranch:      true,
 		Tags:              git.NoTags,
 		NoCheckout:        false,
-		Depth:             1,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 		Progress: cloneProgress{
 			onProgress:     popts.OnProgress,
@@ -132,6 +131,11 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 			once:           &sync.Once{},
 		},
 	}
+
+	if gitCloneDepth > 0 {
+		copts.Depth = gitCloneDepth
+	}
+
 	path := manifest.Origin
 
 	// Is this an SSH URL?
@@ -189,11 +193,14 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		return fmt.Errorf("could not place component package: %w", err)
 	}
 
-	log.G(ctx).
+	entry := log.G(ctx).
 		WithField("from", path).
 		WithField("to", local).
-		WithField("branch", version).
-		Infof("git clone")
+		WithField("branch", version)
+	if gitCloneDepth > 0 {
+		entry = entry.WithField("depth", gitCloneDepth)
+	}
+	entry.Infof("git clone")
 
 	_, err = git.PlainCloneContext(ctx, local, false, copts)
 	switch {
