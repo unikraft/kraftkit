@@ -99,9 +99,6 @@ runs:
         --name buildkitd_${GITHUB_RUN_ID} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.12.1
-  - name: Pull KraftKit GitHub Action
-    shell: bash
-    run: docker pull kraftkit.sh/github-action:v0
   - name: Run kraft
     shell: bash
     run: |
