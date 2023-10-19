@@ -180,4 +180,4 @@ runs:
   - name: Stop BuildKit
     if: always()
     shell: bash
-    run: docker stop buildkitd_${GITHUB_RUN_ID}
+    run: docker stop buildkitd_${GITHUB_RUN_ID} || true
