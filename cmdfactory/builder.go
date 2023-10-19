@@ -319,6 +319,13 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 			// Unknown kind on field " + fieldType.Name + " on " + objValue.Type().Name()
 			continue
 		}
+
+		hidden := fieldType.Tag.Get("hidden")
+		if hidden == "true" {
+			if err := flags.MarkHidden(name); err != nil {
+				return err
+			}
+		}
 	}
 
 	c.PersistentPreRunE = bind(c.PersistentPreRunE, arrays, slices, maps, optInt, optBool, optString, envs)

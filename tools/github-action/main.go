@@ -44,7 +44,7 @@ type GithubAction struct {
 
 	// Packaging flags
 	Args    []string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
-	InitRd  string   `long:"initrd" env:"INPUT_INITRD" usage:"Include an initrd at path"`
+	Rootfs  string   `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
 	Memory  string   `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
 	Name    string   `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
 	Output  string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
@@ -52,8 +52,9 @@ type GithubAction struct {
 	Push    bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
 
 	// Internal attributes
-	project app.Application
-	target  target.Target
+	project    app.Application
+	target     target.Target
+	initrdPath string
 }
 
 func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {

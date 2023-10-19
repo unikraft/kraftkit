@@ -116,7 +116,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 
 // Prepare implements Runner.
 func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
-	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx, runner.exePath)
+	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx)
 	if err != nil {
 		return err
 	}
@@ -127,12 +127,12 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *mac
 		return err
 	}
 
-	// TODO(nderjung): For now, there is no proper support for using the --initrd
+	// TODO(nderjung): For now, there is no proper support for using the --rootfs
 	// flag since we set Linux userspace application as the initramfs.  In the
 	// future when we have better volume/filesystem support, we can re-think its
 	// use here.
-	if len(opts.InitRd) > 0 {
-		log.G(ctx).Warnf("ignoring --initrd in favour of Linux userspace binary")
+	if len(opts.Rootfs) > 0 {
+		log.G(ctx).Warnf("ignoring --rootfs in favour of Linux userspace binary")
 	}
 
 	paramodel, err := paraprogress.NewParaProgress(

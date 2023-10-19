@@ -15,26 +15,28 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-// runnerProject is the runner for a path to a project which either uses the
-// only provided target (single) or one specified via the -t|--target flag
-// (multiple), e.g.:
+// runnerKraftfileUnikraft is the runner for a path to a project which was built
+// from source using the provided unikraft source and any auxiliary microlibrary
+// components given a provided target (single) or one specified via the
+// -t|--target flag (multiple), e.g.:
 //
 //	$ kraft run                            // single target in cwd.
 //	$ kraft run path/to/project            // single target at path.
 //	$ kraft run -t target                  // multiple targets in cwd.
 //	$ kraft run -t target path/to/project  // multiple targets at path.
-type runnerProject struct {
+type runnerKraftfileUnikraft struct {
 	workdir string
 	args    []string
+	project app.Application
 }
 
 // String implements Runner.
-func (runner *runnerProject) String() string {
-	return "project"
+func (runner *runnerKraftfileUnikraft) String() string {
+	return "kraftfile-unikraft"
 }
 
 // Runnable implements Runner.
-func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
 	var err error
 
 	cwd, err := os.Getwd()
@@ -57,11 +59,6 @@ func (runner *runnerProject) Runnable(ctx context.Context, opts *Run, args ...st
 		return false, fmt.Errorf("path is not project: %s", runner.workdir)
 	}
 
-	return true, nil
-}
-
-// Prepare implements Runner.
-func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(runner.workdir),
 	}
@@ -72,14 +69,25 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 		popts = append(popts, app.WithProjectDefaultKraftfiles())
 	}
 
-	project, err := app.NewProjectFromOptions(ctx, popts...)
+	runner.project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
-		return fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
+		return false, fmt.Errorf("could not instantiate project directory %s: %v", runner.workdir, err)
 	}
+
+	if runner.project.Unikraft(ctx) == nil {
+		return false, fmt.Errorf("cannot run project build without unikraft")
+	}
+
+	return true, nil
+}
+
+// Prepare implements Runner.
+func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+	var err error
 
 	// Filter project targets by any provided CLI options
 	targets := target.Filter(
-		project.Targets(),
+		runner.project.Targets(),
 		opts.Architecture,
 		opts.platform.String(),
 		opts.Target,
@@ -106,14 +114,36 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 
 	// Provide a meaningful name
 	targetName := t.Name()
-	if targetName == project.Name() || targetName == "" {
+	if targetName == runner.project.Name() || targetName == "" {
 		targetName = t.Platform().Name() + "/" + t.Architecture().Name()
 	}
 
-	machine.Spec.Kernel = "project://" + project.Name() + ":" + targetName
+	machine.Spec.Kernel = "project://" + runner.project.Name() + ":" + targetName
 	machine.Spec.Architecture = t.Architecture().Name()
 	machine.Spec.Platform = t.Platform().Name()
-	machine.Spec.ApplicationArgs = runner.args
+
+	if len(runner.args) == 0 {
+		runner.args = runner.project.Command()
+	}
+
+	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = runner.project.Rootfs()
+	}
+
+	var kernelArgs []string
+	var appArgs []string
+
+	for _, arg := range runner.args {
+		if arg == "--" {
+			kernelArgs = appArgs
+			appArgs = []string{}
+			continue
+		}
+		appArgs = append(appArgs, arg)
+	}
+
+	machine.Spec.KernelArgs = kernelArgs
+	machine.Spec.ApplicationArgs = appArgs
 
 	// Use the symbolic debuggable kernel image?
 	if opts.WithKernelDbg {
@@ -122,12 +152,12 @@ func (runner *runnerProject) Prepare(ctx context.Context, opts *Run, machine *ma
 		machine.Status.KernelPath = t.Kernel()
 	}
 
-	if len(opts.InitRd) > 0 {
-		machine.Status.InitrdPath = opts.InitRd
-	}
-
 	if _, err := os.Stat(machine.Status.KernelPath); err != nil && os.IsNotExist(err) {
 		return fmt.Errorf("cannot run the selected project target '%s' without building the kernel: try running `kraft build` first: %w", targetName, err)
+	}
+
+	if err := opts.parseKraftfileVolumes(ctx, runner.project, machine); err != nil {
+		return err
 	}
 
 	return nil

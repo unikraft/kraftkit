@@ -91,7 +91,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	if !popts.skipValidation {
-		if err := schema.Validate(iface); err != nil {
+		if err := schema.Validate(ctx, iface); err != nil {
 			return nil, err
 		}
 	}
@@ -142,7 +142,9 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		projectName = normalizeProjectName(projectName)
 	}
 
-	popts.kconfig.OverrideBy(app.unikraft.KConfig())
+	if app.unikraft != nil {
+		popts.kconfig.OverrideBy(app.unikraft.KConfig())
+	}
 
 	for _, library := range app.libraries {
 		popts.kconfig.OverrideBy(library.KConfig())
@@ -167,12 +169,16 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithFilename(app.filename),
 		WithOutDir(app.outDir),
 		WithUnikraft(app.unikraft),
+		WithRuntime(app.elfloader),
+		WithRootfs(app.rootfs),
 		WithTemplate(app.template),
+		WithCommand(app.command...),
 		WithLibraries(app.libraries),
 		WithTargets(app.targets),
 		WithConfiguration(popts.kconfig.Slice()...),
 		WithExtensions(app.extensions),
 		WithKraftfile(popts.kraftfile),
+		WithVolumes(app.volumes...),
 	)
 	if err != nil {
 		return nil, err

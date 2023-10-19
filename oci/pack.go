@@ -57,7 +57,7 @@ type ociPackage struct {
 	plat    plat.Platform
 	kconfig kconfig.KeyValueMap
 	kernel  string
-	initrd  *initrd.InitrdConfig
+	initrd  initrd.Initrd
 	command []string
 }
 
@@ -139,6 +139,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
+		"src":  ocipack.Kernel(),
 		"dest": WellKnownKernelPath,
 	}).Debug("oci: including kernel")
 
@@ -158,37 +159,19 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if popts.Initrd() != "" {
-		log.G(ctx).Debug("oci: including initrd")
-		initRdPath := popts.Initrd()
-		if f, err := os.Stat(initRdPath); err == nil && f.IsDir() {
-			cwd, err2 := os.Getwd()
-			if err2 != nil {
-				return nil, fmt.Errorf("could not get current working directory: %w", err)
-			}
+		log.G(ctx).
+			WithField("src", popts.Initrd()).
+			WithField("dest", WellKnownInitrdPath).
+			Debug("oci: including initrd")
 
-			file, err := os.CreateTemp("", "kraftkit-oci-archive-*")
-			if err != nil {
-				return nil, fmt.Errorf("could not create new temporary file: %w", err)
-			}
-			defer os.Remove(file.Name())
-
-			cfg, err2 := initrd.NewFromMapping(cwd,
-				file.Name(),
-				fmt.Sprintf("%s:/", initRdPath))
-			if err2 != nil {
-				return nil, err2
-			}
-
-			initRdPath = cfg.Output
-		}
 		layer, err := NewLayerFromFile(ctx,
 			ocispec.MediaTypeImageLayer,
-			initRdPath,
+			popts.Initrd(),
 			WellKnownInitrdPath,
 			WithLayerAnnotation(AnnotationKernelInitrdPath, WellKnownInitrdPath),
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could build layer from file: %w", err)
 		}
 		defer os.Remove(layer.tmp)
 
@@ -220,29 +203,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	if version := popts.KernelVersion(); len(version) > 0 {
 		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
 		ocipack.manifest.SetOSVersion(ctx, version)
-	}
-
-	if popts.PackKConfig() {
-		log.G(ctx).Debug("oci: including list of kconfig as features")
-
-		// TODO(nderjung): Not sure if these filters are best placed here or
-		// elsewhere.
-		skippable := set.NewStringSet(
-			"CONFIG_UK_APP",
-			"CONFIG_UK_BASE",
-		)
-		for _, k := range ocipack.KConfig() {
-			// Filter out host-specific KConfig options.
-			if skippable.Contains(k.Key) {
-				continue
-			}
-
-			log.G(ctx).
-				WithField(k.Key, k.Value).
-				Trace("oci: feature")
-
-			ocipack.manifest.SetOSFeature(ctx, k.String())
-		}
 	}
 
 	ocipack.manifest.SetCmd(ctx, ocipack.Command())
@@ -294,7 +254,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			return ocipack.manifest.config.OSFeatures[j] > ocipack.manifest.config.OSFeatures[i]
 		})
 
-		newManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+		newManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 			Architecture: ocipack.manifest.config.Architecture,
 			OS:           ocipack.manifest.config.OS,
 			OSVersion:    ocipack.manifest.config.OSVersion,
@@ -307,7 +267,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		var manifests []*Manifest
 
 		for _, existingManifest := range index.manifests {
-			existingManifestChecksum, err := PlatformChecksum(&ocispec.Platform{
+			existingManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 				Architecture: existingManifest.config.Architecture,
 				OS:           existingManifest.config.OS,
 				OSVersion:    existingManifest.config.OSVersion,
@@ -337,6 +297,29 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+
+	if popts.PackKConfig() {
+		log.G(ctx).Debug("oci: including list of kconfig as features")
+
+		// TODO(nderjung): Not sure if these filters are best placed here or
+		// elsewhere.
+		skippable := set.NewStringSet(
+			"CONFIG_UK_APP",
+			"CONFIG_UK_BASE",
+		)
+		for _, k := range ocipack.KConfig() {
+			// Filter out host-specific KConfig options.
+			if skippable.Contains(k.Key) {
+				continue
+			}
+
+			log.G(ctx).
+				WithField(k.Key, k.Value).
+				Trace("oci: feature")
+
+			ocipack.manifest.SetOSFeature(ctx, k.String())
+		}
+	}
 
 	if err := index.AddManifest(ctx, ocipack.manifest); err != nil {
 		return nil, fmt.Errorf("could not add manifest to index: %w", err)
@@ -483,6 +466,12 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 
 	ocipack.plat = platform.(plat.Platform)
 
+	ocipack.kconfig = kconfig.KeyValueMap{}
+	for _, feature := range ocipack.manifest.config.OSFeatures {
+		_, kval := kconfig.NewKeyValue(feature)
+		ocipack.kconfig.Override(kval)
+	}
+
 	return &ocipack, nil
 }
 
@@ -498,7 +487,7 @@ func (ocipack *ociPackage) Name() string {
 
 // Name implements fmt.Stringer
 func (ocipack *ociPackage) String() string {
-	return ocipack.ref.Context().Name()
+	return ocipack.imageRef()
 }
 
 // Version implements unikraft.Nameable
@@ -588,7 +577,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
 		if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
-			ocipack.initrd, err = initrd.NewFromFile(popts.Workdir(), initrdPath)
+			ocipack.initrd, err = initrd.New(ctx, initrdPath)
 			if err != nil {
 				return err
 			}
@@ -687,16 +676,12 @@ func (ocipack *ociPackage) KernelDbg() string {
 }
 
 // Initrd implements unikraft.target.Target
-func (ocipack *ociPackage) Initrd() *initrd.InitrdConfig {
+func (ocipack *ociPackage) Initrd() initrd.Initrd {
 	return ocipack.initrd
 }
 
 // Command implements unikraft.target.Target
 func (ocipack *ociPackage) Command() []string {
-	if len(ocipack.command) == 0 {
-		return []string{"--"}
-	}
-
 	return ocipack.command
 }
 

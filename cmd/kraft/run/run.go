@@ -8,9 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,13 +17,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -39,7 +33,7 @@ type Run struct {
 	Architecture  string   `long:"arch" short:"m" usage:"Set the architecture"`
 	Detach        bool     `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool     `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
-	InitRd        string   `long:"initrd" usage:"Use the specified initrd"`
+	InitRd        string   `long:"initrd" usage:"Use the specified initrd (readonly)" hidden:"true"`
 	IP            string   `long:"ip" usage:"Assign the provided IP address"`
 	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
 	Kraftfile     string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -49,11 +43,13 @@ type Run struct {
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
 	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 
+	workdir           string
 	platform          mplatform.Platform
 	networkDriver     string
 	networkName       string
@@ -94,19 +90,16 @@ func New() *cobra.Command {
 			$ kraft run a.out
 
 			Supply an initramfs CPIO archive file to the unikernel for its rootfs:
-			$ kraft run --initrd ./initramfs.cpio
+			$ kraft run --rootfs ./initramfs.cpio
 
 			Supply a path which is dynamically serialized into an initramfs CPIO archive:
-			$ kraft run --initrd ./path/to/rootfs
-
-			Specify a specific path which is dynamically serialized into initramfs and map it to /dir in the unikernel:
-			$ kraft run --initrd ./path/to/dir:/dir
+			$ kraft run --rootfs ./path/to/rootfs
 
 			Mount a bi-directional path from on the host to the unikernel mapped to /dir:
 			$ kraft run -v ./path/to/dir:/dir
 
 			Supply a read-only root file system at / via initramfs CPIO archive and mount a bi-directional volume at /dir:
-			$ kraft run --initrd ./initramfs.cpio:/ --volume ./path/to/dir:/dir
+			$ kraft run --rootfs ./initramfs.cpio --volume ./path/to/dir:/dir
 
 			Customize the default content directory of the official Unikraft NGINX OCI-compatible unikernel and map port 8080 to localhost:
 			$ kraft run -v ./path/to/html:/nginx/html -p 8080:80 unikraft.org/nginx:latest
@@ -222,6 +215,17 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	if opts.InitRd != "" {
+		log.G(ctx).Warn("the --initrd flag is deprecated in favour of --rootfs")
+
+		if opts.Rootfs != "" {
+			log.G(ctx).Warn("both --initrd and --rootfs are set! ignorning value of --initrd")
+		} else {
+			log.G(ctx).Warn("for backwards-compatibility reasons the value of --initrd is set to --rootfs")
+			opts.Rootfs = opts.InitRd
+		}
+	}
+
 	return nil
 }
 
@@ -312,59 +316,8 @@ func (opts *Run) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// If the user has supplied an initram path, set this now, this overrides any
-	// preparation and is considered higher priority compared to what has been set
-	// prior to this point.
-	if opts.InitRd != "" {
-		if machine.ObjectMeta.UID == "" {
-			machine.ObjectMeta.UID = uuid.NewUUID()
-		}
-
-		if len(machine.Status.StateDir) == 0 {
-			machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
-		}
-
-		if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
-			return fmt.Errorf("could not make machine state dir: %w", err)
-		}
-
-		var ramfs *initrd.InitrdConfig
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("could not get current working directory: %w", err)
-		}
-
-		if strings.Contains(opts.InitRd, initrd.InputDelimeter) {
-			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
-
-			log.G(ctx).
-				WithField("output", output).
-				Debug("serializing initramfs cpio archive")
-
-			ramfs, err = initrd.NewFromMapping(cwd, output, opts.InitRd)
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		} else if f, err := os.Stat(opts.InitRd); err == nil && f.IsDir() {
-			output := filepath.Join(machine.Status.StateDir, "initramfs.cpio")
-
-			log.G(ctx).
-				WithField("output", output).
-				Debug("serializing initramfs cpio archive")
-
-			ramfs, err = initrd.NewFromMapping(cwd, output, fmt.Sprintf("%s:/", opts.InitRd))
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		} else {
-			ramfs, err = initrd.NewFromFile(cwd, opts.InitRd)
-			if err != nil {
-				return fmt.Errorf("could not prepare initramfs: %w", err)
-			}
-		}
-
-		machine.Spec.Rootfs = fmt.Sprintf("cpio+%s://%s", ramfs.Format, ramfs.Output)
-		machine.Status.InitrdPath = ramfs.Output
+	if err := opts.prepareRootfs(ctx, machine); err != nil {
+		return err
 	}
 
 	// Create the machine

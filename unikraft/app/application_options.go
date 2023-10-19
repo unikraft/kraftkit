@@ -11,8 +11,10 @@ import (
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
@@ -51,7 +53,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 		ac.outDir = filepath.Join(ac.workingDir, unikraft.BuildDir)
 	}
 
-	if len(ac.unikraft.Source()) > 0 {
+	if ac.unikraft != nil && len(ac.unikraft.Source()) > 0 {
 		if p, err := os.Stat(ac.unikraft.Source()); err == nil && p.IsDir() {
 			ac.configuration.Set(unikraft.UK_BASE, ac.unikraft.Source())
 		}
@@ -109,16 +111,40 @@ func WithOutDir(outDir string) ApplicationOption {
 	}
 }
 
+// WithRuntime sets the application's elfloader runtime
+func WithRuntime(runtime *elfloader.ELFLoader) ApplicationOption {
+	return func(ac *application) error {
+		ac.elfloader = runtime
+		return nil
+	}
+}
+
+// WithRootfs sets the application's rootfs
+func WithRootfs(rootfs string) ApplicationOption {
+	return func(ac *application) error {
+		ac.rootfs = rootfs
+		return nil
+	}
+}
+
 // WithTemplate sets the application's template
-func WithTemplate(template template.TemplateConfig) ApplicationOption {
+func WithTemplate(template *template.TemplateConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.template = template
 		return nil
 	}
 }
 
+// WithCommand sets the command-line arguments for the application.
+func WithCommand(command ...string) ApplicationOption {
+	return func(ac *application) error {
+		ac.command = command
+		return nil
+	}
+}
+
 // WithUnikraft sets the application's core
-func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
+func WithUnikraft(unikraft *core.UnikraftConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.unikraft = unikraft
 		return nil
@@ -126,7 +152,7 @@ func WithUnikraft(unikraft core.UnikraftConfig) ApplicationOption {
 }
 
 // WithLibraries sets the application's library list
-func WithLibraries(libraries lib.Libraries) ApplicationOption {
+func WithLibraries(libraries map[string]*lib.LibraryConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.libraries = libraries
 		return nil
@@ -165,6 +191,14 @@ func WithConfiguration(config ...*kconfig.KeyValue) ApplicationOption {
 		}
 
 		ac.configuration.Override(config...)
+		return nil
+	}
+}
+
+// WithVolumes sets the list of volumes to be supplied to the unikernel
+func WithVolumes(volumes ...*volume.VolumeConfig) ApplicationOption {
+	return func(ac *application) error {
+		ac.volumes = volumes
 		return nil
 	}
 }

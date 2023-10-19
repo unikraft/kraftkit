@@ -27,13 +27,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
+	"kraftkit.sh/unikraft/template"
 )
 
 // TransformerFunc defines a function to perform the actual transformation
@@ -83,15 +85,17 @@ func Transform(ctx context.Context, source interface{}, target interface{}, addi
 
 func createTransformHook(ctx context.Context, additionalTransformers ...Transformer) mapstructure.DecodeHookFuncType {
 	transforms := map[reflect.Type]TransformerFunc{
-		reflect.TypeOf(map[string]string{}):       transformMapStringString,
-		reflect.TypeOf(kconfig.KeyValueMap{}):     transformKConfig,
-		reflect.TypeOf(target.Command{}):          transformCommand,
-		reflect.TypeOf(arch.ArchitectureConfig{}): arch.TransformFromSchema,
-		reflect.TypeOf(plat.PlatformConfig{}):     plat.TransformFromSchema,
-		reflect.TypeOf(target.TargetConfig{}):     target.TransformFromSchema,
-		reflect.TypeOf(initrd.InitrdConfig{}):     transformInitrd,
-		reflect.TypeOf(lib.Libraries{}):           lib.TransformMapFromSchema,
-		reflect.TypeOf(core.UnikraftConfig{}):     core.TransformFromSchema,
+		reflect.TypeOf(map[string]string{}):             transformMapStringString,
+		reflect.TypeOf(kconfig.KeyValueMap{}):           transformKConfig,
+		reflect.TypeOf(target.Command{}):                transformCommand,
+		reflect.TypeOf(arch.ArchitectureConfig{}):       arch.TransformFromSchema,
+		reflect.TypeOf(plat.PlatformConfig{}):           plat.TransformFromSchema,
+		reflect.TypeOf(target.TargetConfig{}):           target.TransformFromSchema,
+		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
+		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
+		reflect.TypeOf(elfloader.ELFLoader{}):           elfloader.TransformFromSchema,
+		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
+		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -134,23 +138,6 @@ var transformMapStringString TransformerFunc = func(_ context.Context, data inte
 		return value, nil
 	default:
 		return data, errors.Errorf("invalid type %T for map[string]string", value)
-	}
-}
-
-var transformInitrd TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
-	switch value := data.(type) {
-	case map[string]interface{}:
-		if format, ok := value["format"]; ok {
-			if typ, ok := initrd.NameToType[format.(string)]; ok {
-				value["format"] = typ
-			} else {
-				return value, errors.Errorf("invalid option for initrd type: %s", format)
-			}
-		}
-
-		return value, nil
-	default:
-		return data, errors.Errorf("invalid type %T for platform", value)
 	}
 }
 

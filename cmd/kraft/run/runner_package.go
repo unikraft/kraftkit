@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -165,10 +166,20 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *ma
 	machine.Spec.ApplicationArgs = runner.args
 
 	// Set the path to the initramfs if present.
-	if opts.InitRd == "" && targ.Initrd() != nil {
-		machine.Status.InitrdPath = targ.Initrd().Output
-	} else if len(opts.InitRd) > 0 {
-		machine.Status.InitrdPath = opts.InitRd
+	var ramfs initrd.Initrd
+	if opts.Rootfs == "" && targ.Initrd() != nil {
+		ramfs = targ.Initrd()
+	} else if len(opts.Rootfs) > 0 {
+		ramfs, err = initrd.New(ctx, opts.Rootfs)
+		if err != nil {
+			return err
+		}
+	}
+	if ramfs != nil {
+		machine.Status.InitrdPath, err = ramfs.Build(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Use the symbolic debuggable kernel image?

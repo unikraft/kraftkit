@@ -117,6 +117,7 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 	}
 
 	log.G(ctx).WithFields(logrus.Fields{
+		"src":       layer.blob.src,
 		"dest":      layer.dst,
 		"digest":    layer.blob.desc.Digest.String(),
 		"mediaType": layer.blob.desc.MediaType,

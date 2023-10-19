@@ -32,6 +32,12 @@ type TemplateConfig struct {
 	// source of the template (can be either remote or local, this attribute is
 	// ultimately handled by the packmanager).
 	source string
+
+	// path to the template.
+	path string
+
+	// kconfig associated with the template.
+	kconfig kconfig.KeyValueMap
 }
 
 // NewTemplateFromOptions creates a new template configuration
@@ -72,7 +78,7 @@ func (tc TemplateConfig) Type() unikraft.ComponentType {
 }
 
 func (tc TemplateConfig) Path() string {
-	return ""
+	return tc.path
 }
 
 // KConfigTree returns the path to the kconfig file of the template
@@ -81,7 +87,7 @@ func (tc TemplateConfig) KConfigTree(context.Context, ...*kconfig.KeyValue) (*kc
 }
 
 func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
-	return nil
+	return tc.kconfig
 }
 
 func (tc TemplateConfig) MarshalYAML() (interface{}, error) {

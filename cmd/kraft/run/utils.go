@@ -3,16 +3,25 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/containerd/nerdctl/pkg/strutil"
+	"github.com/dustin/go-humanize"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	volumeapi "kraftkit.sh/api/volume/v1alpha1"
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
 	"kraftkit.sh/machine/volume"
+	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app"
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
@@ -173,6 +182,103 @@ func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) 
 		}
 
 		machine.Spec.Volumes = append(machine.Spec.Volumes, *vol)
+	}
+
+	return nil
+}
+
+// Were any volumes supplied in the Kraftfile
+func (opts *Run) parseKraftfileVolumes(ctx context.Context, project app.Application, machine *machineapi.Machine) error {
+	if project.Volumes() == nil {
+		return nil
+	}
+
+	var err error
+	controllers := map[string]volumeapi.VolumeService{}
+	machine.Spec.Volumes = []volumeapi.Volume{}
+
+	for _, volcfg := range project.Volumes() {
+		driver := volcfg.Driver()
+
+		if len(driver) == 0 {
+			for sname, strategy := range volume.Strategies() {
+				if ok, _ := strategy.IsCompatible(volcfg.Source(), nil); !ok || err != nil {
+					continue
+				}
+
+				if _, ok := controllers[sname]; !ok {
+					controllers[sname], err = strategy.NewVolumeV1alpha1(ctx)
+					if err != nil {
+						return fmt.Errorf("could not prepare %s volume service: %w", sname, err)
+					}
+				}
+
+				driver = sname
+			}
+		}
+
+		if len(driver) == 0 {
+			return fmt.Errorf("could not find compatible volume driver for %s", volcfg.Source())
+		}
+
+		vol, err := controllers[driver].Create(ctx, &volumeapi.Volume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: volcfg.Source(),
+			},
+			Spec: volumeapi.VolumeSpec{
+				Driver:      driver,
+				Source:      volcfg.Source(),
+				Destination: volcfg.Destination(),
+				ReadOnly:    volcfg.ReadOnly(),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create volume: %w", err)
+		}
+
+		machine.Spec.Volumes = append(machine.Spec.Volumes, *vol)
+	}
+
+	return nil
+}
+
+// parse the provided `--rootfs` flag which ultimately is passed into the
+// dynamic Initrd interface which either looks up or constructs the archive
+// based on the value of the flag.
+func (opts *Run) prepareRootfs(ctx context.Context, machine *machineapi.Machine) error {
+	// If the user has supplied an initram path, set this now, this overrides any
+	// preparation and is considered higher priority compared to what has been set
+	// prior to this point.
+	if opts.Rootfs == "" || machine.Status.InitrdPath != "" {
+		return nil
+	}
+
+	ramfs, err := initrd.New(ctx,
+		opts.Rootfs,
+		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
+		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.BuildDir, "rootfs-cache")),
+	)
+	if err != nil {
+		return fmt.Errorf("could not prepare initramfs: %w", err)
+	}
+
+	machine.Status.InitrdPath, err = ramfs.Build(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Warn if the initrd path is greater than allocated memory
+	fi, err := os.Stat(machine.Status.InitrdPath)
+	if err != nil {
+		return err
+	}
+
+	memRequest := machine.Spec.Resources.Requests[corev1.ResourceMemory]
+	if memRequest.Value() < fi.Size() {
+		log.G(ctx).Warnf("requested memory (%s) is less than initramfs (%s)",
+			humanize.Bytes(uint64(memRequest.Value())),
+			humanize.Bytes(uint64(fi.Size())),
+		)
 	}
 
 	return nil

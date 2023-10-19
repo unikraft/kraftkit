@@ -36,7 +36,8 @@ func runners() ([]runner, error) {
 	r := []runner{
 		&runnerLinuxu{},
 		&runnerKernel{},
-		&runnerProject{},
+		&runnerKraftfileUnikraft{},
+		&runnerKraftfileRuntime{},
 	}
 
 	umbrella, err := packmanager.PackageManagers()

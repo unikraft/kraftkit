@@ -33,7 +33,7 @@ type Target interface {
 	KernelDbg() string
 
 	// Initrd contains the initramfs configuration for this target.
-	Initrd() *initrd.InitrdConfig
+	Initrd() initrd.Initrd
 
 	// Command is the command-line arguments set for this target.
 	Command() []string
@@ -64,7 +64,7 @@ type TargetConfig struct {
 	kernelDbg string
 
 	// initrd is the configuration for the initrd.
-	initrd *initrd.InitrdConfig
+	initrd initrd.Initrd
 
 	// command is the command-line arguments set for this target.
 	command []string
@@ -115,7 +115,7 @@ func (tc *TargetConfig) KernelDbg() string {
 	return tc.kernelDbg
 }
 
-func (tc *TargetConfig) Initrd() *initrd.InitrdConfig {
+func (tc *TargetConfig) Initrd() initrd.Initrd {
 	return tc.initrd
 }
 
@@ -138,15 +138,22 @@ func (tc *TargetConfig) IsUnpacked() bool {
 func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
 	if tc.kconfig == nil {
 		tc.kconfig = kconfig.KeyValueMap{}
-		tc.kconfig.OverrideBy(tc.architecture.KConfig())
-		tc.kconfig.OverrideBy(tc.platform.KConfig())
 	}
+
+	tc.kconfig.OverrideBy(tc.architecture.KConfig())
+	tc.kconfig.OverrideBy(tc.platform.KConfig())
 
 	return tc.kconfig
 }
 
 func (tc *TargetConfig) ConfigFilename() string {
-	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, filepath.Base(tc.kernel))
+	var name string
+	if tc.kernel == "" {
+		name = fmt.Sprintf("%s_%s-%s", tc.Name(), tc.platform.Name(), tc.architecture.Name())
+	} else {
+		name = filepath.Base(tc.kernel)
+	}
+	return fmt.Sprintf("%s.%s", kconfig.DotConfigFileName, name)
 }
 
 func (tc *TargetConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {

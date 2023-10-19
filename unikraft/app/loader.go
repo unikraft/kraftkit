@@ -54,11 +54,41 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		}
 	}
 
+	if n, ok := iface["rootfs"]; ok {
+		app.rootfs, ok = n.(string)
+		if !ok {
+			return nil, errors.New("rootfs must be a string")
+		}
+	}
+
+	if n, ok := iface["cmd"]; ok {
+		switch v := n.(type) {
+		case string:
+			app.command = strings.Split(v, " ")
+		case []interface{}:
+			for _, cmd := range v {
+				app.command = append(app.command, cmd.(string))
+			}
+		}
+	}
+
 	if popts.resolvePaths {
 		app.outDir = popts.RelativePath(outdir)
 	}
 
 	if err := Transform(ctx, getSection(iface, "unikraft"), &app.unikraft); err != nil {
+		return nil, err
+	}
+
+	if err := Transform(ctx, getSection(iface, "template"), &app.template); err != nil {
+		return nil, err
+	}
+
+	if err := Transform(ctx, getSection(iface, "volumes"), &app.volumes); err != nil {
+		return nil, err
+	}
+
+	if err := Transform(ctx, getSection(iface, "runtime"), &app.elfloader); err != nil {
 		return nil, err
 	}
 

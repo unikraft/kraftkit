@@ -91,6 +91,6 @@ RUN ln -s /usr/bin/cpp-12                                   /usr/bin/cc; \
     ln -s /usr/bin/gcc-12-arm-linux-gnueabihf-gcov-tool-12  /usr/bin/gcc-12-arm-linux-gnueabihf-gcov-tool; \
     ln -s /usr/bin/gcc-12-arm-linux-gnueabihf-lto-tool-12   /usr/bin/gcc-12-arm-linux-gnueabihf-lto-tool;
 
-WORKDIR /workspace
+WORKDIR /github/workspace
 
-ENTRYPOINT [ "/usr/local/bin/github-action" ]
+ENTRYPOINT [ "github-action" ]

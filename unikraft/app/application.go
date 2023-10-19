@@ -25,8 +25,10 @@ import (
 	"kraftkit.sh/make"
 	"kraftkit.sh/schema"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/core"
+	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
@@ -39,19 +41,29 @@ type Application interface {
 	WorkingDir() string
 
 	// Unikraft returns the application's unikraft configuration
-	Unikraft(context.Context) core.Unikraft
+	Unikraft(context.Context) *core.UnikraftConfig
 
 	// OutDir returns the path to the application's output directory
 	OutDir() string
 
 	// Template returns the application's template
-	Template() template.Template
+	Template() *template.TemplateConfig
+
+	// Runtime returns the application's runtime (ELFLoader).
+	Runtime() *elfloader.ELFLoader
 
 	// Libraries returns the application libraries' configurations
-	Libraries(ctx context.Context) (lib.Libraries, error)
+	Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error)
 
 	// Targets returns the application's targets
 	Targets() []target.Target
+
+	// Rootfs is the desired path containing the filesystem that will be mounted
+	// as the root filesystem.  This can either be an initramdisk or a volume.
+	Rootfs() string
+
+	// Command is the list of arguments passed to the application's runtime.
+	Command() []string
 
 	// Extensions returns the application's extensions
 	Extensions() component.Extensions
@@ -122,7 +134,10 @@ type Application interface {
 	WithTarget(target.Target) (Application, error)
 
 	// Serialize and save the application to the kraftfile
-	Save() error
+	Save(context.Context) error
+
+	// Volumes to be used during runtime of an application.
+	Volumes() []*volume.VolumeConfig
 }
 
 type application struct {
@@ -133,10 +148,14 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
-	template      template.TemplateConfig
-	unikraft      core.UnikraftConfig
-	libraries     lib.Libraries
+	template      *template.TemplateConfig
+	elfloader     *elfloader.ELFLoader
+	unikraft      *core.UnikraftConfig
+	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
+	volumes       []*volume.VolumeConfig
+	command       []string
+	rootfs        string
 	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
@@ -170,15 +189,19 @@ func (app application) OutDir() string {
 	return app.outDir
 }
 
-func (app application) Template() template.Template {
+func (app application) Template() *template.TemplateConfig {
 	return app.template
 }
 
-func (app application) Unikraft(ctx context.Context) core.Unikraft {
+func (app application) Runtime() *elfloader.ELFLoader {
+	return app.elfloader
+}
+
+func (app application) Unikraft(ctx context.Context) *core.UnikraftConfig {
 	return app.unikraft
 }
 
-func (app application) Libraries(ctx context.Context) (lib.Libraries, error) {
+func (app application) Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error) {
 	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
 	if err != nil {
 		return nil, err
@@ -201,6 +224,14 @@ func (app application) Targets() []target.Target {
 	return targets
 }
 
+func (app application) Rootfs() string {
+	return app.rootfs
+}
+
+func (app application) Command() []string {
+	return app.command
+}
+
 func (app application) Extensions() component.Extensions {
 	return app.extensions
 }
@@ -210,13 +241,18 @@ func (app application) Kraftfile() *Kraftfile {
 }
 
 func (app application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
-	app.name = merge.Name()
-	app.source = merge.Source()
-	app.version = merge.Version()
-	app.path = merge.Path()
-	app.workingDir = merge.WorkingDir()
-	app.outDir = merge.OutDir()
-	app.template = merge.Template().(template.TemplateConfig)
+	if app.name == "" {
+		app.name = merge.Name()
+	}
+	if app.source == "" {
+		app.source = merge.Source()
+	}
+	if app.version == "" {
+		app.version = merge.Version()
+	}
+
+	// TODO(nderjung): Recursive templates?
+	// app.template = merge.Template()
 
 	libs, err := merge.Libraries(ctx)
 	if err != nil {
@@ -244,8 +280,24 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 
 	// Need to first merge the app configuration over the template
 	uk := merge.Unikraft(ctx)
-	uk.KConfig().OverrideBy(app.unikraft.KConfig())
-	app.unikraft = uk.(core.UnikraftConfig)
+	if app.unikraft != nil {
+		uk.KConfig().OverrideBy(app.unikraft.KConfig())
+		app.unikraft.KConfig().OverrideBy(uk.KConfig())
+	} else {
+		app.unikraft, err = core.NewUnikraftFromOptions(
+			unikraft.WithContext(ctx, &unikraft.Context{
+				UK_NAME:   app.name,
+				UK_BASE:   app.workingDir,
+				BUILD_DIR: app.outDir,
+			}),
+			core.WithSource(uk.Source()),
+			core.WithKConfig(uk.KConfig()),
+			core.WithVersion(uk.Version()),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return app, nil
 }
@@ -325,7 +377,11 @@ func (app application) KConfig() kconfig.KeyValueMap {
 		app.configuration = kconfig.KeyValueMap{}
 	}
 
-	all := app.configuration.OverrideBy(app.unikraft.KConfig())
+	all := kconfig.KeyValueMap{}
+
+	if app.unikraft != nil {
+		all = app.configuration.OverrideBy(app.unikraft.KConfig())
+	}
 
 	for _, library := range app.libraries {
 		all = all.OverrideBy(library.KConfig())
@@ -346,7 +402,7 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	// syscall availability from a libc (which should be included first).  Long-term
 	// solution is to determine the library order by generating a DAG via KConfig
 	// parsing.
-	unformattedLibraries := lib.Libraries{}
+	unformattedLibraries := map[string]*lib.LibraryConfig{}
 	for k, v := range app.libraries {
 		unformattedLibraries[k] = v
 	}
@@ -666,12 +722,26 @@ func (app application) TargetNames() []string {
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
 func (app application) Components(ctx context.Context) ([]component.Component, error) {
-	components := []component.Component{
-		app.Unikraft(ctx),
+	components := []component.Component{}
+
+	if unikraft := app.Unikraft(ctx); unikraft != nil {
+		components = append(components, unikraft)
 	}
 
-	if app.template.Name() != "" {
-		components = append(components, app.template)
+	if app.template != nil && len(app.template.Path()) > 0 {
+		template, err := NewApplicationFromOptions(
+			WithWorkingDir(app.template.Path()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not read template application: %w", err)
+		}
+
+		templateComponents, err := template.Components(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get template components: %w", err)
+		}
+
+		components = append(components, templateComponents...)
 	}
 
 	for _, library := range app.libraries {
@@ -760,7 +830,7 @@ func (app application) MarshalYAML() (interface{}, error) {
 	return ret, nil
 }
 
-func (app application) Save() error {
+func (app application) Save(ctx context.Context) error {
 	// Marshal the app object to YAML
 	yamlData, err := yaml.Marshal(app)
 	if err != nil {
@@ -773,7 +843,7 @@ func (app application) Save() error {
 	if err != nil {
 		return err
 	}
-	err = schema.Validate(yamlMap)
+	err = schema.Validate(ctx, yamlMap)
 	if err != nil {
 		return err
 	}
@@ -812,4 +882,9 @@ func (app application) Save() error {
 	}
 
 	return nil
+}
+
+// Volumes implemenets Application.
+func (app application) Volumes() []*volume.VolumeConfig {
+	return app.volumes
 }
