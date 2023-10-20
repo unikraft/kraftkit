@@ -41,6 +41,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/stop"
 	"kraftkit.sh/internal/cli/kraft/unset"
 	"kraftkit.sh/internal/cli/kraft/version"
+	"kraftkit.sh/internal/cli/kraft/x"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -101,6 +102,8 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
+
+	cmd.AddCommand(x.NewCmd())
 
 	return cmd
 }
