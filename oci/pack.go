@@ -377,9 +377,11 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 			}
 		}
 
-		auths, err := defaultAuths(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not gather authentication details")
+		if auths == nil {
+			auths, err = defaultAuths(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not gather authentication details")
+			}
 		}
 
 		authConfig := &authn.AuthConfig{}
