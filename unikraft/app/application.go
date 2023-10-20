@@ -811,9 +811,9 @@ func (app application) WithTarget(targ target.Target) (Application, error) {
 // MarshalYAML makes application implement yaml.Marshaller
 func (app application) MarshalYAML() (interface{}, error) {
 	ret := map[string]interface{}{
-		"specification": schema.SchemaVersionLatest,
-		"name":          app.name,
-		"unikraft":      app.unikraft,
+		"spec":     schema.SchemaVersionLatest,
+		"name":     app.name,
+		"unikraft": app.unikraft,
 	}
 
 	// We purposefully do not marshal the configuration as this top level
@@ -835,7 +835,7 @@ func (app application) MarshalYAML() (interface{}, error) {
 	return ret, nil
 }
 
-func (app application) Save(ctx context.Context) error {
+func mergeOverExistingKraftfile(ctx context.Context, app Application) error {
 	// Marshal the app object to YAML
 	yamlData, err := yaml.Marshal(app)
 	if err != nil {
@@ -853,12 +853,10 @@ func (app application) Save(ctx context.Context) error {
 		return err
 	}
 
-	yamlFile, err := os.ReadFile(app.kraftfile.path)
+	yamlFile, err := os.ReadFile(app.Kraftfile().path)
 	if err != nil {
 		return err
 	}
-
-	// Parse YAML file to a Node structure
 	var into yaml.Node
 	err = yaml.Unmarshal(yamlFile, &into)
 	if err != nil {
@@ -875,18 +873,73 @@ func (app application) Save(ctx context.Context) error {
 	}
 
 	// Marshal the Node structure back to YAML
-	yaml, err := yaml.Marshal(&into)
+	outYaml, err := yaml.Marshal(&into)
 	if err != nil {
 		return err
 	}
 
 	// Write the YAML data to the file
-	err = os.WriteFile(app.kraftfile.path, []byte(yaml), 0o644)
+	err = os.WriteFile(app.Kraftfile().path, outYaml, 0o644)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// Marshalling the application does not allow us to impose the order of the fields
+// in the yaml file. This is generally not a problem as updating the yaml file will
+// preserve the old order, but in the case we are generating a fresh yaml file, we
+// need to do something hacky to ensure the order is correct.
+func saveNewKraftfile(ctx context.Context, app Application) error {
+	// Open the kraftfile for writing
+	kraftfile, err := os.OpenFile(app.Kraftfile().path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer kraftfile.Close()
+
+	// Write the schema version to the file
+	_, err = kraftfile.WriteString(fmt.Sprintf("spec: %s\n", schema.SchemaVersionLatest))
+	if err != nil {
+		return err
+	}
+
+	// Hacky way to assure the order of fields in the kraftfile
+	ukernel := app.Unikraft(ctx)
+	coreApp, err := NewApplicationFromOptions(
+		WithName(app.Name()),
+		WithKraftfile(app.Kraftfile()),
+		WithUnikraft(ukernel),
+	)
+	if err != nil {
+		return err
+	}
+
+	if err = mergeOverExistingKraftfile(ctx, coreApp); err != nil {
+		return err
+	}
+
+	if err = mergeOverExistingKraftfile(ctx, app); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (app application) Save(ctx context.Context) error {
+	// Open the kratfile for reading
+	kraftfile, err := os.ReadFile(app.kraftfile.path)
+
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		return saveNewKraftfile(ctx, app)
+	} else if len(kraftfile) == 0 {
+		return saveNewKraftfile(ctx, app)
+	}
+	return mergeOverExistingKraftfile(ctx, app)
 }
 
 // Volumes implemenets Application.
