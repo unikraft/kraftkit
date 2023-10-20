@@ -505,7 +505,7 @@ func (ocipack *ociPackage) imageRef() string {
 
 // Metadata implements pack.Package
 func (ocipack *ociPackage) Metadata() interface{} {
-	return ocipack.manifest.manifest
+	return ocipack.manifest.config
 }
 
 // Columns implements pack.Package
