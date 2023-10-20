@@ -40,3 +40,43 @@ func WithKConfig(kconfig kconfig.KeyValueMap) UnikraftOption {
 		return nil
 	}
 }
+
+// WithLicense sets the license of the unikraft.
+func WithLicense(license string) UnikraftOption {
+	return func(uc *UnikraftConfig) error {
+		uc.license = license
+		return nil
+	}
+}
+
+// WithCompiler sets the compiler of the unikraft.
+func WithCompiler(compiler string) UnikraftOption {
+	return func(uc *UnikraftConfig) error {
+		uc.compiler = compiler
+		return nil
+	}
+}
+
+// WithCompileDate sets the compile date of the unikraft.
+func WithCompileDate(compileDate string) UnikraftOption {
+	return func(uc *UnikraftConfig) error {
+		uc.compileDate = compileDate
+		return nil
+	}
+}
+
+// WithCompiledBy sets the user who compiled unikraft.
+func WithCompiledBy(compiledBy string) UnikraftOption {
+	return func(uc *UnikraftConfig) error {
+		uc.compiledBy = compiledBy
+		return nil
+	}
+}
+
+// WithCompiledByAssoc sets the association of the user who compiled unikraft.
+func WithCompiledByAssoc(compiledByAssoc string) UnikraftOption {
+	return func(uc *UnikraftConfig) error {
+		uc.compiledByAssoc = compiledByAssoc
+		return nil
+	}
+}
