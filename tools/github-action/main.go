@@ -12,6 +12,8 @@ import (
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/bootstrap"
@@ -29,6 +31,7 @@ type GithubAction struct {
 	// Global flags
 	Loglevel   string `long:"loglevel" env:"INPUT_LOGLEVEL" usage:"" default:"info"`
 	RuntimeDir string `long:"runtimedir" env:"INPUT_RUNTIMEDIR" usage:"Path to store runtime artifacts"`
+	Auths      string `long:"auths" env:"INPUT_AUTHS" usage:"Authentication details for services"`
 
 	// Project flags
 	Workdir   string `long:"workdir" env:"INPUT_WORKDIR" usage:"Path to working directory (default is cwd)"`
@@ -91,6 +94,21 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 
 	if opts.RuntimeDir != "" {
 		cfgm.Config.RuntimeDir = opts.RuntimeDir
+	}
+
+	if opts.Auths != "" {
+		var auths map[string]config.AuthConfig
+		if err := yaml.Unmarshal([]byte(opts.Auths), &auths); err != nil {
+			return fmt.Errorf("could not parse auths: %w", err)
+		}
+
+		if cfgm.Config.Auth == nil {
+			cfgm.Config.Auth = make(map[string]config.AuthConfig)
+		}
+
+		for domain, auth := range auths {
+			cfgm.Config.Auth[domain] = auth
+		}
 	}
 
 	ctx = config.WithConfigManager(ctx, cfgm)
