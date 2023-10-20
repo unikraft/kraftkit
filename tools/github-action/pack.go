@@ -63,6 +63,7 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		packmanager.PackInitrd(opts.initrdPath),
 		packmanager.PackKConfig(true),
 		packmanager.PackName(output),
+		packmanager.PackMergeStrategy(packmanager.MergeStrategy(opts.Strategy)),
 	}
 
 	if ukversion, ok := opts.target.KConfig().Get(unikraft.UK_FULLVERSION); ok {
