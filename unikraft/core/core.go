@@ -130,6 +130,9 @@ func (uk UnikraftConfig) Libraries(ctx context.Context) (map[string]*lib.Library
 
 	files, err := os.ReadDir(config_uk_lib)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
