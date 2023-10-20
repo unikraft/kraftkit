@@ -335,7 +335,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 // NewPackageFromOCIManifestDigest is a constructor method which
 // instantiates a package based on the OCI format based on a provided OCI
 // Image manifest digest.
-func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler, ref string, dgst digest.Digest) (pack.Package, error) {
+func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler, ref string, auths map[string]config.AuthConfig, dgst digest.Digest) (pack.Package, error) {
 	var err error
 
 	ocipack := ociPackage{

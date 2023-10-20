@@ -200,6 +200,7 @@ checkManifest:
 		pack, err := NewPackageFromOCIManifestDigest(ctx,
 			handle,
 			fullref,
+			query.Auths(),
 			descriptor.Digest,
 		)
 		if err != nil {
