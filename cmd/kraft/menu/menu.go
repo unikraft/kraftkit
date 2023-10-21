@@ -213,7 +213,7 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 		}
 	}
 
-	if opts.project.Template().Name() != "" {
+	if opts.project.Template() != nil && opts.project.Template().Name() != "" {
 		templateWorkdir, err := unikraft.PlaceComponent(workdir, opts.project.Template().Type(), opts.project.Template().Name())
 		if err != nil {
 			return err
