@@ -36,6 +36,12 @@ You can quickly and easily install KraftKit using the interactive installer.  Si
 curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 ```
 
+For non-interactive installation (i.e. on CI environments):
+
+```shell
+curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sudo sh -s -- -y
+```
+
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
 
 ### Container build environment
