@@ -12,6 +12,8 @@ require (
 	kraftkit.sh v0.6.7-251-gbb138e4
 )
 
+replace kraftkit.sh => ../..
+
 require (
 	api.zip v0.1.5 // indirect
 	dario.cat/mergo v1.0.0 // indirect
