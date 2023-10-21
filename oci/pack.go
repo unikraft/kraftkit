@@ -209,13 +209,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
-	var index *Index
-
 	switch popts.MergeStrategy() {
 	case packmanager.StrategyMerge, packmanager.StrategyExit:
-		index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
+		ocipack.index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
 		if err != nil {
-			index, err = NewIndex(ctx, ocipack.handle)
+			ocipack.index, err = NewIndex(ctx, ocipack.handle)
 			if err != nil {
 				return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
 			}
@@ -228,17 +226,17 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			return nil, fmt.Errorf("could not remove existing index: %w", err)
 		}
 
-		index, err = NewIndex(ctx, ocipack.handle)
+		ocipack.index, err = NewIndex(ctx, ocipack.handle)
 		if err != nil {
 			return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
 		}
 	}
 
-	if popts.MergeStrategy() == packmanager.StrategyExit && len(index.manifests) > 0 {
+	if popts.MergeStrategy() == packmanager.StrategyExit && len(ocipack.index.manifests) > 0 {
 		return nil, fmt.Errorf("cannot continue: reference already exists and merge strategy set to none")
 	}
 
-	if len(index.manifests) > 0 {
+	if len(ocipack.index.manifests) > 0 {
 		// Sort the features alphabetically.  This ensures that comparisons between
 		// versions are symmetric.
 		sort.Slice(ocipack.manifest.config.OSFeatures, func(i, j int) bool {
@@ -266,7 +264,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 		var manifests []*Manifest
 
-		for _, existingManifest := range index.manifests {
+		for _, existingManifest := range ocipack.index.manifests {
 			existingManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 				Architecture: existingManifest.config.Architecture,
 				OS:           existingManifest.config.OS,
@@ -293,10 +291,10 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			}
 		}
 
-		index.manifests = manifests
+		ocipack.index.manifests = manifests
 	}
 
-	index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
+	ocipack.index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 
 	if popts.PackKConfig() {
 		log.G(ctx).Debug("oci: including list of kconfig as features")
@@ -321,11 +319,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 	}
 
-	if err := index.AddManifest(ctx, ocipack.manifest); err != nil {
+	if err := ocipack.index.AddManifest(ctx, ocipack.manifest); err != nil {
 		return nil, fmt.Errorf("could not add manifest to index: %w", err)
 	}
 
-	if _, err = index.Save(ctx, ocipack.ref.String(), nil); err != nil {
+	if _, err = ocipack.index.Save(ctx, ocipack.ref.String(), nil); err != nil {
 		return nil, fmt.Errorf("could not save index: %w", err)
 	}
 
