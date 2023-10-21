@@ -47,12 +47,13 @@ type GithubAction struct {
 	Timeout uint64 `long:"timeout" env:"INPUT_TIMEOUT" usage:"Timeout for the unikernel"`
 
 	// Packaging flags
-	Args   []string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
-	Rootfs string   `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
-	Memory string   `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
-	Name   string   `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
-	Output string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
-	Push   bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
+	Args     []string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
+	Rootfs   string   `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
+	Memory   string   `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
+	Name     string   `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
+	Output   string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
+	Push     bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
+	Strategy string   `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
 
 	// Internal attributes
 	project    app.Application
@@ -191,6 +192,23 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	}
 	if opts.Arch == "" {
 		opts.Arch = opts.target.Architecture().Name()
+	}
+
+	if opts.Strategy != "" {
+		found := false
+		var strategies []string
+		for _, strategy := range packmanager.MergeStrategies() {
+			strategies = append(strategies, strategy.String())
+			if strategy.String() == opts.Strategy {
+				found = true
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("unknown merge strategy '%s': choice from %v", opts.Strategy, strategies)
+		}
+	} else {
+		opts.Strategy = packmanager.StrategyMerge.String()
 	}
 
 	return nil
