@@ -14,6 +14,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/app"
 )
 
 // pull updates the package index and retrieves missing components necessary for
@@ -35,6 +36,60 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 	defer func() {
 		iostreams.G(ctx).Out = oldOut
 	}()
+
+	// Retrieve the list of components that come from a template (if specified).
+	if template := opts.project.Template(); template != nil {
+		if stat, err := os.Stat(template.Path()); err != nil || !stat.IsDir() {
+			var templatePack pack.Package
+
+			p, err := packmanager.G(ctx).Catalog(ctx,
+				packmanager.WithName(template.Name()),
+				packmanager.WithTypes(template.Type()),
+				packmanager.WithVersion(template.Version()),
+				packmanager.WithSource(template.Source()),
+				packmanager.WithUpdate(true),
+				packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
+			)
+			if err != nil {
+				return err
+			}
+
+			if len(p) == 0 {
+				return fmt.Errorf("could not find: %s",
+					unikraft.TypeNameVersion(template),
+				)
+			} else if len(p) > 1 {
+				return fmt.Errorf("too many options for %s",
+					unikraft.TypeNameVersion(template),
+				)
+			}
+
+			templatePack = p[0]
+
+			if err := templatePack.Pull(
+				ctx,
+				pack.WithPullWorkdir(opts.Workdir),
+				pack.WithPullCache(true),
+				pack.WithPullAuthConfig(config.G[config.KraftKit](ctx).Auth),
+			); err != nil {
+				return fmt.Errorf("could not pull template")
+			}
+		}
+
+		templateProject, err := app.NewProjectFromOptions(ctx,
+			app.WithProjectWorkdir(template.Path()),
+			app.WithProjectDefaultKraftfiles(),
+		)
+		if err != nil {
+			return err
+		}
+
+		// Overwrite template with user options
+		opts.project, err = opts.project.MergeTemplate(ctx, templateProject)
+		if err != nil {
+			return err
+		}
+	}
 
 	components, err := opts.project.Components(ctx)
 	if err != nil {
