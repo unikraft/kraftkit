@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -206,7 +207,15 @@ func (kvm KeyValueMap) String() string {
 		} else {
 			ret.WriteString(v.Key)
 			ret.WriteString("=")
-			ret.WriteString(v.Value)
+			if v.Value == "y" {
+				ret.WriteString(v.Value)
+			} else if _, err := strconv.Atoi(v.Value); err == nil {
+				ret.WriteString(v.Value)
+			} else {
+				ret.WriteString("\"")
+				ret.WriteString(strings.ReplaceAll(v.Value, "\"", "\\\""))
+				ret.WriteString("\"")
+			}
 		}
 		ret.WriteString("\n")
 	}
