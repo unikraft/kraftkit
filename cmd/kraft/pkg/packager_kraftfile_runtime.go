@@ -99,21 +99,16 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *Pkg, args ...
 			packmanager.WithKConfig(kconfigs),
 		)
 	} else {
-		arch, err := ukarch.HostArchitecture()
-		if err != nil {
-			return fmt.Errorf("could not get host architecture: %w", err)
+		if opts.Platform != "" {
+			qopts = append(qopts,
+				packmanager.WithPlatform(opts.Platform),
+			)
 		}
-
-		plat, _, err := platform.Detect(ctx)
-		if err != nil {
-			return fmt.Errorf("could not get host platform: %w", err)
+		if opts.Architecture != "" {
+			qopts = append(qopts,
+				packmanager.WithArchitecture(opts.Architecture),
+			)
 		}
-
-		// Use host information
-		qopts = append(qopts,
-			packmanager.WithPlatform(plat.String()),
-			packmanager.WithArchitecture(arch),
-		)
 	}
 
 	packs, err := opts.pm.Catalog(ctx, qopts...)
@@ -121,8 +116,39 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *Pkg, args ...
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
 		return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
-	} else if len(packs) > 1 {
-		return fmt.Errorf("could not find runtime: too many options")
+	} else if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+		// At this point, we have queried the registry without asking for the
+		// platform and architecture and received multiple options.  Re-query the
+		// catalog with the host architecture and platform.
+
+		if opts.Architecture == "" {
+			opts.Architecture, err = ukarch.HostArchitecture()
+			if err != nil {
+				return fmt.Errorf("could not get host architecture: %w", err)
+			}
+		}
+		if opts.Platform == "" {
+			plat, _, err := platform.Detect(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get host platform: %w", err)
+			}
+
+			opts.Platform = plat.String()
+		}
+
+		qopts = append(qopts,
+			packmanager.WithPlatform(opts.Platform),
+			packmanager.WithArchitecture(opts.Architecture),
+		)
+
+		packs, err = opts.pm.Catalog(ctx, qopts...)
+		if err != nil {
+			return fmt.Errorf("could not query catalog: %w", err)
+		} else if len(packs) == 0 {
+			return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+		} else if len(packs) > 1 {
+			return fmt.Errorf("could not find runtime: too many options")
+		}
 	}
 
 	// Create a temporary directory we can use to store the artifacts from
