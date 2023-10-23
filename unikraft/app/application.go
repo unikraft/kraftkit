@@ -453,9 +453,14 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 
 	// TODO: Platforms & architectures
 
+	appDir := app.workingDir
+	if app.template != nil {
+		appDir = app.template.Path()
+	}
+
 	args := &core.MakeArgs{
 		OutputDir:      app.outDir,
-		ApplicationDir: app.workingDir,
+		ApplicationDir: appDir,
 		LibraryDirs:    strings.Join(libraries, core.MakeDelimeter),
 	}
 
