@@ -93,4 +93,7 @@ RUN ln -s /usr/bin/cpp-12                                   /usr/bin/cc; \
 
 WORKDIR /github/workspace
 
+RUN useradd -rm -d /home/runner -s /bin/bash -g root -G sudo -u 1001 runner
+USER runner
+
 ENTRYPOINT [ "github-action" ]
