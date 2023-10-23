@@ -40,6 +40,7 @@ RUN set -xe; \
       bison \
       bzip2 \
       ca-certificates \
+      cmake \
       flex \
       gawk \
       gcc-12 \
