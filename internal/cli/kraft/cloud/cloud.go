@@ -9,8 +9,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/cmd/kraft/cloud/img"
-	"kraftkit.sh/cmd/kraft/cloud/instance"
+	"kraftkit.sh/internal/cli/kraft/cloud/img"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance"
 
 	"kraftkit.sh/cmdfactory"
 )

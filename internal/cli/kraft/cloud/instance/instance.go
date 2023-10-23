@@ -10,13 +10,13 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 
-	"kraftkit.sh/cmd/kraft/cloud/instance/create"
-	"kraftkit.sh/cmd/kraft/cloud/instance/list"
-	"kraftkit.sh/cmd/kraft/cloud/instance/logs"
-	"kraftkit.sh/cmd/kraft/cloud/instance/remove"
-	"kraftkit.sh/cmd/kraft/cloud/instance/start"
-	"kraftkit.sh/cmd/kraft/cloud/instance/status"
-	"kraftkit.sh/cmd/kraft/cloud/instance/stop"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/start"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/status"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
 )
 
 type Instance struct{}

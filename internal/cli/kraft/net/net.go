@@ -9,13 +9,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/cmd/kraft/net/create"
-	"kraftkit.sh/cmd/kraft/net/down"
-	"kraftkit.sh/cmd/kraft/net/inspect"
-	"kraftkit.sh/cmd/kraft/net/list"
-	"kraftkit.sh/cmd/kraft/net/remove"
-	"kraftkit.sh/cmd/kraft/net/up"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/net/create"
+	"kraftkit.sh/internal/cli/kraft/net/down"
+	"kraftkit.sh/internal/cli/kraft/net/inspect"
+	"kraftkit.sh/internal/cli/kraft/net/list"
+	"kraftkit.sh/internal/cli/kraft/net/remove"
+	"kraftkit.sh/internal/cli/kraft/net/up"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/network"
 )
