@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - mac-m2-14
+config-variables: null
