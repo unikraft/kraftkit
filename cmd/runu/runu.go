@@ -124,5 +124,5 @@ func main() {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
-	cmdfactory.Main(ctx, cmd)
+	os.Exit(cmdfactory.Main(ctx, cmd))
 }

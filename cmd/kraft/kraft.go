@@ -160,5 +160,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmdfactory.Main(ctx, cmd)
+	os.Exit(cmdfactory.Main(ctx, cmd))
 }

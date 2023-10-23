@@ -176,14 +176,16 @@ func isSameCommand(cmd *cobra.Command, cmdline string) bool {
 }
 
 // Main executes the given command
-func Main(ctx context.Context, cmd *cobra.Command) {
+func Main(ctx context.Context, cmd *cobra.Command) int {
 	// Expand flag all dynamically registered flag overrides.
 	expandRegisteredFlags(cmd)
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		log.G(ctx).Error(err)
-		os.Exit(1)
+		return 1
 	}
+
+	return 0
 }
 
 // AttributeFlags associates a given struct with public attributes and a set of
