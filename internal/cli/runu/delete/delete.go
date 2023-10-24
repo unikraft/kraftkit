@@ -25,7 +25,7 @@ type DeleteOptions struct {
 	Force bool `long:"force" short:"f" usage:"forcibly delete the unikernel if it is still running"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DeleteOptions{}, cobra.Command{
 		Short: "Delete a unikernel",
 		Args:  cobra.ExactArgs(1),

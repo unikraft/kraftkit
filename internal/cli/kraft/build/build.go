@@ -44,7 +44,7 @@ type BuildOptions struct {
 	workdir string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",

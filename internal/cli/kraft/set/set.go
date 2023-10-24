@@ -49,7 +49,7 @@ type SetOptions struct {
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SetOptions{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Hidden:  true,

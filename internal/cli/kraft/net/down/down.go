@@ -20,7 +20,7 @@ type DownOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
 		Short:   "Bring a network offline",
 		Use:     "down",

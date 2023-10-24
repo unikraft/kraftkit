@@ -20,7 +20,7 @@ type UpOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
 		Short:   "Bring a network online",
 		Use:     "up",

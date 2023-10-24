@@ -32,7 +32,7 @@ type EventOptions struct {
 	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&EventOptions{}, cobra.Command{
 		Short:   "Follow the events of a unikernel",
 		Hidden:  true,

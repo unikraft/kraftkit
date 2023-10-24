@@ -26,7 +26,7 @@ type ListOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List instances",
 		Use:     "ls [FLAGS]",

@@ -45,7 +45,7 @@ type FetchOptions struct {
 	workdir string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&FetchOptions{}, cobra.Command{
 		Short: "Fetch Unikraft unikernel dependencies",
 		Use:   "fetch [FLAGS] [DIR]",

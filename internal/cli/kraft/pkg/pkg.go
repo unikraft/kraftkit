@@ -52,7 +52,7 @@ type PkgOptions struct {
 	pm       packmanager.PackageManager
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PkgOptions{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
@@ -79,13 +79,13 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(pull.New())
-	cmd.AddCommand(push.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(source.New())
-	cmd.AddCommand(unsource.New())
-	cmd.AddCommand(update.New())
+	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(pull.NewCmd())
+	cmd.AddCommand(push.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(source.NewCmd())
+	cmd.AddCommand(unsource.NewCmd())
+	cmd.AddCommand(update.NewCmd())
 
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](

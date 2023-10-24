@@ -30,7 +30,7 @@ type KillOptions struct {
 	All bool `long:"all" short:"a" usage:"send the specified signal to all processes"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&KillOptions{}, cobra.Command{
 		Short: "Send a signal to a unikernel",
 		Args:  cobra.RangeArgs(1, 2),

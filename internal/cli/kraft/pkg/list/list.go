@@ -37,7 +37,7 @@ type ListOptions struct {
 	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "ls [FLAGS] [DIR]",

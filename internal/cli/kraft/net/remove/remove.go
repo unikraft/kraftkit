@@ -20,7 +20,7 @@ type RemoveOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove a network",
 		Use:     "rm",

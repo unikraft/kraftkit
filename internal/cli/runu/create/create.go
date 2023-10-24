@@ -44,7 +44,7 @@ type CreateOptions struct {
 	PidFile       string `long:"pid-file" usage:"specify a file where the process ID will be written"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short: "Create a new unikernel",
 		Args:  cobra.ExactArgs(1),

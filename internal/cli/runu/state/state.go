@@ -25,7 +25,7 @@ const (
 // StateOptions implements the OCI "state" command.
 type StateOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StateOptions{}, cobra.Command{
 		Short: "Output the state of a unikernel",
 		Args:  cobra.ExactArgs(1),

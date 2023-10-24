@@ -31,7 +31,7 @@ type PsOptions struct {
 	Format string `long:"format" short:"f" usage:"format of the output (table or json)" default:"table"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
 		Short: "Displays the VMM process of a unikernel",
 		Args:  cobra.MinimumNArgs(1),

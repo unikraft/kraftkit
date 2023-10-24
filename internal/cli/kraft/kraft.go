@@ -48,7 +48,7 @@ import (
 
 type KraftOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&KraftOptions{}, cobra.Command{
 		Short: "Build and use highly customized and ultra-lightweight unikernels",
 		Use:   "kraft [FLAGS] SUBCOMMAND",
@@ -70,37 +70,37 @@ func New() *cobra.Command {
 	}
 
 	cmd.AddGroup(&cobra.Group{ID: "build", Title: "BUILD COMMANDS"})
-	cmd.AddCommand(build.New())
-	cmd.AddCommand(clean.New())
-	cmd.AddCommand(fetch.New())
-	cmd.AddCommand(menu.New())
-	cmd.AddCommand(properclean.New())
-	cmd.AddCommand(set.New())
-	cmd.AddCommand(unset.New())
+	cmd.AddCommand(build.NewCmd())
+	cmd.AddCommand(clean.NewCmd())
+	cmd.AddCommand(fetch.NewCmd())
+	cmd.AddCommand(menu.NewCmd())
+	cmd.AddCommand(properclean.NewCmd())
+	cmd.AddCommand(set.NewCmd())
+	cmd.AddCommand(unset.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "pkg", Title: "PACKAGING COMMANDS"})
-	cmd.AddCommand(pkg.New())
+	cmd.AddCommand(pkg.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "run", Title: "LOCAL RUNTIME COMMANDS"})
-	cmd.AddCommand(events.New())
-	cmd.AddCommand(logs.New())
-	cmd.AddCommand(ps.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(run.New())
-	cmd.AddCommand(stop.New())
+	cmd.AddCommand(events.NewCmd())
+	cmd.AddCommand(logs.NewCmd())
+	cmd.AddCommand(ps.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(run.NewCmd())
+	cmd.AddCommand(stop.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
-	cmd.AddCommand(net.New())
+	cmd.AddCommand(net.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "KRAFT CLOUD COMMANDS"})
-	cmd.AddCommand(cloud.New())
+	cmd.AddCommand(cloud.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "KRAFT CLOUD IMAGE COMMANDS"})
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "KRAFT CLOUD INSTANCE COMMANDS"})
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
-	cmd.AddCommand(login.New())
-	cmd.AddCommand(version.New())
+	cmd.AddCommand(login.NewCmd())
+	cmd.AddCommand(version.NewCmd())
 
 	return cmd
 }
@@ -110,7 +110,7 @@ func (k *KraftOptions) Run(cmd *cobra.Command, args []string) error {
 }
 
 func Main(args []string) int {
-	cmd := New()
+	cmd := NewCmd()
 	ctx := signals.SetupSignalContext()
 	copts := &cli.CliOptions{}
 

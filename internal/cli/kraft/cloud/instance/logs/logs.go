@@ -26,7 +26,7 @@ type LogOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",
 		Use:   "logs [UUID]",

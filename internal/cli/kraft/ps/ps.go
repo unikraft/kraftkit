@@ -32,7 +32,7 @@ const (
 	MemoryMiB = 1024 * 1024
 )
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",

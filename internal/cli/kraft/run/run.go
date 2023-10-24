@@ -57,7 +57,7 @@ type RunOptions struct {
 	machineController machineapi.MachineService
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RunOptions{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",

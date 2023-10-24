@@ -23,7 +23,7 @@ type CreateOptions struct {
 	Network string `long:"network" short:"n" usage:"Set the gateway IP address and the subnet of the network in CIDR format."`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a new machine network",
 		Use:     "create [FLAGS] NETWORK",

@@ -46,7 +46,7 @@ type ProperCleanOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ProperCleanOptions{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",

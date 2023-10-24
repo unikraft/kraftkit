@@ -26,7 +26,7 @@ type StartOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",
 		Use:   "start [FLAGS] [PACKAGE]",

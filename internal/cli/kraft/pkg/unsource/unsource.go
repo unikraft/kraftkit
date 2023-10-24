@@ -18,8 +18,8 @@ import (
 
 type UnsourceOptions struct{}
 
-// New returns a new unsource command
-func New() *cobra.Command {
+// NewCmd returns a new unsource command
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnsourceOptions{}, cobra.Command{
 		Short: "Remove Unikraft component manifests",
 		Use:   "unsource [FLAGS] [SOURCE]",

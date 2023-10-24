@@ -27,7 +27,7 @@ type StatusOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StatusOptions{}, cobra.Command{
 		Short:   "Retrieve the status of an instance",
 		Use:     "status [FLAGS] UUID",

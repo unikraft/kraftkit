@@ -20,7 +20,7 @@ type RemoveOptions struct {
 	Format string `long:"format" short:"f" usage:"Set the package format." default:"any"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Removes selected local packages",
 		Use:     "rm [FLAGS] [PACKAGE]",

@@ -51,7 +51,7 @@ type CleanOptions struct {
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CleanOptions{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",

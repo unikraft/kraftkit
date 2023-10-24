@@ -25,7 +25,7 @@ type RemoveOptions struct {
 	platform string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",

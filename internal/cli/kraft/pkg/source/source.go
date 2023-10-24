@@ -20,7 +20,7 @@ type SourceOptions struct {
 	Force bool `short:"F" long:"force" usage:"Do not run a compatibility test before sourcing."`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SourceOptions{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",

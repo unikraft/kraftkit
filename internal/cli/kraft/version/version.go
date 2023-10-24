@@ -16,7 +16,7 @@ import (
 
 type VersionOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&VersionOptions{}, cobra.Command{
 		Short:   "Show kraft version information",
 		Use:     "version",

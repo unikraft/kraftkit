@@ -41,7 +41,7 @@ type PullOptions struct {
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PullOptions{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",

@@ -22,7 +22,7 @@ type UpdateOptions struct {
 	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpdateOptions{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",

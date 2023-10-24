@@ -46,7 +46,7 @@ type MenuOptions struct {
 	workdir string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&MenuOptions{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [FLAGS] [DIR]",

@@ -35,7 +35,7 @@ type CreateOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",
 		Use:     "create [FLAGS] IMAGE [-- ARGS]",

@@ -28,7 +28,7 @@ type StopOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
 		Use:   "stop [FLAGS] [UUID]",

@@ -23,7 +23,7 @@ type LoginOptions struct {
 	Token string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LoginOptions{}, cobra.Command{
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",

@@ -47,7 +47,7 @@ type UnsetOptions struct {
 	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnsetOptions{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
 		Hidden:  true,

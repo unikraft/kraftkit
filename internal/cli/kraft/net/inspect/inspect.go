@@ -21,7 +21,7 @@ type InspectOptions struct {
 	Driver string `noattribute:"true"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InspectOptions{}, cobra.Command{
 		Short:   "Inspect a machine network",
 		Use:     "inspect NETWORK",

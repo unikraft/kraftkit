@@ -21,7 +21,7 @@ const (
 // StartOptions implements the OCI "start" command.
 type StartOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start a unikernel",
 		Args:  cobra.ExactArgs(1),

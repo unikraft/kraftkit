@@ -19,7 +19,7 @@ type CloudOptions struct {
 	Metro string `long:"metro" env:"KRAFTCLOUD_METRO" usage:"Set the KraftCloud metro."`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
 		Short:  "KraftCloud",
 		Use:    "cloud [FLAGS] [SUBCOMMAND|DIR]",
@@ -70,10 +70,10 @@ func New() *cobra.Command {
 	}
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "IMAGE COMMANDS"})
-	cmd.AddCommand(img.New())
+	cmd.AddCommand(img.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "INSTANCE COMMANDS"})
-	cmd.AddCommand(instance.New())
+	cmd.AddCommand(instance.NewCmd())
 
 	return cmd
 }

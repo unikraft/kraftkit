@@ -24,7 +24,7 @@ type LogOptions struct {
 	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
