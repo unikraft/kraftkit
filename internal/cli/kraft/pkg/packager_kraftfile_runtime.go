@@ -55,7 +55,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	qopts := []packmanager.QueryOption{
 		packmanager.WithName(opts.project.Runtime().Name()),
 		packmanager.WithVersion(opts.project.Runtime().Version()),
-		packmanager.WithUpdate(true),
 	}
 
 	if len(targets) == 1 {
@@ -111,12 +110,22 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	packs, err := opts.pm.Catalog(ctx, qopts...)
+	packs, err := opts.pm.Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
 	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
-		return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
-	} else if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+		// Try again with a remote update request.  Save this to qopts in case we
+		// need to call `Catalog` again.
+		qopts = append(qopts, packmanager.WithUpdate(true))
+		packs, err = opts.pm.Catalog(ctx, qopts...)
+		if err != nil {
+			return fmt.Errorf("could not query catalog: %w", err)
+		} else if len(packs) == 0 {
+			return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+		}
+	}
+
+	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
 		// At this point, we have queried the registry without asking for the
 		// platform and architecture and received multiple options.  Re-query the
 		// catalog with the host architecture and platform.
