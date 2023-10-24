@@ -42,6 +42,7 @@ RUN set -xe; \
       ca-certificates \
       cmake \
       flex \
+      g++-12 \
       gawk \
       gcc-12 \
       gcc-12-aarch64-linux-gnu \
