@@ -17,9 +17,9 @@ import (
 	kraftcloud "sdk.kraft.cloud"
 	kcinstance "sdk.kraft.cloud/instance"
 
-	"kraftkit.sh/cmd/kraft/cloud/utils"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 

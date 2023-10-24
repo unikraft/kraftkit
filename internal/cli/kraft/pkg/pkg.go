@@ -21,13 +21,13 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
 
-	"kraftkit.sh/cmd/kraft/pkg/list"
-	"kraftkit.sh/cmd/kraft/pkg/pull"
-	"kraftkit.sh/cmd/kraft/pkg/push"
-	"kraftkit.sh/cmd/kraft/pkg/rm"
-	"kraftkit.sh/cmd/kraft/pkg/source"
-	"kraftkit.sh/cmd/kraft/pkg/unsource"
-	"kraftkit.sh/cmd/kraft/pkg/update"
+	"kraftkit.sh/internal/cli/kraft/pkg/list"
+	"kraftkit.sh/internal/cli/kraft/pkg/pull"
+	"kraftkit.sh/internal/cli/kraft/pkg/push"
+	"kraftkit.sh/internal/cli/kraft/pkg/rm"
+	"kraftkit.sh/internal/cli/kraft/pkg/source"
+	"kraftkit.sh/internal/cli/kraft/pkg/unsource"
+	"kraftkit.sh/internal/cli/kraft/pkg/update"
 )
 
 type Pkg struct {

@@ -2,7 +2,8 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package main
+
+package kraft
 
 import (
 	"fmt"
@@ -21,24 +22,24 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 
-	"kraftkit.sh/cmd/kraft/build"
-	"kraftkit.sh/cmd/kraft/clean"
-	"kraftkit.sh/cmd/kraft/cloud"
-	"kraftkit.sh/cmd/kraft/events"
-	"kraftkit.sh/cmd/kraft/fetch"
-	"kraftkit.sh/cmd/kraft/login"
-	"kraftkit.sh/cmd/kraft/logs"
-	"kraftkit.sh/cmd/kraft/menu"
-	"kraftkit.sh/cmd/kraft/net"
-	"kraftkit.sh/cmd/kraft/pkg"
-	"kraftkit.sh/cmd/kraft/properclean"
-	"kraftkit.sh/cmd/kraft/ps"
-	"kraftkit.sh/cmd/kraft/rm"
-	"kraftkit.sh/cmd/kraft/run"
-	"kraftkit.sh/cmd/kraft/set"
-	"kraftkit.sh/cmd/kraft/stop"
-	"kraftkit.sh/cmd/kraft/unset"
-	"kraftkit.sh/cmd/kraft/version"
+	"kraftkit.sh/internal/cli/kraft/build"
+	"kraftkit.sh/internal/cli/kraft/clean"
+	"kraftkit.sh/internal/cli/kraft/cloud"
+	"kraftkit.sh/internal/cli/kraft/events"
+	"kraftkit.sh/internal/cli/kraft/fetch"
+	"kraftkit.sh/internal/cli/kraft/login"
+	"kraftkit.sh/internal/cli/kraft/logs"
+	"kraftkit.sh/internal/cli/kraft/menu"
+	"kraftkit.sh/internal/cli/kraft/net"
+	"kraftkit.sh/internal/cli/kraft/pkg"
+	"kraftkit.sh/internal/cli/kraft/properclean"
+	"kraftkit.sh/internal/cli/kraft/ps"
+	"kraftkit.sh/internal/cli/kraft/rm"
+	"kraftkit.sh/internal/cli/kraft/run"
+	"kraftkit.sh/internal/cli/kraft/set"
+	"kraftkit.sh/internal/cli/kraft/stop"
+	"kraftkit.sh/internal/cli/kraft/unset"
+	"kraftkit.sh/internal/cli/kraft/version"
 
 	// Additional initializers
 	_ "kraftkit.sh/manifest"
@@ -107,7 +108,7 @@ func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 
-func main() {
+func Main(args []string) int {
 	cmd := New()
 	ctx := signals.SetupSignalContext()
 	copts := &cli.CliOptions{}
@@ -160,5 +161,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmdfactory.Main(ctx, cmd)
+	return cmdfactory.Main(ctx, cmd)
 }

@@ -8,7 +8,7 @@ package img
 import (
 	"github.com/spf13/cobra"
 
-	"kraftkit.sh/cmd/kraft/cloud/img/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/img/list"
 
 	"kraftkit.sh/cmdfactory"
 )

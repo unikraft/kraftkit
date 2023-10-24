@@ -2,7 +2,8 @@
 // Copyright (c) 2023, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package main
+
+package runu
 
 import (
 	"context"
@@ -20,12 +21,12 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 
-	"kraftkit.sh/cmd/runu/create"
-	"kraftkit.sh/cmd/runu/delete"
-	"kraftkit.sh/cmd/runu/kill"
-	"kraftkit.sh/cmd/runu/ps"
-	"kraftkit.sh/cmd/runu/start"
-	"kraftkit.sh/cmd/runu/state"
+	"kraftkit.sh/internal/cli/runu/create"
+	"kraftkit.sh/internal/cli/runu/delete"
+	"kraftkit.sh/internal/cli/runu/kill"
+	"kraftkit.sh/internal/cli/runu/ps"
+	"kraftkit.sh/internal/cli/runu/start"
+	"kraftkit.sh/internal/cli/runu/state"
 )
 
 // [OCI runtime] for unikernels. Implements the runc [command-line interface].
@@ -88,7 +89,7 @@ func (*Runu) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 
-func main() {
+func Main(args []string) int {
 	cmd := New()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -105,7 +106,7 @@ func main() {
 	} {
 		if err := o(copts); err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			return 1
 		}
 	}
 
@@ -124,5 +125,5 @@ func main() {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
-	cmdfactory.Main(ctx, cmd)
+	return cmdfactory.Main(ctx, cmd)
 }
