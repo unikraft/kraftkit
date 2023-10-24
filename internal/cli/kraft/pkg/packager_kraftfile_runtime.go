@@ -158,6 +158,11 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		} else if len(packs) > 1 {
 			return fmt.Errorf("could not find runtime: too many options")
 		}
+
+		log.G(ctx).
+			WithField("arch", opts.Architecture).
+			WithField("plat", opts.Platform).
+			Info("using")
 	}
 
 	// Create a temporary directory we can use to store the artifacts from
