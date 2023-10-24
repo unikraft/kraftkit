@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package rm
+package remove
 
 import (
 	"fmt"
@@ -14,14 +14,14 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type Rm struct {
+type Remove struct {
 	Name   string `long:"name" short:"n" usage:"Specify the package name that has to be pruned" default:""`
 	All    bool   `long:"all" short:"a" usage:"Prunes all the packages available on the host machine"`
 	Format string `long:"format" short:"f" usage:"Set the package format." default:"any"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Remove{}, cobra.Command{
 		Short:   "Removes selected local packages",
 		Use:     "rm [FLAGS] [PACKAGE]",
 		Args:    cobra.ArbitraryArgs,
@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Rm) Pre(cmd *cobra.Command, args []string) error {
+func (opts *Remove) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 && opts.Name == "" && !opts.All {
 		return fmt.Errorf("package name is not specified to remove or --all flag")
 	} else if opts.All && (len(args) > 0 || opts.Name != "") {
@@ -81,7 +81,7 @@ func (opts *Rm) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
+func (opts *Remove) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	umbrella, err := packmanager.PackageManagers()
