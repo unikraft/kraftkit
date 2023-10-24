@@ -13,10 +13,10 @@ import (
 	"kraftkit.sh/cmdfactory"
 )
 
-type Img struct{}
+type ImgOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Img{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ImgOptions{}, cobra.Command{
 		Short:   "Manage images on KraftCloud",
 		Use:     "img",
 		Aliases: []string{"images", "image"},
@@ -34,6 +34,6 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Img) Run(cmd *cobra.Command, args []string) error {
+func (opts *ImgOptions) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }

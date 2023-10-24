@@ -26,13 +26,13 @@ const (
 
 const formatJSON = "json"
 
-// Ps implements the runc "ps" command.
-type Ps struct {
+// PsOptions implements the runc "ps" command.
+type PsOptions struct {
 	Format string `long:"format" short:"f" usage:"format of the output (table or json)" default:"table"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
+	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
 		Short: "Displays the VMM process of a unikernel",
 		Args:  cobra.MinimumNArgs(1),
 		Use:   "ps <unikernel-id> [ps options]",
@@ -45,7 +45,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Ps) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *PsOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

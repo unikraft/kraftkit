@@ -17,12 +17,12 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type Inspect struct {
+type InspectOptions struct {
 	Driver string `noattribute:"true"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Inspect{}, cobra.Command{
+	cmd, err := cmdfactory.New(&InspectOptions{}, cobra.Command{
 		Short:   "Inspect a machine network",
 		Use:     "inspect NETWORK",
 		Aliases: []string{"list"},
@@ -38,12 +38,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Inspect) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *InspectOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
-func (opts *Inspect) Run(cmd *cobra.Command, args []string) error {
+func (opts *InspectOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

@@ -18,12 +18,12 @@ import (
 	"kraftkit.sh/tui/processtree"
 )
 
-type Update struct {
+type UpdateOptions struct {
 	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Update{}, cobra.Command{
+	cmd, err := cmdfactory.New(&UpdateOptions{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",
 		Long: heredoc.Doc(`
@@ -43,7 +43,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Update) Pre(cmd *cobra.Command, _ []string) error {
+func (*UpdateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (*Update) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Update) Run(cmd *cobra.Command, args []string) error {
+func (opts *UpdateOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

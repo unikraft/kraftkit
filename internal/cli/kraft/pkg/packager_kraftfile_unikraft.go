@@ -28,7 +28,7 @@ func (p *packagerKraftfileUnikraft) String() string {
 }
 
 // Buildable implements packager.
-func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *Pkg, args ...string) (bool, error) {
+func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOptions, args ...string) (bool, error) {
 	if opts.project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
@@ -43,7 +43,7 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *Pkg, a
 }
 
 // Build implements packager.
-func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *Pkg, args ...string) error {
+func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, args ...string) error {
 	var err error
 
 	var tree []*processtree.ProcessTreeItem

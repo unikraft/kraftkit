@@ -16,12 +16,12 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type Down struct {
+type DownOptions struct {
 	driver string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Down{}, cobra.Command{
+	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
 		Short:   "Bring a network offline",
 		Use:     "down",
 		Aliases: []string{"stop"},
@@ -37,12 +37,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Down) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *DownOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
-func (opts *Down) Run(cmd *cobra.Command, args []string) error {
+func (opts *DownOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

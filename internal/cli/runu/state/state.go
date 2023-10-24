@@ -22,11 +22,11 @@ const (
 	flagRoot = "root"
 )
 
-// State implements the OCI "state" command.
-type State struct{}
+// StateOptions implements the OCI "state" command.
+type StateOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&State{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StateOptions{}, cobra.Command{
 		Short: "Output the state of a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "state <unikernel-id>",
@@ -39,7 +39,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *State) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *StateOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

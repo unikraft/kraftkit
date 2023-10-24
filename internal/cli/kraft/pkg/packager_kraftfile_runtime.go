@@ -32,7 +32,7 @@ func (p *packagerKraftfileRuntime) String() string {
 }
 
 // Packagable implements packager.
-func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *Pkg, args ...string) (bool, error) {
+func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOptions, args ...string) (bool, error) {
 	if opts.project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
@@ -47,7 +47,7 @@ func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *Pkg, ar
 }
 
 // Pack implements packager.
-func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *Pkg, args ...string) error {
+func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, args ...string) error {
 	var err error
 	var targ target.Target
 

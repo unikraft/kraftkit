@@ -14,7 +14,7 @@ import (
 )
 
 // buildRootfs generates a rootfs based on the provided
-func (opts *Build) buildRootfs(ctx context.Context) error {
+func (opts *BuildOptions) buildRootfs(ctx context.Context) error {
 	if opts.Rootfs == "" {
 		return nil
 	}

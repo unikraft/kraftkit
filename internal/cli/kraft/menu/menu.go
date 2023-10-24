@@ -32,7 +32,7 @@ import (
 	"kraftkit.sh/tui/processtree"
 )
 
-type Menu struct {
+type MenuOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	Frontend     string `long:"frontend" short:"f" usage:"Alternative frontend to use for the configuration editor" default:"menuconfig"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -47,7 +47,7 @@ type Menu struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Menu{}, cobra.Command{
+	cmd, err := cmdfactory.New(&MenuOptions{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [FLAGS] [DIR]",
 		Aliases: []string{"m", "menuconfig"},
@@ -70,7 +70,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Menu) Pre(cmd *cobra.Command, args []string) error {
+func (opts *MenuOptions) Pre(cmd *cobra.Command, args []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (opts *Menu) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Menu) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
+func (opts *MenuOptions) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
@@ -354,7 +354,7 @@ func (opts *Menu) pull(ctx context.Context, project app.Application, workdir str
 	return nil
 }
 
-func (opts *Menu) Run(cmd *cobra.Command, _ []string) error {
+func (opts *MenuOptions) Run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	// Filter project targets by any provided CLI options

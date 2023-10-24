@@ -21,10 +21,10 @@ type packager interface {
 
 	// Packagable determines whether the provided input is packagable by the
 	// current implementation.
-	Packagable(context.Context, *Pkg, ...string) (bool, error)
+	Packagable(context.Context, *PkgOptions, ...string) (bool, error)
 
 	// Pack performs the packaging based on the determined implementation.
-	Pack(context.Context, *Pkg, ...string) error
+	Pack(context.Context, *PkgOptions, ...string) error
 }
 
 // packagers is the list of built-in packagers which are checked

@@ -37,15 +37,15 @@ import (
 	"kraftkit.sh/oci"
 )
 
-// Create implements the OCI "create" command.
-type Create struct {
+// CreateOptions implements the OCI "create" command.
+type CreateOptions struct {
 	Bundle        string `long:"bundle" short:"b" usage:"path to the root of the bundle directory"`
 	ConsoleSocket string `long:"console-socket" usage:"path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal"`
 	PidFile       string `long:"pid-file" usage:"specify a file where the process ID will be written"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Create{}, cobra.Command{
+	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short: "Create a new unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "create [FLAGS] <unikernel-id>",
@@ -66,7 +66,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Create) Pre(cmd *cobra.Command, args []string) error {
+func (opts *CreateOptions) Pre(cmd *cobra.Command, args []string) error {
 	if opts.Bundle == "" {
 		return fmt.Errorf("--bundle is required")
 	}
@@ -99,7 +99,7 @@ const (
 	specAnnotUnikernel        = "org.unikraft.kernel"
 )
 
-func (opts *Create) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

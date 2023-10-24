@@ -27,7 +27,7 @@ import (
 	"kraftkit.sh/unikraft/arch"
 )
 
-type Pull struct {
+type PullOptions struct {
 	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
@@ -42,7 +42,7 @@ type Pull struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Pull{}, cobra.Command{
+	cmd, err := cmdfactory.New(&PullOptions{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",
 		Use:     "pull [FLAGS] [PACKAGE|DIR]",
 		Aliases: []string{"pl"},
@@ -76,7 +76,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (opts *Pull) Pre(cmd *cobra.Command, _ []string) error {
 	)
 }
 
-func (opts *Pull) Run(cmd *cobra.Command, args []string) error {
+func (opts *PullOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var project app.Application
 	var processes []*paraprogress.Process

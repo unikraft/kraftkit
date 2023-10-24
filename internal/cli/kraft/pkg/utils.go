@@ -17,7 +17,7 @@ import (
 
 // initProject sets up the project based on the provided context and
 // options.
-func (opts *Pkg) initProject(ctx context.Context) error {
+func (opts *PkgOptions) initProject(ctx context.Context) error {
 	var err error
 
 	popts := []app.ProjectOption{
@@ -40,7 +40,7 @@ func (opts *Pkg) initProject(ctx context.Context) error {
 }
 
 // buildRootfs generates a rootfs based on the provided
-func (opts *Pkg) buildRootfs(ctx context.Context) error {
+func (opts *PkgOptions) buildRootfs(ctx context.Context) error {
 	if opts.Rootfs == "" {
 		if opts.project != nil && opts.project.Rootfs() != "" {
 			opts.Rootfs = opts.project.Rootfs()

@@ -21,14 +21,14 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Status struct {
+type StatusOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 
 	metro string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Status{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StatusOptions{}, cobra.Command{
 		Short:   "Retrieve the status of an instance",
 		Use:     "status [FLAGS] UUID",
 		Args:    cobra.ExactArgs(1),
@@ -48,7 +48,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Status) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *StatusOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -60,7 +60,7 @@ func (opts *Status) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Status) Run(cmd *cobra.Command, args []string) error {
+func (opts *StatusOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

@@ -23,7 +23,7 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Create struct {
+type CreateOptions struct {
 	Env      []string `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Memory   int64    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
 	Name     string   `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
@@ -36,7 +36,7 @@ type Create struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Create{}, cobra.Command{
+	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",
 		Use:     "create [FLAGS] IMAGE [-- ARGS]",
 		Args:    cobra.MinimumNArgs(1),
@@ -62,7 +62,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -74,7 +74,7 @@ func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Create) Run(cmd *cobra.Command, args []string) error {
+func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	image := args[0]
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)

@@ -16,12 +16,11 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-// Unsource is the command to remove a manifest pull location from the local config
-type Unsource struct{}
+type UnsourceOptions struct{}
 
 // New returns a new unsource command
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Unsource{}, cobra.Command{
+	cmd, err := cmdfactory.New(&UnsourceOptions{}, cobra.Command{
 		Short: "Remove Unikraft component manifests",
 		Use:   "unsource [FLAGS] [SOURCE]",
 		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
@@ -41,7 +40,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
+func (*UnsourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -53,7 +52,7 @@ func (*Unsource) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 // Run executes the unsource command
-func (opts *Unsource) Run(cmd *cobra.Command, args []string) error {
+func (opts *UnsourceOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	for _, source := range args {
 		manifests := []string{}

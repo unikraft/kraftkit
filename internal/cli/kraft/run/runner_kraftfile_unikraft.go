@@ -36,7 +36,7 @@ func (runner *runnerKraftfileUnikraft) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOptions, args ...string) (bool, error) {
 	var err error
 
 	cwd, err := os.Getwd()
@@ -82,7 +82,7 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *Run, 
 }
 
 // Prepare implements Runner.
-func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	var err error
 
 	// Filter project targets by any provided CLI options

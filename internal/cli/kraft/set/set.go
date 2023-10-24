@@ -44,13 +44,13 @@ import (
 	"kraftkit.sh/unikraft/app"
 )
 
-type Set struct {
+type SetOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Set{}, cobra.Command{
+	cmd, err := cmdfactory.New(&SetOptions{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Hidden:  true,
 		Use:     "set [OPTIONS] [param=value ...]",
@@ -74,7 +74,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Set) Pre(cmd *cobra.Command, _ []string) error {
+func (*SetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (*Set) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Set) Run(cmd *cobra.Command, args []string) error {
+func (opts *SetOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

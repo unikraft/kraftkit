@@ -19,7 +19,7 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Start struct {
+type StartOptions struct {
 	WaitTimeoutMS int    `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
 	Output        string `long:"output" short:"o" usage:"Set output format" default:"table"`
 
@@ -27,7 +27,7 @@ type Start struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Start{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",
 		Use:   "start [FLAGS] [PACKAGE]",
 		Args:  cobra.ExactArgs(1),
@@ -46,7 +46,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Start) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -58,7 +58,7 @@ func (opts *Start) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Start) Run(cmd *cobra.Command, args []string) error {
+func (opts *StartOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

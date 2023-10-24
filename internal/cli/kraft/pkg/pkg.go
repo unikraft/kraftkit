@@ -24,13 +24,13 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg/list"
 	"kraftkit.sh/internal/cli/kraft/pkg/pull"
 	"kraftkit.sh/internal/cli/kraft/pkg/push"
-	"kraftkit.sh/internal/cli/kraft/pkg/rm"
+	"kraftkit.sh/internal/cli/kraft/pkg/remove"
 	"kraftkit.sh/internal/cli/kraft/pkg/source"
 	"kraftkit.sh/internal/cli/kraft/pkg/unsource"
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
 )
 
-type Pkg struct {
+type PkgOptions struct {
 	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
 	Args         []string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Dbg          bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
@@ -53,7 +53,7 @@ type Pkg struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Pkg{}, cobra.Command{
+	cmd, err := cmdfactory.New(&PkgOptions{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -82,7 +82,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(list.New())
 	cmd.AddCommand(pull.New())
 	cmd.AddCommand(push.New())
-	cmd.AddCommand(rm.New())
+	cmd.AddCommand(remove.New())
 	cmd.AddCommand(source.New())
 	cmd.AddCommand(unsource.New())
 	cmd.AddCommand(update.New())
@@ -99,7 +99,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
+func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 	var err error
 	if len(args) == 0 {
 		opts.workdir, err = os.Getwd()
@@ -144,7 +144,7 @@ func (opts *Pkg) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Pkg) Run(cmd *cobra.Command, args []string) error {
+func (opts *PkgOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	ctx := cmd.Context()
 

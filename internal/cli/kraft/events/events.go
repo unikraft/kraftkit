@@ -26,14 +26,14 @@ import (
 	"kraftkit.sh/machine/qemu/qmp"
 )
 
-type Events struct {
+type EventOptions struct {
 	platform     string
 	Granularity  time.Duration `long:"poll-granularity" short:"g" usage:"How often the machine store and state should polled"`
 	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Events{}, cobra.Command{
+	cmd, err := cmdfactory.New(&EventOptions{}, cobra.Command{
 		Short:   "Follow the events of a unikernel",
 		Hidden:  true,
 		Use:     "events [FLAGS] [MACHINE ID]",
@@ -64,12 +64,12 @@ func New() *cobra.Command {
 
 var observations = waitgroup.WaitGroup[*machineapi.Machine]{}
 
-func (opts *Events) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *EventOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Events) Run(cmd *cobra.Command, args []string) error {
+func (opts *EventOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx, cancel := context.WithCancel(cmd.Context())

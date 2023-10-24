@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type Ps struct {
+type PsOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the list by architecture"`
 	Long         bool   `long:"long" short:"l" usage:"Show more information"`
 	platform     string
@@ -33,7 +33,7 @@ const (
 )
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Ps{}, cobra.Command{
+	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",
 		Args:  cobra.MaximumNArgs(0),
@@ -59,12 +59,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Ps) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *PsOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Ps) Run(cmd *cobra.Command, _ []string) error {
+func (opts *PsOptions) Run(cmd *cobra.Command, _ []string) error {
 	var err error
 
 	type psTable struct {

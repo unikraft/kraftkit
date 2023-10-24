@@ -39,7 +39,7 @@ func (runner *runnerLinuxu) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *RunOptions, args ...string) (bool, error) {
 	if len(args) == 0 {
 		return false, fmt.Errorf("no arguments supplied")
 	}
@@ -115,7 +115,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *Run, args ...str
 }
 
 // Prepare implements Runner.
-func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx)
 	if err != nil {
 		return err

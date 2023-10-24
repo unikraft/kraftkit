@@ -14,10 +14,10 @@ import (
 	"kraftkit.sh/iostreams"
 )
 
-type Version struct{}
+type VersionOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Version{}, cobra.Command{
+	cmd, err := cmdfactory.New(&VersionOptions{}, cobra.Command{
 		Short:   "Show kraft version information",
 		Use:     "version",
 		Aliases: []string{"v"},
@@ -33,7 +33,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Version) Run(cmd *cobra.Command, _ []string) error {
+func (opts *VersionOptions) Run(cmd *cobra.Command, _ []string) error {
 	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
 	return nil
 }

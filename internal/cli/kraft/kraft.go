@@ -46,11 +46,12 @@ import (
 	_ "kraftkit.sh/oci"
 )
 
-type Kraft struct{}
+type KraftOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Kraft{}, cobra.Command{
+	cmd, err := cmdfactory.New(&KraftOptions{}, cobra.Command{
 		Short: "Build and use highly customized and ultra-lightweight unikernels",
+		Use:   "kraft [FLAGS] SUBCOMMAND",
 		Long: heredoc.Docf(`
         .
        /^\     Build and use highly customized and ultra-lightweight unikernels.
@@ -104,7 +105,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (k *Kraft) Run(cmd *cobra.Command, args []string) error {
+func (k *KraftOptions) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 

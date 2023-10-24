@@ -43,12 +43,12 @@ import (
 	"kraftkit.sh/unikraft/app"
 )
 
-type Unset struct {
+type UnsetOptions struct {
 	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Unset{}, cobra.Command{
+	cmd, err := cmdfactory.New(&UnsetOptions{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",
 		Hidden:  true,
 		Use:     "unset [OPTIONS] [param ...]",
@@ -72,7 +72,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Unset) Pre(cmd *cobra.Command, _ []string) error {
+func (*UnsetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (*Unset) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Unset) Run(cmd *cobra.Command, args []string) error {
+func (opts *UnsetOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

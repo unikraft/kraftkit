@@ -33,7 +33,7 @@ import (
 //
 // [OCI runtime]: https://github.com/opencontainers/runtime-spec/blob/v1.1.0/runtime.md
 // [command-line interface]: https://github.com/opencontainers/runtime-tools/blob/v0.9.0/docs/command-line-interface.md
-type Runu struct {
+type RunuOptions struct {
 	Root          string `long:"root" usage:"Root directory for storage of unikernel state" default:"/run/runu"`
 	Log           string `long:"log" usage:"Set the log file path where internal debug information is written" default:"/run/runu/runu.log"`
 	LogFormat     string `long:"log-format" usage:"set the format used by logs" default:"text"`
@@ -41,7 +41,7 @@ type Runu struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Runu{}, cobra.Command{
+	cmd, err := cmdfactory.New(&RunuOptions{}, cobra.Command{
 		Short: "Run OCI-compatible unikernels",
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
@@ -62,7 +62,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Runu) PersistentPre(cmd *cobra.Command, _ []string) error {
+func (opts *RunuOptions) PersistentPre(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	if opts.Root == "" {
@@ -85,7 +85,7 @@ func (opts *Runu) PersistentPre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (*Runu) Run(cmd *cobra.Command, args []string) error {
+func (*RunuOptions) Run(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 

@@ -25,7 +25,7 @@ import (
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
-func (opts *Run) parsePorts(_ context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machine) error {
 	if len(opts.Ports) == 0 {
 		return nil
 	}
@@ -43,7 +43,7 @@ func (opts *Run) parsePorts(_ context.Context, machine *machineapi.Machine) erro
 }
 
 // Was a network specified? E.g. --network=bridge:kraft0
-func (opts *Run) parseNetworks(ctx context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.Machine) error {
 	if opts.Network == "" {
 		return nil
 	}
@@ -102,7 +102,7 @@ func (opts *Run) parseNetworks(ctx context.Context, machine *machineapi.Machine)
 
 // assignName determines the machine instance's name either from a provided
 // argument or randomly generates one.
-func (opts *Run) assignName(ctx context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) assignName(ctx context.Context, machine *machineapi.Machine) error {
 	if opts.Name == "" {
 		machine.ObjectMeta.Name = machinename.NewRandomMachineName(0)
 		return nil
@@ -126,7 +126,7 @@ func (opts *Run) assignName(ctx context.Context, machine *machineapi.Machine) er
 }
 
 // Was a volume specified? E.g. --volume=path:path
-func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) parseVolumes(ctx context.Context, machine *machineapi.Machine) error {
 	if len(opts.Volumes) == 0 {
 		return nil
 	}
@@ -188,7 +188,7 @@ func (opts *Run) parseVolumes(ctx context.Context, machine *machineapi.Machine) 
 }
 
 // Were any volumes supplied in the Kraftfile
-func (opts *Run) parseKraftfileVolumes(ctx context.Context, project app.Application, machine *machineapi.Machine) error {
+func (opts *RunOptions) parseKraftfileVolumes(ctx context.Context, project app.Application, machine *machineapi.Machine) error {
 	if project.Volumes() == nil {
 		return nil
 	}
@@ -245,7 +245,7 @@ func (opts *Run) parseKraftfileVolumes(ctx context.Context, project app.Applicat
 // parse the provided `--rootfs` flag which ultimately is passed into the
 // dynamic Initrd interface which either looks up or constructs the archive
 // based on the value of the flag.
-func (opts *Run) prepareRootfs(ctx context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.Machine) error {
 	// If the user has supplied an initram path, set this now, this overrides any
 	// preparation and is considered higher priority compared to what has been set
 	// prior to this point.

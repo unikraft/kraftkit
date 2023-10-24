@@ -44,7 +44,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-type Clean struct {
+type CleanOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter prepare based on a target's architecture"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
@@ -52,7 +52,7 @@ type Clean struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Clean{}, cobra.Command{
+	cmd, err := cmdfactory.New(&CleanOptions{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -75,7 +75,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *CleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (opts *Clean) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Clean) Run(cmd *cobra.Command, args []string) error {
+func (opts *CleanOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

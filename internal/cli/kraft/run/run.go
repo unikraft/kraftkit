@@ -29,7 +29,7 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type Run struct {
+type RunOptions struct {
 	Architecture  string   `long:"arch" short:"m" usage:"Set the architecture"`
 	Detach        bool     `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool     `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
@@ -58,7 +58,7 @@ type Run struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Run{}, cobra.Command{
+	cmd, err := cmdfactory.New(&RunOptions{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
 		Aliases: []string{"r"},
@@ -124,7 +124,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	var err error
 	ctx := cmd.Context()
 
@@ -229,7 +229,7 @@ func (opts *Run) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Run) Run(cmd *cobra.Command, args []string) error {
+func (opts *RunOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	ctx := cmd.Context()
 

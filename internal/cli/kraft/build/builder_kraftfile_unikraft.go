@@ -33,7 +33,7 @@ func (build *builderKraftfileUnikraft) String() string {
 }
 
 // Buildable implements builder.
-func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Build, args ...string) (bool, error) {
+func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *BuildOptions, args ...string) (bool, error) {
 	if opts.project.Unikraft(ctx) == nil && opts.project.Template() == nil {
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
@@ -45,7 +45,7 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 	return true, nil
 }
 
-func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *Build, norender bool, nameWidth int) error {
+func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOptions, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
@@ -283,7 +283,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *Build, no
 	return nil
 }
 
-func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *Build, targets []target.Target, args ...string) error {
+func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
 	var processes []*paraprogress.Process
 
 	nameWidth := -1
