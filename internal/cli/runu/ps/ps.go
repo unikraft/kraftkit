@@ -5,6 +5,7 @@
 package ps
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,8 @@ const formatJSON = "json"
 // PsOptions implements the runc "ps" command.
 type PsOptions struct {
 	Format string `long:"format" short:"f" usage:"format of the output (table or json)" default:"table"`
+
+	rootDir string
 }
 
 func NewCmd() *cobra.Command {
@@ -45,9 +48,16 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *PsOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
-	ctx := cmd.Context()
+func (opts *PsOptions) Pre(cmd *cobra.Command, args []string) error {
+	opts.rootDir = cmd.Flag(flagRoot).Value.String()
+	if opts.rootDir == "" {
+		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
+	}
 
+	return nil
+}
+
+func (opts *PsOptions) Run(ctx context.Context, args []string) (retErr error) {
 	defer func() {
 		// Make sure the error is written to the configured log destination, so
 		// that the message gets propagated through the caller (e.g. containerd-shim)
@@ -56,14 +66,9 @@ func (opts *PsOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 		}
 	}()
 
-	rootDir := cmd.Flag(flagRoot).Value.String()
-	if rootDir == "" {
-		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
-	}
-
 	cID := args[0]
 
-	c, err := libcontainer.Load(rootDir, cID)
+	c, err := libcontainer.Load(opts.rootDir, cID)
 	if err != nil {
 		return fmt.Errorf("loading container from saved state: %w", err)
 	}

@@ -5,6 +5,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -42,10 +43,8 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

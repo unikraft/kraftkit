@@ -40,7 +40,7 @@ type PreRunnable interface {
 }
 
 type Runnable interface {
-	Run(cmd *cobra.Command, args []string) error
+	Run(ctx context.Context, args []string) error
 }
 
 type fieldInfo struct {
@@ -361,7 +361,9 @@ func New(obj Runnable, cmd cobra.Command) (*cobra.Command, error) {
 	c.InitDefaultCompletionCmd()
 
 	if obj != nil {
-		c.RunE = obj.Run
+		c.RunE = func(cmd *cobra.Command, args []string) error {
+			return obj.Run(cmd.Context(), args)
+		}
 
 		// Parse the attributes of this object into addressable flags for this command
 		if err := AttributeFlags(&c, obj); err != nil {

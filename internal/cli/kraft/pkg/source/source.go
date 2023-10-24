@@ -5,6 +5,7 @@
 package source
 
 import (
+	"context"
 	"errors"
 
 	"github.com/MakeNowJust/heredoc"
@@ -56,9 +57,7 @@ func (*SourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *SourceOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *SourceOptions) Run(ctx context.Context, args []string) error {
 	for _, source := range args {
 		if !opts.Force {
 			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx,

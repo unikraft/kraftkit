@@ -32,6 +32,7 @@
 package set
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -85,10 +86,8 @@ func (*SetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *SetOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	workdir := ""
 	confOpts := []string{}

@@ -32,6 +32,7 @@
 package properclean
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -82,10 +83,9 @@ func (*ProperCleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ProperCleanOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *ProperCleanOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	workdir := ""
 
 	if len(args) == 0 {

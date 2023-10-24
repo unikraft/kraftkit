@@ -6,8 +6,11 @@
 package cloud
 
 import (
+	"context"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/img"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
@@ -78,6 +81,6 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *CloudOptions) Run(cmd *cobra.Command, args []string) error {
-	return nil
+func (opts *CloudOptions) Run(_ context.Context, args []string) error {
+	return pflag.ErrHelp
 }

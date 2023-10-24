@@ -102,7 +102,7 @@ func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
 	)
 }
 
-func (opts *PullOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	var project app.Application
 	var processes []*paraprogress.Process
@@ -119,7 +119,6 @@ func (opts *PullOptions) Run(cmd *cobra.Command, args []string) error {
 		args = []string{workdir}
 	}
 
-	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY

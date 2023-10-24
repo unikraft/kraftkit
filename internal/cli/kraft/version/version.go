@@ -5,6 +5,7 @@
 package version
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -33,7 +34,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *VersionOptions) Run(cmd *cobra.Command, _ []string) error {
-	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
+func (opts *VersionOptions) Run(ctx context.Context, _ []string) error {
+	fmt.Fprintf(iostreams.G(ctx).Out, "kraft %s", version.String())
 	return nil
 }

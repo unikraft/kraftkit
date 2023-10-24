@@ -5,6 +5,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -70,10 +71,9 @@ func (*ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ListOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	workdir := ""
 	if len(args) > 0 {
 		workdir = args[0]

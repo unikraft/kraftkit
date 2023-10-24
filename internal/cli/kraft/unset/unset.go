@@ -32,6 +32,7 @@
 package unset
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -83,10 +84,8 @@ func (*UnsetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UnsetOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	workdir := ""
 	confOpts := []string{}

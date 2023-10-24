@@ -5,6 +5,7 @@
 package kill
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -28,6 +29,8 @@ type KillOptions struct {
 	// retained for backwards compatibility with containerd's CRI implementation
 	// (Kubernetes).
 	All bool `long:"all" short:"a" usage:"send the specified signal to all processes"`
+
+	rootDir string
 }
 
 func NewCmd() *cobra.Command {
@@ -44,9 +47,16 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *KillOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
-	ctx := cmd.Context()
+func (opts *KillOptions) Pre(cmd *cobra.Command, args []string) error {
+	opts.rootDir = cmd.Flag(flagRoot).Value.String()
+	if opts.rootDir == "" {
+		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
+	}
 
+	return nil
+}
+
+func (opts *KillOptions) Run(ctx context.Context, args []string) (retErr error) {
 	defer func() {
 		// Make sure the error is written to the configured log destination, so
 		// that the message gets propagated through the caller (e.g. containerd-shim)
@@ -54,11 +64,6 @@ func (opts *KillOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 			log.G(ctx).Error(retErr)
 		}
 	}()
-
-	rootDir := cmd.Flag(flagRoot).Value.String()
-	if rootDir == "" {
-		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
-	}
 
 	cID := args[0]
 
@@ -70,7 +75,7 @@ func (opts *KillOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 		}
 	}
 
-	c, err := libcontainer.Load(rootDir, cID)
+	c, err := libcontainer.Load(opts.rootDir, cID)
 	if err != nil {
 		return fmt.Errorf("loading container from saved state: %w", err)
 	}

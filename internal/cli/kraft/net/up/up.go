@@ -5,6 +5,7 @@
 package up
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -42,8 +43,7 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UpOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
 		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)

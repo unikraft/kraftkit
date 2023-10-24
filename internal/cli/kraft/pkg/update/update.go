@@ -54,10 +54,9 @@ func (*UpdateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UpdateOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
 	// Force a particular package manager

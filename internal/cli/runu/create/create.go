@@ -42,6 +42,9 @@ type CreateOptions struct {
 	Bundle        string `long:"bundle" short:"b" usage:"path to the root of the bundle directory"`
 	ConsoleSocket string `long:"console-socket" usage:"path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal"`
 	PidFile       string `long:"pid-file" usage:"specify a file where the process ID will be written"`
+
+	rootDir string
+	sdcg    bool
 }
 
 func NewCmd() *cobra.Command {
@@ -81,6 +84,16 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%q should be a regular file", bundleConfig)
 	}
 
+	opts.rootDir = cmd.Flag(flagRoot).Value.String()
+	if opts.rootDir == "" {
+		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
+	}
+
+	opts.sdcg, err = strconv.ParseBool(cmd.Flag(flagSdCgroup).Value.String())
+	if err != nil {
+		return fmt.Errorf("parsing --%s flag: %w", flagSdCgroup, err)
+	}
+
 	return nil
 }
 
@@ -99,9 +112,8 @@ const (
 	specAnnotUnikernel        = "org.unikraft.kernel"
 )
 
-func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
-	ctx := cmd.Context()
-
+func (opts *CreateOptions) Run(ctx context.Context, args []string) (retErr error) {
+	var err error
 	defer func() {
 		// Make sure the error is written to the configured log destination, so
 		// that the message gets propagated through the caller (e.g. containerd-shim)
@@ -110,16 +122,7 @@ func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) (retErr error)
 		}
 	}()
 
-	rootDir := cmd.Flag(flagRoot).Value.String()
-	if rootDir == "" {
-		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
-	}
-
-	sdcg, err := strconv.ParseBool(cmd.Flag(flagSdCgroup).Value.String())
-	if err != nil {
-		return fmt.Errorf("parsing --%s flag: %w", flagSdCgroup, err)
-	}
-	if sdcg {
+	if opts.sdcg {
 		log.G(ctx).Warnf("ignoring --%s flag", flagSdCgroup)
 	}
 
@@ -158,7 +161,7 @@ func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) (retErr error)
 		}
 		spec.Process.Args[0] = cArgPath
 	} else {
-		cArgs, err := genMachineArgs(ctx, cID, rootDir, spec.Root.Path)
+		cArgs, err := genMachineArgs(ctx, cID, opts.rootDir, spec.Root.Path)
 		if err != nil {
 			return fmt.Errorf("generating machine args: %w", err)
 		}
@@ -170,7 +173,7 @@ func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) (retErr error)
 		spec.Annotations[specAnnotUnikernel] = ""
 	}
 
-	c, err := createContainer(cID, rootDir, spec)
+	c, err := createContainer(cID, opts.rootDir, spec)
 	if err != nil {
 		return fmt.Errorf("creating container environment: %w", err)
 	}

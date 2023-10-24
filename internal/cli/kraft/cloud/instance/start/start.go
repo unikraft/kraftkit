@@ -5,6 +5,7 @@
 package start
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -58,8 +59,7 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *StartOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

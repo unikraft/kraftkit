@@ -5,6 +5,7 @@
 package run
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -229,9 +230,8 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RunOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
-	ctx := cmd.Context()
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},

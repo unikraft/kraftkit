@@ -67,7 +67,7 @@ func (opts *PushOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *PushOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *PushOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	var workdir string
 
@@ -82,7 +82,6 @@ func (opts *PushOptions) Run(cmd *cobra.Command, args []string) error {
 		workdir = ""
 	}
 
-	ctx := cmd.Context()
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 	ref := ""
 	if workdir != "" {

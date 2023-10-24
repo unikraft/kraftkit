@@ -5,6 +5,7 @@
 package stop
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -58,14 +59,13 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *StopOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
 
 	var err error
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

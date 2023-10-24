@@ -5,6 +5,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -144,9 +145,8 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *PkgOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 	var err error
-	ctx := cmd.Context()
 
 	exists, err := opts.pm.Catalog(ctx,
 		packmanager.WithName(opts.Name),

@@ -6,6 +6,7 @@
 package create
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -74,8 +75,7 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	image := args[0]
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

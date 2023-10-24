@@ -53,10 +53,9 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *LogOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

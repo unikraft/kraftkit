@@ -6,6 +6,7 @@ package login
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -39,10 +40,9 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *LoginOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *LoginOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	host := args[0]
-	ctx := cmd.Context()
 
 	// Prompt the user from stdin for a username if neither a username nor a token
 	// was provided

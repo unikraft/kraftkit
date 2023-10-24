@@ -6,12 +6,14 @@
 package kraft
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -105,8 +107,8 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (k *KraftOptions) Run(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+func (k *KraftOptions) Run(_ context.Context, args []string) error {
+	return pflag.ErrHelp
 }
 
 func Main(args []string) int {

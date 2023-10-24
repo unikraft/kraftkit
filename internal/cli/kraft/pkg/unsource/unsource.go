@@ -7,6 +7,8 @@
 package unsource
 
 import (
+	"context"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -52,8 +54,7 @@ func (*UnsourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 // Run executes the unsource command
-func (opts *UnsourceOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *UnsourceOptions) Run(ctx context.Context, args []string) error {
 	for _, source := range args {
 		manifests := []string{}
 

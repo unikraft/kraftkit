@@ -5,6 +5,7 @@
 package build
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -112,9 +113,7 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *BuildOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 	if len(selected) == 0 {

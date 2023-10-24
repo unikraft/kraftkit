@@ -5,6 +5,7 @@
 package create
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -59,10 +60,8 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

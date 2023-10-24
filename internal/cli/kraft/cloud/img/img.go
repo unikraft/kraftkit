@@ -6,7 +6,10 @@
 package img
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/img/list"
 
@@ -34,6 +37,6 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *ImgOptions) Run(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+func (opts *ImgOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }

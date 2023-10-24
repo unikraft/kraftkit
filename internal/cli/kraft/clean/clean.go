@@ -32,6 +32,7 @@
 package clean
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -88,10 +89,8 @@ func (opts *CleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CleanOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *CleanOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 	workdir := ""
 
 	if len(args) == 0 {

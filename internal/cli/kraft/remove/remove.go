@@ -5,6 +5,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -59,14 +60,13 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("no machine(s) specified")
 	}
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

@@ -6,7 +6,10 @@
 package instance
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 
@@ -46,6 +49,6 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *InstanceOptions) Run(cmd *cobra.Command, _ []string) error {
-	return cmd.Help()
+func (opts *InstanceOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }

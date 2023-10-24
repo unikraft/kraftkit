@@ -14,6 +14,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -85,8 +86,8 @@ func (opts *RunuOptions) PersistentPre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (*RunuOptions) Run(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+func (*RunuOptions) Run(_ context.Context, args []string) error {
+	return pflag.ErrHelp
 }
 
 func Main(args []string) int {

@@ -357,9 +357,7 @@ func (opts *FetchOptions) pull(ctx context.Context, project app.Application, wor
 	return nil
 }
 
-func (opts *FetchOptions) Run(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-
+func (opts *FetchOptions) Run(ctx context.Context, _ []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 

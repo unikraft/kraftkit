@@ -5,9 +5,11 @@
 package net
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/net/create"
@@ -58,6 +60,6 @@ func (opts *NetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *NetOptions) Run(cmd *cobra.Command, _ []string) error {
-	return cmd.Help()
+func (opts *NetOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }

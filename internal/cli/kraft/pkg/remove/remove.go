@@ -6,6 +6,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -81,9 +82,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	umbrella, err := packmanager.PackageManagers()
 	if err != nil {
 		return fmt.Errorf("could not get registered package managers: %w", err)
