@@ -16,12 +16,12 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type Source struct {
+type SourceOptions struct {
 	Force bool `short:"F" long:"force" usage:"Do not run a compatibility test before sourcing."`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Source{}, cobra.Command{
+	cmd, err := cmdfactory.New(&SourceOptions{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",
 		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
@@ -45,7 +45,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*Source) Pre(cmd *cobra.Command, _ []string) error {
+func (*SourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (*Source) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Source) Run(cmd *cobra.Command, args []string) error {
+func (opts *SourceOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	for _, source := range args {

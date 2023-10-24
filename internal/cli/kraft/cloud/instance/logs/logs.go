@@ -20,14 +20,14 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Logs struct {
+type LogOptions struct {
 	Tail int `local:"true" long:"tail" short:"n" usage:"Lines of recent logs to display" default:"-1"`
 
 	metro string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Logs{}, cobra.Command{
+	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",
 		Use:   "logs [UUID]",
 		Args:  cobra.ExactArgs(1),
@@ -46,7 +46,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Logs) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -58,7 +58,7 @@ func (opts *Logs) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
+func (opts *LogOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

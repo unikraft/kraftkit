@@ -20,12 +20,12 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type Net struct {
+type NetOptions struct {
 	Driver string `local:"false" long:"driver" short:"d" usage:"Set the network driver." default:"bridge"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Net{}, cobra.Command{
+	cmd, err := cmdfactory.New(&NetOptions{}, cobra.Command{
 		Short:   "Manage machine networks",
 		Use:     "net SUBCOMMAND",
 		Aliases: []string{"network"},
@@ -48,7 +48,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Net) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *NetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.Driver == "" {
 		return fmt.Errorf("network driver must be set")
 	} else if !set.NewStringSet(network.DriverNames()...).Contains(opts.Driver) {
@@ -58,6 +58,6 @@ func (opts *Net) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Net) Run(cmd *cobra.Command, _ []string) error {
+func (opts *NetOptions) Run(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
 }

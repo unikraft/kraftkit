@@ -17,13 +17,13 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type Stop struct {
+type StopOptions struct {
 	All      bool `long:"all" usage:"Remove all machines"`
 	platform string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop one or more running unikernels",
 		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
 		Long: heredoc.Doc(`
@@ -49,7 +49,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
+func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
@@ -58,7 +58,7 @@ func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
+func (opts *StopOptions) Run(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}

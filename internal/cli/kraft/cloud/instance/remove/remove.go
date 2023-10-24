@@ -20,7 +20,7 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Remove struct {
+type RemoveOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 	All    bool   `long:"all" usage:"Stop all instances"`
 
@@ -28,7 +28,7 @@ type Remove struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Remove{}, cobra.Command{
+	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete an instance",
 		Use:     "delete UUID",
 		Aliases: []string{"del", "delete", "rm"},
@@ -51,7 +51,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Remove) Pre(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if !opts.All && len(args) == 0 {
 		return fmt.Errorf("either specify an instance UUID or --all flag")
 	}
@@ -67,7 +67,7 @@ func (opts *Remove) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Remove) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

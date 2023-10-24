@@ -23,13 +23,13 @@ import (
 	"kraftkit.sh/unikraft/app"
 )
 
-type Push struct {
+type PushOptions struct {
 	Format    string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Push{}, cobra.Command{
+	cmd, err := cmdfactory.New(&PushOptions{}, cobra.Command{
 		Short:   "Push a Unikraft unikernel package to registry",
 		Use:     "push [FLAGS] [PACKAGE]",
 		Aliases: []string{"ph"},
@@ -56,7 +56,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Push) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *PushOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (opts *Push) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Push) Run(cmd *cobra.Command, args []string) error {
+func (opts *PushOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	var workdir string
 

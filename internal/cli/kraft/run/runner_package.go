@@ -46,7 +46,7 @@ func (runner *runnerPackage) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, args ...string) (bool, error) {
 	if len(args) == 0 {
 		return false, fmt.Errorf("no arguments supplied")
 	}
@@ -75,7 +75,7 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *Run, args ...st
 }
 
 // Prepare implements Runner.
-func (runner *runnerPackage) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	// First try the local cache of the catalog
 	packs, err := runner.pm.Catalog(ctx,
 		packmanager.WithTypes(unikraft.ComponentTypeApp),

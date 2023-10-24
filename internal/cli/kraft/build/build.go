@@ -22,7 +22,7 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-type Build struct {
+type BuildOptions struct {
 	All          bool   `long:"all" usage:"Build all targets"`
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
@@ -45,7 +45,7 @@ type Build struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Build{}, cobra.Command{
+	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -72,7 +72,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
+func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (opts *Build) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Build) Run(cmd *cobra.Command, args []string) error {
+func (opts *BuildOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// Filter project targets by any provided CLI options

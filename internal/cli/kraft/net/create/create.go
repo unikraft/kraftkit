@@ -18,13 +18,13 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type Create struct {
+type CreateOptions struct {
 	driver  string
 	Network string `long:"network" short:"n" usage:"Set the gateway IP address and the subnet of the network in CIDR format."`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Create{}, cobra.Command{
+	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a new machine network",
 		Use:     "create [FLAGS] NETWORK",
 		Aliases: []string{"add"},
@@ -40,7 +40,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.driver = cmd.Flag("driver").Value.String()
 
 	// TODO(nderjung): A future implementation can list existing networks and
@@ -59,7 +59,7 @@ func (opts *Create) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *Create) Run(cmd *cobra.Command, args []string) error {
+func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

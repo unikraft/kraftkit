@@ -32,7 +32,7 @@ func (runner *runnerKraftfileRuntime) String() string {
 }
 
 // Runnable implements Runner.
-func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *Run, args ...string) (bool, error) {
+func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *RunOptions, args ...string) (bool, error) {
 	var err error
 
 	cwd, err := os.Getwd()
@@ -78,7 +78,7 @@ func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *Run, a
 }
 
 // Prepare implements Runner.
-func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *Run, machine *machineapi.Machine, args ...string) error {
+func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	var err error
 	var targ target.Target
 

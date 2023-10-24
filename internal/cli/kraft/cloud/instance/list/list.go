@@ -20,14 +20,14 @@ import (
 	"kraftkit.sh/log"
 )
 
-type List struct {
+type ListOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 
 	metro string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&List{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List instances",
 		Use:     "ls [FLAGS]",
 		Aliases: []string{"list"},
@@ -46,7 +46,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *List) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -58,7 +58,7 @@ func (opts *List) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *List) Run(cmd *cobra.Command, args []string) error {
+func (opts *ListOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

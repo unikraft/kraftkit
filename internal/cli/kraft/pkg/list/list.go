@@ -24,7 +24,7 @@ import (
 	"kraftkit.sh/unikraft"
 )
 
-type List struct {
+type ListOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
@@ -38,7 +38,7 @@ type List struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&List{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "ls [FLAGS] [DIR]",
 		Aliases: []string{"l", "list"},
@@ -59,7 +59,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*List) Pre(cmd *cobra.Command, _ []string) error {
+func (*ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (*List) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *List) Run(cmd *cobra.Command, args []string) error {
+func (opts *ListOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

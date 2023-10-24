@@ -42,12 +42,12 @@ import (
 	"kraftkit.sh/unikraft/app"
 )
 
-type ProperClean struct {
+type ProperCleanOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&ProperClean{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ProperCleanOptions{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
 		Aliases: []string{"pc"},
@@ -71,7 +71,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (*ProperClean) Pre(cmd *cobra.Command, _ []string) error {
+func (*ProperCleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (*ProperClean) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ProperClean) Run(cmd *cobra.Command, args []string) error {
+func (opts *ProperCleanOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

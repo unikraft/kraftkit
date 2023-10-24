@@ -18,13 +18,13 @@ import (
 	"kraftkit.sh/iostreams"
 )
 
-type Login struct {
+type LoginOptions struct {
 	User  string `long:"user" short:"u" usage:"Username" env:"KRAFTKIT_LOGIN_USER"`
 	Token string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Login{}, cobra.Command{
+	cmd, err := cmdfactory.New(&LoginOptions{}, cobra.Command{
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",
 		Args:  cobra.ExactArgs(1),
@@ -39,7 +39,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Login) Run(cmd *cobra.Command, args []string) error {
+func (opts *LoginOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 	host := args[0]
 	ctx := cmd.Context()

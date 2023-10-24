@@ -22,11 +22,11 @@ type builder interface {
 
 	// Buildable determines whether the provided input can be constructed for the
 	// given implementation.
-	Buildable(context.Context, *Build, ...string) (bool, error)
+	Buildable(context.Context, *BuildOptions, ...string) (bool, error)
 
 	// Build performs the actual construction of the unikernel given the provided
 	// inputs for the given implementation.
-	Build(context.Context, *Build, []target.Target, ...string) error
+	Build(context.Context, *BuildOptions, []target.Target, ...string) error
 }
 
 // builders is the list of built-in builders which are checked sequentially for

@@ -18,14 +18,14 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type List struct {
+type ListOptions struct {
 	Long   bool   `long:"long" short:"l" usage:"Show more information"`
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 	driver string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&List{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List machine networks",
 		Use:     "ls [FLAGS]",
 		Aliases: []string{"list"},
@@ -41,12 +41,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *List) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
-func (opts *List) Run(cmd *cobra.Command, _ []string) error {
+func (opts *ListOptions) Run(cmd *cobra.Command, _ []string) error {
 	var err error
 
 	ctx := cmd.Context()

@@ -22,8 +22,8 @@ const (
 	flagRoot = "root"
 )
 
-// Kill implements the OCI "kill" command.
-type Kill struct {
+// KillOptions implements the OCI "kill" command.
+type KillOptions struct {
 	// This flag is being deprecated (opencontainers/runc#3864) but needs to be
 	// retained for backwards compatibility with containerd's CRI implementation
 	// (Kubernetes).
@@ -31,7 +31,7 @@ type Kill struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Kill{}, cobra.Command{
+	cmd, err := cmdfactory.New(&KillOptions{}, cobra.Command{
 		Short: "Send a signal to a unikernel",
 		Args:  cobra.RangeArgs(1, 2),
 		Use:   "kill <unikernel-id> [signal]",
@@ -44,7 +44,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Kill) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *KillOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

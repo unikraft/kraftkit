@@ -19,13 +19,13 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type Logs struct {
+type LogOptions struct {
 	platform string
 	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Logs{}, cobra.Command{
+	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
 		Args:    cobra.MaximumNArgs(1),
@@ -48,12 +48,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Logs) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Logs) Run(cmd *cobra.Command, args []string) error {
+func (opts *LogOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

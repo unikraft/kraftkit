@@ -18,11 +18,11 @@ const (
 	flagRoot = "root"
 )
 
-// Start implements the OCI "start" command.
-type Start struct{}
+// StartOptions implements the OCI "start" command.
+type StartOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Start{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "start <unikernel-id>",
@@ -35,7 +35,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Start) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *StartOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

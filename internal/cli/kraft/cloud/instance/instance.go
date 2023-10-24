@@ -19,10 +19,10 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
 )
 
-type Instance struct{}
+type InstanceOptions struct{}
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Instance{}, cobra.Command{
+	cmd, err := cmdfactory.New(&InstanceOptions{}, cobra.Command{
 		Short:   "Manage KraftCloud instances",
 		Use:     "instance SUBCOMMAND",
 		Aliases: []string{"inst", "instances"},
@@ -46,6 +46,6 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Instance) Run(cmd *cobra.Command, _ []string) error {
+func (opts *InstanceOptions) Run(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
 }

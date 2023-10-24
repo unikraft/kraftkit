@@ -15,12 +15,12 @@ import (
 	"kraftkit.sh/cmdfactory"
 )
 
-type Cloud struct {
+type CloudOptions struct {
 	Metro string `long:"metro" env:"KRAFTCLOUD_METRO" usage:"Set the KraftCloud metro."`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Cloud{}, cobra.Command{
+	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
 		Short:  "KraftCloud",
 		Use:    "cloud [FLAGS] [SUBCOMMAND|DIR]",
 		Hidden: true,
@@ -78,6 +78,6 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Cloud) Run(cmd *cobra.Command, args []string) error {
+func (opts *CloudOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }

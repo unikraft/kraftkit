@@ -16,12 +16,12 @@ import (
 	"kraftkit.sh/machine/network"
 )
 
-type Rm struct {
+type RemoveOptions struct {
 	driver string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
+	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove a network",
 		Use:     "rm",
 		Aliases: []string{"remove", "delete", "del"},
@@ -37,12 +37,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
-func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	ctx := cmd.Context()

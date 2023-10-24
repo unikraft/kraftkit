@@ -20,7 +20,7 @@ import (
 	"kraftkit.sh/log"
 )
 
-type Stop struct {
+type StopOptions struct {
 	WaitTimeoutMS int64  `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
 	Output        string `long:"output" short:"o" usage:"Set output format" default:"table"`
 	All           bool   `long:"all" usage:"Stop all instances"`
@@ -29,7 +29,7 @@ type Stop struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Stop{}, cobra.Command{
+	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
 		Use:   "stop [FLAGS] [UUID]",
 		Args:  cobra.ArbitraryArgs,
@@ -48,7 +48,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
+func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 	if !opts.All && len(args) == 0 {
 		return fmt.Errorf("either specify an instance UUID or --all flag")
 	}
@@ -64,7 +64,7 @@ func (opts *Stop) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Stop) Run(cmd *cobra.Command, args []string) error {
+func (opts *StopOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

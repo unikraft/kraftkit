@@ -32,7 +32,7 @@ import (
 	"kraftkit.sh/tui/processtree"
 )
 
-type Fetch struct {
+type FetchOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" usage:"Do not use the cache when pulling dependencies"`
@@ -46,7 +46,7 @@ type Fetch struct {
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Fetch{}, cobra.Command{
+	cmd, err := cmdfactory.New(&FetchOptions{}, cobra.Command{
 		Short: "Fetch Unikraft unikernel dependencies",
 		Use:   "fetch [FLAGS] [DIR]",
 		Args:  cmdfactory.MaxDirArgs(1),
@@ -73,7 +73,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Fetch) Pre(cmd *cobra.Command, args []string) error {
+func (opts *FetchOptions) Pre(cmd *cobra.Command, args []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (opts *Fetch) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *Fetch) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
+func (opts *FetchOptions) pull(ctx context.Context, project app.Application, workdir string, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
@@ -357,7 +357,7 @@ func (opts *Fetch) pull(ctx context.Context, project app.Application, workdir st
 	return nil
 }
 
-func (opts *Fetch) Run(cmd *cobra.Command, _ []string) error {
+func (opts *FetchOptions) Run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	// Filter project targets by any provided CLI options

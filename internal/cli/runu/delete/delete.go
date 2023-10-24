@@ -20,13 +20,13 @@ const (
 	flagRoot = "root"
 )
 
-// Delete implements the OCI "delete" command.
-type Delete struct {
+// DeleteOptions implements the OCI "delete" command.
+type DeleteOptions struct {
 	Force bool `long:"force" short:"f" usage:"forcibly delete the unikernel if it is still running"`
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Delete{}, cobra.Command{
+	cmd, err := cmdfactory.New(&DeleteOptions{}, cobra.Command{
 		Short: "Delete a unikernel",
 		Args:  cobra.ExactArgs(1),
 		Use:   "delete <unikernel-id>",
@@ -39,7 +39,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Delete) Run(cmd *cobra.Command, args []string) (retErr error) {
+func (opts *DeleteOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
 	ctx := cmd.Context()
 
 	defer func() {

@@ -22,11 +22,11 @@ type runner interface {
 	fmt.Stringer
 
 	// Runnable checks whether the provided configuration is runnable.
-	Runnable(context.Context, *Run, ...string) (bool, error)
+	Runnable(context.Context, *RunOptions, ...string) (bool, error)
 
 	// Prepare the provided configuration into a machine specification ready for
 	// execution by the controller.
-	Prepare(context.Context, *Run, *machineapi.Machine, ...string) error
+	Prepare(context.Context, *RunOptions, *machineapi.Machine, ...string) error
 }
 
 // runners is the list of built-in runners which are checked sequentially for
