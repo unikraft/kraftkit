@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package rm
+package remove
 
 import (
 	"fmt"
@@ -20,13 +20,13 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type Rm struct {
+type Remove struct {
 	All      bool `long:"all" usage:"Remove all machines"`
 	platform string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
+	cmd, err := cmdfactory.New(&Remove{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
 		Args:    cobra.MinimumNArgs(0),
@@ -54,12 +54,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *Remove) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
+func (opts *Remove) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 && !opts.All {

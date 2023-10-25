@@ -34,7 +34,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/internal/cli/kraft/properclean"
 	"kraftkit.sh/internal/cli/kraft/ps"
-	"kraftkit.sh/internal/cli/kraft/rm"
+	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/internal/cli/kraft/run"
 	"kraftkit.sh/internal/cli/kraft/set"
 	"kraftkit.sh/internal/cli/kraft/stop"
@@ -85,7 +85,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(events.New())
 	cmd.AddCommand(logs.New())
 	cmd.AddCommand(ps.New())
-	cmd.AddCommand(rm.New())
+	cmd.AddCommand(remove.New())
 	cmd.AddCommand(run.New())
 	cmd.AddCommand(stop.New())
 
