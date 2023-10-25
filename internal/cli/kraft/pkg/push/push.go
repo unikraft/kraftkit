@@ -28,6 +28,15 @@ type PushOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
+// Push a Unikraft component.
+func Push(ctx context.Context, opts *PushOptions, args ...string) error {
+	if opts == nil {
+		opts = &PushOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PushOptions{}, cobra.Command{
 		Short:   "Push a Unikraft unikernel package to registry",

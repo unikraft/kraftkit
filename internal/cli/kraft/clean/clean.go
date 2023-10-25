@@ -52,6 +52,14 @@ type CleanOptions struct {
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }
 
+// Clean removes the build object files of a Unikraft project.
+func Clean(ctx context.Context, opts *CleanOptions, args ...string) error {
+	if opts == nil {
+		opts = &CleanOptions{}
+	}
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CleanOptions{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",

@@ -27,6 +27,15 @@ type StartOptions struct {
 	metro string
 }
 
+// Start a KraftCloud instance.
+func Start(ctx context.Context, opts *StartOptions, args ...string) error {
+	if opts == nil {
+		opts = &StartOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",

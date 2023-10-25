@@ -58,6 +58,15 @@ type RunOptions struct {
 	machineController machineapi.MachineService
 }
 
+// Run a Unikraft unikernel virtual machine locally.
+func Run(ctx context.Context, opts *RunOptions, args ...string) error {
+	if opts == nil {
+		opts = &RunOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RunOptions{}, cobra.Command{
 		Short:   "Run a unikernel",

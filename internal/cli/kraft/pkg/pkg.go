@@ -53,6 +53,15 @@ type PkgOptions struct {
 	pm       packmanager.PackageManager
 }
 
+// Pkg a Unikraft project.
+func Pkg(ctx context.Context, opts *PkgOptions, args ...string) error {
+	if opts == nil {
+		opts = &PkgOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PkgOptions{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",

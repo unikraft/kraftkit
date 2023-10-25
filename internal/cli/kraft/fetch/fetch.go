@@ -45,6 +45,15 @@ type FetchOptions struct {
 	workdir string
 }
 
+// Fetch Unikraft unikernel dependencies
+func Fetch(ctx context.Context, opts *FetchOptions, args ...string) error {
+	if opts == nil {
+		opts = &FetchOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&FetchOptions{}, cobra.Command{
 		Short: "Fetch Unikraft unikernel dependencies",

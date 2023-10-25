@@ -22,6 +22,15 @@ type UpdateOptions struct {
 	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
+// Update the local index of known locations for remote Unikraft components.
+func Update(ctx context.Context, opts *UpdateOptions, args ...string) error {
+	if opts == nil {
+		opts = &UpdateOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpdateOptions{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",

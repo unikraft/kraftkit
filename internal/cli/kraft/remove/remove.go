@@ -26,6 +26,15 @@ type RemoveOptions struct {
 	platform string
 }
 
+// Remove stops and deletes a local Unikraft virtual machine.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",

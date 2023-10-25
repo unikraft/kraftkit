@@ -21,6 +21,15 @@ type DownOptions struct {
 	driver string
 }
 
+// Down brings a local machine network offline.
+func Down(ctx context.Context, opts *DownOptions, args ...string) error {
+	if opts == nil {
+		opts = &DownOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
 		Short:   "Bring a network offline",

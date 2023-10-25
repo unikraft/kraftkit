@@ -48,6 +48,15 @@ type UnsetOptions struct {
 	Workdir string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
+// Unset a KConfig option in a Unikraft project.
+func Unset(ctx context.Context, opts *UnsetOptions, args ...string) error {
+	if opts == nil {
+		opts = &UnsetOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnsetOptions{}, cobra.Command{
 		Short:   "Unset a variable for a Unikraft project",

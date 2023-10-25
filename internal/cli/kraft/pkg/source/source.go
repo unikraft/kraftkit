@@ -21,6 +21,16 @@ type SourceOptions struct {
 	Force bool `short:"F" long:"force" usage:"Do not run a compatibility test before sourcing."`
 }
 
+// Source adds a remote location for discovering one-or-many Unikraft
+// components.
+func Source(ctx context.Context, opts *SourceOptions, args ...string) error {
+	if opts == nil {
+		opts = &SourceOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SourceOptions{}, cobra.Command{
 		Short: "Add Unikraft component manifests",

@@ -45,6 +45,14 @@ type BuildOptions struct {
 	workdir string
 }
 
+// Build a Unikraft unikernel.
+func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
+	if opts == nil {
+		opts = &BuildOptions{}
+	}
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",

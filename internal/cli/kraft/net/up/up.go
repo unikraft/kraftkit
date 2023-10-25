@@ -21,6 +21,15 @@ type UpOptions struct {
 	driver string
 }
 
+// Up brings a local machine network online.
+func Up(ctx context.Context, opts *UpOptions, args ...string) error {
+	if opts == nil {
+		opts = &UpOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
 		Short:   "Bring a network online",

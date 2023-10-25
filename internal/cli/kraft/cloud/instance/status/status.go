@@ -28,6 +28,15 @@ type StatusOptions struct {
 	metro string
 }
 
+// Status of a KraftCloud instance.
+func Status(ctx context.Context, opts *StatusOptions, args ...string) error {
+	if opts == nil {
+		opts = &StatusOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StatusOptions{}, cobra.Command{
 		Short:   "Retrieve the status of an instance",

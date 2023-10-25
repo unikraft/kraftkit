@@ -27,6 +27,15 @@ type LogOptions struct {
 	metro string
 }
 
+// Log retrieves the console output from a KraftCloud instance.
+func Log(ctx context.Context, opts *LogOptions, args ...string) error {
+	if opts == nil {
+		opts = &LogOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",

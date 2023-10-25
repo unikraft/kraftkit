@@ -42,6 +42,15 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
+// Unsource a remote location representing one-or-many Unikraft components.
+func Unsource(ctx context.Context, opts *UnsourceOptions, args ...string) error {
+	if opts == nil {
+		opts = &UnsourceOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func (*UnsourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {

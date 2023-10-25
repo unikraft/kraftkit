@@ -50,6 +50,15 @@ type SetOptions struct {
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
+// Set a KConfig variable in a Unikraft project.
+func Set(ctx context.Context, opts *SetOptions, args ...string) error {
+	if opts == nil {
+		opts = &SetOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SetOptions{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",

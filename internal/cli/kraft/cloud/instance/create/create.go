@@ -36,6 +36,15 @@ type CreateOptions struct {
 	metro string
 }
 
+// Create a KraftCloud instance.
+func Create(ctx context.Context, opts *CreateOptions, args ...string) error {
+	if opts == nil {
+		opts = &CreateOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",

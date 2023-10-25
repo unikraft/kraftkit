@@ -23,6 +23,15 @@ type StopOptions struct {
 	platform string
 }
 
+// Stop a local Unikraft virtual machine.
+func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
+	if opts == nil {
+		opts = &StopOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop one or more running unikernels",

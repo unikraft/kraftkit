@@ -41,6 +41,15 @@ type PullOptions struct {
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 }
 
+// Pull a Unikraft component.
+func Pull(ctx context.Context, opts *PullOptions, args ...string) error {
+	if opts == nil {
+		opts = &PullOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PullOptions{}, cobra.Command{
 		Short:   "Pull a Unikraft unikernel and/or its dependencies",

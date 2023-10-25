@@ -21,6 +21,15 @@ type RemoveOptions struct {
 	Format string `long:"format" short:"f" usage:"Set the package format." default:"any"`
 }
 
+// Remove a Unikraft component.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Removes selected local packages",

@@ -29,6 +29,15 @@ type StopOptions struct {
 	metro string
 }
 
+// Stop a KraftCloud instance.
+func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
+	if opts == nil {
+		opts = &StopOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
