@@ -20,13 +20,13 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type Remove struct {
+type RemoveOptions struct {
 	All      bool `long:"all" usage:"Remove all machines"`
 	platform string
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Remove{}, cobra.Command{
+	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
 		Args:    cobra.MinimumNArgs(0),
@@ -54,12 +54,12 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Remove) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Remove) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 && !opts.All {
