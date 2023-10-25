@@ -163,8 +163,53 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Discover the platform machine controller strataegy.
 	opts.Platform = cmd.Flag("plat").Value.String()
+
+	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
+		// Set use of the global package manager.
+		ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		cmd.SetContext(ctx)
+	}
+
+	if opts.RunAs != "" {
+		runners, err := runnersByName()
+		if err != nil {
+			return err
+		}
+		if _, ok := runners[opts.RunAs]; !ok {
+			choices := make([]string, len(runners))
+			i := 0
+
+			for choice := range runners {
+				choices[i] = choice
+				i++
+			}
+
+			return fmt.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
+		}
+	}
+
+	if opts.InitRd != "" {
+		log.G(ctx).Warn("the --initrd flag is deprecated in favour of --rootfs")
+
+		if opts.Rootfs != "" {
+			log.G(ctx).Warn("both --initrd and --rootfs are set! ignorning value of --initrd")
+		} else {
+			log.G(ctx).Warn("for backwards-compatibility reasons the value of --initrd is set to --rootfs")
+			opts.Rootfs = opts.InitRd
+		}
+	}
+
+	return nil
+}
+
+func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
+	var err error
+
 	opts.platform = mplatform.PlatformUnknown
 
 	if opts.Platform == "" || opts.Platform == "auto" {
@@ -196,50 +241,16 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
-		// Set use of the global package manager.
-		ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
-		if err != nil {
-			return err
-		}
-
-		cmd.SetContext(ctx)
-	}
-
-	if opts.RunAs != "" {
-		runners, err := runnersByName()
-		if err != nil {
-			return err
-		}
-		if _, ok = runners[opts.RunAs]; !ok {
-			choices := make([]string, len(runners))
-			i := 0
-
-			for choice := range runners {
-				choices[i] = choice
-				i++
-			}
-
-			return fmt.Errorf("unknown runner: %s (choice of %v)", opts.RunAs, choices)
-		}
-	}
-
-	if opts.InitRd != "" {
-		log.G(ctx).Warn("the --initrd flag is deprecated in favour of --rootfs")
-
-		if opts.Rootfs != "" {
-			log.G(ctx).Warn("both --initrd and --rootfs are set! ignorning value of --initrd")
-		} else {
-			log.G(ctx).Warn("for backwards-compatibility reasons the value of --initrd is set to --rootfs")
-			opts.Rootfs = opts.InitRd
-		}
-	}
-
 	return nil
 }
 
 func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
+
+	err = opts.discoverMachineController(ctx)
+	if err != nil {
+		return err
+	}
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
