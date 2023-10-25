@@ -6,6 +6,7 @@ package login
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -23,7 +24,7 @@ type LoginOptions struct {
 	Token string `long:"token" short:"t" usage:"Authentication token" env:"KRAFTKIT_LOGIN_TOKEN"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LoginOptions{}, cobra.Command{
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",
@@ -39,10 +40,9 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *LoginOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *LoginOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	host := args[0]
-	ctx := cmd.Context()
 
 	// Prompt the user from stdin for a username if neither a username nor a token
 	// was provided

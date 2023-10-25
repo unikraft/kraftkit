@@ -32,6 +32,7 @@
 package set
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -49,7 +50,16 @@ type SetOptions struct {
 	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
-func New() *cobra.Command {
+// Set a KConfig variable in a Unikraft project.
+func Set(ctx context.Context, opts *SetOptions, args ...string) error {
+	if opts == nil {
+		opts = &SetOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SetOptions{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
 		Hidden:  true,
@@ -85,10 +95,8 @@ func (*SetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *SetOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	workdir := ""
 	confOpts := []string{}

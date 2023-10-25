@@ -5,6 +5,7 @@
 package start
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -26,7 +27,16 @@ type StartOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+// Start a KraftCloud instance.
+func Start(ctx context.Context, opts *StartOptions, args ...string) error {
+	if opts == nil {
+		opts = &StartOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",
 		Use:   "start [FLAGS] [PACKAGE]",
@@ -58,8 +68,7 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *StartOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

@@ -5,6 +5,7 @@
 package ps
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -32,7 +33,7 @@ const (
 	MemoryMiB = 1024 * 1024
 )
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
 		Short: "List running unikernels",
 		Use:   "ps [FLAGS]",
@@ -64,7 +65,7 @@ func (opts *PsOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *PsOptions) Run(cmd *cobra.Command, _ []string) error {
+func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
 	var err error
 
 	type psTable struct {
@@ -83,7 +84,6 @@ func (opts *PsOptions) Run(cmd *cobra.Command, _ []string) error {
 
 	var items []psTable
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

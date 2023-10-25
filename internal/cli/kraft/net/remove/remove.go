@@ -5,6 +5,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,16 @@ type RemoveOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+// Remove a local machine network.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove a network",
 		Use:     "rm",
@@ -42,10 +52,8 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

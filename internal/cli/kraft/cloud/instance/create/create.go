@@ -6,6 +6,7 @@
 package create
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -35,7 +36,16 @@ type CreateOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+// Create a KraftCloud instance.
+func Create(ctx context.Context, opts *CreateOptions, args ...string) error {
+	if opts == nil {
+		opts = &CreateOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",
 		Use:     "create [FLAGS] IMAGE [-- ARGS]",
@@ -74,8 +84,7 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	image := args[0]
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {

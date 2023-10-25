@@ -6,6 +6,7 @@
 package stop
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -28,7 +29,16 @@ type StopOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+// Stop a KraftCloud instance.
+func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
+	if opts == nil {
+		opts = &StopOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
 		Use:   "stop [FLAGS] [UUID]",
@@ -64,8 +74,7 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *StopOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

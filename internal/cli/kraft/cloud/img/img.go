@@ -6,7 +6,10 @@
 package img
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/img/list"
 
@@ -15,7 +18,7 @@ import (
 
 type ImgOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ImgOptions{}, cobra.Command{
 		Short:   "Manage images on KraftCloud",
 		Use:     "img",
@@ -29,11 +32,11 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(list.New())
+	cmd.AddCommand(list.NewCmd())
 
 	return cmd
 }
 
-func (opts *ImgOptions) Run(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+func (opts *ImgOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }

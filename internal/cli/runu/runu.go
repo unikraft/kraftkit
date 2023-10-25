@@ -14,6 +14,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -40,7 +41,7 @@ type RunuOptions struct {
 	SystemdCgroup bool   `long:"systemd-cgroup" usage:"enable systemd cgroup support"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RunuOptions{}, cobra.Command{
 		Short: "Run OCI-compatible unikernels",
 		CompletionOptions: cobra.CompletionOptions{
@@ -52,12 +53,12 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(state.New())
-	cmd.AddCommand(create.New())
-	cmd.AddCommand(start.New())
-	cmd.AddCommand(kill.New())
-	cmd.AddCommand(delete.New())
-	cmd.AddCommand(ps.New())
+	cmd.AddCommand(state.NewCmd())
+	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(start.NewCmd())
+	cmd.AddCommand(kill.NewCmd())
+	cmd.AddCommand(delete.NewCmd())
+	cmd.AddCommand(ps.NewCmd())
 
 	return cmd
 }
@@ -85,12 +86,12 @@ func (opts *RunuOptions) PersistentPre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (*RunuOptions) Run(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+func (*RunuOptions) Run(_ context.Context, args []string) error {
+	return pflag.ErrHelp
 }
 
 func Main(args []string) int {
-	cmd := New()
+	cmd := NewCmd()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

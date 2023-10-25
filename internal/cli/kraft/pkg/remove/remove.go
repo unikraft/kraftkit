@@ -6,6 +6,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,7 +21,16 @@ type RemoveOptions struct {
 	Format string `long:"format" short:"f" usage:"Set the package format." default:"any"`
 }
 
-func New() *cobra.Command {
+// Remove a Unikraft component.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Removes selected local packages",
 		Use:     "rm [FLAGS] [PACKAGE]",
@@ -81,9 +91,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	umbrella, err := packmanager.PackageManagers()
 	if err != nil {
 		return fmt.Errorf("could not get registered package managers: %w", err)

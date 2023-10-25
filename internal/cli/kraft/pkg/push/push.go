@@ -28,7 +28,16 @@ type PushOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
-func New() *cobra.Command {
+// Push a Unikraft component.
+func Push(ctx context.Context, opts *PushOptions, args ...string) error {
+	if opts == nil {
+		opts = &PushOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PushOptions{}, cobra.Command{
 		Short:   "Push a Unikraft unikernel package to registry",
 		Use:     "push [FLAGS] [PACKAGE]",
@@ -67,7 +76,7 @@ func (opts *PushOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *PushOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *PushOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	var workdir string
 
@@ -82,7 +91,6 @@ func (opts *PushOptions) Run(cmd *cobra.Command, args []string) error {
 		workdir = ""
 	}
 
-	ctx := cmd.Context()
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 	ref := ""
 	if workdir != "" {

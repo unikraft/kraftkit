@@ -5,6 +5,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -52,7 +53,16 @@ type PkgOptions struct {
 	pm       packmanager.PackageManager
 }
 
-func New() *cobra.Command {
+// Pkg a Unikraft project.
+func Pkg(ctx context.Context, opts *PkgOptions, args ...string) error {
+	if opts == nil {
+		opts = &PkgOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PkgOptions{}, cobra.Command{
 		Short: "Package and distribute Unikraft unikernels and their dependencies",
 		Use:   "pkg [FLAGS] [SUBCOMMAND|DIR]",
@@ -79,13 +89,13 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(pull.New())
-	cmd.AddCommand(push.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(source.New())
-	cmd.AddCommand(unsource.New())
-	cmd.AddCommand(update.New())
+	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(pull.NewCmd())
+	cmd.AddCommand(push.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(source.NewCmd())
+	cmd.AddCommand(unsource.NewCmd())
+	cmd.AddCommand(update.NewCmd())
 
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
@@ -144,9 +154,8 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *PkgOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 	var err error
-	ctx := cmd.Context()
 
 	exists, err := opts.pm.Catalog(ctx,
 		packmanager.WithName(opts.Name),

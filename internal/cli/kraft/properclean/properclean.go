@@ -32,6 +32,7 @@
 package properclean
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -46,7 +47,7 @@ type ProperCleanOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ProperCleanOptions{}, cobra.Command{
 		Short:   "Completely remove the build artifacts of a Unikraft project",
 		Use:     "properclean [DIR]",
@@ -82,10 +83,9 @@ func (*ProperCleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ProperCleanOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *ProperCleanOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	workdir := ""
 
 	if len(args) == 0 {

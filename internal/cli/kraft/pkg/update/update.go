@@ -22,7 +22,16 @@ type UpdateOptions struct {
 	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
 }
 
-func New() *cobra.Command {
+// Update the local index of known locations for remote Unikraft components.
+func Update(ctx context.Context, opts *UpdateOptions, args ...string) error {
+	if opts == nil {
+		opts = &UpdateOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpdateOptions{}, cobra.Command{
 		Short: "Retrieve new lists of Unikraft components, libraries and packages",
 		Use:   "update [FLAGS]",
@@ -54,10 +63,9 @@ func (*UpdateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UpdateOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	pm := packmanager.G(ctx)
 
 	// Force a particular package manager

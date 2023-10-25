@@ -5,6 +5,7 @@
 package create
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -23,7 +24,16 @@ type CreateOptions struct {
 	Network string `long:"network" short:"n" usage:"Set the gateway IP address and the subnet of the network in CIDR format."`
 }
 
-func New() *cobra.Command {
+// Create a new local machine network.
+func Create(ctx context.Context, opts *CreateOptions, args ...string) error {
+	if opts == nil {
+		opts = &CreateOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a new machine network",
 		Use:     "create [FLAGS] NETWORK",
@@ -59,10 +69,8 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CreateOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

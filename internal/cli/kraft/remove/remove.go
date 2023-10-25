@@ -2,9 +2,10 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package rm
+package remove
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,13 +21,22 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type Rm struct {
+type RemoveOptions struct {
 	All      bool `long:"all" usage:"Remove all machines"`
 	platform string
 }
 
-func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&Rm{}, cobra.Command{
+// Remove stops and deletes a local Unikraft virtual machine.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
+	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
 		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
 		Args:    cobra.MinimumNArgs(0),
@@ -54,19 +64,18 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Rm) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
-func (opts *Rm) Run(cmd *cobra.Command, args []string) error {
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if len(args) == 0 && !opts.All {
 		return fmt.Errorf("no machine(s) specified")
 	}
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

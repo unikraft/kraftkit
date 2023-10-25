@@ -32,6 +32,7 @@
 package clean
 
 import (
+	"context"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -51,7 +52,15 @@ type CleanOptions struct {
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
 }
 
-func New() *cobra.Command {
+// Clean removes the build object files of a Unikraft project.
+func Clean(ctx context.Context, opts *CleanOptions, args ...string) error {
+	if opts == nil {
+		opts = &CleanOptions{}
+	}
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CleanOptions{}, cobra.Command{
 		Short: "Remove the build object files of a Unikraft project",
 		Use:   "clean [DIR]",
@@ -88,10 +97,8 @@ func (opts *CleanOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CleanOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *CleanOptions) Run(ctx context.Context, args []string) error {
 	var err error
-
-	ctx := cmd.Context()
 	workdir := ""
 
 	if len(args) == 0 {

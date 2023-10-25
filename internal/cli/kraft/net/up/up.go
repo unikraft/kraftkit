@@ -5,6 +5,7 @@
 package up
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,16 @@ type UpOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+// Up brings a local machine network online.
+func Up(ctx context.Context, opts *UpOptions, args ...string) error {
+	if opts == nil {
+		opts = &UpOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
 		Short:   "Bring a network online",
 		Use:     "up",
@@ -42,8 +52,7 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UpOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
 		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)

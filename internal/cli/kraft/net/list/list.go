@@ -5,6 +5,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -24,7 +25,7 @@ type ListOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List machine networks",
 		Use:     "ls [FLAGS]",
@@ -46,10 +47,8 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ListOptions) Run(cmd *cobra.Command, _ []string) error {
+func (opts *ListOptions) Run(ctx context.Context, _ []string) error {
 	var err error
-
-	ctx := cmd.Context()
 
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {

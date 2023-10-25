@@ -5,6 +5,7 @@
 package version
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -16,7 +17,7 @@ import (
 
 type VersionOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&VersionOptions{}, cobra.Command{
 		Short:   "Show kraft version information",
 		Use:     "version",
@@ -33,7 +34,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *VersionOptions) Run(cmd *cobra.Command, _ []string) error {
-	fmt.Fprintf(iostreams.G(cmd.Context()).Out, "kraft %s", version.String())
+func (opts *VersionOptions) Run(ctx context.Context, _ []string) error {
+	fmt.Fprintf(iostreams.G(ctx).Out, "kraft %s", version.String())
 	return nil
 }

@@ -5,6 +5,7 @@
 package source
 
 import (
+	"context"
 	"errors"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,7 +21,17 @@ type SourceOptions struct {
 	Force bool `short:"F" long:"force" usage:"Do not run a compatibility test before sourcing."`
 }
 
-func New() *cobra.Command {
+// Source adds a remote location for discovering one-or-many Unikraft
+// components.
+func Source(ctx context.Context, opts *SourceOptions, args ...string) error {
+	if opts == nil {
+		opts = &SourceOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SourceOptions{}, cobra.Command{
 		Short: "Add Unikraft component manifests",
 		Use:   "source [FLAGS] [SOURCE]",
@@ -56,9 +67,7 @@ func (*SourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *SourceOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *SourceOptions) Run(ctx context.Context, args []string) error {
 	for _, source := range args {
 		if !opts.Force {
 			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx,

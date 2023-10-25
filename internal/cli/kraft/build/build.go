@@ -5,6 +5,7 @@
 package build
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -44,7 +45,15 @@ type BuildOptions struct {
 	workdir string
 }
 
-func New() *cobra.Command {
+// Build a Unikraft unikernel.
+func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
+	if opts == nil {
+		opts = &BuildOptions{}
+	}
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
 		Short: "Configure and build Unikraft unikernels",
 		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
@@ -112,9 +121,7 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *BuildOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 	if len(selected) == 0 {

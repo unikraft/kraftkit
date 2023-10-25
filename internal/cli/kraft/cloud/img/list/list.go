@@ -6,6 +6,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -30,7 +31,7 @@ type ListOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all images at a metro for your account",
 		Use:     "ls",
@@ -65,8 +66,7 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ListOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

@@ -5,6 +5,7 @@
 package run
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -57,7 +58,16 @@ type RunOptions struct {
 	machineController machineapi.MachineService
 }
 
-func New() *cobra.Command {
+// Run a Unikraft unikernel virtual machine locally.
+func Run(ctx context.Context, opts *RunOptions, args ...string) error {
+	if opts == nil {
+		opts = &RunOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RunOptions{}, cobra.Command{
 		Short:   "Run a unikernel",
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
@@ -229,9 +239,8 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RunOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
-	ctx := cmd.Context()
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},

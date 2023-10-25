@@ -6,6 +6,7 @@
 package remove
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -27,7 +28,16 @@ type RemoveOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+// Remove a KraftCloud instance.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	if opts == nil {
+		opts = &RemoveOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete an instance",
 		Use:     "delete UUID",
@@ -67,8 +77,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

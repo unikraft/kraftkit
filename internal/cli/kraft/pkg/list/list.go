@@ -5,6 +5,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -37,7 +38,7 @@ type ListOptions struct {
 	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List installed Unikraft component packages",
 		Use:     "ls [FLAGS] [DIR]",
@@ -70,10 +71,9 @@ func (*ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ListOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	workdir := ""
 	if len(args) > 0 {
 		workdir = args[0]

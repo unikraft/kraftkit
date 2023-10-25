@@ -5,6 +5,7 @@
 package down
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,16 @@ type DownOptions struct {
 	driver string
 }
 
-func New() *cobra.Command {
+// Down brings a local machine network offline.
+func Down(ctx context.Context, opts *DownOptions, args ...string) error {
+	if opts == nil {
+		opts = &DownOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
 		Short:   "Bring a network offline",
 		Use:     "down",
@@ -42,8 +52,7 @@ func (opts *DownOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *DownOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	strategy, ok := network.Strategies()[opts.driver]
 	if !ok {
 		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)

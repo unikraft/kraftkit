@@ -6,7 +6,10 @@
 package instance
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 
@@ -21,7 +24,7 @@ import (
 
 type InstanceOptions struct{}
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InstanceOptions{}, cobra.Command{
 		Short:   "Manage KraftCloud instances",
 		Use:     "instance SUBCOMMAND",
@@ -35,17 +38,17 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(create.New())
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(logs.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(start.New())
-	cmd.AddCommand(status.New())
-	cmd.AddCommand(stop.New())
+	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(logs.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(start.NewCmd())
+	cmd.AddCommand(status.NewCmd())
+	cmd.AddCommand(stop.NewCmd())
 
 	return cmd
 }
 
-func (opts *InstanceOptions) Run(cmd *cobra.Command, _ []string) error {
-	return cmd.Help()
+func (opts *InstanceOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }

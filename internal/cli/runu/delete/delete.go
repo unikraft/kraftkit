@@ -5,6 +5,7 @@
 package delete
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -23,9 +24,11 @@ const (
 // DeleteOptions implements the OCI "delete" command.
 type DeleteOptions struct {
 	Force bool `long:"force" short:"f" usage:"forcibly delete the unikernel if it is still running"`
+
+	rootDir string
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DeleteOptions{}, cobra.Command{
 		Short: "Delete a unikernel",
 		Args:  cobra.ExactArgs(1),
@@ -39,9 +42,16 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *DeleteOptions) Run(cmd *cobra.Command, args []string) (retErr error) {
-	ctx := cmd.Context()
+func (opts *DeleteOptions) Pre(cmd *cobra.Command, args []string) error {
+	opts.rootDir = cmd.Flag(flagRoot).Value.String()
+	if opts.rootDir == "" {
+		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
+	}
 
+	return nil
+}
+
+func (opts *DeleteOptions) Run(ctx context.Context, args []string) (retErr error) {
 	defer func() {
 		// Make sure the error is written to the configured log destination, so
 		// that the message gets propagated through the caller (e.g. containerd-shim)
@@ -50,14 +60,9 @@ func (opts *DeleteOptions) Run(cmd *cobra.Command, args []string) (retErr error)
 		}
 	}()
 
-	rootDir := cmd.Flag(flagRoot).Value.String()
-	if rootDir == "" {
-		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
-	}
-
 	cID := args[0]
 
-	c, err := libcontainer.Load(rootDir, cID)
+	c, err := libcontainer.Load(opts.rootDir, cID)
 	if err != nil {
 		return fmt.Errorf("loading container from saved state: %w", err)
 	}

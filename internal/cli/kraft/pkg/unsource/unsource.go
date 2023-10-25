@@ -7,6 +7,8 @@
 package unsource
 
 import (
+	"context"
+
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
@@ -18,8 +20,8 @@ import (
 
 type UnsourceOptions struct{}
 
-// New returns a new unsource command
-func New() *cobra.Command {
+// NewCmd returns a new unsource command
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnsourceOptions{}, cobra.Command{
 		Short: "Remove Unikraft component manifests",
 		Use:   "unsource [FLAGS] [SOURCE]",
@@ -40,6 +42,15 @@ func New() *cobra.Command {
 	return cmd
 }
 
+// Unsource a remote location representing one-or-many Unikraft components.
+func Unsource(ctx context.Context, opts *UnsourceOptions, args ...string) error {
+	if opts == nil {
+		opts = &UnsourceOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
 func (*UnsourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
@@ -52,8 +63,7 @@ func (*UnsourceOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 // Run executes the unsource command
-func (opts *UnsourceOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *UnsourceOptions) Run(ctx context.Context, args []string) error {
 	for _, source := range args {
 		manifests := []string{}
 

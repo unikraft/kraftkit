@@ -5,6 +5,7 @@
 package logs
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -26,7 +27,16 @@ type LogOptions struct {
 	metro string
 }
 
-func New() *cobra.Command {
+// Log retrieves the console output from a KraftCloud instance.
+func Log(ctx context.Context, opts *LogOptions, args ...string) error {
+	if opts == nil {
+		opts = &LogOptions{}
+	}
+
+	return opts.Run(ctx, args)
+}
+
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",
 		Use:   "logs [UUID]",
@@ -58,8 +68,7 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *LogOptions) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudLoginFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)

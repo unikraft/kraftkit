@@ -24,7 +24,7 @@ type LogOptions struct {
 	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
@@ -53,10 +53,9 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *LogOptions) Run(cmd *cobra.Command, args []string) error {
+func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	ctx := cmd.Context()
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 

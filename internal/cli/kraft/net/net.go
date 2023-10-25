@@ -5,9 +5,11 @@
 package net
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/net/create"
@@ -24,7 +26,7 @@ type NetOptions struct {
 	Driver string `local:"false" long:"driver" short:"d" usage:"Set the network driver." default:"bridge"`
 }
 
-func New() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&NetOptions{}, cobra.Command{
 		Short:   "Manage machine networks",
 		Use:     "net SUBCOMMAND",
@@ -38,12 +40,12 @@ func New() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(create.New())
-	cmd.AddCommand(down.New())
-	cmd.AddCommand(inspect.New())
-	cmd.AddCommand(list.New())
-	cmd.AddCommand(remove.New())
-	cmd.AddCommand(up.New())
+	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(down.NewCmd())
+	cmd.AddCommand(inspect.NewCmd())
+	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(up.NewCmd())
 
 	return cmd
 }
@@ -58,6 +60,6 @@ func (opts *NetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *NetOptions) Run(cmd *cobra.Command, _ []string) error {
-	return cmd.Help()
+func (opts *NetOptions) Run(_ context.Context, _ []string) error {
+	return pflag.ErrHelp
 }
