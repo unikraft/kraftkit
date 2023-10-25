@@ -42,6 +42,7 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
@@ -163,10 +164,10 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Discover the platform machine controller strataegy.
-	plat := cmd.Flag("plat").Value.String()
+	opts.Platform = cmd.Flag("plat").Value.String()
 	opts.platform = mplatform.PlatformUnknown
 
-	if plat == "" || plat == "auto" {
+	if opts.Platform == "" || opts.Platform == "auto" {
 		var mode mplatform.SystemMode
 		opts.platform, mode, err = mplatform.Detect(ctx)
 		if err != nil {
@@ -177,15 +178,15 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	} else {
 		var ok bool
-		opts.platform, ok = mplatform.PlatformsByName()[plat]
+		opts.platform, ok = mplatform.PlatformsByName()[opts.Platform]
 		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
+			return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 		}
 	}
 
 	machineStrategy, ok := mplatform.Strategies()[opts.platform]
 	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.Platform)
 	}
 
 	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
