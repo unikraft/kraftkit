@@ -57,6 +57,10 @@ func (pt ProcessTree) View() string {
 }
 
 func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
+	if pti.status == StatusSuccess && stm.hide {
+		return ""
+	}
+
 	failed := 0
 	completed := 0
 	running := 0

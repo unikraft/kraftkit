@@ -33,3 +33,10 @@ func WithFailFast(failFast bool) ProcessTreeOption {
 		return nil
 	}
 }
+
+func WithHideOnSuccess(hide bool) ProcessTreeOption {
+	return func(pt *ProcessTree) error {
+		pt.hide = hide
+		return nil
+	}
+}
