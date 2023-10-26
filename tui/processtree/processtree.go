@@ -75,6 +75,7 @@ type ProcessTree struct {
 	err      error
 	errChan  chan error
 	failFast bool
+	oldOut   iostreams.FileWriter
 }
 
 func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
@@ -89,6 +90,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 		channel:  make(chan *ProcessTreeItem),
 		errChan:  make(chan error),
 		finished: 0,
+		oldOut:   iostreams.G(ctx).Out,
 	}
 
 	for _, opt := range opts {
@@ -149,6 +151,12 @@ func (pt *ProcessTree) Start() error {
 	teaOpts := []tea.ProgramOption{
 		tea.WithInput(nil),
 	}
+
+	// Restore the old output for the IOStreams which is manipulated per process.
+	defer func() {
+		iostreams.G(pt.ctx).Out = pt.oldOut
+		log.G(pt.ctx).Out = iostreams.G(pt.ctx).Out
+	}()
 
 	if pt.norender {
 		teaOpts = append(teaOpts, tea.WithoutRenderer())

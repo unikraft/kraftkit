@@ -47,7 +47,7 @@ type ErrClosedPagerPipe struct {
 	error
 }
 
-type fileWriter interface {
+type FileWriter interface {
 	io.Writer
 	Fd() uintptr
 }
@@ -70,7 +70,7 @@ type IOStreams struct {
 	term Terminal
 
 	In     fileReader
-	Out    fileWriter
+	Out    FileWriter
 	ErrOut io.Writer
 
 	terminalTheme string
@@ -154,7 +154,7 @@ func (s *IOStreams) SetColorEnabled(colorEnabled bool) {
 	s.colorEnabled = colorEnabled
 }
 
-func (s *IOStreams) SetOut(out fileWriter) {
+func (s *IOStreams) SetOut(out FileWriter) {
 	s.Out = out
 }
 
@@ -417,7 +417,7 @@ func (s *IOStreams) TempFile(dir, pattern string) (*os.File, error) {
 func System() *IOStreams {
 	terminal := ghTerm.FromEnv()
 
-	var stdout fileWriter = os.Stdout
+	var stdout FileWriter = os.Stdout
 
 	// On Windows with no virtual terminal processing support, translate ANSI escape
 	// sequences to console syscalls
@@ -490,7 +490,7 @@ func (w *fdWriteCloser) Fd() uintptr {
 
 // fdWriter represents a wrapped stdin ReadCloser that preserves the original file descriptor
 type fdReader struct {
-	io.ReadCloser
+	io.Reader
 	fd uintptr
 }
 
@@ -498,7 +498,7 @@ func (r *fdReader) Fd() uintptr {
 	return r.fd
 }
 
-func NewNoTTYWriter(w io.WriteCloser) *fdWriter {
+func NewNoTTYWriter(w io.Writer) *fdWriter {
 	return &fdWriter{w, 0}
 }
 
