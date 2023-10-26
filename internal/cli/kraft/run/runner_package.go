@@ -219,6 +219,13 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	machine.Spec.Architecture = targ.Architecture().Name()
 	machine.Spec.Platform = targ.Platform().Name()
 	machine.Spec.Kernel = fmt.Sprintf("%s://%s", runner.pm.Format(), runner.packName)
+
+	// If no arguments have been specified, use the ones which are default and
+	// that have been included in the package.
+	if len(runner.args) == 0 {
+		runner.args = targ.Command()
+	}
+
 	machine.Spec.ApplicationArgs = runner.args
 
 	// Set the path to the initramfs if present.
