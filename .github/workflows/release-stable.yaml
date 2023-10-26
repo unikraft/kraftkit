@@ -28,21 +28,25 @@ jobs:
         run: |
           ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
 
+      - name: Write cosign key to file
+        run: |
+          echo -n "$COSIGN_KEY" > cosign.key
+          chmod 600 cosign.key
+
       - name: Run GoReleaser
         run: |
           GORELEASER_PREVIOUS_TAG=$(curl -s "https://get.kraftkit.sh/latest.txt")
           GORELEASER_PREVIOUS_TAG="v$GORELEASER_PREVIOUS_TAG"
           export GORELEASER_PREVIOUS_TAG
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
-          goreleaser build \
-            --config goreleaser-stable.yaml \
-            --skip-validate
           goreleaser release \
             --config goreleaser-stable.yaml \
-            --rm-dist \
+            --clean \
             --skip-validate
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
           FURY_USER: ${{ secrets.FURY_USER }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
