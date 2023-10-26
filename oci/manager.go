@@ -10,7 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
+	"sync"
 
 	regtypes "github.com/docker/docker/api/types/registry"
 	regtool "github.com/genuinetools/reg/registry"
@@ -31,6 +33,7 @@ import (
 	"kraftkit.sh/oci/simpleauth"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/target"
 )
@@ -137,96 +140,114 @@ func (manager *ociManager) registry(ctx context.Context, domain string) (*regtoo
 // Manifest from an Index.  Based on the provided criterium from the query,
 // identify the Descriptor that is compatible and instantiate a pack.Package
 // structure from it.
-func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullref string, query *packmanager.Query, manifests []ocispec.Descriptor) (map[string]pack.Package, error) {
+func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullref string, query *packmanager.Query, manifests []ocispec.Descriptor) map[string]pack.Package {
 	packs := make(map[string]pack.Package)
+	var wg sync.WaitGroup
+	wg.Add(len(manifests))
+	var mu sync.RWMutex
 
-checkManifest:
 	for _, descriptor := range manifests {
-		if ok, err := IsOCIDescriptorKraftKitCompatible(&descriptor); !ok {
-			log.G(ctx).
-				WithField("digest", descriptor.Digest.String()).
-				Tracef("incompatible index structure: %s", err.Error())
-			continue
-		}
-
-		if query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
-			log.G(ctx).
-				WithField("digest", descriptor.Digest.String()).
-				WithField("want", query.Platform()).
-				WithField("got", descriptor.Platform.OS).
-				Trace("skipping manifest: platform does not match query")
-			continue
-		}
-
-		if query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
-			log.G(ctx).
-				WithField("digest", descriptor.Digest.String()).
-				WithField("want", query.Architecture()).
-				WithField("got", descriptor.Platform.Architecture).
-				Trace("skipping manifest: architecture does not match query")
-			continue
-		}
-
-		if len(query.KConfig()) > 0 {
-			// If the list of requested features is greater than the list of
-			// available features, there will be no way for the two to match.  We
-			// are searching for a subset of query.KConfig() from
-			// m.Platform.OSFeatures to match.
-			if len(query.KConfig()) > len(descriptor.Platform.OSFeatures) {
+		go func(descriptor ocispec.Descriptor) {
+			defer wg.Done()
+			if ok, err := IsOCIDescriptorKraftKitCompatible(&descriptor); !ok {
 				log.G(ctx).
 					WithField("digest", descriptor.Digest.String()).
-					Trace("skipping descriptor: query contains more features than available")
-				continue
+					Tracef("incompatible index structure: %s", err.Error())
+				return
 			}
 
-			available := set.NewStringSet(descriptor.Platform.OSFeatures...)
+			if query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
+				log.G(ctx).
+					WithField("digest", descriptor.Digest.String()).
+					WithField("want", query.Platform()).
+					WithField("got", descriptor.Platform.OS).
+					Trace("skipping manifest: platform does not match query")
+				return
+			}
 
-			// Iterate through the query's requested set of features and skip only
-			// if the descriptor does not contain the requested KConfig feature.
-			for _, a := range query.KConfig() {
-				if !available.Contains(a) {
+			if query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
+				log.G(ctx).
+					WithField("digest", descriptor.Digest.String()).
+					WithField("want", query.Architecture()).
+					WithField("got", descriptor.Platform.Architecture).
+					Trace("skipping manifest: architecture does not match query")
+				return
+			}
+
+			if len(query.KConfig()) > 0 {
+				// If the list of requested features is greater than the list of
+				// available features, there will be no way for the two to match.  We
+				// are searching for a subset of query.KConfig() from
+				// m.Platform.OSFeatures to match.
+				if len(query.KConfig()) > len(descriptor.Platform.OSFeatures) {
 					log.G(ctx).
 						WithField("digest", descriptor.Digest.String()).
-						WithField("feature", a).
-						Trace("skipping manifest: missing feature")
-					continue checkManifest
+						Trace("skipping descriptor: query contains more features than available")
+					return
+				}
+
+				available := set.NewStringSet(descriptor.Platform.OSFeatures...)
+
+				// Iterate through the query's requested set of features and skip only
+				// if the descriptor does not contain the requested KConfig feature.
+				for _, a := range query.KConfig() {
+					if !available.Contains(a) {
+						log.G(ctx).
+							WithField("digest", descriptor.Digest.String()).
+							WithField("feature", a).
+							Trace("skipping manifest: missing feature")
+						return
+					}
 				}
 			}
-		}
 
-		// If we have made it this far, the query has been successfully
-		// satisfied by this particular manifest and we can generate a package
-		// from it.
-		pack, err := NewPackageFromOCIManifestDigest(ctx,
-			handle,
-			fullref,
-			query.Auths(),
-			descriptor.Digest,
-		)
-		if err != nil {
-			log.G(ctx).
-				WithField("digest", descriptor.Digest.String()).
-				Tracef("skipping manifest: could not instantiate package from manifest digest: %s", err.Error())
-			continue
-		}
+			// If we have made it this far, the query has been successfully
+			// satisfied by this particular manifest and we can generate a package
+			// from it.
+			pack, err := NewPackageFromOCIManifestDigest(ctx,
+				handle,
+				fullref,
+				query.Auths(),
+				descriptor.Digest,
+			)
+			if err != nil {
+				log.G(ctx).
+					WithField("digest", descriptor.Digest.String()).
+					Tracef("skipping manifest: could not instantiate package from manifest digest: %s", err.Error())
+				return
+			}
 
-		checksum, err := PlatformChecksum(pack.String(), descriptor.Platform)
-		if err != nil {
-			return nil, fmt.Errorf("could not calculate platform digest for '%s': %w", descriptor.Digest.String(), err)
-		}
+			checksum, err := PlatformChecksum(pack.String(), descriptor.Platform)
+			if err != nil {
+				log.G(ctx).
+					Debugf("could not calculate platform digest for '%s': %s", descriptor.Digest.String(), err)
+				return
+			}
 
-		packs[checksum] = pack
+			mu.Lock()
+			packs[checksum] = pack
+			mu.Unlock()
+		}(descriptor)
 	}
 
-	return packs, nil
+	wg.Wait()
+
+	return packs
 }
 
 // Catalog implements packmanager.PackageManager
 func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+	query := packmanager.NewQuery(qopts...)
+
+	// Do not perform a search if a query for a specific type is requested and it
+	// does not include the application-type.
+	if len(query.Types()) > 0 && !slices.Contains(query.Types(), unikraft.ComponentTypeApp) {
+		return nil, nil
+	}
+
 	var qglob glob.Glob
 	var err error
 	packs := make(map[string]pack.Package)
-	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 
 	if strings.ContainsRune(qname, '*') {
@@ -317,20 +338,12 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			goto searchRemoteIndexes
 		}
 
-		v1ManifestPackages, err := processV1IndexManifests(ctx,
+		for checksum, pack := range processV1IndexManifests(ctx,
 			handle,
 			ref.String(),
 			query,
 			FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
-		)
-		if err != nil {
-			log.G(ctx).
-				WithField("ref", ref).
-				Tracef("could not get manifests from index: %v", err)
-			goto searchRemoteIndexes
-		}
-
-		for checksum, pack := range v1ManifestPackages {
+		) {
 			packs[checksum] = pack
 		}
 	}
@@ -381,76 +394,82 @@ searchRemoteIndexes:
 				continue
 			}
 
+			var wg sync.WaitGroup
+			wg.Add(len(catalog))
+			var mu sync.RWMutex
+
 			for _, fullref := range catalog {
-				// Skip direct references from the remote registry
-				if query.Update() && refErr == nil && ref.String() == fullref {
-					log.G(ctx).
-						WithField("ref", fullref).
-						Trace("skipping index: does not exist locally")
-					continue
-				}
+				go func(fullref string) {
+					defer wg.Done()
 
-				if qfullref := fmt.Sprintf("%s:%s", qname, qversion); len(qname) > 0 && fullref != qfullref {
-					log.G(ctx).
-						WithField("got", fullref).
-						WithField("want", qfullref).
-						Trace("skipping index: query name does not match")
-					continue
-				}
+					// Skip direct references from the remote registry
+					if query.Update() && refErr == nil && ref.String() == fullref {
+						log.G(ctx).
+							WithField("ref", fullref).
+							Trace("skipping index: does not exist locally")
+						return
+					}
 
-				ref, err = name.ParseReference(fullref,
-					name.WithDefaultRegistry(domain),
-				)
-				if err != nil {
-					log.G(ctx).
-						WithField("ref", fullref).
-						Tracef("skipping index: could not parse reference: %s", err.Error())
-					continue
-				}
+					if qfullref := fmt.Sprintf("%s:%s", qname, qversion); len(qname) > 0 && fullref != qfullref {
+						log.G(ctx).
+							WithField("got", fullref).
+							WithField("want", qfullref).
+							Trace("skipping index: query name does not match")
+						return
+					}
 
-				index, err := remote.Index(ref,
-					remote.WithAuth(&simpleauth.SimpleAuthenticator{
-						Auth: authConfig,
-					}),
-					remote.WithTransport(transport),
-					remote.WithPlatform(v1.Platform{
-						Architecture: query.Architecture(),
-						OS:           query.Platform(),
-						OSFeatures:   query.KConfig(),
-					}),
-				)
-				if err != nil {
-					log.G(ctx).
-						WithField("ref", fullref).
-						Tracef("skipping index: could not retrieve image: %s", err.Error())
-					continue
-				}
+					ref, err = name.ParseReference(fullref,
+						name.WithDefaultRegistry(domain),
+					)
+					if err != nil {
+						log.G(ctx).
+							WithField("ref", fullref).
+							Tracef("skipping index: could not parse reference: %s", err.Error())
+						return
+					}
 
-				v1IndexManifest, err := index.IndexManifest()
-				if err != nil {
-					log.G(ctx).
-						WithField("ref", fullref).
-						Tracef("could not access the index's manifest object: %s", err.Error())
-					continue
-				}
+					index, err := remote.Index(ref,
+						remote.WithAuth(&simpleauth.SimpleAuthenticator{
+							Auth: authConfig,
+						}),
+						remote.WithTransport(transport),
+						remote.WithPlatform(v1.Platform{
+							Architecture: query.Architecture(),
+							OS:           query.Platform(),
+							OSFeatures:   query.KConfig(),
+						}),
+					)
+					if err != nil {
+						log.G(ctx).
+							WithField("ref", fullref).
+							Tracef("skipping index: could not retrieve image: %s", err.Error())
+						return
+					}
 
-				v1ManifestPackages, err := processV1IndexManifests(ctx,
-					handle,
-					fullref,
-					query,
-					FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
-				)
-				if err != nil {
-					log.G(ctx).
-						WithField("ref", fullref).
-						Tracef("could not get manifest packages: %s", err.Error())
-					continue
-				}
+					v1IndexManifest, err := index.IndexManifest()
+					if err != nil {
+						log.G(ctx).
+							WithField("ref", fullref).
+							Tracef("could not access the index's manifest object: %s", err.Error())
+						return
+					}
 
-				for checksum, pack := range v1ManifestPackages {
-					packs[checksum] = pack
-				}
+					v1ManifestPackages := processV1IndexManifests(ctx,
+						handle,
+						fullref,
+						query,
+						FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
+					)
+
+					mu.Lock()
+					for checksum, pack := range v1ManifestPackages {
+						packs[checksum] = pack
+					}
+					mu.Unlock()
+				}(fullref)
 			}
+
+			wg.Wait()
 		}
 	}
 
@@ -492,20 +511,12 @@ searchRemoteIndexes:
 			}
 		}
 
-		v1ManifestPackages, err := processV1IndexManifests(ctx,
+		for checksum, pack := range processV1IndexManifests(ctx,
 			handle,
 			fullref,
 			query,
 			index.Manifests,
-		)
-		if err != nil {
-			log.G(ctx).
-				WithField("ref", fullref).
-				Tracef("could not get manifest packages: %s", err.Error())
-			continue
-		}
-
-		for checksum, pack := range v1ManifestPackages {
+		) {
 			packs[checksum] = pack
 		}
 	}
