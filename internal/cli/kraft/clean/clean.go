@@ -50,6 +50,7 @@ type CleanOptions struct {
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter prepare based on a target's platform"`
 	Target       string `long:"target" short:"t" usage:"Filter prepare based on a specific target"`
+	Proper       bool   `long:"proper" short:"P" usage:"Proper clean a project"`
 }
 
 // Clean removes the build object files of a Unikraft project.
@@ -72,7 +73,7 @@ func NewCmd() *cobra.Command {
 			$ kraft clean
 
 			# clean a project at a path
-			$ kraft clean path/to/app`),
+			$ kraft clean --proper path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},
@@ -137,6 +138,10 @@ func (opts *CleanOptions) Run(ctx context.Context, args []string) error {
 	t, err := target.Select(targets)
 	if err != nil {
 		return err
+	}
+
+	if opts.Proper {
+		return project.Properclean(ctx, t)
 	}
 
 	return project.Clean(ctx, t)
