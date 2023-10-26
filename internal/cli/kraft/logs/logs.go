@@ -28,7 +28,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel.",
 		Use:     "logs [FLAGS] MACHINE",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.ExactArgs(1),
 		GroupID: "run",
 	})
 	if err != nil {
@@ -58,10 +58,6 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
-
-	if len(args) == 0 {
-		return fmt.Errorf("must specify a machine to fetch logs for")
-	}
 
 	if opts.platform == "auto" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
