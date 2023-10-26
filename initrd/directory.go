@@ -117,17 +117,31 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 			return fmt.Errorf("could not read file: %w", err)
 		}
 
-		if err := writer.WriteHeader(&cpio.Header{
-			Name:     internal,
-			Linkname: targetLink,
-			Mode:     cpio.FileMode(d.Type().Perm()),
-			Size:     info.Size(),
-		}); err != nil {
-			return err
+		header := &cpio.Header{
+			Name:    internal,
+			Mode:    cpio.FileMode(info.Mode().Perm()),
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		}
+
+		switch {
+		case info.Mode().IsDir():
+			header.Mode |= cpio.TypeDir
+
+		case info.Mode().IsRegular():
+			header.Mode |= cpio.TypeReg
+
+		case info.Mode()&fs.ModeSymlink != 0:
+			header.Mode |= cpio.TypeSymlink
+			header.Linkname = targetLink
+		}
+
+		if err := writer.WriteHeader(header); err != nil {
+			return fmt.Errorf("writing cpio header for %q: %w", internal, err)
 		}
 
 		if _, err := writer.Write(data); err != nil {
-			return fmt.Errorf("could not write CPIO data: %w", err)
+			return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
 		}
 
 		return nil
