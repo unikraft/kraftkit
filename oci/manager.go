@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -32,6 +33,7 @@ import (
 	"kraftkit.sh/oci/simpleauth"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/target"
 )
@@ -235,10 +237,17 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 
 // Catalog implements packmanager.PackageManager
 func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.QueryOption) ([]pack.Package, error) {
+	query := packmanager.NewQuery(qopts...)
+
+	// Do not perform a search if a query for a specific type is requested and it
+	// does not include the application-type.
+	if len(query.Types()) > 0 && !slices.Contains(query.Types(), unikraft.ComponentTypeApp) {
+		return nil, nil
+	}
+
 	var qglob glob.Glob
 	var err error
 	packs := make(map[string]pack.Package)
-	query := packmanager.NewQuery(qopts...)
 	qname := query.Name()
 
 	if strings.ContainsRune(qname, '*') {
