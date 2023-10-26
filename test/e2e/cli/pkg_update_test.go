@@ -59,7 +59,7 @@ var _ = Describe("kraft pkg", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stderr.String()).To(BeEmpty())
-					Expect(stdout.String()).To(MatchRegexp(`^{"level":"info","msg":"Updating..."}\n$`))
+					Expect(stdout.String()).To(MatchRegexp(`^{"level":"info","msg":"updating"}\n$`))
 
 					Expect(manifestsPath).To(ContainFiles("index.yaml", "unikraft.yaml"))
 					Expect(manifestsPath).To(ContainDirectories("libs"))
