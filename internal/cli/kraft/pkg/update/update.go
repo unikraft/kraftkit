@@ -67,34 +67,49 @@ func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	pm := packmanager.G(ctx)
+	processes := []*processtree.ProcessTreeItem{}
 
 	// Force a particular package manager
-	if len(opts.Manager) > 0 && opts.Manager != "auto" {
+	if len(opts.Manager) > 0 && opts.Manager != "all" {
 		pm, err = pm.From(pack.PackageFormat(opts.Manager))
 		if err != nil {
 			return err
 		}
-	}
 
-	parallel := !config.G[config.KraftKit](ctx).NoParallel
-	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
-
-	model, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			// processtree.WithVerb("Updating"),
-			processtree.IsParallel(parallel),
-			processtree.WithRenderer(norender),
-		},
-		[]*processtree.ProcessTreeItem{
+		processes = []*processtree.ProcessTreeItem{
 			processtree.NewProcessTreeItem(
-				"Updating...",
-				"",
+				"updating",
+				pm.Format().String(),
 				func(ctx context.Context) error {
 					return pm.Update(ctx)
 				},
 			),
-		}...,
+		}
+	} else {
+		umbrella, err := packmanager.PackageManagers()
+		if err != nil {
+			return err
+		}
+		for _, pm := range umbrella {
+			processes = append(processes,
+				processtree.NewProcessTreeItem(
+					"updating",
+					pm.Format().String(),
+					func(ctx context.Context) error {
+						return pm.Update(ctx)
+					},
+				),
+			)
+		}
+	}
+
+	model, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+		},
+		processes...,
 	)
 	if err != nil {
 		return err
