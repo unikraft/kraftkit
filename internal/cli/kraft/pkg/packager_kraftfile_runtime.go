@@ -47,7 +47,7 @@ func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOpti
 }
 
 // Pack implements packager.
-func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, args ...string) error {
+func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
 	var targ target.Target
 
@@ -70,18 +70,18 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 		switch {
 		case len(targets) == 0:
-			return fmt.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.Platform, opts.Architecture)
+			return nil, fmt.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.Platform, opts.Architecture)
 
 		case len(targets) == 1:
 			targ = targets[0]
 
 		case config.G[config.KraftKit](ctx).NoPrompt && len(targets) > 1:
-			return fmt.Errorf("could not determine what to run based on provided CLI arguments")
+			return nil, fmt.Errorf("could not determine what to run based on provided CLI arguments")
 
 		default:
 			targ, err = target.Select(targets)
 			if err != nil {
-				return fmt.Errorf("could not select target: %v", err)
+				return nil, fmt.Errorf("could not select target: %v", err)
 			}
 		}
 	}
@@ -112,16 +112,16 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	packs, err := opts.pm.Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
 	if err != nil {
-		return fmt.Errorf("could not query catalog: %w", err)
+		return nil, fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
 		// Try again with a remote update request.  Save this to qopts in case we
 		// need to call `Catalog` again.
 		qopts = append(qopts, packmanager.WithUpdate(true))
 		packs, err = opts.pm.Catalog(ctx, qopts...)
 		if err != nil {
-			return fmt.Errorf("could not query catalog: %w", err)
+			return nil, fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+			return nil, fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
 		}
 	}
 
@@ -133,13 +133,13 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		if opts.Architecture == "" {
 			opts.Architecture, err = ukarch.HostArchitecture()
 			if err != nil {
-				return fmt.Errorf("could not get host architecture: %w", err)
+				return nil, fmt.Errorf("could not get host architecture: %w", err)
 			}
 		}
 		if opts.Platform == "" {
 			plat, _, err := platform.Detect(ctx)
 			if err != nil {
-				return fmt.Errorf("could not get host platform: %w", err)
+				return nil, fmt.Errorf("could not get host platform: %w", err)
 			}
 
 			opts.Platform = plat.String()
@@ -152,11 +152,11 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 		packs, err = opts.pm.Catalog(ctx, qopts...)
 		if err != nil {
-			return fmt.Errorf("could not query catalog: %w", err)
+			return nil, fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+			return nil, fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
 		} else if len(packs) > 1 {
-			return fmt.Errorf("could not find runtime: too many options")
+			return nil, fmt.Errorf("could not find runtime: too many options")
 		}
 
 		log.G(ctx).
@@ -169,7 +169,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	// pulling and extracting the identified package.
 	tempDir, err := os.MkdirTemp("", "kraft-pkg-")
 	if err != nil {
-		return fmt.Errorf("could not create temporary directory: %w", err)
+		return nil, fmt.Errorf("could not create temporary directory: %w", err)
 	}
 
 	defer func() {
@@ -201,11 +201,11 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		paraprogress.WithFailFast(true),
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := paramodel.Start(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Crucially, the catalog should return an interface that also implements
@@ -213,7 +213,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	// resolve application kernels.
 	targ, ok := packs[0].(target.Target)
 	if !ok {
-		return fmt.Errorf("package does not convert to target")
+		return nil, fmt.Errorf("package does not convert to target")
 	}
 
 	// If no arguments have been specified, use the ones which are default and
@@ -224,9 +224,10 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var result []pack.Package
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	model, err := processtree.NewProcessTree(
@@ -254,17 +255,24 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					)
 				}
 
-				if _, err := opts.pm.Pack(ctx, targ, popts...); err != nil {
+				more, err := opts.pm.Pack(ctx, targ, popts...)
+				if err != nil {
 					return err
 				}
+
+				result = append(result, more...)
 
 				return nil
 			},
 		),
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return model.Start()
+	if err := model.Start(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

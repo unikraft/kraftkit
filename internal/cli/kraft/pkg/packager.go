@@ -8,6 +8,8 @@ package pkg
 import (
 	"context"
 	"fmt"
+
+	"kraftkit.sh/pack"
 )
 
 // packager is an interface for defining different mechanisms to perform a
@@ -24,7 +26,7 @@ type packager interface {
 	Packagable(context.Context, *PkgOptions, ...string) (bool, error)
 
 	// Pack performs the packaging based on the determined implementation.
-	Pack(context.Context, *PkgOptions, ...string) error
+	Pack(context.Context, *PkgOptions, ...string) ([]pack.Package, error)
 }
 
 // packagers is the list of built-in packagers which are checked

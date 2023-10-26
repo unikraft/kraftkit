@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -16,6 +17,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
@@ -43,6 +45,7 @@ type PkgOptions struct {
 	NoKConfig    bool     `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	Output       string   `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
 	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Push         bool     `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs       string   `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 
@@ -190,7 +193,7 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	var pack packager
+	var pkgr packager
 
 	packagers := packagers()
 
@@ -204,7 +207,7 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 
 		capable, err := candidate.Packagable(ctx, opts, args...)
 		if capable && err == nil {
-			pack = candidate
+			pkgr = candidate
 			break
 		}
 
@@ -214,7 +217,7 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 			Trace("incompatbile")
 	}
 
-	if pack == nil {
+	if pkgr == nil {
 		return fmt.Errorf("could not determine what or how to package from the given context")
 	}
 
@@ -222,8 +225,49 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not build rootfs: %w", err)
 	}
 
-	if err := pack.Pack(ctx, opts, args...); err != nil {
+	packs, err := pkgr.Pack(ctx, opts, args...)
+	if err != nil {
 		return fmt.Errorf("could not package: %w", err)
+	}
+
+	if opts.Push {
+		var processes []*paraprogress.Process
+
+		for _, p := range packs {
+			p := p
+
+			var title []string
+			for _, column := range p.Columns() {
+				if len(column.Value) > 12 {
+					continue
+				}
+
+				title = append(title, column.Value)
+			}
+
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("pushing %s:%s (%s)", p.Name(), p.Version(), strings.Join(title, ", ")),
+				func(ctx context.Context, w func(progress float64)) error {
+					return p.Push(
+						ctx,
+						pack.WithPushProgressFunc(w),
+					)
+				},
+			))
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			processes,
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		return paramodel.Start()
 	}
 
 	return nil
