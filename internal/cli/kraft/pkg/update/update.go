@@ -108,6 +108,7 @@ func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 		[]processtree.ProcessTreeOption{
 			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
 			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+			processtree.WithHideOnSuccess(true),
 		},
 		processes...,
 	)
