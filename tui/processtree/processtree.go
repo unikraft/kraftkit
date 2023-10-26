@@ -76,6 +76,7 @@ type ProcessTree struct {
 	errChan  chan error
 	failFast bool
 	oldOut   iostreams.FileWriter
+	hide     bool
 }
 
 func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
