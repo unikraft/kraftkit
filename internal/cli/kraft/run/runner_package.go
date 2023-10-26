@@ -16,10 +16,13 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
+	ukarch "kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -76,39 +79,92 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, arg
 
 // Prepare implements Runner.
 func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
-	// First try the local cache of the catalog
-	packs, err := runner.pm.Catalog(ctx,
+	qopts := []packmanager.QueryOption{
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
-		packmanager.WithUpdate(false),
-		packmanager.WithPlatform(opts.platform.String()),
-		packmanager.WithArchitecture(opts.Architecture),
-		packmanager.WithUpdate(true),
-	)
+	}
+
+	// First try the local cache of the catalog
+	packs, err := runner.pm.Catalog(ctx, qopts...)
 	if err != nil {
 		return err
 	}
-
-	if len(packs) > 1 {
-		return fmt.Errorf("could not determine what to run: too many options")
+	if err != nil {
+		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
-		// Second, try accessing the remote catalog
-		packs, err = runner.pm.Catalog(ctx,
-			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithName(runner.packName),
-			packmanager.WithUpdate(true),
-			packmanager.WithPlatform(opts.platform.String()),
-			packmanager.WithArchitecture(opts.Architecture),
+		log.G(ctx).Debug("no local packages detected")
+
+		// Try again with a remote update request.
+		qopts = append(qopts, packmanager.WithUpdate(true))
+
+		parallel := !config.G[config.KraftKit](ctx).NoParallel
+		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				"searching...", "",
+				func(ctx context.Context) error {
+					packs, err = runner.pm.Catalog(ctx, qopts...)
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			),
 		)
 		if err != nil {
 			return err
 		}
-
-		if len(packs) > 1 {
-			return fmt.Errorf("could not determine what to run: too many options")
-		} else if len(packs) == 0 {
-			return fmt.Errorf("not found: %s", runner.packName)
+		if err := treemodel.Start(); err != nil {
+			return fmt.Errorf("could not complete search: %v", err)
 		}
+		if len(packs) == 0 {
+			return fmt.Errorf("coud not find runtime '%s'", runner.packName)
+		}
+	}
+
+	if len(packs) > 1 && (opts.Architecture == "" || opts.platform == "") {
+		// At this point, we have queried the registry without asking for the
+		// platform and architecture and received multiple options.  Re-query the
+		// catalog with the host architecture and platform.
+
+		if opts.Architecture == "" {
+			opts.Architecture, err = ukarch.HostArchitecture()
+			if err != nil {
+				return fmt.Errorf("could not get host architecture: %w", err)
+			}
+		}
+		if opts.platform == "" {
+			opts.platform, _, err = platform.Detect(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get host platform: %w", err)
+			}
+		}
+
+		for _, p := range packs {
+			pt := p.(target.Target)
+			if pt.Architecture().String() == opts.Architecture && pt.Platform().String() == opts.platform.String() {
+				packs = []pack.Package{p}
+				break
+			}
+		}
+
+		if len(packs) != 1 {
+			return fmt.Errorf("coud not find runtime '%s'", runner.packName)
+		}
+
+		log.G(ctx).
+			WithField("arch", opts.Architecture).
+			WithField("plat", opts.platform.String()).
+			Info("using")
 	}
 
 	// Pre-emptively prepare the UID so that we can extract the kernel to the
