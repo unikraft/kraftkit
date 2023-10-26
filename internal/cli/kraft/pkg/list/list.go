@@ -14,6 +14,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	"kraftkit.sh/config"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
@@ -121,12 +123,40 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 
 		fmt.Fprint(iostreams.G(ctx).Out, project.PrintInfo(ctx))
 	} else {
-		found, err := packmanager.G(ctx).Catalog(ctx,
-			packmanager.WithUpdate(opts.Update),
-			packmanager.WithTypes(types...),
+		var found []pack.Package
+
+		parallel := !config.G[config.KraftKit](ctx).NoParallel
+		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				"updating index...", "",
+				func(ctx context.Context) error {
+					found, err = packmanager.G(ctx).Catalog(ctx,
+						packmanager.WithUpdate(opts.Update),
+						packmanager.WithTypes(types...),
+					)
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			),
 		)
 		if err != nil {
 			return err
+		}
+
+		if err := treemodel.Start(); err != nil {
+			return fmt.Errorf("could not complete search: %v", err)
 		}
 
 		for _, p := range found {
@@ -137,6 +167,11 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 
 			packages[format] = append(packages[format], p)
 		}
+	}
+
+	if len(packages) == 0 {
+		log.G(ctx).Info("no packages found")
+		return nil
 	}
 
 	for format, packs := range packages {
