@@ -13,6 +13,7 @@ import (
 	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/multiselect"
 	"kraftkit.sh/tui/processtree"
@@ -43,7 +44,7 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOpt
 }
 
 // Build implements packager.
-func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, args ...string) error {
+func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
 
 	var tree []*processtree.ProcessTreeItem
@@ -58,15 +59,17 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 	if len(selected) > 1 && !config.G[config.KraftKit](ctx).NoPrompt {
 		selected, err = multiselect.MultiSelect[target.Target]("select what to package", opts.project.Targets()...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if len(selected) == 0 {
-		return fmt.Errorf("nothing selected to package")
+		return nil, fmt.Errorf("nothing selected to package")
 	}
 
 	i := 0
+
+	var result []pack.Package
 
 	for _, targ := range selected {
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
@@ -82,7 +85,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 
 		cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// When i > 0, we have already applied the merge strategy.  Now, for all
@@ -112,9 +115,12 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 					)
 				}
 
-				if _, err := opts.pm.Pack(ctx, targ, popts...); err != nil {
+				more, err := opts.pm.Pack(ctx, targ, popts...)
+				if err != nil {
 					return err
 				}
+
+				result = append(result, more...)
 
 				return nil
 			},
@@ -126,13 +132,13 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 	if len(tree) == 0 {
 		switch true {
 		case len(opts.Target) > 0:
-			return fmt.Errorf("no matching targets found for: %s", opts.Target)
+			return nil, fmt.Errorf("no matching targets found for: %s", opts.Target)
 		case len(opts.Architecture) > 0 && len(opts.Platform) == 0:
-			return fmt.Errorf("no matching targets found for architecture: %s", opts.Architecture)
+			return nil, fmt.Errorf("no matching targets found for architecture: %s", opts.Architecture)
 		case len(opts.Architecture) == 0 && len(opts.Platform) > 0:
-			return fmt.Errorf("no matching targets found for platform: %s", opts.Platform)
+			return nil, fmt.Errorf("no matching targets found for platform: %s", opts.Platform)
 		default:
-			return fmt.Errorf("no matching targets found for: %s/%s", opts.Platform, opts.Architecture)
+			return nil, fmt.Errorf("no matching targets found for: %s/%s", opts.Platform, opts.Architecture)
 		}
 	}
 
@@ -145,8 +151,12 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		tree...,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return model.Start()
+	if err := model.Start(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
