@@ -191,9 +191,8 @@ func (pt *ProcessTree) Init() tea.Cmd {
 		pt.timer.Init(),
 	}
 
-	// Start all child processes
-	children := pt.getNextReadyChildren(pt.tree)
-	for _, pti := range children {
+	// Start all child processes plus this one
+	for _, pti := range pt.tree {
 		pti := pti
 		pti.timeout = pt.timeout
 
@@ -233,16 +232,6 @@ func (pt ProcessTree) getNextReadyChildren(tree []*ProcessTreeItem) []*ProcessTr
 					completed++
 				}
 			}
-		}
-
-		// Only start the parent process if all children have succeeded or if there
-		// no children and the status is pending
-		if len(subprocesses) == 0 &&
-			failed == 0 &&
-			(pt.parallel || (len(items) == 0 && !pt.parallel)) &&
-			completed == len(item.children) &&
-			(item.status == StatusPending || item.status == StatusRunningChild) {
-			items = append(items, item)
 		}
 	}
 
