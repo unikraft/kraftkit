@@ -22,22 +22,27 @@ import (
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
+	ukarch "kraftkit.sh/unikraft/arch"
 )
 
 type ListOptions struct {
+	All       bool   `long:"all" usage:"Show everything"`
+	Arch      string `long:"arch" usage:"Set a specific arhitecture to list for"`
+	Plat      string `long:"plat" usage:"Set a specific platform to list for"`
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
+	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
 	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`
 	ShowArchs bool   `long:"archs" short:"M" usage:"Show architectures"`
 	ShowCore  bool   `long:"core" short:"C" usage:"Show Unikraft core versions"`
 	ShowLibs  bool   `long:"libs" short:"L" usage:"Show libraries"`
 	ShowPlats bool   `long:"plats" short:"P" usage:"Show platforms"`
 	Update    bool   `long:"update" short:"u" usage:"Get latest information about components before listing results"`
-	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
 }
 
 func NewCmd() *cobra.Command {
@@ -128,6 +133,35 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		parallel := !config.G[config.KraftKit](ctx).NoParallel
 		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
+		qopts := []packmanager.QueryOption{
+			packmanager.WithUpdate(opts.Update),
+			packmanager.WithTypes(types...),
+		}
+
+		if !opts.ShowArchs && !opts.All {
+			if len(opts.Arch) == 0 {
+				opts.Arch, err = ukarch.HostArchitecture()
+				if err != nil {
+					return fmt.Errorf("could not get host architecture: %w", err)
+				}
+			}
+
+			qopts = append(qopts, packmanager.WithArchitecture(opts.Arch))
+		}
+
+		if !opts.ShowPlats && !opts.All {
+			if len(opts.Plat) == 0 {
+				plat, _, err := mplatform.Detect(ctx)
+				if err != nil {
+					return fmt.Errorf("could not get host architecture: %w", err)
+				}
+
+				opts.Plat = plat.String()
+			}
+
+			qopts = append(qopts, packmanager.WithPlatform(opts.Plat))
+		}
+
 		treemodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -139,10 +173,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 			processtree.NewProcessTreeItem(
 				"updating index...", "",
 				func(ctx context.Context) error {
-					found, err = packmanager.G(ctx).Catalog(ctx,
-						packmanager.WithUpdate(opts.Update),
-						packmanager.WithTypes(types...),
-					)
+					found, err = packmanager.G(ctx).Catalog(ctx, qopts...)
 					if err != nil {
 						return err
 					}
