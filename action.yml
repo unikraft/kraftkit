@@ -10,9 +10,17 @@ inputs:
   #
   # Global flags
   #
+  after:
+    description: Bash script to run after the action
+    required: false
+    default: ""
   auths:
     description: Authentication details for services, must be in YAML format
     required: false
+  before:
+    description: Bash script to run before the action
+    required: false
+    default: ""
   loglevel:
     description: Log-level of the action
     required: false
@@ -20,6 +28,7 @@ inputs:
   runtimedir:
     description: Path to store runtime artifacts
     required: false
+    default: /github/workspace/.kraftkit/runtime
 
   #
   # Project flags
@@ -104,6 +113,21 @@ runs:
         --name buildkitd_${GITHUB_RUN_ID} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.12.1
+  - name: Set up scripts
+    shell: bash
+    run: |
+      mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
+      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      #!/bin/bash
+      #sudo chown -R runner:runner /github/workspace
+      ${{ inputs.before }}
+      EOF
+      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      #!/bin/bash
+      ${{ inputs.after }}
+      EOF
+      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
   - name: Run kraft
     shell: bash
     run: |
@@ -112,6 +136,7 @@ runs:
         --rm \
         --env-file <(env) \
         -e "CI=true" \
+        -e "GITHUB_WORKSPACE=/github/workspace" \
         -e "INPUT_ARCH=${{ inputs.arch }}" \
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_AUTHS=${{ inputs.auths }}" \
