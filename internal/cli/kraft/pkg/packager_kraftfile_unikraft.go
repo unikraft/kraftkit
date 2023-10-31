@@ -30,13 +30,13 @@ func (p *packagerKraftfileUnikraft) String() string {
 
 // Buildable implements packager.
 func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOptions, args ...string) (bool, error) {
-	if opts.project == nil {
+	if opts.Project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
 		}
 	}
 
-	if opts.project.Unikraft(ctx) == nil {
+	if opts.Project.Unikraft(ctx) == nil {
 		return false, fmt.Errorf("cannot package without unikraft core specification")
 	}
 
@@ -51,13 +51,13 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
-	selected := opts.project.Targets()
+	selected := opts.Project.Targets()
 	if len(opts.Target) > 0 || len(opts.Architecture) > 0 || len(opts.Platform) > 0 {
-		selected = target.Filter(opts.project.Targets(), opts.Architecture, opts.Platform, opts.Target)
+		selected = target.Filter(opts.Project.Targets(), opts.Architecture, opts.Platform, opts.Target)
 	}
 
 	if len(selected) > 1 && !config.G[config.KraftKit](ctx).NoPrompt {
-		selected, err = multiselect.MultiSelect[target.Target]("select what to package", opts.project.Targets()...)
+		selected, err = multiselect.MultiSelect[target.Target]("select what to package", opts.Project.Targets()...)
 		if err != nil {
 			return nil, err
 		}

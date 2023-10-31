@@ -34,24 +34,24 @@ import (
 )
 
 type PkgOptions struct {
-	Architecture string   `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
-	Args         []string `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
-	Dbg          bool     `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
-	Force        bool     `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
-	Format       string   `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
-	Kernel       string   `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
-	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Name         string   `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	NoKConfig    bool     `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
-	Output       string   `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string   `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
-	Push         bool     `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
-	Rootfs       string   `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	Target       string   `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Args         []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
+	Dbg          bool                      `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
+	Force        bool                      `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
+	Format       string                    `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
+	Kernel       string                    `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
+	Kraftfile    string                    `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Name         string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
+	Output       string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
+	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Project      app.Application           `noattribute:"true"`
+	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
+	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	Strategy     packmanager.MergeStrategy `noattribute:"true"`
+	Target       string                    `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	Workdir      string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 
-	workdir  string
-	strategy packmanager.MergeStrategy
-	project  app.Application
 	packopts []packmanager.PackOption
 	pm       packmanager.PackageManager
 }
@@ -113,14 +113,27 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(ctx)
+
+	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+
+	return nil
+}
+
+func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	if len(args) == 0 {
-		opts.workdir, err = os.Getwd()
+		opts.Workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
 	} else {
-		opts.workdir = args[0]
+		opts.Workdir = args[0]
 	}
 
 	if opts.Name == "" {
@@ -131,40 +144,27 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
 	}
 
-	ctx := cmd.Context()
-
-	opts.strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
-
-	if config.G[config.KraftKit](ctx).NoPrompt && opts.strategy == "prompt" {
+	if config.G[config.KraftKit](ctx).NoPrompt && opts.Strategy == packmanager.StrategyPrompt {
 		return fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
 	}
 
-	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	cmd.SetContext(ctx)
-
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	// Switch the package manager the desired format for this target
-	opts.pm, err = packmanager.G(ctx).From(pack.PackageFormat(opts.Format))
-	if err != nil {
-		return err
+	if len(opts.Format) > 0 {
+		// Switch the package manager the desired format for this target
+		opts.pm, err = packmanager.G(ctx).From(pack.PackageFormat(opts.Format))
+		if err != nil {
+			return err
+		}
+	} else {
+		opts.pm = packmanager.G(ctx)
 	}
-
-	return nil
-}
-
-func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
-	var err error
 
 	exists, err := opts.pm.Catalog(ctx,
 		packmanager.WithName(opts.Name),
 	)
 	if err == nil && len(exists) > 0 {
-		if opts.strategy == packmanager.StrategyPrompt {
+		if opts.Strategy == packmanager.StrategyPrompt {
 			strategy, err := selection.Select[packmanager.MergeStrategy](
 				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
 				packmanager.MergeStrategies()...,
@@ -173,10 +173,10 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 				return err
 			}
 
-			opts.strategy = *strategy
+			opts.Strategy = *strategy
 		}
 
-		switch opts.strategy {
+		switch opts.Strategy {
 		case packmanager.StrategyExit:
 			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
 
@@ -184,7 +184,7 @@ func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 		// package manager.
 		default:
 			opts.packopts = append(opts.packopts,
-				packmanager.PackMergeStrategy(opts.strategy),
+				packmanager.PackMergeStrategy(opts.Strategy),
 			)
 		}
 	} else {

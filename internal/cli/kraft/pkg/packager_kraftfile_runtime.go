@@ -33,13 +33,13 @@ func (p *packagerKraftfileRuntime) String() string {
 
 // Packagable implements packager.
 func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOptions, args ...string) (bool, error) {
-	if opts.project == nil {
+	if opts.Project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
 		}
 	}
 
-	if opts.project.Runtime() == nil {
+	if opts.Project.Runtime() == nil {
 		return false, fmt.Errorf("cannot package without unikraft core specification")
 	}
 
@@ -51,10 +51,10 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	var err error
 	var targ target.Target
 
-	targets := opts.project.Targets()
+	targets := opts.Project.Targets()
 	qopts := []packmanager.QueryOption{
-		packmanager.WithName(opts.project.Runtime().Name()),
-		packmanager.WithVersion(opts.project.Runtime().Version()),
+		packmanager.WithName(opts.Project.Runtime().Name()),
+		packmanager.WithVersion(opts.Project.Runtime().Version()),
 	}
 
 	if len(targets) == 1 {
@@ -121,7 +121,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		if err != nil {
 			return nil, fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return nil, fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+			return nil, fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
 		}
 	}
 
@@ -154,7 +154,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		if err != nil {
 			return nil, fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return nil, fmt.Errorf("coud not find runtime '%s'", opts.project.Runtime().Name())
+			return nil, fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
 		} else if len(packs) > 1 {
 			return nil, fmt.Errorf("could not find runtime: too many options")
 		}
