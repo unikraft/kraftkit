@@ -53,6 +53,18 @@ func NewIndexFromSpec(ctx context.Context, handle handler.Handler, spec *ocispec
 
 	index.index = spec
 
+	indexJson, err := json.Marshal(spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	indexDesc := content.NewDescriptorFromBytes(
+		ocispec.MediaTypeImageIndex,
+		indexJson,
+	)
+
+	index.desc = &indexDesc
+
 	for _, desc := range spec.Manifests {
 		manifest, err := NewManifestFromDigest(ctx, handle, desc.Digest)
 		if err != nil {
