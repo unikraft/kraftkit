@@ -55,10 +55,14 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")
 		if err != nil {
-			return "", fmt.Errorf("could not make temporary directory: %w", err)
+			return "", fmt.Errorf("could not make temporary file: %w", err)
 		}
 
 		initrd.opts.output = fi.Name()
+		err = fi.Close()
+		if err != nil {
+			return "", fmt.Errorf("could not close temporary file: %w", err)
+		}
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE, 0o644)
