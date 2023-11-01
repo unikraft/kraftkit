@@ -26,6 +26,7 @@ type directory struct {
 // NewFromDirectory returns an instantiated Initrd interface which is is able to
 // serialize a rootfs from a given directory.
 func NewFromDirectory(_ context.Context, path string, opts ...InitrdOption) (Initrd, error) {
+	path = strings.TrimRight(path, string(filepath.Separator))
 	rootfs := directory{
 		opts: InitrdOptions{},
 		path: path,
