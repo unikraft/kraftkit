@@ -82,6 +82,8 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	qopts := []packmanager.QueryOption{
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
+		packmanager.WithArchitecture(opts.Architecture),
+		packmanager.WithPlatform(opts.platform.String()),
 	}
 
 	// First try the local cache of the catalog
