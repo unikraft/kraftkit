@@ -761,7 +761,7 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 	for {
 		select {
 		case line := <-out:
-			if !qemuShowSgaBiosPreamble {
+			if !qemuShowSgaBiosPreamble && machine.Spec.Architecture == "x86_64" {
 				if strings.Contains(line, "Booting from ") {
 					qemuShowSgaBiosPreamble = true
 				}
