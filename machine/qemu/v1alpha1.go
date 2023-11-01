@@ -354,6 +354,8 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				// Unikraft:
 				"",
 				"",
+				// By default, create the directory if it does not exist when mounting.
+				"mkpath",
 			).String())
 
 		default:
