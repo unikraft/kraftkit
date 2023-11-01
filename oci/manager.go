@@ -497,15 +497,15 @@ searchRemoteIndexes:
 			if len(qversion) > 0 && len(qname) > 0 {
 				if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
 					log.G(ctx).
-						WithField("want", fullref).
-						WithField("got", fmt.Sprintf("%s:%s", qname, qversion)).
+						WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+						WithField("got", fullref).
 						Trace("skipping index: name does not match")
 					continue
 				}
 			} else if len(qname) > 0 && fullref != qname {
 				log.G(ctx).
-					WithField("want", fullref).
-					WithField("got", qname).
+					WithField("want", qname).
+					WithField("got", fullref).
 					Trace("skipping index: name does not match")
 				continue
 			}
