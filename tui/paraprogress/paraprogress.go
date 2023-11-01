@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/barkimedes/go-deepcopy"
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,6 +35,7 @@ type ParaProgress struct {
 	errChan       chan error
 	failFast      bool
 	nameWidth     int
+	timeout       time.Duration
 }
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -71,6 +73,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 	for i := range processes {
 		processes[i].norender = md.norender
 		processes[i].NameWidth = maxNameLen
+		processes[i].timeout = md.timeout
 
 		pctx, err := deepcopy.Anything(ctx)
 		if err != nil {

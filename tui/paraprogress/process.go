@@ -6,6 +6,7 @@ package paraprogress
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -78,6 +79,7 @@ type Process struct {
 	err         error
 	norender    bool
 	ctx         context.Context
+	timeout     time.Duration
 
 	Name      string
 	NameWidth int
@@ -213,6 +215,11 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 
 	// TickMsg is sent when the spinner wants to animate itself
 	case spinner.TickMsg:
+		if d.timeout != 0 && d.timer.Elapsed() > d.timeout {
+			d.err = fmt.Errorf("process timedout after %s", d.timeout.String())
+			d.Status = StatusFailed
+		}
+
 		d.spinner, cmd = d.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
@@ -291,7 +298,7 @@ func (p Process) View() string {
 		truncate := 0
 		loglen := len(p.logs) - LOGLEN
 
-		if loglen > 0 {
+		if p.Status != StatusFailed {
 			truncate = loglen
 		}
 

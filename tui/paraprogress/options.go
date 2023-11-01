@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package paraprogress
 
+import "time"
+
 type ParaProgressOption func(md *ParaProgress) error
 
 func WithRenderer(norender bool) ParaProgressOption {
@@ -30,6 +32,13 @@ func WithFailFast(failFast bool) ParaProgressOption {
 func WithNameWidth(width int) ParaProgressOption {
 	return func(pp *ParaProgress) error {
 		pp.nameWidth = width
+		return nil
+	}
+}
+
+func WithTimeout(timeout time.Duration) ParaProgressOption {
+	return func(pp *ParaProgress) error {
+		pp.timeout = timeout
 		return nil
 	}
 }
