@@ -42,7 +42,13 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case spinner.TickMsg:
 		_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
-			pti.spinner, cmd = pti.spinner.Update(msg)
+			if pti.timeout != 0 && pti.timer.Elapsed() > pti.timeout {
+				pti.err = fmt.Errorf("process timedout after %s", pti.timeout.String())
+				pti.status = StatusFailed
+			} else {
+				pti.spinner, cmd = pti.spinner.Update(msg)
+			}
+
 			cmds = append(cmds, cmd)
 
 			return nil

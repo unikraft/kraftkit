@@ -4,6 +4,8 @@
 // You may not use this file expect in compliance with the License.
 package processtree
 
+import "time"
+
 type ProcessTreeOption func(pt *ProcessTree) error
 
 func WithVerb(verb string) ProcessTreeOption {
@@ -37,6 +39,13 @@ func WithFailFast(failFast bool) ProcessTreeOption {
 func WithHideOnSuccess(hide bool) ProcessTreeOption {
 	return func(pt *ProcessTree) error {
 		pt.hide = hide
+		return nil
+	}
+}
+
+func WithTimeout(timeout time.Duration) ProcessTreeOption {
+	return func(pt *ProcessTree) error {
+		pt.timeout = timeout
 		return nil
 	}
 }
