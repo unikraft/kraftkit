@@ -81,6 +81,7 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 
 		internal := strings.TrimPrefix(path, filepath.Clean(initrd.path))
+		internal = filepath.ToSlash(internal)
 		if internal == "" {
 			return nil // Do not archive empty paths
 		}
