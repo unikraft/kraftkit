@@ -17,7 +17,6 @@ import (
 	"kraftkit.sh/log"
 
 	"github.com/cavaliergopher/cpio"
-	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
 
@@ -125,14 +124,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	})
 
 	eg.Go(func() error {
-		var c console.Console
-		if config.G[config.KraftKit](ctx).Log.Type == "fancy" && os.Getenv("GITHUB_ACTIONS") != "true" {
-			if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
-				c = cn
-			}
-		}
-
-		_, err = progressui.DisplaySolveStatus(ctx, c, log.G(ctx).Writer(), ch)
+		_, err = progressui.DisplaySolveStatus(ctx, nil, log.G(ctx).Writer(), ch)
 		if err != nil {
 			return fmt.Errorf("could not display output progress: %w", err)
 		}
