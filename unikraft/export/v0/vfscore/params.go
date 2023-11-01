@@ -25,18 +25,20 @@ type FstabEntry struct {
 	mountTarget  string
 	fsDriver     string
 	flags        string
-	options      string
+	opts         string
+	ukopts       string
 }
 
 // NewFstabEntry generates a structure that is representative of one of
 // Unikraft's vfscore automounts.
-func NewFstabEntry(sourceDevice, mountTarget, fsDriver, flags, options string) FstabEntry {
+func NewFstabEntry(sourceDevice, mountTarget, fsDriver, flags, opts, ukopts string) FstabEntry {
 	return FstabEntry{
 		sourceDevice,
 		mountTarget,
 		fsDriver,
 		flags,
-		options,
+		opts,
+		ukopts,
 	}
 }
 
@@ -48,6 +50,7 @@ func (entry FstabEntry) String() string {
 		entry.mountTarget,
 		entry.fsDriver,
 		entry.flags,
-		entry.options,
+		entry.opts,
+		entry.ukopts,
 	}, ":")
 }

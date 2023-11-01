@@ -61,12 +61,12 @@ func (param *ParamStrSlice) String() string {
 	ret.WriteString(param.library)
 	ret.WriteString(".")
 	ret.WriteString(param.name)
-	ret.WriteString("=[")
+	ret.WriteString("=[ ")
 
 	for _, v := range param.values {
 		ret.WriteString("\"")
 		ret.WriteString(v)
-		ret.WriteString("\"")
+		ret.WriteString("\" ")
 	}
 
 	ret.WriteString("]")
