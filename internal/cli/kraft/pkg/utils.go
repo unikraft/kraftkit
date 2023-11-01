@@ -21,7 +21,7 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 	var err error
 
 	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.workdir),
+		app.WithProjectWorkdir(opts.Workdir),
 	}
 
 	if len(opts.Kraftfile) > 0 {
@@ -31,7 +31,7 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 	}
 
 	// Interpret the project directory
-	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
+	opts.Project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}
@@ -42,16 +42,16 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 // buildRootfs generates a rootfs based on the provided
 func (opts *PkgOptions) buildRootfs(ctx context.Context) error {
 	if opts.Rootfs == "" {
-		if opts.project != nil && opts.project.Rootfs() != "" {
-			opts.Rootfs = opts.project.Rootfs()
+		if opts.Project != nil && opts.Project.Rootfs() != "" {
+			opts.Rootfs = opts.Project.Rootfs()
 		} else {
 			return nil
 		}
 	}
 
 	ramfs, err := initrd.New(ctx, opts.Rootfs,
-		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
-		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.VendorDir, "rootfs-cache")),
+		initrd.WithOutput(filepath.Join(opts.Workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
+		initrd.WithCacheDir(filepath.Join(opts.Workdir, unikraft.VendorDir, "rootfs-cache")),
 	)
 	if err != nil {
 		return fmt.Errorf("could not prepare initramfs: %w", err)
