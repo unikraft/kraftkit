@@ -122,8 +122,6 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 			return fmt.Errorf("could not create cache file: %v", err)
 		}
 
-		defer f.Close()
-
 		get, err := http.NewRequestWithContext(ctx, "GET", resource, nil)
 		if err != nil {
 			return err
@@ -157,6 +155,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 			return err
 		}
 
+		err = f.Close()
+		if err != nil {
+			return fmt.Errorf("could not close file '%s' %s", tmpCache, err)
+		}
+
 		if popts.CalculateChecksum() {
 			log.G(ctx).Debugf("calculating checksum for manifest package...")
 
@@ -168,7 +171,6 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 				if err != nil {
 					return fmt.Errorf("could not perform checksum: %v", err)
 				}
-				defer f.Close()
 
 				h := sha256.New()
 				if _, err := io.Copy(h, f); err != nil {
@@ -177,6 +179,11 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 
 				if checksum != string(h.Sum(nil)) {
 					return fmt.Errorf("checksum of package does not match")
+				}
+
+				err = f.Close()
+				if err != nil {
+					return fmt.Errorf("could not close file '%s' %s", tmpCache, err)
 				}
 
 				log.G(ctx).WithFields(logrus.Fields{
