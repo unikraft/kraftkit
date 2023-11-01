@@ -296,10 +296,12 @@ func (p Process) View() string {
 		}
 
 		truncate := 0
-		loglen := len(p.logs) - LOGLEN
 
 		if p.Status != StatusFailed {
-			truncate = loglen
+			loglen := len(p.logs) - LOGLEN
+			if loglen > 0 {
+				truncate = loglen
+			}
 		}
 
 		for _, line := range p.logs[truncate:] {
