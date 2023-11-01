@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcimage "sdk.kraft.cloud/image"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -72,7 +71,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kcimage.NewImagesClient(
+	client := kraftcloud.NewImagesClient(
 		kraftcloud.WithToken(auth.Token),
 	)
 

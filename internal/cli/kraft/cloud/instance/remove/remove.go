@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcinstance "sdk.kraft.cloud/instance"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -83,7 +82,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kcinstance.NewInstancesClient(
+	client := kraftcloud.NewInstancesClient(
 		kraftcloud.WithToken(auth.Token),
 	)
 

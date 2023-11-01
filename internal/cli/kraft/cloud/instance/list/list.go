@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcinstance "sdk.kraft.cloud/instance"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -65,26 +64,13 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kcinstance.NewInstancesClient(
+	client := kraftcloud.NewInstancesClient(
 		kraftcloud.WithToken(auth.Token),
 	)
 
-	uuids, err := client.WithMetro(opts.metro).List(ctx)
+	instances, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list instances: %w", err)
-	}
-
-	// TODO(nderjung): For now, the KraftCloud API does not support
-	// returning the full details of each instance.  Temporarily request a
-	// status for each instance.
-	var instances []kcinstance.Instance
-	for _, uuid := range uuids {
-		instance, err := client.WithMetro(opts.metro).Status(ctx, uuid.UUID)
-		if err != nil {
-			return fmt.Errorf("could not get instance status: %w", err)
-		}
-
-		instances = append(instances, *instance)
 	}
 
 	return utils.PrintInstances(ctx, opts.Output, instances...)

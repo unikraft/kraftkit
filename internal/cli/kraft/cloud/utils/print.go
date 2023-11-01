@@ -15,12 +15,13 @@ import (
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	kcinstance "sdk.kraft.cloud/instance"
+
+	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
-func PrintInstances(ctx context.Context, format string, instances ...kcinstance.Instance) error {
+func PrintInstances(ctx context.Context, format string, instances ...kraftcloudinstances.Instance) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
