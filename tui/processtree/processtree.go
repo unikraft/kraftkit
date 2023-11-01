@@ -57,6 +57,9 @@ type ProcessTreeItem struct {
 	timer     stopwatch.Model
 	norender  bool
 	ctx       context.Context
+	timeout   time.Duration
+	err       error
+	ellipsis  string
 }
 
 type ProcessTree struct {
@@ -77,6 +80,7 @@ type ProcessTree struct {
 	failFast bool
 	oldOut   iostreams.FileWriter
 	hide     bool
+	timeout  time.Duration
 }
 
 func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
@@ -105,6 +109,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 	_ = pt.traverseTreeAndCall(tree, func(item *ProcessTreeItem) error {
 		total++
 		item.norender = pt.norender
+		item.timeout = pt.timeout
 		return nil
 	})
 
@@ -189,6 +194,8 @@ func (pt *ProcessTree) Init() tea.Cmd {
 	children := pt.getNextReadyChildren(pt.tree)
 	for _, pti := range children {
 		pti := pti
+		pti.timeout = pt.timeout
+
 		cmds = append(cmds, pt.waitForProcessCmd(pti))
 		cmds = append(cmds, pti.timer.Init())
 	}

@@ -6,6 +6,7 @@ package processtree
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -42,7 +43,21 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case spinner.TickMsg:
 		_ = pt.traverseTreeAndCall(pt.tree, func(pti *ProcessTreeItem) error {
-			pti.spinner, cmd = pti.spinner.Update(msg)
+			if pti.timeout != 0 && pti.timer.Elapsed() > pti.timeout {
+				pti.err = fmt.Errorf("process timedout after %s", pti.timeout.String())
+				pti.status = StatusFailed
+			} else {
+				pti.spinner, cmd = pti.spinner.Update(msg)
+			}
+
+			if pti.status == StatusRunning ||
+				pti.status == StatusRunningChild ||
+				pti.status == StatusRunningButAChildHasFailed {
+				pti.ellipsis = strings.Repeat(".", int(pti.timer.Elapsed().Seconds())%4)
+			} else {
+				pti.ellipsis = ""
+			}
+
 			cmds = append(cmds, cmd)
 
 			return nil

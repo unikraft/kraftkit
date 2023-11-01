@@ -105,6 +105,10 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 
 	textLeft += " " + pti.textLeft
 
+	if pti.status == StatusRunning || pti.status == StatusRunningChild {
+		textLeft += pti.ellipsis
+	}
+
 	elapsed := utils.HumanizeDuration(pti.timer.Elapsed())
 	rightTimerWidth := width(elapsed)
 	if rightTimerWidth > stm.rightPad {
