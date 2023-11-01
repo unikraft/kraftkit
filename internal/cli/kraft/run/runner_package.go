@@ -89,9 +89,6 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	// First try the local cache of the catalog
 	packs, err := runner.pm.Catalog(ctx, qopts...)
 	if err != nil {
-		return err
-	}
-	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
 		log.G(ctx).Debug("no local packages detected")
