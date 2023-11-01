@@ -6,6 +6,7 @@ package processtree
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -47,6 +48,14 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pti.status = StatusFailed
 			} else {
 				pti.spinner, cmd = pti.spinner.Update(msg)
+			}
+
+			if pti.status == StatusRunning ||
+				pti.status == StatusRunningChild ||
+				pti.status == StatusRunningButAChildHasFailed {
+				pti.ellipsis = strings.Repeat(".", int(pti.timer.Elapsed().Seconds())%4)
+			} else {
+				pti.ellipsis = ""
 			}
 
 			cmds = append(cmds, cmd)
