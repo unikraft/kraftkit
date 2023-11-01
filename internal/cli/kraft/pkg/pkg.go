@@ -57,12 +57,159 @@ type PkgOptions struct {
 }
 
 // Pkg a Unikraft project.
-func Pkg(ctx context.Context, opts *PkgOptions, args ...string) error {
+func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
+	var err error
+
 	if opts == nil {
 		opts = &PkgOptions{}
 	}
 
-	return opts.Run(ctx, args)
+	if len(args) == 0 {
+		opts.Workdir, err = os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+	} else if len(opts.Workdir) == 0 {
+		opts.Workdir = args[0]
+	}
+
+	if opts.Name == "" {
+		return nil, fmt.Errorf("cannot package without setting --name")
+	}
+
+	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
+		return nil, fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	}
+
+	if config.G[config.KraftKit](ctx).NoPrompt && opts.Strategy == packmanager.StrategyPrompt {
+		return nil, fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
+	}
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
+
+	if len(opts.Format) > 0 {
+		// Switch the package manager the desired format for this target
+		opts.pm, err = packmanager.G(ctx).From(pack.PackageFormat(opts.Format))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		opts.pm = packmanager.G(ctx)
+	}
+
+	exists, err := opts.pm.Catalog(ctx,
+		packmanager.WithName(opts.Name),
+	)
+	if err == nil && len(exists) > 0 {
+		if opts.Strategy == packmanager.StrategyPrompt {
+			strategy, err := selection.Select[packmanager.MergeStrategy](
+				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
+				packmanager.MergeStrategies()...,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			opts.Strategy = *strategy
+		}
+
+		switch opts.Strategy {
+		case packmanager.StrategyExit:
+			return nil, fmt.Errorf("package already exists and merge strategy set to exit on conflict")
+
+		// Set the merge strategy as an option that is then passed to the
+		// package manager.
+		default:
+			opts.packopts = append(opts.packopts,
+				packmanager.PackMergeStrategy(opts.Strategy),
+			)
+		}
+	} else {
+		opts.packopts = append(opts.packopts,
+			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
+		)
+	}
+
+	var pkgr packager
+
+	packagers := packagers()
+
+	// Iterate through the list of built-in builders which sequentially tests
+	// the current context and Kraftfile match specific requirements towards
+	// performing a type of build.
+	for _, candidate := range packagers {
+		log.G(ctx).
+			WithField("packager", candidate.String()).
+			Trace("checking compatibility")
+
+		capable, err := candidate.Packagable(ctx, opts, args...)
+		if capable && err == nil {
+			pkgr = candidate
+			break
+		}
+
+		log.G(ctx).
+			WithError(err).
+			WithField("packager", candidate.String()).
+			Trace("incompatbile")
+	}
+
+	if pkgr == nil {
+		return nil, fmt.Errorf("could not determine what or how to package from the given context")
+	}
+
+	if err := opts.buildRootfs(ctx); err != nil {
+		return nil, fmt.Errorf("could not build rootfs: %w", err)
+	}
+
+	packs, err := pkgr.Pack(ctx, opts, args...)
+	if err != nil {
+		return nil, fmt.Errorf("could not package: %w", err)
+	}
+
+	if opts.Push {
+		var processes []*paraprogress.Process
+
+		for _, p := range packs {
+			p := p
+
+			var title []string
+			for _, column := range p.Columns() {
+				if len(column.Value) > 12 {
+					continue
+				}
+
+				title = append(title, column.Value)
+			}
+
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("pushing %s:%s (%s)", p.Name(), p.Version(), strings.Join(title, ", ")),
+				func(ctx context.Context, w func(progress float64)) error {
+					return p.Push(
+						ctx,
+						pack.WithPushProgressFunc(w),
+					)
+				},
+			))
+		}
+
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			processes,
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return packs, err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return packs, err
+		}
+	}
+
+	return packs, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -126,148 +273,8 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
-	var err error
-	if len(args) == 0 {
-		opts.Workdir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	} else {
-		opts.Workdir = args[0]
-	}
-
-	if opts.Name == "" {
-		return fmt.Errorf("cannot package without setting --name")
-	}
-
-	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
-		return fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-	}
-
-	if config.G[config.KraftKit](ctx).NoPrompt && opts.Strategy == packmanager.StrategyPrompt {
-		return fmt.Errorf("cannot mix --strategy=prompt when --no-prompt is enabled in settings")
-	}
-
-	opts.Platform = platform.PlatformByName(opts.Platform).String()
-
-	if len(opts.Format) > 0 {
-		// Switch the package manager the desired format for this target
-		opts.pm, err = packmanager.G(ctx).From(pack.PackageFormat(opts.Format))
-		if err != nil {
-			return err
-		}
-	} else {
-		opts.pm = packmanager.G(ctx)
-	}
-
-	exists, err := opts.pm.Catalog(ctx,
-		packmanager.WithName(opts.Name),
-	)
-	if err == nil && len(exists) > 0 {
-		if opts.Strategy == packmanager.StrategyPrompt {
-			strategy, err := selection.Select[packmanager.MergeStrategy](
-				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
-				packmanager.MergeStrategies()...,
-			)
-			if err != nil {
-				return err
-			}
-
-			opts.Strategy = *strategy
-		}
-
-		switch opts.Strategy {
-		case packmanager.StrategyExit:
-			return fmt.Errorf("package already exists and merge strategy set to exit on conflict")
-
-		// Set the merge strategy as an option that is then passed to the
-		// package manager.
-		default:
-			opts.packopts = append(opts.packopts,
-				packmanager.PackMergeStrategy(opts.Strategy),
-			)
-		}
-	} else {
-		opts.packopts = append(opts.packopts,
-			packmanager.PackMergeStrategy(packmanager.StrategyMerge),
-		)
-	}
-
-	var pkgr packager
-
-	packagers := packagers()
-
-	// Iterate through the list of built-in builders which sequentially tests
-	// the current context and Kraftfile match specific requirements towards
-	// performing a type of build.
-	for _, candidate := range packagers {
-		log.G(ctx).
-			WithField("packager", candidate.String()).
-			Trace("checking compatibility")
-
-		capable, err := candidate.Packagable(ctx, opts, args...)
-		if capable && err == nil {
-			pkgr = candidate
-			break
-		}
-
-		log.G(ctx).
-			WithError(err).
-			WithField("packager", candidate.String()).
-			Trace("incompatbile")
-	}
-
-	if pkgr == nil {
-		return fmt.Errorf("could not determine what or how to package from the given context")
-	}
-
-	if err := opts.buildRootfs(ctx); err != nil {
-		return fmt.Errorf("could not build rootfs: %w", err)
-	}
-
-	packs, err := pkgr.Pack(ctx, opts, args...)
-	if err != nil {
+	if _, err := Pkg(ctx, opts, args...); err != nil {
 		return fmt.Errorf("could not package: %w", err)
-	}
-
-	if opts.Push {
-		var processes []*paraprogress.Process
-
-		for _, p := range packs {
-			p := p
-
-			var title []string
-			for _, column := range p.Columns() {
-				if len(column.Value) > 12 {
-					continue
-				}
-
-				title = append(title, column.Value)
-			}
-
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pushing %s:%s (%s)", p.Name(), p.Version(), strings.Join(title, ", ")),
-				func(ctx context.Context, w func(progress float64)) error {
-					return p.Push(
-						ctx,
-						pack.WithPushProgressFunc(w),
-					)
-				},
-			))
-		}
-
-		paramodel, err := paraprogress.NewParaProgress(
-			ctx,
-			processes,
-			paraprogress.IsParallel(false),
-			paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
-			paraprogress.WithFailFast(true),
-		)
-		if err != nil {
-			return err
-		}
-
-		return paramodel.Start()
 	}
 
 	return nil
