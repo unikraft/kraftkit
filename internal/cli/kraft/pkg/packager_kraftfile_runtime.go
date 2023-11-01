@@ -239,7 +239,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 		processtree.NewProcessTreeItem(
 			"packaging "+opts.Name+" ("+opts.Format+")",
-			targ.Architecture().Name()+"/"+targ.Platform().Name(),
+			targ.Platform().Name()+"/"+targ.Architecture().Name(),
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
 					packmanager.PackArgs(cmdShellArgs...),
