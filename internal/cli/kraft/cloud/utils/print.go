@@ -38,15 +38,21 @@ func PrintInstances(ctx context.Context, format string, instances ...kcinstance.
 	}
 
 	// Header row
-	table.AddField("UUID", cs.Bold)
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
 	table.AddField("DNS", cs.Bold)
-	table.AddField("PRIVATE IP", cs.Bold)
+	if format != "table" {
+		table.AddField("PRIVATE IP", cs.Bold)
+	}
 	table.AddField("STATUS", cs.Bold)
 	table.AddField("CREATED AT", cs.Bold)
 	table.AddField("IMAGE", cs.Bold)
 	table.AddField("MEMORY", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
-	table.AddField("SERVICE GROUP", cs.Bold)
+	if format != "table" {
+		table.AddField("SERVICE GROUP", cs.Bold)
+	}
 	table.AddField("BOOT TIME", cs.Bold)
 	table.EndRow()
 
@@ -59,15 +65,21 @@ func PrintInstances(ctx context.Context, format string, instances ...kcinstance.
 			}
 			createdAt = humanize.Time(createdTime)
 		}
-		table.AddField(instance.UUID, nil)
+		if format != "table" {
+			table.AddField(instance.UUID, nil)
+		}
 		table.AddField(instance.DNS, nil)
-		table.AddField(instance.PrivateIP, nil)
+		if format != "table" {
+			table.AddField(instance.PrivateIP, nil)
+		}
 		table.AddField(string(instance.Status), nil)
 		table.AddField(createdAt, nil)
 		table.AddField(instance.Image, nil)
 		table.AddField(humanize.Bytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
 		table.AddField(strings.Join(instance.Args, " "), nil)
-		table.AddField(instance.ServiceGroup, nil)
+		if format != "table" {
+			table.AddField(instance.ServiceGroup, nil)
+		}
 		table.AddField(fmt.Sprintf("%dus", instance.BootTimeUS), nil)
 		table.EndRow()
 	}
