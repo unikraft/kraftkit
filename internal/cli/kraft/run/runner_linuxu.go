@@ -15,7 +15,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/tui/paraprogress"
-	"kraftkit.sh/unikraft/elfloader"
+	"kraftkit.sh/unikraft/runtime"
 )
 
 // https://github.com/file/file/blob/FILE5_44/src/readelf.h#L543
@@ -116,7 +116,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *RunOptions, args
 
 // Prepare implements Runner.
 func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
-	loader, err := elfloader.NewELFLoaderFromPrebuilt(ctx)
+	loader, err := runtime.NewELFLoaderRuntime(ctx)
 	if err != nil {
 		return err
 	}

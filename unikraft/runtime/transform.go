@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package elfloader
+package runtime
 
 import (
 	"context"
@@ -14,9 +14,9 @@ import (
 )
 
 // TransformFromSchema parses an input schema and returns an instantiated
-// ELFLoader.
+// runtime.
 func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, error) {
-	elfloader := ELFLoader{}
+	runtime := Runtime{}
 
 	switch entry := props.(type) {
 	case string:
@@ -27,12 +27,12 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 			switch split[0] {
 			case "oci":
 				split = strings.Split(split[1], ":")
-				elfloader.source = split[0]
+				runtime.source = split[0]
 				if len(split) > 1 {
-					elfloader.version = split[1]
+					runtime.version = split[1]
 				}
 			case "kernel":
-				elfloader.kernel = split[1]
+				runtime.kernel = split[1]
 			}
 		} else {
 			// The following sequence parses the format:
@@ -40,9 +40,9 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 			if len(split) > 2 {
 				return nil, fmt.Errorf("expected format template value to be <oci>:<tag>")
 			}
-			elfloader.name = split[0]
+			runtime.name = split[0]
 			if len(split) > 1 {
-				elfloader.version = split[1]
+				runtime.version = split[1]
 			}
 		}
 
@@ -53,17 +53,17 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 		}
 
 		if source, ok := c["source"]; ok {
-			elfloader.source = source.(string)
+			runtime.source = source.(string)
 		}
 
 		if version, ok := c["version"]; ok {
-			elfloader.version = version.(string)
+			runtime.version = version.(string)
 		}
 
 		if kconf, ok := c["kconfig"]; ok {
-			elfloader.kconfig = kconf.(kconfig.KeyValueMap)
+			runtime.kconfig = kconf.(kconfig.KeyValueMap)
 		}
 	}
 
-	return elfloader, nil
+	return runtime, nil
 }
