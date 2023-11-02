@@ -26,6 +26,7 @@ type directory struct {
 // NewFromDirectory returns an instantiated Initrd interface which is is able to
 // serialize a rootfs from a given directory.
 func NewFromDirectory(_ context.Context, path string, opts ...InitrdOption) (Initrd, error) {
+	path = strings.TrimRight(path, string(filepath.Separator))
 	rootfs := directory{
 		opts: InitrdOptions{},
 		path: path,
@@ -54,10 +55,14 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")
 		if err != nil {
-			return "", fmt.Errorf("could not make temporary directory: %w", err)
+			return "", fmt.Errorf("could not make temporary file: %w", err)
 		}
 
 		initrd.opts.output = fi.Name()
+		err = fi.Close()
+		if err != nil {
+			return "", fmt.Errorf("could not close temporary file: %w", err)
+		}
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE, 0o644)
@@ -76,6 +81,7 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 
 		internal := strings.TrimPrefix(path, filepath.Clean(initrd.path))
+		internal = filepath.ToSlash(internal)
 		if internal == "" {
 			return nil // Do not archive empty paths
 		}
