@@ -113,7 +113,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 				processtree.WithHideOnSuccess(true),
 			},
 			processtree.NewProcessTreeItem(
-				"searching...", "",
+				"searching", "",
 				func(ctx context.Context) error {
 					packs, err = runner.pm.Catalog(ctx, qopts...)
 					if err != nil {

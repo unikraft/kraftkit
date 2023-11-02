@@ -171,7 +171,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 				processtree.WithHideOnSuccess(true),
 			},
 			processtree.NewProcessTreeItem(
-				"updating index...", "",
+				"updating index", "",
 				func(ctx context.Context) error {
 					found, err = packmanager.G(ctx).Catalog(ctx, qopts...)
 					if err != nil {
