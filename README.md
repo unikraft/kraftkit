@@ -13,10 +13,11 @@ KraftKit provides a suite of tools and Go-based framework for building custom, m
 With KraftKit, you can easily leverage Unikraft and manage specialized, high-performance applications at every stage of their lifecycle: from construction to production.
 
  * [Getting started guide][kraftkit-getting-started] 📖
- * [Key differences between containers and unikernels](https://unikraft.org/docs/concepts/virtualization/) 🤔
+ * [Key differences between containers and unikernels](https://unikraft.org/docs/concepts/) 🤔
  * [Join `#kraftkit` on Unikraft's Community Discord](https://bit.ly/UnikraftDiscord) 👾
 
-There are many benefits in running your application as a unikernel: for more information about [the performance of unikernels 🚀](https://unikraft.org/docs/features/performance/), [the added security 🔒](https://unikraft.org/docs/features/security/) and [a positive impact on the environment 🌱](https://unikraft.org/docs/features/green/) please [check out Unikraft's documentation][unikraft-docs] and the introductory chapters on these impacts.
+There are many benefits in running your application as a unikernel: for more information about [the performance of unikernels 🚀](https://unikraft.org/docs/features/performance/), [the added security 🔒](https://unikraft.org/docs/features/security/) and [a positive impact on the environment 🌱](https://unikraft.org/docs/features/green/) please [check out Unikraft's documentation][unikraft-docs] and the introductory chapters on these impacts
+
 
 ## Features
 
@@ -28,15 +29,22 @@ There are many benefits in running your application as a unikernel: for more inf
 - 🧰 Go SDK for building unikernels programmatically; and
 - 🚀 _much more!_
 
+
 ## Installation
 
-You can quickly and easily install KraftKit using the interactive installer.  Simply run the following command to get started: 
+You can quickly and easily install KraftKit using the interactive installer.
+Simply run the following command to get started:
 
 ```shell
 curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 ```
 
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
+
+See [additional installation instructions](https://unikraft.org/docs/cli/install).
+
+See also the [hacking documentation on how to build KraftKit from source](https://unikraft.org/docs/cli/hacking).
+
 
 ### Container build environment
 
@@ -51,55 +59,65 @@ docker run -it --rm -v $(pwd):/workspace --entrypoint bash kraftkit.sh/base:late
 The above command will drop you into a container shell.
 Simply type `exit` or Ctrl+D to quit.
 
+
 ## Quickstart
 
-Building a unikernel with KraftKit is designed to be simple.
+Running unikernels with `kraft` is designed to be simple and familiar.
+To test your installation of `kraft`, you can run the following:
 
-Add a `Kraftfile` to your project directory, which specifies the libraries needed for your unikernel:
+```
+kraft run unikraft.org/helloworld:latest
+```
+
+Building unikernels is also designed to be simple.
+You can find some common project examples below:
+
+| | Example |
+|-|:-|
+| ![](https://raw.githubusercontent.com/unikraft/catalog/main/icons/c.svg) | [Simple "Hello, world!" application written in C](https://github.com/unikraft/catalog/tree/main/examples/helloworld-c) |
+| ![](https://raw.githubusercontent.com/unikraft/catalog/main/icons/cpp.svg) | [Simple "Hello, world!" application written in C++](https://github.com/unikraft/catalog/tree/main/examples/helloworld-cpp) |
+| ![](https://raw.githubusercontent.com/unikraft/catalog/main/icons/python3.svg) | [Simple Flask 3.0 HTTP Web Server](https://github.com/unikraft/catalog/tree/main/examples/http-python3.10-flask3.0) |
+| ![](https://raw.githubusercontent.com/unikraft/catalog/main/icons/python3.svg) | [Simple Python 3.10 HTTP Web Server with `http.server.HTTPServer`](https://github.com/unikraft/catalog/tree/main/examples/http-python3.10) |
+
+Find [more examples and applications in our community catalog](https://github.com/unikraft/catalog)!
+
+
+## Use in GitHub Actions
+
+KraftKit can be used to automatically build your application into a unikernel in a GitHub Actions workflow, simply `use` `unikraft/kraftkit@staging`.
+
+In the following example, a repository that has been initialized with a top-level `Kraftfile` that contains a target for qemu/x86_64 will be built every time a PR is opened, synchronized or re-opened:
 
 ```yaml
-specification: v0.5
+name: example
 
-unikraft: stable
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-libraries:
-  musl: stable
+jobs:
+  build:
+    steps:
+    - uses: actions/checkout@v4
 
-targets:
-  - name: default
-    architecture: x86_64
-    platform: qemu
+    - uses: unikraft/kraftkit@staging
+      with:
+        workdir: .
+        kraftfile: Kraftfile
+        arch: x86_64
+        plat: qemu
 ```
 
-You can also add an additional `Makefile.uk` which specifies any source files:
+For other CI's and integrations, including GitLab, check out [the getting started guide](https://unikraft.org/docs/getting-started).
 
-```Makefile
-$(eval $(call addlib,apphelloworld))
-
-APPHELLOWORLD_SRCS-y += $(APPHELLOWORLD_BASE)/main.c
-```
-
-Then it is a case of running:
-
-```shell
-cd path/to/workdir
-
-kraft pkg update
-kraft build
-```
-
-You can run your unikernel using:
-
-```shell
-kraft run
-```
 
 ## Support, Community & Meetings
 
 If you have any further questions or need more information about KraftKit or Unikraft, please refer to [the official Unikraft documentation][unikraft-docs] or ask for help on the Unikraft community forum.
 
-A KraftKit Working Group (WG) meets every Wednesday at 12:30 PM (CET) on [Discord][unikraft-discord].
+A KraftKit Working Group (WG) meets every other Wednesday at 13:00 PM (CET) on [Discord][unikraft-discord].
 Invites and additional details are available on the [Unikraft OSS Public calendar][unikraft-calendar].
+
 
 ## License
 
