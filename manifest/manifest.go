@@ -103,8 +103,12 @@ func (mp *ManifestProvider) Manifests() ([]*Manifest, error) {
 func (mp *ManifestProvider) PullManifest(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) error {
 	manifest.mopts = mp.manifest.mopts
 
+	// If the user has requested to pull the manifest via git, and it passes,
+	// great, otherwise fall back to archive pull.
 	if useGit {
-		return pullGit(ctx, manifest, opts...)
+		if err := pullGit(ctx, manifest, opts...); err == nil {
+			return nil
+		}
 	}
 
 	return pullArchive(ctx, manifest, opts...)
