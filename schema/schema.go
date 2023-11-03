@@ -50,6 +50,10 @@ func Validate(ctx context.Context, config map[string]interface{}) error {
 		return fmt.Errorf("missing 'spec' version attribute")
 	}
 
+	if spec[0] == 'v' {
+		spec = spec[1:]
+	}
+
 	specVer, err := semver.NewVersion(spec)
 	if err != nil {
 		return fmt.Errorf("could not parse specification version: %w", err)
