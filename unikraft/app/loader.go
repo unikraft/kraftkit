@@ -88,7 +88,7 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		return nil, err
 	}
 
-	if err := Transform(ctx, getSection(iface, "runtime"), &app.elfloader); err != nil {
+	if err := Transform(ctx, getSection(iface, "runtime"), &app.runtime); err != nil {
 		return nil, err
 	}
 

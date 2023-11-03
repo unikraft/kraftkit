@@ -31,9 +31,9 @@ import (
 	"kraftkit.sh/unikraft/app/volume"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/core"
-	"kraftkit.sh/unikraft/elfloader"
 	"kraftkit.sh/unikraft/lib"
 	"kraftkit.sh/unikraft/plat"
+	"kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
 )
@@ -93,7 +93,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(target.TargetConfig{}):           target.TransformFromSchema,
 		reflect.TypeOf(map[string]*lib.LibraryConfig{}): lib.TransformMapFromSchema,
 		reflect.TypeOf(core.UnikraftConfig{}):           core.TransformFromSchema,
-		reflect.TypeOf(elfloader.ELFLoader{}):           elfloader.TransformFromSchema,
+		reflect.TypeOf(runtime.Runtime{}):               runtime.TransformFromSchema,
 		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
 		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 	}

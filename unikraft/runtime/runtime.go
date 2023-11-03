@@ -2,7 +2,7 @@
 // Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package elfloader
+package runtime
 
 import (
 	"kraftkit.sh/kconfig"
@@ -11,7 +11,7 @@ import (
 	"kraftkit.sh/unikraft"
 )
 
-type ELFLoader struct {
+type Runtime struct {
 	registry packmanager.PackageManager
 
 	// Path to the kernel of the ELF loader.
@@ -37,29 +37,29 @@ type ELFLoader struct {
 	rootfs string
 }
 
-var _ unikraft.Nameable = (*ELFLoader)(nil)
+var _ unikraft.Nameable = (*Runtime)(nil)
 
 // Type implements kraftkit.sh/unikraft.Nameable
-func (elfloader *ELFLoader) Type() unikraft.ComponentType {
+func (elfloader *Runtime) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeApp
 }
 
 // Name implements kraftkit.sh/unikraft.Nameable
-func (elfloader *ELFLoader) Name() string {
+func (elfloader *Runtime) Name() string {
 	return elfloader.name
 }
 
 // String implements fmt.Stringer
-func (ocipack *ELFLoader) String() string {
+func (ocipack *Runtime) String() string {
 	return ocipack.pack.Name()
 }
 
 // Version implements kraftkit.sh/unikraft.Nameable
-func (elfloader *ELFLoader) Version() string {
+func (elfloader *Runtime) Version() string {
 	return elfloader.version
 }
 
 // Source of the ELF Loader runtime.
-func (elfloader *ELFLoader) Source() string {
+func (elfloader *Runtime) Source() string {
 	return elfloader.source
 }
