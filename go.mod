@@ -66,7 +66,7 @@ require (
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.11.0
+	golang.org/x/sys v0.14.0
 	golang.org/x/term v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
