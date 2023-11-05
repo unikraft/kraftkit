@@ -56,9 +56,10 @@ func Fetch(ctx context.Context, opts *FetchOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&FetchOptions{}, cobra.Command{
-		Short: "Fetch Unikraft unikernel dependencies",
-		Use:   "fetch [FLAGS] [DIR]",
-		Args:  cmdfactory.MaxDirArgs(1),
+		Short:  "Fetch Unikraft unikernel dependencies",
+		Hidden: true,
+		Use:    "fetch [FLAGS] [DIR]",
+		Args:   cmdfactory.MaxDirArgs(1),
 		Long: heredoc.Docf(`
 			Fetch the dependencies of a unikernel.
 
