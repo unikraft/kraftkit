@@ -28,6 +28,10 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 	case string:
 		split := strings.SplitN(value, "/", 2)
 
+		if len(split) != 2 {
+			return nil, fmt.Errorf("invalid target format: %s", value)
+		}
+
 		platform, err := plat.TransformFromSchema(ctx, split[0])
 		if err != nil {
 			return nil, err
@@ -114,6 +118,14 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 
 			t.kernelDbg = filepath.Join(uk.BUILD_DIR, kernelDbg)
 		}
+	}
+
+	if t.Architecture().Name() == "" {
+		return nil, fmt.Errorf("architecture must be specified for all targets")
+	}
+
+	if t.Platform().Name() == "" {
+		return nil, fmt.Errorf("platform must be specified for all targets")
 	}
 
 	return t, nil
