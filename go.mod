@@ -49,7 +49,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0-rc4
+	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/opencontainers/runc v1.1.7
 	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/opencontainers/selinux v1.11.0
@@ -64,7 +64,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.10.0
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.4.0
 	golang.org/x/sys v0.11.0
 	golang.org/x/term v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -72,7 +72,7 @@ require (
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.4
 	k8s.io/apiserver v0.27.3
-	oras.land/oras-go/v2 v2.2.1
+	oras.land/oras-go/v2 v2.3.1
 	sdk.kraft.cloud v0.3.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
