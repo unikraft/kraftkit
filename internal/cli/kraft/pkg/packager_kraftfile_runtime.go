@@ -219,7 +219,11 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	// If no arguments have been specified, use the ones which are default and
 	// that have been included in the package.
 	if len(opts.Args) == 0 {
-		opts.Args = targ.Command()
+		if len(opts.Project.Command()) > 0 {
+			opts.Args = opts.Project.Command()
+		} else if len(targ.Command()) > 0 {
+			opts.Args = targ.Command()
+		}
 	}
 
 	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
