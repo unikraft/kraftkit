@@ -18,7 +18,6 @@ require (
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.17.0
-	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
 	github.com/containerd/containerd v1.7.2
 	github.com/containerd/nerdctl v1.4.0
 	github.com/cyphar/filepath-securejoin v0.2.4
@@ -74,7 +73,7 @@ require (
 	k8s.io/apimachinery v0.27.4
 	k8s.io/apiserver v0.27.3
 	oras.land/oras-go/v2 v2.2.1
-	sdk.kraft.cloud v0.2.4
+	sdk.kraft.cloud v0.3.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
@@ -97,6 +96,7 @@ require (
 	github.com/cli/go-gh/v2 v2.0.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
+	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect

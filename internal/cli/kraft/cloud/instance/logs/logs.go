@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	"sdk.kraft.cloud/instance"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -76,7 +75,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 
 	uuid := args[0]
 
-	client := instance.NewInstancesClient(
+	client := kraftcloud.NewInstancesClient(
 		kraftcloud.WithToken(auth.Token),
 	)
 

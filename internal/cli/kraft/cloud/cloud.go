@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
 	"kraftkit.sh/internal/cli/kraft/cloud/img"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
 
@@ -71,6 +72,8 @@ func NewCmd() *cobra.Command {
 	if err != nil {
 		panic(err)
 	}
+
+	cmd.AddCommand(deploy.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "IMAGE COMMANDS"})
 	cmd.AddCommand(img.NewCmd())

@@ -10,7 +10,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/log"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
@@ -57,8 +60,30 @@ func (opts *PkgOptions) buildRootfs(ctx context.Context) error {
 		return fmt.Errorf("could not prepare initramfs: %w", err)
 	}
 
-	opts.Rootfs, err = ramfs.Build(ctx)
+	model, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+		},
+		processtree.NewProcessTreeItem(
+			"building rootfs",
+			"",
+			func(ctx context.Context) error {
+				opts.Rootfs, err = ramfs.Build(ctx)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+		),
+	)
 	if err != nil {
+		return err
+	}
+
+	if err := model.Start(); err != nil {
 		return err
 	}
 
