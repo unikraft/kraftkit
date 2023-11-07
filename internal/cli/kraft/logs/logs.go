@@ -6,6 +6,7 @@ package logs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -131,11 +132,14 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 func FollowLogs(ctx context.Context, machine *machineapi.Machine, controller machineapi.MachineService) error {
 	ctx, cancel := context.WithCancel(ctx)
 
+	var exitErr error
+
 	go func() {
 		events, errs, err := controller.Watch(ctx, machine)
 		if err != nil {
 			cancel()
-			log.G(ctx).Errorf("could not listen for machine updates: %v", err)
+
+			exitErr = fmt.Errorf("listening to machine events: %w", err)
 			return
 		}
 
@@ -145,12 +149,20 @@ func FollowLogs(ctx context.Context, machine *machineapi.Machine, controller mac
 			select {
 			case status := <-events:
 				switch status.Status.State {
+				case machineapi.MachineStateErrored:
+					exitErr = fmt.Errorf("machine fatally exited")
+					cancel()
+					break loop
+
 				case machineapi.MachineStateExited, machineapi.MachineStateFailed:
+					cancel()
 					break loop
 				}
 
 			case err := <-errs:
 				log.G(ctx).Errorf("received event error: %v", err)
+				exitErr = err
+				cancel()
 				break loop
 
 			case <-ctx.Done():
@@ -173,13 +185,15 @@ loop:
 			fmt.Fprint(iostreams.G(ctx).Out, line)
 
 		case err := <-errs:
-			log.G(ctx).Errorf("received event error: %v", err)
-			return err
+			if !errors.Is(err, io.EOF) {
+				log.G(ctx).Errorf("received event error: %v", err)
+				return err
+			}
 
 		case <-ctx.Done():
 			break loop
 		}
 	}
 
-	return nil
+	return exitErr
 }
