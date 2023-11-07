@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -364,7 +363,6 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	// Start the machine
 	_, err = opts.machineController.Start(ctx, machine)
 	if err != nil {
-		signals.RequestShutdown()
 		return err
 	}
 
