@@ -39,6 +39,12 @@ Simply run the following command to get started:
 curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
 ```
 
+For non-interactive installation (i.e. on CI environments):
+
+```shell
+curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sudo sh -s -- -y
+```
+
 Alternatively, you can download the binaries from the [releases pages](https://github.com/unikraft/kraftkit/releases).
 
 See [additional installation instructions](https://unikraft.org/docs/cli/install).
