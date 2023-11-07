@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -214,9 +215,7 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	return nil
 }
 
-func (opts *GithubAction) Run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 	if err := opts.pull(ctx); err != nil {
 		return fmt.Errorf("could not pull project components: %w", err)
 	}
