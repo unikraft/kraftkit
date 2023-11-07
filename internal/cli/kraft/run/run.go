@@ -8,9 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
-	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
@@ -23,6 +21,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -362,55 +361,6 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	var exitErr error
-	requestShutdown := false
-	logsFinished := make(chan bool, 1)
-
-	// Tail the logs if -d|--detach is not provided
-	if !opts.Detach {
-		go func() {
-			events, errs, err := opts.machineController.Watch(ctx, machine)
-			if err != nil {
-				log.G(ctx).Errorf("could not listen for machine updates: %v", err)
-				signals.RequestShutdown()
-				return
-			}
-
-			log.G(ctx).Trace("waiting for machine events")
-
-		loop:
-			for {
-				if requestShutdown {
-					<-logsFinished
-					signals.RequestShutdown()
-					break loop
-				}
-
-				// Wait on either channel
-				select {
-				case update := <-events:
-					switch update.Status.State {
-					case machineapi.MachineStateErrored:
-						signals.RequestShutdown()
-						exitErr = fmt.Errorf("machine fatally exited")
-						requestShutdown = true
-
-					case machineapi.MachineStateExited, machineapi.MachineStateFailed:
-						requestShutdown = true
-					}
-
-				case err := <-errs:
-					log.G(ctx).Errorf("received event error: %v", err)
-					signals.RequestShutdown()
-					break loop
-
-				case <-ctx.Done():
-					requestShutdown = true
-				}
-			}
-		}()
-	}
-
 	// Start the machine
 	_, err = opts.machineController.Start(ctx, machine)
 	if err != nil {
@@ -418,41 +368,9 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	var exitErr error
 	if !opts.Detach {
-		logs, errs, err := opts.machineController.Logs(ctx, machine)
-		if err != nil {
-			signals.RequestShutdown()
-			return fmt.Errorf("could not listen for machine logs: %v", err)
-		}
-
-		var line string
-	loop:
-		for {
-			// Wait on either channel
-			select {
-			case <-time.After(10 * time.Millisecond):
-				if requestShutdown && line == "" {
-					break loop
-				} else if line != "" {
-					line = ""
-				}
-
-			case line = <-logs:
-				fmt.Fprint(iostreams.G(ctx).Out, line)
-
-			case err := <-errs:
-				if errors.Is(err, io.EOF) && requestShutdown {
-					break loop
-				} else if !errors.Is(err, io.EOF) {
-					log.G(ctx).Errorf("received log error: %v", err)
-					signals.RequestShutdown()
-					break loop
-				}
-
-			case <-ctx.Done():
-				break loop
-			}
-		}
+		exitErr = logs.FollowLogs(ctx, machine, opts.machineController)
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
@@ -495,10 +413,6 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		if _, err = opts.networkController.Update(ctx, found); err != nil {
 			return fmt.Errorf("could not update network %s: %v", opts.networkName, err)
 		}
-	}
-
-	if !opts.Detach {
-		logsFinished <- true
 	}
 
 	return exitErr
