@@ -30,7 +30,7 @@ jobs:
 
       - name: Write cosign key to file
         run: |
-          echo -n "$COSIGN_KEY" > cosign.key
+          echo "$COSIGN_KEY" > cosign.key
           chmod 600 cosign.key
 
       - name: Run GoReleaser
