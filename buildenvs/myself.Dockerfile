@@ -22,12 +22,15 @@ RUN set -xe; \
     go install mvdan.cc/gofumpt@v0.4.0; \
     git config --global --add safe.directory /go/src/kraftkit.sh;
 
-# Install YTT
+# Install YTT and Cosign
 RUN set -xe; \
     curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.41.1/ytt-linux-amd64 > /tmp/ytt; \
     echo "65dbc4f3a4a2ed84296dd1b323e8e7bd77e488fa7540d12dd36cf7fb2fc77c03  /tmp/ytt" | sha256sum -c -; \
     mv /tmp/ytt /usr/local/bin/ytt; \
-    chmod +x /usr/local/bin/ytt;
+    chmod +x /usr/local/bin/ytt; \
+    curl -s -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"; \
+    mv cosign-linux-amd64 /usr/local/bin/cosign; \
+    chmod +x /usr/local/bin/cosign;
 
 WORKDIR /go/src/kraftkit.sh
 
