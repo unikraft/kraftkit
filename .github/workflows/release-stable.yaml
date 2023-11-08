@@ -32,6 +32,8 @@ jobs:
         run: |
           echo "$COSIGN_KEY" > cosign.key
           chmod 600 cosign.key
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
 
       - name: Run GoReleaser
         run: |
