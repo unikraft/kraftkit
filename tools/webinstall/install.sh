@@ -30,6 +30,7 @@ DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
 
 # Commands as variables to make them easier to override
+BREW=${BREW:-brew}
 GREP=${GREP:-grep}
 CAT=${CAT:-cat}
 SUDO=${SUDO:-sudo}
@@ -1104,17 +1105,15 @@ install_linux_musl() {
 }
 
 # install_darwin installs the kraftkit package for MacOS distributions.
-# Currently not implemented.
 # $1: the architecture of the download
 # Returns:
-# Code: 1
+# Code: 0 on success, 1 on error
 install_darwin() {
     _ind_arch="$1"
-    _ind_url="https://github.com/unikraft/kraftkit/issues/266"
-    _ind_ext=".dmg"
 
-    err "error: MacOS architecture unsupported: $_ind_arch."\
-    "You can contribute at $_ind_url"
+    need_cmd "$BREW"
+
+    do_cmd "$BREW" install unikraft/cli/kraftkit
 }
 
 # install_windows installs the kraftkit package for windows distributions.
@@ -1193,6 +1192,93 @@ install_linux_manual() {
     _CLEANUP_VERSION=""
 }
 
+# install_darwin_manual installs the kraftkit package for other Darwin
+# distributions using the GitHub binaries.
+# $1: the architecture of the download
+# Returns:
+# Code: 0 on success, 1 on error
+install_darwin_manual() {
+    _idr_arch="$1"
+    _idr_arch_parsed="amd64"
+
+    # If arch contains x86_64, then translate to amd64
+    if printf "%s" "$_idr_arch" | "$GREP" -q -E "x86_64"; then
+        _idr_arch_parsed="amd64"
+    elif printf "%s" "$_idr_arch" | "$GREP" -q -E "aarch64"; then
+        _idr_arch_parsed="arm64"
+    else
+        err "fatal: unsupported architecture: $_idr_arch"
+    fi
+
+    _idr_version_url="$INSTALL_SERVER/latest.txt"
+    _idr_version_file="latest.txt"
+    downloader "$_idr_version_url" "$_idr_version_file" "$_idr_arch"
+    say_debug "Got kraftkit version: $("$CAT" $_idr_version_file)"
+
+    _idr_url=$(printf "%s%s%s%s%s"              \
+        "https://github.com/unikraft/kraftkit"  \
+        "/releases/latest/download/kraftkit_"   \
+        "$("$CAT" $_idr_version_file)"          \
+        "_darwin_$_idr_arch_parsed"             \
+        ".tar.gz"
+    )
+    _CLEANUP_VERSION="$_idr_version_file"
+
+    get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
+    _idr_answer="$_RETVAL"
+
+    if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+        :
+    elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
+        PREFIX="$_RETVAL"
+    else
+        err "fatal: choose either yes or no."
+    fi
+
+    if [ ! -d "$PREFIX" ]; then
+        get_user_response "prefix does not exist, create? [y/N]: " "n"
+        _idr_answer="$_RETVAL"
+
+        if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            err "fatal: prefix does not exist."
+        elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            do_cmd "$MKDIR -p $PREFIX"
+        else
+            err "fatal: choose either yes or no."
+        fi
+    fi
+
+    _idr_binary="kraft"
+    _idr_archive="kraftkit.tar.gz"
+    downloader "$_idr_url" "$_idr_archive" "$_idr_arch"
+    _CLEANUP_ARCHIVE="$_idr_archive"
+
+    do_cmd "$TAR -xzf $_idr_archive"
+    _CLEANUP_BINARY="$_idr_binary"
+
+    do_cmd "$INSTALL $_idr_binary $PREFIX"
+
+    cleanup
+    _CLEANUP_ARCHIVE=""
+    _CLEANUP_BINARY=""
+    _CLEANUP_VERSION=""
+}
+
+# install_windows_manual installs the kraftkit package for other Windows
+# distributions using the GitHub binaries.
+# $1: the architecture of the download
+# Returns:
+# Code: 0 on success, 1 on error
+install_windows_manual() {
+    _iwm_arch="$1"
+    _iwm_url="https://github.com/unikraft/kraftkit/issues/267"
+    _iwm_ext=".msi"
+
+    err "error: Windows architecture unsupported: $_iwm_arch."\
+    "You can contribute at $_iwm_url"
+}
+
 # install_kraftkit installs the kraftkit package for the current architecture.
 # $1: the architecture
 # $2: whether to install in auto mode
@@ -1215,18 +1301,36 @@ install_kraftkit() {
                 ;;
             *"darwin"*)
                 install_darwin "$_ikk_arch"
+                # not needed as dependencies are installed by brew
+                # install_dependencies_darwin
                 ;;
             *"windows"*)
                 install_windows "$_ikk_arch"
                 ;;
             *)
                 err "error: unsupported architecture: $_ikk_arch"
-                ;; 
+                ;;
         esac
     else
         need_cmd "$TAR"
         need_cmd "$INSTALL"
-        install_linux_manual "$_ikk_arch"
+        case $_ikk_arch in
+            *"linux-gnu"*)
+                install_linux_manual "$_ikk_arch"
+                ;;
+            *"linux-musl"*)
+                install_linux_manual "$_ikk_arch"
+                ;;
+            *"darwin"*)
+                install_darwin_manual "$_ikk_arch"
+                ;;
+            *"windows"*)
+                install_windows_manual "$_ikk_arch"
+                ;;
+            *)
+                err "error: unsupported architecture: $_ikk_arch"
+                ;;
+        esac
     fi
 }
 

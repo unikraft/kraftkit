@@ -128,6 +128,37 @@ nix:
     install: |-
       mkdir -p $out/bin
       cp -vr ./dist/kraft $out/bin/kraft
+brews:
+  - name: kraftkit
+    alternative_names:
+      - kraftkit@{{ .Version }}
+      - kraftkit@{{ .Major }}
+    url_template: "https://github.com/unikraft/kraftkit/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_author:
+      name: Unikraft Bot
+      email: monkey@unikraft.io
+    commit_msg_template: "Bump {{ .ProjectName }} to version {{ .Tag }}"
+    homepage: "https://kraftkit.sh"
+    description: "Build and use highly customized and ultra-lightweight unikernels."
+    license: "BSD-3-Clause"
+    skip_upload: false
+    dependencies:
+      - name: gnu-sed
+      - name: make
+      - name: coreutils
+      - name: m4
+      - name: gawk
+      - name: grep
+      - name: wget
+      - name: qemu
+      - name: socat
+      - name: x86_64-elf-binutils
+      - name: x86_64-elf-gcc
+      - name: aarch64-elf-binutils
+      - name: aarch64-elf-gcc
+    repository:
+      owner: unikraft
+      name: homebrew-cli
 
 builds:
 #@ targets = {
