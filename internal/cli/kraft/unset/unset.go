@@ -40,6 +40,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 )
@@ -95,6 +96,8 @@ func (*UnsetOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 	var err error
+
+	log.G(ctx).Warnf("This command is DEPRECATED and should not be used")
 
 	workdir := ""
 	confOpts := []string{}
