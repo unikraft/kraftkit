@@ -64,15 +64,16 @@ type GithubAction struct {
 }
 
 func runScript(ctx context.Context, path string) error {
-	if _, err := os.Stat(path); err == nil {
-		cmd := exec.CommandContext(ctx, path)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = os.Environ()
-		return cmd.Run()
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		return nil
 	}
 
-	return fmt.Errorf("could not find script at %s", path)
+	cmd := exec.CommandContext(ctx, path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+
+	return cmd.Run()
 }
 
 func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
