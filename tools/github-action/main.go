@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
@@ -62,12 +63,35 @@ type GithubAction struct {
 	initrdPath string
 }
 
+func runScript(ctx context.Context, path string) error {
+	if _, err := os.Stat(path); err == nil {
+		cmd := exec.CommandContext(ctx, path)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = os.Environ()
+		return cmd.Run()
+	}
+
+	return fmt.Errorf("could not find script at %s", path)
+}
+
 func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
 	}
 
 	ctx := cmd.Context()
+
+	workspace := os.Getenv("GITHUB_WORKSPACE")
+	if workspace == "" {
+		workspace = "/github/workspace"
+	}
+	beforePath := fmt.Sprintf("%s/.kraftkit/before.sh", workspace)
+	err = runScript(ctx, beforePath)
+	if err != nil {
+		log.G(ctx).Errorf("could not run before script: %v", err)
+		os.Exit(1)
+	}
 
 	switch opts.Loglevel {
 	case "debug":
@@ -236,7 +260,20 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	return nil
+	workspace := os.Getenv("GITHUB_WORKSPACE")
+	if workspace == "" {
+		workspace = "/github/workspace"
+	}
+	afterPath := fmt.Sprintf("%s/.kraftkit/after.sh", workspace)
+
+	// Run the after script even if the context is cancelled
+	err := runScript(context.Background(), afterPath)
+	if err != nil {
+		log.G(ctx).Errorf("could not run after script: %v", err)
+		os.Exit(1)
+	}
+
+	return err
 }
 
 func main() {
@@ -265,7 +302,7 @@ func main() {
 
 	cmd, args, err := cmd.Find(os.Args[1:])
 	if err != nil {
-		fmt.Printf("could not fing flag: %w", err)
+		fmt.Printf("could not find flag: %w", err)
 		os.Exit(1)
 	}
 

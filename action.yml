@@ -10,27 +10,34 @@ inputs:
   #
   # Global flags
   #
+  after:
+    description: Bash script to run after the action
+    required: false
+    default: ""
+  auths:
+    description: Authentication details for services, must be in YAML format
+    required: false
+  before:
+    description: Bash script to run before the action
+    required: false
+    default: ""
   loglevel:
     description: Log-level of the action
     required: false
     default: error
-  
   runtimedir:
     description: Path to store runtime artifacts
     required: false
-  
-  auths:
-    description: Authentication details for services, must be in YAML format
-    required: false
+    default: /github/workspace/.kraftkit/runtime
 
   #
   # Project flags
   #
-  workdir:
-    description: Path to the project directory.
-    required: false
   kraftfile:
     description: Alternative path for the Kraftfile or inline-Kraftfile.
+    required: false
+  workdir:
+    description: Path to the project directory.
     required: false
 
   #
@@ -45,7 +52,7 @@ inputs:
   target:
     description: Name of the target to build for.
     required: false
-  
+
   #
   # Running flags
   #
@@ -63,9 +70,6 @@ inputs:
   args:
     description: Arguments to pass to the unikernel.
     required: false
-  rootfs:
-    description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
-    required: false
   memory:
     description: Set the memory size. String of format "1M"/"1G"/"1K"
     required: false
@@ -75,11 +79,13 @@ inputs:
   output:
     description: Set the output path.
     required: false
-  # If to push the output to a registry
   push:
-    description: Push the output.
+    description: Push the output to a registry.
     required: false
     default: false
+  rootfs:
+    description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
+    required: false
   strategy:
     description: Merge strategy to use when packaging.
     required: false
@@ -107,6 +113,21 @@ runs:
         --name buildkitd_${GITHUB_RUN_ID} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.12.1
+  - name: Set up scripts
+    shell: bash
+    run: |
+      mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
+      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      #!/bin/bash
+      #sudo chown -R runner:runner /github/workspace
+      ${{ inputs.before }}
+      EOF
+      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      #!/bin/bash
+      ${{ inputs.after }}
+      EOF
+      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
   - name: Run kraft
     shell: bash
     run: |
@@ -115,6 +136,7 @@ runs:
         --rm \
         --env-file <(env) \
         -e "CI=true" \
+        -e "GITHUB_WORKSPACE=/github/workspace" \
         -e "INPUT_ARCH=${{ inputs.arch }}" \
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_AUTHS=${{ inputs.auths }}" \

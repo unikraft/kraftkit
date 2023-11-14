@@ -25,11 +25,13 @@ RUN set -xe; \
         -a;
 
 FROM ${REGISTRY}/qemu:${QEMU_VERSION} AS qemu
+FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS kraftkit
 FROM debian:${DEBIAN_VERSION}         AS base
 
 COPY --from=qemu  /bin/          /usr/local/bin
 COPY --from=qemu  /share/qemu/   /share/qemu
 COPY --from=build /github-action /usr/local/bin/github-action
+COPY --from=kraftkit /kraft       /usr/local/bin/kraft
 
 # Install unikraft dependencies
 RUN set -xe; \
@@ -59,6 +61,7 @@ RUN set -xe; \
       uuid-runtime \
       wget \
       xz-utils \
+      sudo \
       ; \
     apt-get clean; \
     rm -Rf /var/cache/apt/*; \
@@ -95,7 +98,14 @@ RUN ln -s /usr/bin/cpp-12                                   /usr/bin/cc; \
 
 WORKDIR /github/workspace
 
-RUN useradd -rm -d /home/runner -s /bin/bash -g root -G sudo -u 1001 runner
+RUN set -xe; \
+    groupadd -g 127 runner; \
+    useradd -rm -d /home/runner -s /bin/bash -g runner -G sudo -u 1001 runner; \
+    sed -i /etc/sudoers -re 's/^%sudo.*/%sudo ALL=(ALL:ALL) NOPASSWD: ALL/g'; \
+    sed -i /etc/sudoers -re 's/^root.*/root ALL=(ALL:ALL) NOPASSWD: ALL/g'; \
+    sed -i /etc/sudoers -re 's/^#includedir.*/## **Removed the include directive** ##"/g'; \
+    echo "runner ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers; \
+    chown -R runner:runner /github/workspace
 USER runner
 
 ENTRYPOINT [ "github-action" ]

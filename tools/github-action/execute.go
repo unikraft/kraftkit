@@ -6,7 +6,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -91,6 +93,10 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 		return err
 	}
 
+	var exitErr error
+	requestShutdown := false
+	logsFinished := make(chan bool, 1)
+
 	go func() {
 		events, errs, err := controller.Watch(ctx, machine)
 		if err != nil {
@@ -103,13 +109,23 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 
 	loop:
 		for {
+			if requestShutdown {
+				<-logsFinished
+				signals.RequestShutdown()
+				break loop
+			}
+
 			// Wait on either channel
 			select {
 			case update := <-events:
 				switch update.Status.State {
-				case machineapi.MachineStateExited, machineapi.MachineStateFailed:
+				case machineapi.MachineStateErrored:
 					signals.RequestShutdown()
-					break loop
+					exitErr = fmt.Errorf("machine fatally exited")
+					requestShutdown = true
+
+				case machineapi.MachineStateExited, machineapi.MachineStateFailed:
+					requestShutdown = true
 				}
 
 			case err := <-errs:
@@ -118,7 +134,7 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 				break loop
 
 			case <-ctx.Done():
-				break loop
+				requestShutdown = true
 			}
 		}
 	}()
@@ -155,17 +171,29 @@ func (opts *GithubAction) execute(ctx context.Context) error {
 	})
 	defer timer.Stop()
 
+	var line string
 loop:
 	for {
 		// Wait on either channel
 		select {
-		case line := <-logs:
+		case <-time.After(10 * time.Millisecond):
+			if requestShutdown && line == "" {
+				break loop
+			} else if line != "" {
+				line = ""
+			}
+
+		case line = <-logs:
 			fmt.Fprint(iostreams.G(ctx).Out, line)
 
 		case err := <-errs:
-			log.G(ctx).Errorf("received event error: %v", err)
-			signals.RequestShutdown()
-			break loop
+			if errors.Is(err, io.EOF) && requestShutdown {
+				break loop
+			} else if !errors.Is(err, io.EOF) {
+				log.G(ctx).Errorf("received log error: %v", err)
+				signals.RequestShutdown()
+				break loop
+			}
 
 		case <-ctx.Done():
 			break loop
@@ -188,5 +216,5 @@ loop:
 		log.G(ctx).Errorf("could not remove: %v", err)
 	}
 
-	return nil
+	return exitErr
 }
