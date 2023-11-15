@@ -42,8 +42,11 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	NoColor       bool     `long:"no-color" usage:"Disable color output for prefix"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
+	Prefix        string   `long:"prefix" usage:"Prefix each log line with the given string"`
+	PrefixName    bool     `long:"prefix-name" usage:"Prefix each log line with the machine name"`
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
@@ -368,7 +371,16 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 
 	var exitErr error
 	if !opts.Detach {
-		exitErr = logs.FollowLogs(ctx, machine, opts.machineController)
+		if opts.PrefixName && opts.Prefix == "" {
+			opts.Prefix = machine.Name
+		}
+
+		consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !opts.NoColor, opts.Prefix)
+		if err != nil {
+			return err
+		}
+
+		exitErr = logs.FollowLogs(ctx, machine, opts.machineController, consumer)
 
 		// Remove the instance on Ctrl+C if the --rm flag is passed
 		if opts.Remove {
