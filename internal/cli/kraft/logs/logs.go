@@ -25,6 +25,10 @@ type LogOptions struct {
 	Follow   bool `long:"follow" short:"f" usage:"Follow log output"`
 }
 
+type logConsumer interface {
+	consume(line string) error
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Fetch the logs of a unikernel.",
