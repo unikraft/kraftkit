@@ -42,12 +42,16 @@ type QemuConfig struct {
 
 	// Command-line arguments for qemu-system-i386 and qemu-system-x86_64 only
 	NoHPET bool `flag:"-no-hpet" json:"no_hpet,omitempty"`
+
+	ShowSGABiosPreamble bool
 }
 
 type QemuOption func(*QemuConfig) error
 
 func NewQemuConfig(qopts ...QemuOption) (*QemuConfig, error) {
 	qcfg := QemuConfig{}
+
+	qcfg.ShowSGABiosPreamble = qemuShowSgaBiosPreamble
 
 	for _, o := range qopts {
 		if err := o(&qcfg); err != nil {

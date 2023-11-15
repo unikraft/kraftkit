@@ -757,13 +757,19 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 		return nil, nil, err
 	}
 
+	qcfg, ok := machine.Status.PlatformConfig.(QemuConfig)
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot cast QEMU platform configuration from machine status")
+	}
+
 	// Wait and trim the preamble from the logs before returning
 	for {
 		select {
 		case line := <-out:
-			if !qemuShowSgaBiosPreamble && machine.Spec.Architecture == "x86_64" {
+			if !qcfg.ShowSGABiosPreamble && machine.Spec.Architecture == "x86_64" {
 				if strings.Contains(line, "Booting from ") {
-					qemuShowSgaBiosPreamble = true
+					qcfg.ShowSGABiosPreamble = true
+					machine.Status.PlatformConfig = qcfg
 				}
 				continue
 			}
