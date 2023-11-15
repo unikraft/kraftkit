@@ -72,6 +72,8 @@ func (opts *EventOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *EventOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
+	log.G(ctx).Warnf("This command is DEPRECATED and should not be used")
+
 	ctx, cancel := context.WithCancel(ctx)
 	platform := mplatform.PlatformUnknown
 
