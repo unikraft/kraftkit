@@ -33,6 +33,7 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
+	"kraftkit.sh/unikraft/export/v0/vfscore"
 )
 
 const (
@@ -101,6 +102,25 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	// Set and create the log file for this machine
 	if len(machine.Status.LogFile) == 0 {
 		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
+	}
+
+	var fstab []string
+
+	for _, vol := range machine.Spec.Volumes {
+		switch vol.Spec.Driver {
+		case "initrd":
+			fstab = append(fstab, vfscore.NewFstabEntry(
+				"initrd",
+				vol.Spec.Destination,
+				vol.Spec.Driver,
+				"",
+				"",
+				// By default, create the directory if it does not exist when mounting.
+				"mkpath",
+			).String())
+		default:
+			return machine, fmt.Errorf("unsupported Firecracker volume driver: %v", vol.Spec.Driver)
+		}
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
@@ -218,6 +238,12 @@ watch:
 	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
 	if err != nil {
 		return machine, err
+	}
+
+	if len(fstab) > 0 {
+		kernelArgs = append(kernelArgs,
+			vfscore.ParamVfsFstab.WithValue(fstab),
+		)
 	}
 
 	if len(machine.Spec.Networks) > 0 {
