@@ -154,6 +154,21 @@ type LibraryConfig struct {
 
 	// srcs contains the list of source files of this library.
 	srcs []*make.ConditionalValue
+
+	// license of the library.
+	license string
+
+	// compiler used to compile the library.
+	compiler string
+
+	// compileDate is the date when the library was compiled.
+	compileDate string
+
+	// compiledBy is the name of the user who compiled the library as provided by uklibid.
+	compiledBy string
+
+	// compiledByAssoc is the association of the user who compiled the library as provided by uklibid.
+	compiledByAssoc string
 }
 
 func (lc LibraryConfig) Name() string {
@@ -172,12 +187,37 @@ func (lc LibraryConfig) Version() string {
 	return lc.version
 }
 
+func (lc LibraryConfig) License() string {
+	return lc.license
+}
+
 func (lc LibraryConfig) Type() unikraft.ComponentType {
 	return unikraft.ComponentTypeLib
 }
 
 func (lc LibraryConfig) Path() string {
 	return lc.path
+}
+
+func (lc LibraryConfig) Compiler() string {
+	return lc.compiler
+}
+
+func (lc LibraryConfig) CompileDate() string {
+	return lc.compileDate
+}
+
+func (lc LibraryConfig) CompiledBy() string {
+	return lc.compiledBy
+}
+
+func (lc LibraryConfig) CompiledByAssoc() string {
+	return lc.compiledByAssoc
+}
+
+func (lc *LibraryConfig) SetKConfig(config kconfig.KeyValueMap) *LibraryConfig {
+	lc.kconfig = config
+	return lc
 }
 
 func (lc LibraryConfig) KConfigTree(_ context.Context, env ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
@@ -215,6 +255,19 @@ func (lc LibraryConfig) IsUnpacked() bool {
 
 func (lc LibraryConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.lib.LibraryConfig.PrintInfo"
+}
+
+// NewLibraryConfigFromOptions is a constructor for LibraryConfig.
+func NewLibraryConfigFromOptions(opts ...LibraryOption) (*LibraryConfig, error) {
+	lib := LibraryConfig{}
+
+	for _, opt := range opts {
+		if err := opt(&lib); err != nil {
+			return nil, err
+		}
+	}
+
+	return &lib, nil
 }
 
 // NewFromDir returns all the registering libraries from a given directory.

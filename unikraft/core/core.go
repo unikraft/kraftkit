@@ -43,6 +43,21 @@ type UnikraftConfig struct {
 
 	// kconfig list of kconfig key-values specific to this core.
 	kconfig kconfig.KeyValueMap
+
+	// license of the core.
+	license string
+
+	// compiler of the core.
+	compiler string
+
+	// compileDate of the core.
+	compileDate string
+
+	// compiledBy is the user who compiled the core as set in uklibid.
+	compiledBy string
+
+	// compiledByAssoc is the association of the user who compiled the core as set in uklibid.
+	compiledByAssoc string
 }
 
 // NewUnikraftFromOptions is a constructor that configures a core configuration.
@@ -81,6 +96,26 @@ func (uc UnikraftConfig) Source() string {
 
 func (uc UnikraftConfig) Version() string {
 	return uc.version
+}
+
+func (uc UnikraftConfig) License() string {
+	return uc.license
+}
+
+func (uc UnikraftConfig) Compiler() string {
+	return uc.compiler
+}
+
+func (uc UnikraftConfig) CompileDate() string {
+	return uc.compileDate
+}
+
+func (uc UnikraftConfig) CompiledBy() string {
+	return uc.compiledBy
+}
+
+func (uc UnikraftConfig) CompiledByAssoc() string {
+	return uc.compiledByAssoc
 }
 
 func (uc UnikraftConfig) Type() unikraft.ComponentType {
@@ -130,6 +165,9 @@ func (uk UnikraftConfig) Libraries(ctx context.Context) (map[string]*lib.Library
 
 	files, err := os.ReadDir(config_uk_lib)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
