@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2020 Docker Compose CLI authors
+// Copyright 2022 Unikraft GmbH. All rights reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 
+// Package rainbowprint provides primitives for colorized output
+// on ANSI-compliant console.
 package rainbowprint
 
 import (
@@ -10,7 +13,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/docker/compose/v2/pkg/api"
+	"kraftkit.sh/iostreams"
 )
 
 var names = []string{
@@ -36,26 +39,26 @@ const (
 )
 
 // SetANSIMode configure formatter for colored output on ANSI-compliant console
-func SetANSIMode(streams api.Streams, ansi string) {
+func SetANSIMode(streams *iostreams.IOStreams, ansi string) {
 	if !useAnsi(streams, ansi) {
-		nextColor = func() colorFunc {
+		NextColor = func() ColorFunc {
 			return monochrome
 		}
 	}
 }
 
-func useAnsi(streams api.Streams, ansi string) bool {
+func useAnsi(streams *iostreams.IOStreams, ansi string) bool {
 	switch ansi {
 	case Always:
 		return true
 	case Auto:
-		return streams.Out().IsTerminal()
+		return streams.ColorEnabled()
 	}
 	return false
 }
 
-// colorFunc use ANSI codes to render colored text on console
-type colorFunc func(s string) string
+// ColorFunc use ANSI codes to render colored text on console
+type ColorFunc func(s string) string
 
 var monochrome = func(s string) string {
 	return s
@@ -69,34 +72,26 @@ func ansi(code string) string {
 	return fmt.Sprintf("\033[%sm", code)
 }
 
-func makeColorFunc(code string) colorFunc {
+func makeColorFunc(code string) ColorFunc {
 	return func(s string) string {
 		return ansiColor(code, s)
 	}
 }
 
 var (
-	nextColor    = rainbowColor
-	rainbow      []colorFunc
+	NextColor    = rainbowColor
+	rainbow      []ColorFunc
 	currentIndex = 0
 	mutex        sync.Mutex
 )
 
-func rainbowColor() colorFunc {
-	mutex.Lock()
-	defer mutex.Unlock()
-	result := rainbow[currentIndex]
-	currentIndex = (currentIndex + 1) % len(rainbow)
-	return result
-}
-
-func init() {
-	colors := map[string]colorFunc{}
+func initializeRainbow() {
+	colors := map[string]ColorFunc{}
 	for i, name := range names {
 		colors[name] = makeColorFunc(strconv.Itoa(30 + i))
 		colors["intense_"+name] = makeColorFunc(strconv.Itoa(30+i) + ";1")
 	}
-	rainbow = []colorFunc{
+	rainbow = []ColorFunc{
 		colors["cyan"],
 		colors["yellow"],
 		colors["green"],
@@ -108,4 +103,16 @@ func init() {
 		colors["intense_magenta"],
 		colors["intense_blue"],
 	}
+}
+
+func rainbowColor() ColorFunc {
+	if len(rainbow) == 0 {
+		initializeRainbow()
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	result := rainbow[currentIndex]
+	currentIndex = (currentIndex + 1) % len(rainbow)
+	return result
 }
