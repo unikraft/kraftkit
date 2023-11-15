@@ -345,6 +345,21 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 
+	selected = target.Filter(
+		selected,
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
+
+	if !config.G[config.KraftKit](ctx).NoPrompt {
+		res, err := target.Select(selected)
+		if err != nil {
+			return err
+		}
+		selected = []target.Target{res}
+	}
+
 	if len(selected) == 0 {
 		return fmt.Errorf("no targets selected to fetch")
 	}
