@@ -42,6 +42,7 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
@@ -138,8 +139,6 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	var err error
 	ctx := cmd.Context()
 
-	opts.platform = mplatform.PlatformByName(opts.platform.String())
-
 	// Discover the network controller strategy.
 	if opts.Network == "" && opts.IP != "" {
 		return fmt.Errorf("cannot assign IP address without providing --network")
@@ -164,38 +163,7 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Discover the platform machine controller strataegy.
-	plat := cmd.Flag("plat").Value.String()
-	opts.platform = mplatform.PlatformUnknown
-
-	if plat == "" || plat == "auto" {
-		var mode mplatform.SystemMode
-		opts.platform, mode, err = mplatform.Detect(ctx)
-		if err != nil {
-			return err
-		} else if mode == mplatform.SystemGuest {
-			log.G(ctx).Warn("using hardware emulation")
-			opts.DisableAccel = true
-		}
-	} else {
-		var ok bool
-		opts.platform, ok = mplatform.PlatformsByName()[plat]
-		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.platform)
-		}
-	}
-
-	machineStrategy, ok := mplatform.Strategies()[opts.platform]
-	if !ok {
-		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.platform.String())
-	}
-
-	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
-
-	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
-	if err != nil {
-		return err
-	}
+	opts.Platform = cmd.Flag("plat").Value.String()
 
 	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
 		// Set use of the global package manager.
@@ -212,7 +180,7 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if _, ok = runners[opts.RunAs]; !ok {
+		if _, ok := runners[opts.RunAs]; !ok {
 			choices := make([]string, len(runners))
 			i := 0
 
@@ -239,8 +207,50 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
+	var err error
+
+	opts.platform = mplatform.PlatformUnknown
+
+	if opts.Platform == "" || opts.Platform == "auto" {
+		var mode mplatform.SystemMode
+		opts.platform, mode, err = mplatform.Detect(ctx)
+		if err != nil {
+			return err
+		} else if mode == mplatform.SystemGuest {
+			log.G(ctx).Warn("using hardware emulation")
+			opts.DisableAccel = true
+		}
+	} else {
+		var ok bool
+		opts.platform, ok = mplatform.PlatformsByName()[opts.Platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.Platform)
+		}
+	}
+
+	machineStrategy, ok := mplatform.Strategies()[opts.platform]
+	if !ok {
+		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.Platform)
+	}
+
+	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
+
+	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
+
+	err = opts.discoverMachineController(ctx)
+	if err != nil {
+		return err
+	}
 
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
