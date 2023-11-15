@@ -117,14 +117,13 @@ runs:
     shell: bash
     run: |
       mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
-      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      #!/bin/bash
-      #sudo chown -R runner:runner /github/workspace
+      echo '#!/usr/bin/env bash' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       ${{ inputs.before }}
       EOF
       chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
-      #!/bin/bash
+      echo '#!/usr/bin/env bash' > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
       ${{ inputs.after }}
       EOF
       chmod +x "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
