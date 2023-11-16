@@ -33,6 +33,7 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
+	"kraftkit.sh/unikraft/export/v0/vfscore"
 )
 
 const (
@@ -101,6 +102,25 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	// Set and create the log file for this machine
 	if len(machine.Status.LogFile) == 0 {
 		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
+	}
+
+	var fstab []string
+
+	for _, vol := range machine.Spec.Volumes {
+		switch vol.Spec.Driver {
+		case "initrd":
+			fstab = append(fstab, vfscore.NewFstabEntry(
+				"initrd",
+				vol.Spec.Destination,
+				vol.Spec.Driver,
+				"",
+				"",
+				// By default, create the directory if it does not exist when mounting.
+				"mkpath",
+			).String())
+		default:
+			return machine, fmt.Errorf("unsupported Firecracker volume driver: %v", vol.Spec.Driver)
+		}
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
@@ -220,6 +240,12 @@ watch:
 		return machine, err
 	}
 
+	if len(fstab) > 0 {
+		kernelArgs = append(kernelArgs,
+			vfscore.ParamVfsFstab.WithValue(fstab),
+		)
+	}
+
 	if len(machine.Spec.Networks) > 0 {
 		// Start MAC addresses iteratively.  Each interface will have the last
 		// hexdecimal byte increase by 1 starting at 1, allowing for easy-to-spot
@@ -271,11 +297,12 @@ watch:
 	// TODO(nderjung): This is standard "Unikraft" positional argument syntax
 	// (kernel args and application arguments separated with "--").  The resulting
 	// string should be standardized through a central function.
-	args := kernelArgs.Strings()
+	args := []string{filepath.Base(machine.Status.KernelPath)}
+	args = append(args, kernelArgs.Strings()...)
+
 	if len(args) > 0 {
 		args = append(args, "--")
 	}
-	args = append(args, filepath.Base(machine.Status.KernelPath))
 	args = append(args, machine.Spec.ApplicationArgs...)
 
 	// Set the machine's resource configuration.
