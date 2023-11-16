@@ -297,11 +297,12 @@ watch:
 	// TODO(nderjung): This is standard "Unikraft" positional argument syntax
 	// (kernel args and application arguments separated with "--").  The resulting
 	// string should be standardized through a central function.
-	args := kernelArgs.Strings()
+	args := []string{filepath.Base(machine.Status.KernelPath)}
+	args = append(args, kernelArgs.Strings()...)
+
 	if len(args) > 0 {
 		args = append(args, "--")
 	}
-	args = append(args, filepath.Base(machine.Status.KernelPath))
 	args = append(args, machine.Spec.ApplicationArgs...)
 
 	// Set the machine's resource configuration.
