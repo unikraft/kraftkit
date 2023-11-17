@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
+	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
@@ -423,6 +425,18 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		if err != nil {
 			return nil, fmt.Errorf("could not convert index manifest: %w", err)
 		}
+
+		indexJson, err := json.Marshal(index)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+		}
+
+		indexDesc := content.NewDescriptorFromBytes(
+			ocispec.MediaTypeImageIndex,
+			indexJson,
+		)
+
+		ocipack.index.desc = &indexDesc
 
 		for _, descriptor := range index.Manifests {
 			descriptor := descriptor
