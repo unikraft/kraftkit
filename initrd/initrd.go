@@ -6,9 +6,15 @@ package initrd
 
 import "context"
 
-// DefaultInitramfsFileName is the default filename used when creating or
-// serializing a CPIO archive.
-const DefaultInitramfsFileName = "initramfs.cpio"
+const (
+	// DefaultInitramfsFileName is the default filename used when creating or
+	// serializing a CPIO archive.
+	DefaultInitramfsFileName = "initramfs.cpio"
+
+	// DefaultInitramfsArchFileName is the default filename used when creating
+	// or serializing a CPIO archive based on a specific architecture
+	DefaultInitramfsArchFileName = "initramfs-%s.cpio"
+)
 
 // Initrd is an interface that is used to allow for different underlying
 // implementations to construct a CPIO archive.
