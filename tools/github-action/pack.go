@@ -6,11 +6,8 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
 	"strings"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -34,26 +31,6 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 	// Switch the package manager the desired format for this target
 	if format != "auto" {
 		pm, err = pm.From(format)
-		if err != nil {
-			return err
-		}
-	}
-
-	if opts.Rootfs == "" {
-		opts.Rootfs = opts.project.Rootfs()
-	}
-
-	if opts.Rootfs != "" {
-		ramfs, err := initrd.New(ctx,
-			filepath.Join(opts.Workdir, opts.Rootfs),
-			initrd.WithOutput(filepath.Join(opts.Workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
-			initrd.WithCacheDir(filepath.Join(opts.Workdir, unikraft.BuildDir, "rootfs-cache")),
-		)
-		if err != nil {
-			return fmt.Errorf("could not prepare initramfs: %w", err)
-		}
-
-		opts.initrdPath, err = ramfs.Build(ctx)
 		if err != nil {
 			return err
 		}
