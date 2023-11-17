@@ -195,7 +195,9 @@ func (opts *RunOptions) parseKraftfileVolumes(ctx context.Context, project app.A
 
 	var err error
 	controllers := map[string]volumeapi.VolumeService{}
-	machine.Spec.Volumes = []volumeapi.Volume{}
+	if machine.Spec.Volumes == nil {
+		machine.Spec.Volumes = make([]volumeapi.Volume, 0)
+	}
 
 	for _, volcfg := range project.Volumes() {
 		driver := volcfg.Driver()
