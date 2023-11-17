@@ -253,26 +253,34 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		return nil
 	}
 
-	ramfs, err := initrd.New(ctx,
-		opts.Rootfs,
-		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
-		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.BuildDir, "rootfs-cache")),
+	machine.Status.InitrdPath = filepath.Join(
+		opts.workdir,
+		unikraft.BuildDir,
+		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture),
 	)
-	if err != nil {
-		return fmt.Errorf("could not prepare initramfs: %w", err)
-	}
 
-	machine.Status.InitrdPath, err = ramfs.Build(ctx)
+	fi, err := os.Stat(machine.Status.InitrdPath)
 	if err != nil {
-		return err
+		ramfs, err := initrd.New(ctx,
+			opts.Rootfs,
+			initrd.WithOutput(machine.Status.InitrdPath),
+			initrd.WithCacheDir(filepath.Join(
+				opts.workdir,
+				unikraft.BuildDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture(machine.Spec.Architecture),
+		)
+		if err != nil {
+			return fmt.Errorf("could not prepare initramfs: %w", err)
+		}
+
+		if _, err = ramfs.Build(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Warn if the initrd path is greater than allocated memory
-	fi, err := os.Stat(machine.Status.InitrdPath)
-	if err != nil {
-		return err
-	}
-
 	memRequest := machine.Spec.Resources.Requests[corev1.ResourceMemory]
 	if memRequest.Value() < fi.Size() {
 		log.G(ctx).Warnf("requested memory (%s) is less than initramfs (%s)",
