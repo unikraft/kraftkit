@@ -326,7 +326,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		v1ImageIndex, err := remote.Index(ref, ropts...)
 		if err != nil {
 			log.G(ctx).
-				Tracef("could not get index: %v", err)
+				Warnf("could not get index: %v", err)
 			goto searchRemoteIndexes
 		}
 
