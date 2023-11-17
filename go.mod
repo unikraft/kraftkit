@@ -77,6 +77,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
+replace sdk.kraft.cloud => ./go-sdk
+
 replace github.com/vishvananda/netlink => github.com/craciunoiuc/netlink v1.2.1-beta.2
 
 require (
