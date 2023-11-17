@@ -16,6 +16,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
@@ -38,7 +39,7 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",
-		Use:   "start [FLAGS] [PACKAGE]",
+		Use:   "start [FLAGS] [PACKAGE|NAME]",
 		Args:  cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
 			# Start a KraftCloud instance
@@ -68,19 +69,23 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *StartOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
 	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
 	for _, arg := range args {
 		log.G(ctx).Infof("starting %s", arg)
 
-		_, err := client.WithMetro(opts.metro).Start(ctx, arg, opts.WaitTimeoutMS)
+		if utils.IsUUID(arg) {
+			_, err = client.WithMetro(opts.metro).StartByUUID(ctx, arg, opts.WaitTimeoutMS)
+		} else {
+			_, err = client.WithMetro(opts.metro).StartByName(ctx, arg, opts.WaitTimeoutMS)
+		}
 		if err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")
 			continue

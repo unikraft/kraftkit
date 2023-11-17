@@ -135,6 +135,11 @@ func Main(args []string) int {
 		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
 	}
 
+	// Hydrate KraftCloud configuration
+	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
+		ctx = newCtx
+	}
+
 	// Set up the logger in the context if it is available
 	if copts.Logger != nil {
 		ctx = log.WithLogger(ctx, copts.Logger)

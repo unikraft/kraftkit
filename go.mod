@@ -31,9 +31,10 @@ require (
 	github.com/genuinetools/reg v0.16.1
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/gobwas/glob v0.2.3
-	github.com/google/go-containerregistry v0.15.2
+	github.com/google/go-containerregistry v0.16.1
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+	github.com/google/uuid v1.3.0
 	github.com/henvic/httpretty v0.1.2
 	github.com/kubescape/go-git-url v0.0.25
 	github.com/mattn/go-colorable v0.1.13
@@ -64,7 +65,7 @@ require (
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.11.0
+	golang.org/x/sys v0.14.0
 	golang.org/x/term v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -72,7 +73,7 @@ require (
 	k8s.io/apimachinery v0.27.4
 	k8s.io/apiserver v0.27.3
 	oras.land/oras-go/v2 v2.2.1
-	sdk.kraft.cloud v0.3.0
+	sdk.kraft.cloud v0.4.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
@@ -147,7 +148,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

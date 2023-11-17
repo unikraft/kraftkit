@@ -14,11 +14,11 @@ import (
 	"kraftkit.sh/cmdfactory"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/get"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/start"
-	"kraftkit.sh/internal/cli/kraft/cloud/instance/status"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
 )
 
@@ -28,7 +28,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InstanceOptions{}, cobra.Command{
 		Short:   "Manage KraftCloud instances",
 		Use:     "instance SUBCOMMAND",
-		Aliases: []string{"inst", "instances"},
+		Aliases: []string{"inst", "instances", "vm"},
 		Hidden:  true,
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
@@ -43,7 +43,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(logs.NewCmd())
 	cmd.AddCommand(remove.NewCmd())
 	cmd.AddCommand(start.NewCmd())
-	cmd.AddCommand(status.NewCmd())
+	cmd.AddCommand(get.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
 
 	return cmd

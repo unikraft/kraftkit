@@ -17,15 +17,15 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
 type StopOptions struct {
-	WaitTimeoutMS int64  `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
-	Output        string `long:"output" short:"o" usage:"Set output format" default:"table"`
-	All           bool   `long:"all" usage:"Stop all instances"`
-
-	metro string
+	TimeoutMS int64  `local:"true" long:"timeout-ms" short:"w" usage:"Timeout for the instance to stop"`
+	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	All       bool   `long:"all" usage:"Stop all instances"`
+	Metro     string `noattribute:"true"`
 }
 
 // Stop a KraftCloud instance.
@@ -40,7 +40,7 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
-		Use:   "stop [FLAGS] [UUID]",
+		Use:   "stop [FLAGS] [UUID|NAME]",
 		Args:  cobra.ArbitraryArgs,
 		Example: heredoc.Doc(`
 			# Stop a KraftCloud instance
@@ -62,29 +62,29 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify an instance UUID or --all flag")
 	}
 
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
+	opts.Metro = cmd.Flag("metro").Value.String()
+	if opts.Metro == "" {
+		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
 	}
-	if opts.metro == "" {
+	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
+	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }
 
 func (opts *StopOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
 	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
 	if opts.All {
-		instances, err := client.WithMetro(opts.metro).List(ctx)
+		instances, err := client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not get list of all instances: %w", err)
 		}
@@ -92,7 +92,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		for _, instance := range instances {
 			log.G(ctx).Infof("stopping %s", instance.UUID)
 
-			_, err := client.WithMetro(opts.metro).Stop(ctx, instance.UUID, opts.WaitTimeoutMS)
+			_, err := client.WithMetro(opts.Metro).StopByUUID(ctx, instance.UUID, opts.TimeoutMS)
 			if err != nil {
 				log.G(ctx).Error("could not stop instance: %w", err)
 			}
@@ -101,10 +101,14 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	for _, uuid := range args {
-		log.G(ctx).Infof("stopping %s", uuid)
+	for _, arg := range args {
+		log.G(ctx).Infof("stopping %s", arg)
 
-		_, err = client.WithMetro(opts.metro).Stop(ctx, uuid, opts.WaitTimeoutMS)
+		if utils.IsUUID(arg) {
+			_, err = client.WithMetro(opts.Metro).StopByUUID(ctx, arg, opts.TimeoutMS)
+		} else {
+			_, err = client.WithMetro(opts.Metro).StopByName(ctx, arg, opts.TimeoutMS)
+		}
 		if err != nil {
 			return fmt.Errorf("could not create instance: %w", err)
 		}

@@ -59,13 +59,13 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
 	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
 	instances, err := client.WithMetro(opts.metro).List(ctx)

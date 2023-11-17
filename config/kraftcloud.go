@@ -7,31 +7,64 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // GetKraftCloudLogin is a utility method which retrieves credentials of a
-// KraftCloud user from the given context which is populated with the
-// current configuration.
-func GetKraftCloudLoginFromContext(ctx context.Context) (*AuthConfig, error) {
-	auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]
-	if !ok {
-		return nil, fmt.Errorf("user not logged in to kraftcloud")
+// KraftCloud user from the given context returning it in AuthConfig format.
+func GetKraftCloudAuthConfigFromContext(ctx context.Context) (*AuthConfig, error) {
+	auth := AuthConfig{
+		Endpoint:  "index.unikraft.io",
+		VerifySSL: true,
 	}
 
-	auth.Endpoint = "index.unikraft.io"
-
-	// Attempt to fallback to environmental variables:
+	// Prioritize environmental variables
 	if token := os.Getenv("KRAFTCLOUD_TOKEN"); token != "" {
-		auth.Token = token
+		data, err := base64.StdEncoding.DecodeString(token)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode token: %w", err)
+		}
+
+		split := strings.Split(string(data), ":")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("invalid token format")
+		}
+
+		auth.User = split[0]
+		auth.Token = split[1]
+
+		// Fallback to local config
+	} else if auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
+		return &auth, nil
 	} else {
 		return nil, fmt.Errorf("could not determine kraftcloud user token: try setting `KRAFTCLOUD_TOKEN`")
 	}
 
-	if user := os.Getenv("KRAFTCLOUD_USER"); user != "" {
-		auth.User = user
+	return &auth, nil
+}
+
+// GetKraftCloudTokenAuthConfig is a utility method which returns the
+// token of the KraftCloud user based on an AuthConfig.
+func GetKraftCloudTokenAuthConfig(auth AuthConfig) string {
+	return base64.StdEncoding.EncodeToString([]byte(auth.User + ":" + auth.Token))
+}
+
+// HydrateKraftCloudAuthInContext saturates the context with an additional
+// KraftCloud-specific information.
+func HydrateKraftCloudAuthInContext(ctx context.Context) (context.Context, error) {
+	auth, err := GetKraftCloudAuthConfigFromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return &auth, nil
+	if G[KraftKit](ctx).Auth == nil {
+		G[KraftKit](ctx).Auth = make(map[string]AuthConfig)
+	}
+
+	G[KraftKit](ctx).Auth["index.unikraft.io"] = *auth
+
+	return ctx, nil
 }

@@ -42,16 +42,18 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 	if format != "table" {
 		table.AddField("UUID", cs.Bold)
 	}
-	table.AddField("DNS", cs.Bold)
+	table.AddField("NAME", cs.Bold)
+	table.AddField("FQDN", cs.Bold)
 	if format != "table" {
 		table.AddField("PRIVATE IP", cs.Bold)
 	}
-	table.AddField("STATUS", cs.Bold)
+	table.AddField("STATE", cs.Bold)
 	table.AddField("CREATED AT", cs.Bold)
 	table.AddField("IMAGE", cs.Bold)
 	table.AddField("MEMORY", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
 	if format != "table" {
+		table.AddField("VOLUMES", cs.Bold)
 		table.AddField("SERVICE GROUP", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
@@ -59,6 +61,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 
 	for _, instance := range instances {
 		var createdAt string
+
 		if len(instance.CreatedAt) > 0 {
 			createdTime, err := time.Parse(time.RFC3339, instance.CreatedAt)
 			if err != nil {
@@ -66,22 +69,38 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			}
 			createdAt = humanize.Time(createdTime)
 		}
+
 		if format != "table" {
 			table.AddField(instance.UUID, nil)
 		}
-		table.AddField(instance.DNS, nil)
+
+		table.AddField(instance.Name, nil)
+		table.AddField(instance.FQDN, nil)
+
 		if format != "table" {
 			table.AddField(instance.PrivateIP, nil)
 		}
-		table.AddField(string(instance.Status), nil)
+
+		table.AddField(string(instance.State), nil)
 		table.AddField(createdAt, nil)
 		table.AddField(instance.Image, nil)
-		table.AddField(humanize.Bytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
+		table.AddField(humanize.IBytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
 		table.AddField(strings.Join(instance.Args, " "), nil)
+
 		if format != "table" {
-			table.AddField(instance.ServiceGroup, nil)
+			vols := make([]string, len(instance.Volumes))
+			for i, vol := range instance.Volumes {
+				vols[i] = fmt.Sprintf("%s:%s", vol.Name, vol.At)
+				if vol.ReadOnly {
+					vols[i] += ":ro"
+				}
+			}
+			table.AddField(strings.Join(vols, ", "), nil)
+			table.AddField(instance.ServiceGroup.UUID, nil)
 		}
+
 		table.AddField(fmt.Sprintf("%dus", instance.BootTimeUS), nil)
+
 		table.EndRow()
 	}
 
