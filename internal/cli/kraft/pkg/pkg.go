@@ -158,10 +158,6 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 		return nil, fmt.Errorf("could not determine what or how to package from the given context")
 	}
 
-	if err := opts.buildRootfs(ctx); err != nil {
-		return nil, fmt.Errorf("could not build rootfs: %w", err)
-	}
-
 	packs, err := pkgr.Pack(ctx, opts, args...)
 	if err != nil {
 		return nil, fmt.Errorf("could not package: %w", err)

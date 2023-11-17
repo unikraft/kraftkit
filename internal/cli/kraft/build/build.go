@@ -15,6 +15,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/machine/platform"
 
 	"kraftkit.sh/log"
@@ -176,7 +177,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if err := opts.buildRootfs(ctx); err != nil {
+	if err := utils.BuildRootfs(ctx, opts.workdir, opts.Rootfs, selected...); err != nil {
 		return err
 	}
 
