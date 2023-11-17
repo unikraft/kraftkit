@@ -112,6 +112,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		},
 	}
 
+	if initrd.opts.arch != "" {
+		solveOpt.FrontendAttrs["platform"] = fmt.Sprintf("linux/%s", initrd.opts.arch)
+	}
+
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
 
