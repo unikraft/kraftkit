@@ -19,6 +19,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"kraftkit.sh/exec"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/yamlmerger"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
@@ -526,6 +527,20 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 
 	if extra != nil {
 		values.OverrideBy(extra)
+	}
+
+	// Are we embedding an initramfs file into the kernel?
+	if val, exists := values.Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+		// If the user has not specified a path, we set one specifically which
+		// is specific to the target.
+		if val, exists := values.Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD_PATH"); !exists || val.Value == "" {
+			values.Set("CONFIG_LIBVFSCORE_ROOTFS_EINITRD_PATH",
+				filepath.Join(
+					app.outDir,
+					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String()),
+				),
+			)
+		}
 	}
 
 	for _, kv := range values {
