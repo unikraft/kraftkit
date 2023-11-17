@@ -592,7 +592,10 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		// Set the initrd if available
 		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
 		if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
-			ocipack.initrd, err = initrd.New(ctx, initrdPath)
+			ocipack.initrd, err = initrd.New(ctx,
+				initrdPath,
+				initrd.WithArchitecture(image.Architecture),
+			)
 			if err != nil {
 				return err
 			}
