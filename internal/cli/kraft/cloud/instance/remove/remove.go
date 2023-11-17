@@ -39,7 +39,7 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete an instance",
-		Use:     "delete UUID",
+		Use:     "delete UUID|NAME",
 		Aliases: []string{"del", "delete", "rm"},
 		Args:    cobra.ArbitraryArgs,
 		Long: heredoc.Doc(`

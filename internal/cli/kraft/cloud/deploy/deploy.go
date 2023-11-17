@@ -40,7 +40,7 @@ type DeployOptions struct {
 	Output    string                    `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
 	Ports     []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project   app.Application           `noattribute:"true"`
-	Replicas  int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"1"`
+	Replicas  int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Strategy  packmanager.MergeStrategy `noattribute:"true"`
 	Timeout   time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
 	Workdir   string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
@@ -248,23 +248,23 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		Debug("created instance")
 
 	for {
-		instance, err = opts.Client.Instances().WithMetro(opts.Metro).Status(ctx, instance.UUID)
+		status, err := opts.Client.Instances().WithMetro(opts.Metro).Status(ctx, instance.UUID)
 		if err != nil {
 			return fmt.Errorf("could not get instance status: %w", err)
 		}
 
-		if instance.Status == "starting" {
+		if string(*status) == "starting" {
 			continue
 		}
 
 		break
 	}
 
-	dns := instance.DNS
-	if len(dns) > 0 {
+	fqdn := instance.FQDN
+	if len(fqdn) > 0 {
 		for _, port := range opts.Ports {
 			if strings.HasPrefix(port, "443") {
-				dns = "https://" + dns
+				fqdn = "https://" + fqdn
 				break
 			}
 		}
@@ -283,8 +283,8 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	fmt.Fprintf(out, "\n%s%s%s %s\n", textGray("["), color("●"), textGray("]"), instance.UUID)
 	fmt.Fprintf(out, "     %s: %s\n", textGray("state"), color(instance.Status))
-	if len(dns) > 0 {
-		fmt.Fprintf(out, "       %s: %s\n", textGray("dns"), dns)
+	if len(fqdn) > 0 {
+		fmt.Fprintf(out, "       %s: %s\n", textGray("dns"), fqdn)
 	}
 	fmt.Fprintf(out, " %s: %.2f ms\n", textGray("boot time"), float64(instance.BootTimeUS)/1000)
 	fmt.Fprintf(out, "    %s: %d MiB\n", textGray("memory"), instance.MemoryMB)

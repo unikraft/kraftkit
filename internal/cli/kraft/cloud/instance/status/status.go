@@ -79,10 +79,10 @@ func (opts *StatusOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(auth.Token),
 	)
 
-	instance, err := client.WithMetro(opts.metro).Status(ctx, args[0])
+	status, err := client.WithMetro(opts.metro).Status(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not create instance: %w", err)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, *instance)
+	return utils.PrintStatus(ctx, opts.Output, args[0], *status)
 }

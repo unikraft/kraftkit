@@ -35,7 +35,7 @@ type CreateOptions struct {
 	Name     string                               `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	Output   string                               `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
 	Ports    []string                             `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Replicas int                                  `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"1"`
+	Replicas int                                  `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Start    bool                                 `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 }
 
@@ -157,13 +157,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	return opts.Client.WithMetro(opts.Metro).Create(ctx, kraftcloudinstances.CreateInstanceRequest{
-		Image:     image,
-		Args:      args[1:],
-		MemoryMB:  opts.Memory,
-		Services:  services,
+		Image:    image,
+		Args:     args[1:],
+		MemoryMB: opts.Memory,
+		ServiceGroup: kraftcloudservices.ServiceGroup{
+			Services: services,
+		},
 		Autostart: opts.Start,
-		Instances: opts.Replicas,
+		Replicas:  opts.Replicas,
 		Env:       envs,
+		Name:      opts.Name,
 	})
 }
 

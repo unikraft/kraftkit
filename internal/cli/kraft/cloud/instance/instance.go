@@ -18,6 +18,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/start"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/state"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/status"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
 )
@@ -43,6 +44,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(logs.NewCmd())
 	cmd.AddCommand(remove.NewCmd())
 	cmd.AddCommand(start.NewCmd())
+	cmd.AddCommand(state.NewCmd())
 	cmd.AddCommand(status.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
 

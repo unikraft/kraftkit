@@ -38,7 +38,7 @@ func Log(ctx context.Context, opts *LogOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",
-		Use:   "logs [UUID]",
+		Use:   "logs [UUID|NAME]",
 		Args:  cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
 			# Get console output of a kraftcloud instance

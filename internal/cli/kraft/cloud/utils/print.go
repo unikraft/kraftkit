@@ -17,7 +17,44 @@ import (
 	"kraftkit.sh/log"
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
+	kraftcloudservices "sdk.kraft.cloud/services"
 )
+
+// PrintStatus pretty-prints the status of the provided instace.
+// It is a truncated version of PrintInstances.
+func PrintStatus(ctx context.Context, format string, uuid string, msg kraftcloudservices.StatusMsg) error {
+	err := iostreams.G(ctx).StartPager()
+	if err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("STATUS", cs.Bold)
+	table.EndRow()
+
+	if format != "table" {
+		table.AddField(uuid, nil)
+	}
+	table.AddField(string(msg), nil)
+
+	table.EndRow()
+
+	return table.Render(iostreams.G(ctx).Out)
+}
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
@@ -69,7 +106,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 		if format != "table" {
 			table.AddField(instance.UUID, nil)
 		}
-		table.AddField(instance.DNS, nil)
+		table.AddField(instance.FQDN, nil)
 		if format != "table" {
 			table.AddField(instance.PrivateIP, nil)
 		}
