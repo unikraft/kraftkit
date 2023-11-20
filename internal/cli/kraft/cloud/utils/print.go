@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/log"
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
+	kraftcloudservices "sdk.kraft.cloud/services"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
 )
 
@@ -165,6 +166,76 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolum
 		table.AddField(strings.Join(attachedTo, ","), nil)
 		table.AddField(string(volume.State), nil)
 		table.AddField(fmt.Sprintf("%t", volume.Persistent), nil)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrintServiceGroups pretty-prints the provided set of service groups or returns
+// an error if unable to send to stdout via the provided context.
+func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kraftcloudservices.ServiceGroup) error {
+	err := iostreams.G(ctx).StartPager()
+	if err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("FQDN", cs.Bold)
+	table.AddField("SERVICES", cs.Bold)
+	table.AddField("INSTANCES", cs.Bold)
+	table.AddField("CREATED AT", cs.Bold)
+	table.AddField("PERSISTENT", cs.Bold)
+	table.EndRow()
+
+	for _, sg := range serviceGroups {
+		if format != "table" {
+			table.AddField(sg.UUID, nil)
+		}
+
+		table.AddField(sg.Name, nil)
+		table.AddField(sg.FQDN, nil)
+
+		var services []string
+		for _, service := range sg.Services {
+			var handlers []string
+			for _, handler := range service.Handlers {
+				handlers = append(handlers, string(handler))
+			}
+
+			services = append(services, fmt.Sprintf("%d:%d/%s", service.Port, service.DestinationPort, strings.Join(handlers, "+")))
+		}
+
+		table.AddField(strings.Join(services, " "), nil)
+		table.AddField(strings.Join(sg.Instances, " "), nil)
+
+		var createdAt string
+		if len(sg.CreatedAt) > 0 {
+			createdTime, err := time.Parse(time.RFC3339, sg.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("could not parse time for '%s': %w", sg.UUID, err)
+			}
+			createdAt = humanize.Time(createdTime)
+		}
+
+		table.AddField(createdAt, nil)
+		table.AddField(fmt.Sprintf("%v", sg.Persistent), nil)
 
 		table.EndRow()
 	}

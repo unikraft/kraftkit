@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
 	"kraftkit.sh/internal/cli/kraft/cloud/img"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
+	"kraftkit.sh/internal/cli/kraft/cloud/service"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume"
 
 	"kraftkit.sh/cmdfactory"
@@ -84,6 +85,9 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "VOLUME COMMANDS"})
 	cmd.AddCommand(volume.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "SERVICE COMMANDS"})
+	cmd.AddCommand(service.NewCmd())
 
 	return cmd
 }
