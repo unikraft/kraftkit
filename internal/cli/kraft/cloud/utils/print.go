@@ -18,6 +18,7 @@ import (
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 	kraftcloudservices "sdk.kraft.cloud/services"
+	kraftcloudusers "sdk.kraft.cloud/users"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
 )
 
@@ -237,6 +238,63 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kra
 		table.AddField(createdAt, nil)
 		table.AddField(fmt.Sprintf("%v", sg.Persistent), nil)
 
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrintQuotas pretty-prints the provided set of user quotas or returns
+// an error if unable to send to stdout via the provided context.
+func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Quotas) error {
+	if err := iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+
+	table.AddField("NAME", cs.Bold)
+	table.AddField("LIVE INSTANCES", cs.Bold)
+	table.AddField("TOTAL INSTANCES", cs.Bold)
+	table.AddField("MAX TOTAL INSTANCES", cs.Bold)
+	table.AddField("LIVE MEMORY", cs.Bold)
+	table.AddField("SERVICE GROUPS", cs.Bold)
+	table.AddField("SERVICES", cs.Bold)
+	table.AddField("TOTAL VOLUME SIZE", cs.Bold)
+	table.AddField("VOLUMES", cs.Bold)
+	table.EndRow()
+
+	for _, quota := range quotas {
+		if format != "table" {
+			table.AddField(quota.UUID, nil)
+		}
+		table.AddField(quota.Name, nil)
+		table.AddField(fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances), nil)
+		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances), nil)
+		table.AddField(fmt.Sprintf("%s/%s",
+			humanize.IBytes(uint64(quota.Used.LiveMemoryMb)*humanize.MiByte),
+			humanize.IBytes(uint64(quota.Hard.LiveMemoryMb)*humanize.MiByte),
+		), nil)
+		table.AddField(fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups), nil)
+		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services), nil)
+		table.AddField(fmt.Sprintf("%s/%s",
+			humanize.IBytes(uint64(quota.Used.TotalVolumeMb)*humanize.MiByte),
+			humanize.IBytes(uint64(quota.Hard.TotalVolumeMb)*humanize.MiByte),
+		), nil)
+		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Volumes, quota.Hard.Volumes), nil)
 		table.EndRow()
 	}
 
