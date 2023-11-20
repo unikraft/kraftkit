@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/log"
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
+	kraftcloudvolumes "sdk.kraft.cloud/volumes"
 )
 
 // PrintInstances pretty-prints the provided set of instances or returns
@@ -100,6 +101,70 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 		}
 
 		table.AddField(fmt.Sprintf("%dus", instance.BootTimeUS), nil)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrintVolumes pretty-prints the provided set of volumes or returns
+// an error if unable to send to stdout via the provided context.
+func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolumes.Volume) error {
+	err := iostreams.G(ctx).StartPager()
+	if err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("CREATED AT", cs.Bold)
+	table.AddField("SIZE", cs.Bold)
+	table.AddField("ATTACHED TO", cs.Bold)
+	table.AddField("STATE", cs.Bold)
+	table.AddField("PERSISTENT", cs.Bold)
+	table.EndRow()
+
+	for _, volume := range volumes {
+		var createdAt string
+		if len(volume.CreatedAt) > 0 {
+			createdTime, err := time.Parse(time.RFC3339, volume.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("could not parse time for '%s': %w", volume.UUID, err)
+			}
+			createdAt = humanize.Time(createdTime)
+		}
+
+		if format != "table" {
+			table.AddField(volume.UUID, nil)
+		}
+
+		table.AddField(volume.Name, nil)
+		table.AddField(createdAt, nil)
+		table.AddField(humanize.IBytes(uint64(volume.SizeMB)*humanize.MiByte), nil)
+
+		var attachedTo []string
+		for _, instance := range volume.AttachedTo {
+			attachedTo = append(attachedTo, instance.Name)
+		}
+
+		table.AddField(strings.Join(attachedTo, ","), nil)
+		table.AddField(string(volume.State), nil)
+		table.AddField(fmt.Sprintf("%t", volume.Persistent), nil)
 
 		table.EndRow()
 	}
