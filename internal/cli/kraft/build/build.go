@@ -174,7 +174,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("builder", build.String()).Debug("using")
 
-	if err := build.Prepare(ctx, opts, selected, args...); err != nil {
+	if err := build.Prepare(ctx, opts, selected[0], args...); err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
@@ -182,7 +182,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if err := build.Build(ctx, opts, selected, args...); err != nil {
+	if err := build.Build(ctx, opts, selected[0], args...); err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 

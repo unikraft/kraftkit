@@ -47,7 +47,7 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 	return true, nil
 }
 
-func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOptions, norender bool, nameWidth int) error {
+func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOptions, targ target.Target, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
 	var searches []*processtree.ProcessTreeItem
@@ -153,7 +153,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 		}
 	}
 
-	components, err := opts.project.Components(ctx)
+	components, err := opts.project.Components(ctx, targ)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 	return nil
 }
 
-func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
+func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildOptions, targ target.Target, args ...string) error {
 	build.nameWidth = -1
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
@@ -284,13 +284,11 @@ func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildO
 		// additional space characters (2 characters), brackets (2 characters) the
 		// name of the project and the target/plat string (which is variable in
 		// length).
-		for _, targ := range targets {
-			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > build.nameWidth {
-				build.nameWidth = newLen
-			}
+		if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > build.nameWidth {
+			build.nameWidth = newLen
 		}
 
-		components, err := opts.project.Components(ctx)
+		components, err := opts.project.Components(ctx, targ)
 		if err != nil {
 			return fmt.Errorf("could not get list of components: %w", err)
 		}
@@ -330,10 +328,10 @@ func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildO
 		}
 	}
 
-	return build.pull(ctx, opts, norender, build.nameWidth)
+	return build.pull(ctx, opts, targ, norender, build.nameWidth)
 }
 
-func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
+func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, targ target.Target, args ...string) error {
 	var processes []*paraprogress.Process
 	var mopts []make.MakeOption
 	if opts.Jobs > 0 {
@@ -342,53 +340,49 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
 	}
 
-	for _, targ := range targets {
-		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		targ := targ
-		if !opts.NoConfigure {
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
-				func(ctx context.Context, w func(progress float64)) error {
-					return opts.project.Configure(
-						ctx,
-						targ, // Target-specific options
-						nil,  // No extra configuration options
-						make.WithProgressFunc(w),
-						make.WithSilent(true),
-						make.WithExecOptions(
-							exec.WithStdin(iostreams.G(ctx).In),
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
-						),
-					)
-				},
-			))
-		}
-
+	if !opts.NoConfigure {
 		processes = append(processes, paraprogress.NewProcess(
-			fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
+			fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
 			func(ctx context.Context, w func(progress float64)) error {
-				err := opts.project.Build(
+				return opts.project.Configure(
 					ctx,
 					targ, // Target-specific options
-					app.WithBuildProgressFunc(w),
-					app.WithBuildMakeOptions(append(mopts,
-						make.WithExecOptions(
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
-							// exec.WithOSEnv(true),
-						),
-					)...),
-					app.WithBuildLogFile(opts.SaveBuildLog),
+					nil,  // No extra configuration options
+					make.WithProgressFunc(w),
+					make.WithSilent(true),
+					make.WithExecOptions(
+						exec.WithStdin(iostreams.G(ctx).In),
+						exec.WithStdout(log.G(ctx).Writer()),
+						exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+					),
 				)
-				if err != nil {
-					return fmt.Errorf("build failed: %w", err)
-				}
-
-				return nil
 			},
 		))
 	}
+
+	processes = append(processes, paraprogress.NewProcess(
+		fmt.Sprintf("building %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
+		func(ctx context.Context, w func(progress float64)) error {
+			err := opts.project.Build(
+				ctx,
+				targ, // Target-specific options
+				app.WithBuildProgressFunc(w),
+				app.WithBuildMakeOptions(append(mopts,
+					make.WithExecOptions(
+						exec.WithStdout(log.G(ctx).Writer()),
+						exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
+						// exec.WithOSEnv(true),
+					),
+				)...),
+				app.WithBuildLogFile(opts.SaveBuildLog),
+			)
+			if err != nil {
+				return fmt.Errorf("build failed: %w", err)
+			}
+
+			return nil
+		},
+	))
 
 	paramodel, err := paraprogress.NewParaProgress(
 		ctx,
