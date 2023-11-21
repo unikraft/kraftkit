@@ -97,7 +97,7 @@ func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 	// The following are built-in assumptions given the naming conventions used
 	// within the Unikraft core.
 	switch pc.Name() {
-	case "fc", "firecracker":
+	case "fc", "firecracker", "kraftcloud":
 		values.Set("CONFIG_PLAT_KVM", kconfig.Yes)
 		values.Set("CONFIG_KVM_VMM_FIRECRACKER", kconfig.Yes)
 	case "kvm", "qemu":
