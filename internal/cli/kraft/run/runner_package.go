@@ -130,7 +130,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 			return fmt.Errorf("could not complete search: %v", err)
 		}
 		if len(packs) == 0 {
-			return fmt.Errorf("coud not find runtime '%s'", runner.packName)
+			return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.platform.String(), opts.Architecture)
 		}
 	}
 
