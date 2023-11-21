@@ -7,14 +7,7 @@ package pkg
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
 
-	"kraftkit.sh/config"
-	"kraftkit.sh/initrd"
-	"kraftkit.sh/log"
-	"kraftkit.sh/tui/processtree"
-	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
 
@@ -36,54 +29,6 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 	// Interpret the project directory
 	opts.Project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// buildRootfs generates a rootfs based on the provided
-func (opts *PkgOptions) buildRootfs(ctx context.Context) error {
-	if opts.Rootfs == "" {
-		if opts.Project != nil && opts.Project.Rootfs() != "" {
-			opts.Rootfs = opts.Project.Rootfs()
-		} else {
-			return nil
-		}
-	}
-
-	ramfs, err := initrd.New(ctx, opts.Rootfs,
-		initrd.WithOutput(filepath.Join(opts.Workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
-		initrd.WithCacheDir(filepath.Join(opts.Workdir, unikraft.VendorDir, "rootfs-cache")),
-	)
-	if err != nil {
-		return fmt.Errorf("could not prepare initramfs: %w", err)
-	}
-
-	model, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
-		},
-		processtree.NewProcessTreeItem(
-			"building rootfs",
-			"",
-			func(ctx context.Context) error {
-				opts.Rootfs, err = ramfs.Build(ctx)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := model.Start(); err != nil {
 		return err
 	}
 

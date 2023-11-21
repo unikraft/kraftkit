@@ -7,17 +7,49 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/exec"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
 
 func (opts *GithubAction) build(ctx context.Context) error {
+	if opts.Rootfs == "" {
+		opts.Rootfs = opts.project.Rootfs()
+	}
+
+	if opts.Rootfs != "" {
+		ramfs, err := initrd.New(ctx,
+			filepath.Join(opts.Workdir, opts.Rootfs),
+			initrd.WithOutput(filepath.Join(
+				opts.Workdir,
+				unikraft.BuildDir,
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, opts.target.Architecture().String()),
+			)),
+			initrd.WithCacheDir(filepath.Join(
+				opts.Workdir,
+				unikraft.BuildDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture(opts.target.Architecture().String()),
+		)
+		if err != nil {
+			return fmt.Errorf("could not prepare initramfs: %w", err)
+		}
+
+		opts.initrdPath, err = ramfs.Build(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := opts.project.Configure(
 		ctx,
 		opts.target, // Target-specific options

@@ -24,6 +24,10 @@ type builder interface {
 	// given implementation.
 	Buildable(context.Context, *BuildOptions, ...string) (bool, error)
 
+	// Prepare performs any pre-emptive operations that are necessary before
+	// performing the build.
+	Prepare(context.Context, *BuildOptions, []target.Target, ...string) error
+
 	// Build performs the actual construction of the unikernel given the provided
 	// inputs for the given implementation.
 	Build(context.Context, *BuildOptions, []target.Target, ...string) error

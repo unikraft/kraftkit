@@ -25,7 +25,9 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-type builderKraftfileUnikraft struct{}
+type builderKraftfileUnikraft struct {
+	nameWidth int
+}
 
 // String implements fmt.Stringer.
 func (build *builderKraftfileUnikraft) String() string {
@@ -256,7 +258,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 			paraprogress.IsParallel(parallel),
 			paraprogress.WithRenderer(norender),
 			paraprogress.WithFailFast(true),
-			paraprogress.WithNameWidth(nameWidth),
+			paraprogress.WithNameWidth(build.nameWidth),
 		)
 		if err != nil {
 			return err
@@ -270,10 +272,8 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 	return nil
 }
 
-func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
-	var processes []*paraprogress.Process
-
-	nameWidth := -1
+func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
+	build.nameWidth = -1
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	// Calculate the width of the longest process name so that we can align the
@@ -285,8 +285,8 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		// name of the project and the target/plat string (which is variable in
 		// length).
 		for _, targ := range targets {
-			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > nameWidth {
-				nameWidth = newLen
+			if newLen := len(targ.Name()) + len(target.TargetPlatArchName(targ)) + 15; newLen > build.nameWidth {
+				build.nameWidth = newLen
 			}
 		}
 
@@ -298,8 +298,8 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		// The longest word is "pulling" (which is 7 characters long),plus
 		// additional space characters (1 character).
 		for _, component := range components {
-			if newLen := len(unikraft.TypeNameVersion(component)) + 8; newLen > nameWidth {
-				nameWidth = newLen
+			if newLen := len(unikraft.TypeNameVersion(component)) + 8; newLen > build.nameWidth {
+				build.nameWidth = newLen
 			}
 		}
 	}
@@ -330,10 +330,11 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		}
 	}
 
-	if err := build.pull(ctx, opts, norender, nameWidth); err != nil {
-		return err
-	}
+	return build.pull(ctx, opts, norender, build.nameWidth)
+}
 
+func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, targets []target.Target, args ...string) error {
+	var processes []*paraprogress.Process
 	var mopts []make.MakeOption
 	if opts.Jobs > 0 {
 		mopts = append(mopts, make.WithJobs(opts.Jobs))
@@ -398,9 +399,9 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		//  - The Unikraft build system can re-use compiled files from previous
 		//    compilations (if the architecture does not change).
 		paraprogress.IsParallel(false),
-		paraprogress.WithRenderer(norender),
+		paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
 		paraprogress.WithFailFast(true),
-		paraprogress.WithNameWidth(nameWidth),
+		paraprogress.WithNameWidth(build.nameWidth),
 	)
 	if err != nil {
 		return err

@@ -195,7 +195,9 @@ func (opts *RunOptions) parseKraftfileVolumes(ctx context.Context, project app.A
 
 	var err error
 	controllers := map[string]volumeapi.VolumeService{}
-	machine.Spec.Volumes = []volumeapi.Volume{}
+	if machine.Spec.Volumes == nil {
+		machine.Spec.Volumes = make([]volumeapi.Volume, 0)
+	}
 
 	for _, volcfg := range project.Volumes() {
 		driver := volcfg.Driver()
@@ -253,26 +255,34 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		return nil
 	}
 
-	ramfs, err := initrd.New(ctx,
-		opts.Rootfs,
-		initrd.WithOutput(filepath.Join(opts.workdir, unikraft.BuildDir, initrd.DefaultInitramfsFileName)),
-		initrd.WithCacheDir(filepath.Join(opts.workdir, unikraft.BuildDir, "rootfs-cache")),
+	machine.Status.InitrdPath = filepath.Join(
+		opts.workdir,
+		unikraft.BuildDir,
+		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture),
 	)
-	if err != nil {
-		return fmt.Errorf("could not prepare initramfs: %w", err)
-	}
 
-	machine.Status.InitrdPath, err = ramfs.Build(ctx)
+	fi, err := os.Stat(machine.Status.InitrdPath)
 	if err != nil {
-		return err
+		ramfs, err := initrd.New(ctx,
+			opts.Rootfs,
+			initrd.WithOutput(machine.Status.InitrdPath),
+			initrd.WithCacheDir(filepath.Join(
+				opts.workdir,
+				unikraft.BuildDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture(machine.Spec.Architecture),
+		)
+		if err != nil {
+			return fmt.Errorf("could not prepare initramfs: %w", err)
+		}
+
+		if _, err = ramfs.Build(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Warn if the initrd path is greater than allocated memory
-	fi, err := os.Stat(machine.Status.InitrdPath)
-	if err != nil {
-		return err
-	}
-
 	memRequest := machine.Spec.Resources.Requests[corev1.ResourceMemory]
 	if memRequest.Value() < fi.Size() {
 		log.G(ctx).Warnf("requested memory (%s) is less than initramfs (%s)",

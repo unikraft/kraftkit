@@ -7,6 +7,7 @@ package initrd
 type InitrdOptions struct {
 	output   string
 	cacheDir string
+	arch     string
 }
 
 type InitrdOption func(*InitrdOptions) error
@@ -26,6 +27,17 @@ func WithOutput(output string) InitrdOption {
 func WithCacheDir(dir string) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		opts.cacheDir = dir
+		return nil
+	}
+}
+
+// WithArchitecture sets the architecture of the file contents of binaries in
+// the initramfs.  Files may not always be architecture specific, this option
+// simply indicates the target architecture if any binaries are compiled by the
+// implementing initrd builder.
+func WithArchitecture(arch string) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.arch = arch
 		return nil
 	}
 }
