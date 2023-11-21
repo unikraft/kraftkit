@@ -382,7 +382,7 @@ searchRemoteIndexes:
 				log.G(ctx).
 					WithField("want", domain).
 					WithField("got", ref.Context().RegistryStr()).
-					Debug("skipping registry")
+					Tracef("skipping registry")
 				continue
 			}
 
