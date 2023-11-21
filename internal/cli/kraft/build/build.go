@@ -89,6 +89,11 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	cmd.SetContext(ctx)
 
+	return nil
+}
+
+func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
+	var err error
 	if len(args) == 0 {
 		opts.workdir, err = os.Getwd()
 		if err != nil {
@@ -118,10 +123,6 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	return nil
-}
-
-func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 	if len(selected) == 0 {
