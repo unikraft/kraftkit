@@ -195,20 +195,21 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					unikraft.TypeNameVersion(project.Template()),
 				), "",
 				func(ctx context.Context) error {
-					packages, err = pm.Catalog(ctx,
+					qopts := []packmanager.QueryOption{
 						packmanager.WithName(project.Template().Name()),
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
 						packmanager.WithUpdate(opts.ForceCache),
 						packmanager.WithPlatform(opts.Platform),
 						packmanager.WithArchitecture(opts.Architecture),
-					)
+					}
+					packages, err = pm.Catalog(ctx, qopts...)
 					if err != nil {
 						return err
 					}
 
 					if len(packages) == 0 {
-						return fmt.Errorf("could not find: %s", unikraft.TypeNameVersion(project.Template()))
+						return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
 					} else if len(packages) > 1 {
 						return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
 					}
