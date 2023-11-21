@@ -161,7 +161,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 
 		if len(packs) != 1 {
-			return fmt.Errorf("coud not find runtime '%s'", runner.packName)
+			return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.platform.String(), opts.Architecture)
 		}
 
 		log.G(ctx).
