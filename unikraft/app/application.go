@@ -128,7 +128,7 @@ type Application interface {
 
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
-	Components(context.Context) ([]component.Component, error)
+	Components(context.Context, ...target.Target) ([]component.Component, error)
 
 	// WithTarget is a reducer that returns the application with only the provided
 	// target.
@@ -742,7 +742,7 @@ func (app application) TargetNames() []string {
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (app application) Components(ctx context.Context) ([]component.Component, error) {
+func (app application) Components(ctx context.Context, targets ...target.Target) ([]component.Component, error) {
 	components := []component.Component{}
 
 	if unikraft := app.Unikraft(ctx); unikraft != nil {
