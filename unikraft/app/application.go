@@ -84,7 +84,7 @@ type Application interface {
 	// MakeArgs returns the populated `core.MakeArgs` based on the contents of the
 	// instantiated `application`.  This information can be passed directly
 	// to Unikraft's build system.
-	MakeArgs(target.Target) (*core.MakeArgs, error)
+	MakeArgs(context.Context, target.Target) (*core.MakeArgs, error)
 
 	// Make is a method which invokes Unikraft's build system.  You can pass in
 	// make options based on the `make` package.  Ultimately, this is an abstract
@@ -396,7 +396,12 @@ func (app application) IsConfigured(tc target.Target) bool {
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
-func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
+func (app application) MakeArgs(ctx context.Context, tc target.Target) (*core.MakeArgs, error) {
+	components, err := app.Components(ctx, tc)
+	if err != nil {
+		return nil, fmt.Errorf("could not get application components: %w", err)
+	}
+
 	var libraries []string
 
 	// TODO: This is a temporary solution to fix an ordering issue with regard to
@@ -404,8 +409,12 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	// solution is to determine the library order by generating a DAG via KConfig
 	// parsing.
 	unformattedLibraries := map[string]*lib.LibraryConfig{}
-	for k, v := range app.libraries {
-		unformattedLibraries[k] = v
+	for _, c := range components {
+		if c.Type() != unikraft.ComponentTypeLib {
+			continue
+		}
+
+		unformattedLibraries[c.Name()] = c.(*lib.LibraryConfig)
 	}
 
 	// Add language libraries that we know require a specific ordering.
@@ -484,7 +493,7 @@ func (app application) Make(ctx context.Context, tc target.Target, mopts ...make
 		make.WithSyncOutput(true),
 	)
 
-	args, err := app.MakeArgs(tc)
+	args, err := app.MakeArgs(ctx, tc)
 	if err != nil {
 		return err
 	}
