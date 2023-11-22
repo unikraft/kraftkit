@@ -22,8 +22,8 @@ import (
 )
 
 type RemoveOptions struct {
-	All      bool `long:"all" usage:"Remove all machines"`
-	platform string
+	All      bool   `long:"all" usage:"Remove all machines"`
+	Platform string `noattribute:"true"`
 }
 
 // Remove stops and deletes a local Unikraft virtual machine.
@@ -65,7 +65,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.platform = cmd.Flag("plat").Value.String()
+	opts.Platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
@@ -79,19 +79,19 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
-	if opts.All || opts.platform == "auto" {
+	if opts.All || opts.Platform == "auto" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		if opts.platform == "host" {
+		if opts.Platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
 			if err != nil {
 				return err
 			}
 		} else {
 			var ok bool
-			platform, ok = mplatform.PlatformsByName()[opts.platform]
+			platform, ok = mplatform.PlatformsByName()[opts.Platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 			}
 		}
 
