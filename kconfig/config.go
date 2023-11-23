@@ -291,7 +291,7 @@ func (kv *KeyValue) MarshalYAML() (interface{}, error) {
 const (
 	Yes    = "y"
 	Mod    = "m"
-	No     = "---===[[[is not set]]]===---" // to make it more obvious when some code writes it directly
+	No     = "n"
 	Prefix = "CONFIG_"
 )
 
