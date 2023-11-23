@@ -107,6 +107,8 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 
 	if pti.status == StatusRunning || pti.status == StatusRunningChild {
 		textLeft += pti.ellipsis
+	} else if pti.status == StatusSuccess {
+		textLeft += "... done!"
 	}
 
 	elapsed := utils.HumanizeDuration(pti.timer.Elapsed())
