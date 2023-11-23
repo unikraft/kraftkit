@@ -153,7 +153,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 			if len(opts.Plat) == 0 {
 				plat, _, err := mplatform.Detect(ctx)
 				if err != nil {
-					return fmt.Errorf("could not get host architecture: %w", err)
+					return fmt.Errorf("could not get host platform: %w", err)
 				}
 
 				opts.Plat = plat.String()

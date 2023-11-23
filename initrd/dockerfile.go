@@ -82,6 +82,27 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not instantiate BuildKit client: %w", err)
 	}
 
+	buildKitInfo, err := c.Info(ctx)
+	if err != nil {
+		log.G(ctx).Warn("could not connect to BuildKit client, is BuildKit running?")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("By default, KraftKit will look for a native install which")
+		log.G(ctx).Warn("is located at /run/buildkit/buildkit.sock.  Alternatively, you")
+		log.G(ctx).Warn("can run BuildKit in a container (recommended for macOS users)")
+		log.G(ctx).Warn("which you can do by running:")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("  docker run --rm -d --name buildkit --privileged moby/buildkit:latest")
+		log.G(ctx).Warn("  export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkit")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("For more usage instructions visit: https://unikraft.org/buildkit")
+		log.G(ctx).Warn("")
+		return "", fmt.Errorf("could not get BuildKit info: %w", err)
+	}
+
+	log.G(ctx).
+		WithField("version", buildKitInfo.BuildkitVersion).
+		Debug("using buildkit")
+
 	var cacheExports []client.CacheOptionsEntry
 	if len(initrd.opts.cacheDir) > 0 {
 		cacheExports = []client.CacheOptionsEntry{
