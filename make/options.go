@@ -35,6 +35,7 @@ type MakeOptions struct {
 	printDirectory         bool     `flag:"-w"`
 	question               bool     `flag:"-q"`
 	silent                 bool     `flag:"-s"`
+	syncOutput             bool     `flag:"-O"`
 	touch                  bool     `flag:"-t"`
 	trace                  bool     `flag:"--trace"`
 	version                bool     `flag:"-v"`
@@ -314,6 +315,14 @@ func WithNoPrintDirectory(npd bool) MakeOption {
 func WithSilent(silent bool) MakeOption {
 	return func(mo *MakeOptions) error {
 		mo.silent = silent
+		return nil
+	}
+}
+
+// Synchronize the output.
+func WithSyncOutput(sync bool) MakeOption {
+	return func(mo *MakeOptions) error {
+		mo.syncOutput = sync
 		return nil
 	}
 }
