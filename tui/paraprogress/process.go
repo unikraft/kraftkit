@@ -206,11 +206,6 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 			return d, nil
 		}
 
-		if msg.progress > 1.0 {
-			msg.progress = 1.0
-			cmds = append(cmds, d.timer.Stop())
-		}
-
 		d.percent = msg.progress
 
 	// TickMsg is sent when the spinner wants to animate itself
