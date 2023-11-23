@@ -481,6 +481,7 @@ func (app application) Make(ctx context.Context, tc target.Target, mopts ...make
 	mopts = append(mopts,
 		make.WithDirectory(app.unikraft.Path()),
 		make.WithNoPrintDirectory(true),
+		make.WithSyncOutput(true),
 	)
 
 	args, err := app.MakeArgs(tc)
