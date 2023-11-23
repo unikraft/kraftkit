@@ -43,6 +43,10 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOpt
 		return false, fmt.Errorf("cannot package without unikraft core specification")
 	}
 
+	if opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = opts.Project.Rootfs()
+	}
+
 	return true, nil
 }
 
