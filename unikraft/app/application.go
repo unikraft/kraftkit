@@ -84,7 +84,7 @@ type Application interface {
 	// MakeArgs returns the populated `core.MakeArgs` based on the contents of the
 	// instantiated `application`.  This information can be passed directly
 	// to Unikraft's build system.
-	MakeArgs(target.Target) (*core.MakeArgs, error)
+	MakeArgs(context.Context, target.Target) (*core.MakeArgs, error)
 
 	// Make is a method which invokes Unikraft's build system.  You can pass in
 	// make options based on the `make` package.  Ultimately, this is an abstract
@@ -128,7 +128,7 @@ type Application interface {
 
 	// Components returns a unique list of Unikraft components which this
 	// applicatiton consists of
-	Components(context.Context) ([]component.Component, error)
+	Components(context.Context, ...target.Target) ([]component.Component, error)
 
 	// WithTarget is a reducer that returns the application with only the provided
 	// target.
@@ -396,7 +396,12 @@ func (app application) IsConfigured(tc target.Target) bool {
 	return err == nil && !f.IsDir() && f.Size() > 0
 }
 
-func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
+func (app application) MakeArgs(ctx context.Context, tc target.Target) (*core.MakeArgs, error) {
+	components, err := app.Components(ctx, tc)
+	if err != nil {
+		return nil, fmt.Errorf("could not get application components: %w", err)
+	}
+
 	var libraries []string
 
 	// TODO: This is a temporary solution to fix an ordering issue with regard to
@@ -404,8 +409,12 @@ func (app application) MakeArgs(tc target.Target) (*core.MakeArgs, error) {
 	// solution is to determine the library order by generating a DAG via KConfig
 	// parsing.
 	unformattedLibraries := map[string]*lib.LibraryConfig{}
-	for k, v := range app.libraries {
-		unformattedLibraries[k] = v
+	for _, c := range components {
+		if c.Type() != unikraft.ComponentTypeLib {
+			continue
+		}
+
+		unformattedLibraries[c.Name()] = c.(*lib.LibraryConfig)
 	}
 
 	// Add language libraries that we know require a specific ordering.
@@ -484,7 +493,7 @@ func (app application) Make(ctx context.Context, tc target.Target, mopts ...make
 		make.WithSyncOutput(true),
 	)
 
-	args, err := app.MakeArgs(tc)
+	args, err := app.MakeArgs(ctx, tc)
 	if err != nil {
 		return err
 	}
@@ -524,6 +533,12 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 		values.OverrideBy(tc.Architecture().KConfig())
 		values.OverrideBy(tc.Platform().KConfig())
 		values.OverrideBy(tc.KConfig())
+
+		// This is a special exception used for KraftCloud-centric platform targets.
+		if tc.Platform().Name() == "kraftcloud" {
+			values.Set("CONFIG_KVM_DEBUG_VGA_CONSOLE", kconfig.No)
+			values.Set("CONFIG_KVM_KERNEL_VGA_CONSOLE", kconfig.No)
+		}
 	}
 
 	if extra != nil {
@@ -697,9 +712,21 @@ func (app application) Build(ctx context.Context, tc target.Target, opts ...Buil
 		return fmt.Errorf("cannot build without Unikraft core component source")
 	}
 
-	bopts.mopts = append(bopts.mopts, []make.MakeOption{
+	mopts := []make.MakeOption{
 		make.WithProgressFunc(bopts.onProgress),
-	}...)
+	}
+
+	// This is a special exception used for KraftCloud-centric platform targets.
+	// This includes using the ability to rename the kernal image to represent
+	// this as a platform (see [0] for additional details) and setting specific
+	// KConfig options.
+	//
+	// [0]: https://github.com/unikraft/unikraft/pull/1169
+	if tc.Platform().Name() == "kraftcloud" {
+		mopts = append(mopts, make.WithVar("UK_IMAGE_NAME_OVERWRITE", fmt.Sprintf("%s_kraftcloud-%s", app.name, tc.Architecture().Name())))
+	}
+
+	bopts.mopts = append(bopts.mopts, mopts...)
 
 	if !bopts.noPrepare {
 		if err := app.Prepare(
@@ -742,7 +769,7 @@ func (app application) TargetNames() []string {
 
 // Components returns a unique list of Unikraft components which this
 // applicatiton consists of
-func (app application) Components(ctx context.Context) ([]component.Component, error) {
+func (app application) Components(ctx context.Context, targets ...target.Target) ([]component.Component, error) {
 	components := []component.Component{}
 
 	if unikraft := app.Unikraft(ctx); unikraft != nil {
@@ -767,6 +794,42 @@ func (app application) Components(ctx context.Context) ([]component.Component, e
 
 	for _, library := range app.libraries {
 		components = append(components, library)
+	}
+
+	// Add KraftCloud-specific libraries when a target with this name is provided.
+	var ukp *lib.LibraryConfig
+	for _, targ := range targets {
+		if targ.Platform().String() != "kraftcloud" {
+			continue
+		}
+
+		// If the user has already added a library called `ukp`, do not proceed.
+		if _, ok := app.libraries["ukp"]; ok {
+			continue
+		}
+
+		// If the user has already added a library called `ukp-bin`, do not proceed.
+		if _, ok := app.libraries["ukp-bin"]; ok {
+			continue
+		}
+
+		if ukp == nil {
+			ctx = unikraft.WithContext(ctx, &unikraft.Context{
+				UK_NAME:   app.name,
+				UK_BASE:   app.workingDir,
+				BUILD_DIR: app.outDir,
+			})
+			lukp, err := lib.TransformFromSchema(ctx, "ukp-bin", map[string]interface{}{
+				"source":  "https://github.com/unikraft-io/lib-ukp-bin.git",
+				"version": "stable",
+			})
+			if err != nil {
+				return nil, fmt.Errorf("could not add kraftcloud internal libraries: %w", err)
+			}
+			ukp = &lukp
+		}
+
+		components = append(components, ukp)
 	}
 
 	// TODO: Get unique components from each target.  A target will contain at
