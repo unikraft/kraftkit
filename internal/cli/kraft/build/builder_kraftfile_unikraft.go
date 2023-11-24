@@ -116,7 +116,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 							return templatePack.Pull(
 								ctx,
 								pack.WithPullProgressFunc(w),
-								pack.WithPullWorkdir(opts.workdir),
+								pack.WithPullWorkdir(opts.Workdir),
 								// pack.WithPullChecksum(!opts.NoChecksum),
 								pack.WithPullCache(!opts.NoCache),
 								pack.WithPullAuthConfig(auths),
@@ -243,7 +243,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 					return p.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(opts.workdir),
+						pack.WithPullWorkdir(opts.Workdir),
 						// pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(!opts.NoCache),
 						pack.WithPullAuthConfig(auths),
