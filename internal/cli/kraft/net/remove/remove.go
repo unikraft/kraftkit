@@ -18,7 +18,7 @@ import (
 )
 
 type RemoveOptions struct {
-	driver string
+	Driver string `noattribute:"true"`
 }
 
 // Remove a local machine network.
@@ -48,16 +48,16 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.driver = cmd.Flag("driver").Value.String()
+	opts.Driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	strategy, ok := network.Strategies()[opts.driver]
+	strategy, ok := network.Strategies()[opts.Driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
+		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)

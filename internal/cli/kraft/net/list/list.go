@@ -20,9 +20,9 @@ import (
 )
 
 type ListOptions struct {
+	Driver string `noattribute:"true"`
 	Long   bool   `long:"long" short:"l" usage:"Show more information"`
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
-	driver string
 }
 
 func NewCmd() *cobra.Command {
@@ -43,16 +43,16 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.driver = cmd.Flag("driver").Value.String()
+	opts.Driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
 func (opts *ListOptions) Run(ctx context.Context, _ []string) error {
 	var err error
 
-	strategy, ok := network.Strategies()[opts.driver]
+	strategy, ok := network.Strategies()[opts.Driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %s", opts.driver)
+		return fmt.Errorf("unsupported network driver strategy: %s", opts.Driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)
@@ -84,7 +84,7 @@ func (opts *ListOptions) Run(ctx context.Context, _ []string) error {
 			id:      string(network.UID),
 			name:    network.Name,
 			network: addr.String(),
-			driver:  opts.driver,
+			driver:  opts.Driver,
 			status:  network.Status.State,
 		})
 

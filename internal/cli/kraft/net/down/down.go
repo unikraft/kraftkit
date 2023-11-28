@@ -18,7 +18,7 @@ import (
 )
 
 type DownOptions struct {
-	driver string
+	Driver string `noattribute:"true"`
 }
 
 // Down brings a local machine network offline.
@@ -48,14 +48,14 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *DownOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.driver = cmd.Flag("driver").Value.String()
+	opts.Driver = cmd.Flag("driver").Value.String()
 	return nil
 }
 
 func (opts *DownOptions) Run(ctx context.Context, args []string) error {
-	strategy, ok := network.Strategies()[opts.driver]
+	strategy, ok := network.Strategies()[opts.Driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
+		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)
