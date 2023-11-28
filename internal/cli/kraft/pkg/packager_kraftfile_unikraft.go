@@ -74,8 +74,14 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		return nil, fmt.Errorf("nothing selected to package")
 	}
 
-	if err := utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {
-		return nil, fmt.Errorf("could not build rootfs: %w", err)
+	// Reset the rootfs, such that it is not packaged as an initrd if it is
+	// already embedded inside of the kernel.
+	if val, exists := opts.Project.KConfig().Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+		opts.Rootfs = ""
+	} else {
+		if err := utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {
+			return nil, fmt.Errorf("could not build rootfs: %w", err)
+		}
 	}
 
 	i := 0

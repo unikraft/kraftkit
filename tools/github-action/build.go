@@ -48,6 +48,11 @@ func (opts *GithubAction) build(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		// Unset the intird path since this is now embedded in the unikernel
+		if val, exists := opts.project.KConfig().Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+			opts.initrdPath = ""
+		}
 	}
 
 	if err := opts.project.Configure(
