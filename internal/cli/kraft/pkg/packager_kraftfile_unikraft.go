@@ -94,6 +94,16 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			opts.Args = targ.Command()
 		}
 
+		// If no arguments have been specified, use the ones which are default and
+		// that have been included in the package.
+		if len(opts.Args) == 0 {
+			if len(opts.Project.Command()) > 0 {
+				opts.Args = opts.Project.Command()
+			} else if len(targ.Command()) > 0 {
+				opts.Args = targ.Command()
+			}
+		}
+
 		cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
 		if err != nil {
 			return nil, err
