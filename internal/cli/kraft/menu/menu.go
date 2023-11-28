@@ -34,11 +34,11 @@ import (
 
 type MenuOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	ForcePull    bool   `long:"force-pull" usage:"Force pulling components before opening the menu"`
 	Frontend     string `long:"frontend" short:"f" usage:"Alternative frontend to use for the configuration editor" default:"menuconfig"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoCache      bool   `long:"no-cache" usage:"Do not use the cache when pulling dependencies"`
 	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoPull       bool   `long:"no-pull" usage:"Do not pull the dependencies of the project"`
 	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
 
@@ -241,6 +241,12 @@ func (opts *MenuOptions) pull(ctx context.Context, project app.Application, work
 			continue
 		}
 
+		// Only continue to find and pull the component if it does not exist
+		// locally or the user has requested to --force-pull.
+		if stat, err := os.Stat(component.Path()); err == nil && stat.IsDir() && !opts.ForcePull {
+			continue
+		}
+
 		component := component // loop closure
 		auths := auths
 
@@ -382,10 +388,8 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 		}
 	}
 
-	if !opts.NoPull {
-		if err := opts.pull(ctx, opts.project, opts.workdir, norender, nameWidth); err != nil {
-			return err
-		}
+	if err := opts.pull(ctx, opts.project, opts.workdir, norender, nameWidth); err != nil {
+		return err
 	}
 
 	processes := []*paraprogress.Process{}
