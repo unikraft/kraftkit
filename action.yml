@@ -112,7 +112,9 @@ runs:
         --privileged \
         --name buildkitd_${GITHUB_RUN_ID} \
         -v /run/buildkit:/run/buildkit:rw \
-        moby/buildkit:v0.12.1
+        moby/buildkit:v0.12.1;
+      sleep 5; # wait for buildkit to start
+      sudo chmod 666 /run/buildkit/buildkitd.sock;
   - name: Set up scripts
     shell: bash
     run: |
