@@ -20,7 +20,7 @@ import (
 )
 
 type CreateOptions struct {
-	driver  string
+	Driver  string `noattribute:"true"`
 	Network string `long:"network" short:"n" usage:"Set the gateway IP address and the subnet of the network in CIDR format."`
 }
 
@@ -51,7 +51,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.driver = cmd.Flag("driver").Value.String()
+	opts.Driver = cmd.Flag("driver").Value.String()
 
 	// TODO(nderjung): A future implementation can list existing networks and
 	// generate new subnet and gateway appropriately.  Simply calculate a new
@@ -72,9 +72,9 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	strategy, ok := network.Strategies()[opts.driver]
+	strategy, ok := network.Strategies()[opts.Driver]
 	if !ok {
-		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.driver)
+		return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.Driver)
 	}
 
 	controller, err := strategy.NewNetworkV1alpha1(ctx)
