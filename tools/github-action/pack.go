@@ -8,6 +8,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -36,11 +37,27 @@ func (opts *GithubAction) packAndPush(ctx context.Context) error {
 		}
 	}
 
+	// If no arguments have been specified, use the ones which are default and
+	// that have been included in the package.
+	if len(opts.Args) == 0 {
+		if len(opts.project.Command()) > 0 {
+			opts.Args = opts.project.Command()
+		} else if len(opts.target.Command()) > 0 {
+			opts.Args = opts.target.Command()
+		}
+	}
+
+	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
+	if err != nil {
+		return err
+	}
+
 	popts := []packmanager.PackOption{
 		packmanager.PackInitrd(opts.initrdPath),
 		packmanager.PackKConfig(true),
 		packmanager.PackName(output),
 		packmanager.PackMergeStrategy(packmanager.MergeStrategy(opts.Strategy)),
+		packmanager.PackArgs(cmdShellArgs...),
 	}
 
 	if ukversion, ok := opts.target.KConfig().Get(unikraft.UK_FULLVERSION); ok {
