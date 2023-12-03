@@ -136,32 +136,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
-	var err error
 	ctx := cmd.Context()
-
-	// Discover the network controller strategy.
-	if opts.Network == "" && opts.IP != "" {
-		return fmt.Errorf("cannot assign IP address without providing --network")
-	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
-		return fmt.Errorf("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
-	}
-
-	if opts.Network != "" {
-		// TODO(nderjung): With a little bit more work, the driver can be
-		// automatically detected.
-		parts := strings.SplitN(opts.Network, ":", 2)
-		opts.networkDriver, opts.networkName = parts[0], parts[1]
-
-		networkStrategy, ok := network.Strategies()[opts.networkDriver]
-		if !ok {
-			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
-		}
-
-		opts.networkController, err = networkStrategy.NewNetworkV1alpha1(ctx)
-		if err != nil {
-			return err
-		}
-	}
 
 	opts.Platform = cmd.Flag("plat").Value.String()
 
@@ -244,11 +219,43 @@ func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
 	return nil
 }
 
+func (opts *RunOptions) discoverNetworkController(ctx context.Context) error {
+	var err error
+
+	if opts.Network == "" && opts.IP != "" {
+		return fmt.Errorf("cannot assign IP address without providing --network")
+	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
+		return fmt.Errorf("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
+	}
+
+	if opts.Network != "" {
+		// TODO(nderjung): With a little bit more work, the driver can be
+		// automatically detected.
+		parts := strings.SplitN(opts.Network, ":", 2)
+		opts.networkDriver, opts.networkName = parts[0], parts[1]
+
+		networkStrategy, ok := network.Strategies()[opts.networkDriver]
+		if !ok {
+			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
+		}
+
+		opts.networkController, err = networkStrategy.NewNetworkV1alpha1(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	err = opts.discoverMachineController(ctx)
-	if err != nil {
+	if err = opts.discoverMachineController(ctx); err != nil {
+		return err
+	}
+
+	if err = opts.discoverNetworkController(ctx); err != nil {
 		return err
 	}
 
