@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/img/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/img/remove"
 
 	"kraftkit.sh/cmdfactory"
 )
@@ -33,6 +34,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
 
 	return cmd
 }
