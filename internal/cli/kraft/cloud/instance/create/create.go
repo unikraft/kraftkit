@@ -331,7 +331,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	utils.PrintInstances(ctx, opts.Output, *instance)
+	utils.PrettyPrintInstance(ctx, instance, opts.Start)
 
 	return nil
 }

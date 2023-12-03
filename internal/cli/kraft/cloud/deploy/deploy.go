@@ -14,19 +14,19 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
-	"kraftkit.sh/iostreams"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
+	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type DeployOptions struct {
@@ -113,13 +113,6 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	return nil
 }
-
-var (
-	textRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
-	textGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render
-	textYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render
-	textGray   = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render
-)
 
 func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	var err error
@@ -226,6 +219,8 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		pkgName = pkgName[12:]
 	}
 
+	var instance *kraftcloudinstances.Instance
+
 	paramodel, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
@@ -268,6 +263,21 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 					}
 				}
 
+				instance, err = create.Create(ctx, &create.CreateOptions{
+					Env:       opts.Env,
+					FQDN:      opts.FQDN,
+					Memory:    opts.Memory,
+					Metro:     opts.Metro,
+					Name:      opts.Name,
+					Ports:     opts.Ports,
+					Replicas:  opts.Replicas,
+					Start:     !opts.NoStart,
+					SubDomain: opts.SubDomain,
+				}, pkgName)
+				if err != nil {
+					return fmt.Errorf("could not create instance: %w", err)
+				}
+
 				return nil
 			},
 		),
@@ -280,85 +290,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	instance, err := create.Create(ctx, &create.CreateOptions{
-		Env:       opts.Env,
-		FQDN:      opts.FQDN,
-		Memory:    opts.Memory,
-		Metro:     opts.Metro,
-		Name:      opts.Name,
-		Ports:     opts.Ports,
-		Replicas:  opts.Replicas,
-		Start:     !opts.NoStart,
-		SubDomain: opts.SubDomain,
-	}, pkgName)
-	if err != nil {
-		return fmt.Errorf("could not create instance: %w", err)
-	}
-
-	log.G(ctx).
-		WithField("uuid", instance.UUID).
-		Debug("created instance")
-
-	for {
-		state, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUID(ctx, instance.UUID)
-		if err != nil {
-			return fmt.Errorf("could not get instance status: %w", err)
-		}
-
-		if string(state.State) == "starting" {
-			continue
-		}
-
-		break
-	}
-
-	out := iostreams.G(ctx).Out
-	fqdn := instance.FQDN
-
-	if len(fqdn) > 0 {
-		for _, port := range instance.ServiceGroup.Services {
-			if port.Port == 443 {
-				fqdn = "https://" + fqdn
-				break
-			}
-		}
-	}
-
-	var color func(...string) string
-	if instance.State == "running" || instance.State == "starting" {
-		color = textGreen
-	} else if instance.State == "stopped" {
-		color = textRed
-	} else {
-		color = textYellow
-	}
-
-	fmt.Fprintf(out, "\n%s%s%s %s\n", textGray("["), color("●"), textGray("]"), instance.UUID)
-	fmt.Fprintf(out, "             %s: %s\n", textGray("name"), instance.Name)
-	fmt.Fprintf(out, "            %s: %s\n", textGray("state"), color(instance.State))
-	if len(fqdn) > 0 {
-		if strings.HasPrefix(fqdn, "https://") {
-			fmt.Fprintf(out, "              %s: %s\n", textGray("url"), fqdn)
-		} else {
-			fmt.Fprintf(out, "             %s: %s\n", textGray("fqdn"), fqdn)
-		}
-	}
-	fmt.Fprintf(out, "            %s: %s\n", textGray("image"), instance.Image)
-	fmt.Fprintf(out, "        %s: %.2f ms\n", textGray("boot time"), float64(instance.BootTimeUS)/1000)
-	fmt.Fprintf(out, "           %s: %d MiB\n", textGray("memory"), instance.MemoryMB)
-	if len(instance.ServiceGroup.Name) > 0 {
-		fmt.Fprintf(out, "    %s: %s\n", textGray("service group"), instance.ServiceGroup.Name)
-	}
-	if len(instance.Args) > 0 {
-		fmt.Fprintf(out, "             %s: %s\n", textGray("args"), strings.Join(instance.Args, " "))
-	}
-
-	fmt.Fprintf(out, "\n")
-
-	if instance.State != "running" && instance.State != "starting" && !opts.NoStart {
-		log.G(ctx).Info("it looks like the instance did not come online, to view logs run:")
-		fmt.Fprintf(out, "\n    kraft cloud instance logs %s\n\n", instance.Name)
-	}
+	utils.PrettyPrintInstance(ctx, instance, !opts.NoStart)
 
 	return nil
 }

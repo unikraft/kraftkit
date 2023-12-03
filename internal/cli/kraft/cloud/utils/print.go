@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
@@ -20,6 +21,13 @@ import (
 	kraftcloudservices "sdk.kraft.cloud/services"
 	kraftcloudusers "sdk.kraft.cloud/users"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+)
+
+var (
+	textRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
+	textGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render
+	textYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render
+	textGray   = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render
 )
 
 // PrintInstances pretty-prints the provided set of instances or returns
@@ -299,4 +307,55 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 	}
 
 	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrettyPrintInstance outputs a single instance and information about it.
+func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Instance, autoStart bool) {
+	out := iostreams.G(ctx).Out
+	fqdn := instance.FQDN
+
+	if len(fqdn) > 0 {
+		for _, port := range instance.ServiceGroup.Services {
+			if port.Port == 443 {
+				fqdn = "https://" + fqdn
+				break
+			}
+		}
+	}
+
+	var color func(...string) string
+	if instance.State == "running" || instance.State == "starting" {
+		color = textGreen
+	} else if instance.State == "stopped" {
+		color = textRed
+	} else {
+		color = textYellow
+	}
+
+	fmt.Fprintf(out, "\n%s%s%s %s\n", textGray("["), color("●"), textGray("]"), instance.UUID)
+	fmt.Fprintf(out, "             %s: %s\n", textGray("name"), instance.Name)
+	fmt.Fprintf(out, "            %s: %s\n", textGray("state"), color(instance.State))
+	if len(fqdn) > 0 {
+		if strings.HasPrefix(fqdn, "https://") {
+			fmt.Fprintf(out, "              %s: %s\n", textGray("url"), fqdn)
+		} else {
+			fmt.Fprintf(out, "             %s: %s\n", textGray("fqdn"), fqdn)
+		}
+	}
+	fmt.Fprintf(out, "            %s: %s\n", textGray("image"), instance.Image)
+	fmt.Fprintf(out, "        %s: %.2f ms\n", textGray("boot time"), float64(instance.BootTimeUS)/1000)
+	fmt.Fprintf(out, "           %s: %d MiB\n", textGray("memory"), instance.MemoryMB)
+	if len(instance.ServiceGroup.Name) > 0 {
+		fmt.Fprintf(out, "    %s: %s\n", textGray("service group"), instance.ServiceGroup.Name)
+	}
+	if len(instance.Args) > 0 {
+		fmt.Fprintf(out, "             %s: %s\n", textGray("args"), strings.Join(instance.Args, " "))
+	}
+
+	fmt.Fprintf(out, "\n")
+
+	if instance.State != "running" && instance.State != "starting" && autoStart {
+		log.G(ctx).Info("it looks like the instance did not come online, to view logs run:")
+		fmt.Fprintf(out, "\n    kraft cloud instance logs %s\n\n", instance.Name)
+	}
 }
