@@ -49,6 +49,11 @@ func (elfloader *Runtime) Name() string {
 	return elfloader.name
 }
 
+// SetName overwrites the name of the runtime.
+func (elfloader *Runtime) SetName(name string) {
+	elfloader.name = name
+}
+
 // String implements fmt.Stringer
 func (ocipack *Runtime) String() string {
 	return ocipack.pack.Name()

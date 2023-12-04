@@ -27,16 +27,20 @@ import (
 )
 
 type CreateOptions struct {
-	Auth     *config.AuthConfig                   `noattribute:"true"`
-	Client   kraftcloudinstances.InstancesService `noattribute:"true"`
-	Env      []string                             `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Memory   int64                                `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
-	Metro    string                               `noattribute:"true"`
-	Name     string                               `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	Output   string                               `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
-	Ports    []string                             `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Replicas int                                  `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"1"`
-	Start    bool                                 `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	Auth                   *config.AuthConfig    `noattribute:"true"`
+	Client                 kraftcloud.KraftCloud `noattribute:"true"`
+	Env                    []string              `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
+	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
+	Metro                  string                `noattribute:"true"`
+	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
+	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
+	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	SubDomain              string                `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
+	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 }
 
 // Create a KraftCloud instance.
@@ -50,15 +54,74 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	image := args[0]
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudLoginFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewInstancesClient(
-			kraftcloud.WithToken(opts.Auth.Token),
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
+	}
+
+	req := kraftcloudinstances.CreateInstanceRequest{
+		Args:         args[1:],
+		Autostart:    opts.Start,
+		Env:          make(map[string]string),
+		Image:        image,
+		MemoryMB:     opts.Memory,
+		Name:         opts.Name,
+		Replicas:     opts.Replicas,
+		ServiceGroup: kraftcloudinstances.CreateInstanceServiceGroupRequest{},
+		Volumes:      []kraftcloudinstances.CreateInstanceVolumeRequest{},
+	}
+
+	for _, vol := range opts.Volumes {
+		split := strings.Split(vol, ":")
+		if len(split) < 2 || len(split) > 3 {
+			return nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
+		}
+		volume := kraftcloudinstances.CreateInstanceVolumeRequest{
+			At: split[1],
+		}
+		if utils.IsUUID(split[0]) {
+			volume.UUID = split[0]
+		} else {
+			volume.Name = split[0]
+		}
+		if len(split) == 3 && split[2] == "ro" {
+			volume.ReadOnly = true
+		} else {
+			volume.ReadOnly = false
+		}
+
+		req.Volumes = append(req.Volumes, volume)
+	}
+
+	var serviceGroup *kraftcloudservices.ServiceGroup
+
+	if len(opts.ServiceGroupNameOrUUID) > 0 {
+		if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
+			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
+		} else {
+			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, opts.ServiceGroupNameOrUUID)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("could not use service '%s': %w", opts.ServiceGroupNameOrUUID, err)
+		}
+
+		log.G(ctx).
+			WithField("uuid", serviceGroup.UUID).
+			Debug("using service group")
+
+		req.ServiceGroup.UUID = serviceGroup.UUID
+	}
+
+	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// supports updating service groups.
+	if len(opts.ServiceGroupNameOrUUID) > 0 && len(opts.Ports) > 0 {
+		return nil, fmt.Errorf("cannot use existing --service-group|-g and define new --port|-p")
 	}
 
 	services := []kraftcloudservices.Service{}
@@ -66,7 +129,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed port expeted format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+			return nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
 		}
 
 		destPort, err := strconv.Atoi(split[1])
@@ -146,6 +209,20 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		}
 	}
 
+	if len(opts.ServiceGroupNameOrUUID) == 0 {
+		req.ServiceGroup.Services = services
+
+		if len(opts.SubDomain) > 0 {
+			req.ServiceGroup.DNSName = strings.TrimSuffix(opts.SubDomain, ".")
+		} else if len(opts.FQDN) > 0 {
+			if !strings.HasSuffix(".", opts.FQDN) {
+				opts.FQDN += "."
+			}
+
+			req.ServiceGroup.DNSName = opts.FQDN
+		}
+	}
+
 	envs := make(map[string]string)
 	for _, env := range opts.Env {
 		if strings.ContainsRune(env, '=') {
@@ -156,15 +233,27 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		}
 	}
 
-	return opts.Client.WithMetro(opts.Metro).Create(ctx, kraftcloudinstances.CreateInstanceRequest{
-		Image:     image,
-		Args:      args[1:],
-		MemoryMB:  opts.Memory,
-		Services:  services,
-		Autostart: opts.Start,
-		Instances: opts.Replicas,
-		Env:       envs,
-	})
+	instance, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Due to a limitation of the API, hydrate the object.
+	instance, err = opts.Client.Instances().WithMetro(opts.Metro).GetByUUID(ctx, instance.UUID)
+	if err != nil {
+		return instance, err
+	}
+
+	if len(instance.ServiceGroup.UUID) > 0 {
+		serviceGroup, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, instance.ServiceGroup.UUID)
+		if err != nil {
+			return nil, err
+		}
+
+		instance.ServiceGroup = *serviceGroup
+	}
+
+	return instance, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -174,15 +263,12 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
-			# Create a hello world instance
-			$ kraft cloud instance create -M 64 unikraft.org/helloworld:latest
-
 			# Create a new NGINX instance in Frankfurt and start it immediately.  Map the external
 			# port 443 to the internal port 80 which the application listens on.
 			$ kraft cloud --metro fra0 instance create \
 				--start \
 				--port 443:80 \
-				unikraft.io/official/nginx:latest
+				nginx:latest
 
 			# This command is the same as above, however using the more elaborate port expression.
 			# This is because in fact we need need to accept TLS and HTTP connections and redirect
@@ -192,7 +278,15 @@ func NewCmd() *cobra.Command {
 				--start \
 				--port 443:80/http+tls \
 				--port 80:443/http+redirect \
-				unikraft.io/official/nginx:latest
+				nginx:latest
+			
+			# Attach two existing volumes to the instance, one read-write at /data
+			# and another read-only at /config:
+			$ kraft cloud --metro fra0 instance create \
+				--start \
+				--volume my-data-vol:/data \
+				--volume my-config-vol:/config:ro \
+				nginx:latest
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
@@ -201,6 +295,12 @@ func NewCmd() *cobra.Command {
 	if err != nil {
 		panic(err)
 	}
+
+	cmd.Flags().String(
+		"domain",
+		"",
+		"Alias for --fqdn|-d",
+	)
 
 	return cmd
 }
@@ -213,6 +313,14 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
+
+	domain := cmd.Flag("domain").Value.String()
+	if len(domain) > 0 && len(opts.FQDN) > 0 {
+		return fmt.Errorf("cannot use --domain and --fqdn together")
+	} else if len(domain) > 0 && len(opts.FQDN) == 0 {
+		opts.FQDN = domain
+	}
+
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }
@@ -223,5 +331,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, *instance)
+	utils.PrettyPrintInstance(ctx, instance, opts.Start)
+
+	return nil
 }

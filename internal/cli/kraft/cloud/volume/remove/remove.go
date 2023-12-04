@@ -2,7 +2,8 @@
 // Copyright (c) 2023, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package start
+
+package remove
 
 import (
 	"context"
@@ -17,36 +18,35 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
 
-type StartOptions struct {
-	WaitTimeoutMS int    `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
-	Output        string `long:"output" short:"o" usage:"Set output format" default:"table"`
-
+type RemoveOptions struct {
 	metro string
 }
 
-// Start a KraftCloud instance.
-func Start(ctx context.Context, opts *StartOptions, args ...string) error {
+// Remove a KraftCloud persistent volume.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	if opts == nil {
-		opts = &StartOptions{}
+		opts = &RemoveOptions{}
 	}
 
 	return opts.Run(ctx, args)
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
-		Short: "Start an instance",
-		Use:   "start [FLAGS] [PACKAGE|NAME]",
-		Args:  cobra.ExactArgs(1),
+	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
+		Short:   "Permanently delete a persistent volume",
+		Use:     "rm UUID [UUID [...]]",
+		Args:    cobra.MinimumNArgs(1),
+		Aliases: []string{"remove", "del", "delete"},
 		Example: heredoc.Doc(`
-			# Start a KraftCloud instance
-			$ kraft cloud instance start 77d0316a-fbbe-488d-8618-5bf7a612477a
+			# Delete three persistent volumes
+			$ kraft cloud volume rm UUID1 UUID2 UUID3
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
 		},
 	})
 	if err != nil {
@@ -56,7 +56,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -64,31 +64,34 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
+
 	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
 	return nil
 }
 
-func (opts *StartOptions) Run(ctx context.Context, args []string) error {
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewInstancesClient(
+	client := kraftcloud.NewVolumesClient(
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
 	for _, arg := range args {
-		log.G(ctx).Infof("starting %s", arg)
-
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.metro).StartByUUID(ctx, arg, opts.WaitTimeoutMS)
+			err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
 		} else {
-			_, err = client.WithMetro(opts.metro).StartByName(ctx, arg, opts.WaitTimeoutMS)
+			err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
 		}
 		if err != nil {
-			log.G(ctx).WithError(err).Error("could not start instance")
-			continue
+			return fmt.Errorf("could not delete volume: %w", err)
+		}
+
+		_, err = fmt.Fprintln(iostreams.G(ctx).Out, arg)
+		if err != nil {
+			return fmt.Errorf("could not write volume UUID: %w", err)
 		}
 	}
 

@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -25,6 +27,7 @@ import (
 )
 
 type ListOptions struct {
+	All    bool   `long:"all" usage:"Show all images by their digest"`
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
 
 	metro string
@@ -66,16 +69,16 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
 	client := kraftcloud.NewImagesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	images, err := client.WithMetro(opts.metro).List(ctx, map[string]interface{}{})
+	images, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list images: %w", err)
 	}
@@ -96,24 +99,65 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	// Sort the features alphabetically.  This ensures that comparisons between
+	// versions are symmetric.
+	sort.Slice(images, func(i, j int) bool {
+		// Check if we have numbers, sort them accordingly
+		if z, err := strconv.Atoi(images[i].Digest); err == nil {
+			if y, err := strconv.Atoi(images[j].Digest); err == nil {
+				return y < z
+			}
+
+			// If we get only one number, alway say its greater than letter
+			return true
+		}
+
+		// Compare letters normally
+		return images[j].Digest > images[i].Digest
+	})
+
 	// Header row
-	table.AddField("IMAGE", cs.Bold)
-	table.AddField("PUBLIC", cs.Bold)
-	table.AddField("ROOTFS", cs.Bold)
-	table.AddField("ARGS", cs.Bold)
+	table.AddField("NAME", cs.Bold)
+	table.AddField("VERSION", cs.Bold)
+	if opts.Output != "table" {
+		table.AddField("PUBLIC", cs.Bold)
+		table.AddField("ARGS", cs.Bold)
+	}
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
 
 	for _, image := range images {
-		if len(image.Tags) > 0 {
-			table.AddField(image.Tags[0], nil)
-		} else {
-			table.AddField(image.Digest, nil)
+		if len(image.Tags) == 0 && !opts.All {
+			continue
 		}
-		table.AddField(fmt.Sprintf("%v", image.Public), nil)
-		table.AddField(fmt.Sprintf("%v", image.Initrd), nil)
-		table.AddField(strings.TrimSpace(fmt.Sprintf("%s -- %s", image.KernelArgs, image.Args)), nil)
+
+		var name string
+		var versions []string
+
+		if opts.All {
+			split := strings.Split(image.Digest, "@sha256:")
+			name = split[0]
+			versions = append(versions, split[1])
+		}
+
+		if len(image.Tags) > 0 {
+			for _, tag := range image.Tags {
+				split := strings.Split(tag, ":")
+				name = split[0]
+				versions = append(versions, split[1])
+			}
+		}
+
+		table.AddField(name, nil)
+		table.AddField(strings.Join(versions, ", "), nil)
+
+		if opts.Output != "table" {
+			table.AddField(fmt.Sprintf("%v", image.Public), nil)
+			table.AddField(image.Args, nil)
+		}
+
 		table.AddField(humanize.Bytes(uint64(image.SizeInBytes)), nil)
+
 		table.EndRow()
 	}
 

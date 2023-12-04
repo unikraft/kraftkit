@@ -88,6 +88,10 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		workspace = "/github/workspace"
 	}
 
+	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
+		ctx = newCtx
+	}
+
 	if err := runScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
 		log.G(ctx).Errorf("could not run before script: %v", err)
 		os.Exit(1)

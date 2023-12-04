@@ -16,6 +16,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
@@ -38,7 +39,7 @@ func Log(ctx context.Context, opts *LogOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short: "Get console output of an instance",
-		Use:   "logs [UUID]",
+		Use:   "logs [UUID|NAME]",
 		Args:  cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
 			# Get console output of a kraftcloud instance
@@ -68,18 +69,22 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *LogOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	uuid := args[0]
-
 	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	logs, err := client.WithMetro(opts.metro).Logs(ctx, uuid, opts.Tail, true)
+	var logs string
+
+	if utils.IsUUID(args[0]) {
+		logs, err = client.WithMetro(opts.metro).LogsByUUID(ctx, args[0], opts.Tail, true)
+	} else {
+		logs, err = client.WithMetro(opts.metro).LogsByName(ctx, args[0], opts.Tail, true)
+	}
 	if err != nil {
 		return fmt.Errorf("could not retrieve logs: %w", err)
 	}

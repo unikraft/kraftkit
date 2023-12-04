@@ -17,12 +17,13 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
 type RemoveOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
-	All    bool   `long:"all" usage:"Stop all instances"`
+	All    bool   `long:"all" usage:"Remove all instances"`
 
 	metro string
 }
@@ -39,7 +40,7 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete an instance",
-		Use:     "delete UUID",
+		Use:     "delete UUID|NAME",
 		Aliases: []string{"del", "delete", "rm"},
 		Args:    cobra.ArbitraryArgs,
 		Long: heredoc.Doc(`
@@ -62,7 +63,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if !opts.All && len(args) == 0 {
-		return fmt.Errorf("either specify an instance UUID or --all flag")
+		return fmt.Errorf("either specify an instance name or UUID, or use the --all flag")
 	}
 
 	opts.metro = cmd.Flag("metro").Value.String()
@@ -77,13 +78,13 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudLoginFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
 	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(auth.Token),
+		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
 	if opts.All {
@@ -93,9 +94,9 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		for _, instance := range instances {
-			log.G(ctx).Infof("removing %s", instance.UUID)
+			log.G(ctx).Infof("removing %s (%s)", instance.Name, instance.UUID)
 
-			if err := client.WithMetro(opts.metro).Delete(ctx, instance.UUID); err != nil {
+			if err := client.WithMetro(opts.metro).DeleteByUUID(ctx, instance.UUID); err != nil {
 				log.G(ctx).Error("could not stop instance: %w", err)
 			}
 		}
@@ -103,10 +104,16 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	for _, uuid := range args {
-		log.G(ctx).Infof("removing %s", uuid)
+	for _, arg := range args {
+		log.G(ctx).Infof("removing %s", arg)
 
-		if err := client.WithMetro(opts.metro).Delete(ctx, uuid); err != nil {
+		if utils.IsUUID(arg) {
+			err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
+		} else {
+			err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
+		}
+
+		if err != nil {
 			return fmt.Errorf("could not create instance: %w", err)
 		}
 	}

@@ -98,6 +98,8 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "KRAFT CLOUD IMAGE COMMANDS"})
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "KRAFT CLOUD INSTANCE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "KRAFT CLOUD VOLUME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "KRAFT CLOUD SERVICE GROUP COMMANDS"})
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
@@ -133,6 +135,11 @@ func Main(args []string) int {
 	// Set up the config manager in the context if it is available
 	if copts.ConfigManager != nil {
 		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
+	}
+
+	// Hydrate KraftCloud configuration
+	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
+		ctx = newCtx
 	}
 
 	// Set up the logger in the context if it is available

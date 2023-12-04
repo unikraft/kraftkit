@@ -2,7 +2,8 @@
 // Copyright (c) 2023, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package list
+
+package quotas
 
 import (
 	"context"
@@ -12,32 +13,32 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
+
+	kraftcloud "sdk.kraft.cloud"
 )
 
-type ListOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+type QuotasOptions struct {
+	Output string `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
 
 	metro string
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List instances",
-		Use:     "ls [FLAGS]",
-		Aliases: []string{"list"},
-		Example: heredoc.Doc(`
-			# List all instances in your account.
-			$ kraft cloud instances list
-		`),
+	cmd, err := cmdfactory.New(&QuotasOptions{}, cobra.Command{
+		Short:   "View your resource quota on KraftCloud",
+		Use:     "quotas",
+		Aliases: []string{"q", "quota"},
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
+		Example: heredoc.Doc(`
+			# View your resource quota on KraftCloud
+			$ kraft cloud quota
+		`),
 	})
 	if err != nil {
 		panic(err)
@@ -46,7 +47,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
 		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
@@ -58,20 +59,20 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ListOptions) Run(ctx context.Context, args []string) error {
+func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewInstancesClient(
+	client := kraftcloud.NewUsersClient(
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	instances, err := client.WithMetro(opts.metro).List(ctx)
+	quotas, err := client.WithMetro(opts.metro).Quotas(ctx)
 	if err != nil {
-		return fmt.Errorf("could not list instances: %w", err)
+		return fmt.Errorf("could not get quotas: %w", err)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, instances...)
+	return utils.PrintQuotas(ctx, opts.Output, *quotas)
 }
