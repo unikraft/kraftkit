@@ -13,7 +13,10 @@ import (
 
 var queryMark = lipgloss.NewStyle().
 	Background(lipgloss.Color("12")).
-	Foreground(lipgloss.Color("15")).
+	Foreground(lipgloss.AdaptiveColor{
+		Light: "10",
+		Dark:  "0",
+	}).
 	Render
 
 // NewConfirm is a utility method used in a CLI context to prompt the user with

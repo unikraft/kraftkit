@@ -16,8 +16,11 @@ import (
 var (
 	queryMark = lipgloss.NewStyle().
 			Background(lipgloss.Color("12")).
-			Foreground(lipgloss.Color("15")).
-			Render
+			Foreground(lipgloss.AdaptiveColor{
+			Light: "10",
+			Dark:  "0",
+		}).
+		Render
 
 	selectedText = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("32")).
