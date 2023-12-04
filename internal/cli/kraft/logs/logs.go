@@ -26,10 +26,12 @@ type LogOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
-		Short:   "Fetch the logs of a unikernel.",
-		Use:     "logs [FLAGS] MACHINE",
-		Args:    cobra.ExactArgs(1),
-		GroupID: "run",
+		Short: "Fetch the logs of a unikernel.",
+		Use:   "logs [FLAGS] MACHINE",
+		Args:  cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cmdfactory.AnnotationHelpGroup: "run",
+		},
 	})
 	if err != nil {
 		panic(err)
