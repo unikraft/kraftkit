@@ -18,6 +18,8 @@ BUILDENVS    ?= gcc \
 
 DOCKER       ?= docker
 
+PLATFORM     ?= linux/x86_64
+
 WITH_CACHE   ?= y
 
 .PHONY: qemu
@@ -32,6 +34,7 @@ qemu: _WITH_CACHE  := --no-cache
 endif
 qemu:
 	$(DOCKER) build \
+		--platform $(PLATFORM) \
 		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
 		--build-arg MAKE_NPROC=$(MAKE_NPROC) \
 		--tag $(IMAGE) \
@@ -51,6 +54,7 @@ myself: _WITH_CACHE := --no-cache
 endif
 myself:
 	$(DOCKER) build \
+		--platform $(PLATFORM) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--tag $(IMAGE) \
 		--target $(TARGET) \
@@ -97,6 +101,7 @@ base-golang: _WITH_CACHE      := --no-cache
 endif
 base-golang:
 	$(DOCKER) build \
+		--platform $(PLATFORM) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
@@ -117,6 +122,7 @@ github-action: _WITH_CACHE      := --no-cache
 endif
 github-action:
 	$(DOCKER) build \
+		--platform $(PLATFORM) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \
