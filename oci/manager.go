@@ -255,6 +255,8 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		if err != nil {
 			return nil, fmt.Errorf("query name is not globable: %w", err)
 		}
+	} else if !strings.ContainsRune(qname, ':') && len(query.Version()) > 0 {
+		qname = fmt.Sprintf("%s:%s", qname, query.Version())
 	}
 
 	qversion := query.Version()
