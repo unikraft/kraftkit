@@ -101,6 +101,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 func (pd *ParaProgress) Start() error {
 	teaOpts := []tea.ProgramOption{
 		tea.WithInput(nil),
+		tea.WithContext(pd.ctx),
 	}
 
 	if pd.norender {
