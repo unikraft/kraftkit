@@ -6,6 +6,7 @@ package cmdfactory
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -148,10 +149,10 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		})
 	}
 
-	if len(cmd.Groups()) > 0 {
-		maxPad := 0
-		mapping := make(map[string][]*cobra.Command)
+	maxPad := 0
+	mapping := make(map[string][]*cobra.Command)
 
+	if len(cmd.Groups()) > 0 {
 		for _, c := range traverse(cmd) {
 			if c.Short == "" {
 				continue
@@ -172,36 +173,61 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 
 			mapping[group] = append(mapping[group], c)
 		}
+	}
 
-		for _, group := range cmd.Groups() {
-			var usages []string
+	var printableGroups []string
+	for _, group := range cmd.Groups() {
+		printableGroups = append(printableGroups, group.ID)
+	}
 
-			for _, c := range mapping[group.ID] {
-				usages = append(usages, rpad(fullname(cmd, c), maxPad+2)+c.Short)
-			}
+	var usages []string
+	var ungrouped []*cobra.Command
 
-			if len(usages) > 0 {
-				helpEntries = append(helpEntries, helpEntry{
-					title: group.Title,
-					body:  strings.Join(usages, "\n"),
-				})
+	// Add "ungrouped" commands together
+	for _, c := range cmd.Commands() {
+		if c.Short == "" {
+			continue
+		}
+		if c.Hidden {
+			continue
+		}
+
+		// Ignore if already in a printable group
+		if group, ok := c.Annotations[AnnotationHelpGroup]; ok {
+			if slices.Contains[[]string](printableGroups, group) {
+				continue
 			}
 		}
-	} else {
+
+		pad := len(fullname(cmd, c))
+		if pad > maxPad {
+			maxPad = pad
+		}
+
+		ungrouped = append(ungrouped, c)
+	}
+
+	for _, c := range ungrouped {
+		usages = append(usages, rpad(fullname(cmd, c), maxPad+2)+c.Short)
+	}
+
+	if len(usages) > 0 {
+		helpEntries = append(helpEntries, helpEntry{
+			title: "SUBCOMMANDS",
+			body:  strings.Join(usages, "\n"),
+		})
+	}
+
+	for _, group := range cmd.Groups() {
 		var usages []string
-		for _, c := range cmd.Commands() {
-			if c.Short == "" {
-				continue
-			}
-			if c.Hidden {
-				continue
-			}
-			usages = append(usages, rpad(c.Name(), c.NamePadding())+c.Short)
+
+		for _, c := range mapping[group.ID] {
+			usages = append(usages, rpad(fullname(cmd, c), maxPad+2)+c.Short)
 		}
 
 		if len(usages) > 0 {
 			helpEntries = append(helpEntries, helpEntry{
-				title: "SUBCOMMANDS",
+				title: group.Title,
 				body:  strings.Join(usages, "\n"),
 			})
 		}
