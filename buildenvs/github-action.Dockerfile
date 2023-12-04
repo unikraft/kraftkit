@@ -43,6 +43,7 @@ RUN set -xe; \
       bzip2 \
       ca-certificates \
       cmake \
+      curl \
       flex \
       g++-12 \
       gawk \
