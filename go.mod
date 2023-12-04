@@ -60,7 +60,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231127184239-0ced8385386a
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.10.0
@@ -76,8 +76,6 @@ require (
 	sdk.kraft.cloud v0.4.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
-
-replace github.com/vishvananda/netlink => github.com/craciunoiuc/netlink v1.2.1-beta.2
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
