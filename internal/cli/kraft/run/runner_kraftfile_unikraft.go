@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
@@ -92,6 +93,13 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 		opts.platform.String(),
 		opts.Target,
 	)
+
+	// Remove targets which do not have a compiled kernel.
+	for i, targ := range targets {
+		if _, err := os.Stat(targ.Kernel()); err != nil {
+			targets = slices.Delete[[]target.Target](targets, i, 1)
+		}
+	}
 
 	var t target.Target
 
