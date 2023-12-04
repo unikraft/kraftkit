@@ -49,10 +49,10 @@ type TargetConfig struct {
 	name string
 
 	// architecture is the target architecture.
-	architecture arch.ArchitectureConfig
+	architecture arch.Architecture
 
 	// platform is the target platform.
-	platform plat.PlatformConfig
+	platform plat.Platform
 
 	// kconfig list of kconfig key-values specific to this library.
 	kconfig kconfig.KeyValueMap
