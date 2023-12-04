@@ -36,5 +36,6 @@ func packagers() []packager {
 	return []packager{
 		&packagerKraftfileUnikraft{},
 		&packagerKraftfileRuntime{},
+		&packagerCliKernel{},
 	}
 }
