@@ -8,7 +8,6 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/acorn-io/baaah v0.0.0-20230522221318-afcc93619e30
-	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/briandowns/spinner v1.23.0
 	github.com/cavaliergopher/cpio v1.0.1
 	github.com/charmbracelet/bubbles v0.16.1
