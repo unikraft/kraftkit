@@ -156,6 +156,7 @@ func (pti *ProcessTreeItem) Close() error {
 func (pt *ProcessTree) Start() error {
 	teaOpts := []tea.ProgramOption{
 		tea.WithInput(nil),
+		tea.WithContext(pt.ctx),
 	}
 
 	// Restore the old output for the IOStreams which is manipulated per process.
