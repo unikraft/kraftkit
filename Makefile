@@ -111,7 +111,7 @@ all: help
 ifeq ($(DEBUG),y)
 $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
 else
-$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w
+$(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w -linkmode external -extldflags '-static-pie'
 endif
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
@@ -121,6 +121,7 @@ $(addprefix $(.PROXY), $(BIN)):
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
 	$(GO) build \
+		-buildmode=pie \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$@ \
