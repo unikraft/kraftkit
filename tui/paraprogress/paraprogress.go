@@ -10,11 +10,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/barkimedes/go-deepcopy"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"golang.org/x/term"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 )
@@ -36,6 +36,7 @@ type ParaProgress struct {
 	failFast      bool
 	nameWidth     int
 	timeout       time.Duration
+	oldOut        iostreams.FileWriter
 }
 
 func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProgressOption) (*ParaProgress, error) {
@@ -52,6 +53,7 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		// process's name's width is checked and the maximum of all
 		// is used.
 		nameWidth: -1,
+		oldOut:    iostreams.G(ctx).Out,
 	}
 
 	for _, opt := range opts {
@@ -75,12 +77,8 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 		processes[i].NameWidth = maxNameLen
 		processes[i].timeout = md.timeout
 
-		pctx, err := deepcopy.Anything(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		processes[i].ctx = pctx.(context.Context)
+		pctx := ctx
+		processes[i].ctx = pctx
 		log.G(processes[i].ctx).Level = log.G(ctx).Level
 
 		// Update formatter when using KraftKit's TextFormatter.  The
@@ -114,6 +112,12 @@ func (pd *ParaProgress) Start() error {
 	}
 
 	tprog = tea.NewProgram(pd, teaOpts...)
+
+	// Restore the old output for the IOStreams which is manipulated per process.
+	defer func() {
+		iostreams.G(pd.ctx).Out = pd.oldOut
+		log.G(pd.ctx).Out = pd.oldOut
+	}()
 
 	if _, err := tprog.Run(); err != nil {
 		return err
