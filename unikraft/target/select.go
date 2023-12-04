@@ -32,7 +32,10 @@ func Select(targets []Target) (Target, error) {
 
 	queryMark := lipgloss.NewStyle().
 		Background(lipgloss.Color("12")).
-		Foreground(lipgloss.Color("15")).
+		Foreground(lipgloss.AdaptiveColor{
+			Light: "0",
+			Dark:  "15",
+		}).
 		Render
 
 	sp := selection.New(queryMark("[?]")+" select target:", names)

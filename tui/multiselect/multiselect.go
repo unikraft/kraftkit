@@ -17,8 +17,8 @@ var (
 	queryMark = lipgloss.NewStyle().
 			Background(lipgloss.Color("12")).
 			Foreground(lipgloss.AdaptiveColor{
-			Light: "10",
-			Dark:  "0",
+			Light: "0",
+			Dark:  "15",
 		}).
 		Render
 
