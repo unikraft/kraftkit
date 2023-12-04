@@ -13,25 +13,25 @@ var (
 
 	TextRed = lipgloss.NewStyle().
 		Background(lipgloss.Color("9")).
-		Foreground(lipgloss.CompleteAdaptiveColor{
-			Light: lipgloss.CompleteColor{TrueColor: "#ffffff", ANSI256: "15", ANSI: "15"},
-			Dark:  lipgloss.CompleteColor{TrueColor: "#5f0000", ANSI256: "52", ANSI: "0"},
+		Foreground(lipgloss.AdaptiveColor{
+			Light: "0",
+			Dark:  "15",
 		}).
 		Render
 
 	TextGreen = lipgloss.NewStyle().
 			Background(lipgloss.Color("10")).
 			Foreground(lipgloss.AdaptiveColor{
-			Light: "10",
-			Dark:  "0",
+			Light: "0",
+			Dark:  "15",
 		}).
 		Render
 
 	TextBlue = lipgloss.NewStyle().
 			Background(lipgloss.Color("12")).
 			Foreground(lipgloss.AdaptiveColor{
-			Light: "10",
-			Dark:  "0",
+			Light: "0",
+			Dark:  "15",
 		}).
 		Render
 
