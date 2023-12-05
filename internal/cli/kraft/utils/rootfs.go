@@ -21,9 +21,9 @@ import (
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.Target) error {
+func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.Target) (string, error) {
 	if rootfs == "" {
-		return nil
+		return "", nil
 	}
 
 	var processes []*processtree.ProcessTreeItem
@@ -51,7 +51,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.
 			initrd.WithArchitecture(arch),
 		)
 		if err != nil {
-			return fmt.Errorf("could not initialize initramfs builder: %w", err)
+			return "", fmt.Errorf("could not initialize initramfs builder: %w", err)
 		}
 
 		processes = append(processes,
@@ -79,12 +79,12 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.
 		processes...,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := model.Start(); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return rootfs, nil
 }

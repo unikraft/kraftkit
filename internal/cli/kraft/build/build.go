@@ -178,7 +178,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if err := utils.BuildRootfs(ctx, opts.workdir, opts.Rootfs, selected...); err != nil {
+	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.workdir, opts.Rootfs, selected...); err != nil {
 		return err
 	}
 

@@ -23,7 +23,7 @@ func WithName(name string) TargetOption {
 }
 
 // WithVersion sets the version of the target.
-func WithArchitecture(arch arch.ArchitectureConfig) TargetOption {
+func WithArchitecture(arch arch.Architecture) TargetOption {
 	return func(tc *TargetConfig) error {
 		tc.architecture = arch
 		return nil
@@ -31,7 +31,7 @@ func WithArchitecture(arch arch.ArchitectureConfig) TargetOption {
 }
 
 // WithPlatform sets the platform of the target.
-func WithPlatform(platform plat.PlatformConfig) TargetOption {
+func WithPlatform(platform plat.Platform) TargetOption {
 	return func(tc *TargetConfig) error {
 		tc.platform = platform
 		return nil

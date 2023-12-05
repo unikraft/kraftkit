@@ -9,12 +9,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
@@ -223,17 +221,8 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, fmt.Errorf("package does not convert to target")
 	}
 
-	if err := utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, targ); err != nil {
+	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, targ); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
-	}
-
-	initrdPath := ""
-	if len(opts.Rootfs) > 0 {
-		initrdPath = filepath.Join(
-			opts.Workdir,
-			unikraft.BuildDir,
-			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture().String()),
-		)
 	}
 
 	// If no arguments have been specified, use the ones which are default and
@@ -267,7 +256,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
 					packmanager.PackArgs(cmdShellArgs...),
-					packmanager.PackInitrd(initrdPath),
+					packmanager.PackInitrd(opts.Rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
