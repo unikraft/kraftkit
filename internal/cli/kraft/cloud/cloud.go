@@ -28,11 +28,13 @@ type CloudOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
-		Short:  "KraftCloud",
+		Short:  "cloud",
 		Use:    "cloud [FLAGS] [SUBCOMMAND|DIR]",
 		Hidden: true,
 		Long: heredoc.Docf(`
-		Manage resources on KraftCloud: The Millisecond Platform.
+		▄▀▄▀ kraft.cloud
+
+		Manage resources on The Millisecond Platform.
 
 		Learn more & sign up for the beta at https://kraft.cloud
 	
