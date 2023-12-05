@@ -31,14 +31,15 @@ type PullOptions struct {
 	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
 	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
+	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Manager      string   `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
+	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
 	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
 	WithDeps     bool     `long:"with-deps" short:"d" usage:"Pull dependencies"`
 	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
-	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 }
 
 // Pull a Unikraft component.
@@ -116,16 +117,15 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 	var project app.Application
 	var processes []*paraprogress.Process
 
-	workdir := opts.Workdir
-	if len(workdir) == 0 {
-		workdir, err = os.Getwd()
+	if len(opts.Workdir) == 0 {
+		opts.Workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(args) == 0 {
-		args = []string{workdir}
+	if len(opts.Output) == 0 {
+		opts.Output = opts.Workdir
 	}
 
 	pm := packmanager.G(ctx)
@@ -170,7 +170,8 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 	// Are we pulling an application directory?  If so, interpret the application
 	// so we can get a list of components
 	if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
-		workdir = args[0]
+		log.G(ctx).Debug("ignoring -w|--workdir")
+		opts.Workdir = args[0]
 		popts := []app.ProjectOption{}
 
 		if len(opts.Kraftfile) > 0 {
@@ -181,7 +182,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 
 		project, err := app.NewProjectFromOptions(
 			ctx,
-			append(popts, app.WithProjectWorkdir(workdir))...,
+			append(popts, app.WithProjectWorkdir(opts.Workdir))...,
 		)
 		if err != nil {
 			return err
@@ -242,7 +243,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					return packages[0].Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(workdir),
+						pack.WithPullWorkdir(opts.Output),
 						// pack.WithPullChecksum(!opts.NoChecksum),
 						// pack.WithPullCache(!opts.NoCache),
 					)
@@ -267,7 +268,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 			}
 		}
 
-		templateWorkdir, err := unikraft.PlaceComponent(workdir, project.Template().Type(), project.Template().Name())
+		templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
 		if err != nil {
 			return err
 		}
@@ -352,7 +353,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					return p.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(workdir),
+						pack.WithPullWorkdir(opts.Output),
 						pack.WithPullChecksum(!opts.NoChecksum),
 						pack.WithPullCache(opts.ForceCache),
 					)
