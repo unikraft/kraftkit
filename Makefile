@@ -190,6 +190,11 @@ properclean: ## Completely clean the repository's build artifacts.
 	rm -rf $(DISTDIR) $(TESTDIR)
 	$(DOCKER) rmi $(IMAGE)
 
+.PHONY: docs
+docs: OUTDIR ?= $(WORKDIR)/docs/
+docs: ## Generate Markdown documentation.
+	$(GO) run $(WORKDIR)/tools/gendocs $(OUTDIR)
+
 .PHONY: help
 help: ## Show this help menu and exit.
 	@awk 'BEGIN { \
