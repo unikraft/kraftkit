@@ -108,6 +108,11 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     builds:
       - #@ "{}-{}".format(binary, target)
+    files:
+      - src: scripts/kraftld
+        strip_parent: true
+        info:
+          mode: 0755
 #@ end
 #@ end
 #@ targets = [
