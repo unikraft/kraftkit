@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -453,13 +454,17 @@ func (app application) MakeArgs(ctx context.Context, tc target.Target) (*core.Ma
 		}
 	}
 
+	orderedLibraries := []string{}
 	for _, library := range unformattedLibraries {
 		if !library.IsUnpacked() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
-		libraries = append(libraries, library.Path())
+		orderedLibraries = append(orderedLibraries, library.Path())
 	}
+
+	slices.Sort(orderedLibraries)
+	libraries = append(libraries, orderedLibraries...)
 
 	// TODO: Platforms & architectures
 
