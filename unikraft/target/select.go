@@ -7,6 +7,7 @@ package target
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/selection"
@@ -71,6 +72,18 @@ func Filter(targets []Target, arch, plat, targ string) []Target {
 		// If only `targ` is supplied and the target name match
 		func(t Target, arch, plat, targ string) bool {
 			return len(targ) > 0 && len(plat) == 0 && len(arch) == 0 && t.Name() == targ
+		},
+
+		// If only `targ` and it represents a split between plat/arch
+		func(t Target, arch, plat, targ string) bool {
+			if !strings.Contains(targ, "/") {
+				return false
+			}
+			split := strings.Split(targ, "/")
+			if len(split) != 2 {
+				return false
+			}
+			return len(targ) > 0 && len(plat) == 0 && len(arch) == 0 && t.Platform().Name() == split[0] && split[1] == t.Architecture().Name()
 		},
 
 		// If only `arch` is supplied and the target's arch matches

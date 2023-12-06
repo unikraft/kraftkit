@@ -137,7 +137,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 			opts.Target,
 		)
 
-		if !config.G[config.KraftKit](ctx).NoPrompt {
+		if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
 			res, err := target.Select(selected)
 			if err != nil {
 				return err
