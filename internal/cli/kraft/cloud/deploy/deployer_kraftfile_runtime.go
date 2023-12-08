@@ -8,10 +8,17 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
-	"kraftkit.sh/pack"
+	"kraftkit.sh/log"
+	"kraftkit.sh/tui/processtree"
+
+	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type deployerKraftfileRuntime struct{}
@@ -48,16 +55,130 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	return true, nil
 }
 
-func (deployer *deployerKraftfileRuntime) Prepare(ctx context.Context, opts *DeployOptions, args ...string) ([]pack.Package, error) {
-	return pkg.Pkg(ctx, &pkg.PkgOptions{
+func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kraftcloudinstances.Instance, error) {
+	var pkgName string
+
+	if len(opts.Name) > 0 {
+		pkgName = opts.Name
+	} else if opts.Project != nil && len(opts.Project.Name()) > 0 {
+		pkgName = opts.Project.Name()
+	} else {
+		pkgName = filepath.Base(opts.Workdir)
+	}
+
+	if strings.HasPrefix(pkgName, "unikraft.io") {
+		pkgName = "index." + pkgName
+	}
+	if !strings.HasPrefix(pkgName, "index.unikraft.io") {
+		pkgName = fmt.Sprintf(
+			"index.unikraft.io/%s/%s:latest",
+			strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud"),
+			pkgName,
+		)
+	}
+
+	packs, err := pkg.Pkg(ctx, &pkg.PkgOptions{
 		Architecture: "x86_64",
 		Format:       "oci",
 		Kraftfile:    opts.Kraftfile,
-		Name:         args[0],
+		Name:         pkgName,
 		Platform:     "kraftcloud",
 		Project:      opts.Project,
 		Push:         true,
 		Strategy:     opts.Strategy,
 		Workdir:      opts.Workdir,
 	})
+
+	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
+	// from the name.
+	if pkgName[0:17] == "index.unikraft.io" {
+		pkgName = pkgName[6:]
+	}
+	if pkgName[0:12] == "unikraft.io/" {
+		pkgName = pkgName[12:]
+	}
+
+	// FIXME(nderjung): Gathering the digest like this really dirty.
+	metadata := packs[0].Columns()
+	var digest string
+	for _, m := range metadata {
+		if m.Name != "index" {
+			continue
+		}
+
+		digest = m.Value
+	}
+
+	var instance *kraftcloudinstances.Instance
+
+	paramodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
+			processtree.WithTimeout(opts.Timeout),
+		},
+		processtree.NewProcessTreeItem(
+			"deploying",
+			"",
+			func(ctx context.Context) error {
+			checkRemoteImages:
+				for {
+					// First check if the context has been cancelled
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("context cancelled")
+					default:
+					}
+
+					ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+					defer cancel()
+
+					images, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
+					if err != nil {
+						return fmt.Errorf("could not check list of images: %w", err)
+					}
+
+					for _, image := range images {
+						split := strings.Split(image.Digest, "@sha256:")
+						if !strings.HasPrefix(split[len(split)-1], digest) {
+							continue
+						}
+
+						break checkRemoteImages
+					}
+				}
+
+				instance, err = create.Create(ctx, &create.CreateOptions{
+					Env:       opts.Env,
+					FQDN:      opts.FQDN,
+					Memory:    opts.Memory,
+					Metro:     opts.Metro,
+					Name:      opts.Name,
+					Ports:     opts.Ports,
+					Replicas:  opts.Replicas,
+					Start:     !opts.NoStart,
+					SubDomain: opts.SubDomain,
+				}, pkgName)
+				if err != nil {
+					return fmt.Errorf("could not create instance: %w", err)
+				}
+
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := paramodel.Start(); err != nil {
+		return nil, err
+	}
+
+	return []kraftcloudinstances.Instance{*instance}, nil
 }

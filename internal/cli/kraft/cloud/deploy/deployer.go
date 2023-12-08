@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	"kraftkit.sh/pack"
+	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 // deployer is an interface for defining different mechanisms to perform a the
@@ -25,8 +25,8 @@ type deployer interface {
 	// current implementation.
 	Deployable(context.Context, *DeployOptions, ...string) (bool, error)
 
-	// Prepare performs the deployment based on the determined implementation.
-	Prepare(context.Context, *DeployOptions, ...string) ([]pack.Package, error)
+	// Deploy performs the deployment based on the determined implementation.
+	Deploy(context.Context, *DeployOptions, ...string) ([]kraftcloudinstances.Instance, error)
 }
 
 // deployers is the list of built-in deployers which are checked

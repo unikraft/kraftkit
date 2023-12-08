@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -18,15 +17,12 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type DeployOptions struct {
@@ -39,10 +35,11 @@ type DeployOptions struct {
 	Metro     string                    `noattribute:"true"`
 	Name      string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
 	NoStart   bool                      `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
-	Output    string                    `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output    string                    `local:"true" long:"output" short:"o" usage:"Set output format"`
 	Ports     []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project   app.Application           `noattribute:"true"`
 	Replicas  int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rootfs    string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Strategy  packmanager.MergeStrategy `noattribute:"true"`
 	SubDomain string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
 	Timeout   time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
@@ -173,124 +170,15 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not determine what or how to deploy from the given context")
 	}
 
-	var pkgName string
-
-	if len(opts.Name) > 0 {
-		pkgName = opts.Name
-	} else if opts.Project != nil && len(opts.Project.Name()) > 0 {
-		pkgName = opts.Project.Name()
-	} else {
-		pkgName = filepath.Base(opts.Workdir)
-	}
-
-	if strings.HasPrefix(pkgName, "unikraft.io") {
-		pkgName = "index." + pkgName
-	}
-	if !strings.HasPrefix(pkgName, "index.unikraft.io") {
-		pkgName = fmt.Sprintf(
-			"index.unikraft.io/%s/%s:latest",
-			strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud"),
-			pkgName,
-		)
-	}
-
-	packs, err := d.Prepare(ctx, opts, pkgName)
+	instances, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
 
-	// FIXME(nderjung): Gathering the digest like this really dirty.
-	metadata := packs[0].Columns()
-	var digest string
-	for _, m := range metadata {
-		if m.Name != "index" {
-			continue
-		}
-
-		digest = m.Value
+	if len(instances) == 1 && opts.Output == "" {
+		utils.PrettyPrintInstance(ctx, &instances[0], !opts.NoStart)
+		return nil
 	}
 
-	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
-	// from the name.
-	if pkgName[0:17] == "index.unikraft.io" {
-		pkgName = pkgName[6:]
-	}
-	if pkgName[0:12] == "unikraft.io/" {
-		pkgName = pkgName[12:]
-	}
-
-	var instance *kraftcloudinstances.Instance
-
-	paramodel, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
-			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(true),
-			processtree.WithTimeout(opts.Timeout),
-		},
-		processtree.NewProcessTreeItem(
-			"deploying",
-			"",
-			func(ctx context.Context) error {
-			checkRemoteImages:
-				for {
-					// First check if the context has been cancelled
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("context cancelled")
-					default:
-					}
-
-					ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-					defer cancel()
-
-					images, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
-					if err != nil {
-						return fmt.Errorf("could not check list of images: %w", err)
-					}
-
-					for _, image := range images {
-						split := strings.Split(image.Digest, "@sha256:")
-						if !strings.HasPrefix(split[len(split)-1], digest) {
-							continue
-						}
-
-						break checkRemoteImages
-					}
-				}
-
-				instance, err = create.Create(ctx, &create.CreateOptions{
-					Env:       opts.Env,
-					FQDN:      opts.FQDN,
-					Memory:    opts.Memory,
-					Metro:     opts.Metro,
-					Name:      opts.Name,
-					Ports:     opts.Ports,
-					Replicas:  opts.Replicas,
-					Start:     !opts.NoStart,
-					SubDomain: opts.SubDomain,
-				}, pkgName)
-				if err != nil {
-					return fmt.Errorf("could not create instance: %w", err)
-				}
-
-				return nil
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := paramodel.Start(); err != nil {
-		return err
-	}
-
-	utils.PrettyPrintInstance(ctx, instance, !opts.NoStart)
-
-	return nil
+	return utils.PrintInstances(ctx, opts.Output, instances...)
 }
