@@ -34,6 +34,7 @@ type deployer interface {
 // is used with the controller.
 func deployers() []deployer {
 	return []deployer{
+		&deployerImageName{},
 		&deployerKraftfileRuntime{},
 		&deployerKraftfileUnikraft{},
 	}
