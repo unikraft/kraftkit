@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -18,35 +17,43 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type DeployOptions struct {
-	Auth      *config.AuthConfig        `noattribute:"true"`
-	Client    kraftcloud.KraftCloud     `noattribute:"true"`
-	Env       []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	FQDN      string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
-	Kraftfile string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
-	Memory    int64                     `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
-	Metro     string                    `noattribute:"true"`
-	Name      string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
-	NoStart   bool                      `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
-	Output    string                    `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
-	Ports     []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Project   app.Application           `noattribute:"true"`
-	Replicas  int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Strategy  packmanager.MergeStrategy `noattribute:"true"`
-	SubDomain string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
-	Timeout   time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
-	Workdir   string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
+	Auth         *config.AuthConfig        `noattribute:"true"`
+	Client       kraftcloud.KraftCloud     `noattribute:"true"`
+	DotConfig    string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Env          []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	ForcePull    bool                      `long:"force-pull" usage:"Force pulling packages before building"`
+	FQDN         string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
+	Jobs         int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg    bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile    string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
+	Memory       int64                     `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
+	Metro        string                    `noattribute:"true"`
+	Name         string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
+	NoCache      bool                      `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure  bool                      `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast       bool                      `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch      bool                      `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoStart      bool                      `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
+	NoUpdate     bool                      `long:"no-update" usage:"Do not update package index before running the build"`
+	Output       string                    `local:"true" long:"output" short:"o" usage:"Set output format"`
+	Ports        []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	Project      app.Application           `noattribute:"true"`
+	Replicas     int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
+	SaveBuildLog string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Strategy     packmanager.MergeStrategy `noattribute:"true"`
+	SubDomain    string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
+	Timeout      time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
+	Workdir      string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -59,8 +66,11 @@ func NewCmd() *cobra.Command {
 		},
 		Example: heredoc.Docf(`
 		# Create a new deployment at https://hello-world.fra0.kraft.cloud in Frankfurt
-		# of your current working directory which exposes a port at 8080:
-		kraft cloud --metro fra0 deploy --subdomain hello-world -p 443:8080 .`),
+		# of your current working directory which exposes a port at 8080.
+		kraft cloud --metro fra0 deploy --subdomain hello-world -p 443:8080 .
+		
+		# Alternatively supply an existing image which is available in the catalog:
+		kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest`),
 	})
 	if err != nil {
 		panic(err)
@@ -173,124 +183,15 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not determine what or how to deploy from the given context")
 	}
 
-	var pkgName string
-
-	if len(opts.Name) > 0 {
-		pkgName = opts.Name
-	} else if opts.Project != nil && len(opts.Project.Name()) > 0 {
-		pkgName = opts.Project.Name()
-	} else {
-		pkgName = filepath.Base(opts.Workdir)
-	}
-
-	if strings.HasPrefix(pkgName, "unikraft.io") {
-		pkgName = "index." + pkgName
-	}
-	if !strings.HasPrefix(pkgName, "index.unikraft.io") {
-		pkgName = fmt.Sprintf(
-			"index.unikraft.io/%s/%s:latest",
-			strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud"),
-			pkgName,
-		)
-	}
-
-	packs, err := d.Prepare(ctx, opts, pkgName)
+	instances, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
 
-	// FIXME(nderjung): Gathering the digest like this really dirty.
-	metadata := packs[0].Columns()
-	var digest string
-	for _, m := range metadata {
-		if m.Name != "index" {
-			continue
-		}
-
-		digest = m.Value
+	if len(instances) == 1 && opts.Output == "" {
+		utils.PrettyPrintInstance(ctx, &instances[0], !opts.NoStart)
+		return nil
 	}
 
-	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
-	// from the name.
-	if pkgName[0:17] == "index.unikraft.io" {
-		pkgName = pkgName[6:]
-	}
-	if pkgName[0:12] == "unikraft.io/" {
-		pkgName = pkgName[12:]
-	}
-
-	var instance *kraftcloudinstances.Instance
-
-	paramodel, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
-			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(true),
-			processtree.WithTimeout(opts.Timeout),
-		},
-		processtree.NewProcessTreeItem(
-			"deploying",
-			"",
-			func(ctx context.Context) error {
-			checkRemoteImages:
-				for {
-					// First check if the context has been cancelled
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("context cancelled")
-					default:
-					}
-
-					ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-					defer cancel()
-
-					images, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
-					if err != nil {
-						return fmt.Errorf("could not check list of images: %w", err)
-					}
-
-					for _, image := range images {
-						split := strings.Split(image.Digest, "@sha256:")
-						if !strings.HasPrefix(split[len(split)-1], digest) {
-							continue
-						}
-
-						break checkRemoteImages
-					}
-				}
-
-				instance, err = create.Create(ctx, &create.CreateOptions{
-					Env:       opts.Env,
-					FQDN:      opts.FQDN,
-					Memory:    opts.Memory,
-					Metro:     opts.Metro,
-					Name:      opts.Name,
-					Ports:     opts.Ports,
-					Replicas:  opts.Replicas,
-					Start:     !opts.NoStart,
-					SubDomain: opts.SubDomain,
-				}, pkgName)
-				if err != nil {
-					return fmt.Errorf("could not create instance: %w", err)
-				}
-
-				return nil
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := paramodel.Start(); err != nil {
-		return err
-	}
-
-	utils.PrettyPrintInstance(ctx, instance, !opts.NoStart)
-
-	return nil
+	return utils.PrintInstances(ctx, opts.Output, instances...)
 }

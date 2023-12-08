@@ -41,9 +41,9 @@ type BuildOptions struct {
 	Rootfs       string `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
+	Workdir      string `noattribute:"true"`
 
 	project app.Application
-	workdir string
 }
 
 // Build a Unikraft unikernel.
@@ -96,16 +96,16 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	var err error
 	if len(args) == 0 {
-		opts.workdir, err = os.Getwd()
+		opts.Workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
-	} else {
-		opts.workdir = args[0]
+	} else if len(opts.Workdir) == 0 {
+		opts.Workdir = args[0]
 	}
 
 	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.workdir),
+		app.WithProjectWorkdir(opts.Workdir),
 	}
 
 	if len(opts.Kraftfile) > 0 {
@@ -178,7 +178,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.workdir, opts.Rootfs, selected...); err != nil {
+	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {
 		return err
 	}
 
