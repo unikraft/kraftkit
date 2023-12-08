@@ -14,6 +14,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -28,6 +29,7 @@ import (
 	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft/arch"
 )
 
 type RunOptions struct {
@@ -257,6 +259,12 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 
 	if err = opts.discoverNetworkController(ctx); err != nil {
 		return err
+	}
+
+	if _, found := arch.ArchitecturesByName()[opts.Architecture]; !found {
+		log.G(ctx).WithFields(logrus.Fields{
+			"arch": opts.Architecture,
+		}).Warn("unknown or incompatible")
 	}
 
 	machine := &machineapi.Machine{
