@@ -88,6 +88,9 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Strategy:     opts.Strategy,
 		Workdir:      opts.Workdir,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("could not package: %w", err)
+	}
 
 	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
 	// from the name.
