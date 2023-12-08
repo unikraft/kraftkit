@@ -15,6 +15,63 @@ import (
 	"kraftkit.sh/unikraft/component"
 )
 
+type ArchitectureName string
+
+const (
+	ArchitectureUnknown = ArchitectureName("unknown")
+	ArchitectureX86_64  = ArchitectureName("x86_64")
+	ArchitectureArm64   = ArchitectureName("arm64")
+	ArchitectureArm     = ArchitectureName("arm")
+)
+
+// String implements fmt.Stringer
+func (ht ArchitectureName) String() string {
+	return string(ht)
+}
+
+// ArchitectureByName returns the architecture for a given name.
+// If the name is not known, it returns it unchanged.
+func ArchitectureByName(name string) ArchitectureName {
+	architectures := ArchitecturesByName()
+	if _, ok := architectures[name]; !ok {
+		return ArchitectureUnknown
+	}
+	return architectures[name]
+}
+
+// ArchitecturesByName returns the list of known architectures and their name alises.
+func ArchitecturesByName() map[string]ArchitectureName {
+	return map[string]ArchitectureName{
+		"x86_64": ArchitectureX86_64,
+		"arm64":  ArchitectureArm64,
+		"arm":    ArchitectureArm,
+	}
+}
+
+// Architectures returns all the unique Architectures.
+func Architectures() []ArchitectureName {
+	return []ArchitectureName{
+		ArchitectureX86_64,
+		ArchitectureArm64,
+		ArchitectureArm,
+	}
+}
+
+// ArchitectureAliases returns all the name alises for a given architecture.
+func ArchitectureAliases() map[ArchitectureName][]string {
+	aliases := map[ArchitectureName][]string{}
+
+	for alias, plat := range ArchitecturesByName() {
+		if aliases[plat] == nil {
+			aliases[plat] = make([]string, 0)
+		}
+
+		aliases[plat] = append(aliases[plat], alias)
+	}
+
+	return aliases
+}
+
 type Architecture interface {
 	component.Component
 }
@@ -110,12 +167,12 @@ func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 	var arch strings.Builder
 	arch.WriteString(kconfig.Prefix)
 
-	switch ac.Name() {
-	case "x86_64", "amd64":
+	switch ArchitectureName(ac.Name()) {
+	case ArchitectureX86_64:
 		arch.WriteString("ARCH_X86_64")
-	case "arm32":
+	case ArchitectureArm:
 		arch.WriteString("ARCH_ARM_32")
-	case "arm64":
+	case ArchitectureArm64:
 		arch.WriteString("ARCH_ARM_64")
 	}
 
