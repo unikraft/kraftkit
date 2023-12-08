@@ -130,8 +130,21 @@ $(addprefix $(.PROXY), $(BIN)):
 .PHONY: tools
 tools: $(TOOLS)
 
+ifeq ($(DEBUG),y)
+$(addprefix $(.PROXY), $(TOOLS)): GO_GCFLAGS ?= -N -l
+else
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS ?= -s -w
+endif
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
 $(addprefix $(.PROXY), $(TOOLS)):
-	cd $(WORKDIR)/tools/$@ && $(GO) build -o $(DISTDIR)/$@ . && cd $(WORKDIR)
+	(cd $(WORKDIR)/tools/$@ && \
+		$(GO) build -v \
+		-o $(DISTDIR)/$@ \
+		-gcflags=all='$(GO_GCFLAGS)' \
+		-ldflags='$(GO_LDFLAGS)' \
+		./...)
 
 # Proxy all "build environment" (buildenvs) targets
 buildenv-%:
