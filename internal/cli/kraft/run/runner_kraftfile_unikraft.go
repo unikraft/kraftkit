@@ -95,11 +95,10 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 	)
 
 	// Remove targets which do not have a compiled kernel.
-	for i, targ := range targets {
-		if _, err := os.Stat(targ.Kernel()); err != nil {
-			targets = slices.Delete[[]target.Target](targets, i, 1)
-		}
-	}
+	targets = slices.DeleteFunc(targets, func(targ target.Target) bool {
+		_, err := os.Stat(targ.Kernel())
+		return err != nil
+	})
 
 	var t target.Target
 
