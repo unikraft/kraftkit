@@ -35,5 +35,6 @@ type deployer interface {
 func deployers() []deployer {
 	return []deployer{
 		&deployerKraftfileRuntime{},
+		&deployerKraftfileUnikraft{},
 	}
 }
