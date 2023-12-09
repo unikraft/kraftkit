@@ -149,7 +149,7 @@ $(addprefix $(.PROXY), $(TOOLS)):
 
 # Proxy all "build environment" (buildenvs) targets
 buildenv-%:
-		$(MAKE) -C $(WORKDIR)/buildenvs $*
+	$(MAKE) -C $(WORKDIR)/buildenvs $*
 
 # Run an environment where we can build
 .PHONY: devenv
