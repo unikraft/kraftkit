@@ -24,6 +24,7 @@ GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
 GO_VERSION  ?= 1.21
 
+# Calculate the project version based on git history
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
 HASH        ?= $(shell git update-index -q --refresh && \
