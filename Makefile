@@ -105,7 +105,7 @@ ifneq ($(DOCKER_RUN),)
 .PROXY      := docker-proxy-
 $(BIN): ENVIRONMENT ?= myself-full
 $(BIN):
-	$(info Running target via Docker...)
+	$(info Running target via $(DOCKER)...)
 	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) GOOS=$(GOOS) GOARCH=$(GOARCH) -e $@)
 	$(Q)exit 0
 endif
