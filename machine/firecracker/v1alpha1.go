@@ -116,7 +116,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				"",
 				"",
 				// By default, create the directory if it does not exist when mounting.
-				"mkpath",
+				"mkmp",
 			).String())
 		default:
 			return machine, fmt.Errorf("unsupported Firecracker volume driver: %v", vol.Spec.Driver)
