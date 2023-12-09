@@ -24,6 +24,13 @@ GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
 GO_VERSION  ?= 1.21
 
+# Add a special version tag for pull requests
+ifneq ($(shell grep 'refs/pull' $(WORKDIR)/.git/FETCH_HEAD),)
+HASH_COMMIT ?= HEAD
+HASH        += pr-$(shell cat $(WORKDIR)/.git/FETCH_HEAD | awk -F/ '{print $$3}')
+endif
+
+# Calculate the project version based on git history
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
 HASH        ?= $(shell git update-index -q --refresh && \
@@ -98,7 +105,7 @@ ifneq ($(DOCKER_RUN),)
 .PROXY      := docker-proxy-
 $(BIN): ENVIRONMENT ?= myself-full
 $(BIN):
-	$(info Running target via Docker...)
+	$(info Running target via $(DOCKER)...)
 	$(Q)$(call DOCKER_RUN,,$(ENVIRONMENT),$(MAKE) GOOS=$(GOOS) GOARCH=$(GOARCH) -e $@)
 	$(Q)exit 0
 endif
@@ -130,12 +137,25 @@ $(addprefix $(.PROXY), $(BIN)):
 .PHONY: tools
 tools: $(TOOLS)
 
+ifeq ($(DEBUG),y)
+$(addprefix $(.PROXY), $(TOOLS)): GO_GCFLAGS ?= -N -l
+else
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS ?= -s -w
+endif
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
+$(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
 $(addprefix $(.PROXY), $(TOOLS)):
-	cd $(WORKDIR)/tools/$@ && $(GO) build -o $(DISTDIR)/$@ . && cd $(WORKDIR)
+	(cd $(WORKDIR)/tools/$@ && \
+		$(GO) build -v \
+		-o $(DISTDIR)/$@ \
+		-gcflags=all='$(GO_GCFLAGS)' \
+		-ldflags='$(GO_LDFLAGS)' \
+		./...)
 
 # Proxy all "build environment" (buildenvs) targets
 buildenv-%:
-		$(MAKE) -C $(WORKDIR)/buildenvs $*
+	$(MAKE) -C $(WORKDIR)/buildenvs $*
 
 # Run an environment where we can build
 .PHONY: devenv

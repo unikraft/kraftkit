@@ -12,17 +12,15 @@ FROM golang:${GO_VERSION}-bullseye AS build
 
 COPY . /go/src/kraftkit.sh
 
-WORKDIR /go/src/kraftkit.sh/tools/github-action
+WORKDIR /go/src/kraftkit.sh
 
 ENV GOROOT=/usr/local/go
 
 RUN set -xe; \
     git config \
         --global \
-        --add safe.directory /go/src/kraftkit.sh/tools/github-action; \
-    go build \
-        -o /github-action \
-        -a;
+        --add safe.directory /go/src/kraftkit.sh; \
+    DOCKER= DISTDIR=/ make github-action;
 
 FROM ${REGISTRY}/qemu:${QEMU_VERSION} AS qemu
 FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS kraftkit
