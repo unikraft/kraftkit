@@ -24,6 +24,12 @@ GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
 GO_VERSION  ?= 1.21
 
+# Add a special version tag for pull requests
+ifneq ($(shell grep 'refs/pull' $(WORKDIR)/.git/FETCH_HEAD),)
+HASH_COMMIT ?= HEAD
+HASH        += pr-$(shell cat $(WORKDIR)/.git/FETCH_HEAD | awk -F/ '{print $$3}')
+endif
+
 # Calculate the project version based on git history
 ifeq ($(HASH),)
 HASH_COMMIT ?= HEAD
