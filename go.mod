@@ -16,7 +16,7 @@ require (
 	github.com/cli/cli/v2 v2.32.0
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
-	github.com/compose-spec/compose-go v1.17.0
+	github.com/compose-spec/compose-go v1.20.2
 	github.com/containerd/containerd v1.7.2
 	github.com/containerd/nerdctl v1.4.0
 	github.com/cyphar/filepath-securejoin v0.2.4
@@ -106,7 +106,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
-	github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa // indirect
+	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
