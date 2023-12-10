@@ -1,4 +1,14 @@
 #! .goreleaser.yaml
+#@ binaries = {
+#@   "kraft": {
+#@     "darwin": ["amd64", "arm64"],
+#@     "freebsd": ["amd64", "arm64"],
+#@     "linux": ["amd64", "arm64"],
+#@   },
+#@   "runu": {
+#@     "linux": ["amd64"],
+#@   },
+#@ }
 changelog:
   sort: asc
   use: github
@@ -77,17 +87,12 @@ nfpms:
     contents:
       - src: scripts/kraftld
         dst: /usr/local/bin/kraftld
+
 aurs:
   - homepage: https://kraftkit.sh
     ids:
-#@ targets = [
-#@   "linux-amd64",
-#@   "linux-arm64"
-#@ ]
-#@ for binary in ["kraft"]:
-#@ for target in targets:
-      - #@ "archive-{}-{}".format(binary, target)
-#@ end
+#@ for arch in binaries["kraft"]["linux"]:
+      - #@ "archive-kraft-linux-{}".format(arch)
 #@ end
     description: Build and use highly customized and ultra-lightweight unikernels
     maintainers:
@@ -103,17 +108,12 @@ aurs:
     commit_author:
       name: Unikraft Bot
       email: monkey+aur@unikraft.io
+
 nix:
   - name: kraftkit
     ids:
-#@ targets = [
-#@   "linux-amd64",
-#@   "linux-arm64"
-#@ ]
-#@ for binary in ["kraft"]:
-#@ for target in targets:
-      - #@ "archive-{}-{}".format(binary, target)
-#@ end
+#@ for arch in binaries["kraft"]["linux"]:
+      - #@ "archive-kraft-linux-{}".format(arch)
 #@ end
     repository:
       owner: unikraft
@@ -125,8 +125,16 @@ nix:
     install: |-
       mkdir -p $out/bin
       cp -vr ./dist/kraft $out/bin/kraft
+
 brews:
   - name: kraftkit
+    ids:
+#@ for arch in binaries["kraft"]["linux"]:
+      - #@ "archive-kraft-linux-{}".format(arch)
+#@ end
+#@ for arch in binaries["kraft"]["darwin"]:
+      - #@ "archive-kraft-darwin-{}".format(arch)
+#@ end
     url_template: "https://github.com/unikraft/kraftkit/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     commit_author:
       name: Unikraft Bot
@@ -155,26 +163,23 @@ brews:
       name: homebrew-cli
 
 builds:
-#@ targets = {
-#@   "linux-amd64": {"os": "linux", "arch": "amd64"},
-#@   "linux-arm64": {"os": "linux", "arch": "arm64"},
-#@   "freebsd-amd64": {"os": "freebsd", "arch": "amd64"},
-#@   "freebsd-arm64": {"os": "freebsd", "arch": "arm64"},
-#@   "darwin-arm64": {"os": "darwin", "arch": "arm64"},
-#@   "darwin-amd64": {"os": "darwin", "arch": "amd64"}
-#@ }
-#@ for binary in ["kraft"]:
-#@ for target, specs in targets.items():
-  - id: #@ "{}-{}".format(binary, target)
-    binary: #@ binary
-    main: #@ "./cmd/{}".format(binary)
+#@ for bin, oses in binaries.items():
+#@ for os, archs in oses.items():
+#@ for arch in archs:
+  - id: #@ "{}-{}-{}".format(bin, os, arch)
+    binary: #@ bin
+    main: #@ "./cmd/{}".format(bin)
     env:
+    #@ if bin == "runu":
+      - CGO_ENABLED=1
+    #@ else:
       - CGO_ENABLED=0
+    #@ end
       - GOMOD=kraftkit.sh
     goos:
-      - #@ specs["os"]
+      - #@ os
     goarch:
-      - #@ specs["arch"]
+      - #@ arch
     ldflags:
       - -s -w
       - -X {{ .Env.GOMOD }}/internal/version.version={{ .Version }}
@@ -182,41 +187,16 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/version.buildTime={{ .Date }}
 #@ end
 #@ end
-#@ targets = {
-#@   "linux-amd64": {"os": "linux", "arch": "amd64"}
-#@ }
-#@ for binary in ["runu"]:
-#@ for target, specs in targets.items():
-  - id: #@ "{}-{}".format(binary, target)
-    binary: #@ binary
-    main: #@ "./cmd/{}".format(binary)
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - #@ specs["os"]
-    goarch:
-      - #@ specs["arch"]
-    ldflags:
-      - -s -w
-#@ end
 #@ end
 
 archives:
-#@ targets = [
-#@   "linux-amd64",
-#@   "linux-arm64",
-#@   "freebsd-amd64",
-#@   "freebsd-arm64",
-#@   "darwin-arm64",
-#@   "darwin-amd64"
-#@ ]
-#@ for binary in ["kraft"]:
-#@ for target in targets:
-  - id: #@ "archive-{}-{}".format(binary, target)
+#@ for os, archs in binaries["kraft"].items():
+#@ for arch in archs:
+  - id: #@ "archive-kraft-{}-{}".format(os, arch)
     format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: kraft_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     builds:
-      - #@ "{}-{}".format(binary, target)
+      - #@ "kraft-{}-{}".format(os, arch)
     files:
       - src: scripts/kraftld
         strip_parent: true
@@ -224,15 +204,13 @@ archives:
           mode: 0755
 #@ end
 #@ end
-#@ targets = [
-#@   "linux-amd64"
-#@ ]
-#@ for binary in ["runu"]:
-#@ for target in targets:
-  - id: #@ "archive-{}-{}".format(binary, target)
+
+#@ for os, archs in binaries["runu"].items():
+#@ for arch in archs:
+  - id: #@ "archive-runu-{}-{}".format(os, arch)
     format: tar.gz
-    name_template: "{{ .ProjectName }}_runu_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: runu_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     builds:
-      - #@ "{}-{}".format(binary, target)
+      - #@ "runu-{}-{}".format(os, arch)
 #@ end
 #@ end
