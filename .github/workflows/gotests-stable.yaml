@@ -16,7 +16,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.21.2
           cache: false
@@ -54,7 +54,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.21.2
           cache: false
@@ -95,7 +95,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21.2
           cache: false
@@ -142,7 +142,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21.2
           cache: false
