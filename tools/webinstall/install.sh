@@ -1145,7 +1145,7 @@ install_linux_manual() {
 
     _ill_url=$(printf "%s%s%s%s"                \
         "https://github.com/unikraft/kraftkit"  \
-        "/releases/latest/download/kraftkit_"   \
+        "/releases/latest/download/kraft_"      \
         "$("$CAT" $_ill_version_file)"          \
         "_linux_amd64.tar.gz"
     )
@@ -1177,7 +1177,7 @@ install_linux_manual() {
     fi
 
     _ill_binary="kraft"
-    _ill_archive="kraftkit.tar.gz"
+    _ill_archive="kraft.tar.gz"
     downloader "$_ill_url" "$_ill_archive" "$_ill_arch"
     _CLEANUP_ARCHIVE="$_ill_archive"
 
