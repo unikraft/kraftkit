@@ -3,11 +3,11 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=bullseye-20221114
+ARG DEBIAN_VERSION=bookworm-20230725
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 
-ARG QEMU_VERSION=7.2.4
+ARG QEMU_VERSION=7.1.0
 ARG WITH_XEN=disable
 ARG WITH_KVM=enable
 
@@ -34,9 +34,11 @@ RUN set -ex; \
         libglib2.0-dev \
         liblzo2-dev \
         libpixman-1-dev \
+        libslirp-dev \
+        libslirp0 \
         ninja-build \
         pkg-config \
-        python \
+        python3 \
         texinfo \
         vde2 \
         xz-utils \
@@ -151,6 +153,7 @@ RUN set -ex; \
         --disable-sdl-image \
         --disable-seccomp \
         --disable-selinux \
+	    --enable-slirp=git \
         --disable-slirp-smbd \
         --disable-smartcard \
         --disable-snappy \
