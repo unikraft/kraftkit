@@ -261,10 +261,12 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if _, found := arch.ArchitecturesByName()[opts.Architecture]; !found {
-		log.G(ctx).WithFields(logrus.Fields{
-			"arch": opts.Architecture,
-		}).Warn("unknown or incompatible")
+	if len(opts.Architecture) > 0 {
+		if _, found := arch.ArchitecturesByName()[opts.Architecture]; !found {
+			log.G(ctx).WithFields(logrus.Fields{
+				"arch": opts.Architecture,
+			}).Warn("unknown or incompatible")
+		}
 	}
 
 	machine := &machineapi.Machine{
