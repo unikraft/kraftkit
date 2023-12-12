@@ -166,7 +166,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					Replicas:  opts.Replicas,
 					Start:     !opts.NoStart,
 					SubDomain: opts.SubDomain,
-				}, pkgName)
+				}, append([]string{pkgName}, args...)...)
 				if err != nil {
 					return fmt.Errorf("could not create instance: %w", err)
 				}
