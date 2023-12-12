@@ -90,7 +90,6 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	qopts := []packmanager.QueryOption{
 		packmanager.WithName(runner.project.Runtime().Name()),
 		packmanager.WithVersion(runner.project.Runtime().Version()),
-		packmanager.WithUpdate(true),
 	}
 
 	if len(targets) == 1 {
@@ -134,30 +133,69 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			packmanager.WithKConfig(kconfigs),
 		)
 	} else {
-		arch, err := ukarch.HostArchitecture()
-		if err != nil {
-			return fmt.Errorf("could not get host architecture: %w", err)
-		}
-
-		plat, _, err := platform.Detect(ctx)
-		if err != nil {
-			return fmt.Errorf("could not get host platform: %w", err)
-		}
-
-		// Use host information
 		qopts = append(qopts,
-			packmanager.WithPlatform(plat.String()),
-			packmanager.WithArchitecture(arch),
+			packmanager.WithPlatform(opts.platform.String()),
 		)
+		if opts.Architecture != "" {
+			qopts = append(qopts,
+				packmanager.WithArchitecture(opts.Architecture),
+			)
+		}
 	}
 
-	packs, err := packmanager.G(ctx).Catalog(ctx, qopts...)
+	packs, err := packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
 	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
-		return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
-	} else if len(packs) > 1 {
-		return fmt.Errorf("could not find runtime: too many options")
+		// Try again with a remote update request.  Save this to qopts in case we
+		// need to call `Catalog` again.
+		qopts = append(qopts, packmanager.WithUpdate(true))
+		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
+		if err != nil {
+			return fmt.Errorf("could not query catalog: %w", err)
+		} else if len(packs) == 0 {
+			return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
+		}
+	}
+
+	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+		// At this point, we have queried the registry without asking for the
+		// platform and architecture and received multiple options.  Re-query the
+		// catalog with the host architecture and platform.
+
+		if opts.Architecture == "" {
+			opts.Architecture, err = ukarch.HostArchitecture()
+			if err != nil {
+				return fmt.Errorf("could not get host architecture: %w", err)
+			}
+		}
+		if opts.Platform == "" {
+			plat, _, err := platform.Detect(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get host platform: %w", err)
+			}
+
+			opts.Platform = plat.String()
+		}
+
+		qopts = append(qopts,
+			packmanager.WithPlatform(opts.Platform),
+			packmanager.WithArchitecture(opts.Architecture),
+		)
+
+		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
+		if err != nil {
+			return fmt.Errorf("could not query catalog: %w", err)
+		} else if len(packs) == 0 {
+			return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
+		} else if len(packs) > 1 {
+			return fmt.Errorf("could not find runtime: too many options")
+		}
+
+		log.G(ctx).
+			WithField("arch", opts.Architecture).
+			WithField("plat", opts.Platform).
+			Info("using")
 	}
 
 	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
