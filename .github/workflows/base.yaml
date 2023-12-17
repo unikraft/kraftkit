@@ -132,7 +132,7 @@ jobs:
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: oci-images
           path: /tmp
