@@ -34,4 +34,5 @@ const (
 	// Built-in paths
 	VendorDir = ".unikraft"
 	BuildDir  = ".unikraft/build"
+	LibsDir   = ".unikraft/libs"
 )
