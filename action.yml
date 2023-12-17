@@ -132,6 +132,7 @@ runs:
   - name: Run kraft
     shell: bash
     run: |
+      ACTION_WORKSPACE=$(echo "${GITHUB_WORKSPACE}" | grep -Eo "^.*work")
       docker run \
         --workdir /github/workspace \
         --rm \
@@ -157,9 +158,9 @@ runs:
         -e "INPUT_WORKDIR=${{ inputs.workdir }}" \
         -v "${HOME}/.docker/config.json":"${HOME}/.docker/config.json" \
         -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
-        -v "/home/runner/work/_temp/_github_home":"/github/home" \
-        -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" \
-        -v "/home/runner/work/_temp/_runner_file_commands":"/github/file_commands" \
+        -v "${ACTION_WORKSPACE}/_temp/_github_home":"/github/home" \
+        -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
+        -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/github/file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
         kraftkit.sh/github-action:v0
   - name: Stop BuildKit
