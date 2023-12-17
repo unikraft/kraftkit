@@ -39,7 +39,7 @@ jobs:
           outputs: type=docker,dest=/tmp/myself.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-images
           path: /tmp/myself.tar

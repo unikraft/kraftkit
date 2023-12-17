@@ -49,7 +49,7 @@ jobs:
           outputs: type=docker,dest=/tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-images
           path: /tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
@@ -97,7 +97,7 @@ jobs:
           outputs: type=docker,dest=/tmp/myself.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-images
           path: /tmp/myself.tar
@@ -155,7 +155,7 @@ jobs:
           outputs: type=docker,dest=/tmp/base.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-images
           path: /tmp/base.tar
@@ -203,7 +203,7 @@ jobs:
           outputs: type=docker,dest=/tmp/base-golang.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-images
           path: /tmp/base-golang.tar
