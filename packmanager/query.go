@@ -80,7 +80,7 @@ func (query *Query) KConfig() []string {
 	return query.kConfig
 }
 
-// Update indicates whether the package manager should use use remote manifests
+// Update indicates whether the package manager should use remote manifests
 // when making its query.
 func (query *Query) Update() bool {
 	return query.update

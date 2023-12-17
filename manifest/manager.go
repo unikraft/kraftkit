@@ -499,3 +499,45 @@ func (m *manifestManager) LocalManifestIndex(ctx context.Context) string {
 func (m *manifestManager) Format() pack.PackageFormat {
 	return ManifestFormat
 }
+
+func (m *manifestManager) Show(ctx context.Context, outputFormat string, qopts ...packmanager.QueryOption) (any, error) {
+	var query packmanager.Query
+	var metadata any
+
+	for _, qopt := range qopts {
+		qopt(&query)
+	}
+
+	packages, err := m.Catalog(ctx, packmanager.WithUpdate(query.Update()))
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort packages by type, name, version, format
+	sort.Slice(packages, func(i, j int) bool {
+		if packages[i].Type() != packages[j].Type() {
+			return packages[i].Type() < packages[j].Type()
+		}
+
+		if packages[i].Name() != packages[j].Name() {
+			return packages[i].Name() < packages[j].Name()
+		}
+
+		if packages[i].Version() != packages[j].Version() {
+			return packages[i].Version() < packages[j].Version()
+		}
+
+		return packages[i].Format() < packages[j].Format()
+	})
+
+	for _, pack := range packages {
+		if query.Name() == pack.Name() {
+			metadata = pack.Metadata()
+		}
+	}
+
+	if metadata == nil {
+		return nil, fmt.Errorf("%s package information not found", query.Name())
+	}
+	return metadata, nil
+}
