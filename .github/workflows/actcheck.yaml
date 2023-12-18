@@ -9,13 +9,16 @@ on:
 
 jobs:
   action-lint:
-    runs-on: ubuntu-latest
+    runs-on: upb
     name: Action Lint
     steps:
       - uses: actions/checkout@v4
 
       - name: Install action linter
         run: |
+          echo "$PWD"
+          echo "$HOME"
+          echo "$GITHUB_WORKSPACE"
           mkdir -p "$HOME"/.local/bin
           curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest "$HOME"/.local/bin
 
