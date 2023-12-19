@@ -112,7 +112,7 @@ func WithDirectory(ctx context.Context, path string) OCIManagerOption {
 // defined through its configuration.
 func WithDefaultRegistries() OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
-		manager.registries = make([]string, 0)
+		manager.registries = []string{DefaultRegistry}
 
 		for _, manifest := range config.G[config.KraftKit](ctx).Unikraft.Manifests {
 			// Use internal KraftKit knowledge of the fact that the config often lists
@@ -128,10 +128,6 @@ func WithDefaultRegistries() OCIManagerOption {
 			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
-		}
-
-		if len(manager.registries) == 0 {
-			manager.registries = []string{DefaultRegistry}
 		}
 
 		return nil

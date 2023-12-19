@@ -263,7 +263,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format.
 	ref, refErr := name.ParseReference(qname,
-		name.WithDefaultRegistry(""),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if refErr == nil {
 		qname = ref.Context().Name()
@@ -412,12 +412,30 @@ searchRemoteIndexes:
 						return
 					}
 
-					if qfullref := fmt.Sprintf("%s:%s", qname, qversion); len(qname) > 0 && fullref != qfullref {
-						log.G(ctx).
-							WithField("got", fullref).
-							WithField("want", qfullref).
-							Trace("skipping index: query name does not match")
-						return
+					if len(qversion) > 0 {
+						split := strings.Split(fullref, ":")
+						if len(split) < 1 {
+							log.G(ctx).
+								WithField("got", fullref).
+								WithField("want", qname).
+								Trace("skipping index: malformed name")
+							return
+						}
+						if qname != split[0] {
+							log.G(ctx).
+								WithField("got", split[0]).
+								WithField("want", qname).
+								Trace("skipping index: query name does not match")
+							return
+						}
+					} else {
+						if qfullref := fmt.Sprintf("%s:%s", qname, qversion); len(qname) > 0 && fullref != qfullref {
+							log.G(ctx).
+								WithField("got", fullref).
+								WithField("want", qfullref).
+								Trace("skipping index: query name does not match")
+							return
+						}
 					}
 
 					ref, err = name.ParseReference(fullref,
