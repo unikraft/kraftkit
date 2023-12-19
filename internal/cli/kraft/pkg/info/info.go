@@ -1,4 +1,9 @@
-package show
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2023, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
+
+package info
 
 import (
 	"context"
@@ -19,31 +24,31 @@ import (
 	"kraftkit.sh/packmanager"
 )
 
-type ShowOptions struct {
+type InfoOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format" default:"yaml"`
 }
 
-// Show shows a package manifest.
-func Show(ctx context.Context, opts *ShowOptions, args ...string) error {
+// Info shows package information.
+func Info(ctx context.Context, opts *InfoOptions, args ...string) error {
 	if opts == nil {
-		opts = &ShowOptions{}
+		opts = &InfoOptions{}
 	}
 
 	return opts.Run(ctx, args)
 }
 
 func New() *cobra.Command {
-	cmd, err := cmdfactory.New(&ShowOptions{}, cobra.Command{
-		Short:   "Shows a Unikraft package",
-		Use:     "show [FLAGS] [PACKAGE|DIR]",
-		Aliases: []string{"sw"},
+	cmd, err := cmdfactory.New(&InfoOptions{}, cobra.Command{
+		Short:   "Show information about a package",
+		Use:     "info [FLAGS] [PACKAGE|DIR]",
+		Aliases: []string{"show", "get", "i"},
 		Long: heredoc.Doc(`
 			Shows a Unikraft package like library, core etc details
 		`),
 		Args: cmdfactory.MinimumArgs(1, "package name is not specified to show information"),
 		Example: heredoc.Doc(`
 			# Shows details for the library nginx
-			$ kraft pkg show nginx`),
+			$ kraft pkg info nginx`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},
@@ -55,7 +60,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *ShowOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *InfoOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -65,15 +70,16 @@ func (opts *ShowOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *ShowOptions) Run(ctx context.Context, args []string) error {
-	opts.Output = strings.ToLower(opts.Output)
+func (opts *InfoOptions) Run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("package name is not specified to show information")
 	} else if opts.Output != "json" && opts.Output != "yaml" {
 		return fmt.Errorf("specified output format is not supported")
 	}
 
-	metadata, err := packmanager.G(ctx).Show(ctx, opts.Output, packmanager.WithName(args[0]))
+	metadata, err := packmanager.G(ctx).Catalog(ctx,
+		packmanager.WithName(args[0]),
+	)
 	if err != nil {
 		return err
 	}
@@ -122,14 +128,17 @@ func (opts *ShowOptions) Run(ctx context.Context, args []string) error {
 				return err
 			}
 		}
+
 		if opts.Output == "json" {
 			byteCode, err = json.Marshal(manifestStruct)
 		} else {
 			byteCode, err = yaml.Marshal(manifestStruct)
 		}
+
 		if err != nil {
 			return err
 		}
+
 		fmt.Fprint(iostreams.G(ctx).Out, string(byteCode)+"\n")
 	}
 	return nil
