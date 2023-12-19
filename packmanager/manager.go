@@ -58,7 +58,4 @@ type PackageManager interface {
 
 	// Format returns the name of the implementation.
 	Format() pack.PackageFormat
-
-	// Show package information.
-	Show(context.Context, string, ...QueryOption) (any, error)
 }

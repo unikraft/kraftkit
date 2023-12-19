@@ -7,25 +7,23 @@ package info
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path"
-	"reflect"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	pkgutils "kraftkit.sh/internal/cli/kraft/pkg/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/manifest"
+	"kraftkit.sh/log"
+	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 )
 
 type InfoOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"yaml"`
+	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Update bool   `long:"update" short:"u" usage:"Get latest information about components before listing results"`
 }
 
 // Info shows package information.
@@ -45,7 +43,7 @@ func New() *cobra.Command {
 		Long: heredoc.Doc(`
 			Shows a Unikraft package like library, core etc details
 		`),
-		Args: cmdfactory.MinimumArgs(1, "package name is not specified to show information"),
+		Args: cmdfactory.MinimumArgs(1, "package name(s) not specified"),
 		Example: heredoc.Doc(`
 			# Shows details for the library nginx
 			$ kraft pkg info nginx`),
@@ -60,86 +58,64 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *InfoOptions) Pre(cmd *cobra.Command, _ []string) error {
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+func (opts *InfoOptions) Run(ctx context.Context, args []string) error {
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	cmd.SetContext(ctx)
-	return nil
-}
+	parallel := !config.G[config.KraftKit](ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
-func (opts *InfoOptions) Run(ctx context.Context, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("package name is not specified to show information")
-	} else if opts.Output != "json" && opts.Output != "yaml" {
-		return fmt.Errorf("specified output format is not supported")
+	var searches []*processtree.ProcessTreeItem
+	var packs []pack.Package
+
+	for _, arg := range args {
+		search := processtree.NewProcessTreeItem(
+			fmt.Sprintf("finding %s", arg), "",
+			func(ctx context.Context) error {
+				more, err := packmanager.G(ctx).Catalog(ctx,
+					packmanager.WithName(arg),
+					packmanager.WithUpdate(opts.Update),
+				)
+				if err != nil {
+					return err
+				}
+
+				if len(more) == 0 {
+					return fmt.Errorf("could not find: %s", arg)
+				}
+
+				packs = append(packs, more...)
+
+				return nil
+			},
+		)
+
+		searches = append(searches, search)
 	}
 
-	metadata, err := packmanager.G(ctx).Catalog(ctx,
-		packmanager.WithName(args[0]),
+	treemodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithFailFast(false),
+			processtree.WithHideOnSuccess(true),
+		},
+		searches...,
 	)
 	if err != nil {
 		return err
 	}
 
-	if metadata != nil {
-		var byteCode []byte
-		var manifestStruct *manifest.Manifest
-		var origin string
-		value := reflect.ValueOf(metadata).Elem()
-		numFields := value.NumField()
-		structType := value.Type()
-
-		for i := 0; i < numFields; i++ {
-			if structType.Field(i).Name == "Origin" {
-				origin = value.Field(i).String()
-			}
-		}
-
-		if len(origin) > 0 && !strings.HasPrefix(origin, "http") {
-			var indexYaml manifest.ManifestIndex
-			manifestIndexYamlPath := path.Join(config.G[config.KraftKit](ctx).Paths.Manifests, "index.yaml")
-			indexbyteCode, err := os.ReadFile(manifestIndexYamlPath)
-			if err != nil {
-				return err
-			}
-			if err = yaml.Unmarshal(indexbyteCode, &indexYaml); err != nil {
-				return err
-			}
-			for _, manifestObj := range indexYaml.Manifests {
-				if args[0] == manifestObj.Name {
-					manifestYamlPath := path.Join(config.G[config.KraftKit](ctx).Paths.Manifests, manifestObj.Manifest)
-					byteCode, err = os.ReadFile(manifestYamlPath)
-					if err != nil {
-						return err
-					}
-					manifestStruct, err = manifest.NewManifestFromBytes(ctx, byteCode)
-					if err != nil {
-						return err
-					}
-					break
-				}
-			}
-		} else if len(origin) > 0 {
-			manifestStruct, err = manifest.NewManifestFromURL(ctx, origin)
-			if err != nil {
-				return err
-			}
-		}
-
-		if opts.Output == "json" {
-			byteCode, err = json.Marshal(manifestStruct)
-		} else {
-			byteCode, err = yaml.Marshal(manifestStruct)
-		}
-
-		if err != nil {
-			return err
-		}
-
-		fmt.Fprint(iostreams.G(ctx).Out, string(byteCode)+"\n")
+	if err := treemodel.Start(); err != nil {
+		return fmt.Errorf("could not complete search: %v", err)
 	}
-	return nil
+
+	if len(packs) == 0 {
+		return fmt.Errorf("could not find package(s): %v", args)
+	}
+
+	return pkgutils.PrintPackages(ctx, iostreams.G(ctx).Out, opts.Output, packs...)
 }

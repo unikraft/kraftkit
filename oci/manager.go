@@ -712,7 +712,3 @@ func (manager *ociManager) From(pack.PackageFormat) (packmanager.PackageManager,
 func (manager *ociManager) Format() pack.PackageFormat {
 	return OCIFormat
 }
-
-func (manager *ociManager) Show(ctx context.Context, outputFormat string, qopts ...packmanager.QueryOption) (any, error) {
-	return nil, fmt.Errorf("show is not implemented for ociManager")
-}
