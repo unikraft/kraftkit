@@ -2,7 +2,7 @@ name: Go static checks
 
 on:
   push:
-    branches: [staging]
+    branches: [stable]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [staging]

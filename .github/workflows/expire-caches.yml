@@ -2,7 +2,7 @@ name: Expire Action Caches
 
 on:
   push:
-    branches: [staging]
+    branches: [stable]
 
 jobs:
 

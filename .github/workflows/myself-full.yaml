@@ -3,9 +3,7 @@ name: buildenvs/myself-full
 # Build only on changes to the build environment itself
 on:
   push:
-    branches:
-      - stable
-      - staging
+    branches: [stable]
     paths:
       - 'buildenvs/myself.Dockerfile'
       - '.github/workflows/myself-full.yaml'

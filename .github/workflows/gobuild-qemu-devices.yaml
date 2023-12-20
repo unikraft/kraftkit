@@ -2,7 +2,7 @@ name: tools/go-generate-qemu-device
 
 on:
   push:
-    branches: [staging]
+    branches: [stable]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [staging]
