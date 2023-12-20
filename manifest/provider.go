@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -27,6 +28,8 @@ type Provider interface {
 
 	// String returns the name of the provider
 	fmt.Stringer
+
+	json.Marshaler
 }
 
 // NewProvider ultimately returns one of the supported manifest providers by

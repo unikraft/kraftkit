@@ -237,6 +237,10 @@ func (gp *GitProvider) String() string {
 	return "git"
 }
 
+func (gp *GitProvider) MarshalJSON() ([]byte, error) {
+	return []byte("\"git\""), nil
+}
+
 // isSSHURL determines if the provided URL forms an SSH connection
 func isSSHURL(path string) bool {
 	for _, prefix := range []string{

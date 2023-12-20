@@ -172,6 +172,10 @@ func (mp *ManifestProvider) String() string {
 	return "manifest"
 }
 
+func (mp *ManifestProvider) MarshalJSON() ([]byte, error) {
+	return []byte("\"manifest\""), nil
+}
+
 // NewManifestFromBytes parses a byte array of a YAML representing a manifest
 func NewManifestFromBytes(ctx context.Context, raw []byte, opts ...ManifestOption) (*Manifest, error) {
 	// TODO: This deserialization mechanism is used to encode the provider into the
