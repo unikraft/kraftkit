@@ -7,6 +7,7 @@ package manifest
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -74,7 +75,7 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 		"path": path,
 	}).Trace("trying git provider")
 	provider, err = NewGitProvider(ctx, path, mopts...)
-	if err == nil {
+	if err == nil || strings.Contains(path, "github.com") {
 		log.G(ctx).WithFields(logrus.Fields{
 			"path": path,
 		}).Trace("trying github provider")
