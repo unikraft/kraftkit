@@ -2,8 +2,7 @@ name: pre-release-staging
 
 on:
   push:
-    branches:
-      - staging
+    branches: [staging]
 
 permissions:
   contents: write
