@@ -92,7 +92,9 @@ func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (P
 	// If this is a valid Git repository then let's generate a Manifest based on
 	// what we can read from the remote
 	provider.refs, err = remote.ListContext(ctx, lopts)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "remote repository is empty") {
+		return nil, nil
+	} else if err != nil {
 		return nil, fmt.Errorf("could not list remote git repository: %v", err)
 	}
 
