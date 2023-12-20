@@ -120,6 +120,10 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 		return nil, err
 	}
 
+	if manifest == nil {
+		return nil, nil
+	}
+
 	manifest.Provider = ghp
 
 	return []*Manifest{manifest}, nil
@@ -211,6 +215,10 @@ func (ghp GitHubProvider) appendRepositoriesToManifestInParallel(repos []*github
 				return
 			}
 
+			if manifest == nil {
+				return
+			}
+
 			// Populate with GitHub API-centric information
 			if repo.Description != nil {
 				manifest.Description = *repo.Description
@@ -252,6 +260,10 @@ func gitProviderFromGitHub(ctx context.Context, repo string, opts ...ManifestOpt
 	provider, err := NewGitProvider(ctx, repo, opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if provider == nil {
+		return nil, nil
 	}
 
 	manifests, err := provider.Manifests()
