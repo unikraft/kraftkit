@@ -89,6 +89,10 @@ func (mip *ManifestIndexProvider) String() string {
 	return "index"
 }
 
+func (mip *ManifestIndexProvider) MarshalJSON() ([]byte, error) {
+	return []byte("\"index\""), nil
+}
+
 // NewManifestIndexFromBytes parses a byte array of a YAML representing a
 // manifest index
 func NewManifestIndexFromBytes(raw []byte, opts ...ManifestOption) (*ManifestIndex, error) {

@@ -139,3 +139,7 @@ func (dp DirectoryProvider) DeleteManifest(context.Context) error {
 func (dp DirectoryProvider) String() string {
 	return "dir"
 }
+
+func (dp DirectoryProvider) MarshalJSON() ([]byte, error) {
+	return []byte("\"dir\""), nil
+}
