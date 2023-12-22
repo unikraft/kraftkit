@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/lib/add"
 	"kraftkit.sh/internal/cli/kraft/lib/remove"
 )
 
@@ -30,10 +31,11 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(remove.NewCmd())
+	cmd.AddCommand(add.NewCmd())
 
 	return cmd
 }
 
-func (opts *Lib) Run(ctx context.Context, args []string) error {
+func (opts *Lib) Run(_ context.Context, _ []string) error {
 	return pflag.ErrHelp
 }
