@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -19,7 +18,7 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/tableprinter"
+	pkgutils "kraftkit.sh/internal/cli/kraft/pkg/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
@@ -231,48 +230,8 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 
 	defer iostreams.G(ctx).StopPager()
 
-	cs := iostreams.G(ctx).ColorScheme()
-
 	for _, packs := range packages {
-		table, err := tableprinter.NewTablePrinter(ctx,
-			tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
-			tableprinter.WithOutputFormatFromString(opts.Output),
-		)
-		if err != nil {
-			return err
-		}
-
-		// Header row
-		table.AddField("TYPE", cs.Bold)
-		table.AddField("NAME", cs.Bold)
-		table.AddField("VERSION", cs.Bold)
-		table.AddField("FORMAT", cs.Bold)
-
-		if len(packs) == 0 {
-			continue
-		}
-
-		metadata := packs[0].Columns()
-		for _, k := range metadata {
-			table.AddField(strings.ToUpper(k.Name), cs.Bold)
-		}
-
-		table.EndRow()
-
-		for _, pack := range packs {
-			table.AddField(string(pack.Type()), nil)
-			table.AddField(pack.Name(), nil)
-			table.AddField(pack.Version(), nil)
-			table.AddField(pack.Format().String(), nil)
-
-			for _, v := range pack.Columns() {
-				table.AddField(v.Value, nil)
-			}
-
-			table.EndRow()
-		}
-
-		if err := table.Render(iostreams.G(ctx).Out); err != nil {
+		if err := pkgutils.PrintPackages(ctx, iostreams.G(ctx).Out, opts.Output, packs...); err != nil {
 			return err
 		}
 	}

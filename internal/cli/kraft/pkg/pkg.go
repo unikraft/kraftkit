@@ -24,11 +24,11 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
 
+	"kraftkit.sh/internal/cli/kraft/pkg/info"
 	"kraftkit.sh/internal/cli/kraft/pkg/list"
 	"kraftkit.sh/internal/cli/kraft/pkg/pull"
 	"kraftkit.sh/internal/cli/kraft/pkg/push"
 	"kraftkit.sh/internal/cli/kraft/pkg/remove"
-	"kraftkit.sh/internal/cli/kraft/pkg/show"
 	"kraftkit.sh/internal/cli/kraft/pkg/source"
 	"kraftkit.sh/internal/cli/kraft/pkg/unsource"
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
@@ -236,6 +236,7 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.AddCommand(info.New())
 	cmd.AddCommand(list.NewCmd())
 	cmd.AddCommand(pull.NewCmd())
 	cmd.AddCommand(push.NewCmd())
@@ -243,7 +244,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(source.NewCmd())
 	cmd.AddCommand(unsource.NewCmd())
 	cmd.AddCommand(update.NewCmd())
-	cmd.AddCommand(show.New())
 
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
