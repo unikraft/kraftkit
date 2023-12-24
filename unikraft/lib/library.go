@@ -555,6 +555,10 @@ func (lc LibraryConfig) MarshalYAML() (interface{}, error) {
 		"version": lc.version,
 	}
 
+	if len(lc.source) > 0 {
+		ret["source"] = lc.source
+	}
+
 	if lc.kconfig != nil && len(lc.kconfig) > 0 {
 		ret["kconfig"] = lc.kconfig
 	}
@@ -563,7 +567,7 @@ func (lc LibraryConfig) MarshalYAML() (interface{}, error) {
 }
 
 // NewLibraryFromPackage creates a new library from package.
-func NewLibraryFromPackage(ctx context.Context, pack pack.Package, version string) (LibraryConfig, error) {
+func NewLibraryFromPackage(ctx context.Context, pack pack.Package) (LibraryConfig, error) {
 	library := LibraryConfig{
 		name:    pack.Name(),
 		version: pack.Version(),

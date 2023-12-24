@@ -143,6 +143,7 @@ type Application interface {
 
 	// Removes library from the project directory
 	RemoveLibrary(ctx context.Context, libraryName string) error
+
 	// Add library to the application.
 	AddLibrary(context.Context, lib.LibraryConfig) error
 }
@@ -915,9 +916,16 @@ func (app application) WithTarget(targ target.Target) (Application, error) {
 // MarshalYAML makes application implement yaml.Marshaller
 func (app application) MarshalYAML() (interface{}, error) {
 	ret := map[string]interface{}{
-		"spec":     schema.SchemaVersionLatest,
 		"name":     app.name,
 		"unikraft": app.unikraft,
+	}
+
+	if app.kraftfile.config["specification"] != nil {
+		ret["specification"] = app.kraftfile.config["specification"]
+	} else if app.kraftfile.config["spec"] != nil {
+		ret["spec"] = app.kraftfile.config["spec"]
+	} else {
+		ret["spec"] = schema.SchemaVersionLatest
 	}
 
 	// We purposefully do not marshal the configuration as this top level
@@ -934,6 +942,26 @@ func (app application) MarshalYAML() (interface{}, error) {
 
 	if app.libraries != nil && len(app.libraries) > 0 {
 		ret["libraries"] = app.libraries
+	}
+
+	if app.template != nil {
+		ret["template"] = app.template
+	}
+
+	if len(app.rootfs) > 0 {
+		ret["rootfs"] = app.rootfs
+	}
+
+	if len(app.command) > 0 {
+		ret["cmd"] = app.command
+	}
+
+	if app.volumes != nil && len(app.volumes) > 0 {
+		ret["volumes"] = app.volumes
+	}
+
+	if app.runtime != nil {
+		ret["runtime"] = app.runtime
 	}
 
 	return ret, nil
@@ -1003,8 +1031,14 @@ func saveNewKraftfile(ctx context.Context, app Application) error {
 	}
 	defer kraftfile.Close()
 
-	// Write the schema version to the file
-	_, err = kraftfile.WriteString(fmt.Sprintf("spec: '%s'\n", schema.SchemaVersionLatest))
+	// Write the schema version to the file by checking in existing Kraftfile
+	if app.Kraftfile().config["specification"] != nil {
+		_, err = kraftfile.WriteString(fmt.Sprintf("specification: '%s'\n", app.Kraftfile().config["specification"]))
+	} else if app.Kraftfile().config["spec"] != nil {
+		_, err = kraftfile.WriteString(fmt.Sprintf("spec: '%s'\n", app.Kraftfile().config["spec"]))
+	} else {
+		_, err = kraftfile.WriteString(fmt.Sprintf("spec: '%s'\n", schema.SchemaVersionLatest))
+	}
 	if err != nil {
 		return err
 	}
@@ -1015,6 +1049,8 @@ func saveNewKraftfile(ctx context.Context, app Application) error {
 		WithName(app.Name()),
 		WithKraftfile(app.Kraftfile()),
 		WithUnikraft(ukernel),
+		WithRuntime(app.Runtime()),
+		WithTemplate(app.Template()),
 	)
 	if err != nil {
 		return err

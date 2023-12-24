@@ -64,3 +64,22 @@ func (volume *VolumeConfig) Mode() string {
 func (volume *VolumeConfig) ReadOnly() bool {
 	return volume.readOnly
 }
+
+// MarshalYAML makes LibraryConfig implement yaml.Marshaller
+func (volume *VolumeConfig) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{}
+	if len(volume.Source()) > 0 {
+		ret["source"] = volume.Source()
+		ret["readOnly"] = volume.ReadOnly()
+	}
+	if len(volume.Destination()) > 0 {
+		ret["destination"] = volume.Destination()
+	}
+	if len(volume.Driver()) > 0 {
+		ret["driver"] = volume.Driver()
+	}
+	if len(ret) == 0 {
+		return nil, nil
+	}
+	return ret, nil
+}

@@ -203,8 +203,16 @@ func TargetPlatArchName(target Target) string {
 
 // MarshalYAML makes TargetConfig implement yaml.Marshaller
 func (tc TargetConfig) MarshalYAML() (interface{}, error) {
-	return map[string]interface{}{
+	ret := map[string]interface{}{
 		"architecture": tc.architecture.Name(),
 		"platform":     tc.platform.Name(),
-	}, nil
+	}
+	// TODO(Sahil): Needs to check if target name & Kconfig actually exist in Kraftfile.
+	// if len(tc.name) > 0 {
+	// 	ret["name"] = tc.name
+	// }
+	// if tc.kconfig != nil && len(tc.kconfig) > 0 {
+	// 	ret["kconfig"] = tc.kconfig
+	// }
+	return ret, nil
 }

@@ -160,8 +160,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	} else if len(packs) > 1 {
 		return fmt.Errorf("found more than one library")
 	}
-
-	library, err = lib.NewLibraryFromPackage(ctx, packs[0], packVersion)
+	library, err = lib.NewLibraryFromPackage(ctx, packs[0])
 	if err != nil {
 		return err
 	}

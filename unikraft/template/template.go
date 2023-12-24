@@ -91,7 +91,23 @@ func (tc TemplateConfig) KConfig() kconfig.KeyValueMap {
 }
 
 func (tc TemplateConfig) MarshalYAML() (interface{}, error) {
-	return nil, nil
+	ret := map[string]interface{}{}
+	if len(tc.name) > 0 {
+		ret["name"] = tc.name
+	}
+	if len(tc.version) > 0 {
+		ret["version"] = tc.version
+	}
+	if len(tc.source) > 0 {
+		ret["source"] = tc.source
+	}
+	if tc.kconfig != nil && len(tc.kconfig) > 0 {
+		ret["kconfig"] = tc.kconfig
+	}
+	if len(ret) == 0 {
+		return nil, nil
+	}
+	return ret, nil
 }
 
 // PrintInfo prints information about the template
