@@ -53,6 +53,10 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("expected exactly one network to remove, got %d", len(args))
+	}
+
 	var err error
 
 	strategy, ok := network.Strategies()[opts.Driver]
