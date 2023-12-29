@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: BSD-3-Clause
+{{if .Description }}
+# {{ .Description }}
+{{else}}
+# {{ .ProjectName }} Unikraft library
+{{ end }}
+#
+# Authors: {{ .AuthorName }} {{ .AuthorEmail }}
+#
+# Copyright (c) {{ .Year }}, {{ .CopyrightHolder }}. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+################################################################################
+# Library registration
+################################################################################
+$(eval $(call addlib_s,{{ .LibKName }},$(CONFIG_{{ .LibKNameUpperCase }})))
+
+################################################################################
+# Sources
+################################################################################]
+{{ .LibKNameUpperCase }}_URL = {{ .OriginUrl }}
+{{ .LibKNameUpperCase }}_SUBDIR = {{ .ProjectName }}-$({{ .LibKNameUpperCase }}_VERSION)
+{{if .WithPatchedir }}
+{{ .LibKNameUpperCase }}_PATCHDIR = $({{ .LibKNameUpperCase }}_BASE)/patches
+$(eval $(call patch,{{ .LibKName }},$({{ .LibKNameUpperCase }}_PATCHDIR),$({{ .LibKNameUpperCase }}_SUBDIR)))
+{{ end }}
+$(eval $(call fetch,{{ .LibKName }},$({{ .LibKNameUpperCase }}_URL)))
+
+################################################################################
+# Helpers
+################################################################################
+{{ .LibKNameUpperCase }}_SRC = $({{ .LibKNameUpperCase }}_ORIGIN)/$({{ .LibKNameUpperCase }}_SUBDIR)
+
+################################################################################
+# Library includes
+################################################################################
+CINCLUDES-y += -I$({{ .LibKNameUpperCase }}_BASE)/include
+
+################################################################################
+# Flags
+################################################################################
+{{ .LibKNameUpperCase }}_FLAGS =
+
+# Suppress some warnings to make the build process look neater
+{{ .LibKNameUpperCase }}_FLAGS_SUPPRESS =
+
+{{ .LibKNameUpperCase }}_CFLAGS-y += $({{ .LibKNameUpperCase }}_FLAGS)
+{{ .LibKNameUpperCase }}_CFLAGS-y += $({{ .LibKNameUpperCase }}_FLAGS_SUPPRESS)
+
+################################################################################
+# Glue code
+################################################################################
+# Include paths
+# {{ .LibKNameUpperCase }}_CINCLUDES-y   += $({{ .LibKNameUpperCase }}_COMMON_INCLUDES-y)
+# {{ .LibKNameUpperCase }}_CXXINCLUDES-y += $({{ .LibKNameUpperCase }}_COMMON_INCLUDES-y)
+
+{{ if .ProvideCMain }}
+{{ .LibKNameUpperCase }}SRCS-$(CONFIG_{{ .LibKNameUpperCase }}_MAIN_FUNCTION) += $({{ .LibKNameUpperCase }}_BASE)/main.c|unikraft
+{{end}}
+
+################################################################################
+# Library sources
+################################################################################
+# {{ .LibKNameUpperCase }}_SRCS-y += # Include source files here
+
+{{range $index, $SourceFiles := .SourceFiles }}
+{{ .LibKNameUpperCase }}_SRCS-y += {{ $SourceFiles }}
+{{end}}

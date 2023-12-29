@@ -1,0 +1,14 @@
+menuconfig {{ .LibKNameUpperCase }}
+{{if .Description }}	bool "{{ .Description }}"
+{{else }}	bool "{{ .ProjectName }} Unikraft library"
+{{end}}	default n
+{{range $index, $dependency := .KconfigDependencies }}
+	select {{ $dependency }}
+{{end}}
+{{if .LibKName -}}
+{{if .ProvideCMain -}}
+config {{ .LibKNameUpperCase }}_MAIN_FUNCTION
+	bool "Provide main function"
+	default n
+{{end -}}
+{{end -}}
