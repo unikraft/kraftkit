@@ -120,6 +120,9 @@ func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
 	}
 
 	for _, machine := range machines.Items {
+		if !opts.ShowAll && machine.Status.State != machineapi.MachineStateRunning {
+			continue
+		}
 		entry := psTable{
 			id:      string(machine.UID),
 			name:    machine.Name,
