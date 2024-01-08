@@ -133,11 +133,16 @@ func FollowLogs(ctx context.Context, machine *machineapi.Machine, controller mac
 	ctx, cancel := context.WithCancel(ctx)
 
 	var exitErr error
+	var eof bool
 
 	go func() {
 		events, errs, err := controller.Watch(ctx, machine)
 		if err != nil {
 			cancel()
+
+			if eof {
+				return
+			}
 
 			exitErr = fmt.Errorf("listening to machine events: %w", err)
 			return
@@ -185,6 +190,7 @@ loop:
 			fmt.Fprint(iostreams.G(ctx).Out, line)
 
 		case err := <-errs:
+			eof = true
 			if !errors.Is(err, io.EOF) {
 				log.G(ctx).Errorf("received event error: %v", err)
 				return err
