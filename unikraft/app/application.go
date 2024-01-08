@@ -605,14 +605,29 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 		return err
 	}
 
-	return app.Make(
+	if err := app.Make(
 		ctx,
 		tc,
 		append(mopts,
 			make.WithTarget("defconfig"),
 			make.WithVar("UK_DEFCONFIG", tmpfile.Name()),
 		)...,
+	); err != nil {
+		return fmt.Errorf("configuring: %w", err)
+	}
+
+	// Post-process the target by parsing any available .config file which will be
+	// the result artifact from the previously invoked make command.
+	kvmap, err := kconfig.NewKeyValueMapFromFile(
+		filepath.Join(app.workingDir, tc.ConfigFilename()),
 	)
+	if err != nil {
+		return fmt.Errorf("processing KConfig lock file: %w", err)
+	}
+
+	tc.KConfig().OverrideBy(kvmap)
+
+	return nil
 }
 
 func (app application) Prepare(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
