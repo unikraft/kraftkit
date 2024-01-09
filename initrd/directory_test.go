@@ -45,25 +45,25 @@ func TestNewFromDirectory(t *testing.T) {
 	r := cpio.NewReader(openFile(t, irdPath))
 
 	expectHeaders := map[string]cpio.Header{
-		"/entrypoint.sh": {
+		"./entrypoint.sh": {
 			Mode: cpio.TypeReg,
 			Size: 25,
 		},
-		"/etc": {
+		"./etc": {
 			Mode: cpio.TypeDir,
 		},
-		"/etc/app.conf": {
+		"./etc/app.conf": {
 			Mode: cpio.TypeReg,
 			Size: 16,
 		},
-		"/lib": {
+		"./lib": {
 			Mode: cpio.TypeDir,
 		},
-		"/lib/libtest.so.1": {
+		"./lib/libtest.so.1": {
 			Mode:     cpio.TypeSymlink,
 			Linkname: "libtest.so.1.0.0",
 		},
-		"/lib/libtest.so.1.0.0": {
+		"./lib/libtest.so.1.0.0": {
 			Mode: cpio.TypeReg,
 			Size: 9,
 		},

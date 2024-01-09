@@ -182,6 +182,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		if internal == "" {
 			return nil // Do not archive empty paths
 		}
+		internal = "." + filepath.ToSlash(internal)
 
 		info, err := d.Info()
 		if err != nil {
