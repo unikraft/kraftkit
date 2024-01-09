@@ -192,7 +192,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		if d.Type().IsDir() {
 			if err := writer.WriteHeader(&cpio.Header{
 				Name: internal,
-				Mode: cpio.TypeDir,
+				Mode: cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
 			}); err != nil {
 				return fmt.Errorf("could not write CPIO header: %w", err)
 			}
