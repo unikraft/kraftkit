@@ -114,6 +114,9 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 
 	var instance *kraftcloudinstances.Instance
 
+	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer deployCancel()
+
 	paramodel, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
@@ -129,6 +132,9 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 			"deploying",
 			"",
 			func(ctx context.Context) error {
+				var ctxTimeout context.Context
+				var cancel context.CancelFunc
+
 			checkRemoteImages:
 				for {
 					// First check if the context has been cancelled
@@ -138,11 +144,14 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					default:
 					}
 
-					ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+					// Introduce a new context that is used only for iteration
+					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
 					defer cancel()
 
 					images, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
-					if err != nil {
+					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
+						continue
+					} else if err != nil {
 						return fmt.Errorf("could not check list of images: %w", err)
 					}
 
@@ -152,23 +161,42 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 							continue
 						}
 
+						cancel()
 						break checkRemoteImages
 					}
 				}
 
-				instance, err = create.Create(ctx, &create.CreateOptions{
-					Env:       opts.Env,
-					FQDN:      opts.FQDN,
-					Memory:    opts.Memory,
-					Metro:     opts.Metro,
-					Name:      opts.Name,
-					Ports:     opts.Ports,
-					Replicas:  opts.Replicas,
-					Start:     !opts.NoStart,
-					SubDomain: opts.SubDomain,
-				}, append([]string{pkgName}, args...)...)
-				if err != nil {
-					return fmt.Errorf("could not create instance: %w", err)
+			attemptDeployment:
+				for {
+					select {
+					case <-ctx.Done():
+						return fmt.Errorf("context cancelled")
+					default:
+					}
+
+					// Introduce a new context that is used only for iteration
+					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
+					defer cancel()
+
+					instance, err = create.Create(ctxTimeout, &create.CreateOptions{
+						Env:       opts.Env,
+						FQDN:      opts.FQDN,
+						Memory:    opts.Memory,
+						Metro:     opts.Metro,
+						Name:      opts.Name,
+						Ports:     opts.Ports,
+						Replicas:  opts.Replicas,
+						Start:     !opts.NoStart,
+						SubDomain: opts.SubDomain,
+					}, append([]string{pkgName}, args...)...)
+					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
+						continue
+					} else if err != nil {
+						return fmt.Errorf("could not create instance: %w", err)
+					}
+
+					cancel()
+					break attemptDeployment
 				}
 
 				return nil
