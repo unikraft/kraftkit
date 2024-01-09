@@ -65,24 +65,32 @@ func (opts *PsOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
-	var err error
+type PsEntry struct {
+	ID      string
+	Name    string
+	Kernel  string
+	Args    string
+	Created string
+	Status  machineapi.MachineState
+	Mem     string
+	Ports   string
+	Arch    string
+	Plat    string
+	IPs     []string
+}
 
-	type psTable struct {
-		id      string
-		name    string
-		kernel  string
-		args    string
-		created string
-		status  machineapi.MachineState
-		mem     string
-		ports   string
-		arch    string
-		plat    string
-		ips     []string
+func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
+	items, err := opts.PsTable(ctx)
+	if err != nil {
+		return err
 	}
 
-	var items []psTable
+	return opts.PrintPsTable(ctx, items)
+}
+
+func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
+	var err error
+	var items []PsEntry
 
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
@@ -93,60 +101,64 @@ func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
 		if opts.platform == "" || opts.platform == "auto" {
 			platform, _, err = mplatform.Detect(ctx)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			var ok bool
 			platform, ok = mplatform.PlatformsByName()[opts.platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return nil, fmt.Errorf("unknown platform driver: %s", opts.platform)
 			}
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]
 		if !ok {
-			return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
+			return nil, fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", platform.String())
 		}
 
 		controller, err = strategy.NewMachineV1alpha1(ctx)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	machines, err := controller.List(ctx, &machineapi.MachineList{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, machine := range machines.Items {
 		if !opts.ShowAll && machine.Status.State != machineapi.MachineStateRunning {
 			continue
 		}
-		entry := psTable{
-			id:      string(machine.UID),
-			name:    machine.Name,
-			args:    strings.Join(machine.Spec.ApplicationArgs, " "),
-			kernel:  machine.Spec.Kernel,
-			status:  machine.Status.State,
-			mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
-			created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
-			ports:   machine.Spec.Ports.String(),
-			arch:    machine.Spec.Architecture,
-			plat:    machine.Spec.Platform,
-			ips:     []string{},
+		entry := PsEntry{
+			ID:      string(machine.UID),
+			Name:    machine.Name,
+			Args:    strings.Join(machine.Spec.ApplicationArgs, " "),
+			Kernel:  machine.Spec.Kernel,
+			Status:  machine.Status.State,
+			Mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
+			Created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
+			Ports:   machine.Spec.Ports.String(),
+			Arch:    machine.Spec.Architecture,
+			Plat:    machine.Spec.Platform,
+			IPs:     []string{},
 		}
 
 		for _, net := range machine.Spec.Networks {
 			for _, iface := range net.Interfaces {
-				entry.ips = append(entry.ips, iface.Spec.IP)
+				entry.IPs = append(entry.IPs, iface.Spec.IP)
 			}
 		}
 
 		items = append(items, entry)
 	}
 
-	err = iostreams.G(ctx).StartPager()
+	return items, nil
+}
+
+func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error {
+	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -183,21 +195,21 @@ func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
 
 	for _, item := range items {
 		if opts.Long {
-			table.AddField(item.id, nil)
+			table.AddField(item.ID, nil)
 		}
-		table.AddField(item.name, nil)
-		table.AddField(item.kernel, nil)
-		table.AddField(item.args, nil)
-		table.AddField(item.created, nil)
-		table.AddField(item.status.String(), nil)
-		table.AddField(item.mem, nil)
+		table.AddField(item.Name, nil)
+		table.AddField(item.Kernel, nil)
+		table.AddField(item.Args, nil)
+		table.AddField(item.Created, nil)
+		table.AddField(item.Status.String(), nil)
+		table.AddField(item.Mem, nil)
 		if opts.Long {
-			table.AddField(item.ports, nil)
-			table.AddField(strings.Join(item.ips, ","), nil)
-			table.AddField(item.arch, nil)
-			table.AddField(item.plat, nil)
+			table.AddField(item.Ports, nil)
+			table.AddField(strings.Join(item.IPs, ","), nil)
+			table.AddField(item.Arch, nil)
+			table.AddField(item.Plat, nil)
 		} else {
-			table.AddField(fmt.Sprintf("%s/%s", item.plat, item.arch), nil)
+			table.AddField(fmt.Sprintf("%s/%s", item.Plat, item.Arch), nil)
 		}
 		table.EndRow()
 	}
