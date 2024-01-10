@@ -115,7 +115,7 @@ func (m *model) View() string {
 		var text string
 		check := ""
 		if item.checked {
-			check = tui.TextGreen("[x]")
+			check = tui.TextWhiteBgGreen("[x]")
 		} else {
 			check = tui.TextLightGray("[ ]")
 		}

@@ -253,7 +253,7 @@ func (p Process) View() string {
 	case StatusRunning:
 		left += tui.TextBlue("[" + p.spinner.View() + "]")
 	case StatusSuccess:
-		left += tui.TextGreen("[+]")
+		left += tui.TextWhiteBgGreen("[+]")
 	default:
 		if p.Status == StatusFailed || p.err != nil {
 			left += tui.TextRed("<!>")
