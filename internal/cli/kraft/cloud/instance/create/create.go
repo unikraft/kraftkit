@@ -223,13 +223,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		}
 	}
 
-	envs := make(map[string]string)
 	for _, env := range opts.Env {
 		if strings.ContainsRune(env, '=') {
 			split := strings.SplitN(env, "=", 2)
-			envs[split[0]] = split[1]
+			req.Env[split[0]] = split[1]
 		} else {
-			envs[env] = os.Getenv(env)
+			req.Env[env] = os.Getenv(env)
 		}
 	}
 

@@ -64,6 +64,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 	table.AddField("MEMORY", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
 	if format != "table" {
+		table.AddField("ENV", cs.Bold)
 		table.AddField("VOLUMES", cs.Bold)
 		table.AddField("SERVICE GROUP", cs.Bold)
 	}
@@ -99,6 +100,12 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 		table.AddField(strings.Join(instance.Args, " "), nil)
 
 		if format != "table" {
+			envs := []string{}
+			for k, v := range instance.Env {
+				envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+			}
+			table.AddField(strings.Join(envs, ", "), nil)
+
 			vols := make([]string, len(instance.Volumes))
 			for i, vol := range instance.Volumes {
 				vols[i] = fmt.Sprintf("%s:%s", vol.Name, vol.At)
