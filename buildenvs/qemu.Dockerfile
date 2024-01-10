@@ -7,7 +7,7 @@ ARG DEBIAN_VERSION=bookworm-20230725
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 
-ARG QEMU_VERSION=7.1.0
+ARG QEMU_VERSION=8.2.0
 ARG WITH_XEN=disable
 ARG WITH_KVM=enable
 
@@ -39,6 +39,7 @@ RUN set -ex; \
         ninja-build \
         pkg-config \
         python3 \
+        python3-pip \
         texinfo \
         vde2 \
         xz-utils \
@@ -66,7 +67,6 @@ RUN set -ex; \
     fi; \
     ./configure \
         --target-list=$(echo ${tlist} | tail -c +2) \
-        --static \
         --prefix=/ \
         --audio-drv-list="" \
         --enable-attr \
@@ -100,11 +100,9 @@ RUN set -ex; \
         --disable-gio \
         --disable-glusterfs \
         --disable-gnutls \
-        --disable-gprof \
         --disable-gtk \
         --disable-guest-agent \
         --disable-guest-agent-msi \
-        --disable-hax \
         --disable-hvf \
         --disable-iconv \
         --disable-jack \
@@ -138,9 +136,8 @@ RUN set -ex; \
         --disable-oss \
         --disable-pa \
         --disable-parallels \
-        --disable-pie \
+        --enable-pie \
         --disable-png \
-        --disable-profiler \
         --disable-pvrdma \
         --disable-qcow1 \
         --disable-qed \
@@ -153,7 +150,7 @@ RUN set -ex; \
         --disable-sdl-image \
         --disable-seccomp \
         --disable-selinux \
-	    --enable-slirp=git \
+        --enable-slirp \
         --disable-slirp-smbd \
         --disable-smartcard \
         --disable-snappy \
@@ -178,7 +175,6 @@ RUN set -ex; \
         --enable-vhost-user-blk-server \
         --enable-vhost-vdpa \
         --disable-virglrenderer \
-        --disable-virtiofsd \
         --disable-vmnet \
         --disable-vnc \
         --disable-vnc-jpeg \
@@ -200,6 +196,7 @@ FROM scratch AS qemu
 COPY --from=qemu-build /bin/qemu-img \
                        /bin/qemu-io \
                        /bin/qemu-nbd \
+                       /bin/qemu-edid \
                        /bin/qemu-pr-helper \
                        /bin/qemu-system-aarch64 \
                        /bin/qemu-system-arm \
@@ -208,3 +205,15 @@ COPY --from=qemu-build /bin/qemu-img \
 
 COPY --from=qemu-build /share/qemu/ /share/qemu/
 COPY --from=qemu-build /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/
+
+COPY --from=qemu-build /lib/x86_64-linux-gnu/libglib-2.0.so.0 \
+                    /lib/x86_64-linux-gnu/libm.so.6 \
+                    /lib/x86_64-linux-gnu/libz.so.1 \
+                    /lib/x86_64-linux-gnu/libc.so.6 \
+                    /lib/x86_64-linux-gnu/libpcre2-8.so.0 \
+                    /lib/x86_64-linux-gnu/libcap-ng.so.0 \
+                    /lib/x86_64-linux-gnu/libpixman-1.so.0 \
+                    /lib/x86_64-linux-gnu/liblzo2.so.2 \
+                    /lib/x86_64-linux-gnu/libslirp.so.0 \
+                    /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 \
+                    /lib/x86_64-linux-gnu/

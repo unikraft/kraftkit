@@ -5,7 +5,7 @@
 ARG GO_VERSION=1.21.2
 ARG DEBIAN_VERSION=bookworm-20230725
 ARG KRAFTKIT_VERSION=latest
-ARG QEMU_VERSION=7.1.0
+ARG QEMU_VERSION=8.2.0
 ARG REGISTRY=kraftkit.sh
 
 FROM golang:${GO_VERSION}-bullseye AS build
@@ -28,6 +28,7 @@ FROM debian:${DEBIAN_VERSION}         AS base
 
 COPY --from=qemu  /bin/          /usr/local/bin
 COPY --from=qemu  /share/qemu/   /share/qemu
+COPY --from=qemu  /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu
 COPY --from=build /github-action /usr/local/bin/github-action
 COPY --from=kraftkit /kraft       /usr/local/bin/kraft
 

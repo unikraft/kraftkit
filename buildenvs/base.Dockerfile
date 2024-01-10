@@ -4,7 +4,7 @@
 # You may not use this file except in compliance with the License.
 ARG DEBIAN_VERSION=bookworm-20230725
 ARG KRAFTKIT_VERSION=latest
-ARG QEMU_VERSION=7.1.0
+ARG QEMU_VERSION=8.2.0
 ARG REGISTRY=kraftkit.sh
 
 FROM ${REGISTRY}/qemu:${QEMU_VERSION}       AS qemu
@@ -13,6 +13,7 @@ FROM debian:${DEBIAN_VERSION}               AS base
 
 COPY --from=qemu     /bin/        /usr/local/bin
 COPY --from=qemu     /share/qemu/ /share/qemu
+COPY --from=qemu     /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu
 COPY --from=kraftkit /kraft       /usr/local/bin
 
 # Install unikraft dependencies
