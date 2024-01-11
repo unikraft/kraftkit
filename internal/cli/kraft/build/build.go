@@ -25,23 +25,24 @@ import (
 )
 
 type BuildOptions struct {
-	All          bool   `long:"all" usage:"Build all targets"`
-	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
-	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	ForcePull    bool   `long:"force-pull" usage:"Force pulling packages before building"`
-	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
-	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
-	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast       bool   `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
-	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
-	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
-	Rootfs       string `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
-	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
-	Workdir      string `noattribute:"true"`
+	All          bool           `long:"all" usage:"Build all targets"`
+	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	DotConfig    string         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	ForcePull    bool           `long:"force-pull" usage:"Force pulling packages before building"`
+	Jobs         int            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg    bool           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile    string         `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	NoCache      bool           `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure  bool           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast       bool           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
+	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	Rootfs       string         `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	SaveBuildLog string         `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Target       *target.Target `noattribute:"true"`
+	TargetName   string         `long:"target" short:"t" usage:"Build a particular known target"`
+	Workdir      string         `noattribute:"true"`
 
 	project app.Application
 }
@@ -124,30 +125,34 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	// Filter project targets by any provided CLI options
-	selected := opts.project.Targets()
-	if len(selected) == 0 {
-		return fmt.Errorf("no targets to build")
-	}
-	if !opts.All {
-		selected = target.Filter(
-			selected,
-			opts.Architecture,
-			opts.Platform,
-			opts.Target,
-		)
-
-		if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
-			res, err := target.Select(selected)
-			if err != nil {
-				return err
-			}
-			selected = []target.Target{res}
+	if opts.Target == nil {
+		// Filter project targets by any provided CLI options
+		selected := opts.project.Targets()
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets to build")
 		}
-	}
+		if !opts.All {
+			selected = target.Filter(
+				selected,
+				opts.Architecture,
+				opts.Platform,
+				opts.TargetName,
+			)
 
-	if len(selected) == 0 {
-		return fmt.Errorf("no targets selected to build")
+			if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
+				res, err := target.Select(selected)
+				if err != nil {
+					return err
+				}
+				selected = []target.Target{res}
+			}
+		}
+
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets selected to build")
+		}
+
+		opts.Target = &selected[0]
 	}
 
 	var build builder
@@ -174,11 +179,11 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("builder", build.String()).Debug("using")
 
-	if err := build.Prepare(ctx, opts, selected[0], args...); err != nil {
+	if err := build.Prepare(ctx, opts, args...); err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {
+	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, *opts.Target); err != nil {
 		return err
 	}
 
