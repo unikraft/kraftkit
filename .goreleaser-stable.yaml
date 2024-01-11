@@ -101,10 +101,10 @@ aurs:
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/kraftkit-bin.git"
     package: |-
-      # bin
+      # kraft
       install -Dm755 "${srcdir}/kraft" "${pkgdir}/usr/bin/kraft"
-      # license
-      install -Dm644 "${srcdir}/LICENSE.md" "${pkgdir}/usr/share/licenses/kraftkit/LICENSE"
+      # kraftld
+      install -Dm755 "${srcdir}/kraftld" "${pkgdir}/usr/bin/kraftld"
     commit_author:
       name: Unikraft Bot
       email: monkey+aur@unikraft.io
@@ -125,6 +125,7 @@ nix:
     install: |-
       mkdir -p $out/bin
       cp -vr ./dist/kraft $out/bin/kraft
+      cp -vr ./dist/kraftld $out/bin/kraftld
 
 brews:
   - name: kraftkit
