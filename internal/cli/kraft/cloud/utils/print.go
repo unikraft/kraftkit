@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
+	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -324,38 +324,89 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 		}
 	}
 
+	var title string
 	var color func(...string) string
 	if instance.State == "running" || instance.State == "starting" {
+		title = "Deployed successfully!"
 		color = tui.TextGreen
 	} else if instance.State == "stopped" {
+		title = "Deployed but instance is not online!"
 		color = tui.TextRed
 	} else {
+		title = "Deployed but unknown status"
 		color = tui.TextYellow
 	}
 
-	fmt.Fprintf(out, "\n%s%s%s %s\n", tui.TextLightGray("["), color("●"), tui.TextLightGray("]"), instance.UUID)
-	fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("name"), instance.Name)
-	fmt.Fprintf(out, "            %s: %s\n", tui.TextLightGray("state"), color(instance.State))
+	entries := []fancymap.FancyMapEntry{
+		{
+			Key:   "name",
+			Value: instance.Name,
+		},
+		{
+			Key:   "uuid",
+			Value: instance.UUID,
+		},
+		{
+			Key:   "state",
+			Value: color(instance.State),
+		},
+	}
+
 	if len(fqdn) > 0 {
 		if strings.HasPrefix(fqdn, "https://") {
-			fmt.Fprintf(out, "              %s: %s\n", tui.TextLightGray("url"), fqdn)
+			entries = append(entries, fancymap.FancyMapEntry{
+				Key:   "url",
+				Value: fqdn,
+			})
 		} else {
-			fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("fqdn"), fqdn)
+			entries = append(entries, fancymap.FancyMapEntry{
+				Key:   "fqdn",
+				Value: fqdn,
+			})
 		}
 	}
-	fmt.Fprintf(out, "            %s: %s\n", tui.TextLightGray("image"), instance.Image)
-	fmt.Fprintf(out, "        %s: %.2f ms\n", tui.TextLightGray("boot time"), float64(instance.BootTimeUS)/1000)
-	fmt.Fprintf(out, "           %s: %d MiB\n", tui.TextLightGray("memory"), instance.MemoryMB)
+
+	entries = append(entries, []fancymap.FancyMapEntry{
+		{
+			Key:   "image",
+			Value: instance.Image,
+		},
+		{
+			Key:   "boot time",
+			Value: fmt.Sprintf("%.2f ms", float64(instance.BootTimeUS)/1000),
+		},
+		{
+			Key:   "memory",
+			Value: fmt.Sprintf("%d MiB", instance.MemoryMB),
+		},
+	}...)
+
 	if len(instance.ServiceGroup.Name) > 0 {
-		fmt.Fprintf(out, "    %s: %s\n", tui.TextLightGray("service group"), instance.ServiceGroup.Name)
+		entries = append(entries, []fancymap.FancyMapEntry{
+			{
+				Key:   "service group",
+				Value: instance.ServiceGroup.Name,
+			},
+		}...)
 	}
 	if len(instance.Args) > 0 {
-		fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("args"), strings.Join(instance.Args, " "))
+		entries = append(entries, []fancymap.FancyMapEntry{
+			{
+				Key:   "args",
+				Value: strings.Join(instance.Args, " "),
+			},
+		}...)
 	}
 
-	fmt.Fprintf(out, "\n")
+	fancymap.PrintFancyMap(
+		out,
+		title,
+		instance.State == "running" || instance.State == "starting",
+		entries...,
+	)
 
 	if instance.State != "running" && instance.State != "starting" && autoStart {
+		fmt.Fprintf(out, "\n")
 		log.G(ctx).Info("it looks like the instance did not come online, to view logs run:")
 		fmt.Fprintf(out, "\n    kraft cloud instance logs %s\n\n", instance.Name)
 	}
