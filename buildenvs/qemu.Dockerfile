@@ -33,7 +33,6 @@ RUN set -ex; \
         libcap-ng-dev \
         libglib2.0-dev \
         liblzo2-dev \
-        libpixman-1-dev \
         libslirp-dev \
         libslirp0 \
         ninja-build \
@@ -71,8 +70,7 @@ RUN set -ex; \
         --audio-drv-list="" \
         --enable-attr \
         --disable-auth-pam \
-        --disable-avx2 \
-        --disable-avx512f \
+        --disable-alsa \
         --disable-bochs \
         --disable-bpf \
         --disable-brlapi \
@@ -84,6 +82,7 @@ RUN set -ex; \
         --disable-cfi-debug \
         --disable-cloop \
         --disable-cocoa \
+        --disable-colo-proxy \
         --disable-coreaudio \
         --disable-crypto-afalg \
         --disable-curl \
@@ -101,8 +100,10 @@ RUN set -ex; \
         --disable-glusterfs \
         --disable-gnutls \
         --disable-gtk \
+        --disable-gtk-clipboard \
         --disable-guest-agent \
         --disable-guest-agent-msi \
+        --disable-hv-balloon \
         --disable-hvf \
         --disable-iconv \
         --disable-jack \
@@ -110,6 +111,7 @@ RUN set -ex; \
         --${WITH_KVM}-kvm \
         --disable-l2tpv3 \
         --disable-libdaxctl \
+        --disable-libdw \
         --disable-libiscsi \
         --disable-libnfs \
         --disable-libpmem \
@@ -136,6 +138,8 @@ RUN set -ex; \
         --disable-oss \
         --disable-pa \
         --disable-parallels \
+        --disable-pipewire \
+        --disable-pixman \
         --enable-pie \
         --disable-png \
         --disable-pvrdma \
@@ -145,6 +149,7 @@ RUN set -ex; \
         --disable-rbd \
         --disable-rdma \
         --disable-replication \
+        --disable-rutabaga-gfx \
         --disable-safe-stack \
         --disable-sdl \
         --disable-sdl-image \
@@ -154,6 +159,7 @@ RUN set -ex; \
         --disable-slirp-smbd \
         --disable-smartcard \
         --disable-snappy \
+        --disable-sndio \
         --disable-sparse \
         --disable-spice \
         --disable-spice-protocol \
@@ -168,6 +174,7 @@ RUN set -ex; \
         --disable-vdi \
         --disable-vduse-blk-export \
         --disable-vfio-user-server \
+        --disable-vhdx \
         --enable-vhost-crypto \
         --enable-vhost-kernel \
         --enable-vhost-net \
@@ -179,6 +186,7 @@ RUN set -ex; \
         --disable-vnc \
         --disable-vnc-jpeg \
         --disable-vnc-sasl \
+        --disable-vpc \
         --disable-vte \
         --disable-vvfat \
         --disable-werror \
@@ -212,7 +220,6 @@ COPY --from=qemu-build /lib/x86_64-linux-gnu/libglib-2.0.so.0 \
                     /lib/x86_64-linux-gnu/libc.so.6 \
                     /lib/x86_64-linux-gnu/libpcre2-8.so.0 \
                     /lib/x86_64-linux-gnu/libcap-ng.so.0 \
-                    /lib/x86_64-linux-gnu/libpixman-1.so.0 \
                     /lib/x86_64-linux-gnu/liblzo2.so.2 \
                     /lib/x86_64-linux-gnu/libslirp.so.0 \
                     /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 \
