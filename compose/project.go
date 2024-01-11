@@ -93,10 +93,6 @@ func (project *Project) Validate(ctx context.Context) error {
 
 	// Fill in any missing image names and prepend the project name
 	for i, service := range project.Services {
-		if service.Image == "" {
-			project.Services[i].Image = fmt.Sprint(project.Name, "-", service.Name)
-		}
-
 		project.Services[i].Name = fmt.Sprint(project.Name, "-", service.Name)
 	}
 
