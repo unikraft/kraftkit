@@ -9,13 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/dustin/go-humanize"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
+	"kraftkit.sh/internal/fancymap"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/platform"
 
 	"kraftkit.sh/log"
@@ -189,5 +195,65 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
-	return Build(ctx, opts, args...)
+	if err := Build(ctx, opts, args...); err != nil {
+		return err
+	}
+
+	kernelStat, err := os.Stat((*opts.Target).Kernel())
+	if err != nil {
+		return fmt.Errorf("getting kernel image size: %w", err)
+	}
+
+	workdir, err := filepath.Abs(opts.Workdir)
+	if err != nil {
+		return fmt.Errorf("getting the work directory: %w", err)
+	}
+
+	workdir += "/"
+
+	kernelPath, err := filepath.Abs((*opts.Target).Kernel())
+	if err != nil {
+		return fmt.Errorf("getting kernel absolute path: %w", err)
+	}
+
+	entries := []fancymap.FancyMapEntry{
+		{
+			Key:   "kernel",
+			Value: strings.TrimPrefix(kernelPath, workdir),
+			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(kernelStat.Size()))),
+		},
+	}
+
+	if opts.Rootfs != "" {
+		initrdStat, err := os.Stat(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting initramfs size: %w", err)
+		}
+
+		initrdPath, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting initramfs absolute path: %w", err)
+		}
+
+		entries = append(entries, fancymap.FancyMapEntry{
+			Key:   "initramfs",
+			Value: strings.TrimPrefix(initrdPath, workdir),
+			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(initrdStat.Size()))),
+		})
+	}
+
+	if !iostreams.G(ctx).IsStdoutTTY() {
+		fields := logrus.Fields{}
+		for _, entry := range entries {
+			fields[entry.Key] = entry.Value
+		}
+		log.G(ctx).WithFields(fields).Info("build completed successfully")
+		return nil
+	}
+
+	fancymap.PrintFancyMap(iostreams.G(ctx).Out, "Build completed successfully!", true, entries...)
+
+	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
+
+	return nil
 }
