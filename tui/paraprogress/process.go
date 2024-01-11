@@ -251,7 +251,7 @@ func (p Process) View() string {
 
 	switch p.Status {
 	case StatusRunning:
-		left += tui.TextBlue("[" + p.spinner.View() + "]")
+		left += tui.TextWhiteBgBlue("[" + p.spinner.View() + "]")
 	case StatusSuccess:
 		left += tui.TextWhiteBgGreen("[+]")
 	default:
