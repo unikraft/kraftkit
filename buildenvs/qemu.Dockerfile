@@ -3,11 +3,11 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=bullseye-20221114
+ARG DEBIAN_VERSION=bookworm-20230725
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 
-ARG QEMU_VERSION=7.2.4
+ARG QEMU_VERSION=8.2.0
 ARG WITH_XEN=disable
 ARG WITH_KVM=enable
 
@@ -33,10 +33,12 @@ RUN set -ex; \
         libcap-ng-dev \
         libglib2.0-dev \
         liblzo2-dev \
-        libpixman-1-dev \
+        libslirp-dev \
+        libslirp0 \
         ninja-build \
         pkg-config \
-        python \
+        python3 \
+        python3-pip \
         texinfo \
         vde2 \
         xz-utils \
@@ -64,13 +66,11 @@ RUN set -ex; \
     fi; \
     ./configure \
         --target-list=$(echo ${tlist} | tail -c +2) \
-        --static \
         --prefix=/ \
         --audio-drv-list="" \
         --enable-attr \
         --disable-auth-pam \
-        --disable-avx2 \
-        --disable-avx512f \
+        --disable-alsa \
         --disable-bochs \
         --disable-bpf \
         --disable-brlapi \
@@ -82,6 +82,7 @@ RUN set -ex; \
         --disable-cfi-debug \
         --disable-cloop \
         --disable-cocoa \
+        --disable-colo-proxy \
         --disable-coreaudio \
         --disable-crypto-afalg \
         --disable-curl \
@@ -98,11 +99,11 @@ RUN set -ex; \
         --disable-gio \
         --disable-glusterfs \
         --disable-gnutls \
-        --disable-gprof \
         --disable-gtk \
+        --disable-gtk-clipboard \
         --disable-guest-agent \
         --disable-guest-agent-msi \
-        --disable-hax \
+        --disable-hv-balloon \
         --disable-hvf \
         --disable-iconv \
         --disable-jack \
@@ -110,6 +111,7 @@ RUN set -ex; \
         --${WITH_KVM}-kvm \
         --disable-l2tpv3 \
         --disable-libdaxctl \
+        --disable-libdw \
         --disable-libiscsi \
         --disable-libnfs \
         --disable-libpmem \
@@ -136,9 +138,10 @@ RUN set -ex; \
         --disable-oss \
         --disable-pa \
         --disable-parallels \
-        --disable-pie \
+        --disable-pipewire \
+        --disable-pixman \
+        --enable-pie \
         --disable-png \
-        --disable-profiler \
         --disable-pvrdma \
         --disable-qcow1 \
         --disable-qed \
@@ -146,14 +149,17 @@ RUN set -ex; \
         --disable-rbd \
         --disable-rdma \
         --disable-replication \
+        --disable-rutabaga-gfx \
         --disable-safe-stack \
         --disable-sdl \
         --disable-sdl-image \
         --disable-seccomp \
         --disable-selinux \
+        --enable-slirp \
         --disable-slirp-smbd \
         --disable-smartcard \
         --disable-snappy \
+        --disable-sndio \
         --disable-sparse \
         --disable-spice \
         --disable-spice-protocol \
@@ -168,6 +174,7 @@ RUN set -ex; \
         --disable-vdi \
         --disable-vduse-blk-export \
         --disable-vfio-user-server \
+        --disable-vhdx \
         --enable-vhost-crypto \
         --enable-vhost-kernel \
         --enable-vhost-net \
@@ -175,11 +182,11 @@ RUN set -ex; \
         --enable-vhost-user-blk-server \
         --enable-vhost-vdpa \
         --disable-virglrenderer \
-        --disable-virtiofsd \
         --disable-vmnet \
         --disable-vnc \
         --disable-vnc-jpeg \
         --disable-vnc-sasl \
+        --disable-vpc \
         --disable-vte \
         --disable-vvfat \
         --disable-werror \
@@ -197,6 +204,7 @@ FROM scratch AS qemu
 COPY --from=qemu-build /bin/qemu-img \
                        /bin/qemu-io \
                        /bin/qemu-nbd \
+                       /bin/qemu-edid \
                        /bin/qemu-pr-helper \
                        /bin/qemu-system-aarch64 \
                        /bin/qemu-system-arm \
@@ -205,3 +213,14 @@ COPY --from=qemu-build /bin/qemu-img \
 
 COPY --from=qemu-build /share/qemu/ /share/qemu/
 COPY --from=qemu-build /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/
+
+COPY --from=qemu-build /lib/x86_64-linux-gnu/libglib-2.0.so.0 \
+                    /lib/x86_64-linux-gnu/libm.so.6 \
+                    /lib/x86_64-linux-gnu/libz.so.1 \
+                    /lib/x86_64-linux-gnu/libc.so.6 \
+                    /lib/x86_64-linux-gnu/libpcre2-8.so.0 \
+                    /lib/x86_64-linux-gnu/libcap-ng.so.0 \
+                    /lib/x86_64-linux-gnu/liblzo2.so.2 \
+                    /lib/x86_64-linux-gnu/libslirp.so.0 \
+                    /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 \
+                    /lib/x86_64-linux-gnu/
