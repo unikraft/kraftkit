@@ -11,9 +11,9 @@ var (
 			Bold(true).
 			Render
 
-	TextRed = lipgloss.NewStyle().
-		Background(lipgloss.Color("9")).
-		Foreground(lipgloss.AdaptiveColor{
+	TextWhiteBgRed = lipgloss.NewStyle().
+			Background(lipgloss.Color("9")).
+			Foreground(lipgloss.AdaptiveColor{
 			Light: "0",
 			Dark:  "15",
 		}).

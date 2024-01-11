@@ -256,7 +256,7 @@ func (p Process) View() string {
 		left += tui.TextWhiteBgGreen("[+]")
 	default:
 		if p.Status == StatusFailed || p.err != nil {
-			left += tui.TextRed("<!>")
+			left += tui.TextWhiteBgRed("<!>")
 		} else {
 			left += "[ ]"
 		}
