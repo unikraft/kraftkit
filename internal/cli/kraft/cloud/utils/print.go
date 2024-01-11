@@ -16,18 +16,12 @@ import (
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
+	"kraftkit.sh/tui"
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 	kraftcloudservices "sdk.kraft.cloud/services"
 	kraftcloudusers "sdk.kraft.cloud/users"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
-)
-
-var (
-	textRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
-	textGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render
-	textYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render
-	textGray   = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render
 )
 
 // PrintInstances pretty-prints the provided set of instances or returns
@@ -332,31 +326,31 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 
 	var color func(...string) string
 	if instance.State == "running" || instance.State == "starting" {
-		color = textGreen
+		color = tui.TextGreen
 	} else if instance.State == "stopped" {
-		color = textRed
+		color = tui.TextRed
 	} else {
-		color = textYellow
+		color = tui.TextYellow
 	}
 
-	fmt.Fprintf(out, "\n%s%s%s %s\n", textGray("["), color("●"), textGray("]"), instance.UUID)
-	fmt.Fprintf(out, "             %s: %s\n", textGray("name"), instance.Name)
-	fmt.Fprintf(out, "            %s: %s\n", textGray("state"), color(instance.State))
+	fmt.Fprintf(out, "\n%s%s%s %s\n", tui.TextLightGray("["), color("●"), tui.TextLightGray("]"), instance.UUID)
+	fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("name"), instance.Name)
+	fmt.Fprintf(out, "            %s: %s\n", tui.TextLightGray("state"), color(instance.State))
 	if len(fqdn) > 0 {
 		if strings.HasPrefix(fqdn, "https://") {
-			fmt.Fprintf(out, "              %s: %s\n", textGray("url"), fqdn)
+			fmt.Fprintf(out, "              %s: %s\n", tui.TextLightGray("url"), fqdn)
 		} else {
-			fmt.Fprintf(out, "             %s: %s\n", textGray("fqdn"), fqdn)
+			fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("fqdn"), fqdn)
 		}
 	}
-	fmt.Fprintf(out, "            %s: %s\n", textGray("image"), instance.Image)
-	fmt.Fprintf(out, "        %s: %.2f ms\n", textGray("boot time"), float64(instance.BootTimeUS)/1000)
-	fmt.Fprintf(out, "           %s: %d MiB\n", textGray("memory"), instance.MemoryMB)
+	fmt.Fprintf(out, "            %s: %s\n", tui.TextLightGray("image"), instance.Image)
+	fmt.Fprintf(out, "        %s: %.2f ms\n", tui.TextLightGray("boot time"), float64(instance.BootTimeUS)/1000)
+	fmt.Fprintf(out, "           %s: %d MiB\n", tui.TextLightGray("memory"), instance.MemoryMB)
 	if len(instance.ServiceGroup.Name) > 0 {
-		fmt.Fprintf(out, "    %s: %s\n", textGray("service group"), instance.ServiceGroup.Name)
+		fmt.Fprintf(out, "    %s: %s\n", tui.TextLightGray("service group"), instance.ServiceGroup.Name)
 	}
 	if len(instance.Args) > 0 {
-		fmt.Fprintf(out, "             %s: %s\n", textGray("args"), strings.Join(instance.Args, " "))
+		fmt.Fprintf(out, "             %s: %s\n", tui.TextLightGray("args"), strings.Join(instance.Args, " "))
 	}
 
 	fmt.Fprintf(out, "\n")
