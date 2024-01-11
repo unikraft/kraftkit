@@ -49,53 +49,12 @@ type BuildOptions struct {
 
 // Build a Unikraft unikernel.
 func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
+	var err error
+
 	if opts == nil {
 		opts = &BuildOptions{}
 	}
-	return opts.Run(ctx, args)
-}
 
-func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
-		Short: "Configure and build Unikraft unikernels",
-		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
-		Args:  cmdfactory.MaxDirArgs(1),
-		Long: heredoc.Docf(`
-			Build a Unikraft unikernel.
-
-			The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
-			arguments, you will be guided through interactive mode.
-		`, "`"),
-		Example: heredoc.Doc(`
-			# Build the current project (cwd)
-			$ kraft build
-
-			# Build path to a Unikraft project
-			$ kraft build path/to/app`),
-		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "build",
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	return cmd
-}
-
-func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
-	if err != nil {
-		return err
-	}
-
-	cmd.SetContext(ctx)
-
-	return nil
-}
-
-func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
-	var err error
 	if len(args) == 0 {
 		opts.Workdir, err = os.Getwd()
 		if err != nil {
@@ -187,9 +146,48 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if err := build.Build(ctx, opts, selected[0], args...); err != nil {
-		return fmt.Errorf("could not complete build: %w", err)
+	return build.Build(ctx, opts, args...)
+}
+
+func NewCmd() *cobra.Command {
+	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
+		Short: "Configure and build Unikraft unikernels",
+		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
+		Args:  cmdfactory.MaxDirArgs(1),
+		Long: heredoc.Docf(`
+			Build a Unikraft unikernel.
+
+			The default behaviour of %[1]skraft build%[1]s is to build a project.  Given no
+			arguments, you will be guided through interactive mode.
+		`, "`"),
+		Example: heredoc.Doc(`
+			# Build the current project (cwd)
+			$ kraft build
+
+			# Build path to a Unikraft project
+			$ kraft build path/to/app`),
+		Annotations: map[string]string{
+			cmdfactory.AnnotationHelpGroup: "build",
+		},
+	})
+	if err != nil {
+		panic(err)
 	}
 
+	return cmd
+}
+
+func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(ctx)
+
 	return nil
+}
+
+func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
+	return Build(ctx, opts, args...)
 }
