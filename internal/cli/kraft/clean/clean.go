@@ -135,13 +135,13 @@ func (opts *CleanOptions) Run(ctx context.Context, args []string) error {
 		opts.Target,
 	)
 
+	if opts.Proper && len(targets) > 0 {
+		return project.Properclean(ctx, targets[0])
+	}
+
 	t, err := target.Select(targets)
 	if err != nil {
 		return err
-	}
-
-	if opts.Proper {
-		return project.Properclean(ctx, t)
 	}
 
 	return project.Clean(ctx, t)
