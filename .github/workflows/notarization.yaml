@@ -1,0 +1,143 @@
+name: mac-notarization
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  notarization:
+    runs-on: mac-m2-14
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd, arm]
+    steps:
+      - name: Run Notarization
+        run: |
+          set -xe
+
+          KRAFTKIT_VERSION=$(curl -s https://get.kraftkit.sh/latest.txt)
+
+          AMD_LINK=https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraft_${KRAFTKIT_VERSION}_darwin_amd64.tar.gz
+          ARM_LINK=https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraft_${KRAFTKIT_VERSION}_darwin_arm64.tar.gz
+          README_LINK=https://raw.githubusercontent.com/unikraft/kraftkit/v${KRAFTKIT_VERSION}/README.md
+          LICENSE_LINK=https://raw.githubusercontent.com/unikraft/kraftkit/v${KRAFTKIT_VERSION}/LICENSE.md
+
+          WORKDIR="${GITHUB_WORKSPACE}/notarization"
+
+          AMD_PATH="${WORKDIR}/amd/kraftkit"
+          ARM_PATH="${WORKDIR}/arm/kraftkit"
+          UNIVERSAL_PATH="${WORKDIR}/universal/kraftkit"
+
+          mkdir -p "${AMD_PATH}"
+          mkdir -p "${ARM_PATH}"
+          mkdir -p "${UNIVERSAL_PATH}"
+
+          # 1. Fetching and unpacking archives
+
+          if [ "${ARCH_NOTARIZATION}" == "amd" ]; then
+              wget -q -O - "${AMD_LINK}" | tar -xz -C "${AMD_PATH}"
+              wget -q -O - "${README_LINK}" > "${AMD_PATH}/README.md"
+              wget -q -O - "${LICENSE_LINK}" > "${AMD_PATH}/LICENSE.md"
+          elif [ "${ARCH_NOTARIZATION}" == "arm" ]; then
+              wget -q -O - "${ARM_LINK}" | tar -xz -C "${ARM_PATH}"
+              wget -q -O - "${README_LINK}" > "${ARM_PATH}/README.md"
+              wget -q -O - "${LICENSE_LINK}" > "${ARM_PATH}/LICENSE.md"
+          else
+              echo "Invalid architecture for notarization, aborting..."
+              exit 1
+          fi
+
+          # 2. Moving files to workdir
+
+          # lipo -create -output "${UNIVERSAL_PATH}/kraft" "${AMD_PATH}/kraft" "${ARM_PATH}/kraft"
+
+          if [ "${ARCH_NOTARIZATION}" == "amd" ]; then
+              cp "${AMD_PATH}/kraft" "${UNIVERSAL_PATH}/kraft"
+              cp "${AMD_PATH}/README.md" "${UNIVERSAL_PATH}/README.md"
+              cp "${AMD_PATH}/LICENSE.md" "${UNIVERSAL_PATH}/LICENSE.md"
+          elif [ "${ARCH_NOTARIZATION}" == "arm" ]; then
+              cp "${ARM_PATH}/kraft" "${UNIVERSAL_PATH}/kraft"
+              cp "${ARM_PATH}/README.md" "${UNIVERSAL_PATH}/README.md"
+              cp "${ARM_PATH}/LICENSE.md" "${UNIVERSAL_PATH}/LICENSE.md"
+          fi
+
+          # 3. Signing binary
+
+          codesign --timestamp --options=runtime -s "Developer ID Application: Unikraft GmbH" -v "${UNIVERSAL_PATH}/kraft"
+
+          cd "${UNIVERSAL_PATH}"
+          zip -q -r "kraftkit_${KRAFTKIT_VERSION}_darwin_${ARCH_NOTARIZATION}64.zip" .
+
+          # 4. Notarizing binary
+
+          xcrun notarytool submit \
+              --apple-id "${APPLE_ID}" --team-id "${TEAM_ID}" --password "${APPLICATION_PASSWORD}" \
+              --progress --wait \
+              "${UNIVERSAL_PATH}/kraftkit_${KRAFTKIT_VERSION}_darwin_${ARCH_NOTARIZATION}64.zip"
+          _result=$?
+
+          if [ $_result -ne 0 ]; then
+              echo "Notarization failed, aborting..."
+              exit 1
+          fi
+
+          # 5. Copying archive to home directory
+
+          RESULT_PATH="${HOME}/kraft_${KRAFTKIT_VERSION}_darwin_${ARCH_NOTARIZATION}64.zip"
+
+          mv "${UNIVERSAL_PATH}/kraftkit_${KRAFTKIT_VERSION}_darwin_${ARCH_NOTARIZATION}64.zip" "${RESULT_PATH}"
+
+          echo "Archive is available at: ${RESULT_PATH}"
+
+          # 6. Uploading archive to GitHub
+
+          gh release upload "v${KRAFTKIT_VERSION}" "${RESULT_PATH}" -R "unikraft/kraftkit" --clobber
+          _result=$?
+
+          if [ $_result -ne 0 ]; then
+              echo "Upload failed, aborting..."
+              exit 1
+          fi
+
+          # 7. Cleaning up
+
+          sha256sum "${RESULT_PATH}" | awk '{ printf $1 }' > "${GITHUB_WORKSPACE}/binary_sha256.txt"
+          echo -n "${KRAFTKIT_VERSION}" > "${GITHUB_WORKSPACE}/binary_version.txt"
+
+          rm -rf "${WORKDIR}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_IDENTITY }}
+          APPLICATION_PASSWORD: ${{ secrets.APPLE_APPLICATION_PASSWORD }}
+          ARCH_NOTARIZATION: ${{ matrix.arch }}
+
+      - name: Checkout Brew Formula
+        uses: actions/checkout@v4
+        with:
+          repository: unikraft/homebrew-cli
+          ref: staging
+          path: homebrew-kraftkit
+
+      - name: Update Brew Formula
+        run: |
+          set -xe
+
+          cd homebrew-kraftkit
+
+          KRAFTKIT_SHA256=$(cat "${GITHUB_WORKSPACE}/binary_sha256.txt")
+          KRAFTKIT_VERSION=$(cat "${GITHUB_WORKSPACE}/binary_version.txt")
+
+          sed "s/version .*/ version \"${KRAFTKIT_VERSION}\"/g" -i kraftkit.rb
+          sed "s/sha256 .*/ sha256 \"${KRAFTKIT_SHA256}\"/g" -i kraftkit.rb
+          sed "s/url .*/ url \"https://github.com/unikraft/kraftkit/releases/download/v${KRAFTKIT_VERSION}/kraft_${KRAFTKIT_VERSION}_darwin_${ARCH_NOTARIZATION}64.zip\"/g" -i kraftkit.rb
+
+          git config --global user.email "monkey@unikraft.io"
+          git config --global user.name "Unikraft Bot"
+          git add .
+          git commit -s -m "[$(date '+%F')]: Bump kraftkit to v${KRAFTKIT_VERSION}"
+          git push
+        env:
+          ARCH_NOTARIZATION: ${{ matrix.arch }}
