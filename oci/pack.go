@@ -93,7 +93,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 	ocipack.ref, err = name.ParseReference(
 		popts.Name(),
-		name.WithDefaultRegistry(""),
+		name.WithDefaultRegistry(DefaultRegistry),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image reference: %w", err)
