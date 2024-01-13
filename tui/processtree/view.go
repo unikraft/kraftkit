@@ -94,11 +94,11 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	textLeft := ""
 	switch pti.status {
 	case StatusSuccess:
-		textLeft += tui.TextGreen("[+]")
+		textLeft += tui.TextWhiteBgGreen("[+]")
 	case StatusFailed, StatusFailedChild:
-		textLeft += tui.TextRed("<!>")
+		textLeft += tui.TextWhiteBgRed("<!>")
 	case StatusRunning, StatusRunningChild, StatusRunningButAChildHasFailed:
-		textLeft += tui.TextBlue("[" + pti.spinner.View() + "]")
+		textLeft += tui.TextWhiteBgBlue("[" + pti.spinner.View() + "]")
 	default:
 		textLeft += "[ ]"
 	}
@@ -121,11 +121,11 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	if len(pti.textRight) > 0 {
 		switch pti.status {
 		case StatusSuccess:
-			textRight += tui.TextGreen(pti.textRight)
+			textRight += tui.TextWhiteBgGreen(pti.textRight)
 		case StatusFailed, StatusFailedChild:
-			textRight += tui.TextRed(pti.textRight)
+			textRight += tui.TextWhiteBgRed(pti.textRight)
 		case StatusRunning, StatusRunningChild, StatusRunningButAChildHasFailed:
-			textRight += tui.TextBlue(pti.textRight)
+			textRight += tui.TextWhiteBgBlue(pti.textRight)
 		default:
 			textRight += pti.textRight
 		}

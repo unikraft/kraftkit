@@ -7,8 +7,6 @@ package build
 import (
 	"context"
 	"fmt"
-
-	"kraftkit.sh/unikraft/target"
 )
 
 // builder is an interface for defining different mechanisms to perform a build
@@ -26,11 +24,11 @@ type builder interface {
 
 	// Prepare performs any pre-emptive operations that are necessary before
 	// performing the build.
-	Prepare(context.Context, *BuildOptions, target.Target, ...string) error
+	Prepare(context.Context, *BuildOptions, ...string) error
 
 	// Build performs the actual construction of the unikernel given the provided
 	// inputs for the given implementation.
-	Build(context.Context, *BuildOptions, target.Target, ...string) error
+	Build(context.Context, *BuildOptions, ...string) error
 }
 
 // builders is the list of built-in builders which are checked sequentially for

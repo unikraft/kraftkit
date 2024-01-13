@@ -9,13 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/dustin/go-humanize"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
+	"kraftkit.sh/internal/fancymap"
+	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/platform"
 
 	"kraftkit.sh/log"
@@ -25,33 +31,128 @@ import (
 )
 
 type BuildOptions struct {
-	All          bool   `long:"all" usage:"Build all targets"`
-	Architecture string `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
-	DotConfig    string `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	ForcePull    bool   `long:"force-pull" usage:"Force pulling packages before building"`
-	Jobs         int    `long:"jobs" short:"j" usage:"Allow N jobs at once"`
-	KernelDbg    bool   `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	NoCache      bool   `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
-	NoConfigure  bool   `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast       bool   `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
-	NoFetch      bool   `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoUpdate     bool   `long:"no-update" usage:"Do not update package index before running the build"`
-	Platform     string `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
-	Rootfs       string `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	SaveBuildLog string `long:"build-log" usage:"Use the specified file to save the output from the build"`
-	Target       string `long:"target" short:"t" usage:"Build a particular known target"`
-	Workdir      string `noattribute:"true"`
+	All          bool           `long:"all" usage:"Build all targets"`
+	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	DotConfig    string         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	ForcePull    bool           `long:"force-pull" usage:"Force pulling packages before building"`
+	Jobs         int            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg    bool           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile    string         `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	NoCache      bool           `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure  bool           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast       bool           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
+	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	Rootfs       string         `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	SaveBuildLog string         `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Target       *target.Target `noattribute:"true"`
+	TargetName   string         `long:"target" short:"t" usage:"Build a particular known target"`
+	Workdir      string         `noattribute:"true"`
 
 	project app.Application
 }
 
 // Build a Unikraft unikernel.
 func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
+	var err error
+
 	if opts == nil {
 		opts = &BuildOptions{}
 	}
-	return opts.Run(ctx, args)
+
+	if len(args) == 0 {
+		opts.Workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	} else if len(opts.Workdir) == 0 {
+		opts.Workdir = args[0]
+	}
+
+	popts := []app.ProjectOption{
+		app.WithProjectWorkdir(opts.Workdir),
+	}
+
+	if len(opts.Kraftfile) > 0 {
+		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
+	} else {
+		popts = append(popts, app.WithProjectDefaultKraftfiles())
+	}
+
+	// Initialize at least the configuration options for a project
+	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
+	if err != nil && errors.Is(err, app.ErrNoKraftfile) {
+		return fmt.Errorf("cannot build project directory without a Kraftfile")
+	} else if err != nil {
+		return fmt.Errorf("could not initialize project directory: %w", err)
+	}
+
+	opts.Platform = platform.PlatformByName(opts.Platform).String()
+
+	if opts.Target == nil {
+		// Filter project targets by any provided CLI options
+		selected := opts.project.Targets()
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets to build")
+		}
+		if !opts.All {
+			selected = target.Filter(
+				selected,
+				opts.Architecture,
+				opts.Platform,
+				opts.TargetName,
+			)
+
+			if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
+				res, err := target.Select(selected)
+				if err != nil {
+					return err
+				}
+				selected = []target.Target{res}
+			}
+		}
+
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets selected to build")
+		}
+
+		opts.Target = &selected[0]
+	}
+
+	var build builder
+	builders := builders()
+
+	// Iterate through the list of built-in builders which sequentially tests
+	// the current context and Kraftfile match specific requirements towards
+	// performing a type of build.
+	for _, candidate := range builders {
+		log.G(ctx).
+			WithField("builder", candidate.String()).
+			Trace("checking buildability")
+
+		capable, err := candidate.Buildable(ctx, opts, args...)
+		if capable && err == nil {
+			build = candidate
+			break
+		}
+	}
+
+	if build == nil {
+		return fmt.Errorf("could not determine what or how to build from the given context")
+	}
+
+	log.G(ctx).WithField("builder", build.String()).Debug("using")
+
+	if err := build.Prepare(ctx, opts, args...); err != nil {
+		return fmt.Errorf("could not complete build: %w", err)
+	}
+
+	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, *opts.Target); err != nil {
+		return err
+	}
+
+	return build.Build(ctx, opts, args...)
 }
 
 func NewCmd() *cobra.Command {
@@ -94,97 +195,65 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
-	var err error
-	if len(args) == 0 {
-		opts.Workdir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	} else if len(opts.Workdir) == 0 {
-		opts.Workdir = args[0]
-	}
-
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.Workdir),
-	}
-
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
-
-	// Initialize at least the configuration options for a project
-	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
-	if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-		return fmt.Errorf("cannot build project directory without a Kraftfile")
-	} else if err != nil {
-		return fmt.Errorf("could not initialize project directory: %w", err)
-	}
-
-	opts.Platform = platform.PlatformByName(opts.Platform).String()
-
-	// Filter project targets by any provided CLI options
-	selected := opts.project.Targets()
-	if len(selected) == 0 {
-		return fmt.Errorf("no targets to build")
-	}
-	if !opts.All {
-		selected = target.Filter(
-			selected,
-			opts.Architecture,
-			opts.Platform,
-			opts.Target,
-		)
-
-		if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
-			res, err := target.Select(selected)
-			if err != nil {
-				return err
-			}
-			selected = []target.Target{res}
-		}
-	}
-
-	if len(selected) == 0 {
-		return fmt.Errorf("no targets selected to build")
-	}
-
-	var build builder
-	builders := builders()
-
-	// Iterate through the list of built-in builders which sequentially tests
-	// the current context and Kraftfile match specific requirements towards
-	// performing a type of build.
-	for _, candidate := range builders {
-		log.G(ctx).
-			WithField("builder", candidate.String()).
-			Trace("checking buildability")
-
-		capable, err := candidate.Buildable(ctx, opts, args...)
-		if capable && err == nil {
-			build = candidate
-			break
-		}
-	}
-
-	if build == nil {
-		return fmt.Errorf("could not determine what or how to build from the given context")
-	}
-
-	log.G(ctx).WithField("builder", build.String()).Debug("using")
-
-	if err := build.Prepare(ctx, opts, selected[0], args...); err != nil {
-		return fmt.Errorf("could not complete build: %w", err)
-	}
-
-	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {
+	if err := Build(ctx, opts, args...); err != nil {
 		return err
 	}
 
-	if err := build.Build(ctx, opts, selected[0], args...); err != nil {
-		return fmt.Errorf("could not complete build: %w", err)
+	kernelStat, err := os.Stat((*opts.Target).Kernel())
+	if err != nil {
+		return fmt.Errorf("getting kernel image size: %w", err)
 	}
+
+	workdir, err := filepath.Abs(opts.Workdir)
+	if err != nil {
+		return fmt.Errorf("getting the work directory: %w", err)
+	}
+
+	workdir += "/"
+
+	kernelPath, err := filepath.Abs((*opts.Target).Kernel())
+	if err != nil {
+		return fmt.Errorf("getting kernel absolute path: %w", err)
+	}
+
+	entries := []fancymap.FancyMapEntry{
+		{
+			Key:   "kernel",
+			Value: strings.TrimPrefix(kernelPath, workdir),
+			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(kernelStat.Size()))),
+		},
+	}
+
+	if opts.Rootfs != "" {
+		initrdStat, err := os.Stat(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting initramfs size: %w", err)
+		}
+
+		initrdPath, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting initramfs absolute path: %w", err)
+		}
+
+		entries = append(entries, fancymap.FancyMapEntry{
+			Key:   "initramfs",
+			Value: strings.TrimPrefix(initrdPath, workdir),
+			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(initrdStat.Size()))),
+		})
+	}
+
+	if !iostreams.G(ctx).IsStdoutTTY() {
+		fields := logrus.Fields{}
+		for _, entry := range entries {
+			fields[entry.Key] = entry.Value
+		}
+		log.G(ctx).WithFields(fields).Info("build completed successfully")
+		return nil
+	}
+
+	fancymap.PrintFancyMap(iostreams.G(ctx).Out, "Build completed successfully!", true, entries...)
+
+	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
 
 	return nil
 }
