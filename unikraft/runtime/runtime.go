@@ -68,3 +68,20 @@ func (elfloader *Runtime) Version() string {
 func (elfloader *Runtime) Source() string {
 	return elfloader.source
 }
+
+func (elfloader *Runtime) MarshalYAML() (interface{}, error) {
+	ret := map[string]interface{}{}
+	if len(elfloader.name) > 0 {
+		ret["name"] = elfloader.name
+	}
+	if len(elfloader.version) > 0 {
+		ret["version"] = elfloader.version
+	}
+	if len(elfloader.source) > 0 {
+		ret["source"] = elfloader.source
+	}
+	if len(ret) == 0 {
+		return nil, nil
+	}
+	return ret, nil
+}
