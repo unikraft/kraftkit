@@ -313,11 +313,14 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 				// Assign the first interface statically via command-line arguments, also
 				// checking if the built-in arguments for
-				if !kernelArgs.Contains(uknetdev.ParamIpv4Addr) && i == 0 {
+				if !kernelArgs.Contains(uknetdev.ParamIp) && i == 0 {
+					sz, _ := net.IPMask(net.ParseIP(network.Netmask).To4()).Size()
+
 					kernelArgs = append(kernelArgs,
-						uknetdev.ParamIpv4Addr.WithValue(iface.Spec.IP),
-						uknetdev.ParamIpv4GwAddr.WithValue(network.Gateway),
-						uknetdev.ParamIpv4SubnetMask.WithValue(network.Netmask),
+						uknetdev.ParamIp.WithValue(uknetdev.NetdevIp{
+							CIDR:    fmt.Sprintf("%s/%d", iface.Spec.IP, sz),
+							Gateway: network.Gateway,
+						}),
 					)
 				}
 
