@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -44,13 +45,15 @@ type BuildOptions struct {
 	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	PrintStats   bool           `long:"print-stats" usage:"Print build statistics"`
 	Rootfs       string         `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	SaveBuildLog string         `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target       *target.Target `noattribute:"true"`
 	TargetName   string         `long:"target" short:"t" usage:"Build a particular known target"`
 	Workdir      string         `noattribute:"true"`
 
-	project app.Application
+	project    app.Application
+	statistics map[string]string
 }
 
 // Build a Unikraft unikernel.
@@ -89,6 +92,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
+	opts.statistics = map[string]string{}
 
 	if opts.Target == nil {
 		// Filter project targets by any provided CLI options
@@ -152,7 +156,16 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return err
 	}
 
-	return build.Build(ctx, opts, args...)
+	err = build.Build(ctx, opts, args...)
+	if err != nil {
+		return fmt.Errorf("could not complete build: %w", err)
+	}
+
+	if opts.PrintStats {
+		return build.Statistics(ctx, opts, args...)
+	}
+
+	return nil
 }
 
 func NewCmd() *cobra.Command {
@@ -240,6 +253,22 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 			Value: strings.TrimPrefix(initrdPath, workdir),
 			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(initrdStat.Size()))),
 		})
+	}
+
+	if opts.PrintStats {
+		// Sort the statistics map by key
+		keys := make([]string, 0, len(opts.statistics))
+		for k := range opts.statistics {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			entries = append(entries, fancymap.FancyMapEntry{
+				Key:   k,
+				Value: opts.statistics[k],
+			})
+		}
 	}
 
 	if !iostreams.G(ctx).IsStdoutTTY() {
