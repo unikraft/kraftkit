@@ -29,6 +29,9 @@ type builder interface {
 	// Build performs the actual construction of the unikernel given the provided
 	// inputs for the given implementation.
 	Build(context.Context, *BuildOptions, ...string) error
+
+	// Statistics returns the statistics for the build.
+	Statistics(context.Context, *BuildOptions, ...string) error
 }
 
 // builders is the list of built-in builders which are checked sequentially for

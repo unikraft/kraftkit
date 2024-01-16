@@ -8,6 +8,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	plainexec "os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -45,6 +48,36 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 	}
 
 	return true, nil
+}
+
+// Calculate lines of code in a kernel image.
+// Requires objdump to be installed and debug symbols to be enabled.
+func linesOfCode(ctx context.Context, opts *BuildOptions) (int64, error) {
+	objdumpPath, err := plainexec.LookPath("objdump")
+	if err != nil {
+		log.G(ctx).Warn("objdump not found, skipping LoC statistics")
+		return 0, nil
+	}
+	cmd := plainexec.CommandContext(ctx, objdumpPath, "-dl", (*opts.Target).KernelDbg())
+	cmd.Stderr = log.G(ctx).WriterLevel(logrus.DebugLevel)
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("running objdump: %w", err)
+	}
+
+	uniqueLines := map[string]bool{}
+	filterRegex1 := regexp.MustCompile(`^/.*$`)
+	filterRegex2 := regexp.MustCompile(`^/[/*].*$`)
+	filterRegex3 := regexp.MustCompile(`^.* [(]discriminator [0-9]+[)].*$`)
+	for _, line := range strings.Split(string(out), "\n") {
+		if filterRegex1.FindString(line) != "" &&
+			filterRegex2.FindString(line) == "" &&
+			filterRegex3.FindString(line) == "" {
+			uniqueLines[line] = true
+		}
+	}
+
+	return int64(len(uniqueLines)), nil
 }
 
 func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOptions, norender bool, nameWidth int) error {
@@ -392,6 +425,35 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		//    necessary for the subsequent build steps;
 		//  - The Unikraft build system can re-use compiled files from previous
 		//    compilations (if the architecture does not change).
+		paraprogress.IsParallel(false),
+		paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+		paraprogress.WithFailFast(true),
+		paraprogress.WithNameWidth(build.nameWidth),
+	)
+	if err != nil {
+		return err
+	}
+
+	return paramodel.Start()
+}
+
+func (build *builderKraftfileUnikraft) Statistics(ctx context.Context, opts *BuildOptions, args ...string) error {
+	var processes []*paraprogress.Process
+
+	processes = append(processes, paraprogress.NewProcess(
+		fmt.Sprintf("statistics %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
+		func(ctx context.Context, w func(progress float64)) error {
+			lines, err := linesOfCode(ctx, opts)
+			if lines > 1 {
+				opts.statistics["lines of code"] = fmt.Sprintf("%d", lines)
+			}
+			return err
+		},
+	))
+
+	paramodel, err := paraprogress.NewParaProgress(
+		ctx,
+		processes,
 		paraprogress.IsParallel(false),
 		paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
 		paraprogress.WithFailFast(true),
