@@ -195,6 +195,19 @@ func (kvm KeyValueMap) Get(key string) (*KeyValue, bool) {
 	return nil, false
 }
 
+// AnyYes accepts an input list of keys which are all checked against the
+// KConfig value for "y" (meaning "yes" or "true").  If any of the keys are set
+// to this value, this method returns true.
+func (kvm KeyValueMap) AnyYes(keys ...string) bool {
+	for _, key := range keys {
+		if val, ok := kvm[key]; ok && val.Value == Yes {
+			return true
+		}
+	}
+
+	return false
+}
+
 // String returns the serialized string representing a .config file
 func (kvm KeyValueMap) String() string {
 	var ret strings.Builder
