@@ -74,7 +74,11 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 
 	// Reset the rootfs, such that it is not packaged as an initrd if it is
 	// already embedded inside of the kernel.
-	if val, exists := opts.Project.KConfig().Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+	if opts.Project.KConfig().AnyYes(
+		"CONFIG_LIBVFSCORE_ROOTFS_EINITRD", // Deprecated
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+	) {
 		opts.Rootfs = ""
 	} else {
 		if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, selected...); err != nil {

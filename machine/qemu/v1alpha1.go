@@ -363,13 +363,12 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 		case "initrd":
 			fstab = append(fstab, vfscore.NewFstabEntry(
-				"initrd",
+				"initrd0",
 				vol.Spec.Destination,
-				vol.Spec.Driver,
+				"extract",
 				"",
 				"",
-				// By default, create the directory if it does not exist when mounting.
-				"mkmp",
+				"",
 			).String())
 		default:
 			return machine, fmt.Errorf("unsupported QEMU volume driver: %v", vol.Spec.Driver)
