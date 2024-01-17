@@ -59,6 +59,12 @@ func (param *paramStr) Name() string {
 func (param *paramStr) Set(value any) {
 	v, ok := value.(string)
 	if !ok {
+		v, ok := value.(fmt.Stringer)
+		if !ok {
+			return
+		}
+
+		param.value = v.String()
 		return
 	}
 	param.value = v
