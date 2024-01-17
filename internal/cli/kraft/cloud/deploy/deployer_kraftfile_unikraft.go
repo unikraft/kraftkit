@@ -49,7 +49,7 @@ func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *Dep
 		SaveBuildLog: opts.SaveBuildLog,
 		Workdir:      opts.Workdir,
 	}); err != nil {
-		return nil, fmt.Errorf("could not complete build")
+		return nil, fmt.Errorf("could not complete build: %w", err)
 	}
 
 	// Re-use the runtime deployer, which also handles packaging.
