@@ -499,7 +499,19 @@ searchRemoteIndexes:
 		return nil, err
 	}
 
-	for fullref, index := range indexes {
+	for oref, index := range indexes {
+		ref, err := name.ParseReference(oref,
+			name.WithDefaultRegistry(DefaultRegistry),
+		)
+		if err != nil {
+			log.G(ctx).
+				WithField("ref", oref).
+				Tracef("skipping index: invalid reference format: %s", err.Error())
+			continue
+		}
+
+		fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
+
 		if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
 			log.G(ctx).
 				WithField("ref", fullref).
@@ -533,7 +545,7 @@ searchRemoteIndexes:
 
 		for checksum, pack := range processV1IndexManifests(ctx,
 			handle,
-			fullref,
+			oref,
 			query,
 			index.Manifests,
 		) {
@@ -649,6 +661,8 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		if err != nil {
 			return false
 		}
+
+		source = fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
 
 		// log.G(ctx).WithField("source", source).Debug("checking if source is registry")
 		opts := []crane.Option{
