@@ -68,12 +68,11 @@ func linesOfCode(ctx context.Context, opts *BuildOptions) (int64, error) {
 	uniqueLines := map[string]bool{}
 	filterRegex1 := regexp.MustCompile(`^/.*$`)
 	filterRegex2 := regexp.MustCompile(`^/[/*].*$`)
-	filterRegex3 := regexp.MustCompile(`^.* [(]discriminator [0-9]+[)].*$`)
+	filterRegex3 := regexp.MustCompile(` [(]discriminator [0-9]+[)]`)
 	for _, line := range strings.Split(string(out), "\n") {
 		if filterRegex1.FindString(line) != "" &&
-			filterRegex2.FindString(line) == "" &&
-			filterRegex3.FindString(line) == "" {
-			uniqueLines[line] = true
+			filterRegex2.FindString(line) == "" {
+			uniqueLines[filterRegex3.ReplaceAllString(line, "")] = true
 		}
 	}
 
