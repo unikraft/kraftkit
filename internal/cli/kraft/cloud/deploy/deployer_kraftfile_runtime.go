@@ -181,6 +181,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					instance, err = create.Create(ctxTimeout, &create.CreateOptions{
 						Env:       opts.Env,
 						FQDN:      opts.FQDN,
+						Image:     pkgName,
 						Memory:    opts.Memory,
 						Metro:     opts.Metro,
 						Name:      opts.Name,
@@ -188,7 +189,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 						Replicas:  opts.Replicas,
 						Start:     !opts.NoStart,
 						SubDomain: opts.SubDomain,
-					}, append([]string{pkgName}, args...)...)
+					}, args...)
 					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
 						continue
 					} else if err != nil {

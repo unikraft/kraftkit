@@ -31,6 +31,7 @@ type CreateOptions struct {
 	Client                 kraftcloud.KraftCloud `noattribute:"true"`
 	Env                    []string              `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
+	Image                  string                `noattribute:"true"`
 	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
 	Metro                  string                `noattribute:"true"`
 	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
@@ -51,8 +52,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		opts = &CreateOptions{}
 	}
 
-	image := args[0]
-
 	if opts.Auth == nil {
 		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
 		if err != nil {
@@ -66,10 +65,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	req := kraftcloudinstances.CreateInstanceRequest{
-		Args:         args[1:],
+		Args:         args,
 		Autostart:    opts.Start,
 		Env:          make(map[string]string),
-		Image:        image,
+		Image:        opts.Image,
 		MemoryMB:     opts.Memory,
 		Name:         opts.Name,
 		Replicas:     opts.Replicas,
@@ -325,7 +324,9 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
-	instance, err := Create(ctx, opts, args...)
+	opts.Image = args[0]
+
+	instance, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
 	}
