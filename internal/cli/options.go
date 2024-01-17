@@ -65,19 +65,6 @@ func WithDefaultLogger() CliOption {
 			formatter := new(logrus.TextFormatter)
 			logger.Formatter = formatter
 
-		case log.BASIC:
-			formatter := new(log.TextFormatter)
-			formatter.FullTimestamp = true
-			formatter.DisableTimestamp = true
-
-			if copts.ConfigManager.Config.Log.Timestamps {
-				formatter.DisableTimestamp = false
-			} else {
-				formatter.TimestampFormat = ">"
-			}
-
-			logger.Formatter = formatter
-
 		case log.FANCY:
 			formatter := new(log.TextFormatter)
 			formatter.FullTimestamp = true
@@ -97,6 +84,19 @@ func WithDefaultLogger() CliOption {
 
 			if copts.ConfigManager.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false
+			}
+
+			logger.Formatter = formatter
+
+		default:
+			formatter := new(log.TextFormatter)
+			formatter.FullTimestamp = true
+			formatter.DisableTimestamp = true
+
+			if copts.ConfigManager.Config.Log.Timestamps {
+				formatter.DisableTimestamp = false
+			} else {
+				formatter.TimestampFormat = ">"
 			}
 
 			logger.Formatter = formatter
