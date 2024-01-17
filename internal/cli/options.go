@@ -76,6 +76,9 @@ func WithDefaultLogger() CliOption {
 				formatter.TimestampFormat = ">"
 			}
 
+			formatter.DisableColors = iostreams.EnvColorDisabled()
+			formatter.ForceColors = iostreams.EnvColorForced()
+
 			logger.Formatter = formatter
 
 		case log.JSON:
@@ -98,6 +101,9 @@ func WithDefaultLogger() CliOption {
 			} else {
 				formatter.TimestampFormat = ">"
 			}
+
+			formatter.DisableColors = iostreams.EnvColorDisabled()
+			formatter.ForceColors = iostreams.EnvColorForced()
 
 			logger.Formatter = formatter
 		}
