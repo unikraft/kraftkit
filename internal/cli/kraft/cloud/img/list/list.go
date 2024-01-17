@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -147,6 +148,8 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 				versions = append(versions, split[1])
 			}
 		}
+
+		slices.Sort[[]string](versions)
 
 		table.AddField(name, nil)
 		table.AddField(strings.Join(versions, ", "), nil)
