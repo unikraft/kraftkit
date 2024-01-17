@@ -49,6 +49,7 @@ type DeployOptions struct {
 	Project      app.Application           `noattribute:"true"`
 	Replicas     int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
+	Runtime      string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Strategy     packmanager.MergeStrategy `noattribute:"true"`
 	SubDomain    string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
