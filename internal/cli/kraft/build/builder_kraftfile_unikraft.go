@@ -385,7 +385,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 					make.WithExecOptions(
 						exec.WithStdin(iostreams.G(ctx).In),
 						exec.WithStdout(log.G(ctx).Writer()),
-						exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+						exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
 					),
 				)
 			},
