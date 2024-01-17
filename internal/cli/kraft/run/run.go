@@ -190,20 +190,22 @@ func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
 
 	opts.platform = mplatform.PlatformUnknown
 
-	if opts.Platform == "" || opts.Platform == "auto" {
-		var mode mplatform.SystemMode
-		opts.platform, mode, err = mplatform.Detect(ctx)
-		if err != nil {
-			return err
-		} else if mode == mplatform.SystemGuest {
-			log.G(ctx).Warn("using hardware emulation")
-			opts.DisableAccel = true
-		}
+	var mode mplatform.SystemMode
+	defaultPlatform, mode, err := mplatform.Detect(ctx)
+	if err != nil {
+		return err
+	} else if mode == mplatform.SystemGuest {
+		log.G(ctx).Warn("using hardware emulation")
+		opts.DisableAccel = true
+	}
+
+	if opts.Platform == "" || opts.Platform == "auto" || opts.Platform == defaultPlatform.String() {
+		opts.platform = defaultPlatform
 	} else {
 		var ok bool
 		opts.platform, ok = mplatform.PlatformsByName()[opts.Platform]
 		if !ok {
-			return fmt.Errorf("unknown platform driver: %s", opts.Platform)
+			return fmt.Errorf("unknown platform driver '%s', however your system supports '%s'", opts.Platform, defaultPlatform.String())
 		}
 	}
 
@@ -212,7 +214,7 @@ func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
 		return fmt.Errorf("unsupported platform driver: %s (contributions welcome!)", opts.Platform)
 	}
 
-	log.G(ctx).WithField("platform", opts.platform.String()).Debug("detected")
+	log.G(ctx).WithField("platform", opts.platform.String()).Debug("using")
 
 	opts.machineController, err = machineStrategy.NewMachineV1alpha1(ctx)
 	if err != nil {
