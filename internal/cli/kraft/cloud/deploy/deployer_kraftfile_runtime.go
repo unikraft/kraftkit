@@ -47,11 +47,9 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	}
 	if strings.HasPrefix(opts.Project.Runtime().Name(), "unikraft.io") {
 		opts.Project.Runtime().SetName("index." + opts.Project.Runtime().Name())
-	}
-	if strings.Contains(opts.Project.Runtime().Name(), "/") && !strings.Contains(opts.Project.Runtime().Name(), "unikraft.io") {
+	} else if strings.Contains(opts.Project.Runtime().Name(), "/") && !strings.Contains(opts.Project.Runtime().Name(), "unikraft.io") {
 		opts.Project.Runtime().SetName("index.unikraft.io/" + opts.Project.Runtime().Name())
-	}
-	if !strings.HasPrefix(opts.Project.Runtime().Name(), "index.unikraft.io") {
+	} else if !strings.HasPrefix(opts.Project.Runtime().Name(), "index.unikraft.io") {
 		opts.Project.Runtime().SetName("index.unikraft.io/official/" + opts.Project.Runtime().Name())
 	}
 
