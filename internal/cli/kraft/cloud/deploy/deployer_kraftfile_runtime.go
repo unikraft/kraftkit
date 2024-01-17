@@ -42,10 +42,13 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 		return false, fmt.Errorf("cannot package without runtime specification")
 	}
 
+	if opts.Runtime != "" {
+		opts.Project.Runtime().SetName(opts.Runtime)
+	}
 	if strings.HasPrefix(opts.Project.Runtime().Name(), "unikraft.io") {
 		opts.Project.Runtime().SetName("index." + opts.Project.Runtime().Name())
 	}
-	if strings.HasPrefix(opts.Project.Runtime().Name(), opts.Auth.User) {
+	if strings.Contains(opts.Project.Runtime().Name(), "/") && strings.Contains(opts.Project.Runtime().Name(), "unikraft.io") {
 		opts.Project.Runtime().SetName("index.unikraft.io/" + opts.Project.Runtime().Name())
 	}
 	if !strings.HasPrefix(opts.Project.Runtime().Name(), "index.unikraft.io") {
