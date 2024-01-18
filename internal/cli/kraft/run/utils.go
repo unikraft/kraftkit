@@ -261,24 +261,22 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture),
 	)
 
-	if _, err := os.Stat(machine.Status.InitrdPath); err != nil {
-		ramfs, err := initrd.New(ctx,
-			opts.Rootfs,
-			initrd.WithOutput(machine.Status.InitrdPath),
-			initrd.WithCacheDir(filepath.Join(
-				opts.workdir,
-				unikraft.BuildDir,
-				"rootfs-cache",
-			)),
-			initrd.WithArchitecture(machine.Spec.Architecture),
-		)
-		if err != nil {
-			return fmt.Errorf("could not prepare initramfs: %w", err)
-		}
+	ramfs, err := initrd.New(ctx,
+		opts.Rootfs,
+		initrd.WithOutput(machine.Status.InitrdPath),
+		initrd.WithCacheDir(filepath.Join(
+			opts.workdir,
+			unikraft.BuildDir,
+			"rootfs-cache",
+		)),
+		initrd.WithArchitecture(machine.Spec.Architecture),
+	)
+	if err != nil {
+		return fmt.Errorf("could not prepare initramfs: %w", err)
+	}
 
-		if machine.Status.InitrdPath, err = ramfs.Build(ctx); err != nil {
-			return err
-		}
+	if _, err = ramfs.Build(ctx); err != nil {
+		return err
 	}
 
 	if fi, err := os.Stat(machine.Status.InitrdPath); err == nil {

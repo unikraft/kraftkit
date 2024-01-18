@@ -50,7 +50,11 @@ func (opts *GithubAction) build(ctx context.Context) error {
 		}
 
 		// Unset the intird path since this is now embedded in the unikernel
-		if val, exists := opts.project.KConfig().Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+		if opts.project.KConfig().AnyYes(
+			"CONFIG_LIBVFSCORE_FSTAB", // Deprecated
+			"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
+			"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+		) {
 			opts.initrdPath = ""
 		}
 	}

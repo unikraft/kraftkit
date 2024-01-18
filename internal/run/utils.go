@@ -18,9 +18,7 @@ func BootArgsPrepare(args ...string) string {
 			sb.WriteByte('"')
 			sb.WriteByte(' ')
 		} else {
-			sb.WriteByte('\'')
 			sb.Write([]byte(arg))
-			sb.WriteByte('\'')
 			sb.WriteByte(' ')
 		}
 	}

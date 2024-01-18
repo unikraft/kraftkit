@@ -557,11 +557,15 @@ func (app application) Configure(ctx context.Context, tc target.Target, extra kc
 	}
 
 	// Are we embedding an initramfs file into the kernel?
-	if val, exists := values.Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD"); exists && val.Value == "y" {
+	if values.AnyYes(
+		"CONFIG_LIBVFSCORE_FSTAB", // Deprecated
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+	) {
 		// If the user has not specified a path, we set one specifically which
 		// is specific to the target.
-		if val, exists := values.Get("CONFIG_LIBVFSCORE_ROOTFS_EINITRD_PATH"); !exists || val.Value == "" {
-			values.Set("CONFIG_LIBVFSCORE_ROOTFS_EINITRD_PATH",
+		if val, exists := values.Get("CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH"); !exists || val.Value == "" {
+			values.Set("CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH",
 				filepath.Join(
 					app.outDir,
 					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String()),
