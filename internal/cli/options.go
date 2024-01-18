@@ -51,23 +51,18 @@ func WithDefaultLogger() CliOption {
 
 		// Set up a default logger based on the internal TextFormatter
 		logger := logrus.New()
+		logType := log.LoggerTypeFromString(copts.ConfigManager.Config.Log.Type)
 
-		switch log.LoggerTypeFromString(copts.ConfigManager.Config.Log.Type) {
+		// Force setting the log type to basic in non-TTY environments when the
+		// log-type has been set to 'fancy' (which is in fact the default).
+		if copts.IOStreams != nil && !copts.IOStreams.IsStdoutTTY() && copts.ConfigManager.Config.Log.Type == "fancy" {
+			logType = log.BASIC
+			copts.ConfigManager.Config.Log.Type = "basic"
+		}
+
+		switch logType {
 		case log.QUIET:
 			formatter := new(logrus.TextFormatter)
-			logger.Formatter = formatter
-
-		case log.BASIC:
-			formatter := new(log.TextFormatter)
-			formatter.FullTimestamp = true
-			formatter.DisableTimestamp = true
-
-			if copts.ConfigManager.Config.Log.Timestamps {
-				formatter.DisableTimestamp = false
-			} else {
-				formatter.TimestampFormat = ">"
-			}
-
 			logger.Formatter = formatter
 
 		case log.FANCY:
@@ -81,6 +76,9 @@ func WithDefaultLogger() CliOption {
 				formatter.TimestampFormat = ">"
 			}
 
+			formatter.DisableColors = iostreams.EnvColorDisabled()
+			formatter.ForceColors = iostreams.EnvColorForced()
+
 			logger.Formatter = formatter
 
 		case log.JSON:
@@ -90,6 +88,22 @@ func WithDefaultLogger() CliOption {
 			if copts.ConfigManager.Config.Log.Timestamps {
 				formatter.DisableTimestamp = false
 			}
+
+			logger.Formatter = formatter
+
+		default:
+			formatter := new(log.TextFormatter)
+			formatter.FullTimestamp = true
+			formatter.DisableTimestamp = true
+
+			if copts.ConfigManager.Config.Log.Timestamps {
+				formatter.DisableTimestamp = false
+			} else {
+				formatter.TimestampFormat = ">"
+			}
+
+			formatter.DisableColors = iostreams.EnvColorDisabled()
+			formatter.ForceColors = iostreams.EnvColorForced()
 
 			logger.Formatter = formatter
 		}
