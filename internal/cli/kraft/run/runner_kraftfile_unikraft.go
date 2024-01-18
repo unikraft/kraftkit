@@ -136,7 +136,12 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 		runner.args = runner.project.Command()
 	}
 
-	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
+	noEmbedded := t.KConfig().AllNoOrUnset(
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+	)
+
+	if runner.project.Rootfs() != "" && opts.Rootfs == "" && noEmbedded {
 		opts.Rootfs = runner.project.Rootfs()
 	}
 
@@ -145,7 +150,7 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 	if t.KConfig().AnyYes(
 		"CONFIG_LIBVFSCORE_FSTAB", // Deprecated
 		"CONFIG_LIBVFSCORE_AUTOMOUNT_UP",
-	) && (len(machine.Status.InitrdPath) > 0 || len(opts.Rootfs) > 0) {
+	) && noEmbedded && (len(machine.Status.InitrdPath) > 0 || len(opts.Rootfs) > 0) {
 		machine.Spec.Volumes = append(machine.Spec.Volumes, volumeapi.Volume{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "rootfs",
