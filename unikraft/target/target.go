@@ -68,10 +68,6 @@ type TargetConfig struct {
 
 	// command is the command-line arguments set for this target.
 	command []string
-
-	// kraftfileConfig is Kraftfile configuration used to fetch actual kconfig
-	// and name of the target.
-	kraftfileConfig map[string]interface{}
 }
 
 // NewTargetFromOptions is a constructor for TargetConfig.
@@ -168,14 +164,6 @@ func (tc *TargetConfig) PrintInfo(ctx context.Context) string {
 	return "not implemented: unikraft.plat.TargetConfig.PrintInfo"
 }
 
-func (tc *TargetConfig) KraftfileConfig(kraftfileConfig map[string]interface{}) {
-	tc.kraftfileConfig = kraftfileConfig
-}
-
-func (tc *TargetConfig) GetKraftfileConfig() map[string]interface{} {
-	return tc.kraftfileConfig
-}
-
 // TargetName returns the name of the kernel image based on standard pattern
 // which is baked within Unikraft's build system, see for example `KVM_IMAGE`.
 // If we do not have a target name, return an error.
@@ -220,24 +208,12 @@ func (tc TargetConfig) MarshalYAML() (interface{}, error) {
 		"platform":     tc.platform.Name(),
 	}
 
-	if tc.kraftfileConfig["targets"] != nil {
-		targetsInKraftfile := tc.kraftfileConfig["targets"].([]interface{})
-		for _, target := range targetsInKraftfile {
-			targetInterface, err := TransformFromSchema(context.TODO(), target)
-			if err != nil {
-				return nil, err
-			}
-
-			targetVal := targetInterface.(TargetConfig)
-			if targetVal.platform.Name() == tc.platform.Name() && targetVal.architecture.Name() == tc.architecture.Name() {
-				if len(targetVal.name) > 0 {
-					ret["name"] = targetVal.name
-				}
-				if len(targetVal.kconfig) > 0 {
-					ret["kconfig"] = targetVal.kconfig
-				}
-			}
-		}
+	if len(tc.name) > 0 {
+		ret["name"] = tc.name
 	}
+	if len(tc.kconfig) > 0 {
+		ret["kconfig"] = tc.kconfig
+	}
+
 	return ret, nil
 }
