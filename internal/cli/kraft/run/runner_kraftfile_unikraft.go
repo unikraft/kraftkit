@@ -10,7 +10,10 @@ import (
 	"os"
 	"slices"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
@@ -135,6 +138,23 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 
 	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = runner.project.Rootfs()
+	}
+
+	// If automounting is enabled, and an initramfs is provided, set it as a
+	// volume if a initram has been provided.
+	if t.KConfig().AnyYes(
+		"CONFIG_LIBVFSCORE_FSTAB", // Deprecated
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_UP",
+	) && (len(machine.Status.InitrdPath) > 0 || len(opts.Rootfs) > 0) {
+		machine.Spec.Volumes = append(machine.Spec.Volumes, volumeapi.Volume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "rootfs",
+			},
+			Spec: volumeapi.VolumeSpec{
+				Driver:      "initrd",
+				Destination: "/",
+			},
+		})
 	}
 
 	var kernelArgs []string
