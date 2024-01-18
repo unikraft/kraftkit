@@ -97,7 +97,6 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	iface = groupXFieldsIntoExtensions(iface)
-
 	if n, ok := iface["name"]; ok {
 		name = n.(string)
 	}
@@ -128,7 +127,6 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	app := appl.(*application)
-
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +150,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	// Post-process each target by parsing any available .config file
 	for _, target := range app.targets {
+		target.KraftfileConfig(popts.kraftfile.config)
 		kvmap, err := kconfig.NewKeyValueMapFromFile(
 			filepath.Join(popts.workdir, target.ConfigFilename()),
 		)
