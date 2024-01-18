@@ -208,6 +208,19 @@ func (kvm KeyValueMap) AnyYes(keys ...string) bool {
 	return false
 }
 
+// AllNoOrUnset accepts an input list of keys which are all checked against not
+// having the value for "n" (meaning "no" or "false") or whether they are unset.
+// If any of the keys are set to this value, this method returns false.
+func (kvm KeyValueMap) AllNoOrUnset(keys ...string) bool {
+	for _, key := range keys {
+		if val, ok := kvm[key]; ok && val.Value != No {
+			return false
+		}
+	}
+
+	return true
+}
+
 // String returns the serialized string representing a .config file
 func (kvm KeyValueMap) String() string {
 	var ret strings.Builder
