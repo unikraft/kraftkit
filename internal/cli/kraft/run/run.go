@@ -43,6 +43,7 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	NoStart       bool     `long:"no-start" usage:"Do not start the machine"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Prefix        string   `long:"prefix" usage:"Prefix each log line with the given string"`
@@ -365,10 +366,14 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Start the machine
-	_, err = opts.machineController.Start(ctx, machine)
-	if err != nil {
-		return err
+	if opts.NoStart {
+		// Output the name of the instance such that it can be piped
+		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
+		return nil
+	} else {
+		if _, err := opts.machineController.Start(ctx, machine); err != nil {
+			return err
+		}
 	}
 
 	var exitErr error
