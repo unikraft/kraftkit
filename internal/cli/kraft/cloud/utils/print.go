@@ -366,20 +366,22 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 		}
 	}
 
-	entries = append(entries, []fancymap.FancyMapEntry{
-		{
-			Key:   "image",
-			Value: instance.Image,
-		},
-		{
+	entries = append(entries, fancymap.FancyMapEntry{
+		Key:   "image",
+		Value: instance.Image,
+	})
+
+	if instance.State != "starting" {
+		entries = append(entries, fancymap.FancyMapEntry{
 			Key:   "boot time",
 			Value: fmt.Sprintf("%.2f ms", float64(instance.BootTimeUS)/1000),
-		},
-		{
-			Key:   "memory",
-			Value: fmt.Sprintf("%d MiB", instance.MemoryMB),
-		},
-	}...)
+		})
+	}
+
+	entries = append(entries, fancymap.FancyMapEntry{
+		Key:   "memory",
+		Value: fmt.Sprintf("%d MiB", instance.MemoryMB),
+	})
 
 	if len(instance.ServiceGroup.Name) > 0 {
 		entries = append(entries, []fancymap.FancyMapEntry{
