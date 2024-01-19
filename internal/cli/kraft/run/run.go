@@ -276,6 +276,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: machineapi.MachineSpec{
+			Platform: opts.platform.String(),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{},
 			},
