@@ -67,13 +67,19 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		pkgName = filepath.Base(opts.Workdir)
 	}
 
+	user := strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")
+	if split := strings.Split(pkgName, "/"); len(split) > 1 {
+		user = split[0]
+		pkgName = strings.Join(split[1:], "/")
+	}
+
 	if strings.HasPrefix(pkgName, "unikraft.io") {
 		pkgName = "index." + pkgName
 	}
 	if !strings.HasPrefix(pkgName, "index.unikraft.io") {
 		pkgName = fmt.Sprintf(
 			"index.unikraft.io/%s/%s:latest",
-			strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud"),
+			user,
 			pkgName,
 		)
 	}
@@ -185,7 +191,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 						Image:     pkgName,
 						Memory:    opts.Memory,
 						Metro:     opts.Metro,
-						Name:      opts.Name,
+						Name:      strings.ReplaceAll(opts.Name, "/", "-"),
 						Ports:     opts.Ports,
 						Replicas:  opts.Replicas,
 						Start:     !opts.NoStart,
