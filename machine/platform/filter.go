@@ -38,7 +38,7 @@ func storePlatformFilter(platform Platform) zip.OnBefore {
 		obj := req.(*zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus])
 
 		if obj.Spec.Platform != platform.String() {
-			return nil, fmt.Errorf("machine is not %s instance: %s", platform.String(), obj.Name)
+			return nil, fmt.Errorf("wanted machine platform \"%s\" but got \"%s\" instead for instance \"%s\"", obj.Spec.Platform, platform.String(), obj.Name)
 		}
 
 		return obj, nil
