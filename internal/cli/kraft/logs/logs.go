@@ -15,6 +15,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
@@ -22,7 +23,6 @@ import (
 
 type LogOptions struct {
 	Follow     bool   `long:"follow" short:"f" usage:"Follow log output"`
-	NoColor    bool   `long:"no-color" usage:"Disable color output for prefix"`
 	Platform   string `noattribute:"true"`
 	Prefix     string `long:"prefix" usage:"Prefix each log line with the given string"`
 	PrefixName bool   `long:"prefix-name" usage:"Prefix each log line with the machine name"`
@@ -123,7 +123,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {
-		consumer, err := NewColorfulConsumer(iostreams.G(ctx), !opts.NoColor, opts.Prefix)
+		consumer, err := NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, opts.Prefix)
 		if err != nil {
 			return err
 		}

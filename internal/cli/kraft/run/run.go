@@ -20,6 +20,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
@@ -42,7 +43,6 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
-	NoColor       bool     `long:"no-color" usage:"Disable color output for prefix"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Prefix        string   `long:"prefix" usage:"Prefix each log line with the given string"`
@@ -377,7 +377,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 			opts.Prefix = machine.Name
 		}
 
-		consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !opts.NoColor, opts.Prefix)
+		consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, opts.Prefix)
 		if err != nil {
 			return err
 		}
