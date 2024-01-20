@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/compose-spec/compose-go/loader"
@@ -36,33 +37,39 @@ var DefaultFileNames = []string{
 
 // NewProjectFromComposeFile loads a compose file and returns a project. If no
 // compose file is specified, it will look for one in the current directory.
-func NewProjectFromComposeFile(ctx context.Context, composeFile string) (*Project, error) {
-	if composeFile == "" {
+func NewProjectFromComposeFile(ctx context.Context, workdir, composefile string) (*Project, error) {
+	if composefile == "" {
 		for _, file := range DefaultFileNames {
-			if _, err := os.Stat(file); err == nil {
+			fullpath := filepath.Join(workdir, file)
+			if _, err := os.Stat(fullpath); err == nil {
 				log.G(ctx).Debugf("Found compose file: %s", file)
-				composeFile = file
+				composefile = file
 				break
 			}
 		}
 	}
 
-	if composeFile == "" {
+	if composefile == "" {
 		return nil, fmt.Errorf("no compose file found")
 	}
 
-	configfile := types.ConfigFile{
-		Filename: composeFile,
-	}
+	fullpath := filepath.Join(workdir, composefile)
 
 	config := types.ConfigDetails{
-		ConfigFiles: []types.ConfigFile{configfile},
+		ConfigFiles: []types.ConfigFile{
+			{
+				Filename: fullpath,
+			},
+		},
 	}
 
 	project, err := loader.Load(config)
 	if err != nil {
 		return nil, err
 	}
+
+	project.ComposeFiles = []string{composefile}
+	project.WorkingDir = workdir
 
 	return &Project{project}, err
 }
