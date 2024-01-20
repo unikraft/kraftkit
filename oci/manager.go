@@ -156,7 +156,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
+			if query != nil && query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
 				log.G(ctx).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Platform()).
@@ -165,7 +165,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
+			if query != nil && query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
 				log.G(ctx).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Architecture()).
@@ -174,7 +174,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if len(query.KConfig()) > 0 {
+			if query != nil && len(query.KConfig()) > 0 {
 				// If the list of requested features is greater than the list of
 				// available features, there will be no way for the two to match.  We
 				// are searching for a subset of query.KConfig() from
@@ -201,13 +201,18 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				}
 			}
 
+			var auths map[string]config.AuthConfig
+			if query != nil {
+				auths = query.Auths()
+			}
+
 			// If we have made it this far, the query has been successfully
 			// satisfied by this particular manifest and we can generate a package
 			// from it.
 			pack, err := NewPackageFromOCIManifestDigest(ctx,
 				handle,
 				fullref,
-				query.Auths(),
+				auths,
 				descriptor.Digest,
 			)
 			if err != nil {
