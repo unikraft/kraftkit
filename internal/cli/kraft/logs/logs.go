@@ -23,10 +23,9 @@ import (
 type LogOptions struct {
 	Follow     bool   `long:"follow" short:"f" usage:"Follow log output"`
 	NoColor    bool   `long:"no-color" usage:"Disable color output for prefix"`
+	Platform   string `noattribute:"true"`
 	Prefix     string `long:"prefix" usage:"Prefix each log line with the given string"`
 	PrefixName bool   `long:"prefix-name" usage:"Prefix each log line with the machine name"`
-
-	platform string
 }
 
 type logConsumer interface {
@@ -60,7 +59,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.platform = cmd.Flag("plat").Value.String()
+	opts.Platform = cmd.Flag("plat").Value.String()
 
 	return nil
 }
@@ -71,19 +70,19 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
-	if opts.platform == "auto" {
+	if opts.Platform == "auto" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		if opts.platform == "host" {
+		if opts.Platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
 			if err != nil {
 				return err
 			}
 		} else {
 			var ok bool
-			platform, ok = mplatform.PlatformsByName()[opts.platform]
+			platform, ok = mplatform.PlatformsByName()[opts.Platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 			}
 		}
 
