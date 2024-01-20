@@ -26,6 +26,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2/content"
 
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 )
@@ -298,6 +299,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	manifest.annotations[ocispec.AnnotationRefName] = ref.Context().String()
 	// manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
 	manifest.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+	manifest.annotations[AnnotationKraftKitVersion] = version.Version()
 
 	// containerd compatibility annotations
 	manifest.annotations[images.AnnotationImageName] = ref.String()

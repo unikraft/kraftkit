@@ -19,6 +19,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/oci/handler"
 )
 
@@ -154,6 +155,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	// General annotations
 	index.annotations[ocispec.AnnotationRefName] = ref.Context().String()
 	index.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+	index.annotations[AnnotationKraftKitVersion] = version.Version()
 
 	// containerd compatibility annotations
 	index.annotations[images.AnnotationImageName] = ref.String()

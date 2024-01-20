@@ -29,7 +29,6 @@ import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/tableprinter"
-	kraftkitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
@@ -224,7 +223,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// }
 
 	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
-	ocipack.manifest.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 	if version := popts.KernelVersion(); len(version) > 0 {
 		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
 		ocipack.manifest.SetOSVersion(ctx, version)
@@ -320,8 +318,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 		ocipack.index.manifests = manifests
 	}
-
-	ocipack.index.SetAnnotation(ctx, AnnotationKraftKitVersion, kraftkitversion.Version())
 
 	if popts.PackKConfig() {
 		log.G(ctx).Debug("oci: including list of kconfig as features")
