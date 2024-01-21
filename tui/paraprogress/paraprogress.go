@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/LastPossum/kamino"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -64,32 +65,58 @@ func NewParaProgress(ctx context.Context, processes []*Process, opts ...ParaProg
 
 	maxNameLen := md.nameWidth
 	if maxNameLen <= 0 {
-		maxNameLen = len(processes[0].Name)
-		for _, download := range processes {
-			if nameLen := len(download.Name); nameLen > maxNameLen {
+		for _, process := range processes {
+			if nameLen := len(process.Name); nameLen > maxNameLen {
 				maxNameLen = nameLen
 			}
 		}
 	}
 
-	for i := range processes {
-		processes[i].norender = md.norender
-		processes[i].NameWidth = maxNameLen
-		processes[i].timeout = md.timeout
+	for _, process := range processes {
+		process.norender = md.norender
+		process.NameWidth = maxNameLen
+		process.timeout = md.timeout
 
-		pctx := ctx
-		processes[i].ctx = pctx
-		log.G(processes[i].ctx).Level = log.G(ctx).Level
+		if md.norender {
+			process.ctx = ctx
+		} else {
+			pctx := ctx
 
-		// Update formatter when using KraftKit's TextFormatter.  The
-		// TextFormatter recognises that this is a non-standard terminal and
-		// changes the output to a more machine readable format.  Instead we want
-		// to force the formatting so that the output looks seamless with the
-		// style of the TUI.
-		if formatter, ok := log.G(ctx).Formatter.(*log.TextFormatter); ok {
-			formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
-			formatter.ForceFormatting = true
-			log.G(processes[i].ctx).Formatter = formatter
+			logger, err := kamino.Clone(log.G(pctx),
+				kamino.WithZeroUnexported(),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			// Update formatter when using KraftKit's TextFormatter.  The
+			// TextFormatter recognises that this is a non-standard terminal and
+			// changes the output to a more machine readable format.  Instead we want
+			// to force the formatting so that the output looks seamless with the
+			// style of the TUI.
+			if formatter, ok := logger.Formatter.(*log.TextFormatter); ok {
+				formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
+				formatter.ForceFormatting = true
+				logger.Formatter = formatter
+			}
+
+			logger.Out = process
+			pctx = log.WithLogger(pctx, logger)
+
+			ios, err := kamino.Clone(iostreams.G(pctx),
+				kamino.WithZeroUnexported(),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			ios.Out = iostreams.NewNoTTYWriter(process, iostreams.G(ctx).Out.Fd())
+			ios.ErrOut = process
+			ios.In = iostreams.G(ctx).In
+
+			pctx = iostreams.WithIOStreams(pctx, ios)
+
+			process.ctx = pctx
 		}
 	}
 
