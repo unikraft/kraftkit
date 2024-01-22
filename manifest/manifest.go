@@ -134,6 +134,13 @@ func (mp *ManifestProvider) DeleteManifest(ctx context.Context) error {
 			if err := os.Remove(resource); err != nil {
 				errs = append(errs, err)
 			}
+		} else if _, err := os.Stat(channel.Resource); err == nil {
+			log.G(ctx).
+				WithField("dir", channel.Resource).
+				Debug("deleting")
+			if err := os.RemoveAll(channel.Resource); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
