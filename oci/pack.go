@@ -33,6 +33,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/oci/simpleauth"
+	ociutils "kraftkit.sh/oci/utils"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -277,7 +278,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			return ocipack.manifest.config.OSFeatures[j] > ocipack.manifest.config.OSFeatures[i]
 		})
 
-		newManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
+		newManifestChecksum, err := ociutils.PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 			Architecture: ocipack.manifest.config.Architecture,
 			OS:           ocipack.manifest.config.OS,
 			OSVersion:    ocipack.manifest.config.OSVersion,
@@ -290,7 +291,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		var manifests []*Manifest
 
 		for _, existingManifest := range ocipack.index.manifests {
-			existingManifestChecksum, err := PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
+			existingManifestChecksum, err := ociutils.PlatformChecksum(ocipack.ref.String(), &ocispec.Platform{
 				Architecture: existingManifest.config.Architecture,
 				OS:           existingManifest.config.OS,
 				OSVersion:    existingManifest.config.OSVersion,

@@ -31,6 +31,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/oci/simpleauth"
+	ociutils "kraftkit.sh/oci/utils"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -358,7 +359,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			checksum, err := PlatformChecksum(pack.String(), descriptor.Platform)
+			checksum, err := ociutils.PlatformChecksum(pack.String(), descriptor.Platform)
 			if err != nil {
 				log.G(ctx).
 					Debugf("could not calculate platform digest for '%s': %s", descriptor.Digest.String(), err)
