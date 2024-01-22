@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LastPossum/kamino"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
@@ -110,6 +111,45 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 		total++
 		item.norender = pt.norender
 		item.timeout = pt.timeout
+
+		if pt.norender {
+			item.ctx = pt.ctx
+			return nil
+		}
+
+		ictx := pt.ctx
+
+		logger, err := kamino.Clone(log.G(ictx),
+			kamino.WithZeroUnexported(),
+		)
+		if err != nil {
+			return err
+		}
+
+		logger.Out = item
+
+		if formatter, ok := logger.Formatter.(*log.TextFormatter); ok {
+			formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
+			formatter.ForceFormatting = true
+			logger.Formatter = formatter
+		}
+
+		ictx = log.WithLogger(ictx, logger)
+
+		ios, err := kamino.Clone(iostreams.G(ictx),
+			kamino.WithZeroUnexported(),
+		)
+		if err != nil {
+			return err
+		}
+
+		ios.Out = iostreams.NewNoTTYWriter(item, iostreams.G(ctx).Out.Fd())
+		ios.ErrOut = item
+		ios.In = iostreams.G(ctx).In
+		ictx = iostreams.WithIOStreams(ictx, ios)
+
+		item.ctx = ictx
+
 		return nil
 	})
 
@@ -250,21 +290,17 @@ func (pt ProcessTree) getNextReadyChildren(tree []*ProcessTreeItem) []*ProcessTr
 }
 
 func (pt *ProcessTree) traverseTreeAndCall(items []*ProcessTreeItem, callback func(*ProcessTreeItem) error) error {
-	for i, item := range items {
-		item := item
-
-		if len(item.children) > 0 {
-			if err := pt.traverseTreeAndCall(item.children, callback); err != nil {
+	for _, child := range items {
+		if len(child.children) > 0 {
+			if err := pt.traverseTreeAndCall(child.children, callback); err != nil {
 				return err
 			}
 		}
 
 		// Call the callback on the leaf node first
-		if err := callback(item); err != nil {
+		if err := callback(child); err != nil {
 			return err
 		}
-
-		items[i] = item
 	}
 
 	return nil
@@ -274,29 +310,8 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 	return func() tea.Msg {
 		item := item // golang closures
 
-		// Clone the context to be used individually by each process.
-		ctx := new(context.Context)
-		*ctx = pt.ctx
-		item.ctx = *ctx
-
 		if pt.norender {
 			log.G(item.ctx).Info(item.textLeft)
-		} else {
-			// Set the output to the process Writer such that we can hijack logs and
-			// print them in a per-process isolated view.
-			iostreams.G(item.ctx).Out = iostreams.NewNoTTYWriter(item)
-			log.G(item.ctx).Out = item
-
-			// Update formatter when using KraftKit's TextFormatter.  The
-			// TextFormatter recognises that this is a non-standard terminal and
-			// changes the output to a more machine readable format.  Instead we want
-			// to force the formatting so that the output looks seamless with the
-			// style of the TUI.
-			if formatter, ok := log.G(item.ctx).Formatter.(*log.TextFormatter); ok {
-				formatter.ForceColors = termenv.DefaultOutput().ColorProfile() != termenv.Ascii
-				formatter.ForceFormatting = true
-				log.G(item.ctx).Formatter = formatter
-			}
 		}
 
 		// Set the process to running

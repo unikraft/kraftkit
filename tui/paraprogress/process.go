@@ -18,7 +18,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/indent"
 
-	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 	"kraftkit.sh/utils"
@@ -130,11 +129,6 @@ func (p *Process) Start() tea.Cmd {
 
 		if p.norender {
 			log.G(p.ctx).Info(p.Name)
-		} else {
-			// Set the output to the process Writer such that we can hijack logs and
-			// print them in a per-process isolated view.
-			iostreams.G(p.ctx).Out = iostreams.NewNoTTYWriter(p)
-			log.G(p.ctx).Out = p
 		}
 
 		err := p.processFunc(p.ctx, p.onProgress)

@@ -498,10 +498,10 @@ func (r *fdReader) Fd() uintptr {
 	return r.fd
 }
 
-func NewNoTTYWriter(w io.Writer) *fdWriter {
-	return &fdWriter{w, 0}
+func NewNoTTYWriter(w io.Writer, ptr uintptr) *fdWriter {
+	return &fdWriter{w, ptr}
 }
 
-func NewNoTTYReader(r io.ReadCloser) *fdReader {
-	return &fdReader{r, 0}
+func NewNoTTYReader(r io.ReadCloser, ptr uintptr) *fdReader {
+	return &fdReader{r, ptr}
 }
