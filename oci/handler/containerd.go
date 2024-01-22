@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/archive"
 	"kraftkit.sh/config"
@@ -191,10 +190,10 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 
 	defer writer.Close()
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"mediaType": desc.MediaType,
-		"digest":    desc.Digest.String(),
-	}).Tracef("oci: copying")
+	log.G(ctx).
+		WithField("mediaType", desc.MediaType).
+		WithField("digest", desc.Digest.String()).
+		Tracef("copying")
 
 	var tee io.Reader
 	var cache bytes.Buffer
@@ -226,9 +225,9 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 	// associated with the digest.
 	switch desc.MediaType {
 	case ocispec.MediaTypeImageIndex:
-		log.G(ctx).WithFields(logrus.Fields{
-			"ref": fullref,
-		}).Trace("oci: saving index")
+		log.G(ctx).
+			WithField("ref", fullref).
+			Trace("saving index")
 
 		index := ocispec.Index{}
 		if err := json.NewDecoder(&cache).Decode(&index); err != nil {
@@ -271,7 +270,9 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		existingImage, err := is.Get(ctx, fullref)
 
 		if err != nil || existingImage.Target.Digest.String() == "" {
-			log.G(ctx).Trace("oci: creating new image")
+			log.G(ctx).
+				Trace("creating new image")
+
 			image = images.Image{
 				Name:      fullref,
 				Labels:    labels,
@@ -281,7 +282,9 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 			}
 			_, err = is.Create(ctx, image)
 		} else {
-			log.G(ctx).Trace("oci: updating existing image")
+			log.G(ctx).
+				Trace("updating existing image")
+
 			image = images.Image{
 				Name:      fullref,
 				Labels:    labels,
@@ -297,10 +300,10 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		updatedFields := make([]string, 0)
 
 		for k, v := range labels {
-			log.G(ctx).WithFields(logrus.Fields{
-				k:     v,
-				"ref": desc.Digest,
-			}).Trace("oci: labelling")
+			log.G(ctx).
+				WithField(k, v).
+				WithField("ref", desc.Digest).
+				Trace("labelling")
 
 			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
 		}
@@ -313,9 +316,9 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		}
 
 	case ocispec.MediaTypeImageManifest:
-		log.G(ctx).WithFields(logrus.Fields{
-			"ref": fullref,
-		}).Trace("oci: saving manifest")
+		log.G(ctx).
+			WithField("ref", fullref).
+			Trace("saving manifest")
 
 		manifest := ocispec.Manifest{}
 		if err := json.NewDecoder(&cache).Decode(&manifest); err != nil {
@@ -345,10 +348,10 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		updatedFields := make([]string, 0)
 
 		for k, v := range labels {
-			log.G(ctx).WithFields(logrus.Fields{
-				k:     v,
-				"ref": desc.Digest,
-			}).Trace("oci: labelling")
+			log.G(ctx).
+				WithField(k, v).
+				WithField("ref", desc.Digest).
+				Trace("labelling")
 
 			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
 		}
@@ -368,10 +371,10 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 		updatedFields := make([]string, 0)
 
 		for k, v := range labels {
-			log.G(ctx).WithFields(logrus.Fields{
-				k:     v,
-				"ref": desc.Digest,
-			}).Trace("oci: labelling")
+			log.G(ctx).
+				WithField(k, v).
+				WithField("ref", desc.Digest).
+				Trace("labelling")
 
 			updatedFields = append(updatedFields, fmt.Sprintf("labels.%s", k))
 		}

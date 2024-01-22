@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
@@ -31,10 +30,10 @@ func WithDetectHandler() OCIManagerOption {
 				namespace = n
 			}
 
-			log.G(ctx).WithFields(logrus.Fields{
-				"addr":      contAddr,
-				"namespace": namespace,
-			}).Trace("using oci containerd handler")
+			log.G(ctx).
+				WithField("addr", contAddr).
+				WithField("namespace", namespace).
+				Trace("using containerd handler")
 
 			manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 				return handler.NewContainerdHandler(ctx, contAddr, namespace, manager.auths)
@@ -46,9 +45,9 @@ func WithDetectHandler() OCIManagerOption {
 		// Fall-back to using a simpler directory/tarball-based OCI handler
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": ociDir,
-		}).Trace("using oci directory handler")
+		log.G(ctx).
+			WithField("path", ociDir).
+			Trace("using directory handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			handle, err := handler.NewDirectoryHandler(ociDir, manager.auths)
@@ -74,10 +73,10 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 			namespace = DefaultNamespace
 		}
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"addr":      addr,
-			"namespace": namespace,
-		}).Trace("using containerd handler")
+		log.G(ctx).
+			WithField("addr", addr).
+			WithField("namespace", namespace).
+			Trace("using containerd handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			return handler.NewContainerdHandler(ctx, addr, namespace, manager.auths)
@@ -91,9 +90,9 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 // the directory to use as the OCI root.
 func WithDirectory(ctx context.Context, path string) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("using oci directory handler")
+		log.G(ctx).
+			WithField("path", path).
+			Trace("using directory handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			handle, err := handler.NewDirectoryHandler(path, manager.auths)

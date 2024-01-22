@@ -197,7 +197,8 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 						title = append(title, column.Value)
 					}
 
-					log.G(ctx).Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+					log.G(ctx).
+						Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
 					packs[checksum] = pack
 				}
 				mu.Unlock()
@@ -289,12 +290,14 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			if ok, err := IsOCIDescriptorKraftKitCompatible(&descriptor); !ok {
 				log.G(ctx).
 					WithField("digest", descriptor.Digest.String()).
+					WithField("ref", fullref).
 					Tracef("incompatible index structure: %s", err.Error())
 				return
 			}
 
 			if query != nil && query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Platform()).
 					WithField("got", descriptor.Platform.OS).
@@ -304,6 +307,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 
 			if query != nil && query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Architecture()).
 					WithField("got", descriptor.Platform.Architecture).
@@ -318,6 +322,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				// m.Platform.OSFeatures to match.
 				if len(query.KConfig()) > len(descriptor.Platform.OSFeatures) {
 					log.G(ctx).
+						WithField("ref", fullref).
 						WithField("digest", descriptor.Digest.String()).
 						Trace("skipping descriptor: query contains more features than available")
 					return
@@ -330,6 +335,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				for _, a := range query.KConfig() {
 					if !available.Contains(a) {
 						log.G(ctx).
+							WithField("ref", fullref).
 							WithField("digest", descriptor.Digest.String()).
 							WithField("feature", a).
 							Trace("skipping manifest: missing feature")
@@ -343,6 +349,11 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				auths = query.Auths()
 			}
 
+			log.G(ctx).
+				WithField("ref", fullref).
+				WithField("digest", descriptor.Digest.String()).
+				Debug("found")
+
 			// If we have made it this far, the query has been successfully
 			// satisfied by this particular manifest and we can generate a package
 			// from it.
@@ -354,6 +365,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			)
 			if err != nil {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					Tracef("skipping manifest: could not instantiate package from manifest digest: %s", err.Error())
 				return
@@ -362,6 +374,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			checksum, err := ociutils.PlatformChecksum(pack.String(), descriptor.Platform)
 			if err != nil {
 				log.G(ctx).
+					WithField("ref", fullref).
 					Debugf("could not calculate platform digest for '%s': %s", descriptor.Digest.String(), err)
 				return
 			}
@@ -416,7 +429,9 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 	}
 
-	log.G(ctx).WithFields(query.Fields()).Debug("querying oci catalog")
+	log.G(ctx).
+		WithFields(query.Fields()).
+		Debug("querying catalog")
 
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
@@ -467,10 +482,14 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			)
 		}
 
+		log.G(ctx).
+			WithField("ref", ref.String()).
+			Trace("getting remote index")
+
 		v1ImageIndex, err := remote.Index(ref, ropts...)
 		if err != nil {
 			log.G(ctx).
-				Warnf("could not get index: %v", err)
+				Debugf("could not get index: %v", err)
 			goto searchRemoteIndexes
 		}
 

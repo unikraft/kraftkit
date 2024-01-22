@@ -22,7 +22,6 @@ import (
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2/content"
 
@@ -117,12 +116,12 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 		return ocispec.Descriptor{}, fmt.Errorf("cannot add empty layer")
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"src":       layer.blob.src,
-		"dest":      layer.dst,
-		"digest":    layer.blob.desc.Digest.String(),
-		"mediaType": layer.blob.desc.MediaType,
-	}).Trace("oci: layering")
+	log.G(ctx).
+		WithField("src", layer.blob.src).
+		WithField("dest", layer.dst).
+		WithField("digest", layer.blob.desc.Digest.String()).
+		WithField("mediaType", layer.blob.desc.MediaType).
+		Trace("layering")
 
 	manifest.pushed.Store(layer.blob.desc.Digest, false)
 
@@ -135,18 +134,13 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 // AddBlob adds a blog to the manifest and returns the resulting descriptor.
 func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor, error) {
 	if info, err := manifest.handle.DigestInfo(ctx, blob.desc.Digest); err == nil && info != nil {
-		log.G(ctx).WithFields(logrus.Fields{
-			"mediaType": blob.desc.MediaType,
-			"digest":    blob.desc.Digest.String(),
-		}).Trace("oci: blob already exists")
+		log.G(ctx).
+			WithField("mediaType", blob.desc.MediaType).
+			WithField("digest", blob.desc.Digest.String()).
+			Trace("lob already exists")
 
 		return blob.desc, nil
 	}
-
-	log.G(ctx).WithFields(logrus.Fields{
-		"mediaType": blob.desc.MediaType,
-		"digest":    blob.desc.Digest.String(),
-	}).Trace("oci: saving")
 
 	fp, err := os.Open(blob.tmp)
 	if err != nil {
@@ -327,6 +321,11 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
 	manifestDesc.Annotations = manifest.manifest.Annotations
 	manifestDesc.Platform = platform
+
+	log.G(ctx).
+		WithField("ref", ref.String()).
+		WithField("digest", manifest.desc.Digest.String()).
+		Debug("saving manifest")
 
 	// save the manifest descriptor
 	if err := manifest.handle.SaveDescriptor(

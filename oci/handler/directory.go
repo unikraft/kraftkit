@@ -182,6 +182,10 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			}
 		}
 
+		log.G(ctx).
+			WithField("digest", indexDgst.String()).
+			Debugf("pulling index")
+
 		var indexRaw []byte
 		index := ocispec.Index{}
 
@@ -496,6 +500,12 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 		progresReader = reader
 	}
 
+	log.G(ctx).
+		WithField("ref", ref).
+		WithField("mediaType", desc.MediaType).
+		WithField("digest", desc.Digest.String()).
+		Trace("saving")
+
 	if _, err := io.Copy(blob, progresReader); err != nil {
 		return err
 	}
@@ -565,12 +575,14 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 		}
 	}
 
+	log.G(ctx).
+		WithField("ref", ref.Name()).
+		WithField("mediaType", desc.MediaType).
+		WithField("digest", desc.Digest.String()).
+		Debugf("pushing")
+
 	switch desc.MediaType {
 	case ocispec.MediaTypeImageIndex:
-		log.G(ctx).
-			WithField("digest", desc.Digest.String()).
-			Debugf("pushing index")
-
 		return remote.WriteIndex(ref,
 			&DirectoryIndex{
 				ctx:     ctx,
@@ -582,9 +594,6 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 		)
 
 	case ocispec.MediaTypeImageManifest:
-		log.G(ctx).
-			WithField("digest", desc.Digest.String()).
-			Debugf("pushing manifest")
 		image, err := handle.resolveImage(ctx, fullref, desc.Digest)
 		if err != nil {
 			return err
@@ -738,6 +747,10 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 			layer.Digest.Hex(),
 		)
 
+		log.G(ctx).
+			WithField("digest", layer.Digest.String()).
+			Trace("deleting layer")
+
 		if err := os.RemoveAll(layerPath); err != nil {
 			return fmt.Errorf("could not delete layer digest from manifest '%s': %w", dgst.String(), err)
 		}
@@ -749,6 +762,10 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		manifest.Config.Digest.Algorithm().String(),
 		manifest.Config.Digest.Hex(),
 	)
+
+	log.G(ctx).
+		WithField("digest", manifest.Config.Digest.String()).
+		Trace("deleting config")
 
 	if err := os.RemoveAll(configPath); err != nil {
 		return fmt.Errorf("could not delete config digest from manifest '%s': %w", dgst.String(), err)

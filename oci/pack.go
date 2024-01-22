@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
@@ -112,10 +111,10 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			namespace = n
 		}
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"addr":      contAddr,
-			"namespace": namespace,
-		}).Debug("oci: packaging via containerd")
+		log.G(ctx).
+			WithField("addr", contAddr).
+			WithField("namespace", namespace).
+			Debug("packaging via containerd")
 
 		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, auths)
 	} else {
@@ -125,9 +124,9 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": ociDir,
-		}).Trace("oci: directory handler")
+		log.G(ctx).
+			WithField("path", ociDir).
+			Trace("directory handler")
 
 		ocipack.handle, err = handler.NewDirectoryHandler(ociDir, auths)
 	}
@@ -142,10 +141,10 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, fmt.Errorf("could not instantiate new manifest structure: %w", err)
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"src":  ocipack.Kernel(),
-		"dest": WellKnownKernelPath,
-	}).Debug("oci: including kernel")
+	log.G(ctx).
+		WithField("src", ocipack.Kernel()).
+		WithField("dest", WellKnownKernelPath).
+		Debug("including kernel")
 
 	layer, err := NewLayerFromFile(ctx,
 		ocispec.MediaTypeImageLayer,
@@ -187,7 +186,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		log.G(ctx).
 			WithField("src", popts.Initrd()).
 			WithField("dest", WellKnownInitrdPath).
-			Debug("oci: including initrd")
+			Debug("including initrd")
 
 		layer, err := NewLayerFromFile(ctx,
 			ocispec.MediaTypeImageLayer,
@@ -208,19 +207,19 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// TODO(nderjung): See below.
 
 	// if popts.PackKernelLibraryObjects() {
-	// 	log.G(ctx).Debug("oci: including kernel library objects")
+	// 	log.G(ctx).Debug("including kernel library objects")
 	// }
 
 	// if popts.PackKernelLibraryIntermediateObjects() {
-	// 	log.G(ctx).Debug("oci: including kernel library intermediate objects")
+	// 	log.G(ctx).Debug("including kernel library intermediate objects")
 	// }
 
 	// if popts.PackKernelSourceFiles() {
-	// 	log.G(ctx).Debug("oci: including kernel source files")
+	// 	log.G(ctx).Debug("including kernel source files")
 	// }
 
 	// if popts.PackAppSourceFiles() {
-	// 	log.G(ctx).Debug("oci: including application source files")
+	// 	log.G(ctx).Debug("including application source files")
 	// }
 
 	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
@@ -321,7 +320,8 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if popts.PackKConfig() {
-		log.G(ctx).Debug("oci: including list of kconfig as features")
+		log.G(ctx).
+			Debug("including list of kconfig as features")
 
 		// TODO(nderjung): Not sure if these filters are best placed here or
 		// elsewhere.
@@ -337,7 +337,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 			log.G(ctx).
 				WithField(k.Key, k.Value).
-				Trace("oci: feature")
+				Trace("feature")
 
 			ocipack.manifest.SetOSFeature(ctx, k.String())
 		}
@@ -634,7 +634,11 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 
 // Delete implements pack.Package.
 func (ocipack *ociPackage) Delete(ctx context.Context) error {
-	if err := ocipack.handle.DeleteManifest(ctx, ocipack.imageRef(), ocipack.manifest.desc.Digest); err != nil {
+	log.G(ctx).
+		WithField("ref", ocipack.imageRef()).
+		Debug("deleting package")
+
+	if err := ocipack.handle.DeleteManifest(ctx, ocipack.imageRef(), ocipack.manifest.desc.Digest); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete package manifest: %w", err)
 	}
 
