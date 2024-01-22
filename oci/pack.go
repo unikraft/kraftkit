@@ -572,6 +572,38 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 	return nil
 }
 
+// Unpack implements pack.Package
+func (ocipack *ociPackage) Unpack(ctx context.Context, dir string) error {
+	image, err := ocipack.handle.UnpackImage(ctx,
+		ocipack.imageRef(),
+		ocipack.manifest.desc.Digest,
+		dir,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Set the kernel, since it is a well-known within the destination path
+	ocipack.kernel = filepath.Join(dir, WellKnownKernelPath)
+
+	// Set the command
+	ocipack.command = image.Config.Cmd
+
+	// Set the initrd if available
+	initrdPath := filepath.Join(dir, WellKnownInitrdPath)
+	if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
+		ocipack.initrd, err = initrd.New(ctx,
+			initrdPath,
+			initrd.WithArchitecture(image.Architecture),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Pull implements pack.Package
 func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	popts, err := pack.NewPullOptions(opts...)
@@ -579,54 +611,53 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
-	// Check that the manifest has been fully resolved or pull the descriptor
-	// which will fetch all associated descriptors.
-	if _, err := ocipack.handle.ResolveManifest(ctx,
+	// Pull the index but set the platform such that the relevant manifests can
+	// be retrieved as well.
+	if err := ocipack.handle.PullDigest(
+		ctx,
+		ocispec.MediaTypeImageIndex,
 		ocipack.imageRef(),
 		ocipack.manifest.desc.Digest,
+		ocipack.manifest.desc.Platform,
+		popts.OnProgress,
 	); err != nil {
-		// Pull the index but set the platform such that the relevant manifests can
-		// be retrieved as well.
-		if err := ocipack.handle.PullDigest(
-			ctx,
-			ocispec.MediaTypeImageIndex,
-			ocipack.imageRef(),
-			ocipack.manifest.desc.Digest,
-			ocipack.manifest.desc.Platform,
-			popts.OnProgress,
-		); err != nil {
-			return err
+		return err
+	}
+
+	// The digest for index has now changed following a pull.  Figure out the new
+	// manifest by using the
+	existingChecksum, err := ociutils.PlatformChecksum(ocipack.imageRef(), ocipack.manifest.desc.Platform)
+	if err != nil {
+		return fmt.Errorf("calculating checksum for '%s': %w", ocipack.imageRef(), err)
+	}
+
+	manifests, err := ocipack.handle.ListManifests((ctx))
+	if err != nil {
+		return fmt.Errorf("listing existing manifests: %w", err)
+	}
+
+	for dgstStr, manifest := range manifests {
+		newChecksum, err := ociutils.PlatformChecksum(ocipack.imageRef(), manifest.Config.Platform)
+		if err != nil {
+			return fmt.Errorf("calculating checksum for '%s': %w", ocipack.imageRef(), err)
 		}
+
+		if existingChecksum != newChecksum {
+			continue
+		}
+
+		dgst, _ := digest.Parse(dgstStr)
+		ocipack.manifest, err = NewManifestFromDigest(ctx, ocipack.handle, dgst)
+		if err != nil {
+			return fmt.Errorf("could not rehydrate manifest: %w", err)
+		}
+
+		break
 	}
 
 	// Unpack the image if a working directory has been provided
 	if len(popts.Workdir()) > 0 {
-		image, err := ocipack.handle.UnpackImage(ctx,
-			ocipack.imageRef(),
-			ocipack.manifest.desc.Digest,
-			popts.Workdir(),
-		)
-		if err != nil {
-			return err
-		}
-
-		// Set the kernel, since it is a well-known within the destination path
-		ocipack.kernel = filepath.Join(popts.Workdir(), WellKnownKernelPath)
-
-		// Set the command
-		ocipack.command = image.Config.Cmd
-
-		// Set the initrd if available
-		initrdPath := filepath.Join(popts.Workdir(), WellKnownInitrdPath)
-		if f, err := os.Stat(initrdPath); err == nil && f.Size() > 0 {
-			ocipack.initrd, err = initrd.New(ctx,
-				initrdPath,
-				initrd.WithArchitecture(image.Architecture),
-			)
-			if err != nil {
-				return err
-			}
-		}
+		return ocipack.Unpack(ctx, popts.Workdir())
 	}
 
 	return nil

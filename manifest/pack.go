@@ -111,6 +111,10 @@ func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
 	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
 }
 
+func (mp mpack) Unpack(ctx context.Context, dir string) error {
+	return fmt.Errorf("not implemented: manifest.ManifestPackage.Unpack")
+}
+
 func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	log.G(ctx).
 		WithField("package", unikraft.TypeNameVersion(mp)).

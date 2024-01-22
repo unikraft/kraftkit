@@ -184,30 +184,38 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 	}()
 
-	paramodel, err := paraprogress.NewParaProgress(
-		ctx,
-		[]*paraprogress.Process{paraprogress.NewProcess(
-			fmt.Sprintf("pulling %s", runner.packName),
-			func(ctx context.Context, w func(progress float64)) error {
-				return packs[0].Pull(
-					ctx,
-					pack.WithPullProgressFunc(w),
-					pack.WithPullWorkdir(machine.Status.StateDir),
-				)
-			},
-		)},
-		paraprogress.IsParallel(false),
-		paraprogress.WithRenderer(
-			log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-		),
-		paraprogress.WithFailFast(true),
-	)
-	if err != nil {
-		return err
+	if exists, _, err := packs[0].PulledAt(ctx); !exists || err != nil {
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", runner.packName),
+				func(ctx context.Context, w func(progress float64)) error {
+					return packs[0].Pull(
+						ctx,
+						pack.WithPullProgressFunc(w),
+					)
+				},
+			)},
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return err
+		}
 	}
 
-	if err := paramodel.Start(); err != nil {
-		return err
+	if err := packs[0].Unpack(
+		ctx,
+		machine.Status.StateDir,
+	); err != nil {
+		return fmt.Errorf("unpacking the image: %w", err)
 	}
 
 	// Crucially, the catalog should return an interface that also implements

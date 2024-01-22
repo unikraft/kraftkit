@@ -37,6 +37,9 @@ type Package interface {
 	// Pull retreives the package from a remotely retrievable location.
 	Pull(context.Context, ...PullOption) error
 
+	// Unpack the package into the specified directory.
+	Unpack(context.Context, string) error
+
 	// Deletes package available locally.
 	Delete(context.Context) error
 

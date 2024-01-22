@@ -124,6 +124,11 @@ func (elfloader *Runtime) Push(ctx context.Context, opts ...pack.PushOption) err
 	panic("not implemented: kraftkit.sh/unikraft/elfloader.Runtime.Push")
 }
 
+// Unpack implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) Unpack(ctx context.Context, dir string) error {
+	return elfloader.pack.Unpack(ctx, dir)
+}
+
 // Pull implements kraftkit.sh/pack.Package
 func (elfloader *Runtime) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	return elfloader.pack.Pull(ctx, opts...)
