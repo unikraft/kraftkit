@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/simpleauth"
+	ociutils "kraftkit.sh/oci/utils"
 
 	"github.com/containerd/containerd/content"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -137,7 +138,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			return fmt.Errorf("could not retrieve remote index: %w", err)
 		}
 
-		manifests := []ocispec.Descriptor{}
+		localManifests := []ocispec.Descriptor{}
 		var indexTagPath string
 
 		if !strings.ContainsRune(fullref, '@') && len(strings.SplitN(fullref, ":", 2)) == 2 {
@@ -172,7 +173,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 						}
 
 						// Save the existing local manifests
-						manifests = localIndex.Manifests
+						localManifests = localIndex.Manifests
 
 						if err := os.RemoveAll(oldIndexDigestPath); err != nil {
 							return fmt.Errorf("could not remove existing index: %w", err)
@@ -197,6 +198,9 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		if err = json.Unmarshal(indexRaw, &index); err != nil {
 			return fmt.Errorf("could not unmarshal raw index: %w", err)
 		}
+
+		newManifestPlatChecksums := map[string]bool{}
+		newManifests := []ocispec.Descriptor{}
 
 		// Remove manifests that do not match the platform selector.
 	checkManifest:
@@ -231,10 +235,43 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				return fmt.Errorf("could not pull manifest: %w", err)
 			}
 
-			manifests = append(manifests, manifest)
+			checksum, err := ociutils.PlatformChecksum(fullref, manifest.Platform)
+			if err != nil {
+				return fmt.Errorf("could not calculate platform checksum for '%s': %w", manifest.Digest.String(), err)
+			}
+
+			newManifestPlatChecksums[checksum] = true
+			newManifests = append(newManifests, manifest)
 		}
 
-		index.Manifests = manifests
+		// Compare the local digests with the new digest and remove local digests
+		// which have the same platform checksum and zero layers.
+		for _, localManifest := range localManifests {
+			checksum, err := ociutils.PlatformChecksum(fullref, localManifest.Platform)
+			if err != nil {
+				return fmt.Errorf("could not calculate platform checksum for '%s': %w", localManifest.Digest.String(), err)
+			}
+
+			// If this checksum does not exist in the existing list, we can safely add
+			// it to the new index.
+			if _, ok := newManifestPlatChecksums[checksum]; ok {
+				oldManifestPath := filepath.Join(
+					handle.path,
+					DirectoryHandlerDigestsDir,
+					localManifest.Digest.Algorithm().String(),
+					localManifest.Digest.Encoded(),
+				)
+				if err := os.Remove(oldManifestPath); err != nil {
+					return fmt.Errorf("could not remove old manifest '%s': %w", oldManifestPath, err)
+				}
+
+				continue
+			}
+
+			newManifests = append(newManifests, localManifest)
+		}
+
+		index.Manifests = newManifests
 
 		indexRaw, err = json.Marshal(&index)
 		if err != nil {
