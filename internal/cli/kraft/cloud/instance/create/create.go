@@ -262,19 +262,19 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
 			# Create a new NGINX instance in Frankfurt and start it immediately.  Map the external
-			# port 443 to the internal port 80 which the application listens on.
+			# port 443 to the internal port 8080 which the application listens on.
 			$ kraft cloud --metro fra0 instance create \
 				--start \
-				--port 443:80 \
+				--port 443:8080 \
 				nginx:latest
 
 			# This command is the same as above, however using the more elaborate port expression.
 			# This is because in fact we need need to accept TLS and HTTP connections and redirect
-			# port 80 to port 443.  The above example exists only as a shortcut for what is written
+			# port 8080 to port 443.  The above example exists only as a shortcut for what is written
 			# below:
 			$ kraft cloud --metro fra0 instance create \
 				--start \
-				--port 443:80/http+tls \
+				--port 443:8080/http+tls \
 				--port 80:443/http+redirect \
 				nginx:latest
 			
