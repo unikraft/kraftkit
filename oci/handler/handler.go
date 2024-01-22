@@ -8,12 +8,13 @@ import (
 	"context"
 	"io"
 
+	"github.com/containerd/containerd/content"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type DigestResolver interface {
-	DigestExists(context.Context, digest.Digest) (bool, error)
+	DigestInfo(context.Context, digest.Digest) (*content.Info, error)
 }
 
 type DigestPuller interface {

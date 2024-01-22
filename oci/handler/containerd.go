@@ -96,22 +96,23 @@ func (handle *ContainerdHandler) lease(ctx context.Context) (context.Context, fu
 	return ctx, done, nil
 }
 
-// DigestExists implements DigestResolver.
-func (handle *ContainerdHandler) DigestExists(ctx context.Context, dgst digest.Digest) (exists bool, err error) {
+// DigestInfo implements DigestResolver.
+func (handle *ContainerdHandler) DigestInfo(ctx context.Context, dgst digest.Digest) (*content.Info, error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	defer func() {
 		err = combineErrors(err, done(ctx))
 	}()
 
-	if _, err := handle.client.ContentStore().Info(ctx, dgst); err != nil {
-		return false, err
+	info, err := handle.client.ContentStore().Info(ctx, dgst)
+	if err != nil {
+		return nil, err
 	}
 
-	return true, nil
+	return &info, nil
 }
 
 // PullDigest implements DigestPuller.

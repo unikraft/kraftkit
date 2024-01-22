@@ -134,7 +134,7 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 
 // AddBlob adds a blog to the manifest and returns the resulting descriptor.
 func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor, error) {
-	if exists, err := manifest.handle.DigestExists(ctx, blob.desc.Digest); err == nil && exists {
+	if info, err := manifest.handle.DigestInfo(ctx, blob.desc.Digest); err == nil && info != nil {
 		log.G(ctx).WithFields(logrus.Fields{
 			"mediaType": blob.desc.MediaType,
 			"digest":    blob.desc.Digest.String(),
@@ -344,7 +344,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// is called repeatedly.  It's done now to prevent containerd's garbage
 	// collector from removing it before the manifest has been written (which
 	// references this blob).
-	if exists, _ := manifest.handle.DigestExists(ctx, configBlob.desc.Digest); !exists {
+	if info, _ := manifest.handle.DigestInfo(ctx, configBlob.desc.Digest); info == nil {
 		if _, err := manifest.AddBlob(ctx, configBlob); err != nil {
 			return nil, err
 		}
@@ -366,7 +366,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 					return nil
 				}
 
-				if exists, _ = manifest.handle.DigestExists(ctx, manifest.layers[i].blob.desc.Digest); exists {
+				if info, _ := manifest.handle.DigestInfo(ctx, manifest.layers[i].blob.desc.Digest); info != nil {
 					return nil
 				}
 

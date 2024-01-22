@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/lockedfile"
@@ -24,6 +25,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/simpleauth"
 
+	"github.com/containerd/containerd/content"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -54,20 +56,34 @@ func NewDirectoryHandler(path string, auths map[string]config.AuthConfig) (*Dire
 	}, nil
 }
 
-// DigestExists implements DigestResolver.
-func (handle *DirectoryHandler) DigestExists(ctx context.Context, needle digest.Digest) (exists bool, err error) {
-	manifests, err := handle.ListManifests(ctx)
+// DigestInfo implements DigestResolver.
+func (handle *DirectoryHandler) DigestInfo(ctx context.Context, needle digest.Digest) (*content.Info, error) {
+	manifestsDir := filepath.Join(handle.path, DirectoryHandlerDigestsDir)
+
+	// If the digest directory does not exist and return nil, since there's
+	// nothing to return.
+	if _, err := os.Stat(manifestsDir); err != nil && os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	digestPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerDigestsDir,
+		needle.Algorithm().String(),
+		needle.Encoded(),
+	)
+
+	st, err := os.Stat(digestPath)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	for haystack := range manifests {
-		if haystack == needle.String() {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return &content.Info{
+		Digest:    needle,
+		Size:      st.Size(),
+		CreatedAt: time.Time{}, // TODO(nderjung): General-purpose stat not avail.
+		UpdatedAt: st.ModTime(),
+	}, nil
 }
 
 // PullDigest implements DigestPuller.

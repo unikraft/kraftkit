@@ -373,7 +373,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 	// First, check if the digest exists locally, this determines whether we
 	// continue to instantiate it from the local host or from from a remote
 	// registry.
-	if exists, err := handle.DigestExists(ctx, dgst); err == nil && exists {
+	if info, _ := handle.DigestInfo(ctx, dgst); info != nil {
 		ocipack.index, err = NewIndexFromRef(ctx, handle, ref)
 		if err != nil {
 			return nil, fmt.Errorf("could not instantiate index from reference: %w", err)
