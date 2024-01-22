@@ -409,7 +409,6 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		}
 
 		authConfig := &authn.AuthConfig{}
-		// var transport *http.Transport
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 
 		// Annoyingly convert between regtypes and authn.
@@ -418,7 +417,6 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 			authConfig.Password = auth.Token
 
 			if !auth.VerifySSL {
-				// transport = http.DefaultTransport.(*http.Transport).Clone()
 				transport.TLSClientConfig = &tls.Config{
 					InsecureSkipVerify: true,
 				}
