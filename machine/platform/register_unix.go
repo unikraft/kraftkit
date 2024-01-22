@@ -16,7 +16,7 @@ import (
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/machine/qemu"
-	"kraftkit.sh/machine/store"
+	"kraftkit.sh/store"
 )
 
 var qemuV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {

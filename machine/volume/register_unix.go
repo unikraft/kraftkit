@@ -13,8 +13,8 @@ import (
 	volumev1alpha1 "kraftkit.sh/api/volume/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/kconfig"
-	"kraftkit.sh/machine/store"
 	ninepfs "kraftkit.sh/machine/volume/9pfs"
+	"kraftkit.sh/store"
 )
 
 // hostSupportedStrategies returns the map of known supported drivers for the

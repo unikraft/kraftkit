@@ -13,7 +13,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/firecracker"
-	"kraftkit.sh/machine/store"
+	"kraftkit.sh/store"
 )
 
 var firecrackerV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
