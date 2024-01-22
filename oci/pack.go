@@ -468,6 +468,11 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 				return nil, fmt.Errorf("could not instantiate new manifest: %w", err)
 			}
 
+			spec, err := handle.ResolveManifest(ctx, "", descriptor.Digest)
+			if err == nil {
+				manifest.manifest = spec
+			}
+
 			manifest.desc = &descriptor
 			manifest.config.Architecture = descriptor.Platform.Architecture
 			manifest.config.Platform = *descriptor.Platform
