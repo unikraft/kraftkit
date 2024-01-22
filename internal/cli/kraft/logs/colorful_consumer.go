@@ -12,6 +12,10 @@ import (
 	"kraftkit.sh/iostreams"
 )
 
+type LogConsumer interface {
+	Consume(line string) error
+}
+
 type colorfulConsumer struct {
 	streams *iostreams.IOStreams
 	color   rainbow.ColorFunc
@@ -36,7 +40,7 @@ func NewColorfulConsumer(streams *iostreams.IOStreams, color bool, prefix string
 }
 
 // Consume implements logConsumer
-func (c colorfulConsumer) consume(s string) error {
+func (c *colorfulConsumer) Consume(s string) error {
 	if c.prefix != "" {
 		s = fmt.Sprintf("%s | %s", c.color(c.prefix), s)
 	}

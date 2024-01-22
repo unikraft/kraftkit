@@ -20,7 +20,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/cli/kraft/logs"
+	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -42,7 +42,7 @@ type RunOptions struct {
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
 	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
-	NoColor       bool     `long:"no-color" usage:"Disable color output for prefix"`
+	NoStart       bool     `long:"no-start" usage:"Do not start the machine"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
 	Prefix        string   `long:"prefix" usage:"Prefix each log line with the given string"`
@@ -275,6 +275,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	machine := &machineapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: machineapi.MachineSpec{
+			Platform: opts.platform.String(),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{},
 			},
@@ -365,67 +366,21 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Start the machine
-	_, err = opts.machineController.Start(ctx, machine)
-	if err != nil {
-		return err
-	}
-
-	var exitErr error
-	if !opts.Detach {
-		if opts.PrefixName && opts.Prefix == "" {
-			opts.Prefix = machine.Name
-		}
-
-		consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !opts.NoColor, opts.Prefix)
-		if err != nil {
-			return err
-		}
-
-		exitErr = logs.FollowLogs(ctx, machine, opts.machineController, consumer)
-
-		// Remove the instance on Ctrl+C if the --rm flag is passed
-		if opts.Remove {
-			if _, err := opts.machineController.Stop(ctx, machine); err != nil {
-				log.G(ctx).Errorf("could not stop: %v", err)
-			}
-
-			if _, err := opts.machineController.Delete(ctx, machine); err != nil {
-				log.G(ctx).Errorf("could not remove: %v", err)
-			}
-		}
-	} else {
+	if opts.NoStart {
 		// Output the name of the instance such that it can be piped
 		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
-	}
-
-	// Set up a clean up method to remove the interface if the machine exits and
-	// we are requesting to remove the machine.
-	if opts.Remove && !opts.Detach && len(machine.Spec.Networks) > 0 {
-		// Get the latest version of the network.
-		found, err := opts.networkController.Get(ctx, &networkapi.Network{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: opts.networkName,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("could not get network information for %s: %v", opts.networkName, err)
-		}
-
-		// Remove the new network interface
-		for i, iface := range found.Spec.Interfaces {
-			if iface.UID == machine.Spec.Networks[0].Interfaces[0].UID {
-				ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
-				ret = append(ret, found.Spec.Interfaces[:i]...)
-				found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
-				break
-			}
-		}
-
-		if _, err = opts.networkController.Update(ctx, found); err != nil {
-			return fmt.Errorf("could not update network %s: %v", opts.networkName, err)
+		return nil
+	} else {
+		if _, err := opts.machineController.Start(ctx, machine); err != nil {
+			return err
 		}
 	}
 
-	return exitErr
+	return start.Start(ctx, &start.StartOptions{
+		Detach:     opts.Detach,
+		Platform:   opts.platform.String(),
+		Prefix:     opts.Prefix,
+		PrefixName: opts.PrefixName,
+		Remove:     opts.Remove,
+	}, machine.Name)
 }

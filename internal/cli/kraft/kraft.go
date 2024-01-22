@@ -39,6 +39,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/internal/cli/kraft/run"
 	"kraftkit.sh/internal/cli/kraft/set"
+	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/cli/kraft/stop"
 	"kraftkit.sh/internal/cli/kraft/unset"
 	"kraftkit.sh/internal/cli/kraft/version"
@@ -92,6 +93,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(remove.NewCmd())
 	cmd.AddCommand(run.NewCmd())
+	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})

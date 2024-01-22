@@ -19,6 +19,7 @@ type KraftKit struct {
 	NoParallel     bool   `yaml:"no_parallel" env:"KRAFTKIT_NO_PARALLEL" long:"no-parallel" usage:"Do not run internal tasks in parallel" default:"false"`
 	NoEmojis       bool   `yaml:"no_emojis" env:"KRAFTKIT_NO_EMOJIS" long:"no-emojis" usage:"Do not use emojis in any console output" default:"true"`
 	NoCheckUpdates bool   `yaml:"no_check_updates" env:"KRAFTKIT_NO_CHECK_UPDATES" long:"no-check-updates" usage:"Do not check for updates" default:"false"`
+	NoColor        bool   `yaml:"no_color" env:"KRAFTKIT_NO_COLOR" long:"no-color" usage:"Disable color output"`
 	Editor         string `yaml:"editor" env:"KRAFTKIT_EDITOR" long:"editor" usage:"Set the text editor to open when prompt to edit a file"`
 	GitProtocol    string `yaml:"git_protocol" env:"KRAFTKIT_GIT_PROTOCOL" long:"git-protocol" usage:"Preferred Git protocol to use" default:"https"`
 	Pager          string `yaml:"pager,omitempty" env:"KRAFTKIT_PAGER" long:"pager" usage:"System pager to pipe output to" default:"cat"`
