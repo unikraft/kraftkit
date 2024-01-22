@@ -7,6 +7,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/tableprinter"
@@ -126,6 +127,11 @@ func (elfloader *Runtime) Push(ctx context.Context, opts ...pack.PushOption) err
 // Pull implements kraftkit.sh/pack.Package
 func (elfloader *Runtime) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	return elfloader.pack.Pull(ctx, opts...)
+}
+
+// Pull implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) PulledAt(ctx context.Context) (bool, time.Time, error) {
+	return elfloader.pack.PulledAt(ctx)
 }
 
 func (elfloader *Runtime) Delete(ctx context.Context) error {

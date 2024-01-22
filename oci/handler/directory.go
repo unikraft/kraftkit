@@ -62,8 +62,8 @@ func (handle *DirectoryHandler) DigestInfo(ctx context.Context, needle digest.Di
 
 	// If the digest directory does not exist and return nil, since there's
 	// nothing to return.
-	if _, err := os.Stat(manifestsDir); err != nil && os.IsNotExist(err) {
-		return nil, nil
+	if _, err := os.Stat(manifestsDir); err != nil {
+		return nil, err
 	}
 
 	digestPath := filepath.Join(

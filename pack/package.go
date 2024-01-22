@@ -7,6 +7,7 @@ package pack
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/unikraft"
@@ -38,6 +39,10 @@ type Package interface {
 
 	// Deletes package available locally.
 	Delete(context.Context) error
+
+	// PulledAt is an attribute of a package to indicate when (and if) it was
+	// last retrieved.
+	PulledAt(context.Context) (bool, time.Time, error)
 
 	// Format returns the name of the implementation.
 	Format() PackageFormat

@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -630,6 +632,36 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 	}
 
 	return nil
+}
+
+// PulledAt implements pack.Package
+func (ocipack *ociPackage) PulledAt(ctx context.Context) (bool, time.Time, error) {
+	if len(ocipack.manifest.manifest.Layers) == 0 {
+		return false, time.Time{}, nil
+	}
+
+	earliest := time.Now()
+	pulled := false
+
+	for _, layer := range ocipack.manifest.manifest.Layers {
+		info, err := ocipack.handle.DigestInfo(ctx, layer.Digest)
+		if err != nil && errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			continue
+		}
+
+		pulled = true
+		if info.UpdatedAt.Before(earliest) {
+			earliest = info.UpdatedAt
+		}
+	}
+
+	if pulled {
+		return true, earliest, nil
+	}
+
+	return false, time.Time{}, nil
 }
 
 // Delete implements pack.Package.
