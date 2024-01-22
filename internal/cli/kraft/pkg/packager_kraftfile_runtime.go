@@ -29,7 +29,7 @@ type packagerKraftfileRuntime struct{}
 
 // String implements fmt.Stringer.
 func (p *packagerKraftfileRuntime) String() string {
-	return "runtime"
+	return "kraftfile-runtime"
 }
 
 // Packagable implements packager.
@@ -91,83 +91,114 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	if targ != nil {
-		var kconfigs []string
-		for _, kc := range targ.KConfig() {
-			kconfigs = append(kconfigs, kc.String())
-		}
+	var packs []pack.Package
 
-		qopts = append(qopts,
-			packmanager.WithPlatform(targ.Platform().Name()),
-			packmanager.WithArchitecture(targ.Architecture().Name()),
-			packmanager.WithKConfig(kconfigs),
-		)
-	} else {
-		if opts.Platform != "" {
-			qopts = append(qopts,
-				packmanager.WithPlatform(opts.Platform),
-			)
-		}
-		if opts.Architecture != "" {
-			qopts = append(qopts,
-				packmanager.WithArchitecture(opts.Architecture),
-			)
-		}
-	}
+	treemodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+		},
+		processtree.NewProcessTreeItem(
+			fmt.Sprintf(
+				"searching for %s:%s",
+				opts.Project.Runtime().Name(),
+				opts.Project.Runtime().Version(),
+			),
+			"",
+			func(ctx context.Context) error {
+				if targ != nil {
+					var kconfigs []string
+					for _, kc := range targ.KConfig() {
+						kconfigs = append(kconfigs, kc.String())
+					}
 
-	packs, err := opts.pm.Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
+					qopts = append(qopts,
+						packmanager.WithPlatform(targ.Platform().Name()),
+						packmanager.WithArchitecture(targ.Architecture().Name()),
+						packmanager.WithKConfig(kconfigs),
+					)
+				} else {
+					if opts.Platform != "" {
+						qopts = append(qopts,
+							packmanager.WithPlatform(opts.Platform),
+						)
+					}
+					if opts.Architecture != "" {
+						qopts = append(qopts,
+							packmanager.WithArchitecture(opts.Architecture),
+						)
+					}
+				}
+
+				packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
+				if err != nil {
+					return fmt.Errorf("could not query catalog: %w", err)
+				} else if len(packs) == 0 {
+					// Try again with a remote update request.  Save this to qopts in case we
+					// need to call `Catalog` again.
+					qopts = append(qopts, packmanager.WithUpdate(true))
+					packs, err = opts.pm.Catalog(ctx, qopts...)
+					if err != nil {
+						return fmt.Errorf("could not query catalog: %w", err)
+					} else if len(packs) == 0 {
+						return fmt.Errorf("could not find runtime '%s'", opts.Project.Runtime().Name())
+					}
+				}
+
+				if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+					// At this point, we have queried the registry without asking for the
+					// platform and architecture and received multiple options.  Re-query the
+					// catalog with the host architecture and platform.
+
+					if opts.Architecture == "" {
+						opts.Architecture, err = ukarch.HostArchitecture()
+						if err != nil {
+							return fmt.Errorf("could not get host architecture: %w", err)
+						}
+					}
+					if opts.Platform == "" {
+						plat, _, err := platform.Detect(ctx)
+						if err != nil {
+							return fmt.Errorf("could not get host platform: %w", err)
+						}
+
+						opts.Platform = plat.String()
+					}
+
+					qopts = append(qopts,
+						packmanager.WithPlatform(opts.Platform),
+						packmanager.WithArchitecture(opts.Architecture),
+					)
+
+					packs, err = opts.pm.Catalog(ctx, qopts...)
+					if err != nil {
+						return fmt.Errorf("could not query catalog: %w", err)
+					} else if len(packs) == 0 {
+						return fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
+					} else if len(packs) > 1 {
+						return fmt.Errorf("could not find runtime: too many options")
+					}
+
+					log.G(ctx).
+						WithField("arch", opts.Architecture).
+						WithField("plat", opts.Platform).
+						Info("using")
+				}
+
+				return nil
+			},
+		),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("could not query catalog: %w", err)
-	} else if len(packs) == 0 {
-		// Try again with a remote update request.  Save this to qopts in case we
-		// need to call `Catalog` again.
-		qopts = append(qopts, packmanager.WithUpdate(true))
-		packs, err = opts.pm.Catalog(ctx, qopts...)
-		if err != nil {
-			return nil, fmt.Errorf("could not query catalog: %w", err)
-		} else if len(packs) == 0 {
-			return nil, fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
-		}
+		return nil, err
 	}
 
-	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
-		// At this point, we have queried the registry without asking for the
-		// platform and architecture and received multiple options.  Re-query the
-		// catalog with the host architecture and platform.
-
-		if opts.Architecture == "" {
-			opts.Architecture, err = ukarch.HostArchitecture()
-			if err != nil {
-				return nil, fmt.Errorf("could not get host architecture: %w", err)
-			}
-		}
-		if opts.Platform == "" {
-			plat, _, err := platform.Detect(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("could not get host platform: %w", err)
-			}
-
-			opts.Platform = plat.String()
-		}
-
-		qopts = append(qopts,
-			packmanager.WithPlatform(opts.Platform),
-			packmanager.WithArchitecture(opts.Architecture),
-		)
-
-		packs, err = opts.pm.Catalog(ctx, qopts...)
-		if err != nil {
-			return nil, fmt.Errorf("could not query catalog: %w", err)
-		} else if len(packs) == 0 {
-			return nil, fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
-		} else if len(packs) > 1 {
-			return nil, fmt.Errorf("could not find runtime: too many options")
-		}
-
-		log.G(ctx).
-			WithField("arch", opts.Architecture).
-			WithField("plat", opts.Platform).
-			Info("using")
+	if err := treemodel.Start(); err != nil {
+		return nil, err
 	}
 
 	// Create a temporary directory we can use to store the artifacts from
