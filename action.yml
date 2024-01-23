@@ -198,7 +198,7 @@ runs:
         -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
         -v "${ACTION_WORKSPACE}/_temp/_github_home":"/github/home" \
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
-        -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/github/file_commands" \
+        -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/home/runner/work/_temp/_runner_file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
         kraftkit.sh/github-action:v0
   - name: Stop BuildKit
