@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/compose/down"
+	"kraftkit.sh/internal/cli/kraft/compose/ls"
 	"kraftkit.sh/internal/cli/kraft/compose/ps"
 	"kraftkit.sh/internal/cli/kraft/compose/up"
 )
@@ -38,6 +39,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(down.NewCmd())
+	cmd.AddCommand(ls.NewCmd())
 	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(up.NewCmd())
 
