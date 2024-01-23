@@ -17,6 +17,8 @@ import (
 	"kraftkit.sh/log"
 )
 
+var ErrRootfsOutputAlreadyExists = fmt.Errorf("rootfs output already exists")
+
 type directory struct {
 	opts  InitrdOptions
 	path  string
@@ -66,7 +68,7 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 	}
 
 	if _, err := os.Stat(initrd.opts.output); err == nil {
-		return "", fmt.Errorf("output already exists")
+		return initrd.opts.output, ErrRootfsOutputAlreadyExists
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE, 0o644)
