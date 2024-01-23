@@ -63,7 +63,7 @@ type GithubAction struct {
 	initrdPath string
 }
 
-func runScript(ctx context.Context, path string) error {
+func execScript(ctx context.Context, path string) error {
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		return nil
 	}
@@ -92,7 +92,7 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		ctx = newCtx
 	}
 
-	if err := runScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
+	if err := execScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
 		log.G(ctx).Errorf("could not run before script: %v", err)
 		os.Exit(1)
 	}
@@ -270,7 +270,7 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 	}
 
 	// Run the after script even if the context is cancelled
-	if err := runScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err != nil {
+	if err := execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err != nil {
 		return fmt.Errorf("could not run after script: %v", err)
 	}
 
