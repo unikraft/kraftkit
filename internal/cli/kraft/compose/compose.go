@@ -13,8 +13,9 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/compose/down"
+	"kraftkit.sh/internal/cli/kraft/compose/ps"
 	"kraftkit.sh/internal/cli/kraft/compose/up"
-	"kraftkit.sh/internal/cli/kraft/net/down"
 )
 
 type ComposeOptions struct {
@@ -37,6 +38,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(down.NewCmd())
+	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(up.NewCmd())
 
 	return cmd
