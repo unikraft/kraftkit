@@ -95,6 +95,13 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		os.Exit(1)
 	}
 
+	defer func() {
+		// Run the after script even if errors have occurred.
+		if err2 := execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err2 != nil {
+			err = errors.Join(err, fmt.Errorf("could not run after script: %v", err2))
+		}
+	}()
+
 	switch opts.Loglevel {
 	case "debug":
 		log.G(ctx).SetLevel(logrus.DebugLevel)
@@ -259,11 +266,6 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 	workspace = os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
 		workspace = "/github/workspace"
-	}
-
-	// Run the after script even if the context is cancelled
-	if err := execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err != nil {
-		return fmt.Errorf("could not run after script: %v", err)
 	}
 
 	return nil
