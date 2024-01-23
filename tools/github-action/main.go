@@ -76,12 +76,10 @@ func execScript(ctx context.Context, path string) error {
 	return cmd.Run()
 }
 
-func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
+func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
 	}
-
-	ctx := cmd.Context()
 
 	workspace := os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
@@ -104,7 +102,7 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		log.G(ctx).SetLevel(logrus.TraceLevel)
 	}
 
-	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -142,8 +140,6 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	ctx = config.WithConfigManager(ctx, cfgm)
-
-	cmd.SetContext(ctx)
 
 	if len(opts.Workdir) == 0 {
 		opts.Workdir, err = os.Getwd()
@@ -240,10 +236,6 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		opts.Strategy = packmanager.StrategyMerge.String()
 	}
 
-	return nil
-}
-
-func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 	if err := opts.pull(ctx); err != nil {
 		return fmt.Errorf("could not pull project components: %w", err)
 	}
@@ -264,7 +256,7 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	workspace := os.Getenv("GITHUB_WORKSPACE")
+	workspace = os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
 		workspace = "/github/workspace"
 	}
