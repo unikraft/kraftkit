@@ -155,6 +155,17 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		}
 	}
 
+	// If the `run` attribute has been set, only execute this.
+	runScript := fmt.Sprintf("%s/.kraftkit/run.sh", workspace)
+	if _, err := os.Stat(runScript); err == nil {
+		// Write the config to disk based on any previous adjustments.
+		if err := cfgm.Write(true); err != nil {
+			return fmt.Errorf("synchronizing config: %w", err)
+		}
+
+		return execScript(ctx, runScript)
+	}
+
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(opts.Workdir),
 	}
