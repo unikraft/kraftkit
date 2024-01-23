@@ -139,6 +139,7 @@ runs:
         --env-file <(env) \
         -e "CI=true" \
         -e "GITHUB_WORKSPACE=/github/workspace" \
+        -e "GITHUB_OUTPUT=/github-output" \
         -e "INPUT_ARCH=${{ inputs.arch }}" \
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_AUTHS=${{ inputs.auths }}" \
@@ -162,6 +163,7 @@ runs:
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
         -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/github/file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
+        -v "${GITHUB_OUTPUT}":"/github-output" \
         kraftkit.sh/github-action:v0
   - name: Stop BuildKit
     if: always()
