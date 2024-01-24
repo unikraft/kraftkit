@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/compose/up"
+	"kraftkit.sh/internal/cli/kraft/net/down"
 )
 
 type ComposeOptions struct {
@@ -35,6 +36,7 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.AddCommand(down.NewCmd())
 	cmd.AddCommand(up.NewCmd())
 
 	return cmd
