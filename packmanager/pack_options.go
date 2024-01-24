@@ -11,6 +11,7 @@ type PackOptions struct {
 	args                             []string
 	initrd                           string
 	kconfig                          bool
+	kernelDbg                        bool
 	kernelLibraryIntermediateObjects bool
 	kernelLibraryObjects             bool
 	kernelSourceFiles                bool
@@ -47,6 +48,11 @@ func (popts *PackOptions) Initrd() string {
 // PackKConfig returns whether the .config file should be packaged.
 func (popts *PackOptions) PackKConfig() bool {
 	return popts.kconfig
+}
+
+// PackKernelDbg returns return whether to package the debug kernel.
+func (popts *PackOptions) KernelDbg() bool {
+	return popts.kernelDbg
 }
 
 // PackKernelLibraryIntermediateObjects returns whether to package intermediate
@@ -113,6 +119,13 @@ func PackKConfig(kconfig bool) PackOption {
 func PackInitrd(initrd string) PackOption {
 	return func(popts *PackOptions) {
 		popts.initrd = initrd
+	}
+}
+
+// PackKernelDbg includes the debug kernel in the package.
+func PackKernelDbg(dbg bool) PackOption {
+	return func(popts *PackOptions) {
+		popts.kernelDbg = dbg
 	}
 }
 
