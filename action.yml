@@ -93,6 +93,10 @@ inputs:
     description: Merge strategy to use when packaging.
     required: false
     default: merge
+  dbg:
+    description: Use the debug kernel.
+    required: false
+    default: "false"
 
 runs:
   # Use a composite type so we can set up BuildKit beforehand so that
@@ -189,6 +193,7 @@ runs:
         -e "INPUT_OUTPUT=${{ inputs.output }}" \
         -e "INPUT_PLAT=${{ inputs.plat }}" \
         -e "INPUT_STRATEGY=${{ inputs.strategy }}" \
+        -e "INPUT_DBG=${{ inputs.dbg }}" \
         -e "INPUT_PUSH=${{ inputs.push }}" \
         -e "INPUT_RUNTIMEDIR=${{ inputs.runtimedir }}" \
         -e "INPUT_TARGET=${{ inputs.target }}" \

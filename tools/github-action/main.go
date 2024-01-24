@@ -56,6 +56,7 @@ type GithubAction struct {
 	Output   string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
 	Push     bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
 	Strategy string   `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
+	Dbg      bool     `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
 
 	// Internal attributes
 	project    app.Application
