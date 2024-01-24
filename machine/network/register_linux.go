@@ -13,7 +13,7 @@ import (
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/machine/network/bridge"
-	"kraftkit.sh/machine/store"
+	"kraftkit.sh/store"
 )
 
 // hostSupportedStrategies returns the map of known supported drivers for the
