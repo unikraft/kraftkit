@@ -201,7 +201,16 @@ runs:
         -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/home/runner/work/_temp/_runner_file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
         kraftkit.sh/github-action:v0
+
   - name: Stop BuildKit
     if: always()
     shell: bash
     run: docker stop buildkitd_${GITHUB_RUN_ID} || true
+
+  - name: Cleanup
+    if: always()
+    shell: bash
+    run: |
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
