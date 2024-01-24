@@ -48,6 +48,7 @@ type DeployOptions struct {
 	Ports        []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project      app.Application           `noattribute:"true"`
 	Replicas     int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout      RolloutStrategy           `noattribute:"true"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Runtime      string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
@@ -76,6 +77,15 @@ func NewCmd() *cobra.Command {
 	if err != nil {
 		panic(err)
 	}
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[RolloutStrategy](
+			append(RolloutStrategies(), StrategyPrompt),
+			StrategyPrompt,
+		),
+		"rollout",
+		"When a deployment of the same name exists, use this strategy when applying targets.",
+	)
 
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
@@ -107,6 +117,7 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
 
 	domain := cmd.Flag("domain").Value.String()
 	if len(domain) > 0 && len(opts.FQDN) > 0 {

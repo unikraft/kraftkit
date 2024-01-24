@@ -67,6 +67,8 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		pkgName = filepath.Base(opts.Workdir)
 	}
 
+	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
+
 	user := strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")
 	if split := strings.Split(pkgName, "/"); len(split) > 1 {
 		user = split[0]
@@ -120,6 +122,10 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		digest = m.Value
 	}
 
+	if err := opts.checkExists(ctx); err != nil {
+		return nil, err
+	}
+
 	var instance *kraftcloudinstances.Instance
 
 	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -137,7 +143,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 			processtree.WithTimeout(opts.Timeout),
 		},
 		processtree.NewProcessTreeItem(
-			"deploying",
+			"waiting for image",
 			"",
 			func(ctx context.Context) error {
 				var ctxTimeout context.Context
@@ -174,6 +180,36 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					}
 				}
 
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := paramodel.Start(); err != nil {
+		return nil, err
+	}
+
+	paramodel, err = processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
+			processtree.WithTimeout(opts.Timeout),
+		},
+		processtree.NewProcessTreeItem(
+			"deploying",
+			"",
+			func(ctx context.Context) error {
+				var ctxTimeout context.Context
+				var cancel context.CancelFunc
+
 			attemptDeployment:
 				for {
 					select {
@@ -192,7 +228,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 						Image:     pkgName,
 						Memory:    opts.Memory,
 						Metro:     opts.Metro,
-						Name:      strings.ReplaceAll(opts.Name, "/", "-"),
+						Name:      opts.Name,
 						Ports:     opts.Ports,
 						Replicas:  opts.Replicas,
 						Start:     !opts.NoStart,
