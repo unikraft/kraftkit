@@ -14,6 +14,9 @@ inputs:
     description: Bash script to run after the action
     required: false
     default: ""
+  run:
+    description: Run the following script instead of the default command sequence
+    required: false
   auths:
     description: Authentication details for services, must be in YAML format
     required: false
@@ -90,6 +93,10 @@ inputs:
     description: Merge strategy to use when packaging.
     required: false
     default: merge
+  dbg:
+    description: Use the debug kernel.
+    required: false
+    default: "false"
 
 runs:
   # Use a composite type so we can set up BuildKit beforehand so that
@@ -119,16 +126,51 @@ runs:
     shell: bash
     run: |
       mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
-      echo '#!/usr/bin/env bash' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+
+      # Always dump the contents of the inputs into relevant files, and simply
+      # remove if they do not contain any content.
+      touch "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       ${{ inputs.before }}
       EOF
-      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      echo '#!/usr/bin/env bash' > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/before.sh)" != "" ]; then
+        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      #!/usr/bin/env bash
+      ${{ inputs.before }}
+      EOF
+        chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      else
+        rm -f "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      fi
+
+      touch "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      ${{ inputs.run }}
+      EOF
+      if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/run.sh)" != "" ]; then
+        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      #!/usr/bin/env bash
+      ${{ inputs.run }}
+      EOF
+        chmod +x "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      else
+        rm -f "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      fi
+
+      touch "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
       cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
       ${{ inputs.after }}
       EOF
-      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/after.sh)" != "" ]; then
+        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      #!/usr/bin/env bash
+      ${{ inputs.after }}
+      EOF
+        chmod +x "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      else
+        rm -f "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      fi
+
   - name: Run kraft
     shell: bash
     run: |
@@ -151,6 +193,7 @@ runs:
         -e "INPUT_OUTPUT=${{ inputs.output }}" \
         -e "INPUT_PLAT=${{ inputs.plat }}" \
         -e "INPUT_STRATEGY=${{ inputs.strategy }}" \
+        -e "INPUT_DBG=${{ inputs.dbg }}" \
         -e "INPUT_PUSH=${{ inputs.push }}" \
         -e "INPUT_RUNTIMEDIR=${{ inputs.runtimedir }}" \
         -e "INPUT_TARGET=${{ inputs.target }}" \
@@ -160,10 +203,19 @@ runs:
         -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
         -v "${ACTION_WORKSPACE}/_temp/_github_home":"/github/home" \
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
-        -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/github/file_commands" \
+        -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/home/runner/work/_temp/_runner_file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
         kraftkit.sh/github-action:v0
+
   - name: Stop BuildKit
     if: always()
     shell: bash
     run: docker stop buildkitd_${GITHUB_RUN_ID} || true
+
+  - name: Cleanup
+    if: always()
+    shell: bash
+    run: |
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      rm -f "${GITHUB_WORKSPACE}/.kraftkit/after.sh"

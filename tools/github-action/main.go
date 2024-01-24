@@ -56,6 +56,7 @@ type GithubAction struct {
 	Output   string   `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
 	Push     bool     `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
 	Strategy string   `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
+	Dbg      bool     `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
 
 	// Internal attributes
 	project    app.Application
@@ -63,7 +64,7 @@ type GithubAction struct {
 	initrdPath string
 }
 
-func runScript(ctx context.Context, path string) error {
+func execScript(ctx context.Context, path string) error {
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		return nil
 	}
@@ -76,12 +77,10 @@ func runScript(ctx context.Context, path string) error {
 	return cmd.Run()
 }
 
-func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
+func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
 	}
-
-	ctx := cmd.Context()
 
 	workspace := os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
@@ -92,10 +91,17 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		ctx = newCtx
 	}
 
-	if err := runScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
+	if err := execScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
 		log.G(ctx).Errorf("could not run before script: %v", err)
 		os.Exit(1)
 	}
+
+	defer func() {
+		// Run the after script even if errors have occurred.
+		if err2 := execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err2 != nil {
+			err = errors.Join(err, fmt.Errorf("could not run after script: %v", err2))
+		}
+	}()
 
 	switch opts.Loglevel {
 	case "debug":
@@ -104,7 +110,7 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		log.G(ctx).SetLevel(logrus.TraceLevel)
 	}
 
-	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	ctx, err = packmanager.WithDefaultUmbrellaManagerInContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -143,13 +149,22 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 
 	ctx = config.WithConfigManager(ctx, cfgm)
 
-	cmd.SetContext(ctx)
-
 	if len(opts.Workdir) == 0 {
 		opts.Workdir, err = os.Getwd()
 		if err != nil {
 			return err
 		}
+	}
+
+	// If the `run` attribute has been set, only execute this.
+	runScript := fmt.Sprintf("%s/.kraftkit/run.sh", workspace)
+	if _, err := os.Stat(runScript); err == nil {
+		// Write the config to disk based on any previous adjustments.
+		if err := cfgm.Write(true); err != nil {
+			return fmt.Errorf("synchronizing config: %w", err)
+		}
+
+		return execScript(ctx, runScript)
 	}
 
 	popts := []app.ProjectOption{
@@ -240,10 +255,6 @@ func (opts *GithubAction) Pre(cmd *cobra.Command, args []string) (err error) {
 		opts.Strategy = packmanager.StrategyMerge.String()
 	}
 
-	return nil
-}
-
-func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 	if err := opts.pull(ctx); err != nil {
 		return fmt.Errorf("could not pull project components: %w", err)
 	}
@@ -264,14 +275,9 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	workspace := os.Getenv("GITHUB_WORKSPACE")
+	workspace = os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
 		workspace = "/github/workspace"
-	}
-
-	// Run the after script even if the context is cancelled
-	if err := runScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err != nil {
-		return fmt.Errorf("could not run after script: %v", err)
 	}
 
 	return nil

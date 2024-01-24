@@ -55,12 +55,13 @@ type ociPackage struct {
 	manifest *Manifest
 
 	// Embedded attributes which represent target.Target
-	arch    arch.Architecture
-	plat    plat.Platform
-	kconfig kconfig.KeyValueMap
-	kernel  string
-	initrd  initrd.Initrd
-	command []string
+	arch      arch.Architecture
+	plat      plat.Platform
+	kconfig   kconfig.KeyValueMap
+	kernel    string
+	kernelDbg string
+	initrd    initrd.Initrd
+	command   []string
 }
 
 var (
@@ -80,12 +81,13 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	// Initialize the ociPackage by copying over target.Target attributes
 	ocipack := ociPackage{
-		arch:    targ.Architecture(),
-		plat:    targ.Platform(),
-		kconfig: targ.KConfig(),
-		kernel:  targ.Kernel(),
-		initrd:  targ.Initrd(),
-		command: popts.Args(),
+		arch:      targ.Architecture(),
+		plat:      targ.Platform(),
+		kconfig:   targ.KConfig(),
+		initrd:    targ.Initrd(),
+		kernel:    targ.Kernel(),
+		kernelDbg: targ.KernelDbg(),
+		command:   popts.Args(),
 	}
 
 	if popts.Name() == "" {
@@ -158,6 +160,27 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
 		return nil, fmt.Errorf("could not add layer to manifest: %w", err)
+	}
+
+	if popts.KernelDbg() {
+		log.G(ctx).WithFields(logrus.Fields{
+			"src":  ocipack.KernelDbg(),
+			"dest": WellKnownKernelDbgPath,
+		}).Debug("oci: including kernel.dbg")
+
+		layer, err := NewLayerFromFile(ctx,
+			ocispec.MediaTypeImageLayer,
+			ocipack.Kernel(),
+			WellKnownKernelDbgPath,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create new layer structure from file: %w", err)
+		}
+		defer os.Remove(layer.tmp)
+
+		if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
+			return nil, fmt.Errorf("could not add layer to manifest: %w", err)
+		}
 	}
 
 	if popts.Initrd() != "" {
@@ -692,7 +715,7 @@ func (ocipack *ociPackage) Kernel() string {
 
 // KernelDbg implements unikraft.target.Target
 func (ocipack *ociPackage) KernelDbg() string {
-	return ocipack.kernel
+	return ocipack.kernelDbg
 }
 
 // Initrd implements unikraft.target.Target

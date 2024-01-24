@@ -6,6 +6,7 @@ package oci
 
 const (
 	WellKnownKernelPath      = "/unikraft/bin/kernel"
+	WellKnownKernelDbgPath   = "/unikraft/bin/kernel.dbg"
 	WellKnownInitrdPath      = "/unikraft/bin/initrd"
 	WellKnownConfigPath      = "/unikraft/bin/config"
 	WellKnownKernelSourceDir = "/unikraft/src"
