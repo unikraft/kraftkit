@@ -64,7 +64,7 @@ type GithubAction struct {
 	initrdPath string
 }
 
-func execScript(ctx context.Context, path string) error {
+func (opts *GithubAction) execScript(ctx context.Context, path string) error {
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		return nil
 	}
@@ -72,6 +72,7 @@ func execScript(ctx context.Context, path string) error {
 	cmd := exec.CommandContext(ctx, path)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Dir = opts.Workdir
 	cmd.Env = os.Environ()
 
 	return cmd.Run()
@@ -91,14 +92,14 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		ctx = newCtx
 	}
 
-	if err := execScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
+	if err := opts.execScript(ctx, fmt.Sprintf("%s/.kraftkit/before.sh", workspace)); err != nil {
 		log.G(ctx).Errorf("could not run before script: %v", err)
 		os.Exit(1)
 	}
 
 	defer func() {
 		// Run the after script even if errors have occurred.
-		if err2 := execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err2 != nil {
+		if err2 := opts.execScript(ctx, fmt.Sprintf("%s/.kraftkit/after.sh", workspace)); err2 != nil {
 			err = errors.Join(err, fmt.Errorf("could not run after script: %v", err2))
 		}
 	}()
@@ -164,7 +165,7 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 			return fmt.Errorf("synchronizing config: %w", err)
 		}
 
-		return execScript(ctx, runScript)
+		return opts.execScript(ctx, runScript)
 	}
 
 	popts := []app.ProjectOption{
