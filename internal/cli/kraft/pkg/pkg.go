@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -17,7 +16,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
-	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
@@ -165,43 +164,33 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 	}
 
 	if opts.Push {
-		var processes []*paraprogress.Process
+		var processes []*processtree.ProcessTreeItem
 
 		for _, p := range packs {
 			p := p
 
-			var title []string
-			for _, column := range p.Columns() {
-				if len(column.Value) > 12 {
-					continue
-				}
-
-				title = append(title, column.Value)
-			}
-
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pushing %s:%s (%s)", p.Name(), p.Version(), strings.Join(title, ", ")),
-				func(ctx context.Context, w func(progress float64)) error {
-					return p.Push(
-						ctx,
-						pack.WithPushProgressFunc(w),
-					)
+			processes = append(processes, processtree.NewProcessTreeItem(
+				fmt.Sprintf("pushing %s (%s)", p.Name(), p.Format()),
+				"",
+				func(ctx context.Context) error {
+					return p.Push(ctx)
 				},
 			))
 		}
-
-		paramodel, err := paraprogress.NewParaProgress(
+		model, err := processtree.NewProcessTree(
 			ctx,
-			processes,
-			paraprogress.IsParallel(false),
-			paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
-			paraprogress.WithFailFast(true),
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+				processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+				processtree.WithFailFast(true),
+			},
+			processes...,
 		)
 		if err != nil {
 			return packs, err
 		}
 
-		if err := paramodel.Start(); err != nil {
+		if err := model.Start(); err != nil {
 			return packs, err
 		}
 	}
