@@ -115,6 +115,7 @@ base-golang:
 github-action: ENVIRONMENT      ?= github-action
 github-action: GO_VERSION       ?= 1.21.2
 github-action: IMAGE            ?= $(REGISTRY)/github-action:$(IMAGE_TAG)
+github-action: KRAFTKIT_VERSION ?= latest
 ifeq ($(WITH_CACHE),y)
 github-action: _WITH_CACHE      := --cache-from $(IMAGE)
 else
@@ -124,6 +125,7 @@ github-action:
 	$(DOCKER) build \
 		--platform $(PLATFORM) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \
 		--file $(BUILDENVSDIR)/github-action.Dockerfile \
