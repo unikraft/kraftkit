@@ -50,6 +50,7 @@ RUN set -xe; \
       gcc-12-aarch64-linux-gnu \
       gcc-12-arm-linux-gnueabihf \
       git \
+      jq \
       libncursesw5 \
       libncursesw5-dev \
       make \
@@ -61,6 +62,7 @@ RUN set -xe; \
       uuid-runtime \
       wget \
       xz-utils \
+      zip \
       sudo \
       ; \
     apt-get clean; \
