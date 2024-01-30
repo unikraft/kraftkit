@@ -34,6 +34,10 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 	var err error
 	var instance *kraftcloudinstances.Instance
 
+	if err := opts.checkExists(ctx); err != nil {
+		return nil, err
+	}
+
 	paramodel, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
