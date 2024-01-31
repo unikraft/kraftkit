@@ -251,6 +251,8 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 		}
 
 		switch fieldType.Type.Kind() {
+		case reflect.Uint, reflect.Uint64:
+			flags.UintVarP((*uint)(unsafe.Pointer(v.Addr().Pointer())), name, alias, uint(defInt), usage)
 		case reflect.Int, reflect.Int64:
 			flags.IntVarP((*int)(unsafe.Pointer(v.Addr().Pointer())), name, alias, defInt, usage)
 		case reflect.String:

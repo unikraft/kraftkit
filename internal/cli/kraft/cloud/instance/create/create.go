@@ -248,7 +248,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 			return nil, err
 		}
 
-		instance.ServiceGroup = *serviceGroup
+		instance.ServiceGroup = serviceGroup
 	}
 
 	return instance, nil
