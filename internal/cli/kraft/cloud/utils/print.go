@@ -402,6 +402,9 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 	if instance.State == "running" || instance.State == "starting" {
 		title = "Deployed successfully!"
 		color = tui.TextGreen
+	} else if instance.State == "standby" {
+		title = "Deployed but instance is on standby!"
+		color = tui.TextLightBlue
 	} else if instance.State == "stopped" {
 		title = "Deployed but instance is not online!"
 		color = tui.TextRed
