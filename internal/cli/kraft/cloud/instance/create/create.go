@@ -30,6 +30,7 @@ type CreateOptions struct {
 	Auth                   *config.AuthConfig    `noattribute:"true"`
 	Client                 kraftcloud.KraftCloud `noattribute:"true"`
 	Env                    []string              `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features               []string              `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
 	Image                  string                `noattribute:"true"`
 	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
@@ -40,6 +41,7 @@ type CreateOptions struct {
 	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
 	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
 	SubDomain              string                `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 }
@@ -64,10 +66,24 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		)
 	}
 
+	var features []kraftcloudinstances.InstanceFeature
+
+	if opts.ScaleToZero {
+		features = append(features, kraftcloudinstances.FeatureScaleToZero)
+	}
+
+	for _, feature := range opts.Features {
+		formattedFeature := kraftcloudinstances.InstanceFeature(feature)
+		if !slices.Contains(features, formattedFeature) {
+			features = append(features, formattedFeature)
+		}
+	}
+
 	req := kraftcloudinstances.CreateInstanceRequest{
 		Args:         args,
 		Autostart:    opts.Start,
 		Env:          make(map[string]string),
+		Features:     features,
 		Image:        opts.Image,
 		MemoryMB:     opts.Memory,
 		Name:         opts.Name,

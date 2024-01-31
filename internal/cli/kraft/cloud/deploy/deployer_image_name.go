@@ -50,16 +50,18 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			"",
 			func(ctx context.Context) error {
 				instance, err = create.Create(ctx, &create.CreateOptions{
-					Env:       opts.Env,
-					FQDN:      opts.FQDN,
-					Image:     args[0],
-					Memory:    opts.Memory,
-					Metro:     opts.Metro,
-					Name:      opts.Name,
-					Ports:     opts.Ports,
-					Replicas:  opts.Replicas,
-					Start:     !opts.NoStart,
-					SubDomain: opts.SubDomain,
+					Env:         opts.Env,
+					Features:    opts.Features,
+					FQDN:        opts.FQDN,
+					Image:       args[0],
+					Memory:      opts.Memory,
+					Metro:       opts.Metro,
+					Name:        opts.Name,
+					Ports:       opts.Ports,
+					Replicas:    opts.Replicas,
+					ScaleToZero: opts.ScaleToZero,
+					Start:       !opts.NoStart,
+					SubDomain:   opts.SubDomain,
 				}, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("could not create instance: %w", err)

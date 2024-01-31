@@ -30,6 +30,7 @@ type DeployOptions struct {
 	Client       kraftcloud.KraftCloud     `noattribute:"true"`
 	DotConfig    string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env          []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features     []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
 	ForcePull    bool                      `long:"force-pull" usage:"Force pulling packages before building"`
 	FQDN         string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
 	Jobs         int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
@@ -51,6 +52,7 @@ type DeployOptions struct {
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Runtime      string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	ScaleToZero  bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
 	Strategy     packmanager.MergeStrategy `noattribute:"true"`
 	SubDomain    string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
 	Timeout      time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
