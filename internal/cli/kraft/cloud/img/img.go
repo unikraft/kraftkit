@@ -8,6 +8,7 @@ package img
 import (
 	"context"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -25,6 +26,13 @@ func NewCmd() *cobra.Command {
 		Use:     "img",
 		Aliases: []string{"images", "image"},
 		Hidden:  true,
+		Example: heredoc.Doc(`
+			# List images in your account.
+			$ kraft cloud img ls
+
+			# Delete an image from your account.
+			$ kraft cloud img rm caddy@sha256:2ba5324141...
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
 		},

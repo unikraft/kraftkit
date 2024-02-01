@@ -22,7 +22,7 @@ import (
 )
 
 type InfoOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	Update bool   `long:"update" short:"u" usage:"Get latest information about components before listing results"`
 }
 
@@ -46,7 +46,8 @@ func New() *cobra.Command {
 		Args: cmdfactory.MinimumArgs(1, "package name(s) not specified"),
 		Example: heredoc.Doc(`
 			# Shows details for the library nginx
-			$ kraft pkg info nginx`),
+			$ kraft pkg info nginx
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

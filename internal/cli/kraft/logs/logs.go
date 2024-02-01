@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -33,6 +34,19 @@ func NewCmd() *cobra.Command {
 		Short: "Fetch the logs of a unikernel.",
 		Use:   "logs [FLAGS] MACHINE",
 		Args:  cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+			# Fetch the logs of a unikernel
+			$ kraft logs my-machine
+
+			# Fetch the logs of a unikernel and follow the output
+			$ kraft logs --follow my-machine
+
+			# Fetch the logs of a unikernel and prefix each line with the machine name
+			$ kraft logs --prefix-name
+
+			# Fetch the logs of a unikernel and prefix each line with the given string
+			$ kraft logs --prefix "log: "
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},

@@ -24,7 +24,7 @@ import (
 )
 
 type GetOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
 }
@@ -45,8 +45,11 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"status", "info"},
 		Example: heredoc.Doc(`
-			# Retrieve information about a kraftcloud instance
+			# Retrieve information about a kraftcloud instance by UUID
 			$ kraft cloud instance get fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Retrieve information about a kraftcloud instance by name
+			$ kraft cloud instance get my-instance-431342
 	`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

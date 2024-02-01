@@ -22,7 +22,7 @@ import (
 
 type StartOptions struct {
 	WaitTimeoutMS int    `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
-	Output        string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
 }
@@ -39,11 +39,14 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short: "Start an instance",
-		Use:   "start [FLAGS] [PACKAGE|NAME]",
+		Use:   "start [FLAGS] PACKAGE|NAME",
 		Args:  cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
-			# Start a KraftCloud instance
+			# Start a KraftCloud instance by UUID
 			$ kraft cloud instance start 77d0316a-fbbe-488d-8618-5bf7a612477a
+
+			# Start a KraftCloud instance by name
+			$ kraft cloud instance start my-instance-431342
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

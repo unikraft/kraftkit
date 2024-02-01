@@ -57,7 +57,7 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			$ kraft lib create
 			$ kraft lib create sample-project
-			`),
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "lib",
 		},

@@ -66,12 +66,9 @@ func NewCmd() *cobra.Command {
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
 		Example: heredoc.Docf(`
-		# Create a new deployment at https://hello-world.fra0.kraft.cloud in Frankfurt
-		# of your current working directory which exposes a port at 8080.
-		kraft cloud --metro fra0 deploy --subdomain hello-world -p 443:8080 .
-		
-		# Alternatively supply an existing image which is available in the catalog:
-		kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest`),
+			# Run an image from KraftCloud's catalog:
+			$ kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest
+		`),
 	})
 	if err != nil {
 		panic(err)

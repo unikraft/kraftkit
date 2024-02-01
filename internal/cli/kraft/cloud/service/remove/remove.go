@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -33,6 +34,16 @@ func NewCmd() *cobra.Command {
 		Short:   "Delete a service group",
 		Use:     "rm [FLAGS] NAME|UUID",
 		Aliases: []string{"delete", "del", "remove"},
+		Example: heredoc.Doc(`
+			# Remove a service group from your account by UUID.
+			$ kraft cloud svc rm fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Remove a service group from your account by name.
+			$ kraft cloud svc rm my-service-group
+
+			# Remove all service groups from your account.
+			$ kraft cloud svc rm --all
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
 		},

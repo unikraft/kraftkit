@@ -24,7 +24,7 @@ import (
 )
 
 type GetOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
 }
@@ -47,6 +47,9 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Retrieve information about a kraftcloud service group
 			$ kraft cloud service get fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Retrieve information about a kraftcloud service group
+			$ kraft cloud service get my-service-group
 	`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

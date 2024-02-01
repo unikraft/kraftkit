@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	networkapi "kraftkit.sh/api/network/v1alpha1"
@@ -22,7 +23,7 @@ import (
 type ListOptions struct {
 	Driver string `noattribute:"true"`
 	Long   bool   `long:"long" short:"l" usage:"Show more information"`
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 }
 
 func NewCmd() *cobra.Command {
@@ -31,6 +32,16 @@ func NewCmd() *cobra.Command {
 		Use:     "ls [FLAGS]",
 		Aliases: []string{"list"},
 		Args:    cobra.NoArgs,
+		Example: heredoc.Doc(`
+			# List all machine networks
+			$ kraft network ls
+
+			# List all machine networks in JSON format
+			$ kraft network ls -o json
+
+			# List all machine networks with all information
+			$ kraft network ls -l
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},

@@ -35,7 +35,7 @@ type CreateOptions struct {
 	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
 	Metro                  string                `noattribute:"true"`
 	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`

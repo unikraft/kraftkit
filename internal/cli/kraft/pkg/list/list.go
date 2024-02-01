@@ -35,7 +35,7 @@ type ListOptions struct {
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
-	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`
 	ShowArchs bool   `long:"archs" short:"M" usage:"Show architectures"`
 	ShowCore  bool   `long:"core" short:"C" usage:"Show Unikraft core versions"`
@@ -54,7 +54,12 @@ func NewCmd() *cobra.Command {
 			List installed Unikraft component packages.
 		`),
 		Example: heredoc.Doc(`
-			$ kraft pkg list`),
+			# List packages
+			$ kraft pkg list
+
+			# List all packages
+			$ kraft pkg list --all
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

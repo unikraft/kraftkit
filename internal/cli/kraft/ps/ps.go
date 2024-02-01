@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ type PsOptions struct {
 	platform     string
 	Quiet        bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
 	ShowAll      bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
-	Output       string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output       string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 }
 
 const (
@@ -39,6 +40,16 @@ func NewCmd() *cobra.Command {
 		Use:   "ps [FLAGS]",
 		Args:  cobra.MaximumNArgs(0),
 		Long:  "List running unikernels",
+		Example: heredoc.Doc(`
+			# List all running unikernels
+			$ kraft ps
+
+			# List all unikernels
+			$ kraft ps --all
+
+			# List all running unikernels with more information
+			$ kraft ps --long
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},

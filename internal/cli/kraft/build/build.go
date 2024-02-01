@@ -184,7 +184,8 @@ func NewCmd() *cobra.Command {
 			$ kraft build
 
 			# Build path to a Unikraft project
-			$ kraft build path/to/app`),
+			$ kraft build path/to/app
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

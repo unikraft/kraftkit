@@ -44,7 +44,8 @@ func NewCmd() *cobra.Command {
 			$ kraft pkg source https://manifests.kraftkit.sh/index.yaml
 
 			# Add a Unikraft-compatible OCI compatible registry
-			$ kraft pkg source unikraft.org`),
+			$ kraft pkg source unikraft.org
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

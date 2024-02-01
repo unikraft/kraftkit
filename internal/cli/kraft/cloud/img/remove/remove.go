@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -33,6 +34,13 @@ func NewCmd() *cobra.Command {
 		Short:   "Delete an image",
 		Use:     "rm [FLAGS] NAME[:latest|@sha256:...]",
 		Aliases: []string{"delete", "del", "remove"},
+		Example: heredoc.Doc(`
+			# Delete an image from your account.
+			$ kraft cloud img rm caddy@sha256:2ba5324141...
+
+			# Delete all images from your account.
+			$ kraft cloud img rm --all
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
 		},

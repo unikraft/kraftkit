@@ -51,10 +51,10 @@ func NewCmd() *cobra.Command {
 		$ kraft cloud --metro fra0 instance ls
 
 		# Create a new NGINX instance in Frankfurt and start it immediately
-		$ kraft cloud --metro fra0 instance create \
-			--start \
-			--port 80:443 \
-			unikraft.io/$KRAFTCLOUD_USER/nginx:latest -- nginx -c /usr/local/nginx/conf/nginx.conf
+		$ kraft cloud instance create -S \
+			-p 80:443/http+redirect \
+			-p 443:8080/http+tls \
+			nginx:latest
 
 		# Get the status of an instance based on its UUID and output as JSON
 		$ kraft cloud --metro fra0 instance status -o json UUID

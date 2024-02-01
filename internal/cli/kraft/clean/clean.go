@@ -72,7 +72,7 @@ func NewCmd() *cobra.Command {
 			# Clean the cwd build directory
 			$ kraft clean
 
-			# clean a project at a path
+			# properclean a project at a path
 			$ kraft clean --proper path/to/app`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",

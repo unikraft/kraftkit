@@ -29,7 +29,7 @@ const formatJSON = "json"
 
 // PsOptions implements the runc "ps" command.
 type PsOptions struct {
-	Format string `long:"format" short:"f" usage:"format of the output (table or json)" default:"table"`
+	Format string `long:"format" short:"f" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	rootDir string
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/vishvananda/netlink"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,10 @@ func NewCmd() *cobra.Command {
 		Use:     "create [FLAGS] NETWORK",
 		Aliases: []string{"add"},
 		Args:    cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+			# Create a new machine network
+			$ kraft network create my-network --network 133.37.0.1/12
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},

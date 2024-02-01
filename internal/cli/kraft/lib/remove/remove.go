@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
@@ -30,6 +31,10 @@ func NewCmd() *cobra.Command {
 		Use:     "remove [FLAGS] LIB",
 		Aliases: []string{"rm"},
 		Args:    cmdfactory.MinimumArgs(1, "library name is not specified to remove from the project"),
+		Example: heredoc.Doc(`
+			# Remove a library from the project
+			$ kraft lib remove libfoo
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "lib",
 		},
