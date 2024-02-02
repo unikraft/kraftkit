@@ -110,4 +110,6 @@ RUN set -xe; \
     chown -R runner:runner /github/workspace
 USER runner
 
+ENV CLICOLOR_FORCE=1
+
 ENTRYPOINT [ "github-action" ]
