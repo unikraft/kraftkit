@@ -28,6 +28,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/clean"
 	"kraftkit.sh/internal/cli/kraft/cloud"
+	"kraftkit.sh/internal/cli/kraft/compose"
 	"kraftkit.sh/internal/cli/kraft/events"
 	"kraftkit.sh/internal/cli/kraft/fetch"
 	"kraftkit.sh/internal/cli/kraft/login"
@@ -110,6 +111,9 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
+	cmd.AddCommand(compose.NewCmd())
 
 	cmd.AddCommand(x.NewCmd())
 
