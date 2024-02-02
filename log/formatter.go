@@ -25,33 +25,33 @@ var (
 	baseTimestamp      time.Time    = time.Now()
 	defaultColorScheme *ColorScheme = &ColorScheme{
 		InfoLevel: lipgloss.NewStyle().Background(lipgloss.Color("8")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		WarnLevel: lipgloss.NewStyle().Background(lipgloss.Color("11")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		ErrorLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		FatalLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		PanicLevel: lipgloss.NewStyle().Background(lipgloss.Color("9")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		DebugLevel: lipgloss.NewStyle().Background(lipgloss.Color("12")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		TraceLevel: lipgloss.NewStyle().Background(lipgloss.Color("0")).Foreground(lipgloss.Color("15")).Render,
 		Prefix: lipgloss.NewStyle().Background(lipgloss.Color("8")).Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).Render,
 		Timestamp: lipgloss.NewStyle().Render,
 	}

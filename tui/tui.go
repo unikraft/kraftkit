@@ -18,8 +18,8 @@ var (
 	TextWhiteBgRed = lipgloss.NewStyle().
 			Background(lipgloss.Color("9")).
 			Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).
 		Render
 
@@ -30,8 +30,8 @@ var (
 	TextWhiteBgGreen = lipgloss.NewStyle().
 				Background(lipgloss.Color("10")).
 				Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).
 		Render
 
@@ -42,8 +42,8 @@ var (
 	TextWhiteBgBlue = lipgloss.NewStyle().
 			Background(lipgloss.Color("12")).
 			Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
+			Light: "15",
+			Dark:  "0",
 		}).
 		Render
 
