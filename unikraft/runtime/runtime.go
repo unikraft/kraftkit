@@ -5,6 +5,8 @@
 package runtime
 
 import (
+	"strings"
+
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -51,6 +53,12 @@ func (elfloader *Runtime) Name() string {
 
 // SetName overwrites the name of the runtime.
 func (elfloader *Runtime) SetName(name string) {
+	if runtime := strings.Split(name, ":"); len(runtime) == 2 {
+		elfloader.name = runtime[0]
+		elfloader.version = runtime[1]
+		return
+	}
+
 	elfloader.name = name
 }
 
