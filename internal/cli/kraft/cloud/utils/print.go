@@ -20,6 +20,7 @@ import (
 
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 	kraftcloudservices "sdk.kraft.cloud/services"
+	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
 	kraftcloudusers "sdk.kraft.cloud/users"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
 )
@@ -183,6 +184,78 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolum
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// PrintAutoscaleConfigurations pretty-prints the provided set of autoscale configurations or returns
+// an error if unable to send to stdout via the provided context.
+func PrintAutoscaleConfigurations(ctx context.Context, format string, autoscaleConfigurations ...kraftcloudautoscale.AutoscaleConfiguration) error {
+	err := iostreams.G(ctx).StartPager()
+	if err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("ENABLED", cs.Bold)
+	table.AddField("MIN SIZE", cs.Bold)
+	table.AddField("MAX SIZE", cs.Bold)
+	table.AddField("WARMUP (MS)", cs.Bold)
+	table.AddField("COOLDOWN (MS)", cs.Bold)
+	table.AddField("MASTER", cs.Bold)
+	table.AddField("POLICIES", cs.Bold)
+	table.EndRow()
+
+	for _, aconf := range autoscaleConfigurations {
+		if format != "table" {
+			table.AddField(aconf.UUID, nil)
+		}
+
+		table.AddField(aconf.Name, nil)
+		table.AddField(fmt.Sprintf("%t", aconf.Enabled), nil)
+		table.AddField(fmt.Sprintf("%d", aconf.MinSize), nil)
+		table.AddField(fmt.Sprintf("%d", aconf.MaxSize), nil)
+		table.AddField(fmt.Sprintf("%d", aconf.WarmupTimeMs), nil)
+		table.AddField(fmt.Sprintf("%d", aconf.CooldownTimeMs), nil)
+		if aconf.Master == nil {
+			table.AddField("n/a", nil)
+		} else {
+			if aconf.Master.UUID != "" {
+				table.AddField(aconf.Master.UUID, nil)
+			} else if aconf.Master.Name != "" {
+				table.AddField(aconf.Master.Name, nil)
+			}
+		}
+
+		var policies []string
+		for _, policy := range aconf.Policies {
+			name, ok := policy["name"].(string)
+			if !ok {
+				continue
+			}
+
+			policies = append(policies, name)
+		}
+
+		table.AddField(strings.Join(policies, ";"), nil)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
 // PrintServiceGroups pretty-prints the provided set of service groups or returns
 // an error if unable to send to stdout via the provided context.
 func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kraftcloudservices.ServiceGroup) error {
@@ -329,6 +402,9 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 	if instance.State == "running" || instance.State == "starting" {
 		title = "Deployed successfully!"
 		color = tui.TextGreen
+	} else if instance.State == "standby" {
+		title = "Deployed but instance is on standby!"
+		color = tui.TextLightBlue
 	} else if instance.State == "stopped" {
 		title = "Deployed but instance is not online!"
 		color = tui.TextRed
