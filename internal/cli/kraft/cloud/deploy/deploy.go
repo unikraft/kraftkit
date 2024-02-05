@@ -26,37 +26,38 @@ import (
 )
 
 type DeployOptions struct {
-	Auth         *config.AuthConfig        `noattribute:"true"`
-	Client       kraftcloud.KraftCloud     `noattribute:"true"`
-	DotConfig    string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Env          []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features     []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
-	ForcePull    bool                      `long:"force-pull" usage:"Force pulling packages before building"`
-	FQDN         string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
-	Jobs         int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
-	KernelDbg    bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile    string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
-	Memory       int64                     `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
-	Metro        string                    `noattribute:"true"`
-	Name         string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
-	NoCache      bool                      `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
-	NoConfigure  bool                      `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast       bool                      `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
-	NoFetch      bool                      `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoStart      bool                      `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
-	NoUpdate     bool                      `long:"no-update" usage:"Do not update package index before running the build"`
-	Output       string                    `local:"true" long:"output" short:"o" usage:"Set output format"`
-	Ports        []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Project      app.Application           `noattribute:"true"`
-	Replicas     int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
-	Runtime      string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
-	SaveBuildLog string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
-	ScaleToZero  bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
-	Strategy     packmanager.MergeStrategy `noattribute:"true"`
-	SubDomain    string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
-	Timeout      time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
-	Workdir      string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
+	Auth                   *config.AuthConfig        `noattribute:"true"`
+	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
+	DotConfig              string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features               []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
+	ForcePull              bool                      `long:"force-pull" usage:"Force pulling packages before building"`
+	FQDN                   string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
+	Jobs                   int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg              bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile              string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
+	Memory                 int64                     `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
+	Metro                  string                    `noattribute:"true"`
+	Name                   string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
+	NoCache                bool                      `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure            bool                      `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast                 bool                      `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch                bool                      `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoStart                bool                      `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
+	NoUpdate               bool                      `long:"no-update" usage:"Do not update package index before running the build"`
+	Output                 string                    `local:"true" long:"output" short:"o" usage:"Set output format"`
+	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	Project                app.Application           `noattribute:"true"`
+	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rootfs                 string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
+	Runtime                string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
+	SaveBuildLog           string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	ScaleToZero            bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
+	ServiceGroupNameOrUUID string                    `long:"service-group" short:"g" usage:"Attach the new deployment to an existing service group"`
+	Strategy               packmanager.MergeStrategy `noattribute:"true"`
+	SubDomain              string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
+	Timeout                time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
+	Workdir                string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 }
 
 func NewCmd() *cobra.Command {

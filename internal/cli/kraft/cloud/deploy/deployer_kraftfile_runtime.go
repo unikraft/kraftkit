@@ -187,17 +187,18 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					defer cancel()
 
 					instance, err = create.Create(ctxTimeout, &create.CreateOptions{
-						Env:         opts.Env,
-						FQDN:        opts.FQDN,
-						Image:       pkgName,
-						Memory:      opts.Memory,
-						Metro:       opts.Metro,
-						Name:        strings.ReplaceAll(opts.Name, "/", "-"),
-						Ports:       opts.Ports,
-						Replicas:    opts.Replicas,
-						ScaleToZero: opts.ScaleToZero,
-						Start:       !opts.NoStart,
-						SubDomain:   opts.SubDomain,
+						Env:                    opts.Env,
+						FQDN:                   opts.FQDN,
+						Image:                  pkgName,
+						Memory:                 opts.Memory,
+						Metro:                  opts.Metro,
+						Name:                   strings.ReplaceAll(opts.Name, "/", "-"),
+						Ports:                  opts.Ports,
+						Replicas:               opts.Replicas,
+						ScaleToZero:            opts.ScaleToZero,
+						ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
+						Start:                  !opts.NoStart,
+						SubDomain:              opts.SubDomain,
 					}, args...)
 					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
 						continue
