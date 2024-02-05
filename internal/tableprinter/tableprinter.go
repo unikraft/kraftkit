@@ -38,6 +38,7 @@ const (
 	OutputFormatTable = TableOutputFormat("table")
 	OutputFormatJSON  = TableOutputFormat("json")
 	OutputFormatYAML  = TableOutputFormat("yaml")
+	OutputFormatList  = TableOutputFormat("list")
 
 	DefaultDelimeter = "  "
 )
@@ -104,6 +105,8 @@ func (printer *TablePrinter) Render(w io.Writer) error {
 	}
 
 	switch printer.format {
+	case OutputFormatList:
+		return printer.renderList(w)
 	case OutputFormatJSON:
 		return printer.renderJSON(w)
 	case OutputFormatYAML:
