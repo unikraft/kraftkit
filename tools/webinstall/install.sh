@@ -1113,7 +1113,7 @@ install_darwin() {
 
     need_cmd "$BREW"
 
-    do_cmd "$BREW" install unikraft/cli/kraftkit
+    do_cmd "$BREW install unikraft/cli/kraftkit"
 }
 
 # install_windows installs the kraftkit package for windows distributions.
