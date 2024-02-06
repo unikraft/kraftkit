@@ -81,18 +81,12 @@ func NewIndexFromSpec(ctx context.Context, handle handler.Handler, spec *ocispec
 // NewIndexFromRef instantiates a new index using the provided reference which
 // is used by the handle to look up any local existing indexes.
 func NewIndexFromRef(ctx context.Context, handle handler.Handler, ref string) (*Index, error) {
-	indexes, err := handle.ListIndexes(ctx)
+	index, err := handle.ResolveIndex(ctx, ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve list of existing indexes: %w", err)
+		return nil, fmt.Errorf("cannot instantiate index from unknown reference '%s'", ref)
 	}
 
-	for fullref, index := range indexes {
-		if ref == fullref {
-			return NewIndexFromSpec(ctx, handle, index)
-		}
-	}
-
-	return nil, fmt.Errorf("cannot instantiate index from unknown reference '%s'", ref)
+	return NewIndexFromSpec(ctx, handle, index)
 }
 
 // SetAnnotation sets an anootation of the image with the provided key.
