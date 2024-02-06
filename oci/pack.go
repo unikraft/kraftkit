@@ -424,6 +424,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		}
 
 		v1ImageIndex, err := remote.Index(ocipack.ref,
+			remote.WithContext(ctx),
 			remote.WithAuth(&simpleauth.SimpleAuthenticator{
 				Auth: authConfig,
 			}),

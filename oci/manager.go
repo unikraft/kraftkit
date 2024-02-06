@@ -159,6 +159,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 				}
 
 				index, err := remote.Index(ref,
+					remote.WithContext(ctx),
 					remote.WithAuth(&simpleauth.SimpleAuthenticator{
 						Auth: authConfig,
 					}),
@@ -453,6 +454,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
+			remote.WithContext(ctx),
 			remote.WithPlatform(v1.Platform{
 				OS:           query.Platform(),
 				Architecture: query.Architecture(),
