@@ -107,7 +107,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if opts.All {
 			if err = pm.Delete(ctx,
 				packmanager.WithAll(opts.All),
-				packmanager.WithUpdate(false),
 			); err != nil {
 				return err
 			}
@@ -115,7 +114,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			for _, arg := range args {
 				if err := pm.Delete(ctx,
 					packmanager.WithName(arg),
-					packmanager.WithUpdate(false),
 				); err != nil {
 					return fmt.Errorf("could not complete catalog query: %w", err)
 				}

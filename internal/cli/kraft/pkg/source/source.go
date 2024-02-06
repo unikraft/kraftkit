@@ -77,7 +77,7 @@ func (opts *SourceOptions) Run(ctx context.Context, args []string) error {
 		if !opts.Force {
 			_, compatible, err := packmanager.G(ctx).IsCompatible(ctx,
 				source,
-				packmanager.WithUpdate(true),
+				packmanager.WithRemote(true),
 			)
 			if err != nil {
 				return err

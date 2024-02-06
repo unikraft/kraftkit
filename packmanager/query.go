@@ -25,8 +25,11 @@ type Query struct {
 	// Version specifies the version of the package
 	version string
 
-	// update forces the package manager to update values from remote manifests.
-	update bool
+	// remote informs the package manager to update values from remote manifests.
+	remote bool
+
+	// local informs the package manager to update values from local manifests.
+	local bool
 
 	// Auth contains required authentication for the query.
 	auths map[string]config.AuthConfig
@@ -80,10 +83,16 @@ func (query *Query) KConfig() []string {
 	return query.kConfig
 }
 
-// Update indicates whether the package manager should use remote manifests
+// Remote indicates whether the package manager should use remote manifests
 // when making its query.
-func (query *Query) Update() bool {
-	return query.update
+func (query *Query) Remote() bool {
+	return query.remote
+}
+
+// Local indicates whether the package manager should use local manifests
+// when making its query.
+func (query *Query) Local() bool {
+	return query.local
 }
 
 // Auth returns authentication configuration for a given domain or nil if the
@@ -110,7 +119,8 @@ func (query *Query) Fields() map[string]interface{} {
 		fields["types"] = query.types
 	}
 
-	fields["update"] = query.update
+	fields["remote"] = query.remote
+	fields["local"] = query.local
 
 	if len(query.auths) > 0 {
 		fields["auths"] = "true"
@@ -133,7 +143,10 @@ type QueryOption func(*Query)
 
 // NewQuery returns the finalized query given the provided options.
 func NewQuery(qopts ...QueryOption) *Query {
-	query := Query{}
+	query := Query{
+		remote: false,
+		local:  true,
+	}
 	for _, qopt := range qopts {
 		qopt(&query)
 	}
@@ -190,10 +203,17 @@ func WithVersion(version string) QueryOption {
 	}
 }
 
-// WithUpdate sets whether to use remote manifests when making the query.
-func WithUpdate(update bool) QueryOption {
+// WithRemote sets whether to use remote manifests when making the query.
+func WithRemote(remote bool) QueryOption {
 	return func(query *Query) {
-		query.update = update
+		query.remote = remote
+	}
+}
+
+// WithLocal sets whether to use local manifests when making the query.
+func WithLocal(local bool) QueryOption {
+	return func(query *Query) {
+		query.local = local
 	}
 }
 

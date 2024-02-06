@@ -430,6 +430,17 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 	}
 
+	unsetRegistry := false
+
+	// No default registry found, re-parse with
+	if ref != nil && ref.Context().Registry.String() == "" {
+		unsetRegistry = true
+		ref, refErr = name.ParseReference(qname,
+			name.WithDefaultRegistry(DefaultRegistry),
+			name.WithDefaultTag(DefaultTag),
+		)
+	}
+
 	log.G(ctx).
 		WithFields(query.Fields()).
 		Debug("querying catalog")
@@ -450,7 +461,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
-	if query.Update() && refErr == nil {
+	if query.Remote() && refErr == nil {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
@@ -511,10 +522,16 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		) {
 			packs[checksum] = pack
 		}
+
+		// No need to search remote indexes by registry if the registry has been
+		// included as part of the ref.
+		if !unsetRegistry {
+			goto searchLocalIndexes
+		}
 	}
 
 searchRemoteIndexes:
-	if query.Update() {
+	if query.Remote() {
 		more, err := manager.update(ctx, auths)
 		if err != nil {
 			log.G(ctx).
@@ -526,63 +543,66 @@ searchRemoteIndexes:
 		}
 	}
 
-	// Access local indexes that are available on the host
-	indexes, err := handle.ListIndexes(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for oref, index := range indexes {
-		ref, err := name.ParseReference(oref,
-			name.WithDefaultRegistry(DefaultRegistry),
-		)
+searchLocalIndexes:
+	if query.Local() {
+		// Access local indexes that are available on the host
+		indexes, err := handle.ListIndexes(ctx)
 		if err != nil {
-			log.G(ctx).
-				WithField("ref", oref).
-				Tracef("skipping index: invalid reference format: %s", err.Error())
-			continue
+			return nil, err
 		}
 
-		fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
+		for oref, index := range indexes {
+			ref, err := name.ParseReference(oref,
+				name.WithDefaultRegistry(DefaultRegistry),
+			)
+			if err != nil {
+				log.G(ctx).
+					WithField("ref", oref).
+					Tracef("skipping index: invalid reference format: %s", err.Error())
+				continue
+			}
 
-		if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
-			log.G(ctx).
-				WithField("ref", fullref).
-				Tracef("skipping index: incompatible index structure: %s", err.Error())
-			continue
-		}
+			fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
 
-		if qglob != nil && !qglob.Match(fullref) {
-			log.G(ctx).
-				WithField("want", qname).
-				WithField("got", fullref).
-				Trace("skipping index: glob does not match")
-			continue
-		} else if qglob == nil {
-			if len(qversion) > 0 && len(qname) > 0 {
-				if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+			if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
+				log.G(ctx).
+					WithField("ref", fullref).
+					Tracef("skipping index: incompatible index structure: %s", err.Error())
+				continue
+			}
+
+			if qglob != nil && !qglob.Match(fullref) {
+				log.G(ctx).
+					WithField("want", qname).
+					WithField("got", fullref).
+					Trace("skipping index: glob does not match")
+				continue
+			} else if qglob == nil {
+				if len(qversion) > 0 && len(qname) > 0 {
+					if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+						log.G(ctx).
+							WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+							WithField("got", fullref).
+							Trace("skipping index: name does not match")
+						continue
+					}
+				} else if len(qname) > 0 && fullref != qname {
 					log.G(ctx).
-						WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+						WithField("want", qname).
 						WithField("got", fullref).
 						Trace("skipping index: name does not match")
 					continue
 				}
-			} else if len(qname) > 0 && fullref != qname {
-				log.G(ctx).
-					WithField("want", qname).
-					WithField("got", fullref).
-					Trace("skipping index: name does not match")
-				continue
 			}
-		}
 
-		for checksum, pack := range processV1IndexManifests(ctx,
-			handle,
-			oref,
-			query,
-			index.Manifests,
-		) {
-			packs[checksum] = pack
+			for checksum, pack := range processV1IndexManifests(ctx,
+				handle,
+				oref,
+				query,
+				index.Manifests,
+			) {
+				packs[checksum] = pack
+			}
 		}
 	}
 
@@ -752,7 +772,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		isLocalImage,
 	}
 
-	if query.Update() {
+	if query.Remote() {
 		checks = append(checks,
 			isRegistry,
 			isRemoteImage,

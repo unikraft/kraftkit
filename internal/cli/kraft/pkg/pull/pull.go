@@ -200,7 +200,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 						packmanager.WithName(project.Template().Name()),
 						packmanager.WithTypes(unikraft.ComponentTypeApp),
 						packmanager.WithVersion(project.Template().Version()),
-						packmanager.WithUpdate(opts.ForceCache),
+						packmanager.WithRemote(!opts.ForceCache),
 						packmanager.WithPlatform(opts.Platform),
 						packmanager.WithArchitecture(opts.Architecture),
 					}

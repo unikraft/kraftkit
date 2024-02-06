@@ -138,7 +138,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 		qopts := []packmanager.QueryOption{
-			packmanager.WithUpdate(opts.Update),
+			packmanager.WithRemote(opts.Update),
 			packmanager.WithTypes(types...),
 		}
 

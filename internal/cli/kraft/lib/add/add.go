@@ -150,7 +150,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		packmanager.WithName(packName),
 		packmanager.WithTypes(unikraft.ComponentTypeLib),
 		packmanager.WithVersion(packVersion),
-		packmanager.WithUpdate(!opts.NoUpdate),
+		packmanager.WithRemote(!opts.NoUpdate),
 	)
 	if err != nil {
 		return err

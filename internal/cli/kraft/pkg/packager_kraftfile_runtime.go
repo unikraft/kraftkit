@@ -134,7 +134,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					}
 				}
 
-				packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
+				packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
 				if err != nil {
 					return fmt.Errorf("could not query catalog: %w", err)
 				} else if len(packs) == 0 {

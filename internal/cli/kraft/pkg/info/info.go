@@ -77,7 +77,7 @@ func (opts *InfoOptions) Run(ctx context.Context, args []string) error {
 			func(ctx context.Context) error {
 				more, err := packmanager.G(ctx).Catalog(ctx,
 					packmanager.WithName(arg),
-					packmanager.WithUpdate(opts.Update),
+					packmanager.WithRemote(opts.Update),
 				)
 				if err != nil {
 					return err

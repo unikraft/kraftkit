@@ -74,7 +74,6 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 	results, err := elfloader.registry.Catalog(ctx,
 		packmanager.WithName(elfloader.name),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
-		packmanager.WithUpdate(false),
 	)
 	if err != nil {
 		return nil, err
@@ -84,7 +83,7 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 		results, err = elfloader.registry.Catalog(ctx,
 			packmanager.WithName(elfloader.name),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithUpdate(true),
+			packmanager.WithRemote(true),
 		)
 		if err != nil {
 			return nil, err

@@ -142,13 +142,13 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		}
 	}
 
-	packs, err := packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
+	packs, err := packmanager.G(ctx).Catalog(ctx, qopts...)
 	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
 		// Try again with a remote update request.  Save this to qopts in case we
 		// need to call `Catalog` again.
-		qopts = append(qopts, packmanager.WithUpdate(true))
+		qopts = append(qopts, packmanager.WithRemote(true))
 		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
 		if err != nil {
 			return fmt.Errorf("could not query catalog: %w", err)

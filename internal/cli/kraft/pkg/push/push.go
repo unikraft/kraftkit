@@ -140,7 +140,7 @@ func (opts *PushOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	packages, err := pm.Catalog(ctx,
-		packmanager.WithUpdate(false),
+		packmanager.WithRemote(false),
 		packmanager.WithName(ref),
 	)
 	if err != nil {

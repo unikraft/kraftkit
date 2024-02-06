@@ -68,7 +68,7 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, arg
 		runner.packName,
 		packmanager.WithArchitecture(opts.Architecture),
 		packmanager.WithPlatform(opts.platform.String()),
-		packmanager.WithUpdate(true),
+		packmanager.WithRemote(true),
 	)
 	if err == nil && compatible {
 		runner.pm = pm
@@ -97,7 +97,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		log.G(ctx).Debug("no local packages detected")
 
 		// Try again with a remote update request.
-		qopts = append(qopts, packmanager.WithUpdate(true))
+		qopts = append(qopts, packmanager.WithRemote(true))
 
 		parallel := !config.G[config.KraftKit](ctx).NoParallel
 		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY

@@ -107,7 +107,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 							packmanager.WithTypes(template.Type()),
 							packmanager.WithVersion(template.Version()),
 							packmanager.WithSource(template.Source()),
-							packmanager.WithUpdate(opts.NoCache),
+							packmanager.WithRemote(opts.NoCache),
 							packmanager.WithAuthConfig(auths),
 						)
 						if err != nil {
@@ -221,7 +221,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 					packmanager.WithTypes(component.Type()),
 					packmanager.WithVersion(component.Version()),
 					packmanager.WithSource(component.Source()),
-					packmanager.WithUpdate(opts.NoCache),
+					packmanager.WithRemote(opts.NoCache),
 					packmanager.WithAuthConfig(auths),
 				)
 				if err != nil {
