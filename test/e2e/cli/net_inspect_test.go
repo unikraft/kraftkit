@@ -137,7 +137,7 @@ var _ = Describe("kraft net inspect", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^Inspect a machine network\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Inspect a machine network.\n`))
 		})
 	})
 })
