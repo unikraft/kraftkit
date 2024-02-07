@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,6 +29,10 @@ func NewCmd() *cobra.Command {
 		Use:     "inspect NETWORK",
 		Aliases: []string{"list"},
 		Args:    cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+			# Inspect a machine network
+			$ kraft network inspect my-network
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},

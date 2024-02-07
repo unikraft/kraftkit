@@ -22,7 +22,7 @@ import (
 )
 
 type QuotasOptions struct {
-	Output string `local:"true" long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
 }
@@ -38,6 +38,9 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# View your resource quota on KraftCloud
 			$ kraft cloud quota
+
+			# View your resource quota on KraftCloud in JSON format
+			$ kraft cloud quota -o json
 		`),
 	})
 	if err != nil {

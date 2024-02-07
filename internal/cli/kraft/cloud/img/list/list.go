@@ -29,7 +29,7 @@ import (
 
 type ListOptions struct {
 	All    bool   `long:"all" usage:"Show all images by their digest"`
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
 }
@@ -43,8 +43,14 @@ func NewCmd() *cobra.Command {
 			List all images in your account.
 		`),
 		Example: heredoc.Doc(`
-			# List all images in your account.
+			# List images in your account.
 			$ kraft cloud img ls
+
+			# List all images in your account.
+			$ kraft cloud img ls --all
+
+			# List all images in your account in JSON format.
+			$ kraft cloud img ls -o json
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",

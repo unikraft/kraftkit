@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -36,6 +37,10 @@ func NewCmd() *cobra.Command {
 		Use:     "down",
 		Aliases: []string{"stop"},
 		Args:    cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+			# Bring a network offline
+			$ kraft network down my-network
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},

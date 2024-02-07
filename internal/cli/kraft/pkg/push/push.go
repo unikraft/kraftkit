@@ -53,7 +53,8 @@ func NewCmd() *cobra.Command {
 			$ kraft pkg push /path/to/app
 
 			# Push the image with a given name
-			$ kraft pkg push unikraft.org/helloworld:latest`),
+			$ kraft pkg push unikraft.org/helloworld:latest
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

@@ -41,7 +41,8 @@ func NewCmd() *cobra.Command {
 			kraft pkg rm --all
 
 			# Remove only select OCI index packages
-			kraft pkg rm --format=oci unikraft.org/nginx:latest`),
+			kraft pkg rm --format=oci unikraft.org/nginx:latest
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

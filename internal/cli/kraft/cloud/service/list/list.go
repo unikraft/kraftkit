@@ -22,7 +22,7 @@ import (
 )
 
 type ListOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	Watch  bool   `long:"watch" short:"w" usage:"After listing watch for changes."`
 
 	metro string
@@ -39,6 +39,12 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# List all service groups in your account.
 			$ kraft cloud svc ls
+
+			# List all service groups in your account in full table format.
+			$ kraft cloud svc ls -o full
+
+			# List all service groups in your account and watch for changes.
+			$ kraft cloud svc ls -w
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

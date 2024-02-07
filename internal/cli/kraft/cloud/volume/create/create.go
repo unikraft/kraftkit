@@ -61,8 +61,8 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.NoArgs,
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
-			# Create a new persistent 100MiB volume
-			$ kraft cloud volume create --size 100
+			# Create a new persistent 100MiB volume named "my-volume"
+			$ kraft cloud volume create --size 100 --name my-volume
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",

@@ -22,7 +22,7 @@ import (
 )
 
 type RemoveOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	All    bool   `long:"all" usage:"Remove all instances"`
 
 	metro string
@@ -47,8 +47,14 @@ func NewCmd() *cobra.Command {
 			Delete a KraftCloud instance.
 		`),
 		Example: heredoc.Doc(`
-			# Delete a KraftCloud instance
+			# Delete a KraftCloud instance by UUID
 			$ kraft cloud instance delete fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Delete a KraftCloud instance by name
+			$ kraft cloud instance delete my-instance-431342
+
+			# Delete all KraftCloud instances
+			$ kraft cloud instance delete --all
 	`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

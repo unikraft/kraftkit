@@ -75,8 +75,8 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"join", "mount"},
 		Example: heredoc.Doc(`
-		# Attach the volume data to the instance nginx to the path /mnt/data
-		$ kraft cloud vol attach data --to nginx --at /mnt/data
+			# Attach the volume data to the instance nginx to the path /mnt/data
+			$ kraft cloud vol attach data --to nginx --at /mnt/data
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",

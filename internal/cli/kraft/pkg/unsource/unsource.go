@@ -27,10 +27,10 @@ func NewCmd() *cobra.Command {
 		Use:   "unsource [FLAGS] [SOURCE]",
 		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
 		Example: heredoc.Docf(`
-		# Remove a single component as a Git repository or manifest
-		$ kraft pkg unsource https://github.com/unikraft/unikraft.git
-		$ kraft pkg unsource https://manifests.kraftkit.sh/index.yaml
-	`),
+			# Remove a single component as a Git repository or manifest
+			$ kraft pkg unsource https://github.com/unikraft/unikraft.git
+			$ kraft pkg unsource https://manifests.kraftkit.sh/index.yaml
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",
 		},

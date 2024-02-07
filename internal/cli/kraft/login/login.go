@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -29,6 +30,10 @@ func NewCmd() *cobra.Command {
 		Short: "Provide authorization details for a remote service",
 		Use:   "login [FLAGS] HOST",
 		Args:  cobra.ExactArgs(1),
+		Example: heredoc.Doc(`
+			# Login to a remote service
+			$ kraft login https://github.com
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},

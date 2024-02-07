@@ -21,7 +21,7 @@ import (
 type Probe struct {
 	Config    string `long:"config" short:"c" usage:"Set path to generate .config file to"`
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set path to generate Kraftfile to"`
-	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 }
 
 func NewCmd() *cobra.Command {

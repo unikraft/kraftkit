@@ -43,6 +43,10 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"remove"},
 		Long: heredoc.Doc(`
 			Remove one or more running unikernels`),
+		Example: heredoc.Doc(`
+			# Remove a running unikernel
+			$ kraft machine rm my-machine
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},

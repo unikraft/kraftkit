@@ -71,7 +71,8 @@ func NewCmd() *cobra.Command {
 			$ kraft unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 
 			# Unset variables in a project at a path
-			$ kraft unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF`),
+			$ kraft unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
 		},

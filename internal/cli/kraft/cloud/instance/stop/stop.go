@@ -23,7 +23,7 @@ import (
 
 type StopOptions struct {
 	TimeoutMS int64  `local:"true" long:"timeout-ms" short:"w" usage:"Timeout for the instance to stop"`
-	Output    string `long:"output" short:"o" usage:"Set output format" default:"table"`
+	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 	All       bool   `long:"all" usage:"Stop all instances"`
 	Metro     string `noattribute:"true"`
 }
@@ -40,11 +40,14 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short: "Stop an instance",
-		Use:   "stop [FLAGS] [UUID|NAME]",
+		Use:   "stop [FLAGS] UUID|NAME",
 		Args:  cobra.ArbitraryArgs,
 		Example: heredoc.Doc(`
-			# Stop a KraftCloud instance
+			# Stop a KraftCloud instance by UUID
 			$ kraft cloud instance stop 77d0316a-fbbe-488d-8618-5bf7a612477a
+
+			# Stop a KraftCloud instance by name
+			$ kraft cloud instance stop my-instance-431342
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
