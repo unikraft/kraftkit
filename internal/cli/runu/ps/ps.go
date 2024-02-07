@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -40,6 +41,10 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		Use:   "ps <unikernel-id> [ps options]",
 		Long:  "The ps command displays the VMM process that runs a unikernel.",
+		Example: heredoc.Doc(`
+			# Display the VMM process of a unikernel
+			$ runu ps my-unikernel
+		`),
 	})
 	if err != nil {
 		panic(err)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/compose-spec/compose-go/types"
 	"github.com/spf13/cobra"
 
@@ -39,8 +40,15 @@ type UpOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
-		Short: "Run a compose project.",
-		Use:   "up",
+		Short:   "Run a compose project.",
+		Use:     "up [FLAGS]",
+		Args:    cobra.NoArgs,
+		Aliases: []string{},
+		Long:    "Run a compose project.",
+		Example: heredoc.Doc(`
+			# Run a compose project
+			$ kraft compose up
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
 		},

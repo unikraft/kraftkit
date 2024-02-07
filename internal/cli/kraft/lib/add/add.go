@@ -34,9 +34,10 @@ func Add(ctx context.Context, opts *AddOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&AddOptions{}, cobra.Command{
-		Short: "Add unikraft library to the project directory",
-		Use:   "add [FLAGS] [PACKAGE|DIR]",
-		Args:  cmdfactory.MinimumArgs(1, "library name is not specified"),
+		Short:   "Add unikraft library to the project directory",
+		Use:     "add [FLAGS] [PACKAGE|DIR]",
+		Args:    cmdfactory.MinimumArgs(1, "library name is not specified"),
+		Aliases: []string{"a"},
 		Long: heredoc.Doc(`
 			Pull a Unikraft component microlibrary from a remote location
 			and add to the project directory

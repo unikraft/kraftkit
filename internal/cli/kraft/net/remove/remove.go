@@ -34,12 +34,13 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove a network",
-		Use:     "rm",
-		Aliases: []string{"remove", "delete", "del"},
+		Use:     "remove",
+		Aliases: []string{"rm", "delete", "del"},
 		Args:    cobra.ExactArgs(1),
+		Long:    "Remove a network.",
 		Example: heredoc.Doc(`
 			# Remove a network
-			$ kraft network rm my-network
+			$ kraft network remove my-network
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",

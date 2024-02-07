@@ -8,6 +8,7 @@ package volume
 import (
 	"context"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -29,6 +30,11 @@ func NewCmd() *cobra.Command {
 		Use:     "volume SUBCOMMAND",
 		Aliases: []string{"volumes", "vol"},
 		Hidden:  true,
+		Long:    "Manage persistent volumes on KraftCloud.",
+		Example: heredoc.Doc(`
+			# List all volumes in your account.
+			$ kraft cloud volume list
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
 		},

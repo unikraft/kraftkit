@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
@@ -39,6 +40,10 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 		Use:   "kill <unikernel-id> [signal]",
 		Long:  "The kill command sends a signal to a unikernel.  If the signal is not specified, SIGTERM is sent.",
+		Example: heredoc.Doc(`
+			# Send a SIGTERM to a unikernel
+			$ runu kill my-unikernel
+		`),
 	})
 	if err != nil {
 		panic(err)

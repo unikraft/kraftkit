@@ -23,9 +23,13 @@ type UnsourceOptions struct{}
 // NewCmd returns a new unsource command
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnsourceOptions{}, cobra.Command{
-		Short: "Remove Unikraft component manifests",
-		Use:   "unsource [FLAGS] [SOURCE]",
-		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
+		Short:   "Remove Unikraft component manifests",
+		Use:     "unsource [FLAGS] [SOURCE]",
+		Args:    cmdfactory.MinimumArgs(1, "must specify component or manifest"),
+		Aliases: []string{"unsrc"},
+		Long: heredoc.Docf(`
+			Remove a remote location for discovering one-or-many Unikraft components.
+		`),
 		Example: heredoc.Docf(`
 			# Remove a single component as a Git repository or manifest
 			$ kraft pkg unsource https://github.com/unikraft/unikraft.git

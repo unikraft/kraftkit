@@ -65,7 +65,8 @@ func NewCmd() *cobra.Command {
 		Use:     "unset [OPTIONS] [param ...]",
 		Aliases: []string{"u"},
 		Long: heredoc.Doc(`
-			unset a variable for a Unikraft project`),
+			unset a variable for a Unikraft project
+		`),
 		Example: heredoc.Doc(`
 			# Unset variables in the cwd project
 			$ kraft unset LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF

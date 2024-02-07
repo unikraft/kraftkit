@@ -35,6 +35,9 @@ func NewCmd() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
+		Long: heredoc.Doc(`
+			View your resource quota on KraftCloud.
+		`),
 		Example: heredoc.Doc(`
 			# View your resource quota on KraftCloud
 			$ kraft cloud quota

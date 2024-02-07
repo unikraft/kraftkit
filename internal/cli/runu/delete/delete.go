@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
@@ -30,10 +31,15 @@ type DeleteOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DeleteOptions{}, cobra.Command{
-		Short: "Delete a unikernel",
-		Args:  cobra.ExactArgs(1),
-		Use:   "delete <unikernel-id>",
-		Long:  "The delete command deletes any resources held by a unikernel.",
+		Short:   "Delete a unikernel",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"del"},
+		Use:     "delete <unikernel-id>",
+		Long:    "The delete command deletes any resources held by a unikernel.",
+		Example: heredoc.Doc(`
+			# Delete a unikernel
+			$ runu delete my-unikernel
+		`),
 	})
 	if err != nil {
 		panic(err)

@@ -33,15 +33,16 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Removes selected local packages",
-		Use:     "rm [FLAGS] [PACKAGE]",
+		Use:     "remove [FLAGS] [PACKAGE]",
 		Args:    cobra.ArbitraryArgs,
-		Aliases: []string{"prune", "remove"},
+		Aliases: []string{"rm"},
+		Long:    "Remove a Unikraft component.",
 		Example: heredoc.Doc(`
 			# Remove all packages
-			kraft pkg rm --all
+			kraft pkg remove --all
 
 			# Remove only select OCI index packages
-			kraft pkg rm --format=oci unikraft.org/nginx:latest
+			kraft pkg remove --format=oci unikraft.org/nginx:latest
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "pkg",

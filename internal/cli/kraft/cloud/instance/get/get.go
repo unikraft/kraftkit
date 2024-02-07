@@ -50,7 +50,10 @@ func NewCmd() *cobra.Command {
 
 			# Retrieve information about a kraftcloud instance by name
 			$ kraft cloud instance get my-instance-431342
-	`),
+		`),
+		Long: heredoc.Doc(`
+			Retrieve the state of an instance.
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
 		},

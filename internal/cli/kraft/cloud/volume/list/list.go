@@ -31,14 +31,17 @@ type ListOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all volumes at a metro for your account",
-		Use:     "ls",
-		Aliases: []string{"list"},
+		Use:     "list",
+		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
 			List all volumes in your account.
 		`),
 		Example: heredoc.Doc(`
 			# List all volumes in your account.
 			$ kraft cloud vol ls
+
+			# List all volumes in your account in JSON format.
+			$ kraft cloud volume list -o json
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",

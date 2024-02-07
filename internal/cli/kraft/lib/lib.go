@@ -7,6 +7,7 @@ package lib
 import (
 	"context"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"kraftkit.sh/cmdfactory"
@@ -23,6 +24,11 @@ func NewCmd() *cobra.Command {
 		Use:     "lib SUBCOMMAND",
 		Aliases: []string{"library"},
 		Hidden:  true,
+		Long:    "Manage and maintain Unikraft microlibraries.",
+		Example: heredoc.Doc(`
+			# Add a new microlibrary to your project.
+			$ kraft lib add
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "lib",
 		},

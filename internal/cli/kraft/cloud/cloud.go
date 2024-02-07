@@ -29,48 +29,51 @@ type CloudOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
-		Short:  "cloud",
-		Use:    "cloud [FLAGS] [SUBCOMMAND|DIR]",
-		Hidden: true,
+		Short:   "cloud",
+		Use:     "cloud [FLAGS] [SUBCOMMAND|DIR]",
+		Hidden:  true,
+		Aliases: []string{"cl"},
 		Long: heredoc.Docf(`
-		▄▀▄▀ kraft.cloud
+			▄▀▄▀ kraft.cloud
 
-		Manage resources on The Millisecond Platform.
+			Manage resources on The Millisecond Platform.
 
-		Learn more & sign up for the beta at https://kraft.cloud
-	
-		Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
-		%[1]sKRAFTCLOUD_METRO%[1]s environmental variable.
+			Learn more & sign up for the beta at https://kraft.cloud
 		
-		Set authentication by using %[1]skraft login%[1]s or set
-		%[1]sKRAFTCLOUD_TOKEN%[1]s environmental variable.`, "`"),
+			Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
+			%[1]sKRAFTCLOUD_METRO%[1]s environmental variable.
+
+			Set authentication by using %[1]skraft login%[1]s or set
+			%[1]sKRAFTCLOUD_TOKEN%[1]s environmental variable.
+		`, "`"),
 		Example: heredoc.Doc(`
-		# List all images in your account
-		$ kraft cloud img ls
+			# List all images in your account
+			$ kraft cloud image list
 
-		# List all instances in Frankfurt
-		$ kraft cloud --metro fra0 instance ls
+			# List all instances in Frankfurt
+			$ kraft cloud --metro fra0 instance list
 
-		# Create a new NGINX instance in Frankfurt and start it immediately
-		$ kraft cloud instance create -S \
-			-p 80:443/http+redirect \
-			-p 443:8080/http+tls \
-			nginx:latest
+			# Create a new NGINX instance in Frankfurt and start it immediately
+			$ kraft cloud instance create -S \
+				-p 80:443/http+redirect \
+				-p 443:8080/http+tls \
+				nginx:latest
 
-		# Get the status of an instance based on its UUID and output as JSON
-		$ kraft cloud --metro fra0 instance status -o json UUID
+			# Get the status of an instance based on its UUID and output as JSON
+			$ kraft cloud --metro fra0 instance status -o json UUID
 
-		# Stop an instance based on its UUID
-		$ kraft cloud instance stop UUID
+			# Stop an instance based on its UUID
+			$ kraft cloud instance stop UUID
 
-		# Start an instance based on its UUID
-		$ kraft cloud instance start UUID
+			# Start an instance based on its UUID
+			$ kraft cloud instance start UUID
 
-		# Get logs of an instance based on its UUID
-		$ kraft cloud instance logs UUID
+			# Get logs of an instance based on its UUID
+			$ kraft cloud instance logs UUID
 
-		# Delete an instance based on its UUID
-		$ kraft cloud instance rm UUID`),
+			# Delete an instance based on its UUID
+			$ kraft cloud instance remove UUID
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},

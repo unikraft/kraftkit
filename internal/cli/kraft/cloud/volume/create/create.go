@@ -59,7 +59,10 @@ func NewCmd() *cobra.Command {
 		Short:   "Create a persistent volume",
 		Use:     "create [FLAGS]",
 		Args:    cobra.NoArgs,
-		Aliases: []string{"new"},
+		Aliases: []string{"crt"},
+		Long: heredoc.Doc(`
+			Create a new persistent volume.
+		`),
 		Example: heredoc.Doc(`
 			# Create a new persistent 100MiB volume named "my-volume"
 			$ kraft cloud volume create --size 100 --name my-volume

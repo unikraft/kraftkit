@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -23,6 +24,11 @@ func NewCmd() *cobra.Command {
 		Use:     "version",
 		Aliases: []string{"v"},
 		Args:    cobra.NoArgs,
+		Long:    "Show kraft version information.",
+		Example: heredoc.Doc(`
+			# Show kraft version information
+			$ kraft version
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",
 		},

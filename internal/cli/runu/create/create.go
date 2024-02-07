@@ -49,10 +49,12 @@ type CreateOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
-		Short: "Create a new unikernel",
-		Args:  cobra.ExactArgs(1),
-		Use:   "create [FLAGS] <unikernel-id>",
-		Long: heredoc.Doc(`Create a new unikernel with the given ID.  IDs must be unique.
+		Short:   "Create a new unikernel",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"crt"},
+		Use:     "create [FLAGS] <unikernel-id>",
+		Long: heredoc.Doc(`
+			Create a new unikernel with the given ID.  IDs must be unique.
 
 			The create command creates an instance of a unikernel for a bundle. The bundle
 			is a directory with a specification file named "config.json" and a root
@@ -60,7 +62,12 @@ func NewCmd() *cobra.Command {
 
 			The specification file includes an args parameter. The args parameter is used
 			to specify command(s) that get run when the unikernel is started. To change the
-			command(s) that get executed on start, edit the args parameter of the spec`),
+			command(s) that get executed on start, edit the args parameter of the spec
+		`),
+		Example: heredoc.Doc(`
+			# Create a new unikernel
+			$ kraft create my-machine
+		`),
 	})
 	if err != nil {
 		panic(err)

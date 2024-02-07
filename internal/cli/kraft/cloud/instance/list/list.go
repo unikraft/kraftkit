@@ -29,11 +29,14 @@ type ListOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List instances",
-		Use:     "ls [FLAGS]",
-		Aliases: []string{"list"},
+		Use:     "list [FLAGS]",
+		Aliases: []string{"ls"},
 		Example: heredoc.Doc(`
 			# List all instances in your account.
-			$ kraft cloud instances list
+			$ kraft cloud instance list
+		`),
+		Long: heredoc.Doc(`
+			List all instances in your account.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

@@ -39,23 +39,23 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Delete an instance",
-		Use:     "delete UUID|NAME",
+		Short:   "Remove an instance",
+		Use:     "remove UUID|NAME",
 		Aliases: []string{"del", "delete", "rm"},
 		Args:    cobra.ArbitraryArgs,
-		Long: heredoc.Doc(`
-			Delete a KraftCloud instance.
-		`),
 		Example: heredoc.Doc(`
-			# Delete a KraftCloud instance by UUID
-			$ kraft cloud instance delete fd1684ea-7970-4994-92d6-61dcc7905f2b
+			# Remove a KraftCloud instance by UUID
+			$ kraft cloud instance remove fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Delete a KraftCloud instance by name
-			$ kraft cloud instance delete my-instance-431342
+			# Remove a KraftCloud instance by name
+			$ kraft cloud instance remove my-instance-431342
 
-			# Delete all KraftCloud instances
-			$ kraft cloud instance delete --all
-	`),
+			# Remove all KraftCloud instances
+			$ kraft cloud instance remove --all
+		`),
+		Long: heredoc.Doc(`
+			Remove a KraftCloud instance.
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
 		},

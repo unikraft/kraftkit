@@ -39,15 +39,19 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short: "Stop an instance",
-		Use:   "stop [FLAGS] UUID|NAME",
-		Args:  cobra.ArbitraryArgs,
+		Short:   "Stop an instance",
+		Use:     "stop [FLAGS] UUID|NAME",
+		Args:    cobra.ArbitraryArgs,
+		Aliases: []string{"st"},
 		Example: heredoc.Doc(`
 			# Stop a KraftCloud instance by UUID
 			$ kraft cloud instance stop 77d0316a-fbbe-488d-8618-5bf7a612477a
 
 			# Stop a KraftCloud instance by name
 			$ kraft cloud instance stop my-instance-431342
+		`),
+		Long: heredoc.Doc(`
+			Stop a KraftCloud instance.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

@@ -52,10 +52,13 @@ func NewCmd() *cobra.Command {
 		Use:     "create [FLAGS] [NAME]",
 		Aliases: []string{"init"},
 		Long: heredoc.Doc(`
-		Creates a library template
+			Creates a library template
 		`),
 		Example: heredoc.Doc(`
+			# Create a library template
 			$ kraft lib create
+
+			# Create a library template with a name
 			$ kraft lib create sample-project
 		`),
 		Annotations: map[string]string{

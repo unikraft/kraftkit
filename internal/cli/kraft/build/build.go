@@ -170,9 +170,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
-		Short: "Configure and build Unikraft unikernels",
-		Use:   "build [FLAGS] [SUBCOMMAND|DIR]",
-		Args:  cmdfactory.MaxDirArgs(1),
+		Short:   "Configure and build Unikraft unikernels",
+		Use:     "build [FLAGS] [SUBCOMMAND|DIR]",
+		Args:    cmdfactory.MaxDirArgs(1),
+		Aliases: []string{"bld"},
 		Long: heredoc.Docf(`
 			Build a Unikraft unikernel.
 

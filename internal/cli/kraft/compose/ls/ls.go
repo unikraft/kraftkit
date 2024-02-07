@@ -9,6 +9,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -27,8 +28,14 @@ type LsOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LsOptions{}, cobra.Command{
-		Short: "List compose projects.",
-		Use:   "ls",
+		Short:   "List compose projects.",
+		Use:     "ls [FLAGS]",
+		Aliases: []string{"list"},
+		Long:    "List compose projects.",
+		Example: heredoc.Doc(`
+			# List all compose projects
+			$ kraft compose ls
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
 		},

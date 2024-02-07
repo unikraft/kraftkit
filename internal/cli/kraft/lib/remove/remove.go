@@ -29,8 +29,11 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Removes a library dependency from the project directory",
 		Use:     "remove [FLAGS] LIB",
-		Aliases: []string{"rm"},
+		Aliases: []string{"rm", "delete", "del"},
 		Args:    cmdfactory.MinimumArgs(1, "library name is not specified to remove from the project"),
+		Long: heredoc.Doc(`
+			Remove a Unikraft library from the project directory.
+		`),
 		Example: heredoc.Doc(`
 			# Remove a library from the project
 			$ kraft lib remove libfoo

@@ -38,9 +38,12 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Permanently delete a persistent volume",
-		Use:     "rm UUID [UUID [...]]",
+		Use:     "remove UUID [UUID [...]]",
 		Args:    cobra.MinimumNArgs(1),
-		Aliases: []string{"remove", "del", "delete"},
+		Aliases: []string{"rm"},
+		Long: heredoc.Doc(`
+			Permanently delete a persistent volume.
+		`),
 		Example: heredoc.Doc(`
 			# Delete three persistent volumes
 			$ kraft cloud volume rm UUID1 UUID2 UUID3

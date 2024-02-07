@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/spf13/cobra"
 
@@ -34,6 +35,10 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Use:   "state <unikernel-id>",
 		Long:  "The state command outputs current state information for a unikernel.",
+		Example: heredoc.Doc(`
+			# Output the state of a unikernel
+			$ runu state my-unikernel
+		`),
 	})
 	if err != nil {
 		panic(err)
