@@ -6,7 +6,6 @@ package logtail
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"io"
 	"os"
@@ -79,14 +78,14 @@ func peekAndRead(file *os.File, reader *bufio.Reader, logs *chan string, errs *c
 
 	for {
 		b, _ := reader.Peek(DefaultTailPeekSize)
-		i := bytes.LastIndexByte(b, '\x00')
+		i := nullPrefixLength(b)
 
 		if i > 0 {
-			n, _ := reader.Discard(i + 1)
+			n, _ := reader.Discard(i)
 			discarded += n
 		}
 
-		if i+1 < DefaultTailPeekSize {
+		if i < DefaultTailPeekSize {
 			break
 		}
 	}
@@ -121,4 +120,14 @@ func peekAndRead(file *os.File, reader *bufio.Reader, logs *chan string, errs *c
 	}
 
 	return false
+}
+
+func nullPrefixLength(b []byte) int {
+	for i := range b {
+		if b[i] != '\x00' {
+			return i
+		}
+	}
+
+	return len(b)
 }
