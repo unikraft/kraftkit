@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -30,8 +31,16 @@ type RemoveOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete an autoscale configuration policy",
-		Use:     "rm [FLAGS] UUID NAME",
-		Aliases: []string{"delete", "del", "remove"},
+		Use:     "remove [FLAGS] UUID NAME",
+		Aliases: []string{"delete", "del", "rm"},
+		Long:    "Delete an autoscale configuration policy.",
+		Example: heredoc.Doc(`
+			# Delete an autoscale configuration policy by UUID
+			$ kraft cloud scale remove fd1684ea-7970-4994-92d6-61dcc7905f2b my-policy
+
+			# Delete an autoscale configuration policy by name
+			$ kraft cloud scale remove my-instance-431342 my-policy
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
 		},

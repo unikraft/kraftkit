@@ -68,6 +68,11 @@ func NewCmd() *cobra.Command {
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
+		Long: heredoc.Doc(`
+			'kraft cloud deploy' combines a number of kraft cloud sub-commands
+			to enable you to build, package, ship and deploy your application
+			with a single command.
+		`),
 		Example: heredoc.Docf(`
 			# Run an image from KraftCloud's catalog:
 			$ kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest

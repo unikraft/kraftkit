@@ -140,7 +140,7 @@ var _ = Describe("kraft net down", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^Bring a network offline\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Bring a network offline.\n`))
 		})
 	})
 })

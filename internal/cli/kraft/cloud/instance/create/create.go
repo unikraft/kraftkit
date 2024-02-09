@@ -277,7 +277,7 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
-			# Create a new NGINX instance in Frankfurt and start it immediately.  Map the external
+			# Create a new NGINX instance in Frankfurt and start it immediately. Map the external
 			# port 443 to the internal port 8080 which the application listens on.
 			$ kraft cloud --metro fra0 instance create \
 				--start \
@@ -294,13 +294,16 @@ func NewCmd() *cobra.Command {
 				--port 80:443/http+redirect \
 				nginx:latest
 			
-			# Attach two existing volumes to the instance, one read-write at /data
+			# Attach two existing volumes to the vm, one read-write at /data
 			# and another read-only at /config:
 			$ kraft cloud --metro fra0 instance create \
 				--start \
 				--volume my-data-vol:/data \
 				--volume my-config-vol:/config:ro \
 				nginx:latest
+		`),
+		Long: heredoc.Doc(`
+			Create an instance on KraftCloud from an image.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

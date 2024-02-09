@@ -50,7 +50,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&MenuOptions{}, cobra.Command{
 		Short:   "Open's Unikraft configuration editor TUI",
 		Use:     "menu [FLAGS] [DIR]",
-		Aliases: []string{"m", "menuconfig"},
+		Aliases: []string{"menuconfig"},
 		Args:    cmdfactory.MaxDirArgs(1),
 		Long:    heredoc.Docf(`Open Unikraft's configuration editor TUI.`),
 		Example: heredoc.Doc(`

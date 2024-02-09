@@ -76,7 +76,7 @@ var _ = Describe("kraft net rm", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^Remove a network\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Remove a network.\n`))
 		})
 	})
 

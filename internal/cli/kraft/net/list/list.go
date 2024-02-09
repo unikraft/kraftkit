@@ -29,18 +29,21 @@ type ListOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List machine networks",
-		Use:     "ls [FLAGS]",
-		Aliases: []string{"list"},
+		Use:     "list [FLAGS]",
+		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
+		Long: heredoc.Doc(`
+			List machine networks.
+		`),
 		Example: heredoc.Doc(`
 			# List all machine networks
-			$ kraft network ls
+			$ kraft network list
 
 			# List all machine networks in JSON format
-			$ kraft network ls -o json
+			$ kraft network list -o json
 
 			# List all machine networks with all information
-			$ kraft network ls -l
+			$ kraft network list -l
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",

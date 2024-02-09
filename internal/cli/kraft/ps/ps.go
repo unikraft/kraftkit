@@ -36,10 +36,11 @@ const (
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
-		Short: "List running unikernels",
-		Use:   "ps [FLAGS]",
-		Args:  cobra.MaximumNArgs(0),
-		Long:  "List running unikernels",
+		Short:   "List running unikernels",
+		Use:     "ps [FLAGS]",
+		Args:    cobra.MaximumNArgs(0),
+		Aliases: []string{},
+		Long:    "List running unikernels",
 		Example: heredoc.Doc(`
 			# List all running unikernels
 			$ kraft ps

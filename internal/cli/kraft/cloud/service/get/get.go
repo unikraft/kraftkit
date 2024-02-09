@@ -43,7 +43,7 @@ func NewCmd() *cobra.Command {
 		Short:   "Retrieve the state of a service group",
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
-		Aliases: []string{"status", "info"},
+		Aliases: []string{"gt"},
 		Example: heredoc.Doc(`
 			# Retrieve information about a kraftcloud service group
 			$ kraft cloud service get fd1684ea-7970-4994-92d6-61dcc7905f2b

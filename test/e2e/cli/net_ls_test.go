@@ -48,7 +48,7 @@ var _ = Describe("kraft net ls", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"unknown command \\"test\\" for \\"kraft net ls\\""}`))
+			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"unknown command \\"test\\" for \\"kraft net list\\""}`))
 		})
 	})
 
@@ -114,7 +114,7 @@ var _ = Describe("kraft net ls", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^List machine networks\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^List machine networks.\n`))
 		})
 	})
 })

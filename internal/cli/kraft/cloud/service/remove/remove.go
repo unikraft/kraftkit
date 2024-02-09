@@ -32,17 +32,18 @@ type RemoveOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete a service group",
-		Use:     "rm [FLAGS] NAME|UUID",
-		Aliases: []string{"delete", "del", "remove"},
+		Use:     "remove [FLAGS] NAME|UUID",
+		Aliases: []string{"delete", "del", "rm"},
+		Long:    "Delete a service group.",
 		Example: heredoc.Doc(`
 			# Remove a service group from your account by UUID.
-			$ kraft cloud svc rm fd1684ea-7970-4994-92d6-61dcc7905f2b
+			$ kraft cloud service remove fd1684ea-7970-4994-92d6-61dcc7905f2b
 
 			# Remove a service group from your account by name.
-			$ kraft cloud svc rm my-service-group
+			$ kraft cloud service remove my-service-group
 
 			# Remove all service groups from your account.
-			$ kraft cloud svc rm --all
+			$ kraft cloud service remove --all
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

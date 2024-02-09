@@ -59,7 +59,7 @@ var _ = Describe("kraft version", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^Show kraft version information\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Show kraft version information.\n`))
 		})
 	})
 

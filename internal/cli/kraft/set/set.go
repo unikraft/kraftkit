@@ -67,7 +67,8 @@ func NewCmd() *cobra.Command {
 		Use:     "set [OPTIONS] [param=value ...]",
 		Aliases: []string{"s"},
 		Long: heredoc.Doc(`
-			set a variable for a Unikraft project`),
+			set a variable for a Unikraft project
+		`),
 		Example: heredoc.Doc(`
 			# Set variables in the cwd project
 			$ kraft set LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096

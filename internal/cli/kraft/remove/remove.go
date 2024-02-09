@@ -38,14 +38,15 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove one or more running unikernels",
-		Use:     "rm [FLAGS] MACHINE [MACHINE [...]]",
+		Use:     "remove [FLAGS] MACHINE [MACHINE [...]]",
 		Args:    cobra.MinimumNArgs(0),
-		Aliases: []string{"remove"},
+		Aliases: []string{"rm"},
 		Long: heredoc.Doc(`
-			Remove one or more running unikernels`),
+			Remove one or more running unikernels
+		`),
 		Example: heredoc.Doc(`
 			# Remove a running unikernel
-			$ kraft machine rm my-machine
+			$ kraft rm my-machine
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -32,6 +33,11 @@ func NewCmd() *cobra.Command {
 		Use:     "net SUBCOMMAND",
 		Aliases: []string{"network"},
 		Hidden:  true,
+		Long:    "Manage machine networks.",
+		Example: heredoc.Doc(`
+			# Create a new network
+			$ kraft network create my-network
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "net",
 		},

@@ -37,6 +37,7 @@ func NewCmd() *cobra.Command {
 		Use:     "down",
 		Aliases: []string{"stop"},
 		Args:    cobra.ExactArgs(1),
+		Long:    "Bring a network offline.",
 		Example: heredoc.Doc(`
 			# Bring a network offline
 			$ kraft network down my-network

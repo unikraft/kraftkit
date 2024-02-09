@@ -41,7 +41,7 @@ func New() *cobra.Command {
 		Use:     "info [FLAGS] [PACKAGE|DIR]",
 		Aliases: []string{"show", "get", "i"},
 		Long: heredoc.Doc(`
-			Shows a Unikraft package like library, core etc details
+			Shows a Unikraft package like library, core, etc.
 		`),
 		Args: cmdfactory.MinimumArgs(1, "package name(s) not specified"),
 		Example: heredoc.Doc(`

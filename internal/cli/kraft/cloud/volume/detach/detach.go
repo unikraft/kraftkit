@@ -35,10 +35,11 @@ func NewCmd() *cobra.Command {
 		Short:   "Detach a volume from an instance",
 		Use:     "detach [FLAGS] UUID",
 		Args:    cobra.ExactArgs(1),
-		Aliases: []string{"separate", "unmount"},
+		Aliases: []string{"det"},
+		Long:    "Detach a volume from an instance.",
 		Example: heredoc.Doc(`
 			# Detach a volume from an instance
-			$ kraft cloud volume detach UUID
+			$ kraft cloud volume detach 77d0316a-fbbe-488d-8618-5bf7a612477a
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",

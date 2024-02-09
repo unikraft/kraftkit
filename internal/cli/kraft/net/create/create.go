@@ -40,6 +40,7 @@ func NewCmd() *cobra.Command {
 		Use:     "create [FLAGS] NETWORK",
 		Aliases: []string{"add"},
 		Args:    cobra.ExactArgs(1),
+		Long:    "Create a new machine network.",
 		Example: heredoc.Doc(`
 			# Create a new machine network
 			$ kraft network create my-network --network 133.37.0.1/12

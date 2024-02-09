@@ -34,10 +34,16 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short: "Stop one or more running unikernels",
-		Use:   "stop [FLAGS] MACHINE [MACHINE [...]]",
+		Short:   "Stop one or more running unikernels",
+		Use:     "stop [FLAGS] MACHINE [MACHINE [...]]",
+		Aliases: []string{},
 		Long: heredoc.Doc(`
-			Stop one or more running unikernels`),
+			Stop one or more running unikernels
+		`),
+		Example: heredoc.Doc(`
+			# Stop a running unikernel
+			$ kraft stop my-machine
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},

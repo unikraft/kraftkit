@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -27,6 +28,11 @@ func NewCmd() *cobra.Command {
 		Use:     "service SUBCOMMAND",
 		Aliases: []string{"services", "svc"},
 		Hidden:  true,
+		Long:    "Manage services on KraftCloud.",
+		Example: heredoc.Doc(`
+			# List services in your account.
+			$ kraft cloud service list
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
 		},

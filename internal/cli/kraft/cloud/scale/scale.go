@@ -8,6 +8,7 @@ package scale
 import (
 	"context"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -28,6 +29,11 @@ func NewCmd() *cobra.Command {
 		Use:     "scale SUBCOMMAND",
 		Aliases: []string{"autoscale", "scl"},
 		Hidden:  true,
+		Long:    "Manage instance autoscale on KraftCloud.",
+		Example: heredoc.Doc(`
+			# Add an autoscale configuration to a service group
+			$ kraft cloud scale add my-instance-431342 my-policy
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
 		},

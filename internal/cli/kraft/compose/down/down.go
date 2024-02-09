@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/compose-spec/compose-go/types"
 
 	"github.com/spf13/cobra"
@@ -28,8 +29,14 @@ type DownOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
-		Short: "Stop and remove a compose project.",
-		Use:   "down",
+		Short:   "Stop and remove a compose project.",
+		Use:     "down [FLAGS]",
+		Aliases: []string{"dw"},
+		Long:    "Stop and remove a compose project.",
+		Example: heredoc.Doc(`
+			# Stop and remove a compose project
+			$ kraft compose down
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
 		},

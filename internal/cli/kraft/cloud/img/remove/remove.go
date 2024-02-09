@@ -31,15 +31,18 @@ type RemoveOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Delete an image",
-		Use:     "rm [FLAGS] NAME[:latest|@sha256:...]",
-		Aliases: []string{"delete", "del", "remove"},
+		Short:   "Remove an image",
+		Use:     "remove [FLAGS] NAME[:latest|@sha256:...]",
+		Aliases: []string{"rm", "delete", "del"},
+		Long: heredoc.Doc(`
+			Remove an image for your account.
+		`),
 		Example: heredoc.Doc(`
-			# Delete an image from your account.
-			$ kraft cloud img rm caddy@sha256:2ba5324141...
+			# Remove an image from your account.
+			$ kraft cloud image remove caddy@sha256:2ba5324141...
 
-			# Delete all images from your account.
-			$ kraft cloud img rm --all
+			# Remove all images from your account.
+			$ kraft cloud image remove --all
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",

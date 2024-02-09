@@ -63,9 +63,10 @@ func Clean(ctx context.Context, opts *CleanOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CleanOptions{}, cobra.Command{
-		Short: "Remove the build object files of a Unikraft project",
-		Use:   "clean [DIR]",
-		Args:  cmdfactory.MaxDirArgs(1),
+		Short:   "Remove the build object files of a Unikraft project",
+		Use:     "clean [DIR]",
+		Args:    cmdfactory.MaxDirArgs(1),
+		Aliases: []string{"cln"},
 		Long: heredoc.Doc(`
 			Remove the build object files of a Unikraft project`),
 		Example: heredoc.Doc(`

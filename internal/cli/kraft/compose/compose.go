@@ -25,11 +25,17 @@ type ComposeOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ComposeOptions{}, cobra.Command{
-		Short:  "compose",
-		Use:    "compose [FLAGS] [SUBCOMMAND|DIR]",
-		Hidden: true,
+		Short:   "compose",
+		Use:     "compose [FLAGS] [SUBCOMMAND|DIR]",
+		Hidden:  true,
+		Aliases: []string{},
 		Long: heredoc.Docf(`
-		Build and run compose projects with Unikraft.`),
+			Build and run compose projects with Unikraft.
+		`),
+		Example: heredoc.Doc(`
+			# Start a compose project
+			$ kraft compose up
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
 		},

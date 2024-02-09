@@ -27,9 +27,13 @@ type LoginOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LoginOptions{}, cobra.Command{
-		Short: "Provide authorization details for a remote service",
-		Use:   "login [FLAGS] HOST",
-		Args:  cobra.ExactArgs(1),
+		Short:   "Provide authorization details for a remote service",
+		Use:     "login [FLAGS] HOST",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"logon"},
+		Long: heredoc.Doc(`
+			Provide authorization details for a remote service.
+		`),
 		Example: heredoc.Doc(`
 			# Login to a remote service
 			$ kraft login https://github.com

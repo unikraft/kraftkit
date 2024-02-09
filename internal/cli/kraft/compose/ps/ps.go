@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -26,8 +27,15 @@ type PsOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
-		Short: "List running services of current project",
-		Use:   "ps",
+		Short:   "List running services of current project",
+		Use:     "ps [FLAGS]",
+		Args:    cobra.NoArgs,
+		Aliases: []string{},
+		Long:    "List running services of current project.",
+		Example: heredoc.Doc(`
+			# List running services of current project
+			$ kraft compose ps
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
 		},

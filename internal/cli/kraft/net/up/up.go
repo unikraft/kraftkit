@@ -35,8 +35,9 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
 		Short:   "Bring a network online",
 		Use:     "up",
-		Aliases: []string{"start"},
+		Aliases: []string{},
 		Args:    cobra.ExactArgs(1),
+		Long:    "Bring a network online.",
 		Example: heredoc.Doc(`
 			# Bring a network online
 			$ kraft network up my-network

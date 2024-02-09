@@ -61,7 +61,7 @@ var _ = Describe("kraft net create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^Create a new machine network\n`))
+			Expect(stdout.String()).To(MatchRegexp(`^Create a new machine network.\n`))
 		})
 	})
 

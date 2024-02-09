@@ -38,9 +38,14 @@ func NewCmd() *cobra.Command {
 		Hidden:  true,
 		Use:     "events [FLAGS] [MACHINE ID]",
 		Args:    cobra.MaximumNArgs(1),
-		Aliases: []string{"event", "e"},
+		Aliases: []string{"event"},
 		Long: heredoc.Doc(`
-			Follow the events of a unikernel`),
+			Follow the events of a unikernel
+		`),
+		Example: heredoc.Doc(`
+			# Follow the events of a unikernel
+			$ kraft events ID
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},

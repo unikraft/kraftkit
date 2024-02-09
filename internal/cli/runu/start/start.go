@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -30,6 +31,10 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Use:   "start <unikernel-id>",
 		Long:  "The start command starts a created unikernel.",
+		Example: heredoc.Doc(`
+			# Start a unikernel
+			$ runu start my-unikernel
+		`),
 	})
 	if err != nil {
 		panic(err)

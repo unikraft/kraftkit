@@ -77,7 +77,8 @@ func NewCmd() *cobra.Command {
 		Use:     "run [FLAGS] PROJECT|PACKAGE|BINARY -- [APP ARGS]",
 		Aliases: []string{"r"},
 		Long: heredoc.Doc(`
-			Run a unikernel virtual machine`),
+			Run a unikernel virtual machine
+		`),
 		Example: heredoc.Doc(`
 			Run a built target in the current working directory project:
 			$ kraft run

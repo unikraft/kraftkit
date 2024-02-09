@@ -33,9 +33,13 @@ func Source(ctx context.Context, opts *SourceOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SourceOptions{}, cobra.Command{
-		Short: "Add Unikraft component manifests",
-		Use:   "source [FLAGS] [SOURCE]",
-		Args:  cmdfactory.MinimumArgs(1, "must specify component or manifest"),
+		Short:   "Add Unikraft component manifests",
+		Use:     "source [FLAGS] [SOURCE]",
+		Args:    cmdfactory.MinimumArgs(1, "must specify component or manifest"),
+		Aliases: []string{"src"},
+		Long: heredoc.Docf(`
+			Add a remote location for discovering one-or-many Unikraft components.
+		`),
 		Example: heredoc.Docf(`
 			# Add a single component as a Git repository
 			$ kraft pkg source https://github.com/unikraft/unikraft.git

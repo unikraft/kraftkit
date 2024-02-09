@@ -37,20 +37,20 @@ type ListOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all images at a metro for your account",
-		Use:     "ls",
-		Aliases: []string{"list"},
+		Use:     "list",
+		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
-			List all images in your account.
+			List all images at a metro for your account.
 		`),
 		Example: heredoc.Doc(`
 			# List images in your account.
-			$ kraft cloud img ls
+			$ kraft cloud image list
 
 			# List all images in your account.
-			$ kraft cloud img ls --all
+			$ kraft cloud image list --all
 
 			# List all images in your account in JSON format.
-			$ kraft cloud img ls -o json
+			$ kraft cloud image list -o json
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",

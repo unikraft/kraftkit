@@ -29,6 +29,7 @@ func NewCmd() *cobra.Command {
 		Use:     "inspect NETWORK",
 		Aliases: []string{"list"},
 		Args:    cobra.ExactArgs(1),
+		Long:    "Inspect a machine network.",
 		Example: heredoc.Doc(`
 			# Inspect a machine network
 			$ kraft network inspect my-network

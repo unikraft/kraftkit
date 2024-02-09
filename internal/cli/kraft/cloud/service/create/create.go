@@ -167,6 +167,7 @@ func NewCmd() *cobra.Command {
 		Use:     "create [FLAGS] EXTERNAL:INTERNAL[/HANDLER[+HANDLER...]]",
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
+		Long:    "Create a service group.",
 		Example: heredoc.Doc(`
 			# Create a service group with a single service listening on port 443 named "my-service"
 			$ kraft cloud service create --name my-service 443:8080/http+tls

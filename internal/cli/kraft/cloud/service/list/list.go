@@ -31,20 +31,20 @@ type ListOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all service groups at a metro for your account",
-		Use:     "ls",
-		Aliases: []string{"list"},
+		Use:     "list [FLAGS]",
+		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
 			List all service groups in your account.
 		`),
 		Example: heredoc.Doc(`
 			# List all service groups in your account.
-			$ kraft cloud svc ls
+			$ kraft cloud service list
 
 			# List all service groups in your account in full table format.
-			$ kraft cloud svc ls -o full
+			$ kraft cloud service list -o full
 
 			# List all service groups in your account and watch for changes.
-			$ kraft cloud svc ls -w
+			$ kraft cloud service list -w
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
@@ -37,7 +38,21 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
 		Short:   "Get an autoscale configuration or policy",
 		Use:     "get [FLAGS] UUID|NAME",
-		Aliases: []string{"g"},
+		Aliases: []string{"gt"},
+		Long:    "Get an autoscale configuration or policy.",
+		Example: heredoc.Doc(`
+			# Get an autoscale configuration by UUID
+			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Get an autoscale configuration by name
+			$ kraft cloud scale get my-instance-431342
+
+			# Get an autoscale policy by UUID
+			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b --policy my-policy
+
+			# Get an autoscale policy by name
+			$ kraft cloud scale get my-instance-431342 --policy my-policy
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
 		},

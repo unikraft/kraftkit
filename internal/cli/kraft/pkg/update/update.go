@@ -33,12 +33,14 @@ func Update(ctx context.Context, opts *UpdateOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpdateOptions{}, cobra.Command{
-		Short: "Retrieve new lists of Unikraft components, libraries and packages",
-		Use:   "update [FLAGS]",
+		Short:   "Retrieve new lists of Unikraft components, libraries and packages",
+		Use:     "update [FLAGS]",
+		Aliases: []string{"upd"},
 		Long: heredoc.Doc(`
-			Retrieve new lists of Unikraft components, libraries and packages.`),
-		Aliases: []string{"u"},
+			Retrieve new lists of Unikraft components, libraries and packages.
+		`),
 		Example: heredoc.Doc(`
+			# Update the local index of known locations for remote Unikraft components
 			$ kraft pkg update
 		`),
 		Annotations: map[string]string{

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -35,8 +36,14 @@ type StartOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
-		Short: "Start one or more machines",
-		Use:   "start [FLAGS] MACHINE [MACHINE [...]]",
+		Short:   "Start one or more machines",
+		Use:     "start [FLAGS] MACHINE [MACHINE [...]]",
+		Aliases: []string{},
+		Long:    "Start one or more machines",
+		Example: heredoc.Doc(`
+			# Start a machine
+			$ kraft start my-machine
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
 		},
