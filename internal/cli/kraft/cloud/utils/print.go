@@ -380,6 +380,65 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// PrintLimits pretty-prints the provided set of user limits or returns
+// an error if unable to send to stdout via the provided context.
+func PrintLimits(ctx context.Context, format string, quotas ...kraftcloudusers.Quotas) error {
+	if err := iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+
+	table.AddField("MEMORY SIZE (MIN|MAX)", cs.Bold)
+	table.AddField("VOLUME SIZE (MIN|MAX)", cs.Bold)
+	table.AddField("AUTOSCALE SIZE (MIN|MAX)", cs.Bold)
+	table.EndRow()
+
+	for _, quota := range quotas {
+		if format != "table" {
+			table.AddField(quota.UUID, nil)
+		}
+
+		table.AddField(
+			fmt.Sprintf("%s|%s",
+				humanize.IBytes(uint64(quota.Limits.MinMemoryMb)*humanize.MiByte),
+				humanize.IBytes(uint64(quota.Limits.MaxMemoryMb)*humanize.MiByte),
+			), nil,
+		)
+
+		table.AddField(
+			fmt.Sprintf("%s|%s",
+				humanize.IBytes(uint64(quota.Limits.MinVolumeMb)*humanize.MiByte),
+				humanize.IBytes(uint64(quota.Limits.MaxVolumeMb)*humanize.MiByte),
+			), nil,
+		)
+
+		table.AddField(
+			fmt.Sprintf("%d|%d",
+				quota.Limits.MinAutoscaleSize,
+				quota.Limits.MaxAutoscaleSize,
+			), nil,
+		)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
 // PrettyPrintInstance outputs a single instance and information about it.
 func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Instance, autoStart bool) {
 	out := iostreams.G(ctx).Out
