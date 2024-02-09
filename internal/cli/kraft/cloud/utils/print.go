@@ -348,10 +348,8 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 		table.AddField("UUID", cs.Bold)
 	}
 
-	table.AddField("NAME", cs.Bold)
 	table.AddField("LIVE INSTANCES", cs.Bold)
 	table.AddField("TOTAL INSTANCES", cs.Bold)
-	table.AddField("MAX TOTAL INSTANCES", cs.Bold)
 	table.AddField("LIVE MEMORY", cs.Bold)
 	table.AddField("SERVICE GROUPS", cs.Bold)
 	table.AddField("SERVICES", cs.Bold)
@@ -363,7 +361,6 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 		if format != "table" {
 			table.AddField(quota.UUID, nil)
 		}
-		table.AddField(quota.Name, nil)
 		table.AddField(fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances), nil)
 		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances), nil)
 		table.AddField(fmt.Sprintf("%s/%s",
