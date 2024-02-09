@@ -523,6 +523,25 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 			},
 		}...)
 	}
+
+	if len(instance.PrivateFQDN) > 0 {
+		entries = append(entries, []fancymap.FancyMapEntry{
+			{
+				Key:   "private fqdn",
+				Value: instance.PrivateFQDN,
+			},
+		}...)
+	}
+
+	if len(instance.PrivateIP) > 0 {
+		entries = append(entries, []fancymap.FancyMapEntry{
+			{
+				Key:   "private ip",
+				Value: instance.PrivateIP,
+			},
+		}...)
+	}
+
 	if len(instance.Args) > 0 {
 		entries = append(entries, []fancymap.FancyMapEntry{
 			{

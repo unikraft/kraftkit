@@ -350,6 +350,9 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	if opts.Output != "table" && opts.Output != "full" {
+		return utils.PrintInstances(ctx, opts.Output, *instance)
+	}
 	utils.PrettyPrintInstance(ctx, instance, opts.Start)
 
 	return nil
