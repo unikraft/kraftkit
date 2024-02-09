@@ -49,6 +49,9 @@ func NewCmd() *cobra.Command {
 			# Start a KraftCloud instance by name
 			$ kraft cloud instance start my-instance-431342
 		`),
+		Long: heredoc.Doc(`
+			Start an instance on KraftCloud from a stopped instance.
+		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
 		},

@@ -22,6 +22,7 @@ import (
 )
 
 type QuotasOptions struct {
+	Limits bool   `long:"limits" short:"l" usage:"Show usage limits"`
 	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
 
 	metro string
@@ -80,5 +81,9 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 		return fmt.Errorf("could not get quotas: %w", err)
 	}
 
-	return utils.PrintQuotas(ctx, opts.Output, *quotas)
+	if opts.Limits {
+		return utils.PrintLimits(ctx, opts.Output, *quotas)
+	} else {
+		return utils.PrintQuotas(ctx, opts.Output, *quotas)
+	}
 }
