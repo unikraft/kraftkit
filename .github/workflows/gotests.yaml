@@ -12,7 +12,7 @@ on:
 jobs:
   gounit:
     name: Go unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-arm64-virt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,7 +47,7 @@ jobs:
 
   e2e-cli:
     name: kraft CLI end-to-end
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-arm64-virt
 
     steps:
       - uses: actions/checkout@v4
