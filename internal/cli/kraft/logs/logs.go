@@ -169,12 +169,32 @@ func FollowLogs(ctx context.Context, machine *machineapi.Machine, controller mac
 	go func() {
 		events, errs, err := controller.Watch(ctx, machine)
 		if err != nil {
-			cancel()
-
 			if eof {
+				cancel()
 				return
 			}
 
+			// There is a chance that the kernel has booted and exited faster than an
+			// event stream can be initialized and interpreted by KraftKit.  This
+			// typically happens on M-series processors from Apple.  In the event of
+			// an error, first statically check the state of the machine.  If the
+			// machine has exited, we can simply return early such that the logs can
+			// be output appropriately.
+			machine, getMachineErr := controller.Get(ctx, machine)
+			if err != nil {
+				cancel()
+				err = fmt.Errorf("getting the machine information: %w: %w", getMachineErr, err)
+			}
+			if machine.Status.State == machineapi.MachineStateExited {
+				// Calling cancel() in every execution path of this Go routine following
+				// the static detection of a preemptive exit state (since the event
+				// stream is no longer available) would prevent the tailing of the now
+				// finite logs.  A return here without calling cancel() guarantees a
+				// graceful exit and the output of said logs.
+				return
+			}
+
+			cancel()
 			exitErr = fmt.Errorf("listening to machine events: %w", err)
 			return
 		}
