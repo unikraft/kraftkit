@@ -371,10 +371,6 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		// Output the name of the instance such that it can be piped
 		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
 		return nil
-	} else {
-		if _, err := opts.machineController.Start(ctx, machine); err != nil {
-			return err
-		}
 	}
 
 	return start.Start(ctx, &start.StartOptions{
