@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/golang/glog v1.2.0
 	github.com/iancoleman/strcase v0.3.0
-	kraftkit.sh v0.7.3
+	kraftkit.sh v0.7.5
 	mvdan.cc/gofumpt v0.6.0
 )
 
