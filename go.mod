@@ -19,6 +19,7 @@ require (
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.17.0
 	github.com/containerd/containerd v1.7.13
+	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl v1.4.0
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.5
@@ -98,7 +99,6 @@ require (
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect
-	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
