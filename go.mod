@@ -11,9 +11,9 @@ require (
 	github.com/acorn-io/baaah v0.0.0-20230522221318-afcc93619e30
 	github.com/briandowns/spinner v1.23.0
 	github.com/cavaliergopher/cpio v1.0.1
-	github.com/charmbracelet/bubbles v0.16.1
-	github.com/charmbracelet/bubbletea v0.24.2
-	github.com/charmbracelet/lipgloss v0.7.1
+	github.com/charmbracelet/bubbles v0.18.0
+	github.com/charmbracelet/bubbletea v0.25.0
+	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/cli/cli/v2 v2.32.0
 	github.com/cli/go-gh v1.2.1
 	github.com/cli/safeexec v1.0.1
@@ -179,7 +179,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rivo/uniseg v0.4.6 // indirect
 	github.com/rootless-containers/rootlesskit v1.1.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
