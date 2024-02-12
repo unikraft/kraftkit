@@ -83,6 +83,14 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 		return err
 	}
 
+	if hasAliases(cmd) {
+		buf.WriteString("## Aliases\n\n")
+		buf.WriteString("The `" + name + "` command can also be run as:\n\n")
+		buf.WriteString("```\n")
+		buf.WriteString(strings.Join(cmd.Aliases, ", ") + "\n")
+		buf.WriteString("```\n\n")
+	}
+
 	if hasSeeAlso(cmd) {
 		buf.WriteString("## See Also\n\n")
 		if cmd.HasParent() {
@@ -162,6 +170,10 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+func hasAliases(cmd *cobra.Command) bool {
+	return len(cmd.Aliases) > 0
 }
 
 // Test to see if we have a reason to print See Also information in docs
