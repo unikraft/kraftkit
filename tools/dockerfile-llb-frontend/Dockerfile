@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-FROM golang:1.21 AS builder
+FROM golang:1.22 AS builder
 
 WORKDIR /src
 COPY . ./

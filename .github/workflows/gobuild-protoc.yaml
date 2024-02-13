@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.21.2
+          go-version: 1.22.0
           cache: false
 
       - name: Set go.mod variable
@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.21.2
+          go-version: 1.22.0
           cache: false
 
       - name: Set Go variables

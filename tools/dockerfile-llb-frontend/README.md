@@ -11,7 +11,7 @@ The result is a Unikraft image saved in your local Docker registry.
 ## Prerequisites
 
 - Docker with BuildKit enabled (this is the default setting from Docker v23.0 onwards)
-- Go v1.21 or later
+- Go v1.22 or later
 
 ## Usage
 
