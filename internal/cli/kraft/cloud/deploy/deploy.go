@@ -85,7 +85,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
 			append(packmanager.MergeStrategies(), packmanager.StrategyPrompt),
-			packmanager.StrategyPrompt,
+			packmanager.StrategyOverwrite,
 		),
 		"strategy",
 		"When a package of the same name exists, use this strategy when applying targets.",
