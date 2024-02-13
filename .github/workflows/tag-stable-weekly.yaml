@@ -71,4 +71,4 @@ jobs:
           git tag -a "$NEW_TAG" -m "KraftKit $NEW_TAG"
           git push origin "$NEW_TAG"
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_MERGE_PAT }}
