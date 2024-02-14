@@ -29,10 +29,6 @@ import (
 	"xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight"
 )
 
-const (
-	XenLogsDefaultPath = "/var/log/xen"
-)
-
 type machineV1alpha1Service struct{}
 
 func NewMachineV1alpha1Service(ctx context.Context) (machinev1alpha1.MachineService, error) {
@@ -60,6 +56,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	if len(machine.Status.StateDir) == 0 {
 		machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
 	}
+	fmt.Println(machine.Status.StateDir)
 
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
 		return machine, err
@@ -68,6 +65,12 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	if len(machine.Status.LogFile) == 0 {
 		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
 	}
+
+	fd, err := os.Create(machine.Status.LogFile)
+	if err != nil {
+		return machine, err
+	}
+	defer fd.Close()
 
 	if machine.Spec.Resources.Requests == nil {
 		machine.Spec.Resources.Requests = make(corev1.ResourceList, 2)
@@ -192,28 +195,15 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	args = append(args, machine.Spec.ApplicationArgs...)
 	xenOpts = append(xenOpts, WithArgs(args))
 
-	xenLogPath := filepath.Join(XenLogsDefaultPath, fmt.Sprintf("xl-%s.log", machine.Name))
+	xenCtx, err := xenlight.NewContext()
 	if err != nil {
-		return machine, err
+		return nil, fmt.Errorf("could not create xen context: %w", err)
 	}
-	machine.Status.LogFile = xenLogPath
-
-	fi, err := os.Open(machine.Status.LogFile)
-	if err != nil {
-		return machine, err
-	}
-
-	defer fi.Close()
 
 	config, err := NewXenConfig(xenOpts...)
 	if err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
 		return machine, fmt.Errorf("could not create xen config: %w", err)
-	}
-
-	xenCtx, err := xenlight.NewContext()
-	if err != nil {
-		return nil, fmt.Errorf("could not create xen context: %w", err)
 	}
 
 	domID, err := xenCtx.DomainCreateNew(config)
