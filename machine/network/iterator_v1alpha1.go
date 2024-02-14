@@ -13,7 +13,7 @@ import (
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 )
 
-type networkV1alpha1ServiceIteartor struct {
+type networkV1alpha1ServiceIterator struct {
 	strategies map[string]networkv1alpha1.NetworkService
 }
 
@@ -24,7 +24,7 @@ type networkV1alpha1ServiceIteartor struct {
 // driver to succeed is returned in all circumstances.
 func NewNetworkV1alpha1ServiceIterator(ctx context.Context) (networkv1alpha1.NetworkService, error) {
 	var err error
-	iterator := networkV1alpha1ServiceIteartor{
+	iterator := networkV1alpha1ServiceIterator{
 		strategies: map[string]networkv1alpha1.NetworkService{},
 	}
 
@@ -39,7 +39,7 @@ func NewNetworkV1alpha1ServiceIterator(ctx context.Context) (networkv1alpha1.Net
 }
 
 // Create implements kraftkit.sh/api/network/v1alpha1.Create
-func (iterator *networkV1alpha1ServiceIteartor) Create(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Create(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -56,7 +56,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Create(ctx context.Context, netw
 }
 
 // Start implements kraftkit.sh/api/network/v1alpha1.Start
-func (iterator *networkV1alpha1ServiceIteartor) Start(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Start(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -73,7 +73,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Start(ctx context.Context, netwo
 }
 
 // Stop implements kraftkit.sh/api/network/v1alpha1.Stop
-func (iterator *networkV1alpha1ServiceIteartor) Stop(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Stop(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -90,7 +90,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Stop(ctx context.Context, networ
 }
 
 // Update implements kraftkit.sh/api/network/v1alpha1.Update.
-func (iterator *networkV1alpha1ServiceIteartor) Update(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Update(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -107,7 +107,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Update(ctx context.Context, netw
 }
 
 // Delete implements kraftkit.sh/api/network/v1alpha1.Delete
-func (iterator *networkV1alpha1ServiceIteartor) Delete(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Delete(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -124,7 +124,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Delete(ctx context.Context, netw
 }
 
 // Get implements kraftkit.sh/api/network/v1alpha1.Get
-func (iterator *networkV1alpha1ServiceIteartor) Get(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
+func (iterator *networkV1alpha1ServiceIterator) Get(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
@@ -141,7 +141,7 @@ func (iterator *networkV1alpha1ServiceIteartor) Get(ctx context.Context, network
 }
 
 // List implements kraftkit.sh/api/network/v1alpha1.List
-func (iterator *networkV1alpha1ServiceIteartor) List(ctx context.Context, cached *networkv1alpha1.NetworkList) (*networkv1alpha1.NetworkList, error) {
+func (iterator *networkV1alpha1ServiceIterator) List(ctx context.Context, cached *networkv1alpha1.NetworkList) (*networkv1alpha1.NetworkList, error) {
 	found := []zip.Object[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus]{}
 
 	for _, strategy := range iterator.strategies {
