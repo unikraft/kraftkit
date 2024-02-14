@@ -19,6 +19,7 @@ import (
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
+	"kraftkit.sh/machine/network"
 	"kraftkit.sh/machine/volume"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
@@ -42,16 +43,24 @@ func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machin
 	return nil
 }
 
-// Was a network specified? E.g. --network=bridge:kraft0
+// Was a network specified? E.g. --network=kraft0
 func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.Machine) error {
 	if opts.Network == "" {
+		if opts.IP != "" {
+			return fmt.Errorf("cannot assign IP address without providing --network")
+		}
 		return nil
 	}
 
+	networkServiceIterator, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Try to discover the user-provided network.
-	found, err := opts.networkController.Get(ctx, &networkapi.Network{
+	found, err := networkServiceIterator.Get(ctx, &networkapi.Network{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: opts.networkName,
+			Name: opts.Network,
 		},
 	})
 	if err != nil {
@@ -80,7 +89,7 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 	found.Spec.Interfaces = append(found.Spec.Interfaces, newIface)
 
 	// Update the network with the new interface.
-	found, err = opts.networkController.Update(ctx, found)
+	found, err = networkServiceIterator.Update(ctx, found)
 	if err != nil {
 		return err
 	}

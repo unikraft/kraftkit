@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/sirupsen/logrus"
@@ -18,13 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/arch"
@@ -41,7 +38,7 @@ type RunOptions struct {
 	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
-	Network       string   `long:"network" usage:"Attach instance to the provided network in the format <driver>:<network>, e.g. bridge:kraft0"`
+	Network       string   `long:"network" usage:"Attach instance to the provided network"`
 	NoStart       bool     `long:"no-start" usage:"Do not start the machine"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
@@ -56,9 +53,6 @@ type RunOptions struct {
 
 	workdir           string
 	platform          mplatform.Platform
-	networkDriver     string
-	networkName       string
-	networkController networkapi.NetworkService
 	machineController machineapi.MachineService
 }
 
@@ -98,8 +92,8 @@ func NewCmd() *cobra.Command {
 			Run an OCI-compatible unikernel, mapping port 8080 on the host to port 80 in the unikernel:
 			$ kraft run -p 8080:80 unikraft.org/nginx:latest
 
-			Attach the unikernel to an existing network kraft0 backed by the bridge driver:
-			$ kraft run --network bridge:kraft0
+			Attach the unikernel to an existing network kraft0:
+			$ kraft run --network kraft0
 
 			Run a Linux userspace binary in POSIX-/binary-compatibility mode:
 			$ kraft run a.out
@@ -225,43 +219,10 @@ func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
 	return nil
 }
 
-func (opts *RunOptions) discoverNetworkController(ctx context.Context) error {
-	var err error
-
-	if opts.Network == "" && opts.IP != "" {
-		return fmt.Errorf("cannot assign IP address without providing --network")
-	} else if opts.Network != "" && !strings.Contains(opts.Network, ":") {
-		return fmt.Errorf("specifying a network must be in the format <driver>:<network> e.g. --network=bridge:kraft0")
-	}
-
-	if opts.Network != "" {
-		// TODO(nderjung): With a little bit more work, the driver can be
-		// automatically detected.
-		parts := strings.SplitN(opts.Network, ":", 2)
-		opts.networkDriver, opts.networkName = parts[0], parts[1]
-
-		networkStrategy, ok := network.Strategies()[opts.networkDriver]
-		if !ok {
-			return fmt.Errorf("unsupported network driver strategy: %v (contributions welcome!)", opts.networkDriver)
-		}
-
-		opts.networkController, err = networkStrategy.NewNetworkV1alpha1(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if err = opts.discoverMachineController(ctx); err != nil {
-		return err
-	}
-
-	if err = opts.discoverNetworkController(ctx); err != nil {
 		return err
 	}
 
