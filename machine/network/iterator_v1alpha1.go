@@ -60,7 +60,7 @@ func (iterator *networkV1alpha1ServiceIterator) Start(ctx context.Context, netwo
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, network)
+		ret, err := strategy.Start(ctx, network)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -77,7 +77,7 @@ func (iterator *networkV1alpha1ServiceIterator) Stop(ctx context.Context, networ
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, network)
+		ret, err := strategy.Stop(ctx, network)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -94,7 +94,7 @@ func (iterator *networkV1alpha1ServiceIterator) Update(ctx context.Context, netw
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, network)
+		ret, err := strategy.Update(ctx, network)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -111,7 +111,7 @@ func (iterator *networkV1alpha1ServiceIterator) Delete(ctx context.Context, netw
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, network)
+		ret, err := strategy.Delete(ctx, network)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -128,7 +128,7 @@ func (iterator *networkV1alpha1ServiceIterator) Get(ctx context.Context, network
 	var errs []error
 
 	for _, strategy := range iterator.strategies {
-		ret, err := strategy.Create(ctx, network)
+		ret, err := strategy.Get(ctx, network)
 		if err != nil {
 			errs = append(errs, err)
 			continue
