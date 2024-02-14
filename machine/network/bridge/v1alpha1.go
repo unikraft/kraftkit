@@ -192,8 +192,13 @@ func (service *v1alpha1Network) Stop(ctx context.Context, network *networkv1alph
 			return network, fmt.Errorf("getting link %s failed: %v", iface.Spec.IfName, err)
 		}
 
-		if ping.Ping(&net.IPAddr{IP: net.ParseIP(iface.Spec.IP), Zone: ""}, 150*time.Millisecond) {
-			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
+		ip, _, err := net.ParseCIDR(iface.Spec.CIDR)
+		if err != nil {
+			return network, fmt.Errorf("could not parse IP address: %v", err)
+		}
+
+		if ping.Ping(&net.IPAddr{IP: ip, Zone: ""}, 150*time.Millisecond) {
+			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, ip)
 		}
 
 		if err := netlink.LinkSetDown(link); err != nil {
@@ -279,13 +284,14 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 			iface.Spec.MacAddress = mac.String()
 		}
 
-		if iface.Spec.IP == "" {
+		if iface.Spec.CIDR == "" {
 			ip, err := AllocateIP(ctx, ipnet, bridgeface, bridge)
 			if err != nil {
 				return network, fmt.Errorf("could not allocate interface IP for %s: %v", iface.Spec.IfName, err)
 			}
 
-			iface.Spec.IP = ip.String()
+			sz, _ := net.IPMask(net.ParseIP(network.Spec.Netmask).To4()).Size()
+			iface.Spec.CIDR = fmt.Sprintf("%s/%d", ip.String(), sz)
 		}
 
 		tap := &netlink.Tuntap{
@@ -364,8 +370,13 @@ func (service *v1alpha1Network) Delete(ctx context.Context, network *networkv1al
 			return network, fmt.Errorf("could not get %s link: %v", iface.Spec.IfName, err)
 		}
 
-		if ping.Ping(&net.IPAddr{IP: net.ParseIP(iface.Spec.IP), Zone: ""}, 150*time.Millisecond) {
-			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, iface.Spec.IP)
+		ip, _, err := net.ParseCIDR(iface.Spec.CIDR)
+		if err != nil {
+			return network, fmt.Errorf("could not parse IP address: %v", err)
+		}
+
+		if ping.Ping(&net.IPAddr{IP: ip, Zone: ""}, 150*time.Millisecond) {
+			return network, fmt.Errorf("interface still in use: %s (%s, %s)", iface.Spec.IfName, iface.Spec.MacAddress, ip)
 		}
 
 		// Bring down the bridge link

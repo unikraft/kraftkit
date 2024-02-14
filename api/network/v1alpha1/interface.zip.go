@@ -25,8 +25,23 @@ type NetworkInterfaceSpec struct {
 	// The name of the interface.
 	IfName string `json:"ifname,omitempty"`
 
-	// IP address of a machine interface.
-	IP string `json:"ip,omitempty"`
+	// IPv4 address in CIDR notation, which includes the subnet.
+	CIDR string
+
+	// Gateway IPv4 address.
+	Gateway string
+
+	// IPv4 address of the primary DNS server.
+	DNS0 string
+
+	// IPv4 address of the secondary DNS server.
+	DNS1 string
+
+	// Hostname of the IPv4 address.
+	Hostname string
+
+	// Domain/Search suffix for IPv4 address.
+	Domain string
 
 	// Hardware address of a machine interface.
 	MacAddress string `json:"mac,omitempty"`

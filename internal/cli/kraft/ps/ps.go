@@ -159,7 +159,7 @@ func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
 
 		for _, net := range machine.Spec.Networks {
 			for _, iface := range net.Interfaces {
-				entry.IPs = append(entry.IPs, iface.Spec.IP)
+				entry.IPs = append(entry.IPs, iface.Spec.CIDR)
 			}
 		}
 

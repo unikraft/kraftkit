@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,6 +53,12 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 		return nil
 	}
 
+	// The network is specified in the format
+	// network:[cidr[:gw[:dns0[:dns1[:hostname[:domain]]]]]]
+
+	split := strings.SplitN(opts.Network, ":", 2)
+	networkName := split[0]
+
 	networkServiceIterator, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
 	if err != nil {
 		return err
@@ -60,11 +67,46 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 	// Try to discover the user-provided network.
 	found, err := networkServiceIterator.Get(ctx, &networkapi.Network{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: opts.Network,
+			Name: networkName,
 		},
 	})
 	if err != nil {
 		return err
+	}
+
+	var interfaceSpec networkapi.NetworkInterfaceSpec
+
+	if len(split) > 1 {
+		fields := strings.Split(split[1], ":")
+		if len(fields) > 0 {
+			interfaceSpec.CIDR = fields[0]
+			ipMaskSplit := strings.SplitN(interfaceSpec.CIDR, "/", 2)
+			if len(ipMaskSplit) != 2 {
+				sz, _ := net.IPMask(net.ParseIP(found.Spec.Netmask).To4()).Size()
+				interfaceSpec.CIDR = fmt.Sprintf("%s/%d", interfaceSpec.CIDR, sz)
+			}
+			opts.IP = ipMaskSplit[0]
+		}
+
+		if len(fields) > 1 {
+			interfaceSpec.Gateway = fields[1]
+		}
+		if len(fields) > 2 {
+			interfaceSpec.DNS0 = fields[2]
+		}
+		if len(fields) > 3 {
+			interfaceSpec.DNS1 = fields[3]
+		}
+		if len(fields) > 4 {
+			interfaceSpec.Hostname = fields[4]
+		}
+		if len(fields) > 5 {
+			interfaceSpec.Domain = fields[5]
+		}
+	}
+
+	if interfaceSpec.Gateway == "" {
+		interfaceSpec.Gateway = found.Spec.Gateway
 	}
 
 	// Generate the UID pre-emptively so that we can uniquely reference the
@@ -76,10 +118,7 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 		ObjectMeta: metav1.ObjectMeta{
 			UID: uuid.NewUUID(),
 		},
-		Spec: networkapi.NetworkInterfaceSpec{
-			IP:         opts.IP,
-			MacAddress: opts.MacAddress,
-		},
+		Spec: interfaceSpec,
 	}
 
 	// Update the list of interfaces
