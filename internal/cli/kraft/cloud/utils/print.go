@@ -109,7 +109,9 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 				}
 			}
 			table.AddField(strings.Join(vols, ", "), nil)
-			table.AddField(instance.ServiceGroup.UUID, nil)
+			if instance.ServiceGroup != nil {
+				table.AddField(instance.ServiceGroup.UUID, nil)
+			}
 		}
 
 		table.AddField(fmt.Sprintf("%dus", instance.BootTimeUS), nil)
