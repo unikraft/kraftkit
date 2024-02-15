@@ -997,7 +997,7 @@ func (handle *DirectoryHandler) ListIndexes(ctx context.Context) (map[string]*oc
 	return indexes, nil
 }
 
-func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string) error {
+func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string, deps bool) error {
 	indexPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerIndexesDir,
@@ -1010,27 +1010,29 @@ func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string)
 		return nil
 	}
 
-	// Read the index
-	reader, err := os.Open(indexPath)
-	if err != nil {
-		return err
-	}
+	if deps {
+		// Read the index
+		reader, err := os.Open(indexPath)
+		if err != nil {
+			return err
+		}
 
-	defer reader.Close()
+		defer reader.Close()
 
-	indexRaw, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
+		indexRaw, err := io.ReadAll(reader)
+		if err != nil {
+			return err
+		}
 
-	index := ocispec.Index{}
-	if err = json.Unmarshal(indexRaw, &index); err != nil {
-		return err
-	}
+		index := ocispec.Index{}
+		if err = json.Unmarshal(indexRaw, &index); err != nil {
+			return err
+		}
 
-	for _, manifest := range index.Manifests {
-		if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil {
-			return fmt.Errorf("could not delete manifest from '%s': %w", fullref, err)
+		for _, manifest := range index.Manifests {
+			if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("could not delete manifest from '%s': %w", fullref, err)
+			}
 		}
 	}
 

@@ -532,7 +532,7 @@ func (handle *ContainerdHandler) ListIndexes(ctx context.Context) (map[string]*o
 	return indexes, nil
 }
 
-func (handle *ContainerdHandler) DeleteIndex(ctx context.Context, fullref string) error {
+func (handle *ContainerdHandler) DeleteIndex(ctx context.Context, fullref string, deps bool) error {
 	digestIndexes, err := ListContainerdObjectsByType[ocispec.Index](ctx, ocispec.MediaTypeImageIndex, handle)
 	if err != nil {
 		return fmt.Errorf("could not gather list of indexes: %w", err)
@@ -558,9 +558,11 @@ func (handle *ContainerdHandler) DeleteIndex(ctx context.Context, fullref string
 			continue
 		}
 
-		for _, manifest := range index.Manifests {
-			if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil && !strings.Contains(err.Error(), "not found") {
-				return fmt.Errorf("could not delete manifest from index '%s': %w", fullref, err)
+		if deps {
+			for _, manifest := range index.Manifests {
+				if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil && !strings.Contains(err.Error(), "not found") {
+					return fmt.Errorf("could not delete manifest from index '%s': %w", fullref, err)
+				}
 			}
 		}
 

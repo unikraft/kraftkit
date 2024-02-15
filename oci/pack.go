@@ -252,7 +252,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 
 	case packmanager.StrategyOverwrite:
-		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.String()); err != nil {
+		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.String(), true); err != nil {
 			return nil, fmt.Errorf("could not remove existing index: %w", err)
 		}
 
@@ -794,7 +794,7 @@ func (ocipack *ociPackage) Delete(ctx context.Context) error {
 	}
 
 	if len(manifests) == 0 {
-		return ocipack.handle.DeleteIndex(ctx, ocipack.imageRef())
+		return ocipack.handle.DeleteIndex(ctx, ocipack.imageRef(), true)
 	}
 
 	indexDesc.Manifests = manifests

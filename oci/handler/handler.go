@@ -62,7 +62,7 @@ type IndexResolver interface {
 }
 
 type IndexDeleter interface {
-	DeleteIndex(context.Context, string) error
+	DeleteIndex(context.Context, string, bool) error
 }
 
 type ImageUnpacker interface {
