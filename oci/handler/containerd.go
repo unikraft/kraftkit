@@ -141,13 +141,18 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 		return err
 	}
 
-	if err := handle.client.Push(
-		namespaces.WithNamespace(ctx, handle.namespace),
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
+
+	if _, err := handle.client.Pull(ctx,
 		fullref,
-		ocispec.Descriptor{
-			Digest:    dgst,
-			MediaType: mediaType,
-		},
+		containerd.WithPlatform(fmt.Sprintf("%s/%s", plat.OS, plat.Architecture)),
 		containerd.WithResolver(resolver),
 		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
