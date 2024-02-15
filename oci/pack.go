@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	golog "log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,11 +22,13 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	gcrlogs "github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2/content"
 
@@ -68,6 +71,8 @@ type ociPackage struct {
 	kernelDbg string
 	initrd    initrd.Initrd
 	command   []string
+
+	original *ociPackage
 }
 
 var (
@@ -94,6 +99,16 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		kernel:    targ.Kernel(),
 		kernelDbg: targ.KernelDbg(),
 		command:   popts.Args(),
+	}
+
+	// It is possible that `NewPackageFromTarget` is called with an existing
+	// `targ` which represents a previously generated OCI package, e.g. via
+	// `NewPackageFromOCIManifestDigest`.  In this case, we can keep a reference
+	// to the original package and use it to re-tag the original manifest or any
+	// access any other related information which may otherwise be lost through
+	// the `target.Target` or `pack.Package` interfaces.
+	if original, ok := targ.(*ociPackage); ok {
+		ocipack.original = original
 	}
 
 	if popts.Name() == "" {
@@ -148,31 +163,39 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, fmt.Errorf("could not instantiate new manifest structure: %w", err)
 	}
 
-	log.G(ctx).
-		WithField("src", ocipack.Kernel()).
-		WithField("dest", WellKnownKernelPath).
-		Debug("including kernel")
+	if len(ocipack.Kernel()) > 0 {
+		log.G(ctx).
+			WithField("src", ocipack.Kernel()).
+			WithField("dest", WellKnownKernelPath).
+			Debug("including kernel")
 
-	layer, err := NewLayerFromFile(ctx,
-		ocispec.MediaTypeImageLayer,
-		ocipack.Kernel(),
-		WellKnownKernelPath,
-		WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not create new layer structure from file: %w", err)
+		layer, err := NewLayerFromFile(ctx,
+			ocispec.MediaTypeImageLayer,
+			ocipack.Kernel(),
+			WellKnownKernelPath,
+			WithLayerAnnotation(AnnotationKernelPath, WellKnownKernelPath),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create new layer structure from file: %w", err)
+		}
+		defer os.Remove(layer.tmp)
+
+		if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
+			return nil, fmt.Errorf("could not add layer to manifest: %w", err)
+		}
+	} else if ocipack.original != nil {
+		// It is possible that a target is instantiated from a previously generated
+		// package reference and a kernel has not been supplied explicitly.  In this
+		// circumstance, we adopt the original manifest's list of layers, which can
+		// include a reference to a kernel.
+		ocipack.manifest.layers = ocipack.original.manifest.layers
 	}
-	defer os.Remove(layer.tmp)
 
-	if _, err := ocipack.manifest.AddLayer(ctx, layer); err != nil {
-		return nil, fmt.Errorf("could not add layer to manifest: %w", err)
-	}
-
-	if popts.KernelDbg() {
-		log.G(ctx).WithFields(logrus.Fields{
-			"src":  ocipack.KernelDbg(),
-			"dest": WellKnownKernelDbgPath,
-		}).Debug("oci: including kernel.dbg")
+	if popts.KernelDbg() && len(ocipack.KernelDbg()) > 0 {
+		log.G(ctx).
+			WithField("src", ocipack.KernelDbg()).
+			WithField("dest", WellKnownKernelDbgPath).
+			Debug("oci: including kernel.dbg")
 
 		layer, err := NewLayerFromFile(ctx,
 			ocispec.MediaTypeImageLayer,
@@ -323,6 +346,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			}
 		}
 
+		ocipack.index.saved = false
 		ocipack.index.manifests = manifests
 	}
 
@@ -393,9 +417,6 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 			return nil, fmt.Errorf("could not instantiate manifest from digest: %w", err)
 		}
 
-		if err := ocipack.index.AddManifest(ctx, manifest); err != nil {
-			return nil, fmt.Errorf("could not add manifest to index: %w", err)
-		}
 		ocipack.manifest = manifest
 	} else {
 		if ocipack.ref.Context().RegistryStr() == "" {
@@ -633,6 +654,61 @@ func (ocipack *ociPackage) Columns() []tableprinter.Column {
 
 // Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
+	// In the circumstance where the original package is available, we use
+	// google/go-containerregistry to re-tag (which is achieved via `pusher.Push`
+	// which ultimately checks if the manifest, its layers, config and ultimately
+	// blobs are available in the remote registry, and simply performs a HEAD
+	// request which does the actual "re-tagging").  Because the re-tagging
+	// process includes a check for existing remote blobs, the original manifest
+	// can be fully satisfied with only references which are stored locally and
+	// without having to fetch the original blob or upload a new one, improving
+	// performance of the `Push` method.
+	if ocipack.original != nil && ocipack.original.manifest.v1Image != nil {
+		log.G(ctx).
+			Debug("re-tagging original package such that remote references are maintained")
+
+		authConfig := &authn.AuthConfig{}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		auths, err := defaultAuths(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Annoyingly convert between regtypes and authn.
+		if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
+			authConfig.Username = auth.User
+			authConfig.Password = auth.Token
+
+			if !auth.VerifySSL {
+				transport.TLSClientConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+			}
+		}
+
+		gcrlogs.Progress = golog.New(log.G(ctx).WriterLevel(logrus.TraceLevel), "", 0)
+
+		pusher, err := remote.NewPusher(
+			remote.WithContext(ctx),
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+			remote.WithTransport(transport),
+		)
+		if err != nil {
+			return err
+		}
+
+		manRef, _ := name.ParseReference(
+			fmt.Sprintf("%s@%s", ocipack.ref.Context().Name(), ocipack.original.manifest.desc.Digest.String()),
+		)
+
+		// Re-tag the original package's manifests
+		if err := pusher.Push(ctx, manRef, ocipack.original.manifest.v1Image); err != nil {
+			return err
+		}
+	}
+
 	desc, err := ocipack.index.Descriptor()
 	if err != nil {
 		return err

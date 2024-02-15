@@ -19,6 +19,7 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -35,6 +36,7 @@ type Manifest struct {
 
 	handle handler.Handler
 
+	v1Image  v1.Image
 	config   *ocispec.Image
 	manifest *ocispec.Manifest
 	desc     *ocispec.Descriptor
@@ -58,7 +60,6 @@ func NewManifest(ctx context.Context, handle handler.Handler) (*Manifest, error)
 		config: &ocispec.Image{
 			Config: ocispec.ImageConfig{},
 		},
-		manifest: &ocispec.Manifest{},
 	}
 
 	return &manifest, nil
@@ -94,12 +95,24 @@ func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest d
 		Annotations: spec.Annotations,
 		Platform:    spec.Config.Platform,
 	}
+
 	manifest.manifest = spec
-	manifest.config.Architecture = spec.Config.Platform.Architecture
-	manifest.config.OS = spec.Config.Platform.OS
-	manifest.config.OSVersion = spec.Config.Platform.OSVersion
-	manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
+
+	if spec.Config.Platform != nil {
+		manifest.config.Architecture = spec.Config.Platform.Architecture
+		manifest.config.OS = spec.Config.Platform.OS
+		manifest.config.OSVersion = spec.Config.Platform.OSVersion
+		manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
+	}
 	manifest.annotations = spec.Annotations
+
+	for _, desc := range spec.Layers {
+		manifest.layers = append(manifest.layers, &Layer{
+			blob: &Blob{
+				desc: desc,
+			},
+		})
+	}
 
 	return manifest, nil
 }
@@ -222,6 +235,16 @@ func (manifest *Manifest) SetCmd(_ context.Context, cmd []string) {
 
 // Save the image.
 func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress func(float64)) (*ocispec.Descriptor, error) {
+	if manifest.saved && manifest.desc != nil {
+		return manifest.desc, nil
+	}
+
+	if manifest.desc != nil {
+		if info, _ := manifest.handle.DigestInfo(ctx, manifest.desc.Digest); info != nil {
+			return manifest.desc, nil
+		}
+	}
+
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
 	)
@@ -298,15 +321,17 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// containerd compatibility annotations
 	manifest.annotations[images.AnnotationImageName] = ref.String()
 
-	// Generate the final manifest
-	manifest.manifest = &ocispec.Manifest{
-		Versioned: specs.Versioned{
-			SchemaVersion: 2,
-		},
-		Config:      configBlob.desc,
-		MediaType:   ocispec.MediaTypeImageManifest,
-		Layers:      layers,
-		Annotations: manifest.annotations,
+	if manifest.manifest == nil {
+		// Generate the final manifest
+		manifest.manifest = &ocispec.Manifest{
+			Versioned: specs.Versioned{
+				SchemaVersion: 2,
+			},
+			Config:      configBlob.desc,
+			MediaType:   ocispec.MediaTypeImageManifest,
+			Layers:      layers,
+			Annotations: manifest.annotations,
+		}
 	}
 
 	manifestJson, err := json.Marshal(manifest.manifest)
@@ -314,13 +339,17 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	manifestDesc := content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageManifest,
-		manifestJson,
-	)
-	// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
-	manifestDesc.Annotations = manifest.manifest.Annotations
-	manifestDesc.Platform = platform
+	if manifest.desc == nil {
+		manifestDesc := content.NewDescriptorFromBytes(
+			ocispec.MediaTypeImageManifest,
+			manifestJson,
+		)
+		// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
+		manifestDesc.Annotations = manifest.manifest.Annotations
+		manifestDesc.Platform = platform
+
+		manifest.desc = &manifestDesc
+	}
 
 	log.G(ctx).
 		WithField("ref", ref.String()).
@@ -331,7 +360,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	if err := manifest.handle.SaveDescriptor(
 		ctx,
 		fullref,
-		manifestDesc,
+		*manifest.desc,
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
@@ -350,7 +379,6 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	}
 
 	manifest.saved = true
-	manifest.desc = &manifestDesc
 
 	// Push any outstanding layers last.
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -360,6 +388,10 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	for i := range manifest.layers {
 		eg.Go(func(i int) func() error {
 			return func() error {
+				if manifest.layers[i].blob.tmp == "" {
+					return nil
+				}
+
 				pushed, exists := manifest.pushed.Load(manifest.layers[i].blob.desc.Digest)
 				if exists && pushed.(bool) {
 					return nil
@@ -381,5 +413,5 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		return nil, err
 	}
 
-	return &manifestDesc, nil
+	return manifest.desc, nil
 }

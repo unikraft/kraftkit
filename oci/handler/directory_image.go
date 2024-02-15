@@ -21,11 +21,14 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
+
+	"kraftkit.sh/log"
 )
 
 const algorithm = "sha256"
 
 type DirectoryLayer struct {
+	ctx       context.Context
 	path      string
 	diffID    digest.Digest
 	digest    v1.Hash
@@ -73,10 +76,24 @@ func (dl DirectoryLayer) Size() (int64, error) {
 
 // MediaType returns the mediatype of the layer
 func (dl DirectoryLayer) MediaType() (types.MediaType, error) {
+	layerPath := filepath.Join(
+		dl.path,
+		DirectoryHandlerDigestsDir,
+		dl.digest.Algorithm,
+		dl.digest.Hex,
+	)
+
+	if _, err := os.Open(layerPath); err != nil {
+		log.G(dl.ctx).
+			Debugf("error accessing layer: %s: marking as non-distributable layer", err.Error())
+		return types.OCIRestrictedLayer, nil
+	}
+
 	return dl.mediatype, nil
 }
 
 type DirectoryManifest struct {
+	ctx    context.Context
 	handle *DirectoryHandler
 	image  *ocispec.Image
 	desc   *ocispec.Descriptor
@@ -94,6 +111,7 @@ func (dm DirectoryManifest) Layers() ([]v1.Layer, error) {
 	// Only works if the order is the same in the rootfs and the manifest
 	for idx, layer := range manifest.Layers {
 		dlayer := DirectoryLayer{
+			ctx:       dm.ctx,
 			path:      dm.handle.path,
 			digest:    layer.Digest,
 			diffID:    dm.image.RootFS.DiffIDs[idx],
@@ -211,6 +229,7 @@ func (dm DirectoryManifest) LayerByDigest(hash v1.Hash) (v1.Layer, error) {
 		if layer.Digest == hash {
 			// Only works if the order is the same in the rootfs and the manifest
 			dlayer := DirectoryLayer{
+				ctx:       dm.ctx,
 				path:      dm.handle.path,
 				diffID:    dm.image.RootFS.DiffIDs[idx],
 				digest:    layer.Digest,
@@ -330,6 +349,7 @@ func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
 	)
 
 	return &DirectoryManifest{
+		ctx:    di.ctx,
 		handle: di.handle,
 		image:  image,
 		desc:   &desc,
