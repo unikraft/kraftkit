@@ -365,7 +365,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return nil, fmt.Errorf("failed to push manifest: %w", err)
+		return nil, fmt.Errorf("failed to save manifest: %w", err)
 	}
 
 	// We check if the config blob already exists now after saving the manifest.

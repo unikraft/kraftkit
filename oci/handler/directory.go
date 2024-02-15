@@ -592,7 +592,7 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 			}
 
 			if err := os.Symlink(blobPath, indexTagPath); err != nil {
-				return err
+				return fmt.Errorf("creating symbolic link to new index: %w", err)
 			}
 		}
 	}
@@ -1110,7 +1110,7 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 	// Find the manifest of this image
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 
 	manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
@@ -1140,20 +1140,20 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 	// Read the config
 	reader, err := os.Open(configDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening config: %w", err)
 	}
 
 	defer reader.Close()
 
 	configRaw, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
 	// Unmarshal the config
 	config := ocispec.Image{}
 	if err = json.Unmarshal(configRaw, &config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing config; %w", err)
 	}
 
 	// Return the image
@@ -1164,7 +1164,7 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string, dgst digest.Digest, dest string) (*ocispec.Image, error) {
 	img, err := handle.resolveImage(ctx, fullref, dgst)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving config: %w", err)
 	}
 
 	// Iterate over the layers
@@ -1172,7 +1172,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 		// Get the digest
 		digest, err := v1.NewHash(layer.String())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("generating digest: %w", err)
 		}
 
 		// Get the layer path
@@ -1186,7 +1186,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 		// Layer path is a tarball, so we need to extract it
 		reader, err := os.Open(layerPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("opening layer: %w", err)
 		}
 
 		defer reader.Close()
@@ -1205,7 +1205,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 			// If the file is a directory, create it
 			if hdr.Typeflag == tar.TypeDir {
 				if err := os.MkdirAll(path, 0o775); err != nil {
-					return nil, err
+					return nil, fmt.Errorf("creating directory: %w", err)
 				}
 				continue
 			}
@@ -1213,20 +1213,20 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 			// If the directory in the path doesn't exist, create it
 			if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
 				if err := os.MkdirAll(filepath.Dir(path), 0o775); err != nil {
-					return nil, err
+					return nil, fmt.Errorf("creating directory: %w", err)
 				}
 			}
 
 			// Otherwise, create the file
 			writer, err := os.Create(path)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("creating file: %w", err)
 			}
 
 			defer writer.Close()
 
 			if _, err = io.Copy(writer, tr); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("writing file: %w", err)
 			}
 		}
 	}

@@ -286,7 +286,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("package strategy merge unset")
+		return nil, fmt.Errorf("package merge strategy unset")
 	}
 
 	if popts.MergeStrategy() == packmanager.StrategyExit && len(ocipack.index.manifests) > 0 {

@@ -58,7 +58,7 @@ func (dl DirectoryLayer) Compressed() (io.ReadCloser, error) {
 
 	reader, err := os.Open(layerPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening layer: %w", err)
 	}
 
 	return reader, nil
@@ -326,7 +326,7 @@ func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
 		dgst,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving image: %w", err)
 	}
 
 	manifest, err := di.handle.ResolveManifest(
@@ -335,7 +335,7 @@ func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
 		dgst,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving manifest: %w", err)
 	}
 
 	indexJson, err := json.Marshal(manifest)

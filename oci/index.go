@@ -244,7 +244,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 		bytes.NewReader(indexJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
+		return ocispec.Descriptor{}, fmt.Errorf("failed to save manifest: %w", err)
 	}
 
 	index.saved = true
