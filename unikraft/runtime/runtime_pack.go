@@ -142,6 +142,11 @@ func (elfloader *Runtime) Delete(ctx context.Context) error {
 	return elfloader.pack.Delete(ctx)
 }
 
+// Save implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) Save(ctx context.Context) error {
+	return elfloader.pack.Save(ctx)
+}
+
 // Format implements kraftkit.sh/unikraft.component.Component
 func (elfloader *Runtime) Format() pack.PackageFormat {
 	return elfloader.pack.Format()

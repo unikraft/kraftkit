@@ -40,6 +40,9 @@ type Package interface {
 	// Unpack the package into the specified directory.
 	Unpack(context.Context, string) error
 
+	// Save the state of package.
+	Save(context.Context) error
+
 	// Deletes package available locally.
 	Delete(context.Context) error
 

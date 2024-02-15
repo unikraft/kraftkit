@@ -898,6 +898,15 @@ func (ocipack *ociPackage) Delete(ctx context.Context) error {
 	return err
 }
 
+// Save implements pack.Package
+func (ocipack *ociPackage) Save(ctx context.Context) error {
+	if _, err := ocipack.manifest.Save(ctx, ocipack.imageRef(), nil); err != nil {
+		return fmt.Errorf("saving manifest: %w", err)
+	}
+
+	return nil
+}
+
 // Pull implements pack.Package
 func (ocipack *ociPackage) Format() pack.PackageFormat {
 	return OCIFormat

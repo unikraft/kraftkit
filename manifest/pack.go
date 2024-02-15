@@ -166,6 +166,11 @@ func (mp mpack) Delete(ctx context.Context) error {
 	return mp.manifest.Provider.DeleteManifest(ctx)
 }
 
+// Save implements pack.Package.
+func (mp mpack) Save(ctx context.Context) error {
+	return nil
+}
+
 // resourceCacheChecksum returns the resource path, checksum and the cache
 // location for a given Manifestt which only has one channel or one version.  If
 // the Manifest has more than one, then it is not possible to determine which
