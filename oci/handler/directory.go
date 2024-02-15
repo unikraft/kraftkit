@@ -915,6 +915,7 @@ func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string
 	// Find the index of this image
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag("latest"),
 	)
 	if err != nil {
 		return nil, err

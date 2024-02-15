@@ -118,6 +118,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	ocipack.ref, err = name.ParseReference(
 		popts.Name(),
 		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image reference: %w", err)
@@ -399,6 +400,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 
 	ocipack.ref, err = name.ParseReference(ref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
 		return nil, err
@@ -423,6 +425,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		if ocipack.ref.Context().RegistryStr() == "" {
 			ocipack.ref, err = name.ParseReference(ref,
 				name.WithDefaultRegistry(DefaultRegistry),
+				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
 				return nil, err

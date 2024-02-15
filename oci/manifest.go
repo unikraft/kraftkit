@@ -247,6 +247,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
 		return nil, err

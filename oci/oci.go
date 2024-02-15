@@ -7,4 +7,5 @@ package oci
 const (
 	DefaultRegistry  = "unikraft.org"
 	DefaultNamespace = "default"
+	DefaultTag       = "latest"
 )

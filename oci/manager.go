@@ -151,6 +151,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 
 				ref, err := name.ParseReference(fullref,
 					name.WithDefaultRegistry(domain),
+					name.WithDefaultTag(DefaultTag),
 				)
 				if err != nil {
 					log.G(ctx).
@@ -421,6 +422,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// format.
 	ref, refErr := name.ParseReference(qname,
 		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if refErr == nil {
 		qname = ref.Context().Name()
@@ -550,6 +552,7 @@ searchLocalIndexes:
 		for oref, index := range indexes {
 			ref, err := name.ParseReference(oref,
 				name.WithDefaultRegistry(DefaultRegistry),
+				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
 				log.G(ctx).
@@ -680,6 +683,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		for _, registry := range manager.registries {
 			ref, err := name.ParseReference(source,
 				name.WithDefaultRegistry(registry),
+				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
 				continue
@@ -706,6 +710,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 	isRemoteImage := func(source string) bool {
 		ref, err := name.ParseReference(source,
 			name.WithDefaultRegistry(DefaultRegistry),
+			name.WithDefaultTag(DefaultTag),
 		)
 		if err != nil {
 			return false
