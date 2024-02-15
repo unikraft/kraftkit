@@ -18,6 +18,16 @@ import (
 	gomegafmt "github.com/onsi/gomega/format"
 )
 
+func NewCurl(stdout, stderr *IOStream) *Cmd {
+	cmd := exec.Command("curl")
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	cmd.Args = append(cmd.Args, "-s", "-S", "-L", "--fail-with-body")
+
+	return &Cmd{Cmd: cmd}
+}
+
 // NewKraft returns a kraft OS command that uses the given IO streams and has
 // pre-set flags to use the given paths.
 func NewKraft(stdout, stderr *IOStream, cfgPath string) *Cmd {

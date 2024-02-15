@@ -1,0 +1,63 @@
+name: test/e2e/cloud
+
+on:
+  push:
+    branches: [stable]
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - 'internal/cli/kraft/cloud/**'
+      - '.github/workflows/cloudtests.yaml'
+
+jobs:
+  e2e-ubuntu-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.0
+          cache: false
+
+      - name: Set Go variables
+        id: goenv
+        run: |
+          {
+            echo "cache=$(go env GOCACHE)"
+            echo "modcache=$(go env GOMODCACHE)"
+            echo "mod=$(go env GOMOD)"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Go caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.goenv.outputs.cache }}
+            ${{ steps.goenv.outputs.modcache }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Run framework unit tests
+        run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
+
+      - name: Run cloud e2e tests
+        env:
+          KRAFTCLOUD_METRO: ${{ secrets.KRAFTCLOUD_METRO }}
+          KRAFTCLOUD_TOKEN: ${{ secrets.KRAFTCLOUD_TOKEN }}
+          KRAFTCLOUD_USER: ${{ secrets.KRAFTCLOUD_USER }}
+          KRAFTKIT_NO_CHECK_UPDATES: true
+          DOCKER: ''
+        run: go run github.com/onsi/ginkgo/v2/ginkgo -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
