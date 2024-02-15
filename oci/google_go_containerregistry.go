@@ -61,6 +61,10 @@ func FromGoogleV1DescriptorToOCISpec(from ...v1.Descriptor) []ocispec.Descriptor
 // Convert github.com/google/go-containerregistry/pkg/v1.Platform to
 // github.com/opencontainers/image-spec/specs-go/v1.Platform
 func FromGoogleV1PlatformToOCISpec(from *v1.Platform) *ocispec.Platform {
+	if from == nil {
+		return nil
+	}
+
 	return &ocispec.Platform{
 		Architecture: from.Architecture,
 		OS:           from.OS,
