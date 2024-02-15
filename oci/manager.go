@@ -29,6 +29,7 @@ import (
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci/cache"
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/oci/simpleauth"
 	ociutils "kraftkit.sh/oci/utils"
@@ -158,7 +159,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 					return
 				}
 
-				index, err := remote.Index(ref,
+				index, err := cache.RemoteIndex(ref,
 					remote.WithContext(ctx),
 					remote.WithAuth(&simpleauth.SimpleAuthenticator{
 						Auth: authConfig,
@@ -494,7 +495,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			WithField("ref", ref.String()).
 			Trace("getting remote index")
 
-		v1ImageIndex, err := remote.Index(ref, ropts...)
+		v1ImageIndex, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			log.G(ctx).
 				Debugf("could not get index: %v", err)
