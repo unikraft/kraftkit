@@ -243,12 +243,27 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			}
 
 			newManifestPlatChecksums[checksum] = true
+			newManifestPlatChecksums[manifest.Digest.String()] = true
 			newManifests = append(newManifests, manifest)
 		}
 
 		// Compare the local digests with the new digest and remove local digests
 		// which have the same platform checksum and zero layers.
 		for _, localManifest := range localManifests {
+			// Bypass the checksum check if the manifest digest is the same as the
+			// requested manifest, this can be safely stored in the index.  Use the
+			// same `newManifestPlatChecksums` map to keep track of whether we have
+			// performed this .
+			if _, ok := newManifestPlatChecksums[localManifest.Digest.String()]; ok {
+				continue
+			}
+
+			if localManifest.Digest.String() == dgst.String() {
+				newManifests = append(newManifests, localManifest)
+				newManifestPlatChecksums[dgst.String()] = true
+				continue
+			}
+
 			checksum, err := ociutils.PlatformChecksum(fullref, localManifest.Platform)
 			if err != nil {
 				return fmt.Errorf("could not calculate platform checksum for '%s': %w", localManifest.Digest.String(), err)
