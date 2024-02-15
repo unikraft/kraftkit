@@ -93,6 +93,7 @@ func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 			return err
 		}
 		for _, pm := range umbrella {
+			pm := pm // Go closures
 			processes = append(processes,
 				processtree.NewProcessTreeItem(
 					"updating",
