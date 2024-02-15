@@ -466,11 +466,6 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 		ropts := []remote.Option{
 			remote.WithContext(ctx),
-			remote.WithPlatform(v1.Platform{
-				OS:           query.Platform(),
-				Architecture: query.Architecture(),
-				OSFeatures:   query.KConfig(),
-			}),
 		}
 
 		// Annoyingly convert between regtypes and authn.
