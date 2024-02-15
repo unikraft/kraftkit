@@ -140,11 +140,6 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	type pmQuery struct {
-		pm    packmanager.PackageManager
-		query []packmanager.QueryOption
-	}
-
 	// If `--all` is not set and either `--plat` or `--arch` are not set,
 	// use the host platform and architecture, as the user is likely trying
 	// to pull for their system by using "sensible defaults".
@@ -165,7 +160,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	var queries []pmQuery
+	var queries [][]packmanager.QueryOption
 
 	// Are we pulling an application directory?  If so, interpret the application
 	// so we can get a list of components
@@ -203,6 +198,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 						packmanager.WithRemote(!opts.ForceCache),
 						packmanager.WithPlatform(opts.Platform),
 						packmanager.WithArchitecture(opts.Architecture),
+						packmanager.WithLocal(false),
 					}
 					packages, err = pm.Catalog(ctx, qopts...)
 					if err != nil {
@@ -292,74 +288,96 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 			return err
 		}
 		for _, c := range components {
-			queries = append(queries, pmQuery{
-				pm: pm,
-				query: []packmanager.QueryOption{
-					packmanager.WithName(c.Name()),
-					packmanager.WithVersion(c.Version()),
-					packmanager.WithSource(c.Source()),
-					packmanager.WithTypes(c.Type()),
-					packmanager.WithUpdate(!opts.ForceCache),
-					packmanager.WithPlatform(opts.Platform),
-					packmanager.WithArchitecture(opts.Architecture),
-				},
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithName(c.Name()),
+				packmanager.WithVersion(c.Version()),
+				packmanager.WithSource(c.Source()),
+				packmanager.WithTypes(c.Type()),
+				packmanager.WithRemote(!opts.ForceCache),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithArchitecture(opts.Architecture),
+				packmanager.WithLocal(false),
 			})
 		}
 
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
-			pm, compatible, err := pm.IsCompatible(ctx, arg,
-				packmanager.WithUpdate(!opts.ForceCache),
-			)
-			if err != nil || !compatible {
-				continue
-			}
-
-			queries = append(queries, pmQuery{
-				pm: pm,
-				query: []packmanager.QueryOption{
-					packmanager.WithUpdate(!opts.ForceCache),
-					packmanager.WithName(arg),
-					packmanager.WithArchitecture(opts.Architecture),
-					packmanager.WithPlatform(opts.Platform),
-					packmanager.WithKConfig(opts.KConfig),
-				},
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithRemote(!opts.ForceCache),
+				packmanager.WithName(arg),
+				packmanager.WithArchitecture(opts.Architecture),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithKConfig(opts.KConfig),
+				packmanager.WithLocal(false),
 			})
 		}
 	}
 
-	for _, c := range queries {
-		query := packmanager.NewQuery(c.query...)
-		next, err := c.pm.Catalog(ctx, c.query...)
-		if err != nil {
-			log.G(ctx).
-				WithField("format", pm.Format().String()).
-				WithField("name", query.Name()).
-				Warn(err)
-			continue
-		}
+	var found []pack.Package
+	var treeItems []*processtree.ProcessTreeItem
 
-		if len(next) == 0 {
-			log.G(ctx).Warnf("could not find %s", query.String())
-			continue
-		}
+	for _, qopts := range queries {
+		qopts := qopts
+		query := packmanager.NewQuery(qopts...)
+		treeItems = append(treeItems,
+			processtree.NewProcessTreeItem(
+				fmt.Sprintf("finding %s", query.String()),
+				"",
+				func(ctx context.Context) error {
+					more, err := pm.Catalog(ctx, qopts...)
+					if err != nil {
+						log.G(ctx).
+							WithField("format", pm.Format().String()).
+							WithField("name", query.Name()).
+							Warn(err)
+						return nil
+					}
 
-		for _, p := range next {
-			p := p
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", query.String()),
-				func(ctx context.Context, w func(progress float64)) error {
-					return p.Pull(
-						ctx,
-						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(opts.Output),
-						pack.WithPullChecksum(!opts.NoChecksum),
-						pack.WithPullCache(opts.ForceCache),
-					)
+					if len(more) == 0 {
+						log.G(ctx).Warnf("could not find %s", query.String())
+						return nil
+					}
+
+					found = append(found, more...)
+
+					return nil
 				},
-			))
-		}
+			),
+		)
+	}
+
+	tree, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithFailFast(false),
+		},
+		treeItems...,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := tree.Start(); err != nil {
+		return err
+	}
+
+	for _, p := range found {
+		p := p
+		processes = append(processes, paraprogress.NewProcess(
+			fmt.Sprintf("pulling %s", p.String()),
+			func(ctx context.Context, w func(progress float64)) error {
+				return p.Pull(
+					ctx,
+					pack.WithPullProgressFunc(w),
+					pack.WithPullWorkdir(opts.Output),
+					pack.WithPullChecksum(!opts.NoChecksum),
+					pack.WithPullCache(opts.ForceCache),
+				)
+			},
+		))
 	}
 
 	model, err := paraprogress.NewParaProgress(
