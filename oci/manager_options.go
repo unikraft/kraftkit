@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -17,6 +18,8 @@ import (
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	regtypes "github.com/docker/docker/api/types/registry"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -128,7 +131,12 @@ func WithDefaultRegistries() OCIManagerOption {
 				continue
 			}
 
-			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
+			regName, err := name.NewRegistry(manifest)
+			if err != nil {
+				continue
+			}
+
+			if _, err := transport.Ping(ctx, regName, http.DefaultTransport.(*http.Transport).Clone()); err == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
 		}

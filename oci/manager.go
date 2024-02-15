@@ -14,15 +14,13 @@ import (
 	"strings"
 	"sync"
 
-	regtypes "github.com/docker/docker/api/types/registry"
-	regtool "github.com/genuinetools/reg/registry"
-	"github.com/genuinetools/reg/repoutils"
 	"github.com/gobwas/glob"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"kraftkit.sh/config"
@@ -110,19 +108,12 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 			WithField("registry", domain).
 			Trace("querying")
 
-		reg, err := manager.registry(ctx, domain)
-		if err != nil {
-			log.G(ctx).
-				WithField("registry", domain).
-				Debugf("could not initialize registry: %v", err)
-			continue
-		}
-
+		nopts := []name.Option{}
 		authConfig := &authn.AuthConfig{}
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 
 		// Annoyingly convert between regtypes and authn.
-		if auth, ok := auths[reg.Domain]; ok {
+		if auth, ok := auths[domain]; ok {
 			authConfig.Username = auth.User
 			authConfig.Password = auth.Token
 
@@ -130,10 +121,25 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 				transport.TLSClientConfig = &tls.Config{
 					InsecureSkipVerify: true,
 				}
+				nopts = append(nopts, name.Insecure)
 			}
 		}
 
-		catalog, err := reg.Catalog(ctx, "")
+		regName, err := name.NewRegistry(domain, nopts...)
+		if err != nil {
+			log.G(ctx).
+				WithField("registry", domain).
+				Debugf("could not parse registry: %v", err)
+			continue
+		}
+
+		catalog, err := remote.Catalog(ctx, regName,
+			remote.WithContext(ctx),
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+			remote.WithTransport(transport),
+		)
 		if err != nil {
 			log.G(ctx).
 				WithField("registry", domain).
@@ -232,48 +238,6 @@ func (manager *ociManager) Pack(ctx context.Context, entity component.Component,
 // Unpack implements packmanager.PackageManager
 func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts ...packmanager.UnpackOption) ([]component.Component, error) {
 	return nil, fmt.Errorf("not implemented: oci.manager.Unpack")
-}
-
-// registry is a wrapper method for authenticating and listing OCI repositories
-// from a provided domain representing a registry.
-func (manager *ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
-	var err error
-	var auth regtypes.AuthConfig
-	insecure := false
-
-	if a, ok := manager.auths[domain]; ok {
-		insecure = !a.VerifySSL
-
-		log.G(ctx).
-			WithField("registry", domain).
-			WithField("insecure", insecure).
-			Debug("authenticating")
-
-		auth = regtypes.AuthConfig{
-			Username: a.User,
-			Password: a.Token,
-		}
-	} else {
-		auth, err = repoutils.GetAuthConfig("", "", domain)
-		if err != nil {
-			log.G(ctx).WithField("registry", domain).Warn(err)
-		}
-	}
-
-	reg, err := regtool.New(ctx, auth, regtool.Opt{
-		Domain:   domain,
-		Debug:    false,
-		SkipPing: true,
-		Insecure: insecure,
-		Headers: map[string]string{
-			"User-Agent": version.UserAgent(),
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize registry: %v", err)
-	}
-
-	return reg, nil
 }
 
 // processV1IndexManifests is an internal utility method which is able to
@@ -699,7 +663,12 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source an OCI Distrubtion Spec capable registry
 	isRegistry := func(source string) bool {
-		if reg, err := manager.registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
+		regName, err := name.NewRegistry(source)
+		if err != nil {
+			return false
+		}
+
+		if _, err := transport.Ping(ctx, regName, http.DefaultTransport.(*http.Transport).Clone()); err == nil {
 			return true
 		}
 
