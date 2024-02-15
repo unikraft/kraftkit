@@ -778,9 +778,19 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		dgst.Hex(),
 	)
 
-	if _, err := os.Stat(manifestPath); err != nil {
-		return fmt.Errorf("manifest '%s' does not exist at '%s'", dgst.String(), manifestPath)
-	}
+	// TODO(nderjung): Remove empty parent directories up until
+	// DirectoryHandlerManifestsDir.
+	defer func() {
+		log.G(ctx).
+			WithField("digest", dgst.String()).
+			Trace("deleting manifest")
+
+		if err := os.RemoveAll(manifestPath); err != nil {
+			log.G(ctx).
+				WithField("digest", dgst.String()).
+				Debug("could not delete manifest: %w", err)
+		}
+	}()
 
 	manifestReader, err := os.Open(manifestPath)
 	if err != nil {
@@ -897,9 +907,7 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		}
 	}
 
-	// TODO(nderjung): Remove empty parent directories up until
-	// DirectoryHandlerManifestsDir.
-	return os.RemoveAll(manifestPath)
+	return nil
 }
 
 // ResolveIndex implements IndexResolver.
