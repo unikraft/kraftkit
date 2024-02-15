@@ -11,6 +11,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/pack"
@@ -44,6 +45,7 @@ func PrintPackages(ctx context.Context, out io.Writer, style string, packs ...pa
 		table.AddField("NAME", cs.Bold)
 		table.AddField("VERSION", cs.Bold)
 		table.AddField("FORMAT", cs.Bold)
+		table.AddField("PULLED", cs.Bold)
 
 		if len(packs) == 0 {
 			return nil
@@ -61,6 +63,14 @@ func PrintPackages(ctx context.Context, out io.Writer, style string, packs ...pa
 			table.AddField(pack.Name(), nil)
 			table.AddField(pack.Version(), nil)
 			table.AddField(pack.Format().String(), nil)
+			pulledAt := "never"
+			pulled, pulledTime, err := pack.PulledAt(ctx)
+			if err != nil {
+				pulledAt = err.Error()
+			} else if pulled {
+				pulledAt = humanize.Time(pulledTime)
+			}
+			table.AddField(pulledAt, nil)
 
 			for _, v := range pack.Columns() {
 				table.AddField(v.Value, nil)
