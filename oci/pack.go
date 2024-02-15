@@ -5,6 +5,7 @@
 package oci
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -21,9 +22,11 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
@@ -32,6 +35,7 @@ import (
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci/cache"
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/oci/simpleauth"
 	ociutils "kraftkit.sh/oci/utils"
@@ -54,6 +58,7 @@ type ociPackage struct {
 	ref      name.Reference
 	index    *Index
 	manifest *Manifest
+	auths    map[string]config.AuthConfig
 
 	// Embedded attributes which represent target.Target
 	arch      arch.Architecture
@@ -364,6 +369,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 
 	ocipack := ociPackage{
 		handle: handle,
+		auths:  auths,
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
@@ -423,7 +429,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 			}
 		}
 
-		v1ImageIndex, err := remote.Index(ocipack.ref,
+		v1ImageIndex, err := cache.RemoteIndex(ocipack.ref,
 			remote.WithContext(ctx),
 			remote.WithAuth(&simpleauth.SimpleAuthenticator{
 				Auth: authConfig,
@@ -460,29 +466,95 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		)
 
 		ocipack.index.desc = &indexDesc
+		eg, egCtx := errgroup.WithContext(ctx)
 
-		for _, descriptor := range index.Manifests {
-			descriptor := descriptor
+		for i := range index.Manifests {
+			eg.Go(func(i int) func() error {
+				return func() error {
+					descriptor := index.Manifests[i]
 
-			manifest, err := NewManifest(ctx, handle)
-			if err != nil {
-				return nil, fmt.Errorf("could not instantiate new manifest: %w", err)
-			}
+					manifest, err := NewManifest(egCtx, handle)
+					if err != nil {
+						return fmt.Errorf("could not instantiate new manifest: %w", err)
+					}
 
-			spec, err := handle.ResolveManifest(ctx, "", descriptor.Digest)
-			if err == nil {
-				manifest.manifest = spec
-			}
+					ref, err := name.ParseReference(
+						fmt.Sprintf("%s@%s", ocipack.ref.Context().Name(), descriptor.Digest),
+					)
+					if err != nil {
+						return fmt.Errorf("could not parse reference: %w", err)
+					}
 
-			manifest.desc = &descriptor
-			manifest.config.Architecture = descriptor.Platform.Architecture
-			manifest.config.Platform = *descriptor.Platform
-			manifest.manifest.Config.Platform = descriptor.Platform
-			ocipack.index.manifests = append(ocipack.index.manifests, manifest)
+					spec, err := handle.ResolveManifest(egCtx, "", descriptor.Digest)
+					if err == nil {
+						manifest.manifest = spec
+						manifest.config.Architecture = descriptor.Platform.Architecture
+						manifest.config.Platform = *descriptor.Platform
+					} else {
+						manifest.v1Image, err = cache.RemoteImage(
+							ref,
+							remote.WithPlatform(v1.Platform{
+								Architecture: descriptor.Platform.Architecture,
+								OS:           descriptor.Platform.OS,
+								OSFeatures:   descriptor.Platform.OSFeatures,
+							}),
+							remote.WithContext(egCtx),
+							remote.WithAuth(&simpleauth.SimpleAuthenticator{
+								Auth: authConfig,
+							}),
+							remote.WithTransport(transport),
+						)
+						if err != nil {
+							return fmt.Errorf("getting image: %w", err)
+						}
 
-			if manifest.desc.Digest.String() == dgst.String() {
-				ocipack.manifest = manifest
-			}
+						b, err := manifest.v1Image.RawManifest()
+						if err != nil {
+							return fmt.Errorf("getting manifest: %w", err)
+						}
+
+						if err := json.Unmarshal(b, &manifest.manifest); err != nil {
+							return fmt.Errorf("unmarshalling manifest: %w", err)
+						}
+
+						v1Manifest, err := v1.ParseManifest(bytes.NewReader(b))
+						if err != nil {
+							return fmt.Errorf("parsing manifest: %w", err)
+						}
+
+						for _, desc := range v1Manifest.Layers {
+							manifest.layers = append(manifest.layers, &Layer{
+								blob: &Blob{
+									desc: FromGoogleV1DescriptorToOCISpec(desc)[0],
+								},
+							})
+						}
+
+						b, err = manifest.v1Image.RawConfigFile()
+						if err != nil {
+							return fmt.Errorf("getting config: %w", err)
+						}
+
+						if err := json.Unmarshal(b, manifest.config); err != nil {
+							return fmt.Errorf("unmarshalling config: %w", err)
+						}
+					}
+
+					manifest.desc = &descriptor
+					manifest.saved = false
+					ocipack.index.manifests = append(ocipack.index.manifests, manifest)
+
+					if manifest.desc.Digest.String() == dgst.String() {
+						ocipack.manifest = manifest
+					}
+
+					return nil
+				}
+			}(i))
+		}
+
+		if err := eg.Wait(); err != nil {
+			return nil, err
 		}
 
 		if ocipack.manifest == nil {
