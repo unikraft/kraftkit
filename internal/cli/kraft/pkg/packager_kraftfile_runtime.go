@@ -20,6 +20,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	ukarch "kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
@@ -91,6 +92,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
+	var selected *pack.Package
 	var packs []pack.Package
 
 	treemodel, err := processtree.NewProcessTree(
@@ -101,6 +103,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
 			),
 			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
 		},
 		processtree.NewProcessTreeItem(
 			fmt.Sprintf(
@@ -110,29 +113,30 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			),
 			"",
 			func(ctx context.Context) error {
+				var plat, arch string
+				var kconfigs []string
+
 				if targ != nil {
-					var kconfigs []string
 					for _, kc := range targ.KConfig() {
 						kconfigs = append(kconfigs, kc.String())
 					}
 
-					qopts = append(qopts,
-						packmanager.WithPlatform(targ.Platform().Name()),
-						packmanager.WithArchitecture(targ.Architecture().Name()),
-						packmanager.WithKConfig(kconfigs),
-					)
+					plat = targ.Platform().Name()
+					arch = targ.Architecture().Name()
 				} else {
 					if opts.Platform != "" {
-						qopts = append(qopts,
-							packmanager.WithPlatform(opts.Platform),
-						)
+						plat = opts.Platform
 					}
 					if opts.Architecture != "" {
-						qopts = append(qopts,
-							packmanager.WithArchitecture(opts.Architecture),
-						)
+						arch = opts.Architecture
 					}
 				}
+
+				qopts = append(qopts,
+					packmanager.WithArchitecture(arch),
+					packmanager.WithPlatform(plat),
+					packmanager.WithKConfig(kconfigs),
+				)
 
 				packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
 				if err != nil {
@@ -140,53 +144,10 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				} else if len(packs) == 0 {
 					// Try again with a remote update request.  Save this to qopts in case we
 					// need to call `Catalog` again.
-					qopts = append(qopts, packmanager.WithUpdate(true))
-					packs, err = opts.pm.Catalog(ctx, qopts...)
+					packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(true))...)
 					if err != nil {
 						return fmt.Errorf("could not query catalog: %w", err)
-					} else if len(packs) == 0 {
-						return fmt.Errorf("could not find runtime '%s'", opts.Project.Runtime().Name())
 					}
-				}
-
-				if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
-					// At this point, we have queried the registry without asking for the
-					// platform and architecture and received multiple options.  Re-query the
-					// catalog with the host architecture and platform.
-
-					if opts.Architecture == "" {
-						opts.Architecture, err = ukarch.HostArchitecture()
-						if err != nil {
-							return fmt.Errorf("could not get host architecture: %w", err)
-						}
-					}
-					if opts.Platform == "" {
-						plat, _, err := platform.Detect(ctx)
-						if err != nil {
-							return fmt.Errorf("could not get host platform: %w", err)
-						}
-
-						opts.Platform = plat.String()
-					}
-
-					qopts = append(qopts,
-						packmanager.WithPlatform(opts.Platform),
-						packmanager.WithArchitecture(opts.Architecture),
-					)
-
-					packs, err = opts.pm.Catalog(ctx, qopts...)
-					if err != nil {
-						return fmt.Errorf("could not query catalog: %w", err)
-					} else if len(packs) == 0 {
-						return fmt.Errorf("coud not find runtime '%s'", opts.Project.Runtime().Name())
-					} else if len(packs) > 1 {
-						return fmt.Errorf("could not find runtime: too many options")
-					}
-
-					log.G(ctx).
-						WithField("arch", opts.Architecture).
-						WithField("plat", opts.Platform).
-						Info("using")
 				}
 
 				return nil
@@ -201,6 +162,138 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, err
 	}
 
+	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+		// At this point, we have queried the registry without asking for the
+		// platform and architecture and received multiple options.  Re-query the
+		// catalog with the host architecture and platform.
+
+		if opts.Architecture == "" {
+			opts.Architecture, err = ukarch.HostArchitecture()
+			if err != nil {
+				return nil, fmt.Errorf("could not get host architecture: %w", err)
+			}
+		}
+		if opts.Platform == "" {
+			plat, _, err := platform.Detect(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not get host platform: %w", err)
+			}
+
+			opts.Platform = plat.String()
+		}
+
+		qopts = append(qopts,
+			packmanager.WithPlatform(opts.Platform),
+			packmanager.WithArchitecture(opts.Architecture),
+		)
+
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				fmt.Sprintf(
+					"searching for %s:%s",
+					opts.Project.Runtime().Name(),
+					opts.Project.Runtime().Version(),
+				),
+				"",
+				func(ctx context.Context) error {
+					packs, err = opts.pm.Catalog(ctx, qopts...)
+					if err != nil {
+						return fmt.Errorf("could not query catalog: %w", err)
+					}
+					return nil
+				},
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := treemodel.Start(); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(packs) == 0 {
+		return nil, fmt.Errorf(
+			"coud not find runtime '%s:%s' (%s/%s)",
+			opts.Project.Runtime().Name(),
+			opts.Project.Runtime().Version(),
+			opts.Platform,
+			opts.Architecture,
+		)
+	} else if len(packs) == 1 {
+		selected = &packs[0]
+	} else if len(packs) > 1 {
+		selected, err = selection.Select[pack.Package]("multiple runtimes available", packs...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	log.G(ctx).
+		WithField("arch", opts.Architecture).
+		WithField("plat", opts.Platform).
+		Info("using")
+
+	runtime := *selected
+	pulled, _, _ := runtime.PulledAt(ctx)
+
+	// Temporarily save the runtime package.
+	if err := runtime.Save(ctx); err != nil {
+		return nil, fmt.Errorf("could not save runtime package: %w", err)
+	}
+
+	// Remove the cached runtime package reference if it was not previously
+	// pulled.
+	if !pulled {
+		defer func() {
+			if err := runtime.Delete(ctx); err != nil {
+				log.G(ctx).Debugf("could not delete intermediate runtime package: %s", err.Error())
+			}
+		}()
+	}
+
+	if !pulled && !opts.NoPull {
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", packs[0].String()),
+				func(ctx context.Context, w func(progress float64)) error {
+					popts := []pack.PullOption{}
+					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+						popts = append(popts, pack.WithPullProgressFunc(w))
+					}
+
+					return packs[0].Pull(
+						ctx,
+						popts...,
+					)
+				},
+			)},
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return nil, err
+		}
+	}
+
 	// Create a temporary directory we can use to store the artifacts from
 	// pulling and extracting the identified package.
 	tempDir, err := os.MkdirTemp("", "kraft-pkg-")
@@ -212,42 +305,10 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		os.RemoveAll(tempDir)
 	}()
 
-	paramodel, err := paraprogress.NewParaProgress(
-		ctx,
-		[]*paraprogress.Process{paraprogress.NewProcess(
-			fmt.Sprintf("pulling %s", packs[0].String()),
-			func(ctx context.Context, w func(progress float64)) error {
-				popts := []pack.PullOption{
-					pack.WithPullWorkdir(tempDir),
-				}
-				if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
-					popts = append(popts, pack.WithPullProgressFunc(w))
-				}
-
-				return packs[0].Pull(
-					ctx,
-					popts...,
-				)
-			},
-		)},
-		paraprogress.IsParallel(false),
-		paraprogress.WithRenderer(
-			log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-		),
-		paraprogress.WithFailFast(true),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := paramodel.Start(); err != nil {
-		return nil, err
-	}
-
 	// Crucially, the catalog should return an interface that also implements
 	// target.Target.  This demonstrates that the implementing package can
 	// resolve application kernels.
-	targ, ok := packs[0].(target.Target)
+	targ, ok := runtime.(target.Target)
 	if !ok {
 		return nil, fmt.Errorf("package does not convert to target")
 	}

@@ -44,6 +44,7 @@ type PkgOptions struct {
 	Kraftfile    string                    `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Name         string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
+	NoPull       bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`
 	Output       string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
 	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Project      app.Application           `noattribute:"true"`
