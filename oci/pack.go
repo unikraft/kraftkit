@@ -797,7 +797,7 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return fmt.Errorf("calculating checksum for '%s': %w", ocipack.imageRef(), err)
 	}
 
-	manifests, err := ocipack.handle.ListManifests((ctx))
+	manifests, err := ocipack.handle.ListManifests(ctx)
 	if err != nil {
 		return fmt.Errorf("listing existing manifests: %w", err)
 	}
