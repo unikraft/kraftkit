@@ -310,7 +310,7 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 	return func() tea.Msg {
 		item := item // golang closures
 
-		if pt.norender {
+		if pt.norender && !pt.hide {
 			log.G(item.ctx).Info(item.textLeft)
 		}
 
