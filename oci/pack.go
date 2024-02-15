@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/google/go-containerregistry/pkg/authn"
 	gcrlogs "github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -645,10 +646,23 @@ func (ocipack *ociPackage) Metadata() interface{} {
 
 // Columns implements pack.Package
 func (ocipack *ociPackage) Columns() []tableprinter.Column {
+	size := "n/a"
+
+	if len(ocipack.manifest.manifest.Layers) > 0 {
+		var total int64 = 0
+
+		for _, layer := range ocipack.manifest.manifest.Layers {
+			total += layer.Size
+		}
+
+		size = humanize.Bytes(uint64(total))
+	}
+
 	return []tableprinter.Column{
 		{Name: "manifest", Value: ocipack.manifest.desc.Digest.String()[7:14]},
 		{Name: "index", Value: ocipack.index.desc.Digest.String()[7:14]},
 		{Name: "plat", Value: fmt.Sprintf("%s/%s", ocipack.Platform().Name(), ocipack.Architecture().Name())},
+		{Name: "size", Value: size},
 	}
 }
 
