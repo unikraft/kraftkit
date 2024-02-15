@@ -23,6 +23,7 @@ import (
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci/cache"
 	"kraftkit.sh/oci/simpleauth"
 	ociutils "kraftkit.sh/oci/utils"
 
@@ -129,13 +130,14 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex:
-		log.G(ctx).
-			WithField("digest", dgst.String()).
-			Debugf("pulling index")
-
-		indexV1, err := remote.Index(ref, ropts...)
+		indexV1, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote index: %w", err)
+		}
+
+		indexDgst, err := indexV1.Digest()
+		if err != nil {
+			return fmt.Errorf("could not get index digest: %w", err)
 		}
 
 		localManifests := []ocispec.Descriptor{}
@@ -313,115 +315,121 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 	case ocispec.MediaTypeImageManifest:
-		log.G(ctx).
-			WithField("digest", dgst.String()).
-			Debugf("pulling manifest")
-
-		image, err := remote.Image(ref, ropts...)
+		v1Index, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote manifest: %w", err)
 		}
 
-		manifestRaw, err := image.RawManifest()
+		// Only pull the manifest if does not exist locally.
+		manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
 		if err != nil {
-			return fmt.Errorf("could not get raw manifest: %w", err)
-		}
+			manifestPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerDigestsDir,
+				dgst.Algorithm().String(),
+				dgst.Encoded(),
+			)
 
-		manifest := ocispec.Manifest{}
-		if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
-			return fmt.Errorf("could not unmarshal raw manifest: %w", err)
-		}
+			hash, err := v1.NewHash(dgst.String())
+			if err != nil {
+				return fmt.Errorf("could not calculate image digest: %w", err)
+			}
+			image, err := v1Index.Image(hash)
+			if err != nil {
+				return fmt.Errorf("could not retrieve image: %w", err)
+			}
 
-		manifestPath := filepath.Join(
-			handle.path,
-			DirectoryHandlerDigestsDir,
-			dgst.Algorithm().String(),
-			dgst.Encoded(),
-		)
+			log.G(ctx).
+				WithField("digest", dgst.String()).
+				Debugf("pulling manifest")
 
-		if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
-			return fmt.Errorf("could not make manifest parent directories: %w", err)
-		}
+			manifestRaw, err := image.RawManifest()
+			if err != nil {
+				return fmt.Errorf("could not get raw manifest: %w", err)
+			}
 
-		manifestWriter, err := os.Create(manifestPath)
-		if err != nil {
-			return fmt.Errorf("could not get manifest file descriptor: %w", err)
-		}
+			if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
+				return fmt.Errorf("could not unmarshal raw manifest: %w", err)
+			}
 
-		defer manifestWriter.Close()
+			if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
+				return fmt.Errorf("could not make manifest parent directories: %w", err)
+			}
 
-		if _, err = manifestWriter.Write(manifestRaw); err != nil {
-			return fmt.Errorf("could not write manifest: %w", err)
-		}
+			manifestWriter, err := os.Create(manifestPath)
+			if err != nil {
+				return fmt.Errorf("could not get manifest file descriptor: %w", err)
+			}
 
-		configDgst, err := image.ConfigName()
-		if err != nil {
-			return fmt.Errorf("could not get config digest: %w", err)
-		}
+			defer manifestWriter.Close()
 
-		log.G(ctx).
-			WithField("digest", configDgst.String()).
-			Debugf("pulling config")
-
-		configRaw, err := image.RawConfigFile()
-		if err != nil {
-			return fmt.Errorf("could not get raw config: %w", err)
-		}
-
-		config := ocispec.Image{}
-		if err = json.Unmarshal(configRaw, &config); err != nil {
-			return fmt.Errorf("could not unmarshal raw config: %w", err)
+			if _, err = manifestWriter.Write(manifestRaw); err != nil {
+				return fmt.Errorf("could not write manifest: %w", err)
+			}
 		}
 
 		configPath := filepath.Join(
 			handle.path,
 			DirectoryHandlerDigestsDir,
-			configDgst.Algorithm,
-			configDgst.Hex,
+			manifest.Config.Digest.Algorithm().String(),
+			manifest.Config.Digest.Hex(),
 		)
 
-		if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
-			return fmt.Errorf("could not create config parent directories: %w", err)
-		}
+		// Only pull the config if does not exist locally.
+		if _, err := os.Stat(configPath); err != nil {
+			// NOTE(nderjung): Unfortunately, the `remote` package does not support
+			// simply `Get`ting the config, so we must traverse backwards to the image
+			// (and therefore make a remote request to an image manifest, even if we
+			// may have a copy of it locally, adding 1 additional external request to
+			// the registry).
 
-		configWriter, err := os.Create(configPath)
-		if err != nil {
-			return fmt.Errorf("could not get config file descriptor: %w", err)
-		}
+			log.G(ctx).
+				WithField("digest", manifest.Config.Digest.String()).
+				Debugf("pulling config")
 
-		defer configWriter.Close()
+			image, err := remote.Image(ref, ropts...)
+			if err != nil {
+				return fmt.Errorf("could not retrieve remote manifest: %w", err)
+			}
 
-		if _, err = configWriter.Write(configRaw); err != nil {
-			return fmt.Errorf("could not write raw config: %w", err)
-		}
+			configRaw, err := image.RawConfigFile()
+			if err != nil {
+				return fmt.Errorf("could not get raw config: %w", err)
+			}
 
-		layers, err := image.Layers()
-		if err != nil {
-			return fmt.Errorf("could not get manifest layers: %w", err)
+			config := ocispec.Image{}
+			if err = json.Unmarshal(configRaw, &config); err != nil {
+				return fmt.Errorf("could not unmarshal raw config: %w", err)
+			}
+
+			if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
+				return fmt.Errorf("could not create config parent directories: %w", err)
+			}
+
+			configWriter, err := os.Create(configPath)
+			if err != nil {
+				return fmt.Errorf("could not get config file descriptor: %w", err)
+			}
+
+			defer configWriter.Close()
+
+			if _, err = configWriter.Write(configRaw); err != nil {
+				return fmt.Errorf("could not write raw config: %w", err)
+			}
 		}
 
 		// First calculate the total size of all layers.  This is done so that the
 		// onProgress callback correctly reports
 		var totalSize int64
-		for _, layer := range layers {
-			size, err := layer.Size()
-			if err != nil {
-				return fmt.Errorf("could not get layer size: %w", err)
-			}
-
-			totalSize += size
+		for _, layer := range manifest.Layers {
+			totalSize += layer.Size
 		}
 
-		for _, layer := range layers {
-			layerDgst, err := layer.Digest()
-			if err != nil {
-				return fmt.Errorf("could not get layer digest: %w", err)
-			}
-
+		for _, layer := range manifest.Layers {
 			if err := handle.PullDigest(ctx,
 				ocispec.MediaTypeImageLayer,
 				fullref,
-				digest.NewDigestFromHex(layerDgst.Algorithm, layerDgst.Hex),
+				layer.Digest,
 				plat,
 				func(size float64) {
 					onProgress(size / float64(totalSize))
