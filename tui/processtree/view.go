@@ -57,7 +57,7 @@ func (pt ProcessTree) View() string {
 }
 
 func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
-	if pti.status == StatusSuccess && stm.hide {
+	if pti.status == StatusSuccess && stm.hide || ((pti.status == StatusFailed || pti.status == StatusFailedChild) && stm.hideError) {
 		return ""
 	}
 
@@ -152,14 +152,17 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	// Print the logs for this item
 	truncate := 0
 	loglen := len(pti.logs) - LOGLEN
-	if pti.status == StatusFailed {
+	if pti.status == StatusFailed && !pti.hideError {
 		truncate = 0
 	} else if loglen > 0 {
 		truncate = loglen
 	}
-	if pti.status != StatusSuccess {
-		for _, line := range pti.logs[truncate:] {
-			s += line + "\n"
+	if pti.status == StatusRunning || ((pti.status == StatusFailed || pti.status == StatusFailedChild) && pti.hideError) {
+		for i, line := range pti.logs[truncate:] {
+			s += line
+			if i < len(pti.logs[truncate:]) {
+				s += "\n"
+			}
 		}
 	}
 

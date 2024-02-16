@@ -61,27 +61,29 @@ type ProcessTreeItem struct {
 	timeout   time.Duration
 	err       error
 	ellipsis  string
+	hideError bool
 }
 
 type ProcessTree struct {
-	verb     string
-	channel  chan *ProcessTreeItem
-	tree     []*ProcessTreeItem
-	quitting bool
-	ctx      context.Context
-	timer    stopwatch.Model
-	width    int
-	rightPad int
-	parallel bool
-	norender bool
-	finished int
-	total    int
-	err      error
-	errChan  chan error
-	failFast bool
-	oldOut   iostreams.FileWriter
-	hide     bool
-	timeout  time.Duration
+	verb      string
+	channel   chan *ProcessTreeItem
+	tree      []*ProcessTreeItem
+	quitting  bool
+	ctx       context.Context
+	timer     stopwatch.Model
+	width     int
+	rightPad  int
+	parallel  bool
+	norender  bool
+	finished  int
+	total     int
+	err       error
+	errChan   chan error
+	failFast  bool
+	oldOut    iostreams.FileWriter
+	hide      bool
+	hideError bool
+	timeout   time.Duration
 }
 
 func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*ProcessTreeItem) (*ProcessTree, error) {
@@ -90,13 +92,14 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 	}
 
 	pt := &ProcessTree{
-		tree:     tree,
-		ctx:      ctx,
-		timer:    stopwatch.NewWithInterval(time.Millisecond * 100),
-		channel:  make(chan *ProcessTreeItem),
-		errChan:  make(chan error),
-		finished: 0,
-		oldOut:   iostreams.G(ctx).Out,
+		tree:      tree,
+		ctx:       ctx,
+		timer:     stopwatch.NewWithInterval(time.Millisecond * 100),
+		channel:   make(chan *ProcessTreeItem),
+		errChan:   make(chan error),
+		finished:  0,
+		oldOut:    iostreams.G(ctx).Out,
+		hideError: false,
 	}
 
 	for _, opt := range opts {
@@ -111,6 +114,7 @@ func NewProcessTree(ctx context.Context, opts []ProcessTreeOption, tree ...*Proc
 		total++
 		item.norender = pt.norender
 		item.timeout = pt.timeout
+		item.hideError = pt.hideError
 
 		if pt.norender {
 			item.ctx = pt.ctx
