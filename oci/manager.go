@@ -465,7 +465,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		if err != nil {
 			log.G(ctx).
 				Debugf("could not get index: %v", err)
-			goto searchRemoteIndexes
+			goto resolveLocalIndex
 		}
 
 		v1IndexManifest, err := v1ImageIndex.IndexManifest()
@@ -473,7 +473,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			log.G(ctx).
 				WithField("ref", ref).
 				Tracef("could not access the index's manifest object: %s", err.Error())
-			goto searchRemoteIndexes
+			goto resolveLocalIndex
 		}
 
 		for checksum, pack := range processV1IndexManifests(ctx,
@@ -492,7 +492,6 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 	}
 
-searchRemoteIndexes:
 	if query.Remote() {
 		more, err := manager.update(ctx, auths)
 		if err != nil {
@@ -500,11 +499,38 @@ searchRemoteIndexes:
 				Debugf("could not update: %v", err)
 		} else {
 			for checksum, pack := range more {
+				fullref := pack.Name()
+
+				if qglob != nil && !qglob.Match(fullref) {
+					log.G(ctx).
+						WithField("want", qname).
+						WithField("got", fullref).
+						Trace("skipping manifest: glob does not match")
+					continue
+				} else if qglob == nil {
+					if len(qversion) > 0 && len(qname) > 0 {
+						if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+							log.G(ctx).
+								WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+								WithField("got", fullref).
+								Trace("skipping manifest: name does not match")
+							continue
+						}
+					} else if len(qname) > 0 && fullref != qname {
+						log.G(ctx).
+							WithField("want", qname).
+							WithField("got", fullref).
+							Trace("skipping manifest: name does not match")
+						continue
+					}
+				}
+
 				packs[checksum] = pack
 			}
 		}
 	}
 
+resolveLocalIndex:
 	// If the query is local and the reference is a fully qualified OCI reference,
 	// attempt to resolve the exact index and generate packages from it.
 	if query.Local() && len(qversion) > 0 && len(qname) > 0 {
