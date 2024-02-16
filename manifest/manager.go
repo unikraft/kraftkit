@@ -134,6 +134,10 @@ func (m *manifestManager) Update(ctx context.Context) error {
 }
 
 func (m *manifestManager) saveIndex(ctx context.Context, index *ManifestIndex) error {
+	if index == nil {
+		return nil
+	}
+
 	m.indexCache = new(ManifestIndex)
 	*m.indexCache = *index
 
