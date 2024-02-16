@@ -30,9 +30,9 @@ import (
 type PullOptions struct {
 	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	Format       string   `long:"as" short:"f" usage:"Set the package format" default:"auto"`
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Manager      string   `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
 	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
@@ -137,8 +137,8 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	// Force a particular package manager
-	if len(opts.Manager) > 0 && opts.Manager != "auto" {
-		pm, err = pm.From(pack.PackageFormat(opts.Manager))
+	if len(opts.Format) > 0 && opts.Format != "auto" {
+		pm, err = pm.From(pack.PackageFormat(opts.Format))
 		if err != nil {
 			return err
 		}
