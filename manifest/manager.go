@@ -118,7 +118,6 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 			log.G(ctx).Warnf("%s", err)
 		}
 
-		index.Origin = manipath
 		index.Manifests = append(index.Manifests, manifests...)
 	}
 

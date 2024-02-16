@@ -403,7 +403,6 @@ func findManifestsFromSource(ctx context.Context, lastSource, source string, mop
 				}
 			} else {
 				mu.Lock()
-				newManifests[i].Origin = source // Save the origin of the manifest
 				newManifests[i].Provider = provider
 				manifests = append(manifests, newManifests[i])
 				mu.Unlock()
