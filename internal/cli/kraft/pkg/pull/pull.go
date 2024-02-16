@@ -340,7 +340,8 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					}
 
 					if len(more) == 0 {
-						return fmt.Errorf("could not find %s", query.String())
+						opts.Update = true
+						return fmt.Errorf("could not find local reference for %s", query.String())
 					}
 
 					found = append(found, more...)
@@ -357,6 +358,8 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 			processtree.IsParallel(parallel),
 			processtree.WithRenderer(norender),
 			processtree.WithFailFast(false),
+			processtree.WithHideOnSuccess(true),
+			processtree.WithHideError(!opts.Update),
 		},
 		treeItems...,
 	)
@@ -364,8 +367,58 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if err := tree.Start(); err != nil {
-		return err
+	// Try again with a remote search
+	if err := tree.Start(); err != nil && (len(found) == 0 || !opts.Update) {
+		treeItems = []*processtree.ProcessTreeItem{}
+		for _, qopts := range queries {
+			qopts := qopts
+			query := packmanager.NewQuery(qopts...)
+			treeItems = append(treeItems,
+				processtree.NewProcessTreeItem(
+					fmt.Sprintf("finding %s", query.String()),
+					"",
+					func(ctx context.Context) error {
+						more, err := pm.Catalog(ctx, append(
+							qopts,
+							packmanager.WithRemote(true),
+						)...)
+						if err != nil {
+							log.G(ctx).
+								WithField("format", pm.Format().String()).
+								WithField("name", query.Name()).
+								Warn(err)
+							return nil
+						}
+
+						if len(more) == 0 {
+							return fmt.Errorf("could not find %s", query.String())
+						}
+
+						found = append(found, more...)
+
+						return nil
+					},
+				),
+			)
+		}
+
+		tree, err = processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
+				processtree.WithFailFast(false),
+				processtree.WithHideOnSuccess(true),
+			},
+			treeItems...,
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := tree.Start(); err != nil {
+			return err
+		}
 	}
 
 	for _, p := range found {
