@@ -104,6 +104,7 @@ func (mp mpack) Columns() []tableprinter.Column {
 		{Name: "description", Value: mp.manifest.Description},
 		{Name: "channels", Value: strings.Join(channels, ", ")},
 		{Name: "versions", Value: strings.Join(versions, ", ")},
+		{Name: "origin", Value: mp.manifest.Origin},
 	}
 }
 
