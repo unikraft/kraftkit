@@ -128,6 +128,10 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		opts.Output = opts.Workdir
 	}
 
+	if len(args) == 0 {
+		args = []string{opts.Workdir}
+	}
+
 	pm := packmanager.G(ctx)
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
@@ -184,102 +188,105 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if _, err = project.Components(ctx); err != nil {
-			// Pull the template from the package manager
 			var packages []pack.Package
-			search := processtree.NewProcessTreeItem(
-				fmt.Sprintf("finding %s",
-					unikraft.TypeNameVersion(project.Template()),
-				), "",
-				func(ctx context.Context) error {
-					qopts := []packmanager.QueryOption{
-						packmanager.WithName(project.Template().Name()),
-						packmanager.WithTypes(unikraft.ComponentTypeApp),
-						packmanager.WithVersion(project.Template().Version()),
-						packmanager.WithRemote(!opts.ForceCache),
-						packmanager.WithPlatform(opts.Platform),
-						packmanager.WithArchitecture(opts.Architecture),
-						packmanager.WithLocal(false),
-					}
-					packages, err = pm.Catalog(ctx, qopts...)
-					if err != nil {
-						return err
-					}
 
-					if len(packages) == 0 {
-						return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
-					} else if len(packages) > 1 {
-						return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
-					}
-					return nil
-				},
-			)
+			// Pull the template from the package manager
+			if project.Template() != nil {
+				search := processtree.NewProcessTreeItem(
+					fmt.Sprintf("finding %s",
+						unikraft.TypeNameVersion(project.Template()),
+					), "",
+					func(ctx context.Context) error {
+						qopts := []packmanager.QueryOption{
+							packmanager.WithName(project.Template().Name()),
+							packmanager.WithTypes(unikraft.ComponentTypeApp),
+							packmanager.WithVersion(project.Template().Version()),
+							packmanager.WithRemote(!opts.ForceCache),
+							packmanager.WithPlatform(opts.Platform),
+							packmanager.WithArchitecture(opts.Architecture),
+							packmanager.WithLocal(false),
+						}
+						packages, err = pm.Catalog(ctx, qopts...)
+						if err != nil {
+							return err
+						}
 
-			treemodel, err := processtree.NewProcessTree(
+						if len(packages) == 0 {
+							return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
+						} else if len(packages) > 1 {
+							return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
+						}
+						return nil
+					},
+				)
+
+				treemodel, err := processtree.NewProcessTree(
+					ctx,
+					[]processtree.ProcessTreeOption{
+						processtree.IsParallel(parallel),
+						processtree.WithRenderer(norender),
+						processtree.WithFailFast(true),
+					},
+					[]*processtree.ProcessTreeItem{search}...,
+				)
+				if err != nil {
+					return err
+				}
+
+				if err := treemodel.Start(); err != nil {
+					return fmt.Errorf("could not complete search: %v", err)
+				}
+
+				proc := paraprogress.NewProcess(
+					fmt.Sprintf("pulling %s",
+						unikraft.TypeNameVersion(packages[0]),
+					),
+					func(ctx context.Context, w func(progress float64)) error {
+						return packages[0].Pull(
+							ctx,
+							pack.WithPullProgressFunc(w),
+							pack.WithPullWorkdir(opts.Output),
+							// pack.WithPullChecksum(!opts.NoChecksum),
+							// pack.WithPullCache(!opts.NoCache),
+						)
+					},
+				)
+
+				processes = append(processes, proc)
+
+				paramodel, err := paraprogress.NewParaProgress(
+					ctx,
+					processes,
+					paraprogress.IsParallel(parallel),
+					paraprogress.WithRenderer(norender),
+					paraprogress.WithFailFast(true),
+				)
+				if err != nil {
+					return err
+				}
+
+				if err := paramodel.Start(); err != nil {
+					return fmt.Errorf("could not pull all components: %v", err)
+				}
+			}
+
+			templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
+			if err != nil {
+				return err
+			}
+
+			templateProject, err := app.NewProjectFromOptions(
 				ctx,
-				[]processtree.ProcessTreeOption{
-					processtree.IsParallel(parallel),
-					processtree.WithRenderer(norender),
-					processtree.WithFailFast(true),
-				},
-				[]*processtree.ProcessTreeItem{search}...,
+				append(popts, app.WithProjectWorkdir(templateWorkdir))...,
 			)
 			if err != nil {
 				return err
 			}
 
-			if err := treemodel.Start(); err != nil {
-				return fmt.Errorf("could not complete search: %v", err)
-			}
-
-			proc := paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s",
-					unikraft.TypeNameVersion(packages[0]),
-				),
-				func(ctx context.Context, w func(progress float64)) error {
-					return packages[0].Pull(
-						ctx,
-						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(opts.Output),
-						// pack.WithPullChecksum(!opts.NoChecksum),
-						// pack.WithPullCache(!opts.NoCache),
-					)
-				},
-			)
-
-			processes = append(processes, proc)
-
-			paramodel, err := paraprogress.NewParaProgress(
-				ctx,
-				processes,
-				paraprogress.IsParallel(parallel),
-				paraprogress.WithRenderer(norender),
-				paraprogress.WithFailFast(true),
-			)
+			project, err = templateProject.MergeTemplate(ctx, project)
 			if err != nil {
 				return err
 			}
-
-			if err := paramodel.Start(); err != nil {
-				return fmt.Errorf("could not pull all components: %v", err)
-			}
-		}
-
-		templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
-		if err != nil {
-			return err
-		}
-
-		templateProject, err := app.NewProjectFromOptions(
-			ctx,
-			append(popts, app.WithProjectWorkdir(templateWorkdir))...,
-		)
-		if err != nil {
-			return err
-		}
-
-		project, err = templateProject.MergeTemplate(ctx, project)
-		if err != nil {
-			return err
 		}
 
 		// List the components
