@@ -340,8 +340,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					}
 
 					if len(more) == 0 {
-						log.G(ctx).Warnf("could not find %s", query.String())
-						return nil
+						return fmt.Errorf("could not find %s", query.String())
 					}
 
 					found = append(found, more...)
