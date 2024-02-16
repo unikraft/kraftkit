@@ -30,7 +30,6 @@ import (
 type PullOptions struct {
 	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
-	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Manager      string   `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
@@ -38,6 +37,7 @@ type PullOptions struct {
 	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
 	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
+	Update       bool     `long:"update" short:"u" usage:"Perform an update which gathers remote sources"`
 	WithDeps     bool     `long:"with-deps" short:"d" usage:"Pull dependencies"`
 	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
@@ -201,10 +201,10 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 							packmanager.WithName(project.Template().Name()),
 							packmanager.WithTypes(unikraft.ComponentTypeApp),
 							packmanager.WithVersion(project.Template().Version()),
-							packmanager.WithRemote(!opts.ForceCache),
+							packmanager.WithRemote(opts.Update),
 							packmanager.WithPlatform(opts.Platform),
 							packmanager.WithArchitecture(opts.Architecture),
-							packmanager.WithLocal(false),
+							packmanager.WithLocal(true),
 						}
 						packages, err = pm.Catalog(ctx, qopts...)
 						if err != nil {
@@ -300,10 +300,9 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 				packmanager.WithVersion(c.Version()),
 				packmanager.WithSource(c.Source()),
 				packmanager.WithTypes(c.Type()),
-				packmanager.WithRemote(!opts.ForceCache),
+				packmanager.WithRemote(opts.Update),
 				packmanager.WithPlatform(opts.Platform),
 				packmanager.WithArchitecture(opts.Architecture),
-				packmanager.WithLocal(false),
 			})
 		}
 
@@ -311,12 +310,11 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 	} else if len(args) > 0 {
 		for _, arg := range args {
 			queries = append(queries, []packmanager.QueryOption{
-				packmanager.WithRemote(!opts.ForceCache),
+				packmanager.WithRemote(opts.Update),
 				packmanager.WithName(arg),
 				packmanager.WithArchitecture(opts.Architecture),
 				packmanager.WithPlatform(opts.Platform),
 				packmanager.WithKConfig(opts.KConfig),
-				packmanager.WithLocal(false),
 			})
 		}
 	}
@@ -381,7 +379,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					pack.WithPullProgressFunc(w),
 					pack.WithPullWorkdir(opts.Output),
 					pack.WithPullChecksum(!opts.NoChecksum),
-					pack.WithPullCache(opts.ForceCache),
+					pack.WithPullCache(!opts.Update),
 				)
 			},
 		))
