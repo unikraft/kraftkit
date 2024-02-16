@@ -16,8 +16,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/lockedfile"
 	"kraftkit.sh/internal/set"
@@ -205,6 +207,8 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		newManifests := []ocispec.Descriptor{}
 
 		// Remove manifests that do not match the platform selector.
+		manifestsToPull := []ocispec.Descriptor{}
+
 	checkManifest:
 		for _, manifest := range index.Manifests {
 			if plat.OS != "" && plat.OS != manifest.Platform.OS {
@@ -227,24 +231,43 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				}
 			}
 
-			if err := handle.PullDigest(ctx,
-				ocispec.MediaTypeImageManifest,
-				fullref,
-				manifest.Digest,
-				plat,
-				onProgress,
-			); err != nil {
-				return fmt.Errorf("could not pull manifest: %w", err)
-			}
+			manifestsToPull = append(manifestsToPull, manifest)
+		}
 
-			checksum, err := ociutils.PlatformChecksum(fullref, manifest.Platform)
-			if err != nil {
-				return fmt.Errorf("could not calculate platform checksum for '%s': %w", manifest.Digest.String(), err)
-			}
+		eg, egCtx := errgroup.WithContext(ctx)
+		var mu sync.RWMutex
 
-			newManifestPlatChecksums[checksum] = true
-			newManifestPlatChecksums[manifest.Digest.String()] = true
-			newManifests = append(newManifests, manifest)
+		for i := range manifestsToPull {
+			eg.Go(func(i int) func() error {
+				return func() error {
+					if err := handle.PullDigest(egCtx,
+						ocispec.MediaTypeImageManifest,
+						fullref,
+						manifestsToPull[i].Digest,
+						plat,
+						onProgress,
+					); err != nil {
+						return fmt.Errorf("could not pull manifest: %w", err)
+					}
+
+					checksum, err := ociutils.PlatformChecksum(fullref, manifestsToPull[i].Platform)
+					if err != nil {
+						return fmt.Errorf("could not calculate platform checksum for '%s': %w", manifestsToPull[i].Digest.String(), err)
+					}
+
+					mu.Lock()
+					newManifestPlatChecksums[checksum] = true
+					newManifestPlatChecksums[manifestsToPull[i].Digest.String()] = true
+					newManifests = append(newManifests, manifestsToPull[i])
+					mu.Unlock()
+
+					return nil
+				}
+			}(i))
+		}
+
+		if err := eg.Wait(); err != nil {
+			return err
 		}
 
 		// Compare the local digests with the new digest and remove local digests
