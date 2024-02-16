@@ -6,6 +6,7 @@ package make
 
 import (
 	"fmt"
+	"runtime"
 
 	"kraftkit.sh/exec"
 )
@@ -206,8 +207,9 @@ func WithJobs(jobs int) MakeOption {
 func WithMaxJobs(maxJobs bool) MakeOption {
 	return func(mo *MakeOptions) error {
 		if maxJobs {
-			zero := 0
-			mo.jobs = &zero
+			nproc := runtime.NumCPU()
+
+			mo.jobs = &nproc
 		} else {
 			mo.jobs = nil
 		}
