@@ -505,6 +505,27 @@ searchRemoteIndexes:
 		}
 	}
 
+	// If the query is local and the reference is a fully qualified OCI reference,
+	// attempt to resolve the exact index and generate packages from it.
+	if query.Local() && len(qversion) > 0 && len(qname) > 0 {
+		oref := fmt.Sprintf("%s:%s", qname, qversion)
+		index, err := handle.ResolveIndex(ctx, oref)
+		if err != nil {
+			goto searchLocalIndexes
+		}
+
+		for checksum, pack := range processV1IndexManifests(ctx,
+			handle,
+			oref,
+			query,
+			index.Manifests,
+		) {
+			packs[checksum] = pack
+		}
+
+		goto returnPacks
+	}
+
 searchLocalIndexes:
 	if query.Local() {
 		// Access local indexes that are available on the host
@@ -569,6 +590,7 @@ searchLocalIndexes:
 		}
 	}
 
+returnPacks:
 	var ret []pack.Package
 
 	for _, pack := range packs {
