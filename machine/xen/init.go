@@ -1,5 +1,9 @@
 package xen
 
+import (
+	"encoding/gob"
+)
+
 func init() {
-	// Not needed for xen
+	gob.Register(XenConfig{})
 }

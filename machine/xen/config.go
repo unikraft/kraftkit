@@ -9,15 +9,13 @@ import (
 )
 
 const (
-	XenMemoryScale   = 1024 * 1024
+	XenMemoryScale   = 1024
 	XenMemoryDefault = 64
 	XenCPUsDefault   = 1
-	XenTypeDefault   = "pv"
 )
 
 type XenConfig struct {
-	DomainConfig *xenlight.DomainConfig
-	XenCtx       *xenlight.Context
+	DomID xenlight.Domid
 }
 
 type XenOption func(*xenlight.DomainConfig) error
@@ -27,6 +25,22 @@ func NewXenConfig(xopts ...XenOption) (*xenlight.DomainConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	binfoPtr, err := xenlight.NewDomainBuildInfo(xenlight.DomainTypePv)
+	if err != nil {
+		return nil, err
+	}
+
+	xcfg.BInfo = *binfoPtr
+
+	cinfoPtr, err := xenlight.NewDomainCreateInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	xcfg.CInfo = *cinfoPtr
+
+	xcfg.CInfo.Type = xenlight.DomainTypePv
 
 	for _, xopt := range xopts {
 		if err := xopt(xcfg); err != nil {
@@ -95,6 +109,14 @@ func WithUuid(uuid string) XenOption {
 func WithArgs(args []string) XenOption {
 	return func(cfg *xenlight.DomainConfig) error {
 		cfg.BInfo.Extra = xenlight.StringList(args)
+		return nil
+	}
+}
+
+func WithType(xtype xenlight.DomainType) XenOption {
+	return func(cfg *xenlight.DomainConfig) error {
+		cfg.BInfo.Type = xtype
+		cfg.CInfo.Type = xtype
 		return nil
 	}
 }
