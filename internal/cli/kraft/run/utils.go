@@ -46,104 +46,112 @@ func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machin
 
 // Was a network specified? E.g. --network=kraft0
 func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.Machine) error {
-	if opts.Network == "" {
-		if opts.IP != "" {
-			return fmt.Errorf("cannot assign IP address without providing --network")
-		}
+	if opts.IP != "" && len(opts.Networks) != 1 {
+		return fmt.Errorf("the --ip flag only works when providing exactly one network")
+	}
+
+	if len(opts.Networks) == 0 {
 		return nil
 	}
 
-	// The network is specified in the format
-	// network:[cidr[:gw[:dns0[:dns1[:hostname[:domain]]]]]]
+	machineNetworks := []networkapi.NetworkSpec{}
 
-	split := strings.SplitN(opts.Network, ":", 2)
-	networkName := split[0]
+	for _, networkArg := range opts.Networks {
 
-	networkServiceIterator, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
-	if err != nil {
-		return err
-	}
+		// The network is specified in the format
+		// network:[cidr[:gw[:dns0[:dns1[:hostname[:domain]]]]]]
 
-	// Try to discover the user-provided network.
-	found, err := networkServiceIterator.Get(ctx, &networkapi.Network{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: networkName,
-		},
-	})
-	if err != nil {
-		return err
-	}
+		split := strings.SplitN(networkArg, ":", 2)
+		networkName := split[0]
 
-	var interfaceSpec networkapi.NetworkInterfaceSpec
+		networkServiceIterator, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
+		if err != nil {
+			return err
+		}
 
-	if len(split) > 1 {
-		fields := strings.Split(split[1], ":")
-		if len(fields) > 0 {
-			interfaceSpec.CIDR = fields[0]
-			ipMaskSplit := strings.SplitN(interfaceSpec.CIDR, "/", 2)
-			if len(ipMaskSplit) != 2 {
-				sz, _ := net.IPMask(net.ParseIP(found.Spec.Netmask).To4()).Size()
-				interfaceSpec.CIDR = fmt.Sprintf("%s/%d", interfaceSpec.CIDR, sz)
+		// Try to discover the user-provided network.
+		found, err := networkServiceIterator.Get(ctx, &networkapi.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: networkName,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		var interfaceSpec networkapi.NetworkInterfaceSpec
+
+		if len(split) > 1 {
+			fields := strings.Split(split[1], ":")
+			if len(fields) > 0 {
+				interfaceSpec.CIDR = fields[0]
+				ipMaskSplit := strings.SplitN(interfaceSpec.CIDR, "/", 2)
+				if len(ipMaskSplit) != 2 {
+					sz, _ := net.IPMask(net.ParseIP(found.Spec.Netmask).To4()).Size()
+					interfaceSpec.CIDR = fmt.Sprintf("%s/%d", interfaceSpec.CIDR, sz)
+				}
+				opts.IP = ipMaskSplit[0]
 			}
-			opts.IP = ipMaskSplit[0]
+
+			if len(fields) > 1 {
+				interfaceSpec.Gateway = fields[1]
+			}
+			if len(fields) > 2 {
+				interfaceSpec.DNS0 = fields[2]
+			}
+			if len(fields) > 3 {
+				interfaceSpec.DNS1 = fields[3]
+			}
+			if len(fields) > 4 {
+				interfaceSpec.Hostname = fields[4]
+			}
+			if len(fields) > 5 {
+				interfaceSpec.Domain = fields[5]
+			}
 		}
 
-		if len(fields) > 1 {
-			interfaceSpec.Gateway = fields[1]
+		if interfaceSpec.Gateway == "" {
+			interfaceSpec.Gateway = found.Spec.Gateway
 		}
-		if len(fields) > 2 {
-			interfaceSpec.DNS0 = fields[2]
-		}
-		if len(fields) > 3 {
-			interfaceSpec.DNS1 = fields[3]
-		}
-		if len(fields) > 4 {
-			interfaceSpec.Hostname = fields[4]
-		}
-		if len(fields) > 5 {
-			interfaceSpec.Domain = fields[5]
-		}
-	}
 
-	if interfaceSpec.Gateway == "" {
-		interfaceSpec.Gateway = found.Spec.Gateway
-	}
-
-	// Generate the UID pre-emptively so that we can uniquely reference the
-	// network interface which will allow us to clean it up later. Additionally,
-	// it's OK if the IP or MAC address are empty, the network controller will
-	// populate values if they are unset and will populate with new values
-	// following the returning from the Update operation.
-	newIface := networkapi.NetworkInterfaceTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			UID: uuid.NewUUID(),
-		},
-		Spec: interfaceSpec,
-	}
-
-	// Update the list of interfaces
-	if found.Spec.Interfaces == nil {
-		found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{}
-	}
-	found.Spec.Interfaces = append(found.Spec.Interfaces, newIface)
-
-	// Update the network with the new interface.
-	found, err = networkServiceIterator.Update(ctx, found)
-	if err != nil {
-		return err
-	}
-
-	// Only use the single new interface.
-	for _, iface := range found.Spec.Interfaces {
-		if iface.UID == newIface.UID {
-			newIface = iface
-			break
+		// Generate the UID pre-emptively so that we can uniquely reference the
+		// network interface which will allow us to clean it up later. Additionally,
+		// it's OK if the IP or MAC address are empty, the network controller will
+		// populate values if they are unset and will populate with new values
+		// following the returning from the Update operation.
+		newIface := networkapi.NetworkInterfaceTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: uuid.NewUUID(),
+			},
+			Spec: interfaceSpec,
 		}
+
+		// Update the list of interfaces
+		if found.Spec.Interfaces == nil {
+			found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{}
+		}
+		found.Spec.Interfaces = append(found.Spec.Interfaces, newIface)
+
+		// Update the network with the new interface.
+		found, err = networkServiceIterator.Update(ctx, found)
+		if err != nil {
+			return err
+		}
+
+		// Only use the single new interface.
+		for _, iface := range found.Spec.Interfaces {
+			if iface.UID == newIface.UID {
+				newIface = iface
+				break
+			}
+		}
+
+		found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{newIface}
+		machineNetworks = append(machineNetworks, found.Spec)
 	}
 
 	// Set the interface on the machine.
-	found.Spec.Interfaces = []networkapi.NetworkInterfaceTemplateSpec{newIface}
-	machine.Spec.Networks = []networkapi.NetworkSpec{found.Spec}
+	machine.Spec.Networks = machineNetworks
 
 	return nil
 }

@@ -38,7 +38,7 @@ type RunOptions struct {
 	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
 	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
 	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
-	Network       string   `long:"network" usage:"Attach instance to the provided network"`
+	Networks      []string `long:"network" usage:"Attach instance to the provided network, in the format <network>[:ip[/mask][:gw[:dns0[:dns1[:hostname[:domain]]]]]], e.g. kraft0:172.100.0.2"`
 	NoStart       bool     `long:"no-start" usage:"Do not start the machine"`
 	Platform      string   `noattribute:"true"`
 	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
