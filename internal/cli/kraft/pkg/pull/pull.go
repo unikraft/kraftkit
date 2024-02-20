@@ -323,6 +323,10 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
+	if len(queries) == 0 {
+		return fmt.Errorf("no components to pull")
+	}
+
 	var found []pack.Package
 	var treeItems []*processtree.ProcessTreeItem
 
