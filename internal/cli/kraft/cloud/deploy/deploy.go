@@ -146,6 +146,15 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 	)
 
+	// TODO: Preflight check: check if `--subdomain` is already taken
+
+	// Preflight check: check if `--name` is already taken:
+	if len(opts.Name) > 0 {
+		if _, err := opts.Client.Instances().GetByName(ctx, opts.Name); err == nil {
+			return fmt.Errorf("service name '%s' is already taken", opts.Name)
+		}
+	}
+
 	if len(args) > 0 {
 		if fi, err := os.Stat(args[0]); err == nil && fi.IsDir() {
 			abs, err := filepath.Abs(args[0])
