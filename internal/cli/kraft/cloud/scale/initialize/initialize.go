@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -25,14 +26,14 @@ import (
 )
 
 type InitOptions struct {
-	Auth           *config.AuthConfig    `noattribute:"true"`
-	Client         kraftcloud.KraftCloud `noattribute:"true"`
-	CooldownTimeMs uint                  `long:"cooldown-time-ms" short:"c" usage:"The cooldown time of the configuration" default:"1000"`
-	Master         string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
-	MaxSize        uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
-	Metro          string                `noattribute:"true"`
-	MinSize        uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
-	WarmupTimeMs   uint                  `long:"warmup-time-ms" short:"w" usage:"The warmup time of the configuration" default:"1000"`
+	Auth         *config.AuthConfig    `noattribute:"true"`
+	Client       kraftcloud.KraftCloud `noattribute:"true"`
+	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the configuration" default:"1000000000"`
+	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
+	MaxSize      uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
+	Metro        string                `noattribute:"true"`
+	MinSize      uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the configuration" default:"1000000000"`
 }
 
 func NewCmd() *cobra.Command {
@@ -48,8 +49,8 @@ func NewCmd() *cobra.Command {
 				--master my-instance-name \
 				--min-size 1 \
 				--max-size 10 \
-				--cooldown-time-ms 1000 \
-				--warmup-time-ms 1000
+				--cooldown-time 1s \
+				--warmup-time 1s
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
@@ -161,8 +162,8 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		UUID:           args[0],
 		MinSize:        opts.MinSize,
 		MaxSize:        opts.MaxSize,
-		WarmupTimeMs:   opts.WarmupTimeMs,
-		CooldownTimeMs: opts.CooldownTimeMs,
+		WarmupTimeMs:   uint(opts.WarmupTime.Milliseconds()),
+		CooldownTimeMs: uint(opts.CooldownTime.Milliseconds()),
 		Master:         master,
 	}
 
