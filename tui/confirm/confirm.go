@@ -7,23 +7,15 @@
 package confirm
 
 import (
-	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/confirmation"
+	"kraftkit.sh/tui"
 )
-
-var queryMark = lipgloss.NewStyle().
-	Background(lipgloss.Color("12")).
-	Foreground(lipgloss.AdaptiveColor{
-		Light: "0",
-		Dark:  "15",
-	}).
-	Render
 
 // NewConfirm is a utility method used in a CLI context to prompt the user with
 // a yes/no question.
 func NewConfirm(question string) (bool, error) {
 	input := confirmation.New(
-		queryMark("[?] ")+
+		tui.TextWhiteBgBlue("[?]")+" "+
 			question,
 		confirmation.NewValue(true),
 	)
