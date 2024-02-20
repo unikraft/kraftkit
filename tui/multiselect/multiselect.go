@@ -13,19 +13,9 @@ import (
 	"kraftkit.sh/tui"
 )
 
-var (
-	queryMark = lipgloss.NewStyle().
-			Background(lipgloss.Color("12")).
-			Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
-		}).
-		Render
-
-	selectedText = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("32")).
-			Render
-)
+var selectedText = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("32")).
+	Render
 
 // MultiSelect is a utility method used in a CLI context to prompt the
 // user given a slice of options based on the generic type.
@@ -109,7 +99,7 @@ func (m *model) handleKeyMsg(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *model) View() string {
-	out := queryMark("[?]") + " " + m.question + ":\n"
+	out := tui.TextWhiteBgBlue("[?]") + " " + m.question + ":\n"
 
 	for i, item := range m.options {
 		var text string

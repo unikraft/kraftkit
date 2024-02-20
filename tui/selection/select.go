@@ -9,17 +9,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/selection"
+	"kraftkit.sh/tui"
 )
-
-var queryMark = lipgloss.NewStyle().
-	Background(lipgloss.Color("12")).
-	Foreground(lipgloss.AdaptiveColor{
-		Light: "10",
-		Dark:  "0",
-	}).
-	Render
 
 // Select is a utility method used in a CLI context to prompt the user
 // given a slice of options based on the generic type.
@@ -35,7 +27,7 @@ func Select[T fmt.Stringer](question string, options ...T) (*T, error) {
 
 	sort.Strings(strings)
 
-	sp := selection.New(queryMark("[?]")+" "+question, strings)
+	sp := selection.New(tui.TextWhiteBgBlue("[?]")+" "+question, strings)
 	sp.Filter = nil
 
 	result, err := sp.RunPrompt()
