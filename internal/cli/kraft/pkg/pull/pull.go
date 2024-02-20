@@ -300,6 +300,16 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 			})
 		}
 
+		if project.Runtime() != nil {
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithName(project.Runtime().Name()),
+				packmanager.WithVersion(project.Runtime().Version()),
+				packmanager.WithRemote(opts.Update),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithArchitecture(opts.Architecture),
+			})
+		}
+
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
