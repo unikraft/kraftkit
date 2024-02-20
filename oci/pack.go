@@ -575,7 +575,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(""),
+		name.WithDefaultRegistry(DefaultRegistry),
 		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
