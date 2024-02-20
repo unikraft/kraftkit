@@ -35,6 +35,11 @@ type runnerLinuxu struct {
 
 // String implements Runner.
 func (runner *runnerLinuxu) String() string {
+	return fmt.Sprintf("run the Linux userspace binary '%s' in a unikernel and ignore cwd", runner.exePath)
+}
+
+// Name implements Runner.
+func (runner *runnerLinuxu) Name() string {
 	return "linuxu"
 }
 

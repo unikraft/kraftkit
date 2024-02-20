@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -36,6 +37,11 @@ type runnerKraftfileUnikraft struct {
 
 // String implements Runner.
 func (runner *runnerKraftfileUnikraft) String() string {
+	return fmt.Sprintf("run the cwd's Kraftfile and use '%s' as arg(s)", strings.Join(runner.args, " "))
+}
+
+// Name implements Runner.
+func (runner *runnerKraftfileUnikraft) Name() string {
 	return "kraftfile-unikraft"
 }
 
@@ -89,19 +95,23 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOp
 func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	var err error
 
+	// Remove targets which do not have a compiled kernel.
+	targets := slices.DeleteFunc(runner.project.Targets(), func(targ target.Target) bool {
+		_, err := os.Stat(targ.Kernel())
+		return err != nil
+	})
+
+	if len(targets) == 0 {
+		return fmt.Errorf("cannot run project without any built targets: see `kraft build --help` for more information")
+	}
+
 	// Filter project targets by any provided CLI options
-	targets := target.Filter(
-		runner.project.Targets(),
+	targets = target.Filter(
+		targets,
 		opts.Architecture,
 		opts.platform.String(),
 		opts.Target,
 	)
-
-	// Remove targets which do not have a compiled kernel.
-	targets = slices.DeleteFunc(targets, func(targ target.Target) bool {
-		_, err := os.Stat(targ.Kernel())
-		return err != nil
-	})
 
 	var t target.Target
 

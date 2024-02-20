@@ -20,6 +20,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
@@ -27,6 +28,7 @@ import (
 	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/arch"
 )
 
@@ -294,33 +296,50 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	// Iterate through the list of built-in runners which sequentially tests and
 	// first test whether the --as flag has been set to force a specific runner or
 	// whether the current context matches the requirements for being run given
-	// its context.  The first to test positive is used to prepare the machine
-	// specification which is later passed to the controller.
+	// its context.  If prompting is enabled and multiple candidates are
+	// discovered, the user is provided the choice as to which runner to use;
+	// otherwise the determined runner will be used automatically.
+
+	var candidates []runner
+
 	for _, candidate := range runners {
-		if opts.RunAs != "" && candidate.String() != opts.RunAs {
+		if opts.RunAs != "" && candidate.Name() != opts.RunAs {
 			continue
 		}
 
 		log.G(ctx).
-			WithField("runner", candidate.String()).
+			WithField("runner", candidate.Name()).
 			Trace("checking runnability")
 
 		capable, err := candidate.Runnable(ctx, opts, args...)
 		if capable && err == nil {
-			run = candidate
-			break
+			candidates = append(candidates, candidate)
 		} else if err != nil {
 			errs = append(errs, err)
 			log.G(ctx).
-				WithField("runner", candidate.String()).
+				WithField("runner", candidate.Name()).
 				Debugf("cannot run because: %v", err)
 		}
 	}
-	if run == nil {
+
+	if len(candidates) == 0 {
 		return fmt.Errorf("could not determine how to run provided input: %w", errors.Join(errs...))
+	} else if len(candidates) == 1 {
+		run = candidates[0]
+	} else if !config.G[config.KraftKit](ctx).NoPrompt {
+		candidate, err := selection.Select[runner]("multiple runnable contexts discovered: how would you like to proceed?", candidates...)
+		if err != nil {
+			return err
+		}
+
+		run = *candidate
+
+		log.G(ctx).Infof("use --as=%s to skip this prompt in the future", run.Name())
+	} else {
+		return fmt.Errorf("multiple contexts discovered: %v", candidates)
 	}
 
-	log.G(ctx).WithField("runner", run.String()).Debug("using")
+	log.G(ctx).WithField("runner", run.Name()).Debug("using")
 
 	// Prepare the machine specification based on the compatible runner.
 	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
