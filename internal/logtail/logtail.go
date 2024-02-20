@@ -64,7 +64,11 @@ func NewLogTail(ctx context.Context, logFile string) (chan string, chan error, e
 
 				switch event.Op {
 				case fsnotify.Write:
-					peekAndRead(f, reader, &logs, &errs)
+					for {
+						if peekAndRead(f, reader, &logs, &errs) {
+							break
+						}
+					}
 				}
 			}
 		}
