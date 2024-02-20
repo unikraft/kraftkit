@@ -15,7 +15,9 @@ import (
 // is introduced:
 //
 // cidr[:gw[:dns0[:dns1[:hostname[:domain]]]]]
-var ParamIp = ukargparse.ParamStr("netdev", "ip", nil)
+func NewParamIp() ukargparse.Param {
+	return ukargparse.ParamStr("netdev", "ip", nil)
+}
 
 // NetdevIp represents the attributes of the network device which is understood
 // by uknetdev and uklibparam.
@@ -43,6 +45,6 @@ func (entry NetdevIp) String() string {
 // ExportedParams returns the parameters available by this exported library.
 func ExportedParams() []ukargparse.Param {
 	return []ukargparse.Param{
-		ParamIp,
+		NewParamIp(),
 	}
 }
