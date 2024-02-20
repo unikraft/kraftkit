@@ -3,15 +3,26 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"kraftkit.sh/internal/cli/kraft/build"
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
-type deployerKraftfileUnikraft struct{}
+type deployerKraftfileUnikraft struct {
+	args []string
+}
+
+func (deployer *deployerKraftfileUnikraft) Name() string {
+	return "kraftfile-runtime"
+}
 
 func (deployer *deployerKraftfileUnikraft) String() string {
-	return "kraftfile-runtime"
+	if len(deployer.args) == 0 {
+		return "run the cwd with Kraftfile"
+	}
+
+	return fmt.Sprintf("run the detected Kraftfile in the cwd and use '%s' as arg(s)", strings.Join(deployer.args, " "))
 }
 
 func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts *DeployOptions, args ...string) (bool, error) {
@@ -28,6 +39,8 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 	if opts.Project.Unikraft(ctx) == nil {
 		return false, fmt.Errorf("cannot package without unikraft attribute")
 	}
+
+	deployer.args = args
 
 	return true, nil
 }

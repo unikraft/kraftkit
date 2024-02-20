@@ -44,6 +44,11 @@ type runnerPackage struct {
 
 // String implements Runner.
 func (runner *runnerPackage) String() string {
+	return fmt.Sprintf("run the %s '%s' package and ignore cwd", runner.pm.Format(), runner.packName)
+}
+
+// Name implements Runner.
+func (runner *runnerPackage) Name() string {
 	if runner.pm != nil {
 		return runner.pm.Format().String()
 	}
@@ -58,6 +63,13 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, arg
 	}
 
 	runner.packName = args[0]
+
+	// If the pack name is a file or directory, then do not proceed as these
+	// cases are handled directly by other runners.
+	if _, err := os.Stat(runner.packName); err == nil {
+		return false, fmt.Errorf("arguments represent a file or directory")
+	}
+
 	runner.args = args[1:]
 
 	if runner.pm == nil {

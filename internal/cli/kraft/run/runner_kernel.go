@@ -26,6 +26,11 @@ type runnerKernel struct {
 
 // String implements Runner.
 func (runner *runnerKernel) String() string {
+	return fmt.Sprintf("run the '%s' kernel binary and ignore cwd", filepath.Base(runner.kernelPath))
+}
+
+// Name implements Runner.
+func (runner *runnerKernel) Name() string {
 	return "kernel"
 }
 

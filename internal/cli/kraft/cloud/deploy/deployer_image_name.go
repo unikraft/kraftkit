@@ -8,26 +8,64 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci"
+	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
-type deployerImageName struct{}
+type deployerImageName struct {
+	imageName string
+	args      []string
+}
 
 func (deployer *deployerImageName) String() string {
+	if len(deployer.args) == 0 {
+		return fmt.Sprintf("run the '%s' image and ignore cwd", deployer.imageName)
+	}
+
+	return fmt.Sprintf("run the '%s' image, use '%s' as arg(s) and ignore cwd", deployer.imageName, strings.Join(deployer.args, " "))
+}
+
+func (deployer *deployerImageName) Name() string {
 	return "image-name"
 }
 
 func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployOptions, args ...string) (bool, error) {
-	if err := opts.initProject(ctx); err != nil && len(args) > 0 {
-		return true, nil
+	if len(args) == 0 {
+		return false, fmt.Errorf("no image specified")
 	}
 
-	return false, fmt.Errorf("context contains project")
+	pm, err := packmanager.G(ctx).From(oci.OCIFormat)
+	if err != nil {
+		return false, fmt.Errorf("getting oci package manager: %w", err)
+	}
+
+	imageName := args[0]
+
+	if strings.HasPrefix(imageName, "unikraft.io") {
+		imageName = "index." + imageName
+	} else if strings.Contains(imageName, "/") && !strings.Contains(imageName, "unikraft.io") {
+		imageName = "index.unikraft.io/" + imageName
+	} else if !strings.HasPrefix(imageName, "index.unikraft.io") {
+		imageName = "index.unikraft.io/official/" + imageName
+	}
+
+	if _, compatible, err := pm.IsCompatible(ctx, imageName,
+		packmanager.WithRemote(true),
+	); !compatible {
+		return false, err
+	}
+
+	deployer.imageName = args[0]
+	deployer.args = args[1:]
+
+	return true, nil
 }
 
 func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kraftcloudinstances.Instance, error) {
@@ -53,7 +91,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 					Env:                    opts.Env,
 					Features:               opts.Features,
 					FQDN:                   opts.FQDN,
-					Image:                  args[0],
+					Image:                  deployer.imageName,
 					Memory:                 opts.Memory,
 					Metro:                  opts.Metro,
 					Name:                   opts.Name,
@@ -63,7 +101,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 					ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
 					Start:                  !opts.NoStart,
 					SubDomain:              opts.SubDomain,
-				}, args[1:]...)
+				}, deployer.args...)
 				if err != nil {
 					return fmt.Errorf("could not create instance: %w", err)
 				}

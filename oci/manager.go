@@ -776,8 +776,8 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 			}
 		}
 
-		raw, err := crane.Config(source, opts...)
-		if err == nil && len(raw) > 0 {
+		desc, err := crane.Head(source, opts...)
+		if err == nil && desc != nil {
 			return true
 		}
 

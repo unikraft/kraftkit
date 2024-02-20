@@ -17,9 +17,12 @@ import (
 // whether the provided input is capable of executing, and Prepare, actually
 // performing the preparation of the Machine specification for the controller.
 type runner interface {
-	// String implements fmt.Stringer and returns the name of the implementing
-	// runner.
+	// String implements fmt.Stringer and returns the user-facing sentence
+	// representing the runner's context.
 	fmt.Stringer
+
+	// Name is a unique identifier for the runner.
+	Name() string
 
 	// Runnable checks whether the provided configuration is runnable.
 	Runnable(context.Context, *RunOptions, ...string) (bool, error)

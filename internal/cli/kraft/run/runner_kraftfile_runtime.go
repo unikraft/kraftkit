@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -32,6 +33,11 @@ type runnerKraftfileRuntime struct {
 
 // String implements Runner.
 func (runner *runnerKraftfileRuntime) String() string {
+	return fmt.Sprintf("run the cwd's Kraftfile and use '%s' as arg(s)", strings.Join(runner.args, " "))
+}
+
+// Name implements Runner.
+func (runner *runnerKraftfileRuntime) Name() string {
 	return "kraftfile-runtime"
 }
 
