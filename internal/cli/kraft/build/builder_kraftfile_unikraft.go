@@ -23,6 +23,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
@@ -89,6 +90,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 	if template := opts.project.Template(); template != nil {
 		if stat, err := os.Stat(template.Path()); err != nil || !stat.IsDir() || opts.ForcePull {
 			var templatePack pack.Package
+			var packs []pack.Package
 
 			treemodel, err := processtree.NewProcessTree(
 				ctx,
@@ -118,13 +120,10 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 							return fmt.Errorf("could not find: %s",
 								unikraft.TypeNameVersion(template),
 							)
-						} else if len(p) > 1 {
-							return fmt.Errorf("too many options for %s",
-								unikraft.TypeNameVersion(template),
-							)
 						}
 
-						templatePack = p[0]
+						packs = append(packs, p...)
+
 						return nil
 					},
 				),
@@ -135,6 +134,29 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 
 			if err := treemodel.Start(); err != nil {
 				return fmt.Errorf("could not complete search: %v", err)
+			}
+
+			if len(packs) == 1 {
+				templatePack = packs[0]
+			} else if len(packs) > 1 {
+				if config.G[config.KraftKit](ctx).NoPrompt {
+					for _, p := range packs {
+						log.G(ctx).
+							WithField("template", p.String()).
+							Warn("possible")
+					}
+
+					return fmt.Errorf("too many options for %s and prompting has been disabled",
+						unikraft.TypeNameVersion(template),
+					)
+				}
+
+				selected, err := selection.Select[pack.Package]("select possible template", packs...)
+				if err != nil {
+					return err
+				}
+
+				templatePack = *selected
 			}
 
 			paramodel, err := paraprogress.NewParaProgress(
