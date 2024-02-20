@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
@@ -23,6 +24,27 @@ import (
 	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
 	kraftcloudusers "sdk.kraft.cloud/users"
 	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+)
+
+type colorFunc func(string) string
+
+var (
+	instanceStateColor = map[string]colorFunc{
+		"draining": iostreams.Yellow,
+		"running":  iostreams.Green,
+		"standby":  iostreams.Blue,
+		"starting": iostreams.Green,
+		"stopped":  iostreams.Red,
+		"stopping": iostreams.Yellow,
+	}
+	instanceStateColorNil = map[string]colorFunc{
+		"draining": nil,
+		"running":  nil,
+		"standby":  nil,
+		"starting": nil,
+		"stopped":  nil,
+		"stopping": nil,
+	}
 )
 
 // PrintInstances pretty-prints the provided set of instances or returns
@@ -66,6 +88,10 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 	table.AddField("BOOT TIME", cs.Bold)
 	table.EndRow()
 
+	if config.G[config.KraftKit](ctx).NoColor {
+		instanceStateColor = instanceStateColorNil
+	}
+
 	for _, instance := range instances {
 		var createdAt string
 
@@ -88,7 +114,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			table.AddField(instance.PrivateIP, nil)
 		}
 
-		table.AddField(string(instance.State), nil)
+		table.AddField(string(instance.State), instanceStateColor[instance.State])
 		table.AddField(createdAt, nil)
 		table.AddField(instance.Image, nil)
 		table.AddField(humanize.IBytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
