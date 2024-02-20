@@ -109,10 +109,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 func createHooks(rspec *specs.Spec, config *configs.Config) {
 	config.Hooks = configs.Hooks{}
 	if rspec.Hooks != nil {
-		for _, h := range rspec.Hooks.Prestart {
-			cmd := createCommandHook(h)
-			config.Hooks[configs.Prestart] = append(config.Hooks[configs.Prestart], configs.NewCommandHook(cmd))
-		}
 		for _, h := range rspec.Hooks.CreateRuntime {
 			cmd := createCommandHook(h)
 			config.Hooks[configs.CreateRuntime] = append(config.Hooks[configs.CreateRuntime], configs.NewCommandHook(cmd))
