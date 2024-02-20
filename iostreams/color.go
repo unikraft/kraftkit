@@ -32,17 +32,17 @@ import (
 )
 
 var (
-	magenta  = ansi.ColorFunc("magenta")
-	cyan     = ansi.ColorFunc("cyan")
-	red      = ansi.ColorFunc("red")
-	yellow   = ansi.ColorFunc("yellow")
-	blue     = ansi.ColorFunc("blue")
-	green    = ansi.ColorFunc("green")
-	gray     = ansi.ColorFunc("black+h")
-	bold     = ansi.ColorFunc("default+b")
-	cyanBold = ansi.ColorFunc("cyan+b")
+	Magenta  = ansi.ColorFunc("magenta")
+	Cyan     = ansi.ColorFunc("cyan")
+	Red      = ansi.ColorFunc("red")
+	Yellow   = ansi.ColorFunc("yellow")
+	Blue     = ansi.ColorFunc("blue")
+	Green    = ansi.ColorFunc("green")
+	Gray     = ansi.ColorFunc("black+h")
+	Bold     = ansi.ColorFunc("default+b")
+	CyanBold = ansi.ColorFunc("cyan+b")
 
-	gray256 = func(t string) string {
+	Gray256 = func(t string) string {
 		return fmt.Sprintf("\x1b[%d;5;%dm%s\x1b[m", 38, 242, t)
 	}
 )
@@ -89,7 +89,7 @@ func (c *ColorScheme) Bold(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return bold(t)
+	return Bold(t)
 }
 
 func (c *ColorScheme) Boldf(t string, args ...interface{}) string {
@@ -100,7 +100,7 @@ func (c *ColorScheme) Red(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return red(t)
+	return Red(t)
 }
 
 func (c *ColorScheme) Redf(t string, args ...interface{}) string {
@@ -111,7 +111,7 @@ func (c *ColorScheme) Yellow(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return yellow(t)
+	return Yellow(t)
 }
 
 func (c *ColorScheme) Yellowf(t string, args ...interface{}) string {
@@ -122,7 +122,7 @@ func (c *ColorScheme) Green(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return green(t)
+	return Green(t)
 }
 
 func (c *ColorScheme) Greenf(t string, args ...interface{}) string {
@@ -134,9 +134,9 @@ func (c *ColorScheme) Gray(t string) string {
 		return t
 	}
 	if c.is256enabled {
-		return gray256(t)
+		return Gray256(t)
 	}
-	return gray(t)
+	return Gray(t)
 }
 
 func (c *ColorScheme) Grayf(t string, args ...interface{}) string {
@@ -147,7 +147,7 @@ func (c *ColorScheme) Magenta(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return magenta(t)
+	return Magenta(t)
 }
 
 func (c *ColorScheme) Magentaf(t string, args ...interface{}) string {
@@ -158,7 +158,7 @@ func (c *ColorScheme) Cyan(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return cyan(t)
+	return Cyan(t)
 }
 
 func (c *ColorScheme) Cyanf(t string, args ...interface{}) string {
@@ -169,14 +169,14 @@ func (c *ColorScheme) CyanBold(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return cyanBold(t)
+	return CyanBold(t)
 }
 
 func (c *ColorScheme) Blue(t string) string {
 	if !c.enabled {
 		return t
 	}
-	return blue(t)
+	return Blue(t)
 }
 
 func (c *ColorScheme) Bluef(t string, args ...interface{}) string {
