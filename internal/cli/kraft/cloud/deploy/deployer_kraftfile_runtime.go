@@ -21,10 +21,20 @@ import (
 	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
-type deployerKraftfileRuntime struct{}
+type deployerKraftfileRuntime struct {
+	args []string
+}
+
+func (deployer *deployerKraftfileRuntime) Name() string {
+	return "kraftfile-runtime"
+}
 
 func (deployer *deployerKraftfileRuntime) String() string {
-	return "kraftfile-runtime"
+	if len(deployer.args) == 0 {
+		return "run the cwd with Kraftfile"
+	}
+
+	return fmt.Sprintf("run the cwd's Kraftfile and use '%s' as arg(s)", strings.Join(deployer.args, " "))
 }
 
 func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *DeployOptions, args ...string) (bool, error) {
@@ -52,6 +62,8 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	} else if !strings.HasPrefix(opts.Project.Runtime().Name(), "index.unikraft.io") {
 		opts.Project.Runtime().SetName("index.unikraft.io/official/" + opts.Project.Runtime().Name())
 	}
+
+	deployer.args = args
 
 	return true, nil
 }

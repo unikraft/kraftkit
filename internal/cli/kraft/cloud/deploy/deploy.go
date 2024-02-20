@@ -7,6 +7,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -28,6 +30,7 @@ import (
 type DeployOptions struct {
 	Auth                   *config.AuthConfig        `noattribute:"true"`
 	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
+	DeployAs               string                    `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
 	DotConfig              string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
@@ -162,32 +165,47 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	var d deployer
+	var errs []error
+	var candidates []deployer
 
-	deployers := deployers()
-
-	// Iterate through the list of built-in builders which sequentially tests
-	// the current context and Kraftfile match specific requirements towards
-	// performing a type of build.
-	for _, candidate := range deployers {
-		log.G(ctx).
-			WithField("packager", candidate.String()).
-			Trace("checking compatibility")
-
-		capable, err := candidate.Deployable(ctx, opts, args...)
-		if capable && err == nil {
-			d = candidate
-			break
+	for _, candidate := range deployers() {
+		if opts.DeployAs != "" && candidate.Name() != opts.DeployAs {
+			continue
 		}
 
 		log.G(ctx).
-			WithError(err).
-			WithField("packager", candidate.String()).
-			Trace("incompatbile")
+			WithField("deployer", candidate.Name()).
+			Trace("checking deployability")
+
+		capable, err := candidate.Deployable(ctx, opts, args...)
+		if capable && err == nil {
+			candidates = append(candidates, candidate)
+		} else if err != nil {
+			errs = append(errs, err)
+			log.G(ctx).
+				WithField("deployer", candidate.Name()).
+				Debugf("cannot run because: %v", err)
+		}
 	}
 
-	if d == nil {
-		return fmt.Errorf("could not determine what or how to deploy from the given context")
+	if len(candidates) == 0 {
+		return fmt.Errorf("could not determine how to run provided input: %w", errors.Join(errs...))
+	} else if len(candidates) == 1 {
+		d = candidates[0]
+	} else if !config.G[config.KraftKit](ctx).NoPrompt {
+		candidate, err := selection.Select[deployer]("multiple deployable contexts discovered: how would you like to proceed?", candidates...)
+		if err != nil {
+			return err
+		}
+
+		d = *candidate
+
+		log.G(ctx).Infof("use --as=%s to skip this prompt in the future", d.Name())
+	} else {
+		return fmt.Errorf("multiple contexts discovered: %v", candidates)
 	}
+
+	log.G(ctx).WithField("deployer", d.Name()).Debug("using")
 
 	instances, err := d.Deploy(ctx, opts, args...)
 	if err != nil {

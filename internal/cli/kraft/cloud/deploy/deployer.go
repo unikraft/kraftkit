@@ -17,8 +17,11 @@ import (
 // determine whether the provided input is capable of deploying, and deploy,
 // actually performing the deployment.
 type deployer interface {
-	// String implements fmt.Stringer and returns the name of the implementing
-	// builder.
+	// Name returns the name returns the name of the implementing deployer.
+	Name() string
+
+	// String implements fmt.Stringer and returns the human-readable context for
+	// the deployer.
 	fmt.Stringer
 
 	// Deployable determines whether the provided input is deployable by the
