@@ -34,11 +34,9 @@ type PullOptions struct {
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
-	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
 	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
 	Update       bool     `long:"update" short:"u" usage:"Perform an update which gathers remote sources"`
-	WithDeps     bool     `long:"with-deps" short:"d" usage:"Pull dependencies"`
 	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
 
@@ -105,11 +103,7 @@ func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	return cmdfactory.MutuallyExclusive(
-		"the `--with-deps` option is not supported with `--no-deps`",
-		opts.WithDeps,
-		opts.NoDeps,
-	)
+	return nil
 }
 
 func (opts *PullOptions) Run(ctx context.Context, args []string) error {
