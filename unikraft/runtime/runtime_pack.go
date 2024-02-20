@@ -7,6 +7,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/tableprinter"
@@ -73,7 +74,6 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 	results, err := elfloader.registry.Catalog(ctx,
 		packmanager.WithName(elfloader.name),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
-		packmanager.WithUpdate(false),
 	)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 		results, err = elfloader.registry.Catalog(ctx,
 			packmanager.WithName(elfloader.name),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
-			packmanager.WithUpdate(true),
+			packmanager.WithRemote(true),
 		)
 		if err != nil {
 			return nil, err
@@ -123,13 +123,28 @@ func (elfloader *Runtime) Push(ctx context.Context, opts ...pack.PushOption) err
 	panic("not implemented: kraftkit.sh/unikraft/elfloader.Runtime.Push")
 }
 
+// Unpack implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) Unpack(ctx context.Context, dir string) error {
+	return elfloader.pack.Unpack(ctx, dir)
+}
+
 // Pull implements kraftkit.sh/pack.Package
 func (elfloader *Runtime) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	return elfloader.pack.Pull(ctx, opts...)
 }
 
+// Pull implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) PulledAt(ctx context.Context) (bool, time.Time, error) {
+	return elfloader.pack.PulledAt(ctx)
+}
+
 func (elfloader *Runtime) Delete(ctx context.Context) error {
 	return elfloader.pack.Delete(ctx)
+}
+
+// Save implements kraftkit.sh/pack.Package
+func (elfloader *Runtime) Save(ctx context.Context) error {
+	return elfloader.pack.Save(ctx)
 }
 
 // Format implements kraftkit.sh/unikraft.component.Component

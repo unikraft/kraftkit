@@ -60,7 +60,7 @@ func NewManifestManager(ctx context.Context, opts ...any) (packmanager.PackageMa
 		if _, compatible, _ := manager.IsCompatible(ctx, manifest,
 			// During initialization, do not perform a remote check to determine
 			// whether the provided source is compatible.
-			packmanager.WithUpdate(false),
+			packmanager.WithRemote(false),
 		); compatible {
 			manager.manifests = append(manager.manifests, manifest)
 		}
@@ -78,7 +78,7 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 			if _, compatible, _ := m.IsCompatible(ctx, manifest,
 				// During initialization, do not perform a remote check to determine
 				// whether the provided source is compatible.
-				packmanager.WithUpdate(true),
+				packmanager.WithRemote(true),
 			); compatible {
 				m.manifests = append(m.manifests, manifest)
 			}
@@ -118,7 +118,6 @@ func (m *manifestManager) update(ctx context.Context) (*ManifestIndex, error) {
 			log.G(ctx).Warnf("%s", err)
 		}
 
-		index.Origin = manipath
 		index.Manifests = append(index.Manifests, manifests...)
 	}
 
@@ -135,6 +134,10 @@ func (m *manifestManager) Update(ctx context.Context) error {
 }
 
 func (m *manifestManager) saveIndex(ctx context.Context, index *ManifestIndex) error {
+	if index == nil {
+		return nil
+	}
+
 	m.indexCache = new(ManifestIndex)
 	*m.indexCache = *index
 
@@ -236,7 +239,7 @@ func (m *manifestManager) Delete(ctx context.Context, qopts ...packmanager.Query
 			m.indexCache.Origin,
 			WithAuthConfig(query.Auths()),
 			WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
-			WithUpdate(query.Update()),
+			WithUpdate(query.Remote()),
 		)
 		if err != nil {
 			return err
@@ -285,7 +288,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	mopts := []ManifestOption{
 		WithAuthConfig(query.Auths()),
 		WithCacheDir(config.G[config.KraftKit](ctx).Paths.Sources),
-		WithUpdate(query.Update()),
+		WithUpdate(query.Remote()),
 	}
 
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
@@ -300,7 +303,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		if err != nil {
 			return nil, err
 		}
-	} else if query.Update() {
+	} else if query.Remote() {
 		// If Catalog is executed in multiple successive calls, which occurs when
 		// searching for multiple packages sequentially, check if the cacheIndex has
 		// been set.  Even if UseCache set has been set, it means that at least once
@@ -316,7 +319,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		}
 
 		manifests = m.indexCache.Manifests
-	} else {
+	} else if query.Local() {
 		m.indexCache, err = NewManifestIndexFromFile(m.LocalManifestIndex(ctx))
 		if err == nil {
 			manifests, err = FindManifestsFromSource(ctx, m.indexCache.Origin, mopts...)
@@ -474,7 +477,7 @@ func (m *manifestManager) IsCompatible(ctx context.Context, source string, qopts
 	}
 
 	if _, err := NewProvider(ctx, source,
-		WithUpdate(packmanager.NewQuery(qopts...).Update()),
+		WithUpdate(packmanager.NewQuery(qopts...).Remote()),
 	); err != nil {
 		return nil, false, fmt.Errorf("incompatible source: %w", err)
 	}

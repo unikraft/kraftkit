@@ -1,12 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2024, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 package oci
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
@@ -14,6 +18,8 @@ import (
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	regtypes "github.com/docker/docker/api/types/registry"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -31,10 +37,10 @@ func WithDetectHandler() OCIManagerOption {
 				namespace = n
 			}
 
-			log.G(ctx).WithFields(logrus.Fields{
-				"addr":      contAddr,
-				"namespace": namespace,
-			}).Trace("using oci containerd handler")
+			log.G(ctx).
+				WithField("addr", contAddr).
+				WithField("namespace", namespace).
+				Trace("using containerd handler")
 
 			manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 				return handler.NewContainerdHandler(ctx, contAddr, namespace, manager.auths)
@@ -46,9 +52,9 @@ func WithDetectHandler() OCIManagerOption {
 		// Fall-back to using a simpler directory/tarball-based OCI handler
 		ociDir := filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, "oci")
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": ociDir,
-		}).Trace("using oci directory handler")
+		log.G(ctx).
+			WithField("path", ociDir).
+			Trace("using directory handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			handle, err := handler.NewDirectoryHandler(ociDir, manager.auths)
@@ -74,10 +80,10 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 			namespace = DefaultNamespace
 		}
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"addr":      addr,
-			"namespace": namespace,
-		}).Trace("using containerd handler")
+		log.G(ctx).
+			WithField("addr", addr).
+			WithField("namespace", namespace).
+			Trace("using containerd handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			return handler.NewContainerdHandler(ctx, addr, namespace, manager.auths)
@@ -91,9 +97,9 @@ func WithContainerd(ctx context.Context, addr, namespace string) OCIManagerOptio
 // the directory to use as the OCI root.
 func WithDirectory(ctx context.Context, path string) OCIManagerOption {
 	return func(ctx context.Context, manager *ociManager) error {
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("using oci directory handler")
+		log.G(ctx).
+			WithField("path", path).
+			Trace("using directory handler")
 
 		manager.handle = func(ctx context.Context) (context.Context, handler.Handler, error) {
 			handle, err := handler.NewDirectoryHandler(path, manager.auths)
@@ -125,7 +131,12 @@ func WithDefaultRegistries() OCIManagerOption {
 				continue
 			}
 
-			if reg, err := manager.registry(ctx, manifest); err == nil && reg.Ping(ctx) == nil {
+			regName, err := name.NewRegistry(manifest)
+			if err != nil {
+				continue
+			}
+
+			if _, err := transport.Ping(ctx, regName, http.DefaultTransport.(*http.Transport).Clone()); err == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
 		}

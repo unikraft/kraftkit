@@ -142,13 +142,13 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		}
 	}
 
-	packs, err := packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithUpdate(false))...)
+	packs, err := packmanager.G(ctx).Catalog(ctx, qopts...)
 	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
 		// Try again with a remote update request.  Save this to qopts in case we
 		// need to call `Catalog` again.
-		qopts = append(qopts, packmanager.WithUpdate(true))
+		qopts = append(qopts, packmanager.WithRemote(true))
 		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
 		if err != nil {
 			return fmt.Errorf("could not query catalog: %w", err)
@@ -207,36 +207,43 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		return err
 	}
 
-	paramodel, err := paraprogress.NewParaProgress(
-		ctx,
-		[]*paraprogress.Process{paraprogress.NewProcess(
-			fmt.Sprintf("pulling %s", packs[0].String()),
-			func(ctx context.Context, w func(progress float64)) error {
-				popts := []pack.PullOption{
-					pack.WithPullWorkdir(tempDir),
-				}
-				if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
-					popts = append(popts, pack.WithPullProgressFunc(w))
-				}
+	if exists, _, err := packs[0].PulledAt(ctx); !exists || err != nil {
+		paramodel, err := paraprogress.NewParaProgress(
+			ctx,
+			[]*paraprogress.Process{paraprogress.NewProcess(
+				fmt.Sprintf("pulling %s", packs[0].String()),
+				func(ctx context.Context, w func(progress float64)) error {
+					popts := []pack.PullOption{}
+					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+						popts = append(popts, pack.WithPullProgressFunc(w))
+					}
 
-				return packs[0].Pull(
-					ctx,
-					popts...,
-				)
-			},
-		)},
-		paraprogress.IsParallel(false),
-		paraprogress.WithRenderer(
-			log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-		),
-		paraprogress.WithFailFast(true),
-	)
-	if err != nil {
-		return err
+					return packs[0].Pull(
+						ctx,
+						popts...,
+					)
+				},
+			)},
+			paraprogress.IsParallel(false),
+			paraprogress.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			paraprogress.WithFailFast(true),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := paramodel.Start(); err != nil {
+			return err
+		}
 	}
 
-	if err := paramodel.Start(); err != nil {
-		return err
+	if err := packs[0].Unpack(
+		ctx,
+		tempDir,
+	); err != nil {
+		return fmt.Errorf("unpacking the image: %w", err)
 	}
 
 	// Crucially, the catalog should return an interface that also implements

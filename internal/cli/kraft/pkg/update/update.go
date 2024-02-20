@@ -6,6 +6,7 @@ package update
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -19,7 +20,7 @@ import (
 )
 
 type UpdateOptions struct {
-	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"manifest" local:"true"`
+	Manager string `long:"manager" short:"m" usage:"Force the handler type" default:"all" local:"true"`
 }
 
 // Update the local index of known locations for remote Unikraft components.
@@ -93,10 +94,11 @@ func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 			return err
 		}
 		for _, pm := range umbrella {
+			pm := pm // Go closures
 			processes = append(processes,
 				processtree.NewProcessTreeItem(
-					"updating",
-					pm.Format().String(),
+					fmt.Sprintf("updating %s index", pm.Format().String()),
+					"",
 					func(ctx context.Context) error {
 						return pm.Update(ctx)
 					},
@@ -110,7 +112,7 @@ func (opts *UpdateOptions) Run(ctx context.Context, args []string) error {
 		[]processtree.ProcessTreeOption{
 			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
 			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
-			processtree.WithHideOnSuccess(true),
+			processtree.WithHideOnSuccess(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.JSON),
 		},
 		processes...,
 	)

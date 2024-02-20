@@ -16,14 +16,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
+	"golang.org/x/sync/errgroup"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/lockedfile"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci/cache"
 	"kraftkit.sh/oci/simpleauth"
+	ociutils "kraftkit.sh/oci/utils"
 
+	"github.com/containerd/containerd/content"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -54,20 +60,34 @@ func NewDirectoryHandler(path string, auths map[string]config.AuthConfig) (*Dire
 	}, nil
 }
 
-// DigestExists implements DigestResolver.
-func (handle *DirectoryHandler) DigestExists(ctx context.Context, needle digest.Digest) (exists bool, err error) {
-	manifests, err := handle.ListManifests(ctx)
+// DigestInfo implements DigestResolver.
+func (handle *DirectoryHandler) DigestInfo(ctx context.Context, needle digest.Digest) (*content.Info, error) {
+	manifestsDir := filepath.Join(handle.path, DirectoryHandlerDigestsDir)
+
+	// If the digest directory does not exist and return nil, since there's
+	// nothing to return.
+	if _, err := os.Stat(manifestsDir); err != nil {
+		return nil, err
+	}
+
+	digestPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerDigestsDir,
+		needle.Algorithm().String(),
+		needle.Encoded(),
+	)
+
+	st, err := os.Stat(digestPath)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	for haystack := range manifests {
-		if haystack == needle.String() {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return &content.Info{
+		Digest:    needle,
+		Size:      st.Size(),
+		CreatedAt: time.Time{}, // TODO(nderjung): General-purpose stat not avail.
+		UpdatedAt: st.ModTime(),
+	}, nil
 }
 
 // PullDigest implements DigestPuller.
@@ -112,16 +132,17 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex:
-		log.G(ctx).
-			WithField("digest", dgst.String()).
-			Debugf("pulling index")
-
-		indexV1, err := remote.Index(ref, ropts...)
+		indexV1, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote index: %w", err)
 		}
 
-		manifests := []ocispec.Descriptor{}
+		indexDgst, err := indexV1.Digest()
+		if err != nil {
+			return fmt.Errorf("could not get index digest: %w", err)
+		}
+
+		localManifests := []ocispec.Descriptor{}
 		var indexTagPath string
 
 		if !strings.ContainsRune(fullref, '@') && len(strings.SplitN(fullref, ":", 2)) == 2 {
@@ -156,7 +177,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 						}
 
 						// Save the existing local manifests
-						manifests = localIndex.Manifests
+						localManifests = localIndex.Manifests
 
 						if err := os.RemoveAll(oldIndexDigestPath); err != nil {
 							return fmt.Errorf("could not remove existing index: %w", err)
@@ -165,6 +186,10 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				}
 			}
 		}
+
+		log.G(ctx).
+			WithField("digest", indexDgst.String()).
+			Debugf("pulling index")
 
 		var indexRaw []byte
 		index := ocispec.Index{}
@@ -178,7 +203,12 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			return fmt.Errorf("could not unmarshal raw index: %w", err)
 		}
 
+		newManifestPlatChecksums := map[string]bool{}
+		newManifests := []ocispec.Descriptor{}
+
 		// Remove manifests that do not match the platform selector.
+		manifestsToPull := []ocispec.Descriptor{}
+
 	checkManifest:
 		for _, manifest := range index.Manifests {
 			if plat.OS != "" && plat.OS != manifest.Platform.OS {
@@ -201,20 +231,87 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				}
 			}
 
-			if err := handle.PullDigest(ctx,
-				ocispec.MediaTypeImageManifest,
-				fullref,
-				manifest.Digest,
-				plat,
-				onProgress,
-			); err != nil {
-				return fmt.Errorf("could not pull manifest: %w", err)
-			}
-
-			manifests = append(manifests, manifest)
+			manifestsToPull = append(manifestsToPull, manifest)
 		}
 
-		index.Manifests = manifests
+		eg, egCtx := errgroup.WithContext(ctx)
+		var mu sync.RWMutex
+
+		for i := range manifestsToPull {
+			eg.Go(func(i int) func() error {
+				return func() error {
+					if err := handle.PullDigest(egCtx,
+						ocispec.MediaTypeImageManifest,
+						fullref,
+						manifestsToPull[i].Digest,
+						plat,
+						onProgress,
+					); err != nil {
+						return fmt.Errorf("could not pull manifest: %w", err)
+					}
+
+					checksum, err := ociutils.PlatformChecksum(fullref, manifestsToPull[i].Platform)
+					if err != nil {
+						return fmt.Errorf("could not calculate platform checksum for '%s': %w", manifestsToPull[i].Digest.String(), err)
+					}
+
+					mu.Lock()
+					newManifestPlatChecksums[checksum] = true
+					newManifestPlatChecksums[manifestsToPull[i].Digest.String()] = true
+					newManifests = append(newManifests, manifestsToPull[i])
+					mu.Unlock()
+
+					return nil
+				}
+			}(i))
+		}
+
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+
+		// Compare the local digests with the new digest and remove local digests
+		// which have the same platform checksum and zero layers.
+		for _, localManifest := range localManifests {
+			// Bypass the checksum check if the manifest digest is the same as the
+			// requested manifest, this can be safely stored in the index.  Use the
+			// same `newManifestPlatChecksums` map to keep track of whether we have
+			// performed this .
+			if _, ok := newManifestPlatChecksums[localManifest.Digest.String()]; ok {
+				continue
+			}
+
+			if localManifest.Digest.String() == dgst.String() {
+				newManifests = append(newManifests, localManifest)
+				newManifestPlatChecksums[dgst.String()] = true
+				continue
+			}
+
+			checksum, err := ociutils.PlatformChecksum(fullref, localManifest.Platform)
+			if err != nil {
+				return fmt.Errorf("could not calculate platform checksum for '%s': %w", localManifest.Digest.String(), err)
+			}
+
+			// If this checksum does not exist in the existing list, we can safely add
+			// it to the new index.
+			if _, ok := newManifestPlatChecksums[checksum]; ok {
+				oldManifestPath := filepath.Join(
+					handle.path,
+					DirectoryHandlerDigestsDir,
+					localManifest.Digest.Algorithm().String(),
+					localManifest.Digest.Encoded(),
+				)
+				if err := os.Remove(oldManifestPath); err != nil {
+					return fmt.Errorf("could not remove old manifest '%s': %w", oldManifestPath, err)
+				}
+
+				continue
+			}
+
+			newManifests = append(newManifests, localManifest)
+		}
+
+		index.Manifests = newManifests
 
 		indexRaw, err = json.Marshal(&index)
 		if err != nil {
@@ -256,115 +353,121 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 	case ocispec.MediaTypeImageManifest:
-		log.G(ctx).
-			WithField("digest", dgst.String()).
-			Debugf("pulling manifest")
-
-		image, err := remote.Image(ref, ropts...)
+		v1Index, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote manifest: %w", err)
 		}
 
-		manifestRaw, err := image.RawManifest()
+		// Only pull the manifest if does not exist locally.
+		manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
 		if err != nil {
-			return fmt.Errorf("could not get raw manifest: %w", err)
-		}
+			manifestPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerDigestsDir,
+				dgst.Algorithm().String(),
+				dgst.Encoded(),
+			)
 
-		manifest := ocispec.Manifest{}
-		if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
-			return fmt.Errorf("could not unmarshal raw manifest: %w", err)
-		}
+			hash, err := v1.NewHash(dgst.String())
+			if err != nil {
+				return fmt.Errorf("could not calculate image digest: %w", err)
+			}
+			image, err := v1Index.Image(hash)
+			if err != nil {
+				return fmt.Errorf("could not retrieve image: %w", err)
+			}
 
-		manifestPath := filepath.Join(
-			handle.path,
-			DirectoryHandlerDigestsDir,
-			dgst.Algorithm().String(),
-			dgst.Encoded(),
-		)
+			log.G(ctx).
+				WithField("digest", dgst.String()).
+				Debugf("pulling manifest")
 
-		if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
-			return fmt.Errorf("could not make manifest parent directories: %w", err)
-		}
+			manifestRaw, err := image.RawManifest()
+			if err != nil {
+				return fmt.Errorf("could not get raw manifest: %w", err)
+			}
 
-		manifestWriter, err := os.Create(manifestPath)
-		if err != nil {
-			return fmt.Errorf("could not get manifest file descriptor: %w", err)
-		}
+			if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
+				return fmt.Errorf("could not unmarshal raw manifest: %w", err)
+			}
 
-		defer manifestWriter.Close()
+			if err = os.MkdirAll(filepath.Dir(manifestPath), 0o775); err != nil {
+				return fmt.Errorf("could not make manifest parent directories: %w", err)
+			}
 
-		if _, err = manifestWriter.Write(manifestRaw); err != nil {
-			return fmt.Errorf("could not write manifest: %w", err)
-		}
+			manifestWriter, err := os.Create(manifestPath)
+			if err != nil {
+				return fmt.Errorf("could not get manifest file descriptor: %w", err)
+			}
 
-		configDgst, err := image.ConfigName()
-		if err != nil {
-			return fmt.Errorf("could not get config digest: %w", err)
-		}
+			defer manifestWriter.Close()
 
-		log.G(ctx).
-			WithField("digest", configDgst.String()).
-			Debugf("pulling config")
-
-		configRaw, err := image.RawConfigFile()
-		if err != nil {
-			return fmt.Errorf("could not get raw config: %w", err)
-		}
-
-		config := ocispec.Image{}
-		if err = json.Unmarshal(configRaw, &config); err != nil {
-			return fmt.Errorf("could not unmarshal raw config: %w", err)
+			if _, err = manifestWriter.Write(manifestRaw); err != nil {
+				return fmt.Errorf("could not write manifest: %w", err)
+			}
 		}
 
 		configPath := filepath.Join(
 			handle.path,
 			DirectoryHandlerDigestsDir,
-			configDgst.Algorithm,
-			configDgst.Hex,
+			manifest.Config.Digest.Algorithm().String(),
+			manifest.Config.Digest.Hex(),
 		)
 
-		if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
-			return fmt.Errorf("could not create config parent directories: %w", err)
-		}
+		// Only pull the config if does not exist locally.
+		if _, err := os.Stat(configPath); err != nil {
+			// NOTE(nderjung): Unfortunately, the `remote` package does not support
+			// simply `Get`ting the config, so we must traverse backwards to the image
+			// (and therefore make a remote request to an image manifest, even if we
+			// may have a copy of it locally, adding 1 additional external request to
+			// the registry).
 
-		configWriter, err := os.Create(configPath)
-		if err != nil {
-			return fmt.Errorf("could not get config file descriptor: %w", err)
-		}
+			log.G(ctx).
+				WithField("digest", manifest.Config.Digest.String()).
+				Debugf("pulling config")
 
-		defer configWriter.Close()
+			image, err := remote.Image(ref, ropts...)
+			if err != nil {
+				return fmt.Errorf("could not retrieve remote manifest: %w", err)
+			}
 
-		if _, err = configWriter.Write(configRaw); err != nil {
-			return fmt.Errorf("could not write raw config: %w", err)
-		}
+			configRaw, err := image.RawConfigFile()
+			if err != nil {
+				return fmt.Errorf("could not get raw config: %w", err)
+			}
 
-		layers, err := image.Layers()
-		if err != nil {
-			return fmt.Errorf("could not get manifest layers: %w", err)
+			config := ocispec.Image{}
+			if err = json.Unmarshal(configRaw, &config); err != nil {
+				return fmt.Errorf("could not unmarshal raw config: %w", err)
+			}
+
+			if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
+				return fmt.Errorf("could not create config parent directories: %w", err)
+			}
+
+			configWriter, err := os.Create(configPath)
+			if err != nil {
+				return fmt.Errorf("could not get config file descriptor: %w", err)
+			}
+
+			defer configWriter.Close()
+
+			if _, err = configWriter.Write(configRaw); err != nil {
+				return fmt.Errorf("could not write raw config: %w", err)
+			}
 		}
 
 		// First calculate the total size of all layers.  This is done so that the
 		// onProgress callback correctly reports
 		var totalSize int64
-		for _, layer := range layers {
-			size, err := layer.Size()
-			if err != nil {
-				return fmt.Errorf("could not get layer size: %w", err)
-			}
-
-			totalSize += size
+		for _, layer := range manifest.Layers {
+			totalSize += layer.Size
 		}
 
-		for _, layer := range layers {
-			layerDgst, err := layer.Digest()
-			if err != nil {
-				return fmt.Errorf("could not get layer digest: %w", err)
-			}
-
+		for _, layer := range manifest.Layers {
 			if err := handle.PullDigest(ctx,
 				ocispec.MediaTypeImageLayer,
 				fullref,
-				digest.NewDigestFromHex(layerDgst.Algorithm, layerDgst.Hex),
+				layer.Digest,
 				plat,
 				func(size float64) {
 					onProgress(size / float64(totalSize))
@@ -480,6 +583,12 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 		progresReader = reader
 	}
 
+	log.G(ctx).
+		WithField("ref", ref).
+		WithField("mediaType", desc.MediaType).
+		WithField("digest", desc.Digest.String()).
+		Trace("saving")
+
 	if _, err := io.Copy(blob, progresReader); err != nil {
 		return err
 	}
@@ -506,7 +615,7 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 			}
 
 			if err := os.Symlink(blobPath, indexTagPath); err != nil {
-				return err
+				return fmt.Errorf("creating symbolic link to new index: %w", err)
 			}
 		}
 	}
@@ -549,12 +658,14 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 		}
 	}
 
+	log.G(ctx).
+		WithField("ref", ref.Name()).
+		WithField("mediaType", desc.MediaType).
+		WithField("digest", desc.Digest.String()).
+		Debugf("pushing")
+
 	switch desc.MediaType {
 	case ocispec.MediaTypeImageIndex:
-		log.G(ctx).
-			WithField("digest", desc.Digest.String()).
-			Debugf("pushing index")
-
 		return remote.WriteIndex(ref,
 			&DirectoryIndex{
 				ctx:     ctx,
@@ -566,9 +677,6 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 		)
 
 	case ocispec.MediaTypeImageManifest:
-		log.G(ctx).
-			WithField("digest", desc.Digest.String()).
-			Debugf("pushing manifest")
 		image, err := handle.resolveImage(ctx, fullref, desc.Digest)
 		if err != nil {
 			return err
@@ -693,9 +801,19 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		dgst.Hex(),
 	)
 
-	if _, err := os.Stat(manifestPath); err != nil {
-		return fmt.Errorf("manifest '%s' does not exist at '%s'", dgst.String(), manifestPath)
-	}
+	// TODO(nderjung): Remove empty parent directories up until
+	// DirectoryHandlerManifestsDir.
+	defer func() {
+		log.G(ctx).
+			WithField("digest", dgst.String()).
+			Trace("deleting manifest")
+
+		if err := os.RemoveAll(manifestPath); err != nil {
+			log.G(ctx).
+				WithField("digest", dgst.String()).
+				Debug("could not delete manifest: %w", err)
+		}
+	}()
 
 	manifestReader, err := os.Open(manifestPath)
 	if err != nil {
@@ -722,6 +840,10 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 			layer.Digest.Hex(),
 		)
 
+		log.G(ctx).
+			WithField("digest", layer.Digest.String()).
+			Trace("deleting layer")
+
 		if err := os.RemoveAll(layerPath); err != nil {
 			return fmt.Errorf("could not delete layer digest from manifest '%s': %w", dgst.String(), err)
 		}
@@ -733,6 +855,10 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		manifest.Config.Digest.Algorithm().String(),
 		manifest.Config.Digest.Hex(),
 	)
+
+	log.G(ctx).
+		WithField("digest", manifest.Config.Digest.String()).
+		Trace("deleting config")
 
 	if err := os.RemoveAll(configPath); err != nil {
 		return fmt.Errorf("could not delete config digest from manifest '%s': %w", dgst.String(), err)
@@ -804,9 +930,7 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		}
 	}
 
-	// TODO(nderjung): Remove empty parent directories up until
-	// DirectoryHandlerManifestsDir.
-	return os.RemoveAll(manifestPath)
+	return nil
 }
 
 // ResolveIndex implements IndexResolver.
@@ -814,6 +938,7 @@ func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string
 	// Find the index of this image
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag("latest"),
 	)
 	if err != nil {
 		return nil, err
@@ -927,7 +1052,7 @@ func (handle *DirectoryHandler) ListIndexes(ctx context.Context) (map[string]*oc
 	return indexes, nil
 }
 
-func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string) error {
+func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string, deps bool) error {
 	indexPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerIndexesDir,
@@ -940,27 +1065,29 @@ func (handle *DirectoryHandler) DeleteIndex(ctx context.Context, fullref string)
 		return nil
 	}
 
-	// Read the index
-	reader, err := os.Open(indexPath)
-	if err != nil {
-		return err
-	}
+	if deps {
+		// Read the index
+		reader, err := os.Open(indexPath)
+		if err != nil {
+			return err
+		}
 
-	defer reader.Close()
+		defer reader.Close()
 
-	indexRaw, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
+		indexRaw, err := io.ReadAll(reader)
+		if err != nil {
+			return err
+		}
 
-	index := ocispec.Index{}
-	if err = json.Unmarshal(indexRaw, &index); err != nil {
-		return err
-	}
+		index := ocispec.Index{}
+		if err = json.Unmarshal(indexRaw, &index); err != nil {
+			return err
+		}
 
-	for _, manifest := range index.Manifests {
-		if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil {
-			return fmt.Errorf("could not delete manifest from '%s': %w", fullref, err)
+		for _, manifest := range index.Manifests {
+			if err := handle.DeleteManifest(ctx, fullref, manifest.Digest); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("could not delete manifest from '%s': %w", fullref, err)
+			}
 		}
 	}
 
@@ -1006,7 +1133,7 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 	// Find the manifest of this image
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 
 	manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
@@ -1036,20 +1163,20 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 	// Read the config
 	reader, err := os.Open(configDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening config: %w", err)
 	}
 
 	defer reader.Close()
 
 	configRaw, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
 	// Unmarshal the config
 	config := ocispec.Image{}
 	if err = json.Unmarshal(configRaw, &config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing config; %w", err)
 	}
 
 	// Return the image
@@ -1060,7 +1187,7 @@ func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string
 func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string, dgst digest.Digest, dest string) (*ocispec.Image, error) {
 	img, err := handle.resolveImage(ctx, fullref, dgst)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolving config: %w", err)
 	}
 
 	// Iterate over the layers
@@ -1068,7 +1195,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 		// Get the digest
 		digest, err := v1.NewHash(layer.String())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("generating digest: %w", err)
 		}
 
 		// Get the layer path
@@ -1082,7 +1209,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 		// Layer path is a tarball, so we need to extract it
 		reader, err := os.Open(layerPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("opening layer: %w", err)
 		}
 
 		defer reader.Close()
@@ -1101,7 +1228,7 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 			// If the file is a directory, create it
 			if hdr.Typeflag == tar.TypeDir {
 				if err := os.MkdirAll(path, 0o775); err != nil {
-					return nil, err
+					return nil, fmt.Errorf("creating directory: %w", err)
 				}
 				continue
 			}
@@ -1109,20 +1236,20 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 			// If the directory in the path doesn't exist, create it
 			if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
 				if err := os.MkdirAll(filepath.Dir(path), 0o775); err != nil {
-					return nil, err
+					return nil, fmt.Errorf("creating directory: %w", err)
 				}
 			}
 
 			// Otherwise, create the file
 			writer, err := os.Create(path)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("creating file: %w", err)
 			}
 
 			defer writer.Close()
 
 			if _, err = io.Copy(writer, tr); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("writing file: %w", err)
 			}
 		}
 	}

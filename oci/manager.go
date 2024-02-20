@@ -14,23 +14,23 @@ import (
 	"strings"
 	"sync"
 
-	regtypes "github.com/docker/docker/api/types/registry"
-	regtool "github.com/genuinetools/reg/registry"
-	"github.com/genuinetools/reg/repoutils"
 	"github.com/gobwas/glob"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
+	"kraftkit.sh/oci/cache"
 	"kraftkit.sh/oci/handler"
 	"kraftkit.sh/oci/simpleauth"
+	ociutils "kraftkit.sh/oci/utils"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -70,7 +70,154 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 
 // Update implements packmanager.PackageManager
 func (manager *ociManager) Update(ctx context.Context) error {
+	packs, err := manager.update(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, pack := range packs {
+		pack := pack.(*ociPackage) // Safe since we're in the oci package
+
+		log.G(ctx).Infof("saving %s", pack.String())
+
+		if _, err := pack.index.Save(ctx, pack.String(), nil); err != nil {
+			return fmt.Errorf("error saving %s: %w", pack.Name(), err)
+		}
+	}
+
 	return nil
+}
+
+func (manager *ociManager) update(ctx context.Context, auths map[string]config.AuthConfig) (map[string]pack.Package, error) {
+	ctx, handle, err := manager.handle(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if auths == nil {
+		auths, err = defaultAuths(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("accessing credentials: %w", err)
+		}
+	}
+
+	packs := make(map[string]pack.Package)
+
+	for _, domain := range manager.registries {
+		log.G(ctx).
+			WithField("registry", domain).
+			Trace("querying")
+
+		nopts := []name.Option{}
+		authConfig := &authn.AuthConfig{}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+
+		// Annoyingly convert between regtypes and authn.
+		if auth, ok := auths[domain]; ok {
+			authConfig.Username = auth.User
+			authConfig.Password = auth.Token
+
+			if !auth.VerifySSL {
+				transport.TLSClientConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+				nopts = append(nopts, name.Insecure)
+			}
+		}
+
+		regName, err := name.NewRegistry(domain, nopts...)
+		if err != nil {
+			log.G(ctx).
+				WithField("registry", domain).
+				Debugf("could not parse registry: %v", err)
+			continue
+		}
+
+		catalog, err := remote.Catalog(ctx, regName,
+			remote.WithContext(ctx),
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+			remote.WithTransport(transport),
+		)
+		if err != nil {
+			log.G(ctx).
+				WithField("registry", domain).
+				Debugf("could not query catalog: %v", err)
+			continue
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(len(catalog))
+		var mu sync.RWMutex
+
+		for _, fullref := range catalog {
+			go func(fullref string) {
+				defer wg.Done()
+
+				ref, err := name.ParseReference(fullref,
+					name.WithDefaultRegistry(domain),
+					name.WithDefaultTag(DefaultTag),
+				)
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						Tracef("skipping index: could not parse reference: %s", err.Error())
+					return
+				}
+
+				index, err := cache.RemoteIndex(ref,
+					remote.WithContext(ctx),
+					remote.WithAuth(&simpleauth.SimpleAuthenticator{
+						Auth: authConfig,
+					}),
+					remote.WithTransport(transport),
+				)
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						Tracef("skipping index: could not retrieve image: %s", err.Error())
+					return
+				}
+
+				v1IndexManifest, err := index.IndexManifest()
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						Tracef("could not access the index's manifest object: %s", err.Error())
+					return
+				}
+
+				v1ManifestPackages := processV1IndexManifests(ctx,
+					handle,
+					fullref,
+					nil,
+					FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
+				)
+
+				mu.Lock()
+				for checksum, pack := range v1ManifestPackages {
+					var title []string
+					for _, column := range pack.Columns() {
+						if len(column.Value) > 12 {
+							continue
+						}
+
+						title = append(title, column.Value)
+					}
+
+					log.G(ctx).
+						Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+					packs[checksum] = pack
+				}
+				mu.Unlock()
+			}(fullref)
+		}
+
+		wg.Wait()
+	}
+
+	return packs, nil
 }
 
 // Pack implements packmanager.PackageManager
@@ -93,48 +240,6 @@ func (manager *ociManager) Unpack(ctx context.Context, entity pack.Package, opts
 	return nil, fmt.Errorf("not implemented: oci.manager.Unpack")
 }
 
-// registry is a wrapper method for authenticating and listing OCI repositories
-// from a provided domain representing a registry.
-func (manager *ociManager) registry(ctx context.Context, domain string) (*regtool.Registry, error) {
-	var err error
-	var auth regtypes.AuthConfig
-	insecure := false
-
-	if a, ok := manager.auths[domain]; ok {
-		insecure = !a.VerifySSL
-
-		log.G(ctx).
-			WithField("registry", domain).
-			WithField("insecure", insecure).
-			Debug("authenticating")
-
-		auth = regtypes.AuthConfig{
-			Username: a.User,
-			Password: a.Token,
-		}
-	} else {
-		auth, err = repoutils.GetAuthConfig("", "", domain)
-		if err != nil {
-			log.G(ctx).WithField("registry", domain).Warn(err)
-		}
-	}
-
-	reg, err := regtool.New(ctx, auth, regtool.Opt{
-		Domain:   domain,
-		Debug:    false,
-		SkipPing: true,
-		Insecure: insecure,
-		Headers: map[string]string{
-			"User-Agent": version.UserAgent(),
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize registry: %v", err)
-	}
-
-	return reg, nil
-}
-
 // processV1IndexManifests is an internal utility method which is able to
 // iterate over the supplied slice of ocispec.Descriptors which represent a
 // Manifest from an Index.  Based on the provided criterium from the query,
@@ -152,12 +257,14 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			if ok, err := IsOCIDescriptorKraftKitCompatible(&descriptor); !ok {
 				log.G(ctx).
 					WithField("digest", descriptor.Digest.String()).
+					WithField("ref", fullref).
 					Tracef("incompatible index structure: %s", err.Error())
 				return
 			}
 
-			if query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
+			if query != nil && query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Platform()).
 					WithField("got", descriptor.Platform.OS).
@@ -165,8 +272,9 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
+			if query != nil && query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					WithField("want", query.Architecture()).
 					WithField("got", descriptor.Platform.Architecture).
@@ -174,13 +282,14 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if len(query.KConfig()) > 0 {
+			if query != nil && len(query.KConfig()) > 0 {
 				// If the list of requested features is greater than the list of
 				// available features, there will be no way for the two to match.  We
 				// are searching for a subset of query.KConfig() from
 				// m.Platform.OSFeatures to match.
 				if len(query.KConfig()) > len(descriptor.Platform.OSFeatures) {
 					log.G(ctx).
+						WithField("ref", fullref).
 						WithField("digest", descriptor.Digest.String()).
 						Trace("skipping descriptor: query contains more features than available")
 					return
@@ -193,6 +302,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				for _, a := range query.KConfig() {
 					if !available.Contains(a) {
 						log.G(ctx).
+							WithField("ref", fullref).
 							WithField("digest", descriptor.Digest.String()).
 							WithField("feature", a).
 							Trace("skipping manifest: missing feature")
@@ -201,25 +311,37 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				}
 			}
 
+			var auths map[string]config.AuthConfig
+			if query != nil {
+				auths = query.Auths()
+			}
+
+			log.G(ctx).
+				WithField("ref", fullref).
+				WithField("digest", descriptor.Digest.String()).
+				Debug("found")
+
 			// If we have made it this far, the query has been successfully
 			// satisfied by this particular manifest and we can generate a package
 			// from it.
 			pack, err := NewPackageFromOCIManifestDigest(ctx,
 				handle,
 				fullref,
-				query.Auths(),
+				auths,
 				descriptor.Digest,
 			)
 			if err != nil {
 				log.G(ctx).
+					WithField("ref", fullref).
 					WithField("digest", descriptor.Digest.String()).
 					Tracef("skipping manifest: could not instantiate package from manifest digest: %s", err.Error())
 				return
 			}
 
-			checksum, err := PlatformChecksum(pack.String(), descriptor.Platform)
+			checksum, err := ociutils.PlatformChecksum(pack.String(), descriptor.Platform)
 			if err != nil {
 				log.G(ctx).
+					WithField("ref", fullref).
 					Debugf("could not calculate platform digest for '%s': %s", descriptor.Digest.String(), err)
 				return
 			}
@@ -264,6 +386,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// format.
 	ref, refErr := name.ParseReference(qname,
 		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if refErr == nil {
 		qname = ref.Context().Name()
@@ -274,7 +397,20 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 	}
 
-	log.G(ctx).WithFields(query.Fields()).Debug("querying oci catalog")
+	unsetRegistry := false
+
+	// No default registry found, re-parse with
+	if ref != nil && ref.Context().Registry.String() == "" {
+		unsetRegistry = true
+		ref, refErr = name.ParseReference(qname,
+			name.WithDefaultRegistry(DefaultRegistry),
+			name.WithDefaultTag(DefaultTag),
+		)
+	}
+
+	log.G(ctx).
+		WithFields(query.Fields()).
+		Debug("querying catalog")
 
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
@@ -292,15 +428,11 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
-	if query.Update() && refErr == nil {
+	if query.Remote() && refErr == nil {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
-			remote.WithPlatform(v1.Platform{
-				OS:           query.Platform(),
-				Architecture: query.Architecture(),
-				OSFeatures:   query.KConfig(),
-			}),
+			remote.WithContext(ctx),
 		}
 
 		// Annoyingly convert between regtypes and authn.
@@ -325,11 +457,15 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			)
 		}
 
-		v1ImageIndex, err := remote.Index(ref, ropts...)
+		log.G(ctx).
+			WithField("ref", ref.String()).
+			Trace("getting remote index")
+
+		v1ImageIndex, err := cache.RemoteIndex(ref, ropts...)
 		if err != nil {
 			log.G(ctx).
-				Warnf("could not get index: %v", err)
-			goto searchRemoteIndexes
+				Debugf("could not get index: %v", err)
+			goto resolveLocalIndex
 		}
 
 		v1IndexManifest, err := v1ImageIndex.IndexManifest()
@@ -337,7 +473,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			log.G(ctx).
 				WithField("ref", ref).
 				Tracef("could not access the index's manifest object: %s", err.Error())
-			goto searchRemoteIndexes
+			goto resolveLocalIndex
 		}
 
 		for checksum, pack := range processV1IndexManifests(ctx,
@@ -348,199 +484,60 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		) {
 			packs[checksum] = pack
 		}
-	}
 
-searchRemoteIndexes:
-	if query.Update() {
-		for _, domain := range manager.registries {
-			log.G(ctx).
-				WithField("registry", domain).
-				Trace("querying")
-
-			reg, err := manager.registry(ctx, domain)
-			if err != nil {
-				log.G(ctx).
-					WithField("registry", domain).
-					Debugf("could not initialize registry: %v", err)
-				continue
-			}
-
-			authConfig := &authn.AuthConfig{}
-			transport := http.DefaultTransport.(*http.Transport).Clone()
-
-			// Annoyingly convert between regtypes and authn.
-			if auth, ok := auths[reg.Domain]; ok {
-				authConfig.Username = auth.User
-				authConfig.Password = auth.Token
-
-				if !auth.VerifySSL {
-					transport.TLSClientConfig = &tls.Config{
-						InsecureSkipVerify: true,
-					}
-				}
-			}
-
-			if refErr == nil && ref.Context().RegistryStr() != "" && ref.Context().RegistryStr() != domain {
-				log.G(ctx).
-					WithField("want", domain).
-					WithField("got", ref.Context().RegistryStr()).
-					Tracef("skipping registry")
-				continue
-			}
-
-			catalog, err := reg.Catalog(ctx, "")
-			if err != nil {
-				log.G(ctx).
-					WithField("registry", domain).
-					Debugf("could not query catalog: %v", err)
-				continue
-			}
-
-			var wg sync.WaitGroup
-			wg.Add(len(catalog))
-			var mu sync.RWMutex
-
-			for _, fullref := range catalog {
-				go func(fullref string) {
-					defer wg.Done()
-
-					// Skip direct references from the remote registry
-					if query.Update() && refErr == nil && ref.String() == fullref {
-						log.G(ctx).
-							WithField("ref", fullref).
-							Trace("skipping index: does not exist locally")
-						return
-					}
-
-					if len(qversion) > 0 {
-						split := strings.Split(fullref, ":")
-						if len(split) < 1 {
-							log.G(ctx).
-								WithField("got", fullref).
-								WithField("want", qname).
-								Trace("skipping index: malformed name")
-							return
-						}
-						if qname != split[0] {
-							log.G(ctx).
-								WithField("got", split[0]).
-								WithField("want", qname).
-								Trace("skipping index: query name does not match")
-							return
-						}
-					} else {
-						if qfullref := fmt.Sprintf("%s:%s", qname, qversion); len(qname) > 0 && fullref != qfullref {
-							log.G(ctx).
-								WithField("got", fullref).
-								WithField("want", qfullref).
-								Trace("skipping index: query name does not match")
-							return
-						}
-					}
-
-					ref, err = name.ParseReference(fullref,
-						name.WithDefaultRegistry(domain),
-					)
-					if err != nil {
-						log.G(ctx).
-							WithField("ref", fullref).
-							Tracef("skipping index: could not parse reference: %s", err.Error())
-						return
-					}
-
-					index, err := remote.Index(ref,
-						remote.WithAuth(&simpleauth.SimpleAuthenticator{
-							Auth: authConfig,
-						}),
-						remote.WithTransport(transport),
-						remote.WithPlatform(v1.Platform{
-							Architecture: query.Architecture(),
-							OS:           query.Platform(),
-							OSFeatures:   query.KConfig(),
-						}),
-					)
-					if err != nil {
-						log.G(ctx).
-							WithField("ref", fullref).
-							Tracef("skipping index: could not retrieve image: %s", err.Error())
-						return
-					}
-
-					v1IndexManifest, err := index.IndexManifest()
-					if err != nil {
-						log.G(ctx).
-							WithField("ref", fullref).
-							Tracef("could not access the index's manifest object: %s", err.Error())
-						return
-					}
-
-					v1ManifestPackages := processV1IndexManifests(ctx,
-						handle,
-						fullref,
-						query,
-						FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
-					)
-
-					mu.Lock()
-					for checksum, pack := range v1ManifestPackages {
-						packs[checksum] = pack
-					}
-					mu.Unlock()
-				}(fullref)
-			}
-
-			wg.Wait()
+		// No need to search remote indexes by registry if the registry has been
+		// included as part of the ref.
+		if !unsetRegistry {
+			goto searchLocalIndexes
 		}
 	}
 
-	// Access local indexes that are available on the host
-	indexes, err := handle.ListIndexes(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for oref, index := range indexes {
-		ref, err := name.ParseReference(oref,
-			name.WithDefaultRegistry(DefaultRegistry),
-		)
+	if query.Remote() {
+		more, err := manager.update(ctx, auths)
 		if err != nil {
 			log.G(ctx).
-				WithField("ref", oref).
-				Tracef("skipping index: invalid reference format: %s", err.Error())
-			continue
-		}
+				Debugf("could not update: %v", err)
+		} else {
+			for checksum, pack := range more {
+				fullref := pack.Name()
 
-		fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
-
-		if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
-			log.G(ctx).
-				WithField("ref", fullref).
-				Tracef("skipping index: incompatible index structure: %s", err.Error())
-			continue
-		}
-
-		if qglob != nil && !qglob.Match(fullref) {
-			log.G(ctx).
-				WithField("want", qname).
-				WithField("got", fullref).
-				Trace("skipping index: glob does not match")
-			continue
-		} else if qglob == nil {
-			if len(qversion) > 0 && len(qname) > 0 {
-				if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+				if qglob != nil && !qglob.Match(fullref) {
 					log.G(ctx).
-						WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+						WithField("want", qname).
 						WithField("got", fullref).
-						Trace("skipping index: name does not match")
+						Trace("skipping manifest: glob does not match")
 					continue
+				} else if qglob == nil {
+					if len(qversion) > 0 && len(qname) > 0 {
+						if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+							log.G(ctx).
+								WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+								WithField("got", fullref).
+								Trace("skipping manifest: name does not match")
+							continue
+						}
+					} else if len(qname) > 0 && fullref != qname {
+						log.G(ctx).
+							WithField("want", qname).
+							WithField("got", fullref).
+							Trace("skipping manifest: name does not match")
+						continue
+					}
 				}
-			} else if len(qname) > 0 && fullref != qname {
-				log.G(ctx).
-					WithField("want", qname).
-					WithField("got", fullref).
-					Trace("skipping index: name does not match")
-				continue
+
+				packs[checksum] = pack
 			}
+		}
+	}
+
+resolveLocalIndex:
+	// If the query is local and the reference is a fully qualified OCI reference,
+	// attempt to resolve the exact index and generate packages from it.
+	if query.Local() && len(qversion) > 0 && len(qname) > 0 {
+		oref := fmt.Sprintf("%s:%s", qname, qversion)
+		index, err := handle.ResolveIndex(ctx, oref)
+		if err != nil {
+			goto searchLocalIndexes
 		}
 
 		for checksum, pack := range processV1IndexManifests(ctx,
@@ -551,8 +548,75 @@ searchRemoteIndexes:
 		) {
 			packs[checksum] = pack
 		}
+
+		goto returnPacks
 	}
 
+searchLocalIndexes:
+	if query.Local() {
+		// Access local indexes that are available on the host
+		indexes, err := handle.ListIndexes(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for oref, index := range indexes {
+			ref, err := name.ParseReference(oref,
+				name.WithDefaultRegistry(DefaultRegistry),
+				name.WithDefaultTag(DefaultTag),
+			)
+			if err != nil {
+				log.G(ctx).
+					WithField("ref", oref).
+					Tracef("skipping index: invalid reference format: %s", err.Error())
+				continue
+			}
+
+			fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
+
+			if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
+				log.G(ctx).
+					WithField("ref", fullref).
+					Tracef("skipping index: incompatible index structure: %s", err.Error())
+				continue
+			}
+
+			if qglob != nil && !qglob.Match(fullref) {
+				log.G(ctx).
+					WithField("want", qname).
+					WithField("got", fullref).
+					Trace("skipping index: glob does not match")
+				continue
+			} else if qglob == nil {
+				if len(qversion) > 0 && len(qname) > 0 {
+					if fullref != fmt.Sprintf("%s:%s", qname, qversion) {
+						log.G(ctx).
+							WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
+							WithField("got", fullref).
+							Trace("skipping index: name does not match")
+						continue
+					}
+				} else if len(qname) > 0 && fullref != qname {
+					log.G(ctx).
+						WithField("want", qname).
+						WithField("got", fullref).
+						Trace("skipping index: name does not match")
+					continue
+				}
+			}
+
+			for checksum, pack := range processV1IndexManifests(ctx,
+				handle,
+				oref,
+				query,
+				index.Manifests,
+			) {
+				packs[checksum] = pack
+			}
+		}
+	}
+
+returnPacks:
 	var ret []pack.Package
 
 	for _, pack := range packs {
@@ -631,6 +695,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		for _, registry := range manager.registries {
 			ref, err := name.ParseReference(source,
 				name.WithDefaultRegistry(registry),
+				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
 				continue
@@ -646,7 +711,12 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source an OCI Distrubtion Spec capable registry
 	isRegistry := func(source string) bool {
-		if reg, err := manager.registry(ctx, source); err == nil && reg.Ping(ctx) == nil {
+		regName, err := name.NewRegistry(source)
+		if err != nil {
+			return false
+		}
+
+		if _, err := transport.Ping(ctx, regName, http.DefaultTransport.(*http.Transport).Clone()); err == nil {
 			return true
 		}
 
@@ -657,6 +727,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 	isRemoteImage := func(source string) bool {
 		ref, err := name.ParseReference(source,
 			name.WithDefaultRegistry(DefaultRegistry),
+			name.WithDefaultTag(DefaultTag),
 		)
 		if err != nil {
 			return false
@@ -719,7 +790,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		isLocalImage,
 	}
 
-	if query.Update() {
+	if query.Remote() {
 		checks = append(checks,
 			isRegistry,
 			isRemoteImage,

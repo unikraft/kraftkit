@@ -7,8 +7,10 @@ package manifest
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/log"
@@ -102,11 +104,16 @@ func (mp mpack) Columns() []tableprinter.Column {
 		{Name: "description", Value: mp.manifest.Description},
 		{Name: "channels", Value: strings.Join(channels, ", ")},
 		{Name: "versions", Value: strings.Join(versions, ", ")},
+		{Name: "origin", Value: mp.manifest.Origin},
 	}
 }
 
 func (mp mpack) Push(ctx context.Context, opts ...pack.PushOption) error {
 	return fmt.Errorf("not implemented: manifest.ManifestPackage.Push")
+}
+
+func (mp mpack) Unpack(ctx context.Context, dir string) error {
+	return fmt.Errorf("not implemented: manifest.ManifestPackage.Unpack")
 }
 
 func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
@@ -121,9 +128,48 @@ func (mp mpack) Pull(ctx context.Context, opts ...pack.PullOption) error {
 	return mp.manifest.Provider.PullManifest(ctx, mp.manifest, opts...)
 }
 
+func (mp mpack) PulledAt(context.Context) (bool, time.Time, error) {
+	manifests, err := mp.manifest.Provider.Manifests()
+	if err != nil {
+		return false, time.Time{}, err
+	}
+
+	pulled := false
+	earliest := time.Now()
+
+	for _, manifest := range manifests {
+		_, cache, _, err := resourceCacheChecksum(manifest)
+		if err != nil {
+			return false, time.Time{}, err
+		}
+
+		si, err := os.Stat(cache)
+		if err != nil {
+			continue
+		}
+
+		pulled = true
+
+		if earliest.Before(si.ModTime()) {
+			earliest = si.ModTime()
+		}
+	}
+
+	if pulled {
+		return true, earliest, nil
+	}
+
+	return false, time.Time{}, nil
+}
+
 // Delete implements pack.Package.
 func (mp mpack) Delete(ctx context.Context) error {
 	return mp.manifest.Provider.DeleteManifest(ctx)
+}
+
+// Save implements pack.Package.
+func (mp mpack) Save(ctx context.Context) error {
+	return nil
 }
 
 // resourceCacheChecksum returns the resource path, checksum and the cache

@@ -7,6 +7,7 @@ package pack
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/unikraft"
@@ -36,8 +37,18 @@ type Package interface {
 	// Pull retreives the package from a remotely retrievable location.
 	Pull(context.Context, ...PullOption) error
 
+	// Unpack the package into the specified directory.
+	Unpack(context.Context, string) error
+
+	// Save the state of package.
+	Save(context.Context) error
+
 	// Deletes package available locally.
 	Delete(context.Context) error
+
+	// PulledAt is an attribute of a package to indicate when (and if) it was
+	// last retrieved.
+	PulledAt(context.Context) (bool, time.Time, error)
 
 	// Format returns the name of the implementation.
 	Format() PackageFormat

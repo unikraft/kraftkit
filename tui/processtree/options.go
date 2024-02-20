@@ -49,3 +49,10 @@ func WithTimeout(timeout time.Duration) ProcessTreeOption {
 		return nil
 	}
 }
+
+func WithHideError(hide bool) ProcessTreeOption {
+	return func(pt *ProcessTree) error {
+		pt.hideError = hide
+		return nil
+	}
+}

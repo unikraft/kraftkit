@@ -142,7 +142,7 @@ func (opts *FetchOptions) pull(ctx context.Context, project app.Application, wor
 					packmanager.WithName(opts.project.Template().Name()),
 					packmanager.WithTypes(unikraft.ComponentTypeApp),
 					packmanager.WithVersion(opts.project.Template().Version()),
-					packmanager.WithUpdate(opts.NoCache),
+					packmanager.WithRemote(opts.NoCache),
 					packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 				)
 				if err != nil {
@@ -272,7 +272,7 @@ func (opts *FetchOptions) pull(ctx context.Context, project app.Application, wor
 					packmanager.WithTypes(component.Type()),
 					packmanager.WithVersion(component.Version()),
 					packmanager.WithSource(component.Source()),
-					packmanager.WithUpdate(opts.NoCache),
+					packmanager.WithRemote(opts.NoCache),
 					packmanager.WithAuthConfig(auths),
 				)
 				if err != nil {

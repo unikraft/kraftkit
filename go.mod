@@ -30,7 +30,6 @@ require (
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/genuinetools/reg v0.16.1
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.19.0
@@ -112,7 +111,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
@@ -177,7 +175,6 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/peterhellberg/link v1.0.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect

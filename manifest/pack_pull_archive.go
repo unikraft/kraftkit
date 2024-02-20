@@ -105,7 +105,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 		} else if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("received HTTP error code %d on resource", res.StatusCode)
 		} else if res.ContentLength <= 0 {
-			log.G(ctx).Warnf("could not determine package size before pulling")
+			log.G(ctx).Tracef("could not determine package size before pulling")
 			pp.total = 0
 		} else {
 			pp.total = int(res.ContentLength)

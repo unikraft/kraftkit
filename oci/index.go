@@ -19,6 +19,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/oci/handler"
 )
 
@@ -28,6 +29,7 @@ type Index struct {
 	desc        *ocispec.Descriptor
 	manifests   []*Manifest
 	annotations map[string]string
+	saved       bool
 }
 
 // NewIndex instantiates a new index using the provided handler.
@@ -38,6 +40,7 @@ func NewIndex(_ context.Context, handle handler.Handler) (*Index, error) {
 
 	index := Index{
 		handle: handle,
+		saved:  false,
 	}
 
 	return &index, nil
@@ -80,18 +83,19 @@ func NewIndexFromSpec(ctx context.Context, handle handler.Handler, spec *ocispec
 // NewIndexFromRef instantiates a new index using the provided reference which
 // is used by the handle to look up any local existing indexes.
 func NewIndexFromRef(ctx context.Context, handle handler.Handler, ref string) (*Index, error) {
-	indexes, err := handle.ListIndexes(ctx)
+	spec, err := handle.ResolveIndex(ctx, ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve list of existing indexes: %w", err)
+		return nil, fmt.Errorf("cannot instantiate index from unknown reference '%s'", ref)
 	}
 
-	for fullref, index := range indexes {
-		if ref == fullref {
-			return NewIndexFromSpec(ctx, handle, index)
-		}
+	index, err := NewIndexFromSpec(ctx, handle, spec)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("cannot instantiate index from unknown reference '%s'", ref)
+	index.saved = true
+
+	return index, nil
 }
 
 // SetAnnotation sets an anootation of the image with the provided key.
@@ -100,6 +104,7 @@ func (index *Index) SetAnnotation(_ context.Context, key, val string) {
 		index.annotations = make(map[string]string)
 	}
 
+	index.saved = false
 	index.annotations[key] = val
 }
 
@@ -110,6 +115,10 @@ func (index *Index) Annotations() map[string]string {
 
 // IndexDesc returns the descriptor of the index.
 func (index *Index) Descriptor() (*ocispec.Descriptor, error) {
+	if index.desc != nil {
+		return index.desc, nil
+	}
+
 	indexJson, err := json.Marshal(index.index)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
@@ -120,6 +129,7 @@ func (index *Index) Descriptor() (*ocispec.Descriptor, error) {
 		indexJson,
 	)
 	desc.Annotations = index.Annotations()
+	index.desc = &desc
 
 	return &desc, nil
 }
@@ -131,6 +141,15 @@ func (index *Index) AddManifest(_ context.Context, manifest *Manifest) error {
 		index.manifests = []*Manifest{}
 	}
 
+	index.desc = nil
+	index.saved = false
+
+	for _, m := range index.manifests {
+		if m.desc != nil && manifest.desc != nil && m.desc.Digest == manifest.desc.Digest {
+			return nil
+		}
+	}
+
 	index.manifests = append(index.manifests, manifest)
 
 	return nil
@@ -138,6 +157,16 @@ func (index *Index) AddManifest(_ context.Context, manifest *Manifest) error {
 
 // Save the index.
 func (index *Index) Save(ctx context.Context, fullref string, onProgress func(float64)) (ocispec.Descriptor, error) {
+	if index.saved {
+		return *index.desc, nil
+	}
+
+	if index.desc != nil {
+		if info, _ := index.handle.DigestInfo(ctx, index.desc.Digest); info != nil {
+			return *index.desc, nil
+		}
+	}
+
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
 	)
@@ -154,6 +183,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	// General annotations
 	index.annotations[ocispec.AnnotationRefName] = ref.Context().String()
 	index.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+	index.annotations[AnnotationKraftKitVersion] = version.Version()
 
 	// containerd compatibility annotations
 	index.annotations[images.AnnotationImageName] = ref.String()
@@ -166,19 +196,25 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 			if err != nil {
 				return ocispec.Descriptor{}, fmt.Errorf("could not save manifest: %w", err)
 			}
+
+			// Reset the index descriptor if a new manifest is added via local save
+			index.index = nil
 		}
 
 		manifestDescs[i] = *desc
 	}
 
-	// Generate the final manifest
-	index.index = &ocispec.Index{
-		MediaType: ocispec.MediaTypeImageIndex,
-		Versioned: specs.Versioned{
-			SchemaVersion: 2,
-		},
-		Manifests:   manifestDescs,
-		Annotations: index.annotations,
+	if index.index == nil {
+		// Generate the final manifest
+		index.index = &ocispec.Index{
+			MediaType: ocispec.MediaTypeImageIndex,
+			Versioned: specs.Versioned{
+				SchemaVersion: 2,
+			},
+			Manifests:   manifestDescs,
+			Annotations: index.annotations,
+		}
+		index.desc = nil
 	}
 
 	indexJson, err := json.Marshal(index.index)
@@ -186,24 +222,32 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	indexDesc := content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageIndex,
-		indexJson,
-	)
-	indexDesc.Annotations = index.index.Annotations
+	if index.desc == nil {
+		indexDesc := content.NewDescriptorFromBytes(
+			ocispec.MediaTypeImageIndex,
+			indexJson,
+		)
+		indexDesc.Annotations = index.index.Annotations
+		index.desc = &indexDesc
+	}
+
+	// Remove the old index
+	if err := index.handle.DeleteIndex(ctx, fullref, false); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to remove old index: %w", err)
+	}
 
 	// save the manifest digest
 	if err := index.handle.SaveDescriptor(
 		ctx,
 		fullref,
-		indexDesc,
+		*index.desc,
 		bytes.NewReader(indexJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to push manifest: %w", err)
+		return ocispec.Descriptor{}, fmt.Errorf("failed to save manifest: %w", err)
 	}
 
-	index.desc = &indexDesc
+	index.saved = true
 
-	return indexDesc, nil
+	return *index.desc, nil
 }

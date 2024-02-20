@@ -30,15 +30,13 @@ import (
 type PullOptions struct {
 	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
 	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
-	ForceCache   bool     `long:"force-cache" short:"Z" usage:"Force using cache and pull directly from source"`
+	Format       string   `long:"as" short:"f" usage:"Set the package format" default:"auto"`
 	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
 	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Manager      string   `long:"as" short:"M" usage:"Force the handler type (Omitting it will attempt auto-detect)" default:"auto"`
 	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
-	NoDeps       bool     `long:"no-deps" short:"D" usage:"Do not pull dependencies"`
 	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
 	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
-	WithDeps     bool     `long:"with-deps" short:"d" usage:"Pull dependencies"`
+	Update       bool     `long:"update" short:"u" usage:"Perform an update which gathers remote sources"`
 	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
 
@@ -105,11 +103,7 @@ func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 
-	return cmdfactory.MutuallyExclusive(
-		"the `--with-deps` option is not supported with `--no-deps`",
-		opts.WithDeps,
-		opts.NoDeps,
-	)
+	return nil
 }
 
 func (opts *PullOptions) Run(ctx context.Context, args []string) error {
@@ -128,21 +122,20 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		opts.Output = opts.Workdir
 	}
 
+	if len(args) == 0 {
+		args = []string{opts.Workdir}
+	}
+
 	pm := packmanager.G(ctx)
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 	// Force a particular package manager
-	if len(opts.Manager) > 0 && opts.Manager != "auto" {
-		pm, err = pm.From(pack.PackageFormat(opts.Manager))
+	if len(opts.Format) > 0 && opts.Format != "auto" {
+		pm, err = pm.From(pack.PackageFormat(opts.Format))
 		if err != nil {
 			return err
 		}
-	}
-
-	type pmQuery struct {
-		pm    packmanager.PackageManager
-		query []packmanager.QueryOption
 	}
 
 	// If `--all` is not set and either `--plat` or `--arch` are not set,
@@ -165,7 +158,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	var queries []pmQuery
+	var queries [][]packmanager.QueryOption
 
 	// Are we pulling an application directory?  If so, interpret the application
 	// so we can get a list of components
@@ -189,101 +182,105 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if _, err = project.Components(ctx); err != nil {
-			// Pull the template from the package manager
 			var packages []pack.Package
-			search := processtree.NewProcessTreeItem(
-				fmt.Sprintf("finding %s",
-					unikraft.TypeNameVersion(project.Template()),
-				), "",
-				func(ctx context.Context) error {
-					qopts := []packmanager.QueryOption{
-						packmanager.WithName(project.Template().Name()),
-						packmanager.WithTypes(unikraft.ComponentTypeApp),
-						packmanager.WithVersion(project.Template().Version()),
-						packmanager.WithUpdate(opts.ForceCache),
-						packmanager.WithPlatform(opts.Platform),
-						packmanager.WithArchitecture(opts.Architecture),
-					}
-					packages, err = pm.Catalog(ctx, qopts...)
-					if err != nil {
-						return err
-					}
 
-					if len(packages) == 0 {
-						return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
-					} else if len(packages) > 1 {
-						return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
-					}
-					return nil
-				},
-			)
+			// Pull the template from the package manager
+			if project.Template() != nil {
+				search := processtree.NewProcessTreeItem(
+					fmt.Sprintf("finding %s",
+						unikraft.TypeNameVersion(project.Template()),
+					), "",
+					func(ctx context.Context) error {
+						qopts := []packmanager.QueryOption{
+							packmanager.WithName(project.Template().Name()),
+							packmanager.WithTypes(unikraft.ComponentTypeApp),
+							packmanager.WithVersion(project.Template().Version()),
+							packmanager.WithRemote(opts.Update),
+							packmanager.WithPlatform(opts.Platform),
+							packmanager.WithArchitecture(opts.Architecture),
+							packmanager.WithLocal(true),
+						}
+						packages, err = pm.Catalog(ctx, qopts...)
+						if err != nil {
+							return err
+						}
 
-			treemodel, err := processtree.NewProcessTree(
+						if len(packages) == 0 {
+							return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
+						} else if len(packages) > 1 {
+							return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
+						}
+						return nil
+					},
+				)
+
+				treemodel, err := processtree.NewProcessTree(
+					ctx,
+					[]processtree.ProcessTreeOption{
+						processtree.IsParallel(parallel),
+						processtree.WithRenderer(norender),
+						processtree.WithFailFast(true),
+					},
+					[]*processtree.ProcessTreeItem{search}...,
+				)
+				if err != nil {
+					return err
+				}
+
+				if err := treemodel.Start(); err != nil {
+					return fmt.Errorf("could not complete search: %v", err)
+				}
+
+				proc := paraprogress.NewProcess(
+					fmt.Sprintf("pulling %s",
+						unikraft.TypeNameVersion(packages[0]),
+					),
+					func(ctx context.Context, w func(progress float64)) error {
+						return packages[0].Pull(
+							ctx,
+							pack.WithPullProgressFunc(w),
+							pack.WithPullWorkdir(opts.Output),
+							// pack.WithPullChecksum(!opts.NoChecksum),
+							// pack.WithPullCache(!opts.NoCache),
+						)
+					},
+				)
+
+				processes = append(processes, proc)
+
+				paramodel, err := paraprogress.NewParaProgress(
+					ctx,
+					processes,
+					paraprogress.IsParallel(parallel),
+					paraprogress.WithRenderer(norender),
+					paraprogress.WithFailFast(true),
+				)
+				if err != nil {
+					return err
+				}
+
+				if err := paramodel.Start(); err != nil {
+					return fmt.Errorf("could not pull all components: %v", err)
+				}
+			}
+
+			templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
+			if err != nil {
+				return err
+			}
+
+			templateProject, err := app.NewProjectFromOptions(
 				ctx,
-				[]processtree.ProcessTreeOption{
-					processtree.IsParallel(parallel),
-					processtree.WithRenderer(norender),
-					processtree.WithFailFast(true),
-				},
-				[]*processtree.ProcessTreeItem{search}...,
+				append(popts, app.WithProjectWorkdir(templateWorkdir))...,
 			)
 			if err != nil {
 				return err
 			}
 
-			if err := treemodel.Start(); err != nil {
-				return fmt.Errorf("could not complete search: %v", err)
-			}
-
-			proc := paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s",
-					unikraft.TypeNameVersion(packages[0]),
-				),
-				func(ctx context.Context, w func(progress float64)) error {
-					return packages[0].Pull(
-						ctx,
-						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(opts.Output),
-						// pack.WithPullChecksum(!opts.NoChecksum),
-						// pack.WithPullCache(!opts.NoCache),
-					)
-				},
-			)
-
-			processes = append(processes, proc)
-
-			paramodel, err := paraprogress.NewParaProgress(
-				ctx,
-				processes,
-				paraprogress.IsParallel(parallel),
-				paraprogress.WithRenderer(norender),
-				paraprogress.WithFailFast(true),
-			)
+			project, err = templateProject.MergeTemplate(ctx, project)
 			if err != nil {
 				return err
 			}
-
-			if err := paramodel.Start(); err != nil {
-				return fmt.Errorf("could not pull all components: %v", err)
-			}
-		}
-
-		templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
-		if err != nil {
-			return err
-		}
-
-		templateProject, err := app.NewProjectFromOptions(
-			ctx,
-			append(popts, app.WithProjectWorkdir(templateWorkdir))...,
-		)
-		if err != nil {
-			return err
-		}
-
-		project, err = templateProject.MergeTemplate(ctx, project)
-		if err != nil {
-			return err
 		}
 
 		// List the components
@@ -292,74 +289,160 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 			return err
 		}
 		for _, c := range components {
-			queries = append(queries, pmQuery{
-				pm: pm,
-				query: []packmanager.QueryOption{
-					packmanager.WithName(c.Name()),
-					packmanager.WithVersion(c.Version()),
-					packmanager.WithSource(c.Source()),
-					packmanager.WithTypes(c.Type()),
-					packmanager.WithUpdate(!opts.ForceCache),
-					packmanager.WithPlatform(opts.Platform),
-					packmanager.WithArchitecture(opts.Architecture),
-				},
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithName(c.Name()),
+				packmanager.WithVersion(c.Version()),
+				packmanager.WithSource(c.Source()),
+				packmanager.WithTypes(c.Type()),
+				packmanager.WithRemote(opts.Update),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithArchitecture(opts.Architecture),
+			})
+		}
+
+		if project.Runtime() != nil {
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithName(project.Runtime().Name()),
+				packmanager.WithVersion(project.Runtime().Version()),
+				packmanager.WithRemote(opts.Update),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithArchitecture(opts.Architecture),
 			})
 		}
 
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
-			pm, compatible, err := pm.IsCompatible(ctx, arg,
-				packmanager.WithUpdate(!opts.ForceCache),
-			)
-			if err != nil || !compatible {
-				continue
-			}
-
-			queries = append(queries, pmQuery{
-				pm: pm,
-				query: []packmanager.QueryOption{
-					packmanager.WithUpdate(!opts.ForceCache),
-					packmanager.WithName(arg),
-					packmanager.WithArchitecture(opts.Architecture),
-					packmanager.WithPlatform(opts.Platform),
-					packmanager.WithKConfig(opts.KConfig),
-				},
+			queries = append(queries, []packmanager.QueryOption{
+				packmanager.WithRemote(opts.Update),
+				packmanager.WithName(arg),
+				packmanager.WithArchitecture(opts.Architecture),
+				packmanager.WithPlatform(opts.Platform),
+				packmanager.WithKConfig(opts.KConfig),
 			})
 		}
 	}
 
-	for _, c := range queries {
-		query := packmanager.NewQuery(c.query...)
-		next, err := c.pm.Catalog(ctx, c.query...)
-		if err != nil {
-			log.G(ctx).
-				WithField("format", pm.Format().String()).
-				WithField("name", query.Name()).
-				Warn(err)
-			continue
-		}
+	if len(queries) == 0 {
+		return fmt.Errorf("no components to pull")
+	}
 
-		if len(next) == 0 {
-			log.G(ctx).Warnf("could not find %s", query.String())
-			continue
-		}
+	var found []pack.Package
+	var treeItems []*processtree.ProcessTreeItem
 
-		for _, p := range next {
-			p := p
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", query.String()),
-				func(ctx context.Context, w func(progress float64)) error {
-					return p.Pull(
-						ctx,
-						pack.WithPullProgressFunc(w),
-						pack.WithPullWorkdir(opts.Output),
-						pack.WithPullChecksum(!opts.NoChecksum),
-						pack.WithPullCache(opts.ForceCache),
-					)
+	for _, qopts := range queries {
+		qopts := qopts
+		query := packmanager.NewQuery(qopts...)
+		treeItems = append(treeItems,
+			processtree.NewProcessTreeItem(
+				fmt.Sprintf("finding %s", query.String()),
+				"",
+				func(ctx context.Context) error {
+					more, err := pm.Catalog(ctx, qopts...)
+					if err != nil {
+						log.G(ctx).
+							WithField("format", pm.Format().String()).
+							WithField("name", query.Name()).
+							Warn(err)
+						return nil
+					}
+
+					if len(more) == 0 {
+						opts.Update = true
+						return fmt.Errorf("could not find local reference for %s", query.String())
+					}
+
+					found = append(found, more...)
+
+					return nil
 				},
-			))
+			),
+		)
+	}
+
+	tree, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithFailFast(false),
+			processtree.WithHideOnSuccess(true),
+			processtree.WithHideError(!opts.Update),
+		},
+		treeItems...,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Try again with a remote search
+	if err := tree.Start(); err != nil && (len(found) == 0 || !opts.Update) {
+		treeItems = []*processtree.ProcessTreeItem{}
+		for _, qopts := range queries {
+			qopts := qopts
+			query := packmanager.NewQuery(qopts...)
+			treeItems = append(treeItems,
+				processtree.NewProcessTreeItem(
+					fmt.Sprintf("finding %s", query.String()),
+					"",
+					func(ctx context.Context) error {
+						more, err := pm.Catalog(ctx, append(
+							qopts,
+							packmanager.WithRemote(true),
+						)...)
+						if err != nil {
+							log.G(ctx).
+								WithField("format", pm.Format().String()).
+								WithField("name", query.Name()).
+								Warn(err)
+							return nil
+						}
+
+						if len(more) == 0 {
+							return fmt.Errorf("could not find %s", query.String())
+						}
+
+						found = append(found, more...)
+
+						return nil
+					},
+				),
+			)
 		}
+
+		tree, err = processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(parallel),
+				processtree.WithRenderer(norender),
+				processtree.WithFailFast(false),
+				processtree.WithHideOnSuccess(true),
+			},
+			treeItems...,
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := tree.Start(); err != nil {
+			return err
+		}
+	}
+
+	for _, p := range found {
+		p := p
+		processes = append(processes, paraprogress.NewProcess(
+			fmt.Sprintf("pulling %s", p.String()),
+			func(ctx context.Context, w func(progress float64)) error {
+				return p.Pull(
+					ctx,
+					pack.WithPullProgressFunc(w),
+					pack.WithPullWorkdir(opts.Output),
+					pack.WithPullChecksum(!opts.NoChecksum),
+					pack.WithPullCache(!opts.Update),
+				)
+			},
+		))
 	}
 
 	model, err := paraprogress.NewParaProgress(

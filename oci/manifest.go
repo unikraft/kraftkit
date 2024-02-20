@@ -19,13 +19,14 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2/content"
 
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 )
@@ -35,6 +36,7 @@ type Manifest struct {
 
 	handle handler.Handler
 
+	v1Image  v1.Image
 	config   *ocispec.Image
 	manifest *ocispec.Manifest
 	desc     *ocispec.Descriptor
@@ -58,7 +60,6 @@ func NewManifest(ctx context.Context, handle handler.Handler) (*Manifest, error)
 		config: &ocispec.Image{
 			Config: ocispec.ImageConfig{},
 		},
-		manifest: &ocispec.Manifest{},
 	}
 
 	return &manifest, nil
@@ -94,12 +95,24 @@ func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest d
 		Annotations: spec.Annotations,
 		Platform:    spec.Config.Platform,
 	}
+
 	manifest.manifest = spec
-	manifest.config.Architecture = spec.Config.Platform.Architecture
-	manifest.config.OS = spec.Config.Platform.OS
-	manifest.config.OSVersion = spec.Config.Platform.OSVersion
-	manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
+
+	if spec.Config.Platform != nil {
+		manifest.config.Architecture = spec.Config.Platform.Architecture
+		manifest.config.OS = spec.Config.Platform.OS
+		manifest.config.OSVersion = spec.Config.Platform.OSVersion
+		manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
+	}
 	manifest.annotations = spec.Annotations
+
+	for _, desc := range spec.Layers {
+		manifest.layers = append(manifest.layers, &Layer{
+			blob: &Blob{
+				desc: desc,
+			},
+		})
+	}
 
 	return manifest, nil
 }
@@ -116,12 +129,12 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 		return ocispec.Descriptor{}, fmt.Errorf("cannot add empty layer")
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
-		"src":       layer.blob.src,
-		"dest":      layer.dst,
-		"digest":    layer.blob.desc.Digest.String(),
-		"mediaType": layer.blob.desc.MediaType,
-	}).Trace("oci: layering")
+	log.G(ctx).
+		WithField("src", layer.blob.src).
+		WithField("dest", layer.dst).
+		WithField("digest", layer.blob.desc.Digest.String()).
+		WithField("mediaType", layer.blob.desc.MediaType).
+		Trace("layering")
 
 	manifest.pushed.Store(layer.blob.desc.Digest, false)
 
@@ -133,19 +146,14 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 
 // AddBlob adds a blog to the manifest and returns the resulting descriptor.
 func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor, error) {
-	if exists, err := manifest.handle.DigestExists(ctx, blob.desc.Digest); err == nil && exists {
-		log.G(ctx).WithFields(logrus.Fields{
-			"mediaType": blob.desc.MediaType,
-			"digest":    blob.desc.Digest.String(),
-		}).Trace("oci: blob already exists")
+	if info, err := manifest.handle.DigestInfo(ctx, blob.desc.Digest); err == nil && info != nil {
+		log.G(ctx).
+			WithField("mediaType", blob.desc.MediaType).
+			WithField("digest", blob.desc.Digest.String()).
+			Trace("lob already exists")
 
 		return blob.desc, nil
 	}
-
-	log.G(ctx).WithFields(logrus.Fields{
-		"mediaType": blob.desc.MediaType,
-		"digest":    blob.desc.Digest.String(),
-	}).Trace("oci: saving")
 
 	fp, err := os.Open(blob.tmp)
 	if err != nil {
@@ -227,8 +235,19 @@ func (manifest *Manifest) SetCmd(_ context.Context, cmd []string) {
 
 // Save the image.
 func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress func(float64)) (*ocispec.Descriptor, error) {
+	if manifest.saved && manifest.desc != nil {
+		return manifest.desc, nil
+	}
+
+	if manifest.desc != nil {
+		if info, _ := manifest.handle.DigestInfo(ctx, manifest.desc.Digest); info != nil {
+			return manifest.desc, nil
+		}
+	}
+
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
 		return nil, err
@@ -298,19 +317,22 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	manifest.annotations[ocispec.AnnotationRefName] = ref.Context().String()
 	// manifest.annotations[ocispec.AnnotationRevision] = ref.Identifier()
 	manifest.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
+	manifest.annotations[AnnotationKraftKitVersion] = version.Version()
 
 	// containerd compatibility annotations
 	manifest.annotations[images.AnnotationImageName] = ref.String()
 
-	// Generate the final manifest
-	manifest.manifest = &ocispec.Manifest{
-		Versioned: specs.Versioned{
-			SchemaVersion: 2,
-		},
-		Config:      configBlob.desc,
-		MediaType:   ocispec.MediaTypeImageManifest,
-		Layers:      layers,
-		Annotations: manifest.annotations,
+	if manifest.manifest == nil {
+		// Generate the final manifest
+		manifest.manifest = &ocispec.Manifest{
+			Versioned: specs.Versioned{
+				SchemaVersion: 2,
+			},
+			Config:      configBlob.desc,
+			MediaType:   ocispec.MediaTypeImageManifest,
+			Layers:      layers,
+			Annotations: manifest.annotations,
+		}
 	}
 
 	manifestJson, err := json.Marshal(manifest.manifest)
@@ -318,23 +340,32 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	manifestDesc := content.NewDescriptorFromBytes(
-		ocispec.MediaTypeImageManifest,
-		manifestJson,
-	)
-	// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
-	manifestDesc.Annotations = manifest.manifest.Annotations
-	manifestDesc.Platform = platform
+	if manifest.desc == nil {
+		manifestDesc := content.NewDescriptorFromBytes(
+			ocispec.MediaTypeImageManifest,
+			manifestJson,
+		)
+		// manifestDesc.ArtifactType = manifest.manifest.Config.MediaType
+		manifestDesc.Annotations = manifest.manifest.Annotations
+		manifestDesc.Platform = platform
+
+		manifest.desc = &manifestDesc
+	}
+
+	log.G(ctx).
+		WithField("ref", ref.String()).
+		WithField("digest", manifest.desc.Digest.String()).
+		Debug("saving manifest")
 
 	// save the manifest descriptor
 	if err := manifest.handle.SaveDescriptor(
 		ctx,
 		fullref,
-		manifestDesc,
+		*manifest.desc,
 		bytes.NewReader(manifestJson),
 		onProgress,
 	); err != nil && !errors.Is(err, errdefs.ErrAlreadyExists) {
-		return nil, fmt.Errorf("failed to push manifest: %w", err)
+		return nil, fmt.Errorf("failed to save manifest: %w", err)
 	}
 
 	// We check if the config blob already exists now after saving the manifest.
@@ -342,14 +373,13 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// is called repeatedly.  It's done now to prevent containerd's garbage
 	// collector from removing it before the manifest has been written (which
 	// references this blob).
-	if exists, _ := manifest.handle.DigestExists(ctx, configBlob.desc.Digest); !exists {
+	if info, _ := manifest.handle.DigestInfo(ctx, configBlob.desc.Digest); info == nil {
 		if _, err := manifest.AddBlob(ctx, configBlob); err != nil {
 			return nil, err
 		}
 	}
 
 	manifest.saved = true
-	manifest.desc = &manifestDesc
 
 	// Push any outstanding layers last.
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -359,12 +389,16 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	for i := range manifest.layers {
 		eg.Go(func(i int) func() error {
 			return func() error {
+				if manifest.layers[i].blob.tmp == "" {
+					return nil
+				}
+
 				pushed, exists := manifest.pushed.Load(manifest.layers[i].blob.desc.Digest)
 				if exists && pushed.(bool) {
 					return nil
 				}
 
-				if exists, _ = manifest.handle.DigestExists(ctx, manifest.layers[i].blob.desc.Digest); exists {
+				if info, _ := manifest.handle.DigestInfo(ctx, manifest.layers[i].blob.desc.Digest); info != nil {
 					return nil
 				}
 
@@ -380,5 +414,5 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		return nil, err
 	}
 
-	return &manifestDesc, nil
+	return manifest.desc, nil
 }
