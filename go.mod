@@ -24,7 +24,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v24.0.4+incompatible
-	github.com/docker/docker v24.0.4+incompatible
+	github.com/docker/docker v25.0.3+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
@@ -106,6 +106,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa // indirect
+	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
