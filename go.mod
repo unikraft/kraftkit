@@ -76,7 +76,6 @@ require (
 	oras.land/oras-go/v2 v2.2.1
 	sdk.kraft.cloud v0.2.4
 	sigs.k8s.io/kustomize/kyaml v0.14.3
-	xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240202070433-091466ba55d1
 )
 
 replace github.com/vishvananda/netlink => github.com/craciunoiuc/netlink v1.2.1-beta.2
@@ -225,4 +224,5 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+	xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240201170224-b1fdd7d0e47e // indirect
 )

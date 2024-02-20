@@ -5,6 +5,8 @@
 package xen
 
 import (
+	"strings"
+
 	"xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight"
 )
 
@@ -108,7 +110,7 @@ func WithUuid(uuid string) XenOption {
 
 func WithArgs(args []string) XenOption {
 	return func(cfg *xenlight.DomainConfig) error {
-		cfg.BInfo.Extra = xenlight.StringList(args)
+		cfg.BInfo.Cmdline = strings.Join(args, " ")
 		return nil
 	}
 }

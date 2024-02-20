@@ -56,7 +56,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	if len(machine.Status.StateDir) == 0 {
 		machine.Status.StateDir = filepath.Join(config.G[config.KraftKit](ctx).RuntimeDir, string(machine.ObjectMeta.UID))
 	}
-	fmt.Println(machine.Status.StateDir)
 
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
 		return machine, err
@@ -96,7 +95,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		machine.Spec.Resources.Requests[corev1.ResourceCPU] = quantity
 	}
 
-	// TODO(andreistan26): Check if the name is already in use as a xen domain
 	xenOpts := []XenOption{
 		WithCpu(int(machine.Spec.Resources.Requests.Cpu().Value())),
 		WithMemoryKb(uint64(machine.Spec.Resources.Requests.Memory().Value() / XenMemoryScale)),
@@ -110,12 +108,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		xenOpts = append(xenOpts, WithRamdisk(machine.Status.InitrdPath))
 	}
 
-	// TODO(andreistan26): Add port mapping
 	if len(machine.Spec.Ports) > 0 {
 		return machine, fmt.Errorf("mapping ports is not supported for xen")
 	}
 
-	// TODO(andreistan26): Add args
 	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
 	if err != nil {
 		return machine, err
@@ -136,7 +132,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 					mac = startMac.String()
 				}
 
-				//TODO(andreistan26): refactor this
 				nic, err := xenlight.NewDeviceNic()
 				if err != nil {
 					return nil, err
@@ -159,7 +154,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		switch vol.Spec.Driver {
 		case "9pfs":
 			mounttag := fmt.Sprintf("fs%d", i+1)
-			// TODO(andreistan26): refactor this
 			p9Dev, err := xenlight.NewDeviceP9()
 			if err != nil {
 				return nil, err
@@ -167,6 +161,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 			p9Dev.Tag = mounttag
 			p9Dev.Path = vol.Spec.Source
+			p9Dev.SecurityModel = "none"
 
 			xenOpts = append(xenOpts,
 				WithP9(*p9Dev),
@@ -208,18 +203,18 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("could not create xen config: %w", err)
 	}
 
-	log.G(ctx).Infof("Creating xen domain with config")
+	machine.CreationTimestamp = metav1.Now()
+
 	domID, err := xenCtx.DomainCreateNew(config)
 	if err != nil {
 		return machine, fmt.Errorf("could not create xen domain: %w", err)
 	}
 
 	config.CInfo.Domid = domID
-
-	machine.CreationTimestamp = metav1.Now()
-	machine.Status.PlatformConfig = &XenConfig{
+	machine.Status.PlatformConfig = XenConfig{
 		DomID: domID,
 	}
+
 	machine.Status.State = machinev1alpha1.MachineStateCreated
 
 	return machine, nil
@@ -229,7 +224,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		return machine, fmt.Errorf("machine has no platform config")
 	}
 
-	config := machine.Status.PlatformConfig.(*XenConfig)
+	config := machine.Status.PlatformConfig.(XenConfig)
 
 	xenCtx, err := xenlight.NewContext()
 	if err != nil {
@@ -237,7 +232,6 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 	}
 	defer xenCtx.Close()
 
-	log.G(ctx).Infof("Unpausing xen domain %d", config.DomID)
 	err = xenCtx.DomainUnpause(config.DomID)
 	if err != nil {
 		return machine, fmt.Errorf("could not unpause xen domain: %w", err)
@@ -246,58 +240,6 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 	machine.Status.State = machinev1alpha1.MachineStateRunning
 	machine.Status.StartedAt = time.Now()
 
-	// Start appending pts output to logfile: pts -> chan -> log file
-	pts, err := xenCtx.PrimaryConsoleGetTty(uint32(config.DomID))
-	log.G(ctx).Infof("Getting xen domain pts: %v", pts)
-	if err != nil {
-		return machine, fmt.Errorf("could not get xen domain pts: %v", err)
-	}
-
-	go func() {
-		ptsChan := make(chan []byte)
-		errChan := make(chan error)
-
-		ptsFD, err := os.OpenFile(pts, os.O_RDONLY, 0o644)
-		if err != nil {
-			log.G(ctx).Errorf("could not open xen domain pts: %v", err)
-			return
-		}
-
-		go func() {
-			for {
-				buf := make([]byte, 1024)
-				n, err := ptsFD.Read(buf)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				ptsChan <- buf[:n]
-			}
-		}()
-
-		logFD, err := os.OpenFile(machine.Status.LogFile, os.O_APPEND|os.O_WRONLY, 0o644)
-		if err != nil {
-			log.G(ctx).Errorf("log file not found after create: %v", err)
-			return
-		}
-
-		for {
-			select {
-			case err := <-errChan:
-				log.G(ctx).Errorf("could not read from pts: %v", err)
-			case line := <-ptsChan:
-				_, err := logFD.Write(line)
-				if err != nil {
-					log.G(ctx).Errorf("could not write to log file: %v", err)
-				}
-			case <-ctx.Done():
-				logFD.Close()
-				ptsFD.Close()
-				return
-			}
-		}
-	}()
-
 	return machine, nil
 }
 func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
@@ -305,7 +247,7 @@ func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machi
 		return machine, fmt.Errorf("machine has no platform config")
 	}
 
-	config, ok := machine.Status.PlatformConfig.(*XenConfig)
+	config, ok := machine.Status.PlatformConfig.(XenConfig)
 	if !ok {
 		return machine, fmt.Errorf("machine has no platform config")
 	}
@@ -329,7 +271,7 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 		return machine, nil
 	}
 
-	config, ok := machine.Status.PlatformConfig.(*XenConfig)
+	config, ok := machine.Status.PlatformConfig.(XenConfig)
 	if !ok {
 		return machine, fmt.Errorf("machine has no platform config")
 	}
@@ -339,7 +281,6 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 		return nil, fmt.Errorf("could not create xen context: %w", err)
 	}
 	defer xenCtx.Close()
-	log.G(ctx).Infof("Destroying xen domain %d", config.DomID)
 	if err := xenCtx.DomainDestroy(config.DomID); err != nil {
 		return machine, fmt.Errorf("could not destroy xen domain: %w", err)
 	}
@@ -358,7 +299,7 @@ func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *mach
 	return nil, err
 }
 func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
-	config, ok := machine.Status.PlatformConfig.(*XenConfig)
+	config, ok := machine.Status.PlatformConfig.(XenConfig)
 	if !ok {
 		return machine, fmt.Errorf("machine has no platform config")
 	}
@@ -374,7 +315,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 
 	dominfo := &xenlight.Dominfo{}
 
-	// until xenCtx.DomainInfo is fixed use ListDomain
+	// Should be done with xenCtx.DomainInfo, but it currently does not work
 	doms := xenCtx.ListDomain()
 	if err != nil {
 		return machine, fmt.Errorf("could not list xen domains: %w", err)
@@ -404,7 +345,6 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 func (service *machineV1alpha1Service) List(ctx context.Context, machines *machinev1alpha1.MachineList) (*machinev1alpha1.MachineList, error) {
 	cached := machines.Items
 	machines.Items = make([]zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus], len(cached))
-
 	for i, machine := range cached {
 		machine, err := service.Get(ctx, &machine)
 		if err != nil {
@@ -419,12 +359,10 @@ func (service *machineV1alpha1Service) List(ctx context.Context, machines *machi
 }
 
 func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machinev1alpha1.Machine) (chan *machinev1alpha1.Machine, chan error, error) {
-	config, ok := machine.Status.PlatformConfig.(*XenConfig)
+	config, ok := machine.Status.PlatformConfig.(XenConfig)
 	if !ok {
 		return nil, nil, fmt.Errorf("machine has no platform config")
 	}
-
-	log.G(ctx).Infof("Watching xen domain %d", config.DomID)
 
 	w, err := NewWatcher(config.DomID)
 	if err != nil {
@@ -440,7 +378,6 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 	errs := make(chan error)
 
 	go func() {
-		log.G(ctx).Infof("Querying initial state for xen domain %d", config.DomID)
 		intialMachine, err := service.Get(ctx, machine)
 		if err != nil {
 			errs <- err
@@ -453,7 +390,6 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 				w.Close()
 				return
 			case <-watch:
-				log.G(ctx).Infof("Received event for xen domain %d", config.DomID)
 				machine, err := service.Get(ctx, machine)
 				if err != nil {
 					errs <- err
@@ -468,6 +404,70 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 	return events, errs, nil
 }
 func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machinev1alpha1.Machine) (chan string, chan error, error) {
+	config, ok := machine.Status.PlatformConfig.(XenConfig)
+	if !ok {
+		return nil, nil, fmt.Errorf("machine has no platform config")
+	}
+
+	xenCtx, err := xenlight.NewContext()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not create xen context: %w", err)
+	}
+	defer xenCtx.Close()
+
+	pts, err := xenCtx.PrimaryConsoleGetTty(uint32(config.DomID))
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get xen domain pts: %v", err)
+	}
+
+	// Start appending pts output to logfile: pts -> chan -> log file
+	go func() {
+		ptsChan := make(chan []byte)
+		errChan := make(chan error)
+
+		ptsFD, err := os.OpenFile(pts, os.O_RDONLY, 0o644)
+		if err != nil {
+			log.G(ctx).Errorf("could not open xen domain pts: %v", err)
+			return
+		}
+
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				n, err := ptsFD.Read(buf)
+				if err != nil {
+					if err != os.ErrClosed {
+						errChan <- err
+					}
+					return
+				}
+				ptsChan <- buf[:n]
+			}
+		}()
+
+		logFD, err := os.OpenFile(machine.Status.LogFile, os.O_APPEND|os.O_WRONLY, 0o644)
+		if err != nil {
+			log.G(ctx).Errorf("log file not found after create: %v", err)
+			return
+		}
+
+		for {
+			select {
+			case err := <-errChan:
+				log.G(ctx).Errorf("could not read from pts: %v", err)
+			case line := <-ptsChan:
+				_, err := logFD.Write(line)
+				if err != nil {
+					log.G(ctx).Errorf("could not write to log file: %v", err)
+				}
+			case <-ctx.Done():
+				logFD.Close()
+				ptsFD.Close()
+				return
+			}
+		}
+	}()
+
 	return logtail.NewLogTail(ctx, machine.Status.LogFile)
 }
 
