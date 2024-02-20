@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG GO_VERSION=1.21.2
+ARG GO_VERSION=1.22.0
 
 FROM golang:${GO_VERSION}-bullseye AS kraftkit-full
 
@@ -24,8 +24,8 @@ RUN set -xe; \
 
 # Install YTT and Cosign
 RUN set -xe; \
-    curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.41.1/ytt-linux-amd64 > /tmp/ytt; \
-    echo "65dbc4f3a4a2ed84296dd1b323e8e7bd77e488fa7540d12dd36cf7fb2fc77c03  /tmp/ytt" | sha256sum -c -; \
+    curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.48.0/ytt-linux-amd64 > /tmp/ytt; \
+    echo "090dc914c87e5ba5861e37f885f12bac3b15559c183c30d4af2e63ccab03d5f9  /tmp/ytt" | sha256sum -c -; \
     mv /tmp/ytt /usr/local/bin/ytt; \
     chmod +x /usr/local/bin/ytt; \
     curl -s -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"; \
@@ -34,7 +34,7 @@ RUN set -xe; \
 
 WORKDIR /go/src/kraftkit.sh
 
-COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.21.2 /usr/bin/goreleaser /usr/bin/
+COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.22.0 /usr/bin/goreleaser /usr/bin/
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go

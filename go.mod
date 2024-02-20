@@ -1,6 +1,6 @@
 module kraftkit.sh
 
-go 1.21
+go 1.22
 
 require (
 	api.zip v0.1.5
