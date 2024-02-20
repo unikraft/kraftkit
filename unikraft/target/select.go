@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/erikgeiser/promptkit/selection"
+	"kraftkit.sh/tui"
 )
 
 // Select is a utility method used in a CLI context to prompt the user
@@ -31,15 +31,7 @@ func Select(targets []Target) (Target, error) {
 
 	sort.Strings(names)
 
-	queryMark := lipgloss.NewStyle().
-		Background(lipgloss.Color("12")).
-		Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "15",
-		}).
-		Render
-
-	sp := selection.New(queryMark("[?]")+" select target:", names)
+	sp := selection.New(tui.TextWhiteBgBlue("[?]")+" select target:", names)
 	sp.Filter = nil
 
 	result, err := sp.RunPrompt()
