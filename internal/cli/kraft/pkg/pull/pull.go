@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/arch"
@@ -182,6 +183,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if _, err = project.Components(ctx); err != nil {
+			var pullPack pack.Package
 			var packages []pack.Package
 
 			// Pull the template from the package manager
@@ -207,9 +209,8 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 
 						if len(packages) == 0 {
 							return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
-						} else if len(packages) > 1 {
-							return fmt.Errorf("too many options for %s", unikraft.TypeNameVersion(project.Template()))
 						}
+
 						return nil
 					},
 				)
@@ -231,12 +232,35 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					return fmt.Errorf("could not complete search: %v", err)
 				}
 
+				if len(packages) == 1 {
+					pullPack = packages[0]
+				} else if len(packages) > 1 {
+					if config.G[config.KraftKit](ctx).NoPrompt {
+						for _, p := range packages {
+							log.G(ctx).
+								WithField("template", p.String()).
+								Warn("possible")
+						}
+
+						return fmt.Errorf("too many options for %s and prompting has been disabled",
+							project.Template().String(),
+						)
+					}
+
+					selected, err := selection.Select[pack.Package]("select possible template", packages...)
+					if err != nil {
+						return err
+					}
+
+					pullPack = *selected
+				}
+
 				proc := paraprogress.NewProcess(
 					fmt.Sprintf("pulling %s",
-						unikraft.TypeNameVersion(packages[0]),
+						unikraft.TypeNameVersion(pullPack),
 					),
 					func(ctx context.Context, w func(progress float64)) error {
-						return packages[0].Pull(
+						return pullPack.Pull(
 							ctx,
 							pack.WithPullProgressFunc(w),
 							pack.WithPullWorkdir(opts.Output),

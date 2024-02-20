@@ -19,6 +19,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 	ukarch "kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
@@ -157,6 +158,8 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		}
 	}
 
+	var found pack.Package
+
 	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
 		// At this point, we have queried the registry without asking for the
 		// platform and architecture and received multiple options.  Re-query the
@@ -187,8 +190,27 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			return fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
 			return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
+		} else if len(packs) == 1 {
+			found = packs[0]
 		} else if len(packs) > 1 {
-			return fmt.Errorf("could not find runtime: too many options")
+			if config.G[config.KraftKit](ctx).NoPrompt {
+				for _, p := range packs {
+					log.G(ctx).
+						WithField("runtime", p.String()).
+						Warn("possible")
+				}
+
+				return fmt.Errorf("too many options for %s and prompting has been disabled",
+					runner.project.Runtime().String(),
+				)
+			}
+
+			selected, err := selection.Select[pack.Package]("select possible runtime", packs...)
+			if err != nil {
+				return err
+			}
+
+			found = *selected
 		}
 
 		log.G(ctx).
@@ -207,18 +229,18 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		return err
 	}
 
-	if exists, _, err := packs[0].PulledAt(ctx); !exists || err != nil {
+	if exists, _, err := found.PulledAt(ctx); !exists || err != nil {
 		paramodel, err := paraprogress.NewParaProgress(
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", packs[0].String()),
+				fmt.Sprintf("pulling %s", found.String()),
 				func(ctx context.Context, w func(progress float64)) error {
 					popts := []pack.PullOption{}
 					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 						popts = append(popts, pack.WithPullProgressFunc(w))
 					}
 
-					return packs[0].Pull(
+					return found.Pull(
 						ctx,
 						popts...,
 					)
@@ -239,7 +261,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		}
 	}
 
-	if err := packs[0].Unpack(
+	if err := found.Unpack(
 		ctx,
 		tempDir,
 	); err != nil {
@@ -249,7 +271,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	// Crucially, the catalog should return an interface that also implements
 	// target.Target.  This demonstrates that the implementing package can
 	// resolve application kernels.
-	runtime, ok := packs[0].(target.Target)
+	runtime, ok := found.(target.Target)
 	if !ok {
 		return fmt.Errorf("package does not convert to target")
 	}
