@@ -127,6 +127,11 @@ func (store *embedded[_, _]) Versioner() storage.Versioner {
 	return store.versioner
 }
 
+// RequestWatchProgress implements storage.Interface
+func (store *embedded[_, _]) RequestWatchProgress(ctx context.Context) error {
+	return fmt.Errorf("not implemented: zip.store.RequestWatchProgress")
+}
+
 // Create implements storage.Interface
 func (store *embedded[_, _]) Create(ctx context.Context, key string, _, out runtime.Object, ttl uint64) error {
 	if err := store.open(); err != nil {
