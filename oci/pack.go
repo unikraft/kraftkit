@@ -254,6 +254,10 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// 	log.G(ctx).Debug("including application source files")
 	// }
 
+	if ocipack.original != nil {
+		ocipack.manifest.config = ocipack.original.manifest.config
+	}
+
 	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
 	if version := popts.KernelVersion(); len(version) > 0 {
 		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
