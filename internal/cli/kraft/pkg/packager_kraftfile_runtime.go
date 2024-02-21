@@ -332,6 +332,14 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, err
 	}
 
+	if len(opts.Readme) == 0 {
+		opts.Readme = opts.Project.Readme()
+	} else {
+		if readmeBytes, err := os.ReadFile(opts.Readme); err == nil {
+			opts.Readme = string(readmeBytes)
+		}
+	}
+
 	var result []pack.Package
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
@@ -352,6 +360,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
+					packmanager.PackReadme(opts.Readme),
 				)
 
 				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {

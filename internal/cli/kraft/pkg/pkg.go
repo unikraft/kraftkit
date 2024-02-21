@@ -48,6 +48,7 @@ type PkgOptions struct {
 	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
 	Project      app.Application           `noattribute:"true"`
 	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
+	Readme       string                    `local:"true" long:"readme" usage:"Verbatim text or path to a README file to include in the package"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	Strategy     packmanager.MergeStrategy `noattribute:"true"`
 	Target       string                    `local:"true" long:"target" short:"t" usage:"Package a particular known target"`

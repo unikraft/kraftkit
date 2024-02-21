@@ -11,6 +11,7 @@ const (
 	AnnotationURL                  = "org.unikraft.image.url"
 	AnnotationCreated              = "org.unikraft.image.created"
 	AnnotationDescription          = "org.unikraft.image.description"
+	AnnotationReadme               = "org.unikraft.image.readme"
 	AnnotationKernelPath           = "org.unikraft.kernel.image"
 	AnnotationKernelVersion        = "org.unikraft.kernel.version"
 	AnnotationKernelInitrdPath     = "org.unikraft.kernel.initrd"

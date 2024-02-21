@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -72,6 +73,7 @@ type ociPackage struct {
 	kernelDbg string
 	initrd    initrd.Initrd
 	command   []string
+	readme    string
 
 	original *ociPackage
 }
@@ -100,6 +102,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		kernel:    targ.Kernel(),
 		kernelDbg: targ.KernelDbg(),
 		command:   popts.Args(),
+		readme:    popts.Readme(),
 	}
 
 	// It is possible that `NewPackageFromTarget` is called with an existing
@@ -385,6 +388,11 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	if err := ocipack.index.AddManifest(ctx, ocipack.manifest); err != nil {
 		return nil, fmt.Errorf("could not add manifest to index: %w", err)
+	}
+
+	if len(ocipack.readme) > 0 {
+		encoded := base64.StdEncoding.EncodeToString([]byte(ocipack.readme))
+		ocipack.manifest.SetAnnotation(ctx, AnnotationReadme, encoded)
 	}
 
 	if _, err = ocipack.index.Save(ctx, ocipack.ref.String(), nil); err != nil {
