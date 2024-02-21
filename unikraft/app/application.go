@@ -857,6 +857,9 @@ func (app application) Components(ctx context.Context, targets ...target.Target)
 				return nil, fmt.Errorf("could not add kraftcloud internal libraries: %w", err)
 			}
 			ukp = &lukp
+
+			// Add relevant KConfig option
+			targ.KConfig().Set("CONFIG_LIBUKP", kconfig.Yes)
 		}
 
 		components = append(components, ukp)
