@@ -682,6 +682,15 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 		return nil, false, err
 	}
 
+	isFullyQualifiedNameReference := func(source string) bool {
+		_, err := name.ParseReference(source)
+		if err != nil && errors.Is(err, &name.ErrBadName{}) {
+			return false
+		}
+
+		return true
+	}
+
 	query := packmanager.NewQuery(qopts...)
 
 	// Check if the provided source is a fully qualified OCI reference
@@ -788,6 +797,7 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	checks := []func(string) bool{
 		isLocalImage,
+		isFullyQualifiedNameReference,
 	}
 
 	if query.Remote() {
