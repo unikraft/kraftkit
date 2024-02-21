@@ -264,7 +264,10 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		ocipack.manifest.SetOSVersion(ctx, version)
 	}
 
-	ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	if len(ocipack.Command()) > 0 {
+		ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	}
+
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
