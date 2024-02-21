@@ -8,6 +8,8 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/mattn/go-shellwords"
@@ -62,9 +64,21 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 	}
 
 	if len(selected) > 1 && !config.G[config.KraftKit](ctx).NoPrompt {
-		selected, err = multiselect.MultiSelect[target.Target]("select what to package", opts.Project.Targets()...)
-		if err != nil {
-			return nil, err
+		// Remove targets which do not have a compiled kernel.
+		targets := slices.DeleteFunc(opts.Project.Targets(), func(targ target.Target) bool {
+			_, err := os.Stat(targ.Kernel())
+			return err != nil
+		})
+
+		if len(targets) == 0 {
+			return nil, fmt.Errorf("no targets with a compiled kernel found")
+		} else if len(targets) == 1 {
+			selected = targets
+		} else {
+			selected, err = multiselect.MultiSelect[target.Target]("select built kernel to package", targets...)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
