@@ -31,6 +31,10 @@ func WithIOStreams(ctx context.Context, iostreams *IOStreams) context.Context {
 // FromContext returns the logger kraftkit in the context, or an inert logger
 // that will not log anything.
 func FromContext(ctx context.Context) *IOStreams {
+	if ctx == nil {
+		return IO
+	}
+
 	l := ctx.Value(contextKey{})
 
 	if l == nil {
