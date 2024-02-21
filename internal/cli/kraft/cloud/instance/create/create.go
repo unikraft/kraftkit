@@ -33,7 +33,7 @@ type CreateOptions struct {
 	Features               []string              `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
 	Image                  string                `noattribute:"true"`
-	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate"`
+	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
 	Metro                  string                `noattribute:"true"`
 	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
