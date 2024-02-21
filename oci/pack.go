@@ -254,13 +254,20 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	// 	log.G(ctx).Debug("including application source files")
 	// }
 
+	if ocipack.original != nil {
+		ocipack.manifest.config = ocipack.original.manifest.config
+	}
+
 	ocipack.manifest.SetAnnotation(ctx, AnnotationName, ocipack.Name())
 	if version := popts.KernelVersion(); len(version) > 0 {
 		ocipack.manifest.SetAnnotation(ctx, AnnotationKernelVersion, version)
 		ocipack.manifest.SetOSVersion(ctx, version)
 	}
 
-	ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	if len(ocipack.Command()) > 0 {
+		ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	}
+
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
 
