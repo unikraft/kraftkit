@@ -121,7 +121,7 @@ nix:
     homepage: https://kraftkit.sh
     description: Build and use highly customized and ultra-lightweight unikernels
     path: pkgs/kraftkit/default.nix
-    license: BSD-3-Clause
+    license: bsd3
     install: |-
       mkdir -p $out/bin
       cp -vr ./dist/kraft $out/bin/kraft
