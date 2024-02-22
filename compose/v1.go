@@ -21,7 +21,10 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type v1Compose struct{}
+type v1Compose struct {
+	machineController machineapi.MachineService
+	networkController networkapi.NetworkService
+}
 
 func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeService, error) {
 	embeddedStore, err := store.NewEmbeddedStore[composev1.ComposeSpec, composev1.ComposeStatus](
@@ -36,6 +39,16 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 
 	service := &v1Compose{}
 
+	service.machineController, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	service.networkController, err = network.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return composev1.NewComposeServiceHandler(
 		ctx,
 		service,
@@ -43,7 +56,7 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 	)
 }
 
-func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose) error {
+func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose) error {
 	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
 	if err != nil {
 		return err
@@ -53,12 +66,7 @@ func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Comp
 		return err
 	}
 
-	controller, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
-	if err != nil {
-		return err
-	}
-
-	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	machines, err := v1.machineController.List(ctx, &machineapi.MachineList{})
 	if err != nil {
 		return err
 	}
@@ -124,7 +132,7 @@ func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Comp
 	return nil
 }
 
-func refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Compose) error {
+func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Compose) error {
 	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
 	if err != nil {
 		return err
@@ -134,14 +142,9 @@ func refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Com
 		return err
 	}
 
-	controller, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
-	if err != nil {
-		return err
-	}
-
 	existingNetworks := []metav1.ObjectMeta{}
 
-	allNetworks, err := controller.List(ctx, &networkapi.NetworkList{})
+	allNetworks, err := v1.networkController.List(ctx, &networkapi.NetworkList{})
 	if err != nil {
 		return err
 	}
@@ -188,17 +191,17 @@ func refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Com
 }
 
 // Create implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (v1 *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }
 
 // Delete implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := refreshRunningServices(ctx, project); err != nil {
+func (v1 *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+	if err := v1.refreshRunningServices(ctx, project); err != nil {
 		return project, err
 	}
 
-	if err := refreshExistingNetworks(ctx, project); err != nil {
+	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
 		return project, err
 	}
 
@@ -206,13 +209,13 @@ func (p *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*co
 }
 
 // List implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
+func (v1 *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
 	for i := range projects.Items {
-		if err := refreshRunningServices(ctx, &projects.Items[i]); err != nil {
+		if err := v1.refreshRunningServices(ctx, &projects.Items[i]); err != nil {
 			return projects, err
 		}
 
-		if err := refreshExistingNetworks(ctx, &projects.Items[i]); err != nil {
+		if err := v1.refreshExistingNetworks(ctx, &projects.Items[i]); err != nil {
 			return projects, err
 		}
 	}
@@ -221,12 +224,12 @@ func (p *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (
 }
 
 // Get implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := refreshRunningServices(ctx, project); err != nil {
+func (v1 *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+	if err := v1.refreshRunningServices(ctx, project); err != nil {
 		return project, err
 	}
 
-	if err := refreshExistingNetworks(ctx, project); err != nil {
+	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
 		return project, err
 	}
 
@@ -234,6 +237,6 @@ func (p *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*compo
 }
 
 // Update implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1Compose) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (v1 *v1Compose) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }
