@@ -1217,7 +1217,7 @@ install_darwin_manual() {
 
     _idr_url=$(printf "%s%s%s%s%s"              \
         "https://github.com/unikraft/kraftkit"  \
-        "/releases/latest/download/kraftkit_"   \
+        "/releases/latest/download/kraft_"      \
         "$("$CAT" $_idr_version_file)"          \
         "_darwin_$_idr_arch_parsed"             \
         ".tar.gz"
