@@ -95,6 +95,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not get list of all images: %w", err)
 		}
 
+		var notFoundMessagesCount int
 		for _, image := range images {
 			if !strings.HasPrefix(image.Digest, strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")) {
 				continue
@@ -103,17 +104,29 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			log.G(ctx).Infof("removing %s", image.Digest)
 
 			if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, image.Digest); err != nil {
-				log.G(ctx).Errorf("could not delete image: %s", err.Error())
+				log.G(ctx).Warnf("could not delete image: %s", err.Error())
+
+				if strings.Contains(err.Error(), "NOT_FOUND") {
+					notFoundMessagesCount++
+				}
 			}
+		}
+
+		if notFoundMessagesCount > 0 {
+			log.G(ctx).Warnf("some images were not found. This is expected if you have already removed them.")
 		}
 	}
 
 	for _, arg := range args {
-		if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg); err != nil {
-			return fmt.Errorf("could not delete image: %w", err)
-		}
-
 		log.G(ctx).Infof("removing %s", arg)
+
+		if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg); err != nil {
+			if strings.Contains(err.Error(), "NOT_FOUND") {
+				log.G(ctx).Warnf("%s not found. This is expected if you have already removed it.", arg)
+			} else {
+				return fmt.Errorf("could not remove image: %w", err)
+			}
+		}
 	}
 
 	return err
