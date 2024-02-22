@@ -21,7 +21,7 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type v1ComposeProject struct{}
+type v1Compose struct{}
 
 func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeService, error) {
 	embeddedStore, err := store.NewEmbeddedStore[composev1.ComposeSpec, composev1.ComposeStatus](
@@ -34,7 +34,7 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 		return nil, err
 	}
 
-	service := &v1ComposeProject{}
+	service := &v1Compose{}
 
 	return composev1.NewComposeServiceHandler(
 		ctx,
@@ -188,12 +188,12 @@ func refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Com
 }
 
 // Create implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (p *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }
 
 // Delete implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (p *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	if err := refreshRunningServices(ctx, project); err != nil {
 		return project, err
 	}
@@ -206,7 +206,7 @@ func (p *v1ComposeProject) Delete(ctx context.Context, project *composev1.Compos
 }
 
 // List implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
+func (p *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
 	for i := range projects.Items {
 		if err := refreshRunningServices(ctx, &projects.Items[i]); err != nil {
 			return projects, err
@@ -221,7 +221,7 @@ func (p *v1ComposeProject) List(ctx context.Context, projects *composev1.Compose
 }
 
 // Get implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (p *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	if err := refreshRunningServices(ctx, project); err != nil {
 		return project, err
 	}
@@ -234,6 +234,6 @@ func (p *v1ComposeProject) Get(ctx context.Context, project *composev1.Compose) 
 }
 
 // Update implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (p *v1Compose) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }
