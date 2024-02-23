@@ -28,12 +28,12 @@ import (
 type InitOptions struct {
 	Auth         *config.AuthConfig    `noattribute:"true"`
 	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the configuration" default:"1000000000"`
+	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)" default:"1000000000"`
 	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
 	MaxSize      uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
 	Metro        string                `noattribute:"true"`
 	MinSize      uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
-	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the configuration" default:"1000000000"`
+	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
 
 func NewCmd() *cobra.Command {
@@ -105,6 +105,14 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		args[0] = conf.UUID
+	}
+
+	if opts.WarmupTime < time.Millisecond {
+		return fmt.Errorf("warmup time must be at least 1ms")
+	}
+
+	if opts.CooldownTime < time.Millisecond {
+		return fmt.Errorf("cooldown time must be at least 1ms")
 	}
 
 	master := &kraftcloudinstances.Instance{}
