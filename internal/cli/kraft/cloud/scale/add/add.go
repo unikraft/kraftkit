@@ -33,6 +33,15 @@ type AddOptions struct {
 	Step       []string              `long:"step" short:"s" usage:"The step of the policy in the format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'"`
 }
 
+// stepFormat holds the step format of the policy for parsing.
+type stepFormat struct {
+	LowerBound int
+	UpperBound int
+	Adjustment int
+	LowerEmpty bool
+	UpperEmpty bool
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&AddOptions{}, cobra.Command{
 		Short:   "Add an autoscale configuration policy",
@@ -110,83 +119,73 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		args[0] = conf.UUID
 	}
 
-	steps := []kraftcloudautoscale.AutoscaleStepPolicyStep{}
-
+	steps := []stepFormat{}
 	for _, step := range opts.Step {
-		var policyStep kraftcloudautoscale.AutoscaleStepPolicyStep
+		var policyStep stepFormat
 
+		// Read in all possible format. Fail otherwise.
 		if _, err := fmt.Sscanf(step, "%d:%d/%d", &policyStep.LowerBound, &policyStep.UpperBound, &policyStep.Adjustment); err != nil {
-			return fmt.Errorf("could not parse step '%s': expected format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'", step)
+			if _, err := fmt.Sscanf(step, ":%d/%d", &policyStep.UpperBound, &policyStep.Adjustment); err != nil {
+				if _, err := fmt.Sscanf(step, "%d:/%d", &policyStep.LowerBound, &policyStep.Adjustment); err != nil {
+					return fmt.Errorf("could not parse step '%s': expected format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'", step)
+				} else {
+					policyStep.UpperEmpty = true
+				}
+			} else {
+				policyStep.LowerEmpty = true
+			}
 		}
 
-		// if lowerBoundString == "" && upperBoundString == "" {
-		// 	return fmt.Errorf("lower bound and upper bound cannot both be null in the same step")
-		// }
-
-		// if idx != 0 && lowerBoundString == "" {
-		// 	return fmt.Errorf("lower bound cannot be null in a step after the first step")
-		// }
-
-		// if idx != len(opts.Step)-1 && upperBoundString == "" {
-		// 	return fmt.Errorf("upper bound cannot be null in a step before the last step")
-		// }
-
-		if policyStep.Adjustment == 0 {
-			return fmt.Errorf("adjustment cannot be zero")
-		}
-
-		// if lowerBoundString != "" {
-		// 	lowerBound, err = strconv.Atoi(lowerBoundString)
-		// 	if err != nil {
-		// 		return fmt.Errorf("could not parse lower bound: %w", err)
-		// 	}
-		// }
-
-		// if upperBoundString != "" {
-		// 	upperBound, err = strconv.Atoi(upperBoundString)
-		// 	if err != nil {
-		// 		return fmt.Errorf("could not parse upper bound: %w", err)
-		// 	}
-		// }
-
-		// adjustment, err = strconv.Atoi(adjustmentString)
-		// if err != nil {
-		// 	return fmt.Errorf("could not parse adjustment: %w", err)
-		// }
-
-		if policyStep.LowerBound >= policyStep.UpperBound {
+		if policyStep.LowerBound >= policyStep.UpperBound && !policyStep.LowerEmpty && !policyStep.UpperEmpty {
 			return fmt.Errorf("lower bound cannot be greater or equal than upper bound")
 		}
-
-		// if adjustment == 0 {
-		// 	return fmt.Errorf("adjustment cannot be 0")
-		// }
-
-		// if lowerBoundString != "" {
-		// 	policyStep.LowerBound = lowerBound
-		// }
-		// if upperBoundString != "" {
-		// 	policyStep.UpperBound = upperBound
-		// }
-
-		// policyStep.Adjustment = adjustment
 
 		steps = append(steps, policyStep)
 	}
 
 	// Sort steps by lower bound.
 	sort.Slice(steps, func(i, j int) bool {
+		// First one should be the empty one
+		if steps[i].LowerEmpty && !steps[j].LowerEmpty {
+			return true
+		}
 		return steps[i].LowerBound < steps[j].LowerBound
 	})
 
+	// Do checks to ensure the steps are contiguous and valid.
 	for idx, step := range steps {
 		if idx == 0 {
 			continue
 		}
 
+		if step.LowerEmpty {
+			return fmt.Errorf("lower bound cannot be empty in a step after the first step")
+		}
+
+		if step.UpperEmpty && idx != len(opts.Step)-1 {
+			return fmt.Errorf("upper bound cannot be empty in a step before the last step")
+		}
+
 		if steps[idx-1].UpperBound != step.LowerBound {
 			return fmt.Errorf("steps are not contiguous, gap found between %d and %d", steps[idx-1].UpperBound, step.LowerBound)
 		}
+	}
+
+	stepsAPI := []kraftcloudautoscale.AutoscaleStepPolicyStep{}
+	for _, step := range steps {
+		var stepAPI kraftcloudautoscale.AutoscaleStepPolicyStep
+
+		stepAPI.Adjustment = &step.Adjustment
+
+		if !step.LowerEmpty {
+			stepAPI.LowerBound = &step.LowerBound
+		}
+
+		if !step.UpperEmpty {
+			stepAPI.UpperBound = &step.UpperBound
+		}
+
+		stepsAPI = append(stepsAPI, stepAPI)
 	}
 
 	if _, err := opts.Client.
@@ -199,7 +198,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 				Name:           opts.Name,
 				AdjustmentType: kraftcloudautoscale.AutoscaleAdjustmentType(opts.Adjustment),
 				Metric:         kraftcloudautoscale.AutoscalePolicyMetric(opts.Metric),
-				Steps:          steps,
+				Steps:          stepsAPI,
 			},
 		); err != nil {
 		return fmt.Errorf("could not add configuration: %w", err)
