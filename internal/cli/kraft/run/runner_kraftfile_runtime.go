@@ -160,13 +160,34 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		if err != nil {
 			return fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
+			return fmt.Errorf("could not find runtime '%s'", runner.project.Runtime().Name())
 		}
 	}
 
 	var found pack.Package
 
-	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
+	if len(packs) == 1 {
+		found = packs[0]
+	} else if len(packs) > 1 {
+		if config.G[config.KraftKit](ctx).NoPrompt {
+			for _, p := range packs {
+				log.G(ctx).
+					WithField("runtime", p.String()).
+					Warn("possible")
+			}
+
+			return fmt.Errorf("too many options for %s and prompting has been disabled",
+				runner.project.Runtime().String(),
+			)
+		}
+
+		selected, err := selection.Select[pack.Package]("select possible runtime", packs...)
+		if err != nil {
+			return err
+		}
+
+		found = *selected
+	} else {
 		// At this point, we have queried the registry without asking for the
 		// platform and architecture and received multiple options.  Re-query the
 		// catalog with the host architecture and platform.
