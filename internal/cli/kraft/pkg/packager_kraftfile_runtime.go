@@ -239,11 +239,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	log.G(ctx).
-		WithField("arch", opts.Architecture).
-		WithField("plat", opts.Platform).
-		Info("using")
-
 	runtime := *selected
 	pulled, _, _ := runtime.PulledAt(ctx)
 
