@@ -100,7 +100,11 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			if err != nil {
 				return fmt.Errorf("could not parse time for '%s': %w", instance.UUID, err)
 			}
-			createdAt = humanize.Time(createdTime)
+			if format != "table" {
+				createdAt = instance.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
 		}
 
 		if format != "table" {
@@ -186,7 +190,11 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolum
 			if err != nil {
 				return fmt.Errorf("could not parse time for '%s': %w", volume.UUID, err)
 			}
-			createdAt = humanize.Time(createdTime)
+			if format != "table" {
+				createdAt = volume.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
 		}
 
 		if format != "table" {
@@ -342,7 +350,11 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kra
 			if err != nil {
 				return fmt.Errorf("could not parse time for '%s': %w", sg.UUID, err)
 			}
-			createdAt = humanize.Time(createdTime)
+			if format != "table" {
+				createdAt = sg.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
 		}
 
 		table.AddField(createdAt, nil)
