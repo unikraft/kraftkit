@@ -40,7 +40,7 @@ type UpOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
-		Short:   "Run a compose project.",
+		Short:   "Run a compose project",
 		Use:     "up [FLAGS]",
 		Args:    cobra.NoArgs,
 		Aliases: []string{},

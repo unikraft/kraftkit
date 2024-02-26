@@ -28,7 +28,7 @@ type LsOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LsOptions{}, cobra.Command{
-		Short:   "List compose projects.",
+		Short:   "List compose projects",
 		Use:     "ls [FLAGS]",
 		Aliases: []string{"list"},
 		Long:    "List compose projects.",

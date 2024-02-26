@@ -29,7 +29,7 @@ func NewCmd() *cobra.Command {
 			$ kraft lib add
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "lib",
+			cmdfactory.AnnotationHelpGroup:  "lib",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

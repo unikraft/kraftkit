@@ -29,7 +29,7 @@ type DownOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
-		Short:   "Stop and remove a compose project.",
+		Short:   "Stop and remove a compose project",
 		Use:     "down [FLAGS]",
 		Aliases: []string{"dw"},
 		Long:    "Stop and remove a compose project.",
