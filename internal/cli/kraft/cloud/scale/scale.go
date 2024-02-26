@@ -28,14 +28,14 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage instance autoscale on KraftCloud",
 		Use:     "scale SUBCOMMAND",
 		Aliases: []string{"autoscale", "scl"},
-		Hidden:  true,
 		Long:    "Manage instance autoscale on KraftCloud.",
 		Example: heredoc.Doc(`
 			# Add an autoscale configuration to a service group
 			$ kraft cloud scale add my-instance-431342 my-policy
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud-scale",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

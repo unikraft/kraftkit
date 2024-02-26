@@ -29,14 +29,14 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage persistent volumes on KraftCloud",
 		Use:     "volume SUBCOMMAND",
 		Aliases: []string{"volumes", "vol"},
-		Hidden:  true,
 		Long:    "Manage persistent volumes on KraftCloud.",
 		Example: heredoc.Doc(`
 			# List all volumes in your account.
 			$ kraft cloud volume list
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud-vol",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

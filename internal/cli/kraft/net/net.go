@@ -32,14 +32,14 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage machine networks",
 		Use:     "net SUBCOMMAND",
 		Aliases: []string{"network"},
-		Hidden:  true,
 		Long:    "Manage machine networks.",
 		Example: heredoc.Doc(`
 			# Create a new network
 			$ kraft network create my-network
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "net",
+			cmdfactory.AnnotationHelpGroup:  "net",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

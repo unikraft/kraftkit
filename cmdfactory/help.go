@@ -20,7 +20,10 @@ import (
 )
 
 // AnnotationHelpGroup is used to indicate in which help group a command belongs.
-const AnnotationHelpGroup = "help:group"
+const (
+	AnnotationHelpGroup  = "help:group"
+	AnnotationHelpHidden = "help:hidden"
+)
 
 func rootUsageFunc(command *cobra.Command) error {
 	command.Printf("Usage:  %s", command.UseLine())
@@ -29,7 +32,7 @@ func rootUsageFunc(command *cobra.Command) error {
 	if len(subcommands) > 0 {
 		command.Print("\n\nAvailable commands:\n")
 		for _, c := range subcommands {
-			if c.Hidden {
+			if _, ok := c.Annotations[AnnotationHelpHidden]; ok {
 				continue
 			}
 			command.Printf("  %s\n", c.Name())
@@ -157,7 +160,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 			if c.Short == "" {
 				continue
 			}
-			if c.Hidden {
+			if _, ok := c.Annotations[AnnotationHelpHidden]; ok {
 				continue
 			}
 
@@ -188,7 +191,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		if c.Short == "" {
 			continue
 		}
-		if c.Hidden {
+		if _, ok := c.Annotations[AnnotationHelpHidden]; ok {
 			continue
 		}
 

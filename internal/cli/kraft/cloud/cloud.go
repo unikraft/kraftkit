@@ -29,9 +29,8 @@ type CloudOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
-		Short:   "cloud",
+		Short:   "Manage resources on the KraftCloud platform",
 		Use:     "cloud [FLAGS] [SUBCOMMAND|DIR]",
-		Hidden:  true,
 		Aliases: []string{"cl"},
 		Long: heredoc.Docf(`
 			▄▀▄▀ kraft.cloud
@@ -39,7 +38,7 @@ func NewCmd() *cobra.Command {
 			Manage resources on The Millisecond Platform.
 
 			Learn more & sign up for the beta at https://kraft.cloud
-		
+
 			Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
 			%[1]sKRAFTCLOUD_METRO%[1]s environmental variable.
 
@@ -75,7 +74,8 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance remove UUID
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

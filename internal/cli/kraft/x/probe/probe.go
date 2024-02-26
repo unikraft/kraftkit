@@ -26,12 +26,12 @@ type Probe struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&Probe{}, cobra.Command{
-		Short: "Read Unikraft and library metadata from an ELF binary.",
+		Short: "Read Unikraft and library metadata from an ELF binary",
 		Use:   "probe [FLAGS] path/to/unikernel",
 		Args:  cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
-			# Output metadata for a Unikraft unikernel 
-			$ kraft x probe path/to/unikernel 
+			# Output metadata for a Unikraft unikernel
+			$ kraft x probe path/to/unikernel
 
 			# Output the raw metadata from the elf
 			$ kraft x probe -r path/to/unikernel
