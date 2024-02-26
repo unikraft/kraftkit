@@ -38,20 +38,21 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
 		Short:   "Get an autoscale configuration or policy",
 		Use:     "get [FLAGS] UUID|NAME",
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},
-		Long:    "Get an autoscale configuration or policy.",
+		Long:    "Get an autoscale configuration or policy of a service group.",
 		Example: heredoc.Doc(`
-			# Get an autoscale configuration by UUID
+			# Get an autoscale configuration by UUID of a service group
 			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Get an autoscale configuration by name
-			$ kraft cloud scale get my-instance-431342
+			# Get an autoscale configuration by name of a service group
+			$ kraft cloud scale get my-service-group
 
-			# Get an autoscale policy by UUID
+			# Get an autoscale policy by UUID of a service group
 			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b --policy my-policy
 
-			# Get an autoscale policy by name
-			$ kraft cloud scale get my-instance-431342 --policy my-policy
+			# Get an autoscale policy by name of a service group
+			$ kraft cloud scale get my-service-group --policy my-policy
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",

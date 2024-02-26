@@ -48,13 +48,13 @@ func NewCmd() *cobra.Command {
 		Use:     "add [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"a"},
-		Long:    "Add an autoscale configuration policy.",
+		Long:    "Add an autoscale configuration policy for a service group.",
 		Example: heredoc.Doc(`
-			# Add an autoscale configuration policy by UUID
+			# Add an autoscale configuration policy by service group UUID
 			$ kraft cloud scale add fd1684ea-7970-4994-92d6-61dcc7905f2b --name my-policy --step 0:10/1
 
-			# Add an autoscale configuration policy by name
-			$ kraft cloud scale add my-instance-431342 --name my-policy --step 0:10/1 --step 10:20/2
+			# Add an autoscale configuration policy by service group name
+			$ kraft cloud scale add my-service-group --name my-policy --step 0:10/1 --step 10:20/2
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
