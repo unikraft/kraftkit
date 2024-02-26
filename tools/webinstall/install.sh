@@ -30,30 +30,31 @@ DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
 
 # Commands as variables to make them easier to override
-BREW=${BREW:-brew}
-GREP=${GREP:-grep}
-CAT=${CAT:-cat}
-SUDO=${SUDO:-sudo}
-AWK=${AWK:-awk}
-HEAD=${HEAD:-head}
-TAIL=${TAIL:-tail}
-UNAME=${UNAME:-uname}
-LDD=${LDD:-ldd}
-SYSCTL=${SYSCTL:-sysctl}
-CURL=${CURL:-curl}
-WGET=${WGET:-wget}
-YUM=${YUM:-yum}
-APT=${APT:-apt-get}
 APK=${APK:-apk}
+APT=${APT:-apt-get}
+AWK=${AWK:-awk}
+BREW=${BREW:-brew}
+CAT=${CAT:-cat}
+CURL=${CURL:-curl}
+CUT=${CUT:-cut}
+GIT=${GIT:-git}
+GREP=${GREP:-grep}
+HEAD=${HEAD:-head}
+INSTALL=${INSTALL:-install}
+LDD=${LDD:-ldd}
 MAKEPKG=${MAKEPKG:-makepkg}
 MKDIR=${MKDIR:-mkdir}
-GIT=${GIT:-git}
-TAR=${TAR:-tar}
 PACMAN=${PACMAN:-pacman}
-INSTALL=${INSTALL:-install}
 RM=${RM:-rm}
-CUT=${CUT:-cut}
+SUDO=${SUDO:-sudo}
 SW_VERS=${SW_VERS:-sw_vers}
+SYSCTL=${SYSCTL:-sysctl}
+TAIL=${TAIL:-tail}
+TAR=${TAR:-tar}
+TR=${TR:-tr}
+UNAME=${UNAME:-uname}
+WGET=${WGET:-wget}
+YUM=${YUM:-yum}
 
 set -u
 
@@ -1048,7 +1049,7 @@ install_linux_gnu() {
 
         get_user_response "install recommended dependencies? [y/N]: " "n"
         _idd_answer="$_RETVAL"
-        
+
         _idd_recommended=""
         if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
             _idd_recommended="--install-recommends"
@@ -1066,9 +1067,9 @@ install_linux_gnu() {
         need_cmd "$MAKEPKG"
         need_cmd "$RM"
         do_cmd "$GIT clone https://aur.archlinux.org/kraftkit-bin.git /tmp/kraftkit-bin"
-        cd /tmp/kraftkit-bin
+        cd /tmp/kraftkit-bin || exit
         do_cmd "$MAKEPKG -si"
-        cd - 1> /dev/null
+        cd - 1> /dev/null || exit
         $RM -rf /tmp/kraftkit-bin
     else
         _ilg_msg=$(printf "error: %s%s%s"                               \
@@ -1462,6 +1463,71 @@ install_dependencies_musl() {
     return 0
 }
 
+# install_completions installs the kraftkit completions for the current
+# environment.
+# Returns:
+# Code: 0 on success, 1 on error
+install_completions() {
+    need_cmd "$TR"
+    need_cmd "$GREP"
+
+    get_user_response "Do you want to install command completions? [Y/n]: " "y"
+    _inc_answer="$_RETVAL"
+
+    if printf "%s" "$_inc_answer" | "$GREP" -q -E "$_NO_ANS"; then
+        return 0
+    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
+        :
+    else
+        err "fatal: choose either yes or no."
+    fi
+
+    get_user_response "What shell are you using? [bash/zsh/fish]: " ""
+    _inc_answer=$(printf "%s" "$_RETVAL" | "$TR" '[:upper:]' '[:lower:]')
+
+    # Check if the shell is supported
+    _inc_shell=""
+    _inc_config_file=""
+    _inc_kraft_config_file=""
+    if printf "%s" "$_inc_answer" | "$GREP" -q -E "bash"; then
+        _inc_shell="bash"
+        _inc_config_file="$HOME/.bashrc"
+        _inc_kraft_config_file="$HOME/.bash_kraft_completion"
+    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "zsh"; then
+        _inc_shell="zsh"
+        _inc_config_file="$HOME/.zshrc"
+        _inc_kraft_config_file="$HOME/.zsh_kraft_completion"
+    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "fish"; then
+        _inc_shell="fish"
+        _inc_config_file="$HOME/.config/fish/config.fish"
+        _inc_kraft_config_file="$HOME/.config/fish/kraft_completion.fish"
+    elif [ -z "$_inc_answer" ]; then
+        err "fatal: no shell provided."
+    else
+        err "fatal: unsupported shell: $_inc_answer"
+    fi
+
+    if [ -f "$_inc_kraft_config_file" ]; then
+        get_user_response "kraft completions already exist, overwrite? [Y/n]: " "y"
+        _inc_answer="$_RETVAL"
+
+        if printf "%s" "$_inc_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
+            :
+        elif printf "%s" "$_inc_answer" | "$GREP" -q -E "$_NO_ANS"; then
+            return 0
+        else
+            err "fatal: choose either yes or no."
+        fi
+    fi
+
+    do_cmd "kraft completion $_inc_shell > $_inc_kraft_config_file"
+
+    say "Done please run the following commands to enable completions:"
+    say ""
+    say "source $_inc_kraft_config_file;"
+    say "echo 'source $_inc_kraft_config_file;' >> $_inc_config_file;"
+}
+
 # arg_parse parses the arguments passed to the script.
 # $@: the arguments to parse
 # Returns:
@@ -1570,8 +1636,12 @@ main() {
 
     # Check if kraft is installed and working
     kraft -h
+    _main_kraft_ret="$?"
 
-    return $?
+    # Install kraftkit completions
+    install_completions
+
+    return $_main_kraft_ret
 }
 
 
