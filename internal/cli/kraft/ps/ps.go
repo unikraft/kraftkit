@@ -27,7 +27,7 @@ type PsOptions struct {
 	platform     string
 	Quiet        bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
 	ShowAll      bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
-	Output       string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output       string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 }
 
 const (

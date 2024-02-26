@@ -22,7 +22,7 @@ import (
 
 type StartOptions struct {
 	WaitTimeoutMS int    `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
-	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 }

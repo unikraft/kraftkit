@@ -23,7 +23,7 @@ import (
 type ListOptions struct {
 	Driver string `noattribute:"true"`
 	Long   bool   `long:"long" short:"l" usage:"Show more information"`
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 }
 
 func NewCmd() *cobra.Command {

@@ -23,7 +23,7 @@ import (
 
 type QuotasOptions struct {
 	Limits bool   `long:"limits" short:"l" usage:"Show usage limits"`
-	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 }
