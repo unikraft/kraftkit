@@ -29,7 +29,7 @@ import (
 
 type ListOptions struct {
 	All    bool   `long:"all" usage:"Show all images by their digest"`
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 }

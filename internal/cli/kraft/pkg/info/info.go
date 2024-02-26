@@ -22,7 +22,7 @@ import (
 )
 
 type InfoOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Update bool   `long:"update" short:"u" usage:"Get latest information about components before listing results"`
 }
 

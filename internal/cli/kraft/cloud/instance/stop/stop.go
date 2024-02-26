@@ -23,7 +23,7 @@ import (
 
 type StopOptions struct {
 	TimeoutMS int64  `local:"true" long:"timeout-ms" short:"w" usage:"Timeout for the instance to stop"`
-	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	All       bool   `long:"all" usage:"Stop all instances"`
 	Metro     string `noattribute:"true"`
 }

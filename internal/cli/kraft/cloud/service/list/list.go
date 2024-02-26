@@ -22,7 +22,7 @@ import (
 )
 
 type ListOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Watch  bool   `long:"watch" short:"w" usage:"After listing watch for changes."`
 
 	metro string

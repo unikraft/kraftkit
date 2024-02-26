@@ -32,7 +32,7 @@ type CreateOptions struct {
 	SubDomain string                             `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
 	Metro     string                             `noattribute:"true"`
 	Name      string                             `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
-	Output    string                             `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,full" default:"table"`
+	Output    string                             `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 }
 
 // Create a KraftCloud instance.
