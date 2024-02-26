@@ -254,7 +254,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	// Remove the cached runtime package reference if it was not previously
 	// pulled.
-	if !pulled {
+	if !pulled && opts.NoPull {
 		defer func() {
 			if err := runtime.Delete(ctx); err != nil {
 				log.G(ctx).Debugf("could not delete intermediate runtime package: %s", err.Error())
