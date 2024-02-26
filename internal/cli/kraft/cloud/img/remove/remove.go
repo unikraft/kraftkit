@@ -32,7 +32,7 @@ type RemoveOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove an image",
-		Use:     "remove [FLAGS] NAME[:latest|@sha256:...]",
+		Use:     "remove [FLAGS] [USER/]NAME[:latest|@sha256:...]",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"rm", "delete", "del"},
 		Long: heredoc.Doc(`
@@ -40,7 +40,16 @@ func NewCmd() *cobra.Command {
 		`),
 		Example: heredoc.Doc(`
 			# Remove an image from your account.
+			$ kraft cloud image remove caddy
+
+			# Remove an image from your account by tag.
+			$ kraft cloud image remove caddy:latest
+
+			# Remove an image from your account by digest.
 			$ kraft cloud image remove caddy@sha256:2ba5324141...
+
+			# Remove an image from your account with user.
+			$ kraft cloud image remove user/caddy
 
 			# Remove all images from your account.
 			$ kraft cloud image remove --all
@@ -119,6 +128,11 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	for _, arg := range args {
+		if strings.Contains(arg, "/") {
+			splits := strings.Split(arg, "/")
+			arg = splits[len(splits)-1]
+		}
+
 		log.G(ctx).Infof("removing %s", arg)
 
 		if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg); err != nil {
