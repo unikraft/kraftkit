@@ -239,11 +239,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	log.G(ctx).
-		WithField("arch", opts.Architecture).
-		WithField("plat", opts.Platform).
-		Info("using")
-
 	runtime := *selected
 	pulled, _, _ := runtime.PulledAt(ctx)
 
@@ -254,7 +249,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	// Remove the cached runtime package reference if it was not previously
 	// pulled.
-	if !pulled {
+	if !pulled && opts.NoPull {
 		defer func() {
 			if err := runtime.Delete(ctx); err != nil {
 				log.G(ctx).Debugf("could not delete intermediate runtime package: %s", err.Error())
@@ -266,14 +261,14 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		paramodel, err := paraprogress.NewParaProgress(
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", packs[0].String()),
+				fmt.Sprintf("pulling %s", runtime.String()),
 				func(ctx context.Context, w func(progress float64)) error {
 					popts := []pack.PullOption{}
 					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 						popts = append(popts, pack.WithPullProgressFunc(w))
 					}
 
-					return packs[0].Pull(
+					return runtime.Pull(
 						ctx,
 						popts...,
 					)
@@ -343,7 +338,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		},
 
 		processtree.NewProcessTreeItem(
-			"packaging "+opts.Name+" ("+opts.Format+")",
+			"packaging "+opts.Name,
 			targ.Platform().Name()+"/"+targ.Architecture().Name(),
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
