@@ -261,14 +261,14 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		paramodel, err := paraprogress.NewParaProgress(
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
-				fmt.Sprintf("pulling %s", packs[0].String()),
+				fmt.Sprintf("pulling %s", runtime.String()),
 				func(ctx context.Context, w func(progress float64)) error {
 					popts := []pack.PullOption{}
 					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 						popts = append(popts, pack.WithPullProgressFunc(w))
 					}
 
-					return packs[0].Pull(
+					return runtime.Pull(
 						ctx,
 						popts...,
 					)
