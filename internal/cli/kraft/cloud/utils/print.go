@@ -73,6 +73,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 	table.AddField("NAME", cs.Bold)
 	table.AddField("FQDN", cs.Bold)
 	if format != "table" {
+		table.AddField("PRIVATE FQDN", cs.Bold)
 		table.AddField("PRIVATE IP", cs.Bold)
 	}
 	table.AddField("STATE", cs.Bold)
@@ -115,6 +116,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 		table.AddField(instance.FQDN, nil)
 
 		if format != "table" {
+			table.AddField(instance.PrivateFQDN, nil)
 			table.AddField(instance.PrivateIP, nil)
 		}
 
