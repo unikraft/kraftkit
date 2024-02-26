@@ -1049,7 +1049,7 @@ install_linux_gnu() {
 
         get_user_response "install recommended dependencies? [y/N]: " "n"
         _idd_answer="$_RETVAL"
-        
+
         _idd_recommended=""
         if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
             _idd_recommended="--install-recommends"
@@ -1067,9 +1067,9 @@ install_linux_gnu() {
         need_cmd "$MAKEPKG"
         need_cmd "$RM"
         do_cmd "$GIT clone https://aur.archlinux.org/kraftkit-bin.git /tmp/kraftkit-bin"
-        cd /tmp/kraftkit-bin
+        cd /tmp/kraftkit-bin || exit
         do_cmd "$MAKEPKG -si"
-        cd - 1> /dev/null
+        cd - 1> /dev/null || exit
         $RM -rf /tmp/kraftkit-bin
     else
         _ilg_msg=$(printf "error: %s%s%s"                               \
