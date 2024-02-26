@@ -195,7 +195,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		if err != nil {
 			return fmt.Errorf("could not query catalog: %w", err)
 		} else if len(packs) == 0 {
-			return fmt.Errorf("coud not find runtime '%s'", runner.project.Runtime().Name())
+			return fmt.Errorf("could not find runtime '%s'", runner.project.Runtime().Name())
 		} else if len(packs) == 1 {
 			found = packs[0]
 		} else if len(packs) > 1 {
