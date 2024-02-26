@@ -30,31 +30,31 @@ DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
 
 # Commands as variables to make them easier to override
-BREW=${BREW:-brew}
-GREP=${GREP:-grep}
-CAT=${CAT:-cat}
-SUDO=${SUDO:-sudo}
-AWK=${AWK:-awk}
-HEAD=${HEAD:-head}
-TAIL=${TAIL:-tail}
-UNAME=${UNAME:-uname}
-LDD=${LDD:-ldd}
-SYSCTL=${SYSCTL:-sysctl}
-CURL=${CURL:-curl}
-WGET=${WGET:-wget}
-YUM=${YUM:-yum}
-APT=${APT:-apt-get}
 APK=${APK:-apk}
+APT=${APT:-apt-get}
+AWK=${AWK:-awk}
+BREW=${BREW:-brew}
+CAT=${CAT:-cat}
+CURL=${CURL:-curl}
+CUT=${CUT:-cut}
+GIT=${GIT:-git}
+GREP=${GREP:-grep}
+HEAD=${HEAD:-head}
+INSTALL=${INSTALL:-install}
+LDD=${LDD:-ldd}
 MAKEPKG=${MAKEPKG:-makepkg}
 MKDIR=${MKDIR:-mkdir}
-GIT=${GIT:-git}
+PACMAN=${PACMAN:-pacman}
+RM=${RM:-rm}
+SUDO=${SUDO:-sudo}
+SW_VERS=${SW_VERS:-sw_vers}
+SYSCTL=${SYSCTL:-sysctl}
+TAIL=${TAIL:-tail}
 TAR=${TAR:-tar}
 TR=${TR:-tr}
-PACMAN=${PACMAN:-pacman}
-INSTALL=${INSTALL:-install}
-RM=${RM:-rm}
-CUT=${CUT:-cut}
-SW_VERS=${SW_VERS:-sw_vers}
+UNAME=${UNAME:-uname}
+WGET=${WGET:-wget}
+YUM=${YUM:-yum}
 
 set -u
 
