@@ -32,6 +32,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all service groups at a metro for your account",
 		Use:     "list [FLAGS]",
+		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
 			List all service groups in your account.

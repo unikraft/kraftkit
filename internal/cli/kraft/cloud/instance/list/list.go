@@ -30,6 +30,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List instances",
 		Use:     "list [FLAGS]",
+		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
 		Example: heredoc.Doc(`
 			# List all instances in your account.

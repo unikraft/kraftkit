@@ -32,6 +32,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&QuotasOptions{}, cobra.Command{
 		Short:   "View your resource quota on KraftCloud",
 		Use:     "quotas",
+		Args:    cobra.NoArgs,
 		Aliases: []string{"q", "quota"},
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",

@@ -31,7 +31,7 @@ func NewCmd() *cobra.Command {
 		Long:    "Manage instance autoscale on KraftCloud.",
 		Example: heredoc.Doc(`
 			# Add an autoscale configuration to a service group
-			$ kraft cloud scale add my-instance-431342 my-policy
+			$ kraft cloud scale add my-service-group my-policy
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-scale",

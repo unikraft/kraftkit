@@ -42,7 +42,7 @@ func NewCmd() *cobra.Command {
 		Short:   "Remove an instance",
 		Use:     "remove UUID|NAME",
 		Aliases: []string{"del", "delete", "rm"},
-		Args:    cobra.ArbitraryArgs,
+		Args:    cobra.ExactArgs(1),
 		Example: heredoc.Doc(`
 			# Remove a KraftCloud instance by UUID
 			$ kraft cloud instance remove fd1684ea-7970-4994-92d6-61dcc7905f2b

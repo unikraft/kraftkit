@@ -41,7 +41,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short:   "Stop an instance",
 		Use:     "stop [FLAGS] UUID|NAME",
-		Args:    cobra.ArbitraryArgs,
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"st"},
 		Example: heredoc.Doc(`
 			# Stop a KraftCloud instance by UUID

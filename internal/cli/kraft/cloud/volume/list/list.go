@@ -32,6 +32,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
 		Short:   "List all volumes at a metro for your account",
 		Use:     "list",
+		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
 			List all volumes in your account.

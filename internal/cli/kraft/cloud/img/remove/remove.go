@@ -33,6 +33,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove an image",
 		Use:     "remove [FLAGS] NAME[:latest|@sha256:...]",
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"rm", "delete", "del"},
 		Long: heredoc.Doc(`
 			Remove an image for your account.

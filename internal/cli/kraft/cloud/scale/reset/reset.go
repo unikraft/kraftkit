@@ -32,6 +32,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ResetOptions{}, cobra.Command{
 		Short:   "Reset autoscale configuration of a service group",
 		Use:     "reset [FLAGS] UUID|NAME",
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"rs", "delconfig", "deinit", "rmconfig"},
 		Long:    "Reset autoscale configuration of a service group.",
 		Example: heredoc.Doc(`
@@ -39,7 +40,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale reset fd1684ea-7970-4994-92d6-61dcc7905f2b
 
 			# Reset an autoscale configuration by name
-			$ kraft cloud scale reset my-instance-431342
+			$ kraft cloud scale reset my-service-group
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
