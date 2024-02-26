@@ -27,14 +27,14 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage services on KraftCloud",
 		Use:     "service SUBCOMMAND",
 		Aliases: []string{"services", "svc"},
-		Hidden:  true,
 		Long:    "Manage services on KraftCloud.",
 		Example: heredoc.Doc(`
 			# List services in your account.
 			$ kraft cloud service list
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud-svc",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

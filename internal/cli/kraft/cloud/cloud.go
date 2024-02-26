@@ -31,7 +31,6 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
 		Short:   "cloud",
 		Use:     "cloud [FLAGS] [SUBCOMMAND|DIR]",
-		Hidden:  true,
 		Aliases: []string{"cl"},
 		Long: heredoc.Docf(`
 			▄▀▄▀ kraft.cloud
@@ -75,7 +74,8 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance remove UUID
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

@@ -23,7 +23,6 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage and maintain Unikraft microlibraries",
 		Use:     "lib SUBCOMMAND",
 		Aliases: []string{"library"},
-		Hidden:  true,
 		Long:    "Manage and maintain Unikraft microlibraries.",
 		Example: heredoc.Doc(`
 			# Add a new microlibrary to your project.
@@ -31,6 +30,7 @@ func NewCmd() *cobra.Command {
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "lib",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

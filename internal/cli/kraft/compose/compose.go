@@ -27,7 +27,6 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ComposeOptions{}, cobra.Command{
 		Short:   "compose",
 		Use:     "compose [FLAGS] [SUBCOMMAND|DIR]",
-		Hidden:  true,
 		Aliases: []string{},
 		Long: heredoc.Docf(`
 			Build and run compose projects with Unikraft.
@@ -37,7 +36,8 @@ func NewCmd() *cobra.Command {
 			$ kraft compose up
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "compose",
+			cmdfactory.AnnotationHelpGroup:  "compose",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

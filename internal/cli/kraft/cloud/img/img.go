@@ -25,7 +25,6 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage images on KraftCloud",
 		Use:     "image",
 		Aliases: []string{"img"},
-		Hidden:  true,
 		Long: heredoc.Doc(`
 			Mange images on KraftCloud.
 		`),
@@ -37,7 +36,8 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image remove caddy@sha256:2ba5324141...
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud-img",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {
