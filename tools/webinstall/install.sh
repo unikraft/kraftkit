@@ -44,6 +44,7 @@ INSTALL=${INSTALL:-install}
 LDD=${LDD:-ldd}
 MAKEPKG=${MAKEPKG:-makepkg}
 MKDIR=${MKDIR:-mkdir}
+MV=${MV:-mv}
 PACMAN=${PACMAN:-pacman}
 RM=${RM:-rm}
 SUDO=${SUDO:-sudo}
@@ -1465,11 +1466,16 @@ install_dependencies_musl() {
 
 # install_completions installs the kraftkit completions for the current
 # environment.
+# $1: the architecture of the system
 # Returns:
 # Code: 0 on success, 1 on error
 install_completions() {
-    need_cmd "$TR"
+    need_cmd "$CAT"
     need_cmd "$GREP"
+    need_cmd "$MV"
+    need_cmd "$TR"
+
+    _inc_arch="$1"
 
     get_user_response "Do you want to install command completions? [Y/n]: " "y"
     _inc_answer="$_RETVAL"
@@ -1521,6 +1527,15 @@ install_completions() {
     fi
 
     do_cmd "kraft completion $_inc_shell > $_inc_kraft_config_file"
+
+    if printf "%s" "$_inc_arch" | "$GREP" -q "darwin"; then
+        echo 'autoload -Uz compinit' |
+            "$CAT" - "$_inc_kraft_config_file" > .kraft_tmp &&
+            "$MV" .kraft_tmp "$_inc_kraft_config_file"
+        echo 'compinit' |
+            "$CAT" - "$_inc_kraft_config_file" > .kraft_tmp &&
+            "$MV" .kraft_tmp "$_inc_kraft_config_file"
+    fi
 
     say "Done please run the following commands to enable completions:"
     say ""
@@ -1639,7 +1654,7 @@ main() {
     _main_kraft_ret="$?"
 
     # Install kraftkit completions
-    install_completions
+    install_completions "$_main_arch"
 
     return $_main_kraft_ret
 }
