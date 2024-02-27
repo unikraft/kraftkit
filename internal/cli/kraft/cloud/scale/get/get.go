@@ -70,19 +70,10 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("specify a service group NAME or UUID")
 	}
 
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
-
-	opts.Token = cmd.Flag("token").Value.String()
-	if opts.Token == "" {
-		return fmt.Errorf("kraftcloud token is unset")
-	}
-
-	log.G(cmd.Context()).WithField("token", opts.Token).Debug("using")
 
 	return nil
 }

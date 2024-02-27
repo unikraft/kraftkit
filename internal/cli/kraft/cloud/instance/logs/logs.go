@@ -17,7 +17,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 type LogOptions struct {
@@ -64,18 +63,10 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
-
-	opts.token = cmd.Flag("token").Value.String()
-	if opts.token == "" {
-		return fmt.Errorf("kraftcloud token is unset")
-	}
-
-	log.G(cmd.Context()).WithField("token", opts.token).Debug("using")
 
 	return nil
 }
