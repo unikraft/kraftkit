@@ -8,7 +8,6 @@ package initialize
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -33,6 +32,7 @@ type InitOptions struct {
 	MaxSize      uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
 	Metro        string                `noattribute:"true"`
 	MinSize      uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	Token        string                `noattribute:"true"`
 	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
 
@@ -70,13 +70,17 @@ func (opts *InitOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Metro = cmd.Flag("metro").Value.String()
 	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
 
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
+
+	opts.Token = cmd.Flag("token").Value.String()
+	if opts.Token == "" {
+		return fmt.Errorf("kraftcloud token is unset")
+	}
+
+	log.G(cmd.Context()).WithField("token", opts.Token).Debug("using")
 
 	return nil
 }
@@ -85,7 +89,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}

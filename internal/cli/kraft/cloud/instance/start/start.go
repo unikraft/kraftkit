@@ -7,7 +7,6 @@ package start
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -25,6 +24,7 @@ type StartOptions struct {
 	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
+	token string
 }
 
 // Start a KraftCloud instance.
@@ -66,17 +66,22 @@ func NewCmd() *cobra.Command {
 func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.metro = cmd.Flag("metro").Value.String()
 	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
 	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
+
+	opts.token = cmd.Flag("token").Value.String()
+	if opts.token == "" {
+		return fmt.Errorf("kraftcloud token is unset")
+	}
+
+	log.G(cmd.Context()).WithField("token", opts.token).Debug("using")
+
 	return nil
 }
 
 func (opts *StartOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

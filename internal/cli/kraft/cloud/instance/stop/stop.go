@@ -8,7 +8,6 @@ package stop
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -26,6 +25,7 @@ type StopOptions struct {
 	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	All       bool   `long:"all" usage:"Stop all instances"`
 	Metro     string `noattribute:"true"`
+	Token     string `noattribute:"true"`
 }
 
 // Stop a KraftCloud instance.
@@ -71,17 +71,22 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Metro = cmd.Flag("metro").Value.String()
 	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
+
+	opts.Token = cmd.Flag("token").Value.String()
+	if opts.Token == "" {
+		return fmt.Errorf("kraftcloud token is unset")
+	}
+
+	log.G(cmd.Context()).WithField("token", opts.Token).Debug("using")
+
 	return nil
 }
 
 func (opts *StopOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

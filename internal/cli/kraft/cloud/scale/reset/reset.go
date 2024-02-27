@@ -8,7 +8,6 @@ package reset
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -26,6 +25,7 @@ type ResetOptions struct {
 	Auth   *config.AuthConfig                   `noattribute:"true"`
 	Client kraftcloudautoscale.AutoscaleService `noattribute:"true"`
 	Metro  string                               `noattribute:"true"`
+	Token  string                               `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -60,13 +60,17 @@ func (opts *ResetOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Metro = cmd.Flag("metro").Value.String()
 	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
 
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
+
+	opts.Token = cmd.Flag("token").Value.String()
+	if opts.Token == "" {
+		return fmt.Errorf("kraftcloud token is unset")
+	}
+
+	log.G(cmd.Context()).WithField("token", opts.Token).Debug("using")
 
 	return nil
 }
@@ -75,7 +79,7 @@ func (opts *ResetOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}

@@ -8,7 +8,6 @@ package add
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/MakeNowJust/heredoc"
@@ -31,6 +30,7 @@ type AddOptions struct {
 	Metro      string                `noattribute:"true"`
 	Name       string                `long:"name" short:"n" usage:"The name of the policy"`
 	Step       []string              `long:"step" short:"s" usage:"The step of the policy in the format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'"`
+	Token      string                `noattribute:"true"`
 }
 
 // stepFormat holds the step format of the policy for parsing.
@@ -74,13 +74,17 @@ func (opts *AddOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Metro = cmd.Flag("metro").Value.String()
 	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
 		return fmt.Errorf("kraftcloud metro is unset")
 	}
 
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
+
+	opts.Token = cmd.Flag("token").Value.String()
+	if opts.Token == "" {
+		return fmt.Errorf("kraftcloud token is unset")
+	}
+
+	log.G(cmd.Context()).WithField("token", opts.Token).Debug("using")
 
 	return nil
 }
@@ -97,7 +101,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
