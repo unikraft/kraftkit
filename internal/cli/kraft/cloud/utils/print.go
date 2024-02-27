@@ -143,6 +143,8 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			table.AddField(strings.Join(vols, ", "), nil)
 			if instance.ServiceGroup != nil {
 				table.AddField(instance.ServiceGroup.UUID, nil)
+			} else {
+				table.AddField("", nil)
 			}
 		}
 
@@ -486,7 +488,7 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 	out := iostreams.G(ctx).Out
 	fqdn := instance.FQDN
 
-	if len(fqdn) > 0 {
+	if instance.ServiceGroup != nil && len(fqdn) > 0 {
 		for _, port := range instance.ServiceGroup.Services {
 			if port.Port == 443 {
 				fqdn = "https://" + fqdn
@@ -557,7 +559,7 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 		Value: fmt.Sprintf("%d MiB", instance.MemoryMB),
 	})
 
-	if len(instance.ServiceGroup.Name) > 0 {
+	if instance.ServiceGroup != nil && len(instance.ServiceGroup.Name) > 0 {
 		entries = append(entries, []fancymap.FancyMapEntry{
 			{
 				Key:   "service group",

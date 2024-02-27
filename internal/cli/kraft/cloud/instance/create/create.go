@@ -81,16 +81,15 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	req := kraftcloudinstances.CreateInstanceRequest{
-		Args:         args,
-		Autostart:    opts.Start,
-		Env:          make(map[string]string),
-		Features:     features,
-		Image:        opts.Image,
-		MemoryMB:     opts.Memory,
-		Name:         opts.Name,
-		Replicas:     opts.Replicas,
-		ServiceGroup: kraftcloudinstances.CreateInstanceServiceGroupRequest{},
-		Volumes:      []kraftcloudinstances.CreateInstanceVolumeRequest{},
+		Args:      args,
+		Autostart: opts.Start,
+		Env:       make(map[string]string),
+		Features:  features,
+		Image:     opts.Image,
+		MemoryMB:  opts.Memory,
+		Name:      opts.Name,
+		Replicas:  opts.Replicas,
+		Volumes:   []kraftcloudinstances.CreateInstanceVolumeRequest{},
 	}
 
 	for _, vol := range opts.Volumes {
@@ -131,7 +130,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 			WithField("uuid", serviceGroup.UUID).
 			Debug("using service group")
 
-		req.ServiceGroup.UUID = serviceGroup.UUID
+		req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
+			UUID: serviceGroup.UUID,
+		}
 	}
 
 	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
@@ -181,7 +182,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
 				if len(split) != 2 {
-					return nil, fmt.Errorf("malformed port expeted format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+					return nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
@@ -226,16 +227,33 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if len(opts.ServiceGroupNameOrUUID) == 0 {
-		req.ServiceGroup.Services = services
-
+		if len(services) > 0 {
+			req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
+				Services: services,
+			}
+		}
 		if len(opts.SubDomain) > 0 {
-			req.ServiceGroup.DNSName = strings.TrimSuffix(opts.SubDomain, ".")
+			if req.ServiceGroup == nil {
+				req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
+					DNSName:  strings.TrimSuffix(opts.SubDomain, "."),
+					Services: services,
+				}
+			} else {
+				req.ServiceGroup.DNSName = strings.TrimSuffix(opts.SubDomain, ".")
+			}
 		} else if len(opts.FQDN) > 0 {
 			if !strings.HasSuffix(".", opts.FQDN) {
 				opts.FQDN += "."
 			}
 
-			req.ServiceGroup.DNSName = opts.FQDN
+			if req.ServiceGroup == nil {
+				req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
+					DNSName:  opts.FQDN,
+					Services: services,
+				}
+			} else {
+				req.ServiceGroup.DNSName = opts.FQDN
+			}
 		}
 	}
 
@@ -259,7 +277,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		return instance, err
 	}
 
-	if len(instance.ServiceGroup.UUID) > 0 {
+	if instance.ServiceGroup != nil && len(instance.ServiceGroup.UUID) > 0 {
 		serviceGroup, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, instance.ServiceGroup.UUID)
 		if err != nil {
 			return nil, err
