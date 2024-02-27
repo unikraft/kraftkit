@@ -24,8 +24,8 @@ import (
 )
 
 type CloudOptions struct {
-	Metro string `long:"metro" env:"KRAFTCLOUD_METRO" usage:"Set the KraftCloud metro."`
-	Token string `long:"token" env:"KRAFTCLOUD_TOKEN" usage:"Set the KraftCloud token."`
+	Metro string `long:"metro" env:"KRAFTCLOUD_METRO" usage:"Set the KraftCloud metro"`
+	Token string `long:"token" env:"KRAFTCLOUD_TOKEN" usage:"Set the KraftCloud token"`
 }
 
 func NewCmd() *cobra.Command {
