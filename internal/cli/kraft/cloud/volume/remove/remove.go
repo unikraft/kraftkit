@@ -8,7 +8,6 @@ package remove
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -19,11 +18,11 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 type RemoveOptions struct {
 	metro string
+	token string
 }
 
 // Remove a KraftCloud persistent volume.
@@ -60,20 +59,16 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
 	return nil
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

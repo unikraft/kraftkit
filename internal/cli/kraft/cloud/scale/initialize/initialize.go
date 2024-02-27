@@ -8,7 +8,6 @@ package initialize
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -21,7 +20,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/log"
 	"kraftkit.sh/tui/selection"
 )
 
@@ -33,6 +31,7 @@ type InitOptions struct {
 	MaxSize      uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
 	Metro        string                `noattribute:"true"`
 	MinSize      uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	Token        string                `noattribute:"true"`
 	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
 
@@ -68,15 +67,10 @@ func (opts *InitOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("specify a service group name or UUID")
 	}
 
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 
 	return nil
 }
@@ -85,7 +79,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}

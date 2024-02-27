@@ -8,7 +8,6 @@ package get
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/google/uuid"
@@ -20,13 +19,13 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/log"
 )
 
 type GetOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
+	token string
 }
 
 // Status of a KraftCloud instance.
@@ -66,19 +65,16 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
+
 	return nil
 }
 
 func (opts *GetOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

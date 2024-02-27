@@ -60,6 +60,7 @@ type DeployOptions struct {
 	Strategy               packmanager.MergeStrategy `noattribute:"true"`
 	SubDomain              string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
 	Timeout                time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
+	Token                  string                    `noattribute:"true"`
 	Volumes                []string                  `long:"volume" short:"v" usage:"Specify the volume mapping(s) in the form NAME:DEST or NAME:DEST:OPTIONS"`
 	Workdir                string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 }
@@ -105,15 +106,10 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
 
@@ -137,7 +133,7 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+	opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

@@ -8,7 +8,6 @@ package create
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -18,8 +17,8 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 type CreateOptions struct {
@@ -28,6 +27,7 @@ type CreateOptions struct {
 	Metro  string                           `noattribute:"true"`
 	Name   string                           `local:"true" size:"name" short:"n"`
 	SizeMB int                              `local:"true" long:"size" short:"s" usage:"Size in MB"`
+	Token  string                           `noattribute:"true"`
 }
 
 // Create a KraftCloud persistent volume.
@@ -39,7 +39,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
@@ -83,15 +83,11 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("must specify --size flag")
 	}
 
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }
 

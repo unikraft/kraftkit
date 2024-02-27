@@ -8,7 +8,6 @@ package attach
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -20,7 +19,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 type AttachOptions struct {
@@ -30,6 +28,7 @@ type AttachOptions struct {
 	To     string                           `long:"to" usage:"The instance the volume should be attached to"`
 
 	metro string
+	token string
 }
 
 // Attach a KraftCloud persistent volume to an instance.
@@ -49,7 +48,7 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
@@ -94,15 +93,11 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *AttachOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
 	return nil
 }
 

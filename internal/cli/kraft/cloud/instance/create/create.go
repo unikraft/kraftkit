@@ -43,6 +43,7 @@ type CreateOptions struct {
 	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
 	SubDomain              string                `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
+	Token                  string                `noattribute:"true"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 }
 
@@ -55,7 +56,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
@@ -293,7 +294,7 @@ func NewCmd() *cobra.Command {
 				--port 443:8080/http+tls \
 				--port 80:443/http+redirect \
 				nginx:latest
-			
+
 			# Attach two existing volumes to the vm, one read-write at /data
 			# and another read-only at /config:
 			$ kraft cloud --metro fra0 instance create \
@@ -323,12 +324,9 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
-	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
 	domain := cmd.Flag("domain").Value.String()

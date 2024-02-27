@@ -8,7 +8,6 @@ package create
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,7 +21,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/log"
 )
 
 type CreateOptions struct {
@@ -33,6 +31,7 @@ type CreateOptions struct {
 	Metro     string                             `noattribute:"true"`
 	Name      string                             `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	Output    string                             `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Token     string                             `noattribute:"true"`
 }
 
 // Create a KraftCloud instance.
@@ -48,7 +47,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
@@ -190,14 +189,10 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 
 	domain := cmd.Flag("domain").Value.String()
 	if len(domain) > 0 && len(opts.FQDN) > 0 {

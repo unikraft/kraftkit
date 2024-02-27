@@ -8,7 +8,6 @@ package remove
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -26,6 +25,7 @@ type RemoveOptions struct {
 	All    bool   `long:"all" usage:"Remove all instances"`
 
 	metro string
+	token string
 }
 
 // Remove a KraftCloud instance.
@@ -72,19 +72,16 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify an instance name or UUID, or use the --all flag")
 	}
 
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
+
 	return nil
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}

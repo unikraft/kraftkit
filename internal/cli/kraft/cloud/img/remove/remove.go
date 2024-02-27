@@ -8,7 +8,6 @@ package remove
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -19,6 +18,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
@@ -27,6 +27,7 @@ type RemoveOptions struct {
 	Auth   *config.AuthConfig             `noattribute:"true"`
 	Client kraftcloudimages.ImagesService `noattribute:"true"`
 	Metro  string                         `noattribute:"true"`
+	Token  string                         `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -70,15 +71,10 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify an image name, or use the --all flag")
 	}
 
-	opts.Metro = cmd.Flag("metro").Value.String()
-	if opts.Metro == "" {
-		opts.Metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.Metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 
 	return nil
 }
@@ -87,7 +83,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}

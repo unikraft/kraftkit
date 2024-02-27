@@ -7,7 +7,6 @@ package logs
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -18,13 +17,13 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 )
 
 type LogOptions struct {
 	Tail int `local:"true" long:"tail" short:"n" usage:"Lines of recent logs to display" default:"-1"`
 
 	metro string
+	token string
 }
 
 // Log retrieves the console output from a KraftCloud instance.
@@ -64,19 +63,16 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	opts.metro = cmd.Flag("metro").Value.String()
-	if opts.metro == "" {
-		opts.metro = os.Getenv("KRAFTCLOUD_METRO")
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
-	if opts.metro == "" {
-		return fmt.Errorf("kraftcloud metro is unset")
-	}
-	log.G(cmd.Context()).WithField("metro", opts.metro).Debug("using")
+
 	return nil
 }
 
 func (opts *LogOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
