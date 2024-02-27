@@ -79,11 +79,13 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 
 	// br.Promisc = 1 // TODO(nderjung): Should the bridge be promiscuous?
 
+	maskBytes := net.ParseIP(network.Spec.Netmask).To4()
+	mask := net.IPv4Mask(maskBytes[0], maskBytes[1], maskBytes[2], maskBytes[3])
 	// Setup IP address for bridge.
 	addr := &netlink.Addr{
 		IPNet: &net.IPNet{
 			IP:   net.ParseIP(network.Spec.Gateway),
-			Mask: net.ParseIP(network.Spec.Netmask).DefaultMask(),
+			Mask: mask,
 		},
 	}
 	if err := netlink.AddrAdd(br, addr); err != nil {
