@@ -146,7 +146,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			}
 		}
 
-		table.AddField(fmt.Sprintf("%dus", instance.BootTimeUS), nil)
+		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUS)/1000), nil)
 
 		table.EndRow()
 	}
