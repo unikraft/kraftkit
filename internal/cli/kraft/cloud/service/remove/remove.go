@@ -33,7 +33,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete a service group",
 		Use:     "remove [FLAGS] NAME|UUID",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"delete", "del", "rm"},
 		Long:    "Delete a service group.",
 		Example: heredoc.Doc(`
