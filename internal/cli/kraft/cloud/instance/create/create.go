@@ -56,7 +56,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
@@ -294,7 +294,7 @@ func NewCmd() *cobra.Command {
 				--port 443:8080/http+tls \
 				--port 80:443/http+redirect \
 				nginx:latest
-			
+
 			# Attach two existing volumes to the vm, one read-write at /data
 			# and another read-only at /config:
 			$ kraft cloud --metro fra0 instance create \

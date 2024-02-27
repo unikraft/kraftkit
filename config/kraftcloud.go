@@ -14,7 +14,7 @@ import (
 
 // GetKraftCloudLogin is a utility method which retrieves credentials of a
 // KraftCloud user from the given context returning it in AuthConfig format.
-func GetKraftCloudAuthConfigFromContext(ctx context.Context, flagToken string) (*AuthConfig, error) {
+func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig, error) {
 	auth := AuthConfig{
 		Endpoint:  "index.unikraft.io",
 		VerifySSL: true,
@@ -54,7 +54,7 @@ func GetKraftCloudTokenAuthConfig(auth AuthConfig) string {
 // HydrateKraftCloudAuthInContext saturates the context with an additional
 // KraftCloud-specific information.
 func HydrateKraftCloudAuthInContext(ctx context.Context) (context.Context, error) {
-	auth, err := GetKraftCloudAuthConfigFromContext(ctx, "")
+	auth, err := GetKraftCloudAuthConfig(ctx, "")
 	if err != nil {
 		return nil, err
 	}

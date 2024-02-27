@@ -48,7 +48,7 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.token)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}

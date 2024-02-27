@@ -39,7 +39,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}

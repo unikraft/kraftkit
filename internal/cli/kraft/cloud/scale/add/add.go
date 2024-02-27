@@ -91,7 +91,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfigFromContext(ctx, opts.Token)
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}

@@ -59,7 +59,7 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfigFromContext(ctx, opts.token)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
