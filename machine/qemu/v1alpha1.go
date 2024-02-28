@@ -977,5 +977,8 @@ func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *mach
 	_ = os.Remove(qcfg.QMP[0].Resource())
 	_ = os.Remove(qcfg.QMP[1].Resource())
 
+	errs = append(errs, os.RemoveAll(machine.Status.LogFile))
+	errs = append(errs, os.RemoveAll(machine.Status.StateDir))
+
 	return nil, errs.Err()
 }
