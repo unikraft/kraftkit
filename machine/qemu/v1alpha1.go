@@ -777,7 +777,7 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 
 		case err := <-errOut:
 			if err != io.EOF {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("reading log: %w", err)
 			}
 
 		case <-ctx.Done():
