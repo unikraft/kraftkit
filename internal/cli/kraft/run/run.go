@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/arch"
+	ukarch "kraftkit.sh/unikraft/arch"
 )
 
 type RunOptions struct {
@@ -198,11 +199,19 @@ func (opts *RunOptions) discoverMachineController(ctx context.Context) error {
 
 	if opts.Platform == "" || opts.Platform == "auto" || opts.Platform == defaultPlatform.String() {
 		opts.platform = defaultPlatform
+		opts.Platform = defaultPlatform.String()
 	} else {
 		var ok bool
 		opts.platform, ok = mplatform.PlatformsByName()[opts.Platform]
 		if !ok {
 			return fmt.Errorf("unknown platform driver '%s', however your system supports '%s'", opts.Platform, defaultPlatform.String())
+		}
+	}
+
+	if opts.Architecture == "" {
+		opts.Architecture, err = ukarch.HostArchitecture()
+		if err != nil {
+			return fmt.Errorf("could not get host architecture: %w", err)
 		}
 	}
 

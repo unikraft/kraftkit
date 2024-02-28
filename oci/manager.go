@@ -80,8 +80,8 @@ func (manager *ociManager) Update(ctx context.Context) error {
 
 		log.G(ctx).Infof("saving %s", pack.String())
 
-		if _, err := pack.index.Save(ctx, pack.String(), nil); err != nil {
-			return fmt.Errorf("error saving %s: %w", pack.Name(), err)
+		if _, err := pack.index.Save(ctx, pack.imageRef(), nil); err != nil {
+			return fmt.Errorf("error saving %s: %w", pack.String(), err)
 		}
 	}
 
@@ -385,7 +385,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format.
 	ref, refErr := name.ParseReference(qname,
-		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultRegistry(""),
 		name.WithDefaultTag(DefaultTag),
 	)
 	if refErr == nil {
@@ -400,7 +400,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	unsetRegistry := false
 
 	// No default registry found, re-parse with
-	if ref != nil && ref.Context().Registry.String() == "" {
+	if ref != nil && ref.Context().RegistryStr() == "" {
 		unsetRegistry = true
 		ref, refErr = name.ParseReference(qname,
 			name.WithDefaultRegistry(DefaultRegistry),
@@ -428,7 +428,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
-	if query.Remote() && refErr == nil {
+	if query.Remote() && refErr == nil && !unsetRegistry {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
@@ -487,9 +487,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 		// No need to search remote indexes by registry if the registry has been
 		// included as part of the ref.
-		if !unsetRegistry {
-			goto searchLocalIndexes
-		}
+		goto searchLocalIndexes
 	}
 
 	if query.Remote() {
@@ -499,7 +497,21 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 				Debugf("could not update: %v", err)
 		} else {
 			for checksum, pack := range more {
-				fullref := pack.Name()
+				ref, err := name.ParseReference(fmt.Sprintf("%s:%s", pack.Name(), pack.Version()))
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", pack.Name()).
+						Tracef("skipping index: could not parse reference: %s", err.Error())
+					continue
+				}
+
+				fullref := fmt.Sprintf("%s:%s", ref.Context().RepositoryStr(), ref.Identifier())
+
+				// If the query did specify a registry include this in check otherwise
+				// search for indexes without this as prefix.
+				if !unsetRegistry {
+					fullref = fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), fullref)
+				}
 
 				if qglob != nil && !qglob.Match(fullref) {
 					log.G(ctx).
@@ -549,7 +561,11 @@ resolveLocalIndex:
 			packs[checksum] = pack
 		}
 
-		goto returnPacks
+		// If the register was set, then an exact local index lookup was expected so
+		// we can return here.
+		if !unsetRegistry {
+			goto returnPacks
+		}
 	}
 
 searchLocalIndexes:
@@ -562,7 +578,7 @@ searchLocalIndexes:
 
 		for oref, index := range indexes {
 			ref, err := name.ParseReference(oref,
-				name.WithDefaultRegistry(DefaultRegistry),
+				name.WithDefaultRegistry(""),
 				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
@@ -572,7 +588,13 @@ searchLocalIndexes:
 				continue
 			}
 
-			fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
+			fullref := fmt.Sprintf("%s:%s", ref.Context().RepositoryStr(), ref.Identifier())
+
+			// If the query did specify a registry include this in check otherwise
+			// search for indexes without this as prefix.
+			if !unsetRegistry {
+				fullref = fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), fullref)
+			}
 
 			if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
 				log.G(ctx).

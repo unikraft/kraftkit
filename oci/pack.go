@@ -363,6 +363,9 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		log.G(ctx).
 			Debug("including list of kconfig as features")
 
+		// Reset the list of features.
+		ocipack.manifest.config.OSFeatures = make([]string, 0)
+
 		// TODO(nderjung): Not sure if these filters are best placed here or
 		// elsewhere.
 		skippable := set.NewStringSet(
@@ -582,7 +585,7 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 	}
 
 	ocipack.ref, err = name.ParseReference(ref,
-		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultRegistry(""),
 		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
@@ -661,7 +664,7 @@ func (ocipack *ociPackage) Name() string {
 
 // Name implements fmt.Stringer
 func (ocipack *ociPackage) String() string {
-	return ocipack.imageRef()
+	return fmt.Sprintf("%s (%s/%s)", ocipack.imageRef(), ocipack.Architecture().Name(), ocipack.Platform().Name())
 }
 
 // Version implements unikraft.Nameable
