@@ -35,6 +35,14 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 		auth.User = split[0]
 		auth.Token = split[1]
 
+		if G[KraftKit](ctx).Auth == nil {
+			authMap := map[string]AuthConfig{}
+			authMap["index.unikraft.io"] = auth
+			(*G[KraftKit](ctx)).Auth = authMap
+		} else {
+			G[KraftKit](ctx).Auth["index.unikraft.io"] = auth
+		}
+
 		// Fallback to local config
 	} else if auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
 		return &auth, nil
