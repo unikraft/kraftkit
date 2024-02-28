@@ -902,17 +902,17 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 // List implements kraftkit.sh/api/machine/v1alpha1.MachineService.List
 func (service *machineV1alpha1Service) List(ctx context.Context, machines *machinev1alpha1.MachineList) (*machinev1alpha1.MachineList, error) {
 	cached := machines.Items
-	machines.Items = make([]zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus], len(cached))
+	machines.Items = []zip.Object[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus]{}
 
 	// Iterate through each machine and grab the latest status
-	for i, machine := range cached {
+	for _, machine := range cached {
 		machine, err := service.Get(ctx, &machine)
 		if err != nil {
 			machines.Items = cached
 			return machines, err
 		}
 
-		machines.Items[i] = *machine
+		machines.Items = append(machines.Items, *machine)
 	}
 
 	return machines, nil
