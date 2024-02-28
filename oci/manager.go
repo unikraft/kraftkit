@@ -428,7 +428,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
-	if query.Remote() && refErr == nil {
+	if query.Remote() && refErr == nil && !unsetRegistry {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
@@ -487,9 +487,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 		// No need to search remote indexes by registry if the registry has been
 		// included as part of the ref.
-		if !unsetRegistry {
-			goto searchLocalIndexes
-		}
+		goto searchLocalIndexes
 	}
 
 	if query.Remote() {
@@ -549,7 +547,11 @@ resolveLocalIndex:
 			packs[checksum] = pack
 		}
 
-		goto returnPacks
+		// If the register was set, then an exact local index lookup was expected so
+		// we can return here.
+		if !unsetRegistry {
+			goto returnPacks
+		}
 	}
 
 searchLocalIndexes:
