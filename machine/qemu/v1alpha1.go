@@ -922,6 +922,12 @@ func (service *machineV1alpha1Service) List(ctx context.Context, machines *machi
 func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
+		if strings.HasSuffix(err.Error(), "connect: no such file or directory") {
+			machine.Status.State = machinev1alpha1.MachineStateExited
+			machine.Status.ExitedAt = time.Now()
+			return machine, nil
+		}
+
 		return machine, fmt.Errorf("could not stop qemu instance: %v", err)
 	}
 
