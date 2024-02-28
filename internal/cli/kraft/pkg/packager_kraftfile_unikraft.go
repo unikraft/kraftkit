@@ -28,7 +28,7 @@ type packagerKraftfileUnikraft struct{}
 
 // String implements fmt.Stringer.
 func (p *packagerKraftfileUnikraft) String() string {
-	return "unikraft"
+	return "kraftfile-unikraft"
 }
 
 // Buildable implements packager.
