@@ -385,7 +385,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// Adjust for the version being suffixed in a prototypical OCI reference
 	// format.
 	ref, refErr := name.ParseReference(qname,
-		name.WithDefaultRegistry(DefaultRegistry),
+		name.WithDefaultRegistry(""),
 		name.WithDefaultTag(DefaultTag),
 	)
 	if refErr == nil {
@@ -400,7 +400,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	unsetRegistry := false
 
 	// No default registry found, re-parse with
-	if ref != nil && ref.Context().Registry.String() == "" {
+	if ref != nil && ref.Context().RegistryStr() == "" {
 		unsetRegistry = true
 		ref, refErr = name.ParseReference(qname,
 			name.WithDefaultRegistry(DefaultRegistry),
