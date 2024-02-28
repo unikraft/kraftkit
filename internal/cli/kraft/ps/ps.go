@@ -83,7 +83,7 @@ type PsEntry struct {
 	Kernel  string
 	Args    string
 	Created string
-	Status  machineapi.MachineState
+	State   machineapi.MachineState
 	Mem     string
 	Ports   string
 	Arch    string
@@ -148,7 +148,7 @@ func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
 			Name:    machine.Name,
 			Args:    strings.Join(machine.Spec.ApplicationArgs, " "),
 			Kernel:  machine.Spec.Kernel,
-			Status:  machine.Status.State,
+			State:   machine.Status.State,
 			Mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
 			Created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
 			Ports:   machine.Spec.Ports.String(),
@@ -213,7 +213,7 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 		table.AddField(item.Kernel, nil)
 		table.AddField(item.Args, nil)
 		table.AddField(item.Created, nil)
-		table.AddField(item.Status.String(), nil)
+		table.AddField(item.State.String(), nil)
 		table.AddField(item.Mem, nil)
 		if opts.Long {
 			table.AddField(item.Ports, nil)
