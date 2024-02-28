@@ -267,7 +267,6 @@ func ensureServiceIsPackaged(ctx context.Context, service types.ServiceConfig) e
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithRemote(true),
 		packmanager.WithVersion(imageVersion))
-
 	if err != nil {
 		return err
 	}
