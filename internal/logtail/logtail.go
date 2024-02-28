@@ -7,6 +7,7 @@ package logtail
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -25,16 +26,16 @@ const (
 func NewLogTail(ctx context.Context, logFile string) (chan string, chan error, error) {
 	f, err := os.Open(logFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("opening log file: %w", err)
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("setting up file watcher: %w", err)
 	}
 
 	if err := watcher.Add(logFile); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("adding log file to watcher: %w", err)
 	}
 
 	logs := make(chan string)
