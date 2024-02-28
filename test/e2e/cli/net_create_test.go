@@ -80,20 +80,6 @@ var _ = Describe("kraft net create", func() {
 		})
 	})
 
-	When("invoked with one positional argument without a network", func() {
-		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "some-arg")
-		})
-
-		It("should print an error and exit with an error", func() {
-			err := cmd.Run()
-			Expect(err).To(HaveOccurred())
-
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"cannot create network without gateway and subnet in CIDR format"}\n$`))
-		})
-	})
-
 	When("invoked with one positional argument and a network without a subnet", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--network", "172.45.1.1")
@@ -199,6 +185,50 @@ var _ = Describe("kraft net create", func() {
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
 			Expect(stdoutLs.String()).To(MatchRegexp(`test-create-4[\t ]+172.45.4.1/24[\t ]+bridge[\t ]+up`))
+		})
+	})
+
+	When("invoked with one positional argument without a network", func() {
+		BeforeEach(func() {
+			cmd.Args = append(cmd.Args, "test-create-5")
+		})
+
+		AfterEach(func() {
+			// Remove the network
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
+			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-create-5")
+
+			err := cmdRm.Run()
+			if err != nil {
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
+			}
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should create the network, print the network name, and exit", func() {
+			err := cmd.Run()
+			if err != nil {
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stderr.String()).To(BeEmpty())
+			Expect(stdout.String()).To(MatchRegexp(`^test-create-5\n$`))
+
+			// Check that the network exists
+			stdoutLs := fcmd.NewIOStream()
+			stderrLs := fcmd.NewIOStream()
+			cmdLs := fcmd.NewKraftPrivileged(stdoutLs, stderrLs, cfg.Path())
+			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
+			err = cmdLs.Run()
+			if err != nil {
+				fmt.Print(cmd.DumpError(stdout, stderr, err))
+			}
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stderrLs.String()).To(BeEmpty())
+			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
+			Expect(stdoutLs.String()).To(MatchRegexp(`test-create-5[\t ]+172.18.0.1/16[\t ]+bridge[\t ]+up`))
 		})
 	})
 })
