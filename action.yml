@@ -62,7 +62,7 @@ inputs:
   execute:
     description: If to run the unikernel.
     required: false
-    default: false
+    default: "false"
   timeout:
     description: Timeout for the unikernel.
     required: false
@@ -85,7 +85,7 @@ inputs:
   push:
     description: Push the output to a registry.
     required: false
-    default: false
+    default: "false"
   rootfs:
     description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
     required: false
@@ -110,6 +110,10 @@ runs:
   # additional paths which are specific to the action including the workspace.
   using: composite
   steps:
+  - name: Generate Suffix
+    shell: bash
+    id: suffix
+    run: echo "suffix=$(date +%s)" >> "$GITHUB_OUTPUT"
   - name: Set up BuildKit
     shell: bash
     run: |
@@ -117,11 +121,13 @@ runs:
         --rm \
         -itd \
         --privileged \
-        --name buildkitd_${GITHUB_RUN_ID} \
+        --name buildkitd_${GITHUB_RUN_ID}_${SUFFIX} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.12.1;
       sleep 5; # wait for buildkit to start
       sudo chmod 666 /run/buildkit/buildkitd.sock;
+    env:
+      SUFFIX: ${{ steps.suffix.outputs.suffix }}
   - name: Set up scripts
     shell: bash
     run: |
@@ -210,7 +216,9 @@ runs:
   - name: Stop BuildKit
     if: always()
     shell: bash
-    run: docker stop buildkitd_${GITHUB_RUN_ID} || true
+    run: docker stop buildkitd_${GITHUB_RUN_ID}_${SUFFIX} || true
+    env:
+      SUFFIX: ${{ steps.suffix.outputs.suffix }}
 
   - name: Cleanup
     if: always()
