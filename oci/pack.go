@@ -363,6 +363,9 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		log.G(ctx).
 			Debug("including list of kconfig as features")
 
+		// Reset the list of features.
+		ocipack.manifest.config.OSFeatures = make([]string, 0)
+
 		// TODO(nderjung): Not sure if these filters are best placed here or
 		// elsewhere.
 		skippable := set.NewStringSet(
