@@ -828,7 +828,7 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 
 		// Finally, save the state if it is different from the what we have on
 		// record
-		if state != savedState {
+		if state != machinev1alpha1.MachineStateUnknown && state != savedState {
 			machine.Status.State = state
 		}
 	}()
