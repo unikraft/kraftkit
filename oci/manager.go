@@ -564,7 +564,7 @@ searchLocalIndexes:
 
 		for oref, index := range indexes {
 			ref, err := name.ParseReference(oref,
-				name.WithDefaultRegistry(DefaultRegistry),
+				name.WithDefaultRegistry(""),
 				name.WithDefaultTag(DefaultTag),
 			)
 			if err != nil {
