@@ -142,6 +142,10 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 	for _, machine := range machines {
 		machine := machine // Go closures
 
+		log.G(ctx).
+			WithField("machine", machine.Name).
+			Trace("starting")
+
 		if _, err := machineController.Start(ctx, &machine); err != nil {
 			return err
 		}
@@ -174,9 +178,17 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 
 			// Remove the instance on Ctrl+C if the --rm flag is passed
 			if opts.Remove {
+				log.G(ctx).
+					WithField("machine", machine.Name).
+					Trace("stopping")
+
 				if _, err := machineController.Stop(ctx, machine); err != nil {
 					log.G(ctx).Errorf("could not stop: %v", err)
 				}
+
+				log.G(ctx).
+					WithField("machine", machine.Name).
+					Trace("removing")
 
 				if _, err := machineController.Delete(ctx, machine); err != nil {
 					log.G(ctx).Errorf("could not remove: %v", err)

@@ -230,7 +230,7 @@ func FollowLogs(ctx context.Context, machine *machineapi.Machine, controller mac
 	logs, errs, err := controller.Logs(ctx, machine)
 	if err != nil {
 		cancel()
-		return err
+		return fmt.Errorf("accessing logs: %w", err)
 	}
 
 loop:
@@ -247,7 +247,7 @@ loop:
 			eof = true
 			if !errors.Is(err, io.EOF) {
 				log.G(ctx).Errorf("received event error: %v", err)
-				return err
+				return fmt.Errorf("event: %w", err)
 			}
 
 		case <-ctx.Done():

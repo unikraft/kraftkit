@@ -735,7 +735,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 func (service *machineV1alpha1Service) Pause(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
 	if err != nil {
-		return machine, fmt.Errorf("could not start qemu instance: %v", err)
+		return machine, fmt.Errorf("could not pause qemu instance: %v", err)
 	}
 
 	defer qmpClient.Close()
@@ -777,7 +777,7 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 
 		case err := <-errOut:
 			if err != io.EOF {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("reading log: %w", err)
 			}
 
 		case <-ctx.Done():
