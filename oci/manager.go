@@ -497,7 +497,21 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 				Debugf("could not update: %v", err)
 		} else {
 			for checksum, pack := range more {
-				fullref := pack.Name()
+				ref, err := name.ParseReference(fmt.Sprintf("%s:%s", pack.Name(), pack.Version()))
+				if err != nil {
+					log.G(ctx).
+						WithField("ref", pack.Name()).
+						Tracef("skipping index: could not parse reference: %s", err.Error())
+					continue
+				}
+
+				fullref := fmt.Sprintf("%s:%s", ref.Context().RepositoryStr(), ref.Identifier())
+
+				// If the query did specify a registry include this in check otherwise
+				// search for indexes without this as prefix.
+				if !unsetRegistry {
+					fullref = fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), fullref)
+				}
 
 				if qglob != nil && !qglob.Match(fullref) {
 					log.G(ctx).
@@ -574,7 +588,13 @@ searchLocalIndexes:
 				continue
 			}
 
-			fullref := fmt.Sprintf("%s:%s", ref.Context().String(), ref.Identifier())
+			fullref := fmt.Sprintf("%s:%s", ref.Context().RepositoryStr(), ref.Identifier())
+
+			// If the query did specify a registry include this in check otherwise
+			// search for indexes without this as prefix.
+			if !unsetRegistry {
+				fullref = fmt.Sprintf("%s/%s", ref.Context().RegistryStr(), fullref)
+			}
 
 			if ok, err := IsOCIIndexKraftKitCompatible(index); !ok {
 				log.G(ctx).
