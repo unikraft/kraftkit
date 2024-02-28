@@ -123,7 +123,6 @@ var _ = Describe("kraft net up", func() {
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()
-
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -134,7 +133,6 @@ var _ = Describe("kraft net up", func() {
 
 			// Bring the network back up
 			err = cmd.Run()
-
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -148,7 +146,6 @@ var _ = Describe("kraft net up", func() {
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()
-
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}

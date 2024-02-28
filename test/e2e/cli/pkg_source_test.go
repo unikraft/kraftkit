@@ -247,7 +247,6 @@ var _ = Describe("kraft pkg", func() {
 
 					cmd.Args = append(cmd.Args, "https://manifests.kraftkit.sh/index.yaml")
 					err = cmd.Run()
-
 					if err != nil {
 						fmt.Print(cmd.DumpError(stdout, stderr, err))
 					}

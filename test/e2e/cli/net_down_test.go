@@ -116,7 +116,6 @@ var _ = Describe("kraft net down", func() {
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 
 			err = cmdLs.Run()
-
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}

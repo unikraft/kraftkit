@@ -192,7 +192,6 @@ var _ = Describe("kraft net create", func() {
 			cmdLs := fcmd.NewKraftPrivileged(stdoutLs, stderrLs, cfg.Path())
 			cmdLs.Args = append(cmdLs.Args, "net", "ls", "--log-level", "info", "--log-type", "json")
 			err = cmdLs.Run()
-
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
