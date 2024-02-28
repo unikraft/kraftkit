@@ -15,14 +15,12 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
-	ukarch "kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -94,6 +92,16 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	var selected *pack.Package
 	var packs []pack.Package
+	var kconfigs []string
+
+	if targ != nil {
+		for _, kc := range targ.KConfig() {
+			kconfigs = append(kconfigs, kc.String())
+		}
+
+		opts.Platform = targ.Platform().Name()
+		opts.Architecture = targ.Architecture().Name()
+	}
 
 	treemodel, err := processtree.NewProcessTree(
 		ctx,
@@ -113,28 +121,9 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			),
 			"",
 			func(ctx context.Context) error {
-				var plat, arch string
-				var kconfigs []string
-
-				if targ != nil {
-					for _, kc := range targ.KConfig() {
-						kconfigs = append(kconfigs, kc.String())
-					}
-
-					plat = targ.Platform().Name()
-					arch = targ.Architecture().Name()
-				} else {
-					if opts.Platform != "" {
-						plat = opts.Platform
-					}
-					if opts.Architecture != "" {
-						arch = opts.Architecture
-					}
-				}
-
 				qopts = append(qopts,
-					packmanager.WithArchitecture(arch),
-					packmanager.WithPlatform(plat),
+					packmanager.WithArchitecture(opts.Architecture),
+					packmanager.WithPlatform(opts.Platform),
 					packmanager.WithKConfig(kconfigs),
 				)
 
@@ -162,80 +151,61 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, err
 	}
 
-	if len(packs) > 1 && targ == nil && (opts.Architecture == "" || opts.Platform == "") {
-		// At this point, we have queried the registry without asking for the
-		// platform and architecture and received multiple options.  Re-query the
-		// catalog with the host architecture and platform.
-
-		if opts.Architecture == "" {
-			opts.Architecture, err = ukarch.HostArchitecture()
-			if err != nil {
-				return nil, fmt.Errorf("could not get host architecture: %w", err)
-			}
-		}
-		if opts.Platform == "" {
-			plat, _, err := platform.Detect(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("could not get host platform: %w", err)
-			}
-
-			opts.Platform = plat.String()
-		}
-
-		qopts = append(qopts,
-			packmanager.WithPlatform(opts.Platform),
-			packmanager.WithArchitecture(opts.Architecture),
-		)
-
-		treemodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(false),
-				processtree.WithRenderer(
-					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-				),
-				processtree.WithFailFast(true),
-				processtree.WithHideOnSuccess(true),
-			},
-			processtree.NewProcessTreeItem(
-				fmt.Sprintf(
-					"searching for %s:%s",
-					opts.Project.Runtime().Name(),
-					opts.Project.Runtime().Version(),
-				),
-				"",
-				func(ctx context.Context) error {
-					packs, err = opts.pm.Catalog(ctx, qopts...)
-					if err != nil {
-						return fmt.Errorf("could not query catalog: %w", err)
-					}
-					return nil
-				},
-			),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := treemodel.Start(); err != nil {
-			return nil, err
-		}
-	}
-
 	if len(packs) == 0 {
 		return nil, fmt.Errorf(
-			"coud not find runtime '%s:%s' (%s/%s)",
+			"could not find runtime '%s:%s'",
 			opts.Project.Runtime().Name(),
 			opts.Project.Runtime().Version(),
-			opts.Platform,
-			opts.Architecture,
 		)
 	} else if len(packs) == 1 {
 		selected = &packs[0]
 	} else if len(packs) > 1 {
-		selected, err = selection.Select[pack.Package]("multiple runtimes available", packs...)
-		if err != nil {
-			return nil, err
+		// If a target has been previously selected, we can use this to filter the
+		// returned list of packages based on its platform and architecture.
+		if targ != nil {
+			found := []pack.Package{}
+
+			for _, p := range packs {
+				pt := p.(target.Target)
+				if pt.Architecture().String() == opts.Architecture && pt.Platform().String() == opts.Platform {
+					found = append(found, p)
+				}
+			}
+
+			// Could not find a package that matches the desired architecture and
+			// platform, prompt with available set of packages.
+			if len(found) == 0 {
+				if !config.G[config.KraftKit](ctx).NoPrompt {
+					log.G(ctx).Warnf("could not find package '%s:%s' based on %s/%s", opts.Project.Runtime().Name(), opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+					p, err := selection.Select[pack.Package]("select alternative package with same name to continue", packs...)
+					if err != nil {
+						return nil, fmt.Errorf("could not select package: %w", err)
+					}
+
+					selected = p
+				} else {
+					return nil, fmt.Errorf("could not find package '%s:%s' based on %s/%s but %d others found but prompting has been disabled", opts.Project.Runtime().Name(), opts.Project.Runtime().Version(), opts.Platform, opts.Architecture, len(packs))
+				}
+			} else if len(found) == 1 {
+				selected = &found[0]
+			} else { // > 1
+				if !config.G[config.KraftKit](ctx).NoPrompt {
+					log.G(ctx).Infof("found %d packages named '%s:%s' based on %s/%s", len(found), opts.Project.Runtime().Name(), opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+					p, err := selection.Select[pack.Package]("select package to continue", found...)
+					if err != nil {
+						return nil, fmt.Errorf("could not select package: %w", err)
+					}
+
+					selected = p
+				} else {
+					return nil, fmt.Errorf("found %d packages named '%s:%s' based on %s/%s but prompting has been disabled", len(found), opts.Project.Runtime().Name(), opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+				}
+			}
+		} else {
+			selected, err = selection.Select[pack.Package]("multiple runtimes available", packs...)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
