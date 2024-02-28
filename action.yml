@@ -62,7 +62,7 @@ inputs:
   execute:
     description: If to run the unikernel.
     required: false
-    default: false
+    default: "false"
   timeout:
     description: Timeout for the unikernel.
     required: false
@@ -85,7 +85,7 @@ inputs:
   push:
     description: Push the output to a registry.
     required: false
-    default: false
+    default: "false"
   rootfs:
     description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
     required: false
