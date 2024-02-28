@@ -11,6 +11,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -48,7 +49,7 @@ func NewCmd() *cobra.Command {
 			# List all unikernels
 			$ kraft ps --all
 
-			# List all running unikernels with more information
+			# List all unikernels with more information
 			$ kraft ps --long
 		`),
 		Annotations: map[string]string{
@@ -90,6 +91,33 @@ type PsEntry struct {
 	Plat    string
 	IPs     []string
 }
+
+type colorFunc func(string) string
+
+var (
+	machineStateColor = map[machineapi.MachineState]colorFunc{
+		machineapi.MachineStateUnknown:    iostreams.Gray,
+		machineapi.MachineStateCreated:    iostreams.Blue,
+		machineapi.MachineStateFailed:     iostreams.Red,
+		machineapi.MachineStateRestarting: iostreams.Yellow,
+		machineapi.MachineStateRunning:    iostreams.Green,
+		machineapi.MachineStatePaused:     iostreams.Yellow,
+		machineapi.MachineStateSuspended:  iostreams.Yellow,
+		machineapi.MachineStateExited:     iostreams.Gray,
+		machineapi.MachineStateErrored:    iostreams.Red,
+	}
+	machineStateColorNil = map[machineapi.MachineState]colorFunc{
+		machineapi.MachineStateUnknown:    nil,
+		machineapi.MachineStateCreated:    nil,
+		machineapi.MachineStateFailed:     nil,
+		machineapi.MachineStateRestarting: nil,
+		machineapi.MachineStateRunning:    nil,
+		machineapi.MachineStatePaused:     nil,
+		machineapi.MachineStateSuspended:  nil,
+		machineapi.MachineStateExited:     nil,
+		machineapi.MachineStateErrored:    nil,
+	}
+)
 
 func (opts *PsOptions) Run(ctx context.Context, _ []string) error {
 	items, err := opts.PsTable(ctx)
@@ -205,6 +233,10 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 	table.AddField("PLAT", cs.Bold)
 	table.EndRow()
 
+	if config.G[config.KraftKit](ctx).NoColor {
+		machineStateColor = machineStateColorNil
+	}
+
 	for _, item := range items {
 		if opts.Long {
 			table.AddField(item.ID, nil)
@@ -213,7 +245,7 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 		table.AddField(item.Kernel, nil)
 		table.AddField(item.Args, nil)
 		table.AddField(item.Created, nil)
-		table.AddField(item.State.String(), nil)
+		table.AddField(item.State.String(), machineStateColor[item.State])
 		table.AddField(item.Mem, nil)
 		if opts.Long {
 			table.AddField(item.Ports, nil)
