@@ -80,8 +80,8 @@ func (manager *ociManager) Update(ctx context.Context) error {
 
 		log.G(ctx).Infof("saving %s", pack.String())
 
-		if _, err := pack.index.Save(ctx, pack.String(), nil); err != nil {
-			return fmt.Errorf("error saving %s: %w", pack.Name(), err)
+		if _, err := pack.index.Save(ctx, pack.imageRef(), nil); err != nil {
+			return fmt.Errorf("error saving %s: %w", pack.String(), err)
 		}
 	}
 
