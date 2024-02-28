@@ -19,13 +19,12 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
-	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
-	ukarch "kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -97,8 +96,6 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	qopts := []packmanager.QueryOption{
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
-		packmanager.WithArchitecture(opts.Architecture),
-		packmanager.WithPlatform(opts.platform.String()),
 	}
 
 	// First try the local cache of the catalog
@@ -140,45 +137,52 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		if err := treemodel.Start(); err != nil {
 			return fmt.Errorf("could not complete search: %v", err)
 		}
-		if len(packs) == 0 {
-			return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.platform.String(), opts.Architecture)
-		}
 	}
 
-	if len(packs) > 1 && (opts.Architecture == "" || opts.platform == "") {
-		// At this point, we have queried the registry without asking for the
-		// platform and architecture and received multiple options.  Re-query the
-		// catalog with the host architecture and platform.
+	var selected pack.Package
 
-		if opts.Architecture == "" {
-			opts.Architecture, err = ukarch.HostArchitecture()
-			if err != nil {
-				return fmt.Errorf("could not get host architecture: %w", err)
-			}
-		}
-		if opts.platform == "" {
-			opts.platform, _, err = platform.Detect(ctx)
-			if err != nil {
-				return fmt.Errorf("could not get host platform: %w", err)
-			}
-		}
+	if len(packs) == 0 {
+		return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.Platform, opts.Architecture)
+	} else if len(packs) == 1 {
+		selected = packs[0]
+	} else {
+		found := []pack.Package{}
 
 		for _, p := range packs {
 			pt := p.(target.Target)
-			if pt.Architecture().String() == opts.Architecture && pt.Platform().String() == opts.platform.String() {
-				packs = []pack.Package{p}
-				break
+			if pt.Architecture().String() == opts.Architecture && pt.Platform().String() == opts.Platform {
+				found = append(found, p)
 			}
 		}
 
-		if len(packs) != 1 {
-			return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.platform.String(), opts.Architecture)
-		}
+		// Could not find a package that matches the desired architecture and platform.
+		if len(found) == 0 {
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				log.G(ctx).Warnf("could not find package '%s' based on %s/%s", runner.packName, opts.Platform, opts.Architecture)
+				p, err := selection.Select[pack.Package]("select alternative package with same name to continue", packs...)
+				if err != nil {
+					return fmt.Errorf("could not select package: %w", err)
+				}
 
-		log.G(ctx).
-			WithField("arch", opts.Architecture).
-			WithField("plat", opts.platform.String()).
-			Info("using")
+				selected = *p
+			} else {
+				return fmt.Errorf("could not find package '%s' based on %s/%s but %d others found but prompting has been disabled", runner.packName, opts.Platform, opts.Architecture, len(packs))
+			}
+		} else if len(found) == 1 {
+			selected = found[0]
+		} else {
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				log.G(ctx).Infof("found %d packages named '%s' based on %s/%s", len(found), runner.packName, opts.Platform, opts.Architecture)
+				p, err := selection.Select[pack.Package]("select package to continue", found...)
+				if err != nil {
+					return fmt.Errorf("could not select package: %w", err)
+				}
+
+				selected = *p
+			} else {
+				return fmt.Errorf("found %d packages named '%s' based on %s/%s but prompting has been disabled", len(found), runner.packName, opts.Platform, opts.Architecture)
+			}
+		}
 	}
 
 	// Pre-emptively prepare the UID so that we can extract the kernel to the
@@ -196,13 +200,13 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 	}()
 
-	if exists, _, err := packs[0].PulledAt(ctx); !exists || err != nil {
+	if exists, _, err := selected.PulledAt(ctx); !exists || err != nil {
 		paramodel, err := paraprogress.NewParaProgress(
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", runner.packName),
 				func(ctx context.Context, w func(progress float64)) error {
-					return packs[0].Pull(
+					return selected.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
 					)
@@ -223,7 +227,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 	}
 
-	if err := packs[0].Unpack(
+	if err := selected.Unpack(
 		ctx,
 		machine.Status.StateDir,
 	); err != nil {
@@ -233,10 +237,15 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	// Crucially, the catalog should return an interface that also implements
 	// target.Target.  This demonstrates that the implementing package can
 	// resolve application kernels.
-	targ, ok := packs[0].(target.Target)
+	targ, ok := selected.(target.Target)
 	if !ok {
 		return fmt.Errorf("package does not convert to target")
 	}
+
+	log.G(ctx).
+		WithField("arch", targ.Architecture().Name()).
+		WithField("plat", opts.platform.String()).
+		Info("using")
 
 	machine.Spec.Architecture = targ.Architecture().Name()
 	machine.Spec.Platform = targ.Platform().Name()
