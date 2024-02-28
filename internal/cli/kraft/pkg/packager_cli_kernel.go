@@ -35,6 +35,10 @@ func (p *packagerCliKernel) Packagable(ctx context.Context, opts *PkgOptions, ar
 		return true, nil
 	}
 
+	if len(opts.Kernel) > 0 {
+		log.G(ctx).Warn("--kernel flag set but must be used in conjunction with -m|--arch and -p|--plat")
+	}
+
 	return false, fmt.Errorf("cannot package without path to -k|-kernel, -m|--arch and -p|--plat")
 }
 
