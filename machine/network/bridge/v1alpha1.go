@@ -242,9 +242,11 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		return nil, fmt.Errorf("could not get bridge interface: %v", err)
 	}
 
+	maskBytes := net.ParseIP(network.Spec.Netmask).To4()
+	mask := net.IPv4Mask(maskBytes[0], maskBytes[1], maskBytes[2], maskBytes[3])
 	ipnet := &net.IPNet{
 		IP:   net.ParseIP(network.Spec.Gateway),
-		Mask: net.ParseIP(network.Spec.Netmask).DefaultMask(),
+		Mask: mask,
 	}
 
 	// Start MAC addresses iteratively.
