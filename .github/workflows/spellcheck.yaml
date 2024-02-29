@@ -1,0 +1,29 @@
+name: spellcheck
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+
+jobs:
+  spell-check:
+    runs-on: ubuntu-latest
+    name: Check Spelling
+    steps:
+      - name: Create filter file
+        run: |
+          echo "\.md$" > only.txt
+          echo "\.go$" >> only.txt
+
+      - uses: check-spelling/check-spelling@v0.0.22
+        with:
+          checkout: true
+          check_file_names: 1
+          extra_dictionaries:
+            cspell:golang/go.txt
+            cspell:cpp/cpp.txt
+          #  unikraft:kraftkit/kraftkit.txt
+          # dictionary_source_prefixes: >
+          #   {
+          #     "unikraft": "https://raw.githubusercontent.com/unikraft/spell-dicts/master/dictionaries/"
+          #   }
