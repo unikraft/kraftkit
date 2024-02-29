@@ -13,13 +13,18 @@ import (
 	composev1 "kraftkit.sh/api/compose/v1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/network"
 	"kraftkit.sh/store"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type v1ComposeProject struct{}
+type v1Compose struct {
+	machineController machineapi.MachineService
+	networkController networkapi.NetworkService
+}
 
 func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeService, error) {
 	embeddedStore, err := store.NewEmbeddedStore[composev1.ComposeSpec, composev1.ComposeStatus](
@@ -32,7 +37,17 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 		return nil, err
 	}
 
-	service := &v1ComposeProject{}
+	service := &v1Compose{}
+
+	service.machineController, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	service.networkController, err = network.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	return composev1.NewComposeServiceHandler(
 		ctx,
@@ -41,7 +56,7 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 	)
 }
 
-func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose) error {
+func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose) error {
 	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
 	if err != nil {
 		return err
@@ -51,12 +66,7 @@ func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Comp
 		return err
 	}
 
-	controller, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
-	if err != nil {
-		return err
-	}
-
-	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	machines, err := v1.machineController.List(ctx, &machineapi.MachineList{})
 	if err != nil {
 		return err
 	}
@@ -122,14 +132,76 @@ func refreshRunningServices(ctx context.Context, embeddedProject *composev1.Comp
 	return nil
 }
 
+func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Compose) error {
+	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
+	if err != nil {
+		return err
+	}
+
+	if err := project.Validate(ctx); err != nil {
+		return err
+	}
+
+	existingNetworks := []metav1.ObjectMeta{}
+
+	allNetworks, err := v1.networkController.List(ctx, &networkapi.NetworkList{})
+	if err != nil {
+		return err
+	}
+
+	for i, network := range embeddedProject.Status.Networks {
+		if network.Name[0] == '_' {
+			network.Name = project.Name + network.Name
+			embeddedProject.Status.Networks[i] = network
+		}
+		for _, n := range allNetworks.Items {
+			if n.Name == network.Name {
+				existingNetworks = append(existingNetworks, n.ObjectMeta)
+				break
+			}
+		}
+	}
+
+	embeddedProject.Status.Networks = existingNetworks
+
+	for _, network := range project.Networks {
+		belongToProject := false
+		for _, existingNetwork := range existingNetworks {
+			if network.Name == existingNetwork.Name {
+				belongToProject = true
+				break
+			}
+		}
+
+		if belongToProject {
+			continue
+		}
+
+		for _, n := range allNetworks.Items {
+			if n.Name == network.Name {
+				log.G(ctx).WithField("network", network.Name).Warn("network already exists but does not belong to project")
+				break
+			}
+		}
+	}
+
+	embeddedProject.Status.Networks = existingNetworks
+
+	return nil
+}
+
 // Create implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (v1 *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }
 
 // Delete implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := refreshRunningServices(ctx, project); err != nil {
+func (v1 *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+	if err := v1.refreshRunningServices(ctx, project); err != nil {
+		return project, err
+	}
+
+	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
 		return project, err
 	}
 
@@ -137,9 +209,13 @@ func (p *v1ComposeProject) Delete(ctx context.Context, project *composev1.Compos
 }
 
 // List implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
+func (v1 *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
 	for i := range projects.Items {
-		if err := refreshRunningServices(ctx, &projects.Items[i]); err != nil {
+		if err := v1.refreshRunningServices(ctx, &projects.Items[i]); err != nil {
+			return projects, err
+		}
+
+		if err := v1.refreshExistingNetworks(ctx, &projects.Items[i]); err != nil {
 			return projects, err
 		}
 	}
@@ -148,8 +224,12 @@ func (p *v1ComposeProject) List(ctx context.Context, projects *composev1.Compose
 }
 
 // Get implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := refreshRunningServices(ctx, project); err != nil {
+func (v1 *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+	if err := v1.refreshRunningServices(ctx, project); err != nil {
+		return project, err
+	}
+
+	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
 		return project, err
 	}
 
@@ -157,6 +237,6 @@ func (p *v1ComposeProject) Get(ctx context.Context, project *composev1.Compose) 
 }
 
 // Update implements kraftkit.sh/api/compose/v1.ComposeService
-func (p *v1ComposeProject) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
+func (v1 *v1Compose) Update(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
 }

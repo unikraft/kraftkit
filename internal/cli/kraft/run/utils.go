@@ -83,7 +83,7 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 
 		if len(split) > 1 {
 			fields := strings.Split(split[1], ":")
-			if len(fields) > 0 {
+			if len(fields) > 0 && fields[0] != "" {
 				interfaceSpec.CIDR = fields[0]
 				ipMaskSplit := strings.SplitN(interfaceSpec.CIDR, "/", 2)
 				if len(ipMaskSplit) != 2 {

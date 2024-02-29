@@ -15,11 +15,14 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
-	"kraftkit.sh/internal/cli/kraft/remove"
+	networkremove "kraftkit.sh/internal/cli/kraft/net/remove"
+	machineremove "kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
+	mnetwork "kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
@@ -78,12 +81,12 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	controller, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+	machineController, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	if err != nil {
 		return err
 	}
 
-	machines, err := controller.List(ctx, &machineapi.MachineList{})
+	machines, err := machineController.List(ctx, &machineapi.MachineList{})
 	if err != nil {
 		return err
 	}
@@ -98,12 +101,43 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
+	networkController, err := mnetwork.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return err
+	}
+
+	networks, err := networkController.List(ctx, &networkapi.NetworkList{})
+	if err != nil {
+		return err
+	}
+
+	for _, projectNetwork := range project.Networks {
+		for _, network := range networks.Items {
+			if projectNetwork.Name == network.Name {
+				if err := removeNetwork(ctx, projectNetwork); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
 func removeService(ctx context.Context, service types.ServiceConfig) error {
 	log.G(ctx).Infof("removing service %s...", service.Name)
-	removeOptions := remove.RemoveOptions{Platform: "auto"}
+	removeOptions := machineremove.RemoveOptions{Platform: "auto"}
 
 	return removeOptions.Run(ctx, []string{service.Name})
+}
+
+func removeNetwork(ctx context.Context, network types.NetworkConfig) error {
+	log.G(ctx).Infof("removing network %s...", network.Name)
+	driver := "bridge"
+	if network.Driver != "" {
+		driver = network.Driver
+	}
+	removeOptions := networkremove.RemoveOptions{Driver: driver}
+
+	return removeOptions.Run(ctx, []string{network.Name})
 }

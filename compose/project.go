@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/compose-spec/compose-go/types"
 
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/network/iputils"
 	mplatform "kraftkit.sh/machine/platform"
 	ukarch "kraftkit.sh/unikraft/arch"
 )
@@ -113,6 +115,138 @@ func (project *Project) Validate(ctx context.Context) error {
 
 		}
 	}
+
+	for i, network := range project.Networks {
+		if network.Name[0] == '_' {
+			network.Name = project.Name + network.Name
+			project.Networks[i] = network
+		}
+	}
+
+	return nil
+}
+
+func (project *Project) AssignIPs(ctx context.Context) error {
+	usedAddresses := make(map[string]map[string]struct{})
+	for i, network := range project.Networks {
+		if len(network.Ipam.Config) == 0 {
+			continue
+		}
+
+		// Join all the IPAM configs together
+		ipamConfig := network.Ipam.Config[0]
+		for _, config := range network.Ipam.Config[1:] {
+			if config.Subnet != "" {
+				ipamConfig.Subnet = config.Subnet
+			}
+			if config.Gateway != "" {
+				ipamConfig.Gateway = config.Gateway
+			}
+		}
+
+		if ipamConfig.Subnet == "" {
+			return fmt.Errorf("network %s has no subnet specified", network.Name)
+		}
+
+		// Check that the subnet is of type addr/subnet
+		if len(strings.Split(ipamConfig.Subnet, "/")) != 2 {
+			return fmt.Errorf("network %s has an invalid subnet specified", network.Name)
+		}
+
+		subnetIP, subnetMask, err := net.ParseCIDR(ipamConfig.Subnet)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s network subnet", network.Name)
+		}
+
+		if subnetMask == nil {
+			return fmt.Errorf("failed to parse network %s subnet mask", network.Name)
+		}
+
+		// Check that the gateway is of type addr
+		if ipamConfig.Gateway == "" {
+			ipamConfig.Gateway = subnetIP.String()
+		} else {
+			// Additionally check the gateway is part of the subnet
+			gatewayIP := net.ParseIP(ipamConfig.Gateway)
+			if gatewayIP == nil {
+				return fmt.Errorf("failed to parse %s network gateway", network.Name)
+			}
+
+			if !subnetMask.Contains(gatewayIP) {
+				return fmt.Errorf("network %s gateway is not within the subnet", network.Name)
+			}
+		}
+
+		usedAddresses[i] = make(map[string]struct{})
+		usedAddresses[i][ipamConfig.Gateway] = struct{}{}
+		usedAddresses[i][subnetMask.IP.String()] = struct{}{}
+
+		network.Ipam.Config[0] = ipamConfig
+		project.Networks[i] = network
+	}
+
+	activeNetworks := make(map[string]struct{})
+
+	// Run through the services again and assign an IP address to each
+	for i, service := range project.Services {
+		if service.Networks == nil {
+			continue
+		}
+		for name, network := range service.Networks {
+			if _, ok := project.Networks[name]; !ok {
+				return fmt.Errorf("service %s references non-existent network %s", service.Name, name)
+			}
+
+			activeNetworks[name] = struct{}{}
+
+			if network == nil {
+				service.Networks[name] = &types.ServiceNetworkConfig{}
+				network = service.Networks[name]
+			}
+
+			if network.Ipv4Address != "" {
+				if project.Networks[name].Ipam.Config == nil || len(project.Networks[name].Ipam.Config) == 0 {
+					return fmt.Errorf("cannot assign IP address to service %s on network %s without IPAM config", service.Name, name)
+				}
+			} else if len(project.Networks[name].Ipam.Config) > 0 {
+				// Start at the network's subnet IP and increment until we find
+				// a free one
+				_, subnet, err := net.ParseCIDR(project.Networks[name].Ipam.Config[0].Subnet)
+				if err != nil {
+					return err
+				}
+
+				if subnet == nil {
+					// This should not be possible
+					return fmt.Errorf("failed to parse network %s subnet", name)
+				}
+
+				ip := subnet.IP
+
+				for _, exists := usedAddresses[name][ip.String()]; subnet.Contains(ip) && exists; _, exists = usedAddresses[name][ip.String()] {
+					ip = iputils.IncreaseIP(ip)
+				}
+
+				if !subnet.Contains(ip) {
+					return fmt.Errorf("not enough free IP addresses in network %s", name)
+				}
+
+				project.Services[i].Networks[name].Ipv4Address = ip.String()
+				usedAddresses[name][ip.String()] = struct{}{}
+			}
+		}
+	}
+
+	// Remove the networks that are not used from the project
+
+	usedProjectNetworks := make(map[string]types.NetworkConfig)
+	for name := range project.Networks {
+		if _, ok := activeNetworks[name]; ok {
+			usedProjectNetworks[name] = project.Networks[name]
+		}
+	}
+
+	project.Networks = usedProjectNetworks
 
 	return nil
 }

@@ -20,17 +20,20 @@ import (
 	"kraftkit.sh/compose"
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/logs"
+	"kraftkit.sh/internal/cli/kraft/net/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/internal/cli/kraft/pkg/pull"
 	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/internal/cli/kraft/run"
 	"kraftkit.sh/log"
+	"kraftkit.sh/machine/network"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	composeapi "kraftkit.sh/api/compose/v1"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
@@ -91,6 +94,10 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	if err := project.AssignIPs(ctx); err != nil {
+		return err
+	}
+
 	composeController, err := compose.NewComposeProjectV1(ctx)
 	if err != nil {
 		return err
@@ -105,6 +112,82 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	projectNetworks := []metav1.ObjectMeta{}
+	if embeddedProject != nil {
+		projectNetworks = embeddedProject.Status.Networks
+	}
+
+	networkController, err := network.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return err
+	}
+
+	networks, err := networkController.List(ctx, &networkapi.NetworkList{})
+	if err != nil {
+		return err
+	}
+
+	// We need to first create the networks with a provided subnet
+	// and then the ones which we will assign IPs to
+	subnetNetworks := []string{}
+	emptyNetworks := []string{}
+	for name, network := range project.Networks {
+		if network.Ipam.Config == nil || len(network.Ipam.Config) == 0 {
+			emptyNetworks = append(emptyNetworks, name)
+		} else {
+			subnetNetworks = append(subnetNetworks, name)
+		}
+	}
+
+	orderedNetworks := append(subnetNetworks, emptyNetworks...)
+
+	for _, networkName := range orderedNetworks {
+		network := project.Networks[networkName]
+		alreadyRunning := false
+		for _, n := range networks.Items {
+			if n.Name == network.Name {
+				alreadyRunning = true
+				break
+			}
+		}
+		if alreadyRunning {
+			continue
+		}
+
+		driver := "bridge"
+		if network.Driver != "" {
+			driver = network.Driver
+		}
+
+		subnet := ""
+		if len(network.Ipam.Config) > 0 {
+			subnet = network.Ipam.Config[0].Subnet
+		}
+		createOptions := create.CreateOptions{
+			Driver:  driver,
+			Network: subnet,
+		}
+
+		log.G(ctx).Infof("creating network %s...", network.Name)
+		if err := createOptions.Run(ctx, []string{network.Name}); err != nil {
+			return err
+		}
+
+		if network, err := networkController.Get(ctx, &networkapi.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: network.Name,
+			},
+		}); err == nil && network.Status.State == networkapi.NetworkStateUp {
+			projectNetworks = append(projectNetworks, network.ObjectMeta)
+		}
+
+	}
+
+	projectMachines := []metav1.ObjectMeta{}
+	if embeddedProject != nil {
+		projectMachines = embeddedProject.Status.Machines
+	}
+
 	// Check that none of the services are already running
 	machineController, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	if err != nil {
@@ -114,11 +197,6 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 	machines, err := machineController.List(ctx, &machineapi.MachineList{})
 	if err != nil {
 		return err
-	}
-
-	projectMachines := []metav1.ObjectMeta{}
-	if embeddedProject != nil {
-		projectMachines = embeddedProject.Status.Machines
 	}
 
 	for _, service := range project.Services {
@@ -152,7 +230,7 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 			}
 		}
 
-		if err := runService(ctx, service); err != nil {
+		if err := runService(ctx, project, service); err != nil {
 			log.G(ctx).WithError(err).Errorf("failed to run service %s", service.Name)
 		}
 
@@ -175,6 +253,7 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 		},
 		Status: composeapi.ComposeStatus{
 			Machines: projectMachines,
+			Networks: projectNetworks,
 		},
 	}); err != nil {
 		return err
@@ -211,15 +290,6 @@ func platArchFromService(service types.ServiceConfig) (string, string, error) {
 
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid platform: %s for service %s", service.Platform, service.Name)
-	}
-
-	// Check that the platform is supported
-	if _, ok := mplatform.PlatformsByName()[parts[0]]; !ok {
-		return "", "", fmt.Errorf("unsupported platform: %s for service %s", parts[0], service.Name)
-	}
-
-	if parts[1] != "x86_64" && parts[1] != "amd64" && parts[1] != "arm32" && parts[1] != "arm64" {
-		return "", "", fmt.Errorf("unsupported architecture: %s for service %s", parts[1], service.Name)
 	}
 
 	return parts[0], parts[1], nil
@@ -323,7 +393,7 @@ func pkgService(ctx context.Context, service types.ServiceConfig) error {
 	return pkgOptions.Run(ctx, []string{service.Build.Context})
 }
 
-func runService(ctx context.Context, service types.ServiceConfig) error {
+func runService(ctx context.Context, project *compose.Project, service types.ServiceConfig) error {
 	// The service should be packaged at this point
 	plat, arch, err := platArchFromService(service)
 	if err != nil {
@@ -332,10 +402,17 @@ func runService(ctx context.Context, service types.ServiceConfig) error {
 
 	log.G(ctx).Infof("running service %s...", service.Name)
 
+	networks := []string{}
+	for name, network := range service.Networks {
+		networkArg := fmt.Sprintf("%s:%s", project.Networks[name].Name, network.Ipv4Address)
+		networks = append(networks, networkArg)
+	}
+
 	runOptions := run.RunOptions{
 		Architecture: arch,
 		Detach:       true,
 		Name:         service.Name,
+		Networks:     networks,
 		Platform:     plat,
 	}
 
