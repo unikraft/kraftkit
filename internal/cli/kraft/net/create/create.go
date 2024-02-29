@@ -59,19 +59,6 @@ func NewCmd() *cobra.Command {
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Driver = cmd.Flag("driver").Value.String()
 
-	// TODO(nderjung): A future implementation can list existing networks and
-	// generate new subnet and gateway appropriately.  Simply calculate a new
-	// subnet which is out of bounds from all existing subnets for the given
-	// driver.  Additionally, a gateway can be determined by selecting the first
-	// allocatable IP of a given subnet, i.e. 0.0.0.1.  The subnet and gateway
-	// can therefore be expressed in the form X.Y.Z.1/N.
-	// if opts.Subnet == "" {
-	// 	return fmt.Errorf("cannot create network without subnet")
-	// }
-	if opts.Network == "" {
-		return fmt.Errorf("cannot create network without gateway and subnet in CIDR format")
-	}
-
 	return nil
 }
 
@@ -86,6 +73,20 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	controller, err := strategy.NewNetworkV1alpha1(ctx)
 	if err != nil {
 		return err
+	}
+
+	if opts.Network == "" {
+		existingNetworks, err := controller.List(ctx, &networkapi.NetworkList{})
+		if err != nil {
+			return err
+		}
+
+		freeNetwork, err := network.FindFreeNetwork(network.DefaultNetworkPool, existingNetworks)
+		if err != nil {
+			return err
+		}
+
+		opts.Network = freeNetwork.String()
 	}
 
 	addr, err := netlink.ParseAddr(opts.Network)
