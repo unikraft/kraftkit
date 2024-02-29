@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -105,21 +104,10 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Sort the features alphabetically.  This ensures that comparisons between
+	// Sort the features lexically.  This ensures that comparisons between
 	// versions are symmetric.
 	sort.Slice(images, func(i, j int) bool {
-		// Check if we have numbers, sort them accordingly
-		if z, err := strconv.Atoi(images[i].Digest); err == nil {
-			if y, err := strconv.Atoi(images[j].Digest); err == nil {
-				return y < z
-			}
-
-			// If we get only one number, alway say its greater than letter
-			return true
-		}
-
-		// Compare letters normally
-		return images[j].Digest > images[i].Digest
+		return images[i].Digest < images[j].Digest
 	})
 
 	// Header row
