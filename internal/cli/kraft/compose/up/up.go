@@ -213,15 +213,6 @@ func platArchFromService(service types.ServiceConfig) (string, string, error) {
 		return "", "", fmt.Errorf("invalid platform: %s for service %s", service.Platform, service.Name)
 	}
 
-	// Check that the platform is supported
-	if _, ok := mplatform.PlatformsByName()[parts[0]]; !ok {
-		return "", "", fmt.Errorf("unsupported platform: %s for service %s", parts[0], service.Name)
-	}
-
-	if parts[1] != "x86_64" && parts[1] != "amd64" && parts[1] != "arm32" && parts[1] != "arm64" {
-		return "", "", fmt.Errorf("unsupported architecture: %s for service %s", parts[1], service.Name)
-	}
-
 	return parts[0], parts[1], nil
 }
 
