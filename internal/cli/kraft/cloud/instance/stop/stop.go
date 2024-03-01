@@ -8,6 +8,7 @@ package stop
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -21,11 +22,11 @@ import (
 )
 
 type StopOptions struct {
-	TimeoutMS int64  `local:"true" long:"timeout-ms" short:"w" usage:"Timeout for the instance to stop"`
-	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	All       bool   `long:"all" usage:"Stop all instances"`
-	Metro     string `noattribute:"true"`
-	Token     string `noattribute:"true"`
+	DrainTimeout time.Duration `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	Output       string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	All          bool          `long:"all" usage:"Stop all instances"`
+	Metro        string        `noattribute:"true"`
+	Token        string        `noattribute:"true"`
 }
 
 // Stop a KraftCloud instance.
@@ -87,6 +88,11 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
+	if opts.DrainTimeout < time.Millisecond {
+		return fmt.Errorf("drain timeout must be at least 1ms")
+	}
+
+	timeout := int64(opts.DrainTimeout / time.Millisecond)
 	if opts.All {
 		instances, err := client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
@@ -96,7 +102,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		for _, instance := range instances {
 			log.G(ctx).Infof("stopping %s", instance.UUID)
 
-			_, err := client.WithMetro(opts.Metro).StopByUUID(ctx, instance.UUID, opts.TimeoutMS)
+			_, err := client.WithMetro(opts.Metro).StopByUUID(ctx, instance.UUID, timeout)
 			if err != nil {
 				log.G(ctx).Error("could not stop instance: %w", err)
 			}
@@ -109,9 +115,9 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		log.G(ctx).Infof("stopping %s", arg)
 
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.Metro).StopByUUID(ctx, arg, opts.TimeoutMS)
+			_, err = client.WithMetro(opts.Metro).StopByUUID(ctx, arg, timeout)
 		} else {
-			_, err = client.WithMetro(opts.Metro).StopByName(ctx, arg, opts.TimeoutMS)
+			_, err = client.WithMetro(opts.Metro).StopByName(ctx, arg, timeout)
 		}
 		if err != nil {
 			return fmt.Errorf("could not create instance: %w", err)
