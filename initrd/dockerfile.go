@@ -8,8 +8,11 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -19,6 +22,8 @@ import (
 	"github.com/cavaliergopher/cpio"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"
 	_ "github.com/moby/buildkit/client/connhelper/kubepod"
@@ -26,6 +31,74 @@ import (
 	_ "github.com/moby/buildkit/client/connhelper/podmancontainer"
 	_ "github.com/moby/buildkit/client/connhelper/ssh"
 )
+
+var testcontainersLoggingHook = func(logger testcontainers.Logging) testcontainers.ContainerLifecycleHooks {
+	shortContainerID := func(c testcontainers.Container) string {
+		return c.GetContainerID()[:12]
+	}
+
+	return testcontainers.ContainerLifecycleHooks{
+		PreCreates: []testcontainers.ContainerRequestHook{
+			func(ctx context.Context, req testcontainers.ContainerRequest) error {
+				logger.Printf("creating container for image %s", req.Image)
+				return nil
+			},
+		},
+		PostCreates: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("container created: %s", shortContainerID(c))
+				return nil
+			},
+		},
+		PreStarts: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("starting container: %s", shortContainerID(c))
+				return nil
+			},
+		},
+		PostStarts: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("container started: %s", shortContainerID(c))
+
+				return nil
+			},
+		},
+		PreStops: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("stopping container: %s", shortContainerID(c))
+				return nil
+			},
+		},
+		PostStops: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("container stopped: %s", shortContainerID(c))
+				return nil
+			},
+		},
+		PreTerminates: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("terminating container: %s", shortContainerID(c))
+				return nil
+			},
+		},
+		PostTerminates: []testcontainers.ContainerHook{
+			func(ctx context.Context, c testcontainers.Container) error {
+				logger.Printf("container terminated: %s", shortContainerID(c))
+				return nil
+			},
+		},
+	}
+}
+
+type testcontainersPrintf struct {
+	ctx context.Context
+}
+
+func (t *testcontainersPrintf) Printf(format string, v ...interface{}) {
+	if config.G[config.KraftKit](t.ctx).Log.Level == "trace" {
+		log.G(t.ctx).Tracef(format, v...)
+	}
+}
 
 type dockerfile struct {
 	opts       InitrdOptions
@@ -73,34 +146,102 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	}
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
-
-	c, err := client.New(ctx,
-		buildkitAddr,
+	copts := []client.ClientOpt{
 		client.WithFailFast(),
-	)
-	if err != nil {
-		return "", fmt.Errorf("could not instantiate BuildKit client: %w", err)
 	}
 
+	c, _ := client.New(ctx, buildkitAddr, copts...)
 	buildKitInfo, err := c.Info(ctx)
 	if err != nil {
-		log.G(ctx).Warn("could not connect to BuildKit client, is BuildKit running?")
-		log.G(ctx).Warn("")
-		log.G(ctx).Warn("By default, KraftKit will look for a native install which")
-		log.G(ctx).Warn("is located at /run/buildkit/buildkit.sock.  Alternatively, you")
-		log.G(ctx).Warn("can run BuildKit in a container (recommended for macOS users)")
-		log.G(ctx).Warn("which you can do by running:")
-		log.G(ctx).Warn("")
-		log.G(ctx).Warn("  docker run --rm -d --name buildkit --privileged moby/buildkit:latest")
-		log.G(ctx).Warn("  export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkit")
-		log.G(ctx).Warn("")
-		log.G(ctx).Warn("For more usage instructions visit: https://unikraft.org/buildkit")
-		log.G(ctx).Warn("")
-		return "", fmt.Errorf("could not get BuildKit info: %w", err)
+		log.G(ctx).Debugf("connecting to host buildkit client: %s", err)
+		log.G(ctx).Info("creating ephemeral buildkit container")
+
+		testcontainers.DefaultLoggingHook = testcontainersLoggingHook
+		printf := &testcontainersPrintf{ctx}
+		testcontainers.Logger = printf
+
+		// Trap any errors with a helpful message for how to use buildkit
+		defer func() {
+			if err == nil {
+				return
+			}
+
+			log.G(ctx).Warnf("could not connect to BuildKit client '%s' is BuildKit running?", buildkitAddr)
+			log.G(ctx).Warn("")
+			log.G(ctx).Warn("By default, KraftKit will look for a native install which")
+			log.G(ctx).Warn("is located at /run/buildkit/buildkit.sock.  Alternatively, you")
+			log.G(ctx).Warn("can run BuildKit in a container (recommended for macOS users)")
+			log.G(ctx).Warn("which you can do by running:")
+			log.G(ctx).Warn("")
+			log.G(ctx).Warn("  docker run --rm -d --name buildkit --privileged moby/buildkit:latest")
+			log.G(ctx).Warn("  export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkit")
+			log.G(ctx).Warn("")
+			log.G(ctx).Warn("For more usage instructions visit: https://unikraft.org/buildkit")
+			log.G(ctx).Warn("")
+		}()
+
+		// Generate a random port number between 4000 and 5000.  Try 10 times before
+		// giving up.
+		var port int
+		attempts := 0
+
+		for {
+			if attempts > 10 {
+				return "", fmt.Errorf("could not find an available port after 10 attempts")
+			}
+
+			port = rand.Intn(5000-4000+1) + 4000
+			listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+			if err != nil {
+				log.G(ctx).WithField("port", port).Debug("port is use")
+				attempts++
+				continue
+			}
+
+			listener.Close()
+			break
+		}
+
+		buildkitd, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			Started: true,
+			Logger:  printf,
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image:        "moby/buildkit:latest",
+				WaitingFor:   wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
+				Privileged:   true,
+				ExposedPorts: []string{fmt.Sprintf("%d:%d/tcp", port, port)},
+				Cmd:          []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
+				Mounts: testcontainers.ContainerMounts{
+					{
+						Source: testcontainers.GenericVolumeMountSource{
+							Name: "kraftkit-buildkit-cache",
+						},
+						Target: "/var/lib/buildkit",
+					},
+				},
+			},
+		})
+		if err != nil {
+			return "", fmt.Errorf("creating buildkit container: %w", err)
+		}
+		defer func() {
+			if err := buildkitd.Terminate(context.TODO()); err != nil {
+				log.G(ctx).Warnf("terminating buildkit container: %s", err)
+			}
+		}()
+
+		buildkitAddr = fmt.Sprintf("tcp://localhost:%d", port)
+
+		c, _ = client.New(ctx, buildkitAddr, copts...)
+		buildKitInfo, err = c.Info(ctx)
+		if err != nil {
+			return "", fmt.Errorf("connecting to container buildkit client: %w", err)
+		}
 	}
 
 	log.G(ctx).
-		WithField("version", buildKitInfo.BuildkitVersion).
+		WithField("addr", buildkitAddr).
+		WithField("version", buildKitInfo.BuildkitVersion.Version).
 		Debug("using buildkit")
 
 	var cacheExports []client.CacheOptionsEntry
