@@ -32,8 +32,8 @@ type RemoveOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Delete a service group",
-		Use:     "remove [FLAGS] NAME|UUID",
-		Args:    cobra.MaximumNArgs(1),
+		Use:     "remove [FLAGS] [NAME|UUID [NAME|UUID]...]",
+		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"delete", "del", "rm"},
 		Long:    "Delete a service group.",
 		Example: heredoc.Doc(`
@@ -42,6 +42,9 @@ func NewCmd() *cobra.Command {
 
 			# Remove a service group from your account by name.
 			$ kraft cloud service remove my-service-group
+
+			# Remove multiple service groups from your account.
+			$ kraft cloud service remove my-service-group my-other-service-group
 
 			# Remove all service groups from your account.
 			$ kraft cloud service remove --all
@@ -102,6 +105,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	for _, arg := range args {
+		log.G(ctx).Infof("removing %s", arg)
+
 		if utils.IsUUID(arg) {
 			err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, arg)
 		} else {
@@ -110,8 +115,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not delete service group: %w", err)
 		}
-
-		log.G(ctx).Infof("removing %s", arg)
 	}
 
 	return err
