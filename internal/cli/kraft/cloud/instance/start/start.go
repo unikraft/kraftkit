@@ -7,6 +7,7 @@ package start
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -20,8 +21,8 @@ import (
 )
 
 type StartOptions struct {
-	WaitTimeoutMS int    `local:"true" long:"wait_timeout_ms" short:"w" usage:"Timeout to wait for the instance to start in milliseconds"`
-	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	WaitTimeout time.Duration `local:"true" long:"wait-timeout" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	Output      string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 	token string
@@ -85,13 +86,18 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
+	if opts.WaitTimeout < time.Millisecond {
+		return fmt.Errorf("wait timeout must be greater than 1ms")
+	}
+
+	timeout := int(opts.WaitTimeout.Milliseconds())
 	for _, arg := range args {
 		log.G(ctx).Infof("starting %s", arg)
 
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.metro).StartByUUID(ctx, arg, opts.WaitTimeoutMS)
+			_, err = client.WithMetro(opts.metro).StartByUUID(ctx, arg, timeout)
 		} else {
-			_, err = client.WithMetro(opts.metro).StartByName(ctx, arg, opts.WaitTimeoutMS)
+			_, err = client.WithMetro(opts.metro).StartByName(ctx, arg, timeout)
 		}
 		if err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")
