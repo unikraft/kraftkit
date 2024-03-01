@@ -157,7 +157,7 @@ func (stm ProcessTree) printItem(pti *ProcessTreeItem, offset uint) string {
 	} else if loglen > 0 {
 		truncate = loglen
 	}
-	if pti.status == StatusRunning || ((pti.status == StatusFailed || pti.status == StatusFailedChild) && pti.hideError) {
+	if pti.status == StatusRunning || ((pti.status == StatusFailed || pti.status == StatusFailedChild) && !pti.hideError) {
 		for i, line := range pti.logs[truncate:] {
 			s += line
 			if i < len(pti.logs[truncate:]) {
