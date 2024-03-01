@@ -34,7 +34,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
 		Short:   "Remove an image",
 		Use:     "remove [FLAGS] [USER/]NAME[:latest|@sha256:...]",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"rm", "delete", "del"},
 		Long: heredoc.Doc(`
 			Remove an image for your account.
@@ -51,6 +51,9 @@ func NewCmd() *cobra.Command {
 
 			# Remove an image from your account with user.
 			$ kraft cloud image remove user/caddy
+
+			# Remove multiple images from your account.
+			$ kraft cloud image remove caddy:latest nginx:latest caddy:other-latest
 
 			# Remove all images from your account.
 			$ kraft cloud image remove --all

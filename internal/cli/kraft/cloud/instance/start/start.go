@@ -39,8 +39,8 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short:   "Start an instance",
-		Use:     "start [FLAGS] PACKAGE|NAME",
-		Args:    cobra.ExactArgs(1),
+		Use:     "start [FLAGS] [UUID|NAME [UUID|NAME]...]",
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"str"},
 		Example: heredoc.Doc(`
 			# Start a KraftCloud instance by UUID
@@ -48,6 +48,9 @@ func NewCmd() *cobra.Command {
 
 			# Start a KraftCloud instance by name
 			$ kraft cloud instance start my-instance-431342
+
+			# Start multiple KraftCloud instances
+			$ kraft cloud instance start my-instance-431342 my-instance-other-2313
 		`),
 		Long: heredoc.Doc(`
 			Start an instance on KraftCloud from a stopped instance.
