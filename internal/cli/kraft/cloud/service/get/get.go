@@ -88,7 +88,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		services, volerr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
 	if volerr != nil {
-		return fmt.Errorf("could not create instance: %w", volerr)
+		return fmt.Errorf("could not get service: %w", volerr)
 	}
 
 	return utils.PrintServiceGroups(ctx, opts.Output, *services)
