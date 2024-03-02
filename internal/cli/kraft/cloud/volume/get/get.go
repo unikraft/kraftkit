@@ -91,7 +91,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		volumes, volerr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
 	if volerr != nil {
-		return fmt.Errorf("could not create instance: %w", volerr)
+		return fmt.Errorf("could not get volume: %w", volerr)
 	}
 
 	return utils.PrintVolumes(ctx, opts.Output, *volumes)

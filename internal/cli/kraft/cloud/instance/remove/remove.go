@@ -120,7 +120,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("could not create instance: %w", err)
+			return fmt.Errorf("could not remove instance: %w", err)
 		}
 	}
 

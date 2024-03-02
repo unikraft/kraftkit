@@ -91,7 +91,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		instances, insterr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
 	if insterr != nil {
-		return fmt.Errorf("could not create instance: %w", insterr)
+		return fmt.Errorf("could not get instance: %w", insterr)
 	}
 
 	return utils.PrintInstances(ctx, opts.Output, *instances)

@@ -126,7 +126,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			_, err = client.WithMetro(opts.Metro).StopByName(ctx, arg, timeout)
 		}
 		if err != nil {
-			return fmt.Errorf("could not create instance: %w", err)
+			return fmt.Errorf("could not stop instance: %w", err)
 		}
 	}
 
