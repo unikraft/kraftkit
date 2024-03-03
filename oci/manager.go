@@ -459,7 +459,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 
 		log.G(ctx).
-			WithField("ref", ref.String()).
+			WithField("ref", ref.Name()).
 			Trace("getting remote index")
 
 		v1ImageIndex, err := cache.RemoteIndex(ref, ropts...)
