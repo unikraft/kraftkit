@@ -371,6 +371,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	var err error
 	packs := make(map[string]pack.Package)
 	qname := query.Name()
+	total := 0
 
 	if strings.ContainsRune(qname, '*') {
 		qglob, err = glob.Compile(qname)
@@ -483,6 +484,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
 		) {
 			packs[checksum] = pack
+			total++
 		}
 
 		// No need to search remote indexes by registry if the registry has been
@@ -497,6 +499,8 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 				Debugf("could not update: %v", err)
 		} else {
 			for checksum, pack := range more {
+				total++
+
 				ref, err := name.ParseReference(fmt.Sprintf("%s:%s", pack.Name(), pack.Version()))
 				if err != nil {
 					log.G(ctx).
@@ -559,6 +563,7 @@ resolveLocalIndex:
 			index.Manifests,
 		) {
 			packs[checksum] = pack
+			total++
 		}
 
 		// If the register was set, then an exact local index lookup was expected so
@@ -585,6 +590,7 @@ searchLocalIndexes:
 				log.G(ctx).
 					WithField("ref", oref).
 					Tracef("skipping index: invalid reference format: %s", err.Error())
+				total += len(index.Manifests)
 				continue
 			}
 
@@ -600,6 +606,7 @@ searchLocalIndexes:
 				log.G(ctx).
 					WithField("ref", fullref).
 					Tracef("skipping index: incompatible index structure: %s", err.Error())
+				total += len(index.Manifests)
 				continue
 			}
 
@@ -608,6 +615,7 @@ searchLocalIndexes:
 					WithField("want", qname).
 					WithField("got", fullref).
 					Trace("skipping index: glob does not match")
+				total += len(index.Manifests)
 				continue
 			} else if qglob == nil {
 				if len(qversion) > 0 && len(qname) > 0 {
@@ -616,6 +624,7 @@ searchLocalIndexes:
 							WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
 							WithField("got", fullref).
 							Trace("skipping index: name does not match")
+						total += len(index.Manifests)
 						continue
 					}
 				} else if len(qname) > 0 && fullref != qname {
@@ -623,6 +632,7 @@ searchLocalIndexes:
 						WithField("want", qname).
 						WithField("got", fullref).
 						Trace("skipping index: name does not match")
+					total += len(index.Manifests)
 					continue
 				}
 			}
@@ -634,6 +644,7 @@ searchLocalIndexes:
 				index.Manifests,
 			) {
 				packs[checksum] = pack
+				total++
 			}
 		}
 	}
@@ -644,6 +655,8 @@ returnPacks:
 	for _, pack := range packs {
 		ret = append(ret, pack)
 	}
+
+	log.G(ctx).Debugf("found %d/%d matching packages in oci catalog", len(packs), total)
 
 	return ret, nil
 }
