@@ -653,6 +653,18 @@ returnPacks:
 	var ret []pack.Package
 
 	for _, pack := range packs {
+		var title []string
+		for _, column := range pack.Columns() {
+			if len(column.Value) > 12 {
+				continue
+			}
+
+			title = append(title, column.Value)
+		}
+
+		log.G(ctx).
+			Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+
 		ret = append(ret, pack)
 	}
 
