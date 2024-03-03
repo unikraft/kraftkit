@@ -174,18 +174,20 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 				return
 			}
 
+			// FollowLogs will block until either the machine exits or the context is
+			// cancelled.
 			exitErr := logs.FollowLogs(ctx, machine, machineController, consumer)
+
+			log.G(ctx).
+				WithField("machine", machine.Name).
+				Trace("stopping")
+
+			if _, err := machineController.Stop(ctx, machine); err != nil {
+				log.G(ctx).Errorf("could not stop: %v", err)
+			}
 
 			// Remove the instance on Ctrl+C if the --rm flag is passed
 			if opts.Remove {
-				log.G(ctx).
-					WithField("machine", machine.Name).
-					Trace("stopping")
-
-				if _, err := machineController.Stop(ctx, machine); err != nil {
-					log.G(ctx).Errorf("could not stop: %v", err)
-				}
-
 				log.G(ctx).
 					WithField("machine", machine.Name).
 					Trace("removing")
