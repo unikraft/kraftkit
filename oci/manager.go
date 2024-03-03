@@ -70,7 +70,7 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 
 // Update implements packmanager.PackageManager
 func (manager *ociManager) Update(ctx context.Context) error {
-	packs, err := manager.update(ctx, nil)
+	packs, err := manager.update(ctx, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (manager *ociManager) Update(ctx context.Context) error {
 	return nil
 }
 
-func (manager *ociManager) update(ctx context.Context, auths map[string]config.AuthConfig) (map[string]pack.Package, error) {
+func (manager *ociManager) update(ctx context.Context, auths map[string]config.AuthConfig, query *packmanager.Query) (map[string]pack.Package, error) {
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 				v1ManifestPackages := processV1IndexManifests(ctx,
 					handle,
 					fullref,
-					nil,
+					query,
 					FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
 				)
 
@@ -491,7 +491,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	if query.Remote() {
-		more, err := manager.update(ctx, auths)
+		more, err := manager.update(ctx, auths, query)
 		if err != nil {
 			log.G(ctx).
 				Debugf("could not update: %v", err)
