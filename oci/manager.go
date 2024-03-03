@@ -319,7 +319,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			log.G(ctx).
 				WithField("ref", fullref).
 				WithField("digest", descriptor.Digest.String()).
-				Debug("found")
+				Trace("found")
 
 			// If we have made it this far, the query has been successfully
 			// satisfied by this particular manifest and we can generate a package
