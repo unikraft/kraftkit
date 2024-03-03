@@ -41,6 +41,21 @@ func (opts *RunOptions) assignPorts(ctx context.Context, machine *machineapi.Mac
 		machine.Spec.Ports = append(machine.Spec.Ports, parsed...)
 	}
 
+	existingMachines, err := opts.machineController.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return fmt.Errorf("getting list of existing machines: %w", err)
+	}
+
+	for _, existingMachine := range existingMachines.Items {
+		for _, existingPort := range existingMachine.Spec.Ports {
+			for _, newPort := range machine.Spec.Ports {
+				if existingPort.HostIP == newPort.HostIP && existingPort.HostPort == newPort.HostPort {
+					return fmt.Errorf("port %s:%d is already in use by %s", existingPort.HostIP, existingPort.HostPort, machine.Name)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
