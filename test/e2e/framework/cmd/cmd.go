@@ -65,6 +65,7 @@ func NewKraftPrivileged(stdout, stderr *IOStream, cfgPath string) *Cmd {
 
 	var cmd *exec.Cmd
 	if usr.Uid != "0" {
+		args = append(args, "--no-warn-sudo")
 		cmd = exec.Command("sudo", args...)
 	} else {
 		cmd = exec.Command("kraft", args...)

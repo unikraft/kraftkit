@@ -163,6 +163,20 @@ func Main(args []string) int {
 		ctx = iostreams.WithIOStreams(ctx, copts.IOStreams)
 	}
 
+	if (os.Getenv("SUDO_UID") != "" || os.Getenv("SUDO_GID") != "" || os.Getenv("SUDO_USER") != "") && !config.G[config.KraftKit](ctx).NoWarnSudo {
+		log.G(ctx).Warn("detected invocation via sudo!")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("mixing invocations of kraft with sudo can lead to unexpected behavior")
+		log.G(ctx).Warn("read more on how to use kraft without sudo at:")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("\thttps://unikraft.org/sudoless")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("to hide and ignore this warning message, set the environmental variable:")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("\texport KRAFTKIT_NO_WARN_SUDO=1")
+		log.G(ctx).Warn("")
+	}
+
 	// Add the kraftkit version to the debug logs
 	log.G(ctx).Debugf("kraftkit %s", kitversion.Version())
 
