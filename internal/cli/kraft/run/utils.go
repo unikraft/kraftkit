@@ -4,24 +4,23 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/containerd/nerdctl/pkg/strutil"
-	"github.com/dustin/go-humanize"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	volumeapi "kraftkit.sh/api/volume/v1alpha1"
+	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	machinename "kraftkit.sh/machine/name"
 	"kraftkit.sh/machine/network"
 	"kraftkit.sh/machine/volume"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 )
@@ -331,20 +330,30 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		return fmt.Errorf("could not prepare initramfs: %w", err)
 	}
 
-	if _, err = ramfs.Build(ctx); err != nil {
+	treemodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+		},
+		processtree.NewProcessTreeItem(
+			"building rootfs",
+			machine.Spec.Architecture,
+			func(ctx context.Context) error {
+				if _, err = ramfs.Build(ctx); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		),
+	)
+	if err != nil {
 		return err
 	}
 
-	if fi, err := os.Stat(machine.Status.InitrdPath); err == nil {
-		// Warn if the initrd path is greater than allocated memory
-		memRequest := machine.Spec.Resources.Requests[corev1.ResourceMemory]
-		if memRequest.Value() < fi.Size() {
-			log.G(ctx).Warnf("requested memory (%s) is less than initramfs (%s)",
-				humanize.Bytes(uint64(memRequest.Value())),
-				humanize.Bytes(uint64(fi.Size())),
-			)
-		}
-	}
-
-	return nil
+	return treemodel.Start()
 }
