@@ -225,8 +225,8 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 	table.AddField("CREATED", cs.Bold)
 	table.AddField("STATUS", cs.Bold)
 	table.AddField("MEM", cs.Bold)
+	table.AddField("PORTS", cs.Bold)
 	if opts.Long {
-		table.AddField("PORTS", cs.Bold)
 		table.AddField("IP", cs.Bold)
 		table.AddField("ARCH", cs.Bold)
 	}
@@ -247,8 +247,8 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 		table.AddField(item.Created, nil)
 		table.AddField(item.State.String(), machineStateColor[item.State])
 		table.AddField(item.Mem, nil)
+		table.AddField(item.Ports, nil)
 		if opts.Long {
-			table.AddField(item.Ports, nil)
 			table.AddField(strings.Join(item.IPs, ","), nil)
 			table.AddField(item.Arch, nil)
 			table.AddField(item.Plat, nil)
