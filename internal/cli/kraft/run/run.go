@@ -270,6 +270,8 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	// discovered, the user is provided the choice as to which runner to use;
 	// otherwise the determined runner will be used automatically.
 
+	log.G(ctx).Debug("determining how to proceed given provided input and context")
+
 	var candidates []runner
 
 	for _, candidate := range runners {
@@ -287,8 +289,8 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		} else if err != nil {
 			errs = append(errs, err)
 			log.G(ctx).
-				WithField("runner", candidate.Name()).
-				Debugf("cannot run because: %v", err)
+				WithField("candidate", candidate.Name()).
+				Tracef("candidate is not runnable because: %v", err)
 		}
 	}
 
@@ -309,7 +311,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("multiple contexts discovered: %v", candidates)
 	}
 
-	log.G(ctx).WithField("runner", run.Name()).Debug("using")
+	log.G(ctx).WithField("candidate", run.Name()).Debug("using compatible context")
 
 	// Prepare the machine specification based on the compatible runner.
 	if err := run.Prepare(ctx, opts, machine, args...); err != nil {
