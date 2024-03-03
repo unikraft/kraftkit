@@ -20,6 +20,7 @@ import (
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/paraprogress"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 	ukarch "kraftkit.sh/unikraft/arch"
@@ -138,65 +139,67 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			packmanager.WithArchitecture(targ.Architecture().Name()),
 			packmanager.WithKConfig(kconfigs),
 		)
-	} else {
-		qopts = append(qopts,
-			packmanager.WithPlatform(opts.platform.String()),
-		)
-		if opts.Architecture != "" {
-			qopts = append(qopts,
-				packmanager.WithArchitecture(opts.Architecture),
-			)
-		}
 	}
 
-	packs, err := packmanager.G(ctx).Catalog(ctx, qopts...)
+	var packs []pack.Package
+
+	treemodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
+		},
+		processtree.NewProcessTreeItem(
+			fmt.Sprintf(
+				"searching for %s:%s",
+				runner.project.Runtime().Name(),
+				runner.project.Runtime().Version(),
+			),
+			"",
+			func(ctx context.Context) error {
+				packs, err = packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
+				if err != nil {
+					return fmt.Errorf("could not query catalog: %w", err)
+				} else if len(packs) == 0 {
+					// Try again with a remote update request.  Save this to qopts in case we
+					// need to call `Catalog` again.
+					packs, err = packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithRemote(true))...)
+					if err != nil {
+						return fmt.Errorf("could not query catalog: %w", err)
+					}
+				}
+
+				return nil
+			},
+		),
+	)
 	if err != nil {
-		return fmt.Errorf("could not query catalog: %w", err)
-	} else if len(packs) == 0 {
-		// Try again with a remote update request.  Save this to qopts in case we
-		// need to call `Catalog` again.
-		qopts = append(qopts, packmanager.WithRemote(true))
-		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
-		if err != nil {
-			return fmt.Errorf("could not query catalog: %w", err)
-		} else if len(packs) == 0 {
-			return fmt.Errorf("could not find runtime '%s'", runner.project.Runtime().Name())
-		}
+		return err
+	}
+
+	if err := treemodel.Start(); err != nil {
+		return err
 	}
 
 	var found pack.Package
 
 	if len(packs) == 1 {
 		found = packs[0]
-	} else if len(packs) > 1 {
-		if config.G[config.KraftKit](ctx).NoPrompt {
-			for _, p := range packs {
-				log.G(ctx).
-					WithField("runtime", p.String()).
-					Warn("possible")
-			}
-
-			return fmt.Errorf("too many options for %s and prompting has been disabled",
-				runner.project.Runtime().String(),
-			)
-		}
-
-		selected, err := selection.Select[pack.Package]("select possible runtime", packs...)
-		if err != nil {
-			return err
-		}
-
-		found = *selected
 	} else {
-		// At this point, we have queried the registry without asking for the
-		// platform and architecture and received multiple options.  Re-query the
-		// catalog with the host architecture and platform.
+		// At this point, we have queried the registry WITHOUT asking for the
+		// platform and architecture and have received multiple options.  Begin by
+		// filtering based on the host platform and architecture.
 
 		if opts.Architecture == "" {
 			opts.Architecture, err = ukarch.HostArchitecture()
 			if err != nil {
 				return fmt.Errorf("could not get host architecture: %w", err)
 			}
+			log.G(ctx).WithField("arch", opts.Architecture).Info("using")
 		}
 		if opts.Platform == "" {
 			plat, _, err := platform.Detect(ctx)
@@ -205,39 +208,46 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			}
 
 			opts.Platform = plat.String()
+			log.G(ctx).WithField("plat", opts.Platform).Info("using")
 		}
 
-		qopts = append(qopts,
-			packmanager.WithPlatform(opts.Platform),
-			packmanager.WithArchitecture(opts.Architecture),
-		)
+		compatible := []pack.Package{}
 
-		packs, err = packmanager.G(ctx).Catalog(ctx, qopts...)
-		if err != nil {
-			return fmt.Errorf("could not query catalog: %w", err)
-		} else if len(packs) == 0 {
-			return fmt.Errorf("could not find runtime '%s'", runner.project.Runtime().Name())
-		} else if len(packs) == 1 {
-			found = packs[0]
-		} else if len(packs) > 1 {
-			if config.G[config.KraftKit](ctx).NoPrompt {
-				for _, p := range packs {
-					log.G(ctx).
-						WithField("runtime", p.String()).
-						Warn("possible")
+		for _, p := range packs {
+			pt := p.(target.Target)
+			if pt.Architecture().String() == opts.Architecture && pt.Platform().String() == opts.Platform {
+				compatible = append(compatible, p)
+			}
+		}
+
+		// Could not find a package that matches the desired architecture and
+		// platform, prompt with previous available set of packages.
+		if len(compatible) == 0 {
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				log.G(ctx).Warnf("could not find package '%s:%s' based on %s/%s", runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
+				p, err := selection.Select("select alternative package with same name to continue", packs...)
+				if err != nil {
+					return fmt.Errorf("could not select package: %w", err)
 				}
 
-				return fmt.Errorf("too many options for %s and prompting has been disabled",
-					runner.project.Runtime().String(),
-				)
+				found = *p
+			} else {
+				return fmt.Errorf("could not find package '%s:%s' based on %s/%s but %d others found but prompting has been disabled", runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture, len(packs))
 			}
+		} else if len(compatible) == 1 { // An exact match was found!
+			found = compatible[0]
+		} else { // More than 1 match found, provide a selection prompt if possible.
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				log.G(ctx).Infof("found %d packages named '%s:%s' based on %s/%s", len(compatible), runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
+				p, err := selection.Select("select package to continue", compatible...)
+				if err != nil {
+					return fmt.Errorf("could not select package: %w", err)
+				}
 
-			selected, err := selection.Select[pack.Package]("select possible runtime", packs...)
-			if err != nil {
-				return err
+				found = *p
+			} else {
+				return fmt.Errorf("found %d packages named '%s:%s' based on %s/%s but prompting has been disabled", len(compatible), runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
 			}
-
-			found = *selected
 		}
 
 		log.G(ctx).
