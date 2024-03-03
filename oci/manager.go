@@ -207,7 +207,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 					}
 
 					log.G(ctx).
-						Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+						Tracef("found %s (%s)", pack.String(), strings.Join(title, ", "))
 					packs[checksum] = pack
 				}
 				mu.Unlock()
