@@ -112,7 +112,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 
 		switch {
 		case len(targets) == 0:
-			return fmt.Errorf("could not detect any project targets based on plat=\"%s\" arch=\"%s\"", opts.platform.String(), opts.Architecture)
+			return fmt.Errorf("could not detect any project targets based on %s/%s", opts.platform.String(), opts.Architecture)
 
 		case len(targets) == 1:
 			targ = targets[0]
