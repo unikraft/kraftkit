@@ -27,7 +27,7 @@ import (
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
-func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) assignPorts(ctx context.Context, machine *machineapi.Machine) error {
 	if len(opts.Ports) == 0 {
 		return nil
 	}

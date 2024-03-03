@@ -330,7 +330,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		machine.Spec.Resources.Requests[corev1.ResourceMemory] = quantity
 	}
 
-	if err := opts.parsePorts(ctx, machine); err != nil {
+	if err := opts.assignPorts(ctx, machine); err != nil {
 		return err
 	}
 
