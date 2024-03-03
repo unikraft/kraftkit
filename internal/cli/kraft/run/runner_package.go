@@ -101,6 +101,13 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		packmanager.WithName(runner.packName),
 	}
 
+	if len(opts.Architecture) > 0 {
+		qopts = append(qopts, packmanager.WithArchitecture(opts.Architecture))
+	}
+	if len(opts.Platform) > 0 {
+		qopts = append(qopts, packmanager.WithPlatform(opts.Platform))
+	}
+
 	// First try the local cache of the catalog
 	var packs []pack.Package
 
