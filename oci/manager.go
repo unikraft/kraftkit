@@ -403,7 +403,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// No default registry found, re-parse with
 	if ref != nil && ref.Context().RegistryStr() == "" {
 		unsetRegistry = true
-		ref, refErr = name.ParseReference(qname,
+		ref, refErr = name.ParseReference(fmt.Sprintf("%s:%s", qname, qversion),
 			name.WithDefaultRegistry(DefaultRegistry),
 			name.WithDefaultTag(DefaultTag),
 		)
