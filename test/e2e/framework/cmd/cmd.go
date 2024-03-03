@@ -69,6 +69,7 @@ func NewKraftPrivileged(stdout, stderr *IOStream, cfgPath string) *Cmd {
 	} else {
 		cmd = exec.Command("kraft", args...)
 	}
+	cmd.Env = append(cmd.Env, "KRAFTKIT_NO_WARN_SUDO=1")
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
