@@ -553,6 +553,9 @@ resolveLocalIndex:
 		oref := fmt.Sprintf("%s:%s", qname, qversion)
 		index, err := handle.ResolveIndex(ctx, oref)
 		if err != nil {
+			log.G(ctx).
+				WithField("ref", oref).
+				Trace("could not resolve exact index")
 			goto searchLocalIndexes
 		}
 
