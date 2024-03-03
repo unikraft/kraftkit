@@ -770,6 +770,10 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source an OCI Distrubtion Spec capable registry
 	isRegistry := func(source string) bool {
+		log.G(ctx).
+			WithField("source", source).
+			Tracef("checking if source is registry")
+
 		regName, err := name.NewRegistry(source)
 		if err != nil {
 			return false
@@ -784,6 +788,10 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source is OCI registry
 	isRemoteImage := func(source string) bool {
+		log.G(ctx).
+			WithField("source", source).
+			Tracef("checking if source is remote image")
+
 		ref, err := name.ParseReference(source,
 			name.WithDefaultRegistry(DefaultRegistry),
 			name.WithDefaultTag(DefaultTag),
