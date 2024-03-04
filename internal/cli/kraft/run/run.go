@@ -256,6 +256,12 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		},
 	}
 
+	// Preemptively assign ports which can return early with an error if they are
+	// already in use.
+	if err := opts.assignPorts(ctx, machine); err != nil {
+		return err
+	}
+
 	var run runner
 	var errs []error
 	runners, err := runners()
@@ -330,10 +336,6 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		machine.Spec.Resources.Requests[corev1.ResourceMemory] = quantity
-	}
-
-	if err := opts.parsePorts(ctx, machine); err != nil {
-		return err
 	}
 
 	if err := opts.parseNetworks(ctx, machine); err != nil {

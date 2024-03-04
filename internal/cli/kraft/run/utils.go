@@ -27,7 +27,7 @@ import (
 )
 
 // Are we publishing ports? E.g. -p/--ports=127.0.0.1:80:8080/tcp ...
-func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machine) error {
+func (opts *RunOptions) assignPorts(ctx context.Context, machine *machineapi.Machine) error {
 	if len(opts.Ports) == 0 {
 		return nil
 	}
@@ -39,6 +39,21 @@ func (opts *RunOptions) parsePorts(_ context.Context, machine *machineapi.Machin
 			return err
 		}
 		machine.Spec.Ports = append(machine.Spec.Ports, parsed...)
+	}
+
+	existingMachines, err := opts.machineController.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return fmt.Errorf("getting list of existing machines: %w", err)
+	}
+
+	for _, existingMachine := range existingMachines.Items {
+		for _, existingPort := range existingMachine.Spec.Ports {
+			for _, newPort := range machine.Spec.Ports {
+				if existingPort.HostIP == newPort.HostIP && existingPort.HostPort == newPort.HostPort {
+					return fmt.Errorf("port %s:%d is already in use by %s", existingPort.HostIP, existingPort.HostPort, machine.Name)
+				}
+			}
+		}
 	}
 
 	return nil
