@@ -360,7 +360,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// save the manifest descriptor
 	if err := manifest.handle.SaveDescriptor(
 		ctx,
-		fullref,
+		ref.Name(),
 		*manifest.desc,
 		bytes.NewReader(manifestJson),
 		onProgress,

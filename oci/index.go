@@ -239,7 +239,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	// save the manifest digest
 	if err := index.handle.SaveDescriptor(
 		ctx,
-		fullref,
+		ref.Name(),
 		*index.desc,
 		bytes.NewReader(indexJson),
 		onProgress,
