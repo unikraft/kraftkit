@@ -70,7 +70,7 @@ func NewOCIManager(ctx context.Context, opts ...any) (packmanager.PackageManager
 
 // Update implements packmanager.PackageManager
 func (manager *ociManager) Update(ctx context.Context) error {
-	packs, err := manager.update(ctx, nil)
+	packs, err := manager.update(ctx, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (manager *ociManager) Update(ctx context.Context) error {
 	return nil
 }
 
-func (manager *ociManager) update(ctx context.Context, auths map[string]config.AuthConfig) (map[string]pack.Package, error) {
+func (manager *ociManager) update(ctx context.Context, auths map[string]config.AuthConfig, query *packmanager.Query) (map[string]pack.Package, error) {
 	ctx, handle, err := manager.handle(ctx)
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 				v1ManifestPackages := processV1IndexManifests(ctx,
 					handle,
 					fullref,
-					nil,
+					query,
 					FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
 				)
 
@@ -207,7 +207,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 					}
 
 					log.G(ctx).
-						Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+						Tracef("found %s (%s)", pack.String(), strings.Join(title, ", "))
 					packs[checksum] = pack
 				}
 				mu.Unlock()
@@ -319,7 +319,7 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 			log.G(ctx).
 				WithField("ref", fullref).
 				WithField("digest", descriptor.Digest.String()).
-				Debug("found")
+				Trace("found")
 
 			// If we have made it this far, the query has been successfully
 			// satisfied by this particular manifest and we can generate a package
@@ -371,6 +371,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	var err error
 	packs := make(map[string]pack.Package)
 	qname := query.Name()
+	total := 0
 
 	if strings.ContainsRune(qname, '*') {
 		qglob, err = glob.Compile(qname)
@@ -402,7 +403,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// No default registry found, re-parse with
 	if ref != nil && ref.Context().RegistryStr() == "" {
 		unsetRegistry = true
-		ref, refErr = name.ParseReference(qname,
+		ref, refErr = name.ParseReference(fmt.Sprintf("%s:%s", qname, qversion),
 			name.WithDefaultRegistry(DefaultRegistry),
 			name.WithDefaultTag(DefaultTag),
 		)
@@ -458,7 +459,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		}
 
 		log.G(ctx).
-			WithField("ref", ref.String()).
+			WithField("ref", ref.Name()).
 			Trace("getting remote index")
 
 		v1ImageIndex, err := cache.RemoteIndex(ref, ropts...)
@@ -483,6 +484,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 			FromGoogleV1DescriptorToOCISpec(v1IndexManifest.Manifests...),
 		) {
 			packs[checksum] = pack
+			total++
 		}
 
 		// No need to search remote indexes by registry if the registry has been
@@ -491,12 +493,14 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	if query.Remote() {
-		more, err := manager.update(ctx, auths)
+		more, err := manager.update(ctx, auths, query)
 		if err != nil {
 			log.G(ctx).
 				Debugf("could not update: %v", err)
 		} else {
 			for checksum, pack := range more {
+				total++
+
 				ref, err := name.ParseReference(fmt.Sprintf("%s:%s", pack.Name(), pack.Version()))
 				if err != nil {
 					log.G(ctx).
@@ -549,6 +553,9 @@ resolveLocalIndex:
 		oref := fmt.Sprintf("%s:%s", qname, qversion)
 		index, err := handle.ResolveIndex(ctx, oref)
 		if err != nil {
+			log.G(ctx).
+				WithField("ref", oref).
+				Trace("could not resolve exact index")
 			goto searchLocalIndexes
 		}
 
@@ -559,6 +566,7 @@ resolveLocalIndex:
 			index.Manifests,
 		) {
 			packs[checksum] = pack
+			total++
 		}
 
 		// If the register was set, then an exact local index lookup was expected so
@@ -585,6 +593,7 @@ searchLocalIndexes:
 				log.G(ctx).
 					WithField("ref", oref).
 					Tracef("skipping index: invalid reference format: %s", err.Error())
+				total += len(index.Manifests)
 				continue
 			}
 
@@ -600,6 +609,7 @@ searchLocalIndexes:
 				log.G(ctx).
 					WithField("ref", fullref).
 					Tracef("skipping index: incompatible index structure: %s", err.Error())
+				total += len(index.Manifests)
 				continue
 			}
 
@@ -608,6 +618,7 @@ searchLocalIndexes:
 					WithField("want", qname).
 					WithField("got", fullref).
 					Trace("skipping index: glob does not match")
+				total += len(index.Manifests)
 				continue
 			} else if qglob == nil {
 				if len(qversion) > 0 && len(qname) > 0 {
@@ -616,6 +627,7 @@ searchLocalIndexes:
 							WithField("want", fmt.Sprintf("%s:%s", qname, qversion)).
 							WithField("got", fullref).
 							Trace("skipping index: name does not match")
+						total += len(index.Manifests)
 						continue
 					}
 				} else if len(qname) > 0 && fullref != qname {
@@ -623,6 +635,7 @@ searchLocalIndexes:
 						WithField("want", qname).
 						WithField("got", fullref).
 						Trace("skipping index: name does not match")
+					total += len(index.Manifests)
 					continue
 				}
 			}
@@ -634,6 +647,7 @@ searchLocalIndexes:
 				index.Manifests,
 			) {
 				packs[checksum] = pack
+				total++
 			}
 		}
 	}
@@ -642,8 +656,22 @@ returnPacks:
 	var ret []pack.Package
 
 	for _, pack := range packs {
+		var title []string
+		for _, column := range pack.Columns() {
+			if len(column.Value) > 12 {
+				continue
+			}
+
+			title = append(title, column.Value)
+		}
+
+		log.G(ctx).
+			Infof("found %s (%s)", pack.String(), strings.Join(title, ", "))
+
 		ret = append(ret, pack)
 	}
+
+	log.G(ctx).Debugf("found %d/%d matching packages in oci catalog", len(packs), total)
 
 	return ret, nil
 }
@@ -742,6 +770,10 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source an OCI Distrubtion Spec capable registry
 	isRegistry := func(source string) bool {
+		log.G(ctx).
+			WithField("source", source).
+			Tracef("checking if source is registry")
+
 		regName, err := name.NewRegistry(source)
 		if err != nil {
 			return false
@@ -756,6 +788,10 @@ func (manager *ociManager) IsCompatible(ctx context.Context, source string, qopt
 
 	// Check if the provided source is OCI registry
 	isRemoteImage := func(source string) bool {
+		log.G(ctx).
+			WithField("source", source).
+			Tracef("checking if source is remote image")
+
 		ref, err := name.ParseReference(source,
 			name.WithDefaultRegistry(DefaultRegistry),
 			name.WithDefaultTag(DefaultTag),
