@@ -49,7 +49,7 @@ func (opts *RunOptions) assignPorts(ctx context.Context, machine *machineapi.Mac
 		for _, existingPort := range existingMachine.Spec.Ports {
 			for _, newPort := range machine.Spec.Ports {
 				if existingPort.HostIP == newPort.HostIP && existingPort.HostPort == newPort.HostPort {
-					return fmt.Errorf("port %s:%d is already in use by %s", existingPort.HostIP, existingPort.HostPort, machine.Name)
+					return fmt.Errorf("port %s:%d is already in use by %s", existingPort.HostIP, existingPort.HostPort, existingMachine.Name)
 				}
 			}
 		}
