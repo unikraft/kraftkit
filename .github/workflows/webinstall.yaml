@@ -26,6 +26,6 @@ jobs:
           push: true
           tags: ghcr.io/unikraft/kraftkit/webinstall:latest
           platforms: linux/amd64
-          file: ./tool/webinstall/Dockerfile
+          file: ./tools/webinstall/Dockerfile
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
