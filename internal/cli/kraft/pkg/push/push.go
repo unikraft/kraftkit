@@ -156,7 +156,7 @@ func (opts *PushOptions) Run(ctx context.Context, args []string) error {
 		p := p
 
 		processes = append(processes, processtree.NewProcessTreeItem(
-			fmt.Sprintf("pushing %s (%s)", p.Name(), p.Format()),
+			fmt.Sprintf("pushing %s", p.String()),
 			"",
 			func(ctx context.Context) error {
 				return p.Push(ctx)
