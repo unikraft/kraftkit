@@ -31,17 +31,19 @@ import (
 type ListOptions struct {
 	All       bool   `long:"all" usage:"Show everything"`
 	Arch      string `long:"arch" usage:"Set a specific arhitecture to list for"`
-	Plat      string `long:"plat" usage:"Set a specific platform to list for"`
 	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
+	Local     bool   `long:"local" usage:"Show local packages only"`
 	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
 	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Plat      string `long:"plat" usage:"Set a specific platform to list for"`
+	Remote    bool   `long:"remote" short:"u" usage:"Show remote packages only"`
 	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`
 	ShowArchs bool   `long:"archs" short:"M" usage:"Show architectures"`
 	ShowCore  bool   `long:"core" short:"C" usage:"Show Unikraft core versions"`
 	ShowLibs  bool   `long:"libs" short:"L" usage:"Show libraries"`
 	ShowPlats bool   `long:"plats" short:"P" usage:"Show platforms"`
-	Update    bool   `long:"update" short:"u" usage:"Get latest information about components before listing results"`
+	Update    bool   `long:"update" short:"U" usage:"Update package indexes before listing"`
 }
 
 func NewCmd() *cobra.Command {
@@ -71,10 +73,14 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (*ListOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
+	}
+
+	if opts.Local && opts.Remote {
+		return fmt.Errorf("cannot use --local and --remote")
 	}
 
 	cmd.SetContext(ctx)
@@ -111,6 +117,33 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		types = append(types, unikraft.ComponentTypeApp)
 	}
 
+	if opts.Update {
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				"updating",
+				"",
+				func(ctx context.Context) error {
+					return packmanager.G(ctx).Update(ctx)
+				},
+			),
+		)
+		if err != nil {
+			return err
+		}
+		if err := treemodel.Start(); err != nil {
+			return err
+		}
+	}
+
 	packages := make(map[string][]pack.Package)
 
 	// List pacakges part of a project
@@ -138,7 +171,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 		qopts := []packmanager.QueryOption{
-			packmanager.WithRemote(opts.Update),
+			packmanager.WithRemote(opts.Remote),
 			packmanager.WithTypes(types...),
 		}
 
@@ -175,7 +208,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 				processtree.WithHideOnSuccess(true),
 			},
 			processtree.NewProcessTreeItem(
-				"updating index", "",
+				"updating", "",
 				func(ctx context.Context) error {
 					found, err = packmanager.G(ctx).Catalog(ctx, qopts...)
 					if err != nil {
