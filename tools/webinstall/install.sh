@@ -1529,10 +1529,7 @@ install_completions() {
     do_cmd "kraft completion $_inc_shell > $_inc_kraft_config_file"
 
     if printf "%s" "$_inc_arch" | "$GREP" -q "darwin"; then
-        echo 'autoload -Uz compinit' |
-            "$CAT" - "$_inc_kraft_config_file" > .kraft_tmp &&
-            "$MV" .kraft_tmp "$_inc_kraft_config_file"
-        echo 'compinit' |
+        echo 'autoload -Uz compinit\ncompinit' |
             "$CAT" - "$_inc_kraft_config_file" > .kraft_tmp &&
             "$MV" .kraft_tmp "$_inc_kraft_config_file"
     fi
