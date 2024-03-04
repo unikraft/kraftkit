@@ -462,7 +462,7 @@ func (m *manifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 		return len(iRunes) < len(jRunes)
 	})
 
-	log.G(ctx).Tracef("found %d/%d matching manifests in catalog", len(packages), len(manifests))
+	log.G(ctx).Debugf("found %d/%d matching packages in manifest catalog", len(packages), len(manifests))
 
 	return packages, nil
 }
