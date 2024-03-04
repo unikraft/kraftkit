@@ -136,11 +136,11 @@ runs:
       # Always dump the contents of the inputs into relevant files, and simply
       # remove if they do not contain any content.
       touch "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      cat <<'EOF' >> "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       ${{ inputs.before }}
       EOF
       if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/before.sh)" != "" ]; then
-        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       #!/usr/bin/env bash
       ${{ inputs.before }}
       EOF
@@ -150,11 +150,11 @@ runs:
       fi
 
       touch "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
-      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+      cat <<'EOF' >> "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
       ${{ inputs.run }}
       EOF
       if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/run.sh)" != "" ]; then
-        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
+        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
       #!/usr/bin/env bash
       ${{ inputs.run }}
       EOF
@@ -164,11 +164,11 @@ runs:
       fi
 
       touch "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
-      cat <<EOF >> "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+      cat <<'EOF' >> "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
       ${{ inputs.after }}
       EOF
       if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/after.sh)" != "" ]; then
-        cat <<EOF > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
+        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/after.sh"
       #!/usr/bin/env bash
       ${{ inputs.after }}
       EOF
