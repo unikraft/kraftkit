@@ -664,7 +664,7 @@ func (ocipack *ociPackage) Name() string {
 
 // Name implements fmt.Stringer
 func (ocipack *ociPackage) String() string {
-	return fmt.Sprintf("%s (%s/%s)", ocipack.imageRef(), ocipack.Architecture().Name(), ocipack.Platform().Name())
+	return fmt.Sprintf("%s (%s/%s)", ocipack.imageRef(), ocipack.Platform().Name(), ocipack.Architecture().Name())
 }
 
 // Version implements unikraft.Nameable
