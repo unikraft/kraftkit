@@ -93,13 +93,52 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, arg
 
 // Prepare implements Runner.
 func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
+	parallel := !config.G[config.KraftKit](ctx).NoParallel
+	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+
 	qopts := []packmanager.QueryOption{
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 		packmanager.WithName(runner.packName),
 	}
 
+	if len(opts.Architecture) > 0 {
+		qopts = append(qopts, packmanager.WithArchitecture(opts.Architecture))
+	}
+	if len(opts.Platform) > 0 {
+		qopts = append(qopts, packmanager.WithPlatform(opts.Platform))
+	}
+
 	// First try the local cache of the catalog
-	packs, err := runner.pm.Catalog(ctx, qopts...)
+	var packs []pack.Package
+
+	treemodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(parallel),
+			processtree.WithRenderer(norender),
+			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
+		},
+		processtree.NewProcessTreeItem(
+			fmt.Sprintf("finding %s", runner.packName), "",
+			func(ctx context.Context) error {
+				var err error
+				packs, err = runner.pm.Catalog(ctx, qopts...)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		return err
+	}
+	if err := treemodel.Start(); err != nil {
+		return fmt.Errorf("could not complete search: %v", err)
+	}
+
 	if err != nil {
 		return fmt.Errorf("could not query catalog: %w", err)
 	} else if len(packs) == 0 {
@@ -107,9 +146,6 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 
 		// Try again with a remote update request.
 		qopts = append(qopts, packmanager.WithRemote(true))
-
-		parallel := !config.G[config.KraftKit](ctx).NoParallel
-		norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
 		treemodel, err := processtree.NewProcessTree(
 			ctx,
@@ -120,8 +156,9 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 				processtree.WithHideOnSuccess(true),
 			},
 			processtree.NewProcessTreeItem(
-				"searching", "",
+				fmt.Sprintf("finding %s", runner.packName), "",
 				func(ctx context.Context) error {
+					var err error
 					packs, err = runner.pm.Catalog(ctx, qopts...)
 					if err != nil {
 						return err
@@ -141,9 +178,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 
 	var selected pack.Package
 
-	if len(packs) == 0 {
-		return fmt.Errorf("could not find runtime '%s' (%s/%s)", runner.packName, opts.Platform, opts.Architecture)
-	} else if len(packs) == 1 {
+	if len(packs) == 1 {
 		selected = packs[0]
 	} else {
 		found := []pack.Package{}
