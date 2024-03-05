@@ -87,6 +87,7 @@ type PsEntry struct {
 	State   machineapi.MachineState
 	Mem     string
 	Ports   string
+	Pid     int32
 	Arch    string
 	Plat    string
 	IPs     []string
@@ -180,6 +181,7 @@ func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
 			Mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
 			Created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
 			Arch:    machine.Spec.Architecture,
+			Pid:     machine.Status.Pid,
 			Plat:    machine.Spec.Platform,
 			IPs:     []string{},
 		}
@@ -231,9 +233,12 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 	table.AddField("PORTS", cs.Bold)
 	if opts.Long {
 		table.AddField("IP", cs.Bold)
-		table.AddField("ARCH", cs.Bold)
+		table.AddField("PID", cs.Bold)
 	}
 	table.AddField("PLAT", cs.Bold)
+	if opts.Long {
+		table.AddField("ARCH", cs.Bold)
+	}
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
@@ -253,10 +258,13 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 		table.AddField(item.Ports, nil)
 		if opts.Long {
 			table.AddField(strings.Join(item.IPs, ","), nil)
-			table.AddField(item.Arch, nil)
+			table.AddField(fmt.Sprintf("%d", item.Pid), nil)
 			table.AddField(item.Plat, nil)
 		} else {
 			table.AddField(fmt.Sprintf("%s/%s", item.Plat, item.Arch), nil)
+		}
+		if opts.Long {
+			table.AddField(item.Arch, nil)
 		}
 		table.EndRow()
 	}
