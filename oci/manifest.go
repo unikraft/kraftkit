@@ -353,7 +353,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	}
 
 	log.G(ctx).
-		WithField("ref", ref.String()).
+		WithField("ref", ref.Name()).
 		WithField("digest", manifest.desc.Digest.String()).
 		Debug("saving manifest")
 
