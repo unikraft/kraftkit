@@ -11,4 +11,8 @@ type FirecrackerConfig struct {
 	SocketPath string `json:"socketPath,omitempty"`
 	BootArgs   string `json:"bootArgs,omitempty"`
 	LogPath    string `json:"logPath,omitempty"`
+
+	// TODO(craciunouc): This is a temporary solution until we have proper
+	// un/marshalling of the resources (and all structures).
+	Memory string `json:"memory,omitempty"`
 }

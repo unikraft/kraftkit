@@ -153,6 +153,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	fccfg := FirecrackerConfig{
 		SocketPath: filepath.Join(machine.Status.StateDir, "firecracker.sock"),
 		LogPath:    fcLogFile,
+		Memory:     machine.Spec.Resources.Requests.Memory().String(),
 	}
 
 	defer func() {
@@ -440,6 +441,19 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 	if err != nil {
 		return machine, err
 	}
+
+	// Set the cpu and memory resources
+	// TODO(craciunouc): This is a temporary solution until we have proper
+	// un/marshalling of the resources (and all structures).
+	machine.Spec.Resources.Requests[corev1.ResourceCPU] = resource.MustParse("1")
+
+	// Backwards compatibility with older runs
+	memory := "0Mi"
+	if fccfg.Memory != "" {
+		memory = fccfg.Memory
+	}
+
+	machine.Spec.Resources.Requests[corev1.ResourceMemory] = resource.MustParse(memory)
 
 	// Check if the process is alive, which ultimately indicates to us whether we
 	// able to speak to the exposed QMP socket
