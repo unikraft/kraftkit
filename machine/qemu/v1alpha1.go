@@ -704,6 +704,13 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 // Start implements kraftkit.sh/api/machine/v1alpha1.MachineService
 func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	qmpClient, err := service.QMPClient(ctx, machine)
+	if err != nil && strings.HasSuffix(err.Error(), "connect: no such file or directory") {
+		machine, err = service.Create(ctx, machine)
+		if err != nil {
+			return machine, err
+		}
+		qmpClient, err = service.QMPClient(ctx, machine)
+	}
 	if err != nil {
 		return machine, fmt.Errorf("could not start qemu instance: %v", err)
 	}
