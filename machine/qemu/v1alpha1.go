@@ -803,6 +803,19 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		return machine, fmt.Errorf("cannot read QEMU platform configuration from machine status")
 	}
 
+	// Set the cpu and memory resources
+	// TODO(craciunouc): This is a temporary solution until we have proper
+	// un/marshalling of the resources (and all structures).
+	machine.Spec.Resources.Requests[corev1.ResourceCPU] = resource.MustParse("1")
+
+	// Backwards compatibility with older runs
+	memory := "0Mi"
+	if qcfg.Memory.String() != "" {
+		memory = strings.SplitN(qcfg.Memory.String(), "=", 2)[1]
+	}
+
+	machine.Spec.Resources.Requests[corev1.ResourceMemory] = resource.MustParse(memory)
+
 	// Check if the process is alive, which ultimately indicates to us whether we
 	// able to speak to the exposed QMP socket
 	activeProcess := false

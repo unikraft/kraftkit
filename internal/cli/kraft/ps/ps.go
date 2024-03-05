@@ -178,7 +178,7 @@ func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
 			Args:    strings.Join(machine.Spec.ApplicationArgs, " "),
 			Kernel:  machine.Spec.Kernel,
 			State:   machine.Status.State,
-			Mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
+			Mem:     machine.Spec.Resources.Requests.Memory().String(),
 			Created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
 			Arch:    machine.Spec.Architecture,
 			Pid:     machine.Status.Pid,
