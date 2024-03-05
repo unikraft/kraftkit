@@ -94,33 +94,61 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	)
 
 	if opts.All {
-		instances, err := client.WithMetro(opts.metro).List(ctx)
+		instListResp, err := client.WithMetro(opts.metro).List(ctx)
 		if err != nil {
-			return fmt.Errorf("could not get list of all instances: %w", err)
+			return fmt.Errorf("could not list instances: %w", err)
 		}
 
-		for _, instance := range instances {
-			log.G(ctx).Infof("removing %s (%s)", instance.Name, instance.UUID)
+		log.G(ctx).Infof("Removing %d instance(s)", len(instListResp))
 
-			if err := client.WithMetro(opts.metro).DeleteByUUID(ctx, instance.UUID); err != nil {
-				log.G(ctx).Error("could not stop instance: %w", err)
-			}
+		uuids := make([]string, 0, len(instListResp))
+		for _, instItem := range instListResp {
+			uuids = append(uuids, instItem.UUID)
 		}
 
+		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+			return fmt.Errorf("removing %d instance(s): %w", len(instListResp), err)
+		}
 		return nil
 	}
 
+	log.G(ctx).Infof("Removing %d instance(s)", len(args))
+
+	allUUIDs := true
+	allNames := true
 	for _, arg := range args {
-		log.G(ctx).Infof("removing %s", arg)
-
 		if utils.IsUUID(arg) {
-			err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
+			allNames = false
 		} else {
-			err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
+			allUUIDs = false
 		}
+		if !(allUUIDs || allNames) {
+			break
+		}
+	}
 
-		if err != nil {
-			return fmt.Errorf("could not remove instance: %w", err)
+	switch {
+	case allUUIDs:
+		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
+			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
+		}
+	case allNames:
+		if _, err := client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
+			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
+		}
+	default:
+		for _, arg := range args {
+			log.G(ctx).Infof("Removing instance %s", arg)
+
+			if utils.IsUUID(arg) {
+				_, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
+			} else {
+				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
+			}
+
+			if err != nil {
+				return fmt.Errorf("could not remove instance %s: %w", arg, err)
+			}
 		}
 	}
 

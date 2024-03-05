@@ -92,12 +92,12 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 
 	timeout := int(opts.WaitTimeout.Milliseconds())
 	for _, arg := range args {
-		log.G(ctx).Infof("starting %s", arg)
+		log.G(ctx).Infof("Starting %s", arg)
 
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.metro).StartByUUID(ctx, arg, timeout)
+			_, err = client.WithMetro(opts.metro).StartByUUIDs(ctx, timeout, arg)
 		} else {
-			_, err = client.WithMetro(opts.metro).StartByName(ctx, arg, timeout)
+			_, err = client.WithMetro(opts.metro).StartByNames(ctx, timeout, arg)
 		}
 		if err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")

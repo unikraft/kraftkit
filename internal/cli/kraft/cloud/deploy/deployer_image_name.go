@@ -10,13 +10,15 @@ import (
 	"fmt"
 	"strings"
 
+	kcinstances "sdk.kraft.cloud/instances"
+	kcservices "sdk.kraft.cloud/services"
+
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
+	instancecreate "kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type deployerImageName struct {
@@ -68,9 +70,11 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 	return true, nil
 }
 
-func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kraftcloudinstances.Instance, error) {
+func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
 	var err error
-	var instance *kraftcloudinstances.Instance
+
+	var inst *kcinstances.GetResponseItem
+	var sg *kcservices.GetResponseItem
 
 	paramodel, err := processtree.NewProcessTree(
 		ctx,
@@ -87,7 +91,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			"deploying",
 			"",
 			func(ctx context.Context) error {
-				instance, err = create.Create(ctx, &create.CreateOptions{
+				inst, sg, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
 					Env:                    opts.Env,
 					Features:               opts.Features,
 					FQDN:                   opts.FQDN,
@@ -112,12 +116,12 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if err := paramodel.Start(); err != nil {
-		return nil, err
+	if err = paramodel.Start(); err != nil {
+		return nil, nil, err
 	}
 
-	return []kraftcloudinstances.Instance{*instance}, nil
+	return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{*sg}, nil
 }

@@ -79,9 +79,9 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	for _, arg := range args {
 		if utils.IsUUID(arg) {
-			err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
+			_, err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
 		} else {
-			err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
+			_, err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
 		}
 		if err != nil {
 			return fmt.Errorf("could not delete volume: %w", err)

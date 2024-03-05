@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
+	kcinstances "sdk.kraft.cloud/instances"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -28,9 +28,9 @@ type InitOptions struct {
 	Client       kraftcloud.KraftCloud `noattribute:"true"`
 	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)" default:"1000000000"`
 	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
-	MaxSize      uint                  `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
+	MaxSize      int                   `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
 	Metro        string                `noattribute:"true"`
-	MinSize      uint                  `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	MinSize      int                   `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
 	Token        string                `noattribute:"true"`
 	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
@@ -109,40 +109,48 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("cooldown time must be at least 1ms")
 	}
 
-	master := &kraftcloudinstances.Instance{}
+	var master kcautoscale.CreateRequestMaster
 
 	if opts.Master == "" {
 		if config.G[config.KraftKit](ctx).NoPrompt {
 			return fmt.Errorf("specify an instance master UUID or name via --master")
 		}
 
-		instances, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
+		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
-
-		if len(instances) == 0 {
-			return fmt.Errorf("no instances found in service group")
+		if len(instListResp) == 0 {
+			return fmt.Errorf("no instance found in service group")
 		}
 
-		if len(instances) == 1 {
-			master.UUID = instances[0].UUID
+		if len(instListResp) == 1 {
+			master.UUID = &instListResp[0].UUID
 		} else {
-			var possible []kraftcloudinstances.Instance
+			var possible []stringerInstance
 
-			for _, instance := range instances {
-				if instance.ServiceGroup == nil {
-					continue
-				}
-
-				if instance.ServiceGroup.UUID != args[0] {
-					continue
-				}
-
-				possible = append(possible, instance)
+			uuids := make([]string, 0, len(instListResp))
+			for _, instItem := range instListResp {
+				uuids = append(uuids, instItem.UUID)
 			}
 
-			result, err := selection.Select[kraftcloudinstances.Instance](
+			instances, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, uuids...)
+			if err != nil {
+				return fmt.Errorf("getting details of %d instance(s): %w", len(instListResp), err)
+			}
+
+			for _, inst := range instances {
+				if inst.ServiceGroup == nil {
+					continue
+				}
+				if inst.ServiceGroup.UUID != args[0] {
+					continue
+				}
+
+				possible = append(possible, stringerInstance{&inst})
+			}
+
+			result, err := selection.Select[stringerInstance](
 				"select master instance",
 				possible...,
 			)
@@ -150,39 +158,48 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 				return fmt.Errorf("could not select master instance: %w", err)
 			}
 
-			master.UUID = result.UUID
+			master.UUID = &result.UUID
 		}
 	} else {
 		if utils.IsUUID(opts.Master) {
-			master.UUID = opts.Master
+			master.UUID = &opts.Master
 		} else {
-			master.Name = opts.Master
+			master.Name = &opts.Master
 		}
 	}
 
-	conf := kraftcloudautoscale.AutoscaleConfiguration{
-		UUID:           args[0],
-		MinSize:        opts.MinSize,
-		MaxSize:        opts.MaxSize,
-		WarmupTimeMs:   uint(opts.WarmupTime.Milliseconds()),
-		CooldownTimeMs: uint(opts.CooldownTime.Milliseconds()),
-		Master:         master,
+	req := kcautoscale.CreateRequest{
+		UUID:   &args[0],
+		Master: master,
+	}
+	if opts.MinSize > 0 {
+		req.MinSize = &opts.MinSize
+	}
+	if opts.MaxSize > 0 {
+		req.MaxSize = &opts.MaxSize
+	}
+	if opts.WarmupTime > 0 {
+		warmupTimeMs := int(opts.WarmupTime.Milliseconds())
+		req.WarmupTimeMs = &warmupTimeMs
+	}
+	if opts.CooldownTime > 0 {
+		cooldownTimeMs := int(opts.CooldownTime.Milliseconds())
+		req.CooldownTimeMs = &cooldownTimeMs
 	}
 
-	if utils.IsUUID(args[0]) {
-		_, err = opts.Client.
-			Autoscale().
-			WithMetro(opts.Metro).
-			CreateConfigurationByUUID(ctx, args[0], conf)
-	} else {
-		_, err = opts.Client.
-			Autoscale().
-			WithMetro(opts.Metro).
-			CreateConfigurationByName(ctx, args[0], conf)
-	}
-	if err != nil {
+	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).CreateConfiguration(ctx, req); err != nil {
 		return fmt.Errorf("could not create configuration: %w", err)
 	}
-
 	return nil
+}
+
+type stringerInstance struct {
+	*kcinstances.GetResponseItem
+}
+
+var _ fmt.Stringer = (*stringerInstance)(nil)
+
+// String implements fmt.Stringer.
+func (i stringerInstance) String() string {
+	return i.Name
 }

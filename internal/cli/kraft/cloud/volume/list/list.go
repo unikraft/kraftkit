@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -73,10 +74,19 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	volumes, err := client.WithMetro(opts.metro).List(ctx)
+	volListResp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list volumes: %w", err)
 	}
 
-	return utils.PrintVolumes(ctx, opts.Output, volumes...)
+	vols := make([]kcvolumes.GetResponseItem, 0, len(volListResp))
+	for _, volItem := range volListResp {
+		v, err := client.WithMetro(opts.metro).GetByUUID(ctx, volItem.UUID)
+		if err != nil {
+			return fmt.Errorf("getting details of volume %s: %w", volItem.UUID, err)
+		}
+		vols = append(vols, *v)
+	}
+
+	return utils.PrintVolumes(ctx, opts.Output, vols...)
 }

@@ -17,8 +17,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
-	kraftcloudservices "sdk.kraft.cloud/services"
+	kcinstances "sdk.kraft.cloud/instances"
+	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -33,9 +33,9 @@ type CreateOptions struct {
 	Features               []string              `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
 	Image                  string                `noattribute:"true"`
-	Memory                 int64                 `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
+	Memory                 int                   `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
 	Metro                  string                `noattribute:"true"`
-	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
+	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
 	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
@@ -48,7 +48,7 @@ type CreateOptions struct {
 }
 
 // Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftcloudinstances.Instance, error) {
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstances.GetResponseItem, *kcservices.GetResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -58,7 +58,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 	if opts.Auth == nil {
 		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
+			return nil, nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 	if opts.Client == nil {
@@ -67,37 +67,43 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		)
 	}
 
-	var features []kraftcloudinstances.InstanceFeature
+	var features []kcinstances.Feature
 
 	if opts.ScaleToZero {
-		features = append(features, kraftcloudinstances.FeatureScaleToZero)
+		features = append(features, kcinstances.FeatureScaleToZero)
 	}
 
 	for _, feature := range opts.Features {
-		formattedFeature := kraftcloudinstances.InstanceFeature(feature)
+		formattedFeature := kcinstances.Feature(feature)
 		if !slices.Contains(features, formattedFeature) {
 			features = append(features, formattedFeature)
 		}
 	}
 
-	req := kraftcloudinstances.CreateInstanceRequest{
-		Args:      args,
-		Autostart: opts.Start,
-		Env:       make(map[string]string),
+	req := kcinstances.CreateRequest{
+		Autostart: &opts.Start,
 		Features:  features,
 		Image:     opts.Image,
-		MemoryMB:  opts.Memory,
-		Name:      opts.Name,
-		Replicas:  opts.Replicas,
-		Volumes:   []kraftcloudinstances.CreateInstanceVolumeRequest{},
+	}
+	if opts.Name != "" {
+		req.Name = &opts.Name
+	}
+	if len(args) > 0 {
+		req.Args = args
+	}
+	if opts.Memory > 0 {
+		req.MemoryMB = &opts.Memory
+	}
+	if opts.Replicas > 0 {
+		req.MemoryMB = &opts.Replicas
 	}
 
 	for _, vol := range opts.Volumes {
 		split := strings.Split(vol, ":")
 		if len(split) < 2 || len(split) > 3 {
-			return nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
+			return nil, nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
 		}
-		volume := kraftcloudinstances.CreateInstanceVolumeRequest{
+		volume := kcinstances.CreateRequestVolume{
 			At: split[1],
 		}
 		if utils.IsUUID(split[0]) {
@@ -106,89 +112,90 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 			volume.Name = split[0]
 		}
 		if len(split) == 3 && split[2] == "ro" {
-			volume.ReadOnly = true
+			trueVal := true
+			volume.ReadOnly = &trueVal
 		} else {
-			volume.ReadOnly = false
+			falseVal := false
+			volume.ReadOnly = &falseVal
 		}
 
 		req.Volumes = append(req.Volumes, volume)
 	}
 
-	var serviceGroup *kraftcloudservices.ServiceGroup
+	var serviceGroup *kcservices.GetResponseItem
 
-	if len(opts.ServiceGroupNameOrUUID) > 0 {
+	if opts.ServiceGroupNameOrUUID != "" {
 		if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
 			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
 		} else {
 			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, opts.ServiceGroupNameOrUUID)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("could not use service '%s': %w", opts.ServiceGroupNameOrUUID, err)
+			return nil, nil, fmt.Errorf("could not use service '%s': %w", opts.ServiceGroupNameOrUUID, err)
 		}
 
 		log.G(ctx).
 			WithField("uuid", serviceGroup.UUID).
 			Debug("using service group")
 
-		req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
-			UUID: serviceGroup.UUID,
+		req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+			UUID: &serviceGroup.UUID,
 		}
 	}
 
 	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
 	// supports updating service groups.
-	if len(opts.ServiceGroupNameOrUUID) > 0 && len(opts.Ports) > 0 {
-		return nil, fmt.Errorf("cannot use existing --service-group|-g and define new --port|-p")
+	if opts.ServiceGroupNameOrUUID != "" && len(opts.Ports) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --port|-p")
 	}
 
-	services := []kraftcloudservices.Service{}
+	var services []kcservices.CreateRequestService
 
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+			return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
 		}
 
 		destPort, err := strconv.Atoi(split[1])
 		if err != nil {
-			return nil, fmt.Errorf("invalid external port: %w", err)
+			return nil, nil, fmt.Errorf("invalid external port: %w", err)
 		}
 
-		services = []kraftcloudservices.Service{
+		port443 := 443
+		services = []kcservices.CreateRequestService{
 			{
 				Port:            443,
-				DestinationPort: destPort,
-				Handlers: []kraftcloudservices.Handler{
-					kraftcloudservices.HandlerHTTP,
-					kraftcloudservices.HandlerTLS,
+				DestinationPort: &destPort,
+				Handlers: []kcservices.Handler{
+					kcservices.HandlerHTTP,
+					kcservices.HandlerTLS,
 				},
 			},
 			{
 				Port:            80,
-				DestinationPort: 443,
-				Handlers: []kraftcloudservices.Handler{
-					kraftcloudservices.HandlerHTTP,
-					kraftcloudservices.HandlerRedirect,
+				DestinationPort: &port443,
+				Handlers: []kcservices.Handler{
+					kcservices.HandlerHTTP,
+					kcservices.HandlerRedirect,
 				},
 			},
 		}
 
 	} else {
 		for _, port := range opts.Ports {
-			service := kraftcloudservices.Service{
-				Handlers: []kraftcloudservices.Handler{},
-			}
+			var service kcservices.CreateRequestService
 
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
 				if len(split) != 2 {
-					return nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+					return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
-					h := kraftcloudservices.Handler(handler)
-					if !slices.Contains(kraftcloudservices.Handlers(), h) {
-						return nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, kraftcloudservices.Handlers())
+					h := kcservices.Handler(handler)
+					if !slices.Contains(kcservices.Handlers(), h) {
+						return nil, nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, kcservices.Handlers())
 					}
 
 					service.Handlers = append(service.Handlers, h)
@@ -200,26 +207,27 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 			if strings.ContainsRune(port, ':') {
 				ports := strings.Split(port, ":")
 				if len(ports) != 2 {
-					return nil, fmt.Errorf("invalid --port value expected --port EXTERNAL:INTERNAL")
+					return nil, nil, fmt.Errorf("invalid --port value expected --port EXTERNAL:INTERNAL")
 				}
 
 				service.Port, err = strconv.Atoi(ports[0])
 				if err != nil {
-					return nil, fmt.Errorf("invalid internal port: %w", err)
+					return nil, nil, fmt.Errorf("invalid internal port: %w", err)
 				}
 
-				service.DestinationPort, err = strconv.Atoi(ports[1])
+				dstPort, err := strconv.Atoi(ports[1])
 				if err != nil {
-					return nil, fmt.Errorf("invalid external port: %w", err)
+					return nil, nil, fmt.Errorf("invalid external port: %w", err)
 				}
+				service.DestinationPort = &dstPort
 			} else {
 				port, err := strconv.Atoi(port)
 				if err != nil {
-					return nil, fmt.Errorf("could not parse port number: %w", err)
+					return nil, nil, fmt.Errorf("could not parse port number: %w", err)
 				}
 
 				service.Port = port
-				service.DestinationPort = port
+				service.DestinationPort = &port
 			}
 
 			services = append(services, service)
@@ -228,31 +236,32 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 
 	if len(opts.ServiceGroupNameOrUUID) == 0 {
 		if len(services) > 0 {
-			req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
+			req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 				Services: services,
 			}
 		}
-		if len(opts.SubDomain) > 0 {
+		if opts.SubDomain != "" {
+			dnsName := strings.TrimSuffix(opts.SubDomain, ".")
 			if req.ServiceGroup == nil {
-				req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
-					DNSName:  strings.TrimSuffix(opts.SubDomain, "."),
+				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+					DNSName:  &dnsName,
 					Services: services,
 				}
 			} else {
-				req.ServiceGroup.DNSName = strings.TrimSuffix(opts.SubDomain, ".")
+				req.ServiceGroup.DNSName = &dnsName
 			}
-		} else if len(opts.FQDN) > 0 {
+		} else if opts.FQDN != "" {
 			if !strings.HasSuffix(".", opts.FQDN) {
 				opts.FQDN += "."
 			}
 
 			if req.ServiceGroup == nil {
-				req.ServiceGroup = &kraftcloudinstances.CreateInstanceServiceGroupRequest{
-					DNSName:  opts.FQDN,
+				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+					DNSName:  &opts.FQDN,
 					Services: services,
 				}
 			} else {
-				req.ServiceGroup.DNSName = opts.FQDN
+				req.ServiceGroup.DNSName = &opts.FQDN
 			}
 		}
 	}
@@ -266,27 +275,23 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftclo
 		}
 	}
 
-	instance, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+	newInstance, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// Due to a limitation of the API, hydrate the object.
-	instance, err = opts.Client.Instances().WithMetro(opts.Metro).GetByUUID(ctx, instance.UUID)
+	instances, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, newInstance.UUID)
 	if err != nil {
-		return instance, err
+		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
-	if instance.ServiceGroup != nil && len(instance.ServiceGroup.UUID) > 0 {
-		serviceGroup, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, instance.ServiceGroup.UUID)
-		if err != nil {
-			return nil, err
+	if sg := instances[0].ServiceGroup; sg != nil && sg.UUID != "" {
+		if serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, sg.UUID); err != nil {
+			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}
-
-		instance.ServiceGroup = serviceGroup
 	}
 
-	return instance, nil
+	return &instances[0], serviceGroup, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -348,9 +353,9 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	domain := cmd.Flag("domain").Value.String()
-	if len(domain) > 0 && len(opts.FQDN) > 0 {
+	if domain != "" && opts.FQDN != "" {
 		return fmt.Errorf("cannot use --domain and --fqdn together")
-	} else if len(domain) > 0 && len(opts.FQDN) == 0 {
+	} else if domain != "" && opts.FQDN == "" {
 		opts.FQDN = domain
 	}
 
@@ -361,7 +366,7 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	opts.Image = args[0]
 
-	instance, err := Create(ctx, opts, args[1:]...)
+	instance, serviceGroup, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
 	}
@@ -369,7 +374,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	if opts.Output != "table" && opts.Output != "full" {
 		return utils.PrintInstances(ctx, opts.Output, *instance)
 	}
-	utils.PrettyPrintInstance(ctx, instance, opts.Start)
+	utils.PrettyPrintInstance(ctx, instance, serviceGroup, opts.Start)
 
 	return nil
 }

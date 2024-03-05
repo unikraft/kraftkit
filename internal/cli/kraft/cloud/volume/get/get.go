@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -83,16 +82,15 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var volumes *kraftcloudvolumes.Volume
-	var volerr error
-	if _, err := uuid.Parse(args[0]); err == nil {
-		volumes, volerr = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+	var vol *kraftcloudvolumes.GetResponseItem
+	if utils.IsUUID(args[0]) {
+		vol, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
 	} else {
-		volumes, volerr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		vol, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
-	if volerr != nil {
-		return fmt.Errorf("could not get volume: %w", volerr)
+	if err != nil {
+		return fmt.Errorf("could not get volume: %w", err)
 	}
 
-	return utils.PrintVolumes(ctx, opts.Output, *volumes)
+	return utils.PrintVolumes(ctx, opts.Output, *vol)
 }

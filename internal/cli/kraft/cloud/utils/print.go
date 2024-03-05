@@ -8,6 +8,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,11 +20,11 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 
-	kraftcloudinstances "sdk.kraft.cloud/instances"
-	kraftcloudservices "sdk.kraft.cloud/services"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
-	kraftcloudusers "sdk.kraft.cloud/users"
-	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+	kcinstances "sdk.kraft.cloud/instances"
+	kcservices "sdk.kraft.cloud/services"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
+	kcusers "sdk.kraft.cloud/users"
+	kcvolumes "sdk.kraft.cloud/volumes"
 )
 
 type colorFunc func(string) string
@@ -49,7 +50,7 @@ var (
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
-func PrintInstances(ctx context.Context, format string, instances ...kraftcloudinstances.Instance) error {
+func PrintInstances(ctx context.Context, format string, instances ...kcinstances.GetResponseItem) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -148,7 +149,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 			}
 		}
 
-		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUS)/1000), nil)
+		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUs)/1000), nil)
 
 		table.EndRow()
 	}
@@ -158,7 +159,7 @@ func PrintInstances(ctx context.Context, format string, instances ...kraftcloudi
 
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
-func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolumes.Volume) error {
+func PrintVolumes(ctx context.Context, format string, volumes ...kcvolumes.GetResponseItem) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -210,8 +211,8 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolum
 		table.AddField(humanize.IBytes(uint64(volume.SizeMB)*humanize.MiByte), nil)
 
 		var attachedTo []string
-		for _, instance := range volume.AttachedTo {
-			attachedTo = append(attachedTo, instance.Name)
+		for _, attch := range volume.AttachedTo {
+			attachedTo = append(attachedTo, attch.Name)
 		}
 
 		table.AddField(strings.Join(attachedTo, ","), nil)
@@ -224,9 +225,9 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kraftcloudvolum
 	return table.Render(iostreams.G(ctx).Out)
 }
 
-// PrintAutoscaleConfigurations pretty-prints the provided set of autoscale configurations or returns
+// PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
-func PrintAutoscaleConfigurations(ctx context.Context, format string, autoscaleConfigurations ...kraftcloudautoscale.AutoscaleConfiguration) error {
+func PrintAutoscaleConfiguration(ctx context.Context, format string, aconf kcautoscale.GetResponseItem) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -249,56 +250,80 @@ func PrintAutoscaleConfigurations(ctx context.Context, format string, autoscaleC
 	}
 	table.AddField("NAME", cs.Bold)
 	table.AddField("ENABLED", cs.Bold)
-	table.AddField("MIN SIZE", cs.Bold)
-	table.AddField("MAX SIZE", cs.Bold)
-	table.AddField("WARMUP (MS)", cs.Bold)
-	table.AddField("COOLDOWN (MS)", cs.Bold)
-	table.AddField("MASTER", cs.Bold)
+	var minSizeStr string
+	if aconf.MinSize != nil {
+		table.AddField("MIN SIZE", cs.Bold)
+		minSizeStr = strconv.Itoa(*aconf.MinSize)
+	}
+	var maxSizeStr string
+	if aconf.MaxSize != nil {
+		table.AddField("MAX SIZE", cs.Bold)
+		maxSizeStr = strconv.Itoa(*aconf.MaxSize)
+	}
+	var warmupStr string
+	if aconf.WarmupTimeMs != nil {
+		table.AddField("WARMUP (MS)", cs.Bold)
+		warmupStr = strconv.Itoa(*aconf.WarmupTimeMs)
+	}
+	var cooldownStr string
+	if aconf.CooldownTimeMs != nil {
+		table.AddField("COOLDOWN (MS)", cs.Bold)
+		cooldownStr = strconv.Itoa(*aconf.CooldownTimeMs)
+	}
+	var masterStr string
+	if aconf.Master != nil {
+		table.AddField("MASTER", cs.Bold)
+		if aconf.Master.UUID != "" {
+			masterStr = aconf.Master.UUID
+		} else if aconf.Master.Name != "" {
+			masterStr = aconf.Master.Name
+		}
+	}
 	table.AddField("POLICIES", cs.Bold)
 	table.EndRow()
 
-	for _, aconf := range autoscaleConfigurations {
-		if format != "table" {
-			table.AddField(aconf.UUID, nil)
-		}
-
-		table.AddField(aconf.Name, nil)
-		table.AddField(fmt.Sprintf("%t", aconf.Enabled), nil)
-		table.AddField(fmt.Sprintf("%d", aconf.MinSize), nil)
-		table.AddField(fmt.Sprintf("%d", aconf.MaxSize), nil)
-		table.AddField(fmt.Sprintf("%d", aconf.WarmupTimeMs), nil)
-		table.AddField(fmt.Sprintf("%d", aconf.CooldownTimeMs), nil)
-		if aconf.Master == nil {
-			table.AddField("n/a", nil)
-		} else {
-			if aconf.Master.UUID != "" {
-				table.AddField(aconf.Master.UUID, nil)
-			} else if aconf.Master.Name != "" {
-				table.AddField(aconf.Master.Name, nil)
-			}
-		}
-
-		var policies []string
-		for _, policy := range aconf.Policies {
-			name, ok := policy["name"].(string)
-			if !ok {
-				continue
-			}
-
-			policies = append(policies, name)
-		}
-
-		table.AddField(strings.Join(policies, ";"), nil)
-
-		table.EndRow()
+	if format != "table" {
+		table.AddField(aconf.UUID, nil)
 	}
+
+	table.AddField(aconf.Name, nil)
+	table.AddField(fmt.Sprint(aconf.Enabled), nil)
+	if aconf.MinSize != nil {
+		table.AddField(fmt.Sprint(minSizeStr), nil)
+	}
+	if aconf.MaxSize != nil {
+		table.AddField(fmt.Sprint(maxSizeStr), nil)
+	}
+	if aconf.WarmupTimeMs != nil {
+		table.AddField(fmt.Sprint(warmupStr), nil)
+	}
+	if aconf.CooldownTimeMs != nil {
+		table.AddField(fmt.Sprint(cooldownStr), nil)
+	}
+	if aconf.Master != nil {
+		table.AddField(fmt.Sprint(masterStr), nil)
+	}
+
+	var policies []string
+	for _, policy := range aconf.Policies {
+		name := "<unknown>"
+		switch policy.Type() {
+		case kcautoscale.PolicyTypeStep:
+			name = policy.(*kcautoscale.StepPolicy).Name
+		}
+		policies = append(policies, name)
+	}
+
+	table.AddField(strings.Join(policies, ";"), nil)
+
+	table.EndRow()
 
 	return table.Render(iostreams.G(ctx).Out)
 }
 
 // PrintServiceGroups pretty-prints the provided set of service groups or returns
 // an error if unable to send to stdout via the provided context.
-func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kraftcloudservices.ServiceGroup) error {
+func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcservices.GetResponseItem) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -372,7 +397,7 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kra
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Quotas) error {
+func PrintQuotas(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
 	if err := iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -426,7 +451,7 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 
 // PrintLimits pretty-prints the provided set of user limits or returns
 // an error if unable to send to stdout via the provided context.
-func PrintLimits(ctx context.Context, format string, quotas ...kraftcloudusers.Quotas) error {
+func PrintLimits(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
 	if err := iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -484,12 +509,12 @@ func PrintLimits(ctx context.Context, format string, quotas ...kraftcloudusers.Q
 }
 
 // PrettyPrintInstance outputs a single instance and information about it.
-func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Instance, autoStart bool) {
+func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseItem, serviceGroup *kcservices.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
 	fqdn := instance.FQDN
 
-	if instance.ServiceGroup != nil && len(fqdn) > 0 {
-		for _, port := range instance.ServiceGroup.Services {
+	if serviceGroup != nil && fqdn != "" {
+		for _, port := range serviceGroup.Services {
 			if port.Port == 443 {
 				fqdn = "https://" + fqdn
 				break
@@ -550,7 +575,7 @@ func PrettyPrintInstance(ctx context.Context, instance *kraftcloudinstances.Inst
 	if instance.State != "starting" {
 		entries = append(entries, fancymap.FancyMapEntry{
 			Key:   "boot time",
-			Value: fmt.Sprintf("%.2f ms", float64(instance.BootTimeUS)/1000),
+			Value: fmt.Sprintf("%.2f ms", float64(instance.BootTimeUs)/1000),
 		})
 	}
 

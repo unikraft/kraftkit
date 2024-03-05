@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	kcinstances "sdk.kraft.cloud/instances"
+	kcservices "sdk.kraft.cloud/services"
+
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui/processtree"
-
-	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type deployerKraftfileRuntime struct {
@@ -68,7 +69,7 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	return true, nil
 }
 
-func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kraftcloudinstances.Instance, error) {
+func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
 	var pkgName string
 
 	if len(opts.Name) > 0 {
@@ -110,7 +111,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Workdir:      opts.Workdir,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not package: %w", err)
+		return nil, nil, fmt.Errorf("could not package: %w", err)
 	}
 
 	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
@@ -133,7 +134,8 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		digest = m.Value
 	}
 
-	var instance *kraftcloudinstances.Instance
+	var inst *kcinstances.GetResponseItem
+	var sg *kcservices.GetResponseItem
 
 	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer deployCancel()
@@ -199,7 +201,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
 					defer cancel()
 
-					instance, err = create.Create(ctxTimeout, &create.CreateOptions{
+					inst, sg, err = create.Create(ctxTimeout, &create.CreateOptions{
 						Env:                    opts.Env,
 						FQDN:                   opts.FQDN,
 						Image:                  pkgName,
@@ -230,12 +232,12 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := paramodel.Start(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return []kraftcloudinstances.Instance{*instance}, nil
+	return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{*sg}, nil
 }

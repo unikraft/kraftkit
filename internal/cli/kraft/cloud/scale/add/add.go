@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -165,36 +165,25 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	stepsAPI := []kraftcloudautoscale.AutoscaleStepPolicyStep{}
+	stepPol := kcautoscale.StepPolicy{
+		Name:           opts.Name,
+		Metric:         kcautoscale.PolicyMetric(opts.Metric),
+		AdjustmentType: kcautoscale.AdjustmentType(opts.Adjustment),
+	}
 	for _, step := range steps {
-		var stepAPI kraftcloudautoscale.AutoscaleStepPolicyStep
-
-		stepAPI.Adjustment = &step.Adjustment
-
+		s := kcautoscale.Step{
+			Adjustment: step.Adjustment,
+		}
 		if !step.LowerEmpty {
-			stepAPI.LowerBound = &step.LowerBound
+			s.LowerBound = &step.LowerBound
 		}
-
 		if !step.UpperEmpty {
-			stepAPI.UpperBound = &step.UpperBound
+			s.UpperBound = &step.UpperBound
 		}
-
-		stepsAPI = append(stepsAPI, stepAPI)
+		stepPol.Steps = append(stepPol.Steps, s)
 	}
 
-	if _, err := opts.Client.
-		Autoscale().
-		WithMetro(opts.Metro).
-		CreatePolicy(ctx,
-			args[0],
-			kraftcloudautoscale.AutoscalePolicyTypeStep,
-			&kraftcloudautoscale.AutoscaleStepPolicy{
-				Name:           opts.Name,
-				AdjustmentType: kraftcloudautoscale.AutoscaleAdjustmentType(opts.Adjustment),
-				Metric:         kraftcloudautoscale.AutoscalePolicyMetric(opts.Metric),
-				Steps:          stepsAPI,
-			},
-		); err != nil {
+	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, args[0], stepPol); err != nil {
 		return fmt.Errorf("could not add configuration: %w", err)
 	}
 

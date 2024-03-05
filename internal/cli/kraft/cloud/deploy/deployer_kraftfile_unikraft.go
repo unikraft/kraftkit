@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	kcinstances "sdk.kraft.cloud/instances"
+	kcservices "sdk.kraft.cloud/services"
+
 	"kraftkit.sh/internal/cli/kraft/build"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
 )
 
 type deployerKraftfileUnikraft struct {
@@ -45,7 +47,7 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 	return true, nil
 }
 
-func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kraftcloudinstances.Instance, error) {
+func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
 	if err := build.Build(ctx, &build.BuildOptions{
 		Architecture: "x86_64",
 		DotConfig:    opts.DotConfig,
@@ -62,10 +64,9 @@ func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *Dep
 		SaveBuildLog: opts.SaveBuildLog,
 		Workdir:      opts.Workdir,
 	}); err != nil {
-		return nil, fmt.Errorf("could not complete build: %w", err)
+		return nil, nil, fmt.Errorf("could not complete build: %w", err)
 	}
 
 	// Re-use the runtime deployer, which also handles packaging.
-	runtimeDeployer := &deployerKraftfileRuntime{}
-	return runtimeDeployer.Deploy(ctx, opts, args...)
+	return (*deployerKraftfileRuntime)(nil).Deploy(ctx, opts, args...)
 }

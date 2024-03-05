@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,16 +22,16 @@ import (
 )
 
 type CreateOptions struct {
-	Auth   *config.AuthConfig               `noattribute:"true"`
-	Client kraftcloudvolumes.VolumesService `noattribute:"true"`
-	Metro  string                           `noattribute:"true"`
-	Name   string                           `local:"true" size:"name" short:"n"`
-	SizeMB int                              `local:"true" long:"size" short:"s" usage:"Size in MB"`
-	Token  string                           `noattribute:"true"`
+	Auth   *config.AuthConfig       `noattribute:"true"`
+	Client kcvolumes.VolumesService `noattribute:"true"`
+	Metro  string                   `noattribute:"true"`
+	Name   string                   `local:"true" size:"name" short:"n"`
+	SizeMB int                      `local:"true" long:"size" short:"s" usage:"Size in MB"`
+	Token  string                   `noattribute:"true"`
 }
 
 // Create a KraftCloud persistent volume.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kraftcloudvolumes.Volume, error) {
+func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -91,8 +91,8 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
-	volume, err := Create(ctx, opts, args...)
+func (opts *CreateOptions) Run(ctx context.Context, _ []string) error {
+	volume, err := Create(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("could not create volume: %w", err)
 	}

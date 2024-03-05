@@ -10,11 +10,10 @@ import (
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudservices "sdk.kraft.cloud/services"
+	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -80,16 +79,15 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var services *kraftcloudservices.ServiceGroup
-	var volerr error
-	if _, err := uuid.Parse(args[0]); err == nil {
-		services, volerr = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+	var sg *kcservices.GetResponseItem
+	if utils.IsUUID(args[0]) {
+		sg, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
 	} else {
-		services, volerr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		sg, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
-	if volerr != nil {
-		return fmt.Errorf("could not get service: %w", volerr)
+	if err != nil {
+		return fmt.Errorf("could not get service: %w", err)
 	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *services)
+	return utils.PrintServiceGroups(ctx, opts.Output, *sg)
 }

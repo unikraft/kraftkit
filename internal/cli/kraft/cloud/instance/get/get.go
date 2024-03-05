@@ -10,11 +10,10 @@ import (
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudinstances "sdk.kraft.cloud/instances"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -83,16 +82,15 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var instances *kraftcloudinstances.Instance
-	var insterr error
-	if _, err := uuid.Parse(args[0]); err == nil {
-		instances, insterr = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+	var instances []kcinstances.GetResponseItem
+	if utils.IsUUID(args[0]) {
+		instances, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
 	} else {
-		instances, insterr = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		instances, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
 	}
-	if insterr != nil {
-		return fmt.Errorf("could not get instance: %w", insterr)
+	if err != nil {
+		return fmt.Errorf("could not get instance: %w", err)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, *instances)
+	return utils.PrintInstances(ctx, opts.Output, instances...)
 }

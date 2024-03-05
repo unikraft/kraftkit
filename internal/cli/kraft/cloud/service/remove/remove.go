@@ -98,7 +98,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		for _, group := range groups {
 			log.G(ctx).Infof("removing %s (%s)", group.Name, group.UUID)
 
-			if err := opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, group.UUID); err != nil {
+			if _, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, group.UUID); err != nil {
 				log.G(ctx).Errorf("could not delete service group: %s", err.Error())
 			}
 		}
@@ -108,9 +108,9 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		log.G(ctx).Infof("removing %s", arg)
 
 		if utils.IsUUID(arg) {
-			err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, arg)
+			_, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, arg)
 		} else {
-			err = opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg)
+			_, err = opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg)
 		}
 		if err != nil {
 			return fmt.Errorf("could not delete service group: %w", err)

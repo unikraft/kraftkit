@@ -115,7 +115,6 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	table.AddField("NAME", cs.Bold)
 	table.AddField("VERSION", cs.Bold)
 	if opts.Output != "table" {
-		table.AddField("PUBLIC", cs.Bold)
 		table.AddField("ARGS", cs.Bold)
 	}
 	table.AddField("SIZE", cs.Bold)
@@ -150,7 +149,6 @@ imgloop:
 		table.AddField(strings.Join(versions, ", "), nil)
 
 		if opts.Output != "table" {
-			table.AddField(fmt.Sprintf("%v", image.Public), nil)
 			table.AddField(image.Args, nil)
 		}
 

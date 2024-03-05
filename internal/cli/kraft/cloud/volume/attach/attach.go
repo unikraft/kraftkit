@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,17 +22,17 @@ import (
 )
 
 type AttachOptions struct {
-	At     string                           `long:"at" usage:"The path the volume should be mounted to"`
-	Auth   *config.AuthConfig               `noattribute:"true"`
-	Client kraftcloudvolumes.VolumesService `noattribute:"true"`
-	To     string                           `long:"to" usage:"The instance the volume should be attached to"`
+	At     string                   `long:"at" usage:"The path the volume should be mounted to"`
+	Auth   *config.AuthConfig       `noattribute:"true"`
+	Client kcvolumes.VolumesService `noattribute:"true"`
+	To     string                   `long:"to" usage:"The instance the volume should be attached to"`
 
 	metro string
 	token string
 }
 
 // Attach a KraftCloud persistent volume to an instance.
-func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kraftcloudvolumes.Volume, error) {
+func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolumes.AttachResponseItem, error) {
 	var err error
 
 	if opts == nil {

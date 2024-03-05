@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -137,7 +137,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		return nil
 
 	} else {
-		var autoscale *kraftcloudautoscale.AutoscaleConfiguration
+		var autoscale *kcautoscale.GetResponseItem
 		if utils.IsUUID(args[0]) {
 			autoscale, err = opts.Client.Autoscale().WithMetro(opts.Metro).GetConfigurationByUUID(ctx, args[0])
 		} else {
@@ -147,6 +147,6 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
 
-		return utils.PrintAutoscaleConfigurations(ctx, opts.Output, *autoscale)
+		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, *autoscale)
 	}
 }

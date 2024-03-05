@@ -6,12 +6,14 @@ package logs
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -81,18 +83,23 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var logs string
+	var resp *kcinstances.ConsoleResponseItem
 
 	if utils.IsUUID(args[0]) {
-		logs, err = client.WithMetro(opts.metro).LogsByUUID(ctx, args[0], opts.Tail, true)
+		resp, err = client.WithMetro(opts.metro).ConsoleByUUID(ctx, args[0], opts.Tail, true)
 	} else {
-		logs, err = client.WithMetro(opts.metro).LogsByName(ctx, args[0], opts.Tail, true)
+		resp, err = client.WithMetro(opts.metro).ConsoleByName(ctx, args[0], opts.Tail, true)
 	}
 	if err != nil {
 		return fmt.Errorf("could not retrieve logs: %w", err)
 	}
 
-	fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", logs)
+	output, err := base64.StdEncoding.DecodeString(resp.Output)
+	if err != nil {
+		return fmt.Errorf("decoding base64 console output: %w", err)
+	}
+
+	fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", output)
 
 	return nil
 }

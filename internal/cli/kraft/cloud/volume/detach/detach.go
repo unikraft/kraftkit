@@ -76,7 +76,7 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	var volume *kraftcloudvolumes.Volume
+	var volume *kraftcloudvolumes.DetachResponseItem
 
 	if utils.IsUUID(args[0]) {
 		volume, err = opts.Client.WithMetro(opts.metro).DetachByUUID(ctx, args[0])

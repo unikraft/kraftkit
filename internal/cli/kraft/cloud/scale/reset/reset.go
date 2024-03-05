@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -21,10 +21,10 @@ import (
 )
 
 type ResetOptions struct {
-	Auth   *config.AuthConfig                   `noattribute:"true"`
-	Client kraftcloudautoscale.AutoscaleService `noattribute:"true"`
-	Metro  string                               `noattribute:"true"`
-	Token  string                               `noattribute:"true"`
+	Auth   *config.AuthConfig           `noattribute:"true"`
+	Client kcautoscale.AutoscaleService `noattribute:"true"`
+	Metro  string                       `noattribute:"true"`
+	Token  string                       `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -82,13 +82,13 @@ func (opts *ResetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if utils.IsUUID(args[0]) {
-		err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByUUID(ctx, args[0])
+		_, err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByUUID(ctx, args[0])
 	} else {
-		err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByName(ctx, args[0])
+		_, err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByName(ctx, args[0])
 	}
 	if err != nil {
 		return fmt.Errorf("could not reset configuration: %w", err)
 	}
 
-	return err
+	return nil
 }

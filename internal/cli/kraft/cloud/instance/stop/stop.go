@@ -98,35 +98,65 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("drain timeout must be at least 1ms")
 	}
 
-	timeout := int64(opts.DrainTimeout / time.Millisecond)
+	timeout := int(opts.DrainTimeout / time.Millisecond)
+
 	if opts.All {
-		instances, err := client.WithMetro(opts.Metro).List(ctx)
+		instListResp, err := client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
-			return fmt.Errorf("could not get list of all instances: %w", err)
+			return fmt.Errorf("could not list instances: %w", err)
 		}
 
-		for _, instance := range instances {
-			log.G(ctx).Infof("stopping %s", instance.UUID)
+		log.G(ctx).Infof("Stopping %d instance(s)", len(instListResp))
 
-			_, err := client.WithMetro(opts.Metro).StopByUUID(ctx, instance.UUID, timeout)
-			if err != nil {
-				log.G(ctx).Error("could not stop instance: %w", err)
-			}
+		uuids := make([]string, 0, len(instListResp))
+		for _, instItem := range instListResp {
+			uuids = append(uuids, instItem.UUID)
+		}
+
+		if _, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, uuids...); err != nil {
+			log.G(ctx).Error("could not stop instance: %w", err)
 		}
 
 		return nil
 	}
 
-	for _, arg := range args {
-		log.G(ctx).Infof("stopping %s", arg)
+	log.G(ctx).Infof("Stopping %d instance(s)", len(args))
 
+	allUUIDs := true
+	allNames := true
+	for _, arg := range args {
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.Metro).StopByUUID(ctx, arg, timeout)
+			allNames = false
 		} else {
-			_, err = client.WithMetro(opts.Metro).StopByName(ctx, arg, timeout)
+			allUUIDs = false
 		}
-		if err != nil {
-			return fmt.Errorf("could not stop instance: %w", err)
+		if !(allUUIDs || allNames) {
+			break
+		}
+	}
+
+	switch {
+	case allUUIDs:
+		if _, err := client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, args...); err != nil {
+			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
+		}
+	case allNames:
+		if _, err := client.WithMetro(opts.Metro).StopByNames(ctx, timeout, args...); err != nil {
+			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
+		}
+	default:
+		for _, arg := range args {
+			log.G(ctx).Infof("Stopping instance %s", arg)
+
+			if utils.IsUUID(arg) {
+				_, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, arg)
+			} else {
+				_, err = client.WithMetro(opts.Metro).StopByNames(ctx, timeout, arg)
+			}
+
+			if err != nil {
+				return fmt.Errorf("could not stop instance %s: %w", arg, err)
+			}
 		}
 	}
 
