@@ -336,6 +336,31 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		network.Spec.Interfaces[i] = iface
 	}
 
+	// Clean up any removed interfaces.  Re-check the link list.
+	links, err := netlink.LinkList()
+	if err != nil {
+		return network, fmt.Errorf("could not gather list of existing links: %v", err)
+	}
+
+	for _, link := range links {
+		tap, ok := link.(*netlink.Tuntap)
+		if !ok {
+			continue // Skip non-tap interfaces
+		}
+
+		if _, ok := inuse[tap.Alias]; ok {
+			continue // Skip in-use interfaces
+		}
+
+		if err = netlink.LinkSetDown(tap); err != nil {
+			return network, fmt.Errorf("could not bring %s link down: %v", tap.Name, err)
+		}
+
+		if err = netlink.LinkDel(tap); err != nil {
+			return network, fmt.Errorf("could not remove %s: %v", tap.Name, err)
+		}
+	}
+
 	return network, nil
 }
 
