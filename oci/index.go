@@ -169,6 +169,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
+		name.WithDefaultTag(DefaultTag),
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, err
@@ -192,7 +193,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	for i, manifest := range index.manifests {
 		desc := manifest.desc
 		if !manifest.saved {
-			desc, err = manifest.Save(ctx, fullref, nil)
+			desc, err = manifest.Save(ctx, ref.Name(), nil)
 			if err != nil {
 				return ocispec.Descriptor{}, fmt.Errorf("could not save manifest: %w", err)
 			}
@@ -232,7 +233,7 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	}
 
 	// Remove the old index
-	if err := index.handle.DeleteIndex(ctx, fullref, false); err != nil {
+	if err := index.handle.DeleteIndex(ctx, ref.Name(), false); err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to remove old index: %w", err)
 	}
 
