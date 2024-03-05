@@ -180,6 +180,10 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	if len(opts.Ports) > 0 && len(opts.Networks) > 0 {
+		return fmt.Errorf("cannot use both --port and --network flags together")
+	}
+
 	return nil
 }
 
