@@ -18,6 +18,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/logs"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -141,6 +142,12 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 
 	for _, machine := range machines {
 		machine := machine // Go closures
+
+		// Check if the machine's requested ports are not already in use by an
+		// existing running machine.
+		if err := utils.CheckPorts(ctx, machineController, &machine); err != nil {
+			return err
+		}
 
 		log.G(ctx).
 			WithField("machine", machine.Name).
