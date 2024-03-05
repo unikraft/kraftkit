@@ -179,10 +179,13 @@ func (opts *PsOptions) PsTable(ctx context.Context) ([]PsEntry, error) {
 			State:   machine.Status.State,
 			Mem:     fmt.Sprintf("%dMiB", machine.Spec.Resources.Requests.Memory().Value()/MemoryMiB),
 			Created: humanize.Time(machine.ObjectMeta.CreationTimestamp.Time),
-			Ports:   machine.Spec.Ports.String(),
 			Arch:    machine.Spec.Architecture,
 			Plat:    machine.Spec.Platform,
 			IPs:     []string{},
+		}
+
+		if machine.Status.State == machineapi.MachineStateRunning {
+			entry.Ports = machine.Spec.Ports.String()
 		}
 
 		for _, net := range machine.Spec.Networks {
