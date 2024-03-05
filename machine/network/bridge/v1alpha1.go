@@ -352,6 +352,16 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 			continue // Skip in-use interfaces
 		}
 
+		parts := strings.SplitN(tap.Alias, ":", 2)
+
+		if len(parts) != 2 {
+			continue
+		}
+
+		if parts[0] != string(network.ObjectMeta.UID) {
+			continue
+		}
+
 		if err = netlink.LinkSetDown(tap); err != nil {
 			return network, fmt.Errorf("could not bring %s link down: %v", tap.Name, err)
 		}
