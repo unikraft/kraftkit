@@ -266,6 +266,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 		}
 	}
 
+	if len(opts.Env) > 0 && req.Env == nil {
+		req.Env = make(map[string]string, len(opts.Env))
+	}
 	for _, env := range opts.Env {
 		if strings.ContainsRune(env, '=') {
 			split := strings.SplitN(env, "=", 2)
