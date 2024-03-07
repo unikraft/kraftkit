@@ -90,9 +90,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	for _, machine := range machines.Items {
-		if machine.Status.State != machineapi.MachineStateRunning {
-			continue
-		}
 		for _, network := range machine.Spec.Networks {
 			if network.IfName == args[0] {
 				if !opts.Force {
