@@ -17,6 +17,8 @@ import (
 	"kraftkit.sh/log"
 )
 
+var ErrRootfsOutputAlreadyExists = fmt.Errorf("rootfs output already exists")
+
 type directory struct {
 	opts  InitrdOptions
 	path  string
@@ -65,6 +67,10 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 	}
 
+	if _, err := os.Stat(initrd.opts.output); err == nil {
+		return initrd.opts.output, ErrRootfsOutputAlreadyExists
+	}
+
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("could not open initramfs file: %w", err)
@@ -74,6 +80,11 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 
 	writer := cpio.NewWriter(f)
 	defer writer.Close()
+
+	ignoringItems, err := GetKraftIgnoreItems(ctx, initrd.path)
+	if err != nil {
+		return "", err
+	}
 
 	if err := filepath.WalkDir(initrd.path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -85,6 +96,21 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 			return nil // Do not archive empty paths
 		}
 		internal = "." + filepath.ToSlash(internal)
+
+		if len(ignoringItems) > 0 && path != initrd.path {
+			switch isExistInKraftignoreFile(internal, d, ignoringItems) {
+			case SkipDir:
+				log.G(ctx).
+					WithField("directory", internal).
+					Trace("ignoring from archiving")
+				return filepath.SkipDir
+			case Exist:
+				log.G(ctx).
+					WithField("file", internal).
+					Trace("ignoring from archiving")
+				return nil
+			}
+		}
 
 		info, err := d.Info()
 		if err != nil {
