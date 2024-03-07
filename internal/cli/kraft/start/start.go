@@ -240,7 +240,7 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 
 				// Remove the new network interface
 				for i, iface := range found.Spec.Interfaces {
-					if iface.UID == machine.Spec.Networks[0].Interfaces[0].UID {
+					if iface.UID == network.Interfaces[0].UID {
 						ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
 						ret = append(ret, found.Spec.Interfaces[:i]...)
 						found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
