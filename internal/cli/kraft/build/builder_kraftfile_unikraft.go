@@ -35,7 +35,7 @@ type builderKraftfileUnikraft struct {
 
 // String implements fmt.Stringer.
 func (build *builderKraftfileUnikraft) String() string {
-	return "unikraft"
+	return "kraftfile-unikraft"
 }
 
 // Buildable implements builder.
