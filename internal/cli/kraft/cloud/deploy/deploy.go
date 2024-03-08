@@ -15,12 +15,14 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	"sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
@@ -52,6 +54,7 @@ type DeployOptions struct {
 	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project                app.Application           `noattribute:"true"`
 	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout                string                    `local:"true" long:"rollout" short:"r" usage:"Name or UUID of the instance to rollout over"`
 	Rootfs                 string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Runtime                string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog           string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
@@ -123,6 +126,10 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
+	}
+
+	if opts.Rollout != "" && opts.ServiceGroupNameOrUUID == "" {
+		return errors.New("cannot use --rollout without a --service-group")
 	}
 
 	cmd.SetContext(ctx)
@@ -216,6 +223,66 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	insts, sgs, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
+	}
+
+	if opts.Rollout != "" {
+		paramodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(false),
+				processtree.WithTimeout(opts.Timeout),
+			},
+			processtree.NewProcessTreeItem(
+				"draining",
+				"",
+				func(ctx context.Context) error {
+					instanceClient := kraftcloud.NewInstancesClient(
+						kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+						kraftcloud.WithDefaultMetro(opts.Metro),
+					)
+
+					var oldInsts []instances.GetResponseItem
+					if utils.IsUUID(opts.Rollout) {
+						oldInsts, err = instanceClient.GetByUUIDs(ctx, opts.Rollout)
+					} else {
+						oldInsts, err = instanceClient.GetByNames(ctx, opts.Rollout)
+					}
+					if err != nil {
+						return fmt.Errorf("could not retrieve old instance: %w", err)
+					}
+
+					if len(oldInsts) != 1 {
+						return fmt.Errorf("expected 1 instance, got %d", len(oldInsts))
+					}
+
+					if _, err := instanceClient.StopByUUIDs(ctx, int(time.Minute.Milliseconds()), oldInsts[0].UUID); err != nil {
+						return fmt.Errorf("could not stop the old instance: %w", err)
+					}
+
+					log.G(ctx).Info("waiting one minute for the old instance to stop")
+					time.Sleep(time.Minute)
+
+					if _, err := instanceClient.DeleteByUUIDs(ctx, oldInsts[0].UUID); err != nil {
+						return fmt.Errorf("could not remove the old instance: %w", err)
+					}
+
+					return nil
+				},
+			),
+		)
+		if err != nil {
+			return nil
+		}
+
+		err = paramodel.Start()
+		if err != nil {
+			return fmt.Errorf("could not start the process tree: %w", err)
+		}
 	}
 
 	if len(insts) == 1 && opts.Output == "" {
