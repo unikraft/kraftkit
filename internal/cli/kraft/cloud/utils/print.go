@@ -780,8 +780,8 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 
 	fancymap.PrintFancyMap(
 		out,
+		color,
 		title,
-		instance.State == "running" || instance.State == "starting",
 		entries...,
 	)
 

@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/platform"
+	"kraftkit.sh/tui"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -284,7 +285,12 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	fancymap.PrintFancyMap(iostreams.G(ctx).Out, "Build completed successfully!", true, entries...)
+	fancymap.PrintFancyMap(
+		iostreams.G(ctx).Out,
+		tui.TextGreen,
+		"Build completed successfully!",
+		entries...,
+	)
 
 	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
 
