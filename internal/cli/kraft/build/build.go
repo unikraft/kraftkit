@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
@@ -94,36 +93,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 	opts.statistics = map[string]string{}
-
-	if opts.Target == nil {
-		// Filter project targets by any provided CLI options
-		selected := opts.project.Targets()
-		if len(selected) == 0 {
-			return fmt.Errorf("no targets to build")
-		}
-		if !opts.All {
-			selected = target.Filter(
-				selected,
-				opts.Architecture,
-				opts.Platform,
-				opts.TargetName,
-			)
-
-			if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
-				res, err := target.Select(selected)
-				if err != nil {
-					return err
-				}
-				selected = []target.Target{res}
-			}
-		}
-
-		if len(selected) == 0 {
-			return fmt.Errorf("no targets selected to build")
-		}
-
-		opts.Target = &selected[0]
-	}
 
 	var build builder
 	builders := builders()
