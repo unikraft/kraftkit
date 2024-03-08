@@ -7,6 +7,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -51,8 +52,13 @@ var (
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
 func PrintInstances(ctx context.Context, format string, instances ...kcinstances.GetResponseItem) error {
-	err := iostreams.G(ctx).StartPager()
-	if err != nil {
+	if format == "json" {
+		return printJSON(ctx, instances)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -160,8 +166,13 @@ func PrintInstances(ctx context.Context, format string, instances ...kcinstances
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
 func PrintVolumes(ctx context.Context, format string, volumes ...kcvolumes.GetResponseItem) error {
-	err := iostreams.G(ctx).StartPager()
-	if err != nil {
+	if format == "json" {
+		return printJSON(ctx, volumes)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -228,8 +239,13 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kcvolumes.GetRe
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
 func PrintAutoscaleConfiguration(ctx context.Context, format string, aconf kcautoscale.GetResponseItem) error {
-	err := iostreams.G(ctx).StartPager()
-	if err != nil {
+	if format == "json" {
+		return printJSON(ctx, aconf)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -324,8 +340,13 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, aconf kcaut
 // PrintServiceGroups pretty-prints the provided set of service groups or returns
 // an error if unable to send to stdout via the provided context.
 func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcservices.GetResponseItem) error {
-	err := iostreams.G(ctx).StartPager()
-	if err != nil {
+	if format == "json" {
+		return printJSON(ctx, serviceGroups)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -398,7 +419,13 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcs
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
 func PrintQuotas(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
-	if err := iostreams.G(ctx).StartPager(); err != nil {
+	if format == "json" {
+		return printJSON(ctx, quotas)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -452,7 +479,13 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kcusers.QuotasRes
 // PrintLimits pretty-prints the provided set of user limits or returns
 // an error if unable to send to stdout via the provided context.
 func PrintLimits(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
-	if err := iostreams.G(ctx).StartPager(); err != nil {
+	if format == "json" {
+		return printJSON(ctx, quotas)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -632,4 +665,13 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 		log.G(ctx).Info("it looks like the instance did not come online, to view logs run:")
 		fmt.Fprintf(out, "\n    kraft cloud instance logs %s\n\n", instance.Name)
 	}
+}
+
+func printJSON(ctx context.Context, data any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("serializing data to JSON: %w", err)
+	}
+	fmt.Fprintln(iostreams.G(ctx).Out, string(b))
+	return nil
 }
