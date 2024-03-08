@@ -75,7 +75,7 @@ require (
 	k8s.io/apimachinery v0.29.2
 	k8s.io/apiserver v0.29.2
 	oras.land/oras-go/v2 v2.4.0
-	sdk.kraft.cloud v0.5.1
+	sdk.kraft.cloud v0.5.2
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
@@ -139,6 +139,7 @@ require (
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/goharbor/go-client v0.28.2 // indirect
 	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
