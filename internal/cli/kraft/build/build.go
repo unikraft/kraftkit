@@ -214,11 +214,6 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	kernelStat, err := os.Stat((*opts.Target).Kernel())
-	if err != nil {
-		return fmt.Errorf("getting kernel image size: %w", err)
-	}
-
 	workdir, err := filepath.Abs(opts.Workdir)
 	if err != nil {
 		return fmt.Errorf("getting the work directory: %w", err)
@@ -226,17 +221,24 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	workdir += "/"
 
-	kernelPath, err := filepath.Abs((*opts.Target).Kernel())
-	if err != nil {
-		return fmt.Errorf("getting kernel absolute path: %w", err)
-	}
+	entries := []fancymap.FancyMapEntry{}
 
-	entries := []fancymap.FancyMapEntry{
-		{
+	if opts.project.Unikraft(ctx) != nil {
+		kernelStat, err := os.Stat((*opts.Target).Kernel())
+		if err != nil {
+			return fmt.Errorf("getting kernel image size: %w", err)
+		}
+
+		kernelPath, err := filepath.Abs((*opts.Target).Kernel())
+		if err != nil {
+			return fmt.Errorf("getting kernel absolute path: %w", err)
+		}
+
+		entries = append(entries, fancymap.FancyMapEntry{
 			Key:   "kernel",
 			Value: strings.TrimPrefix(kernelPath, workdir),
 			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(kernelStat.Size()))),
-		},
+		})
 	}
 
 	if opts.Rootfs != "" {
