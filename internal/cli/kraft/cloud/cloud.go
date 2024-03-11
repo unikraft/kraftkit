@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
 	"kraftkit.sh/internal/cli/kraft/cloud/img"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
+	"kraftkit.sh/internal/cli/kraft/cloud/metros"
 	"kraftkit.sh/internal/cli/kraft/cloud/quotas"
 	"kraftkit.sh/internal/cli/kraft/cloud/scale"
 	"kraftkit.sh/internal/cli/kraft/cloud/service"
@@ -100,6 +101,9 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "SERVICE COMMANDS"})
 	cmd.AddCommand(service.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-metro", Title: "METRO COMMANDS"})
+	cmd.AddCommand(metros.NewCmd())
 
 	return cmd
 }
