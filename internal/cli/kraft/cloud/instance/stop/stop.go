@@ -25,6 +25,7 @@ type StopOptions struct {
 	DrainTimeout time.Duration `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
 	Output       string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	All          bool          `long:"all" usage:"Stop all instances"`
+	Force        bool          `long:"force" short:"f" usage:"Force stop the instance(s)"`
 	Metro        string        `noattribute:"true"`
 	Token        string        `noattribute:"true"`
 }
@@ -113,7 +114,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			uuids = append(uuids, instItem.UUID)
 		}
 
-		if _, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, uuids...); err != nil {
+		if _, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, uuids...); err != nil {
 			log.G(ctx).Error("could not stop instance: %w", err)
 		}
 
@@ -137,11 +138,11 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 
 	switch {
 	case allUUIDs:
-		if _, err := client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, args...); err != nil {
+		if _, err := client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, args...); err != nil {
 			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 		}
 	case allNames:
-		if _, err := client.WithMetro(opts.Metro).StopByNames(ctx, timeout, args...); err != nil {
+		if _, err := client.WithMetro(opts.Metro).StopByNames(ctx, timeout, opts.Force, args...); err != nil {
 			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 		}
 	default:
@@ -149,9 +150,9 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			log.G(ctx).Infof("Stopping instance %s", arg)
 
 			if utils.IsUUID(arg) {
-				_, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, arg)
+				_, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, arg)
 			} else {
-				_, err = client.WithMetro(opts.Metro).StopByNames(ctx, timeout, arg)
+				_, err = client.WithMetro(opts.Metro).StopByNames(ctx, timeout, opts.Force, arg)
 			}
 
 			if err != nil {
