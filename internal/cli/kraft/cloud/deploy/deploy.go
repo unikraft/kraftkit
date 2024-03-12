@@ -16,6 +16,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"sdk.kraft.cloud/instances"
+	"sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -54,7 +55,7 @@ type DeployOptions struct {
 	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project                app.Application           `noattribute:"true"`
 	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout                string                    `local:"true" long:"rollout" short:"r" usage:"Name or UUID of the instance to rollout over"`
+	Rollout                bool                      `local:"true" long:"rollout" short:"r" usage:"Whether to perform a rolling update of all instances in a service group"`
 	Rootfs                 string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Runtime                string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog           string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
@@ -128,8 +129,12 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if opts.Rollout != "" && opts.ServiceGroupNameOrUUID == "" {
+	if opts.Rollout && opts.ServiceGroupNameOrUUID == "" {
 		return errors.New("cannot use --rollout without a --service-group")
+	}
+
+	if opts.Rollout && opts.Replicas > 0 {
+		return errors.New("cannot use --rollout with --replicas")
 	}
 
 	cmd.SetContext(ctx)
@@ -225,7 +230,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
 
-	if opts.Rollout != "" {
+	if opts.Rollout {
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -241,34 +246,81 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 				"draining",
 				"",
 				func(ctx context.Context) error {
-					instanceClient := kraftcloud.NewInstancesClient(
-						kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
-						kraftcloud.WithDefaultMetro(opts.Metro),
-					)
+					// Specifically wait for first instance to start as it is not done by deploy
+					_, err = opts.Client.Instances().WithMetro(opts.Metro).
+						WaitByUUIDs(ctx, instances.StateRunning, int(time.Minute.Milliseconds()), insts[0].UUID)
+					if err != nil {
+						return fmt.Errorf("could not wait for the first new instance to start: %w", err)
+					}
 
-					var oldInsts []instances.GetResponseItem
-					if utils.IsUUID(opts.Rollout) {
-						oldInsts, err = instanceClient.GetByUUIDs(ctx, opts.Rollout)
+					var serviceGroup *services.GetResponseItem
+					if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
+						serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).
+							GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
 					} else {
-						oldInsts, err = instanceClient.GetByNames(ctx, opts.Rollout)
+						serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).
+							GetByName(ctx, opts.ServiceGroupNameOrUUID)
 					}
 					if err != nil {
-						return fmt.Errorf("could not retrieve old instance: %w", err)
+						return fmt.Errorf("could not retrieve service group: %w", err)
 					}
 
-					if len(oldInsts) != 1 {
-						return fmt.Errorf("expected 1 instance, got %d", len(oldInsts))
+					if serviceGroup == nil {
+						return fmt.Errorf("empty service group")
 					}
 
-					if _, err := instanceClient.StopByUUIDs(ctx, int(time.Minute.Milliseconds()), oldInsts[0].UUID); err != nil {
-						return fmt.Errorf("could not stop the old instance: %w", err)
+					log.G(ctx).WithField("service-group", serviceGroup.Name).Info("rolling all old instances in the service group")
+
+					// First stop one instance which is not the new one
+					for i, instance := range serviceGroup.Instances {
+						if instance == insts[0].UUID {
+							continue
+						}
+
+						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
+							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), instance); err != nil {
+							return fmt.Errorf("could not stop the old instance: %w", err)
+						}
+
+						serviceGroup.Instances = append(serviceGroup.Instances[:i], serviceGroup.Instances[i+1:]...)
+						break
 					}
 
-					log.G(ctx).Info("waiting one minute for the old instance to stop")
-					time.Sleep(time.Minute)
+					for _, instance := range serviceGroup.Instances {
+						if instance == insts[0].UUID {
+							continue
+						}
 
-					if _, err := instanceClient.DeleteByUUIDs(ctx, oldInsts[0].UUID); err != nil {
-						return fmt.Errorf("could not remove the old instance: %w", err)
+						log.G(ctx).WithField("instance", instance).Info("rolling old instance in the service group")
+
+						// Create the rest of the instances and wait max 10s for them to start
+						timeout := int(time.Second.Milliseconds() * 10)
+						autoStart := true
+						_, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, instances.CreateRequest{
+							Image:    insts[0].Image,
+							Args:     insts[0].Args,
+							Env:      insts[0].Env,
+							MemoryMB: &opts.Memory,
+							ServiceGroup: &instances.CreateRequestServiceGroup{
+								UUID: &serviceGroup.UUID,
+							},
+							Autostart:     &autoStart,
+							WaitTimeoutMs: &timeout,
+						})
+						if err != nil {
+							return fmt.Errorf("could not create a new instance: %w", err)
+						}
+
+						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
+							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), instance); err != nil {
+							return fmt.Errorf("could not stop the old instance: %w", err)
+						}
+
+						_, err = opts.Client.Instances().WithMetro(opts.Metro).
+							WaitByUUIDs(ctx, instances.StateStopped, int(time.Minute.Milliseconds()), instance)
+						if err != nil {
+							return fmt.Errorf("could not wait for the old instance to stop: %w", err)
+						}
 					}
 
 					return nil
