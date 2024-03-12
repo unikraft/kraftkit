@@ -22,6 +22,8 @@ import (
 )
 
 type PsOptions struct {
+	ShowAll bool `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
+
 	composefile string
 }
 
@@ -78,7 +80,8 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	pslistOptions := pslist.PsOptions{
-		Output: "table",
+		Output:  "table",
+		ShowAll: opts.ShowAll,
 	}
 
 	psTable, err := pslistOptions.PsTable(ctx)
