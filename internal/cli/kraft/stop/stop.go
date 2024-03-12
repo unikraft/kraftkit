@@ -123,9 +123,10 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			stop = append(stop, machine)
 			continue
 		}
-
-		if args[0] == machine.Name || args[0] == string(machine.UID) {
-			stop = append(stop, machine)
+		for _, arg := range args {
+			if arg == machine.Name || arg == string(machine.UID) {
+				stop = append(stop, machine)
+			}
 		}
 	}
 
