@@ -95,7 +95,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 		req.MemoryMB = &opts.Memory
 	}
 	if opts.Replicas > 0 {
-		req.MemoryMB = &opts.Replicas
+		req.Replicas = &opts.Replicas
 	}
 
 	for _, vol := range opts.Volumes {
