@@ -11,6 +11,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	"sdk.kraft.cloud/instances"
 
 	kraftcloud "sdk.kraft.cloud"
 
@@ -21,8 +22,9 @@ import (
 )
 
 type RemoveOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	All    bool   `long:"all" usage:"Remove all instances"`
+	Output  string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	All     bool   `long:"all" short:"a" usage:"Remove all instances"`
+	Stopped bool   `long:"stopped" short:"s" usage:"Remove all stopped instances"`
 
 	metro string
 	token string
@@ -55,6 +57,9 @@ func NewCmd() *cobra.Command {
 
 			# Remove all KraftCloud instances
 			$ kraft cloud instance remove --all
+
+			# Remove all stopped KraftCloud instances
+			$ kraft cloud instance remove --stopped
 		`),
 		Long: heredoc.Doc(`
 			Remove a KraftCloud instance.
@@ -71,8 +76,17 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
-	if !opts.All && len(args) == 0 {
+	if !opts.Stopped && !opts.All && len(args) == 0 {
 		return fmt.Errorf("either specify an instance name or UUID, or use the --all flag")
+	}
+	if opts.Stopped && opts.All {
+		return fmt.Errorf("cannot use --stopped and --all together")
+	}
+	if opts.Stopped && len(args) > 0 {
+		return fmt.Errorf("cannot specify instances and use --stopped together")
+	}
+	if opts.All && len(args) > 0 {
+		return fmt.Errorf("cannot specify instances and use --all together")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
@@ -93,21 +107,41 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	if opts.All {
+	if opts.All || opts.Stopped {
 		instListResp, err := client.WithMetro(opts.metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
-
-		log.G(ctx).Infof("Removing %d instance(s)", len(instListResp))
 
 		uuids := make([]string, 0, len(instListResp))
 		for _, instItem := range instListResp {
 			uuids = append(uuids, instItem.UUID)
 		}
 
+		if opts.Stopped {
+			instInfos, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+			if err != nil {
+				return fmt.Errorf("could not get instances: %w", err)
+			}
+
+			var stoppedUuids []string
+			for _, instInfo := range instInfos {
+				if instances.State(instInfo.State) == instances.StateStopped {
+					stoppedUuids = append(stoppedUuids, instInfo.UUID)
+				}
+			}
+
+			uuids = stoppedUuids
+		}
+
+		if len(uuids) == 0 {
+			return nil
+		}
+
+		log.G(ctx).Infof("Removing %d instance(s)", len(uuids))
+
 		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
-			return fmt.Errorf("removing %d instance(s): %w", len(instListResp), err)
+			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
 		}
 		return nil
 	}
