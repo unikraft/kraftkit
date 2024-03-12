@@ -21,6 +21,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 
+	kccerts "sdk.kraft.cloud/certificates"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 	kcautoscale "sdk.kraft.cloud/services/autoscale"
@@ -46,6 +47,19 @@ var (
 		"starting": nil,
 		"stopped":  nil,
 		"stopping": nil,
+	}
+)
+
+var (
+	certStateColor = map[string]colorFunc{
+		"error":   iostreams.Red,
+		"pending": iostreams.Yellow,
+		"valid":   iostreams.Green,
+	}
+	certStateColorNil = map[string]colorFunc{
+		"error":   nil,
+		"pending": nil,
+		"valid":   nil,
 	}
 )
 
@@ -534,6 +548,117 @@ func PrintLimits(ctx context.Context, format string, quotas ...kcusers.QuotasRes
 				quota.Limits.MaxAutoscaleSize,
 			), nil,
 		)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrintCertificates pretty-prints the provided set of certificates or returns
+// an error if unable to send to stdout via the provided context.
+func PrintCertificates(ctx context.Context, format string, certs ...kccerts.GetResponseItem) error {
+	if format == "json" {
+		return printJSON(ctx, certs)
+	}
+
+	var err error
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("STATE", cs.Bold)
+	if format != "table" {
+		table.AddField("VALIDATION ATTEMPTS", cs.Bold)
+		table.AddField("NEXT ATTEMPT", cs.Bold)
+	}
+	table.AddField("COMMON NAME", cs.Bold)
+	if format != "table" {
+		table.AddField("SUBJECT", cs.Bold)
+		table.AddField("ISSUER", cs.Bold)
+		table.AddField("SERIAL NUMBER", cs.Bold)
+		table.AddField("NOT BEFORE", cs.Bold)
+		table.AddField("NOT AFTER", cs.Bold)
+	}
+	table.AddField("CREATED AT", cs.Bold)
+	if format != "table" {
+		table.AddField("SERVICE GROUPS", cs.Bold)
+	}
+	table.EndRow()
+
+	if config.G[config.KraftKit](ctx).NoColor {
+		certStateColor = certStateColorNil
+	}
+
+	for _, cert := range certs {
+		var createdAt string
+
+		if len(cert.CreatedAt) > 0 {
+			createdTime, err := time.Parse(time.RFC3339, cert.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("could not parse time for '%s': %w", cert.UUID, err)
+			}
+			if format != "table" {
+				createdAt = cert.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
+		}
+
+		if format != "table" {
+			table.AddField(cert.UUID, nil)
+		}
+
+		table.AddField(cert.Name, nil)
+		table.AddField(string(cert.State), certStateColor[cert.State])
+
+		if format != "table" {
+			var validationAttempt string
+			var validationNext string
+			if cert.Validation != nil {
+				validationAttempt = strconv.Itoa(cert.Validation.Attempt)
+				validationNext = cert.Validation.Next
+			}
+			table.AddField(validationAttempt, nil)
+			table.AddField(validationNext, nil)
+		}
+
+		table.AddField(cert.CommonName, nil)
+
+		if format != "table" {
+			table.AddField(cert.Subject, nil)
+			table.AddField(cert.Issuer, nil)
+			table.AddField(cert.SerialNumber, nil)
+			table.AddField(cert.NotBefore, nil)
+			table.AddField(cert.NotAfter, nil)
+		}
+
+		table.AddField(createdAt, nil)
+
+		if format != "table" {
+			sgs := make([]string, 0, len(cert.ServiceGroups))
+			for _, sg := range cert.ServiceGroups {
+				sgs = append(sgs, sg.Name)
+			}
+			table.AddField(strings.Join(sgs, ", "), nil)
+		}
 
 		table.EndRow()
 	}
