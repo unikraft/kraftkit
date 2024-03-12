@@ -278,7 +278,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 						}
 
 						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), instance); err != nil {
+							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
 							return fmt.Errorf("could not stop the old instance: %w", err)
 						}
 
@@ -312,7 +312,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 						}
 
 						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), instance); err != nil {
+							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
 							return fmt.Errorf("could not stop the old instance: %w", err)
 						}
 
