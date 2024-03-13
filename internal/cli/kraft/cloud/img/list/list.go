@@ -7,6 +7,7 @@ package list
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -89,6 +90,38 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not list images: %w", err)
 	}
 
+	filteredImages := images[:0]
+
+imgloop:
+	for _, image := range images {
+		if len(image.Tags) == 0 {
+			continue
+		}
+
+		var name string
+		for _, taggedImgRef := range image.Tags {
+			tag, err := parseTagReference(taggedImgRef)
+			if err != nil {
+				log.G(ctx).Warn("Invalid tagged image reference: ", err)
+				continue
+			}
+			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
+				continue imgloop
+			}
+		}
+
+		filteredImages = append(filteredImages, image)
+	}
+
+	if opts.Output == "json" {
+		return printJSON(ctx, filteredImages)
+	}
+
+	// Sort by digest lexically. This ensures that comparisons between versions are symmetric.
+	sort.Slice(filteredImages, func(i, j int) bool {
+		return filteredImages[i].Digest < filteredImages[j].Digest
+	})
+
 	err = iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -105,12 +138,6 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Sort the features lexically.  This ensures that comparisons between
-	// versions are symmetric.
-	sort.Slice(images, func(i, j int) bool {
-		return images[i].Digest < images[j].Digest
-	})
-
 	// Header row
 	table.AddField("NAME", cs.Bold)
 	table.AddField("VERSION", cs.Bold)
@@ -120,12 +147,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
 
-imgloop:
-	for _, image := range images {
-		if len(image.Tags) == 0 {
-			continue
-		}
-
+	for _, image := range filteredImages {
 		var name string
 		versions := make([]string, 0, len(image.Tags))
 
@@ -136,10 +158,7 @@ imgloop:
 				continue
 			}
 
-			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
-				continue imgloop
-			}
-
+			name = tag.RepositoryStr()
 			versions = append(versions, tag.TagStr())
 		}
 
@@ -199,4 +218,13 @@ func isOfficial(repo string) bool {
 func isNamespacedRepository(repo string) bool {
 	const regNsDelimiter = '/'
 	return strings.ContainsRune(repo, regNsDelimiter)
+}
+
+func printJSON(ctx context.Context, data any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("serializing data to JSON: %w", err)
+	}
+	fmt.Fprintln(iostreams.G(ctx).Out, string(b))
+	return nil
 }
