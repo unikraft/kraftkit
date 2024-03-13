@@ -800,3 +800,11 @@ func printJSON(ctx context.Context, data any) error {
 	fmt.Fprintln(iostreams.G(ctx).Out, string(b))
 	return nil
 }
+
+func IsValidOutputFormat(format string) bool {
+	return format == "json" ||
+		format == "table" ||
+		format == "yaml" ||
+		format == "list" ||
+		format == ""
+}

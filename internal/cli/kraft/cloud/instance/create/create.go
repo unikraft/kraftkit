@@ -473,6 +473,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return errors.New("cannot use --rollout with --replicas")
 	}
 
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }

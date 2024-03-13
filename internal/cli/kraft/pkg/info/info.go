@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	pkgutils "kraftkit.sh/internal/cli/kraft/pkg/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -57,6 +58,14 @@ func New() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func (opts *InfoOptions) Pre(cmd *cobra.Command, _ []string) error {
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
+	return nil
 }
 
 func (opts *InfoOptions) Run(ctx context.Context, args []string) error {
