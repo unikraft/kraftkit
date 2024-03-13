@@ -40,5 +40,6 @@ type builder interface {
 func builders() []builder {
 	return []builder{
 		&builderKraftfileUnikraft{},
+		&builderKraftfileRuntime{},
 	}
 }

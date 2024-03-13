@@ -35,7 +35,7 @@ type builderKraftfileUnikraft struct {
 
 // String implements fmt.Stringer.
 func (build *builderKraftfileUnikraft) String() string {
-	return "unikraft"
+	return "kraftfile-unikraft"
 }
 
 // Buildable implements builder.
@@ -329,6 +329,36 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildOptions, args ...string) error {
 	build.nameWidth = -1
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+
+	if opts.Target == nil {
+		// Filter project targets by any provided CLI options
+		selected := opts.project.Targets()
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets to build")
+		}
+		if !opts.All {
+			selected = target.Filter(
+				selected,
+				opts.Architecture,
+				opts.Platform,
+				opts.TargetName,
+			)
+
+			if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
+				res, err := target.Select(selected)
+				if err != nil {
+					return err
+				}
+				selected = []target.Target{res}
+			}
+		}
+
+		if len(selected) == 0 {
+			return fmt.Errorf("no targets selected to build")
+		}
+
+		opts.Target = &selected[0]
+	}
 
 	// Calculate the width of the longest process name so that we can align the
 	// two independent processtrees if we are using "render" mode (aka the fancy

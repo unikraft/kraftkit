@@ -19,11 +19,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/machine/platform"
+	"kraftkit.sh/tui"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -93,36 +93,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
 	opts.statistics = map[string]string{}
-
-	if opts.Target == nil {
-		// Filter project targets by any provided CLI options
-		selected := opts.project.Targets()
-		if len(selected) == 0 {
-			return fmt.Errorf("no targets to build")
-		}
-		if !opts.All {
-			selected = target.Filter(
-				selected,
-				opts.Architecture,
-				opts.Platform,
-				opts.TargetName,
-			)
-
-			if !config.G[config.KraftKit](ctx).NoPrompt && len(selected) > 1 {
-				res, err := target.Select(selected)
-				if err != nil {
-					return err
-				}
-				selected = []target.Target{res}
-			}
-		}
-
-		if len(selected) == 0 {
-			return fmt.Errorf("no targets selected to build")
-		}
-
-		opts.Target = &selected[0]
-	}
 
 	var build builder
 	builders := builders()
@@ -214,11 +184,6 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	kernelStat, err := os.Stat((*opts.Target).Kernel())
-	if err != nil {
-		return fmt.Errorf("getting kernel image size: %w", err)
-	}
-
 	workdir, err := filepath.Abs(opts.Workdir)
 	if err != nil {
 		return fmt.Errorf("getting the work directory: %w", err)
@@ -226,17 +191,24 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	workdir += "/"
 
-	kernelPath, err := filepath.Abs((*opts.Target).Kernel())
-	if err != nil {
-		return fmt.Errorf("getting kernel absolute path: %w", err)
-	}
+	entries := []fancymap.FancyMapEntry{}
 
-	entries := []fancymap.FancyMapEntry{
-		{
+	if opts.project.Unikraft(ctx) != nil {
+		kernelStat, err := os.Stat((*opts.Target).Kernel())
+		if err != nil {
+			return fmt.Errorf("getting kernel image size: %w", err)
+		}
+
+		kernelPath, err := filepath.Abs((*opts.Target).Kernel())
+		if err != nil {
+			return fmt.Errorf("getting kernel absolute path: %w", err)
+		}
+
+		entries = append(entries, fancymap.FancyMapEntry{
 			Key:   "kernel",
 			Value: strings.TrimPrefix(kernelPath, workdir),
 			Right: fmt.Sprintf("(%s)", humanize.Bytes(uint64(kernelStat.Size()))),
-		},
+		})
 	}
 
 	if opts.Rootfs != "" {
@@ -282,7 +254,12 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	fancymap.PrintFancyMap(iostreams.G(ctx).Out, "Build completed successfully!", true, entries...)
+	fancymap.PrintFancyMap(
+		iostreams.G(ctx).Out,
+		tui.TextGreen,
+		"Build completed successfully!",
+		entries...,
+	)
 
 	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
 

@@ -25,7 +25,7 @@ type FancyMapEntry struct {
 // PrintFancyMap uses the provided writer `w` and outputs a pretty printed listed
 // based on the list of `entries`.  A `title` and `success` state can be set
 // which are prepended to the list.
-func PrintFancyMap(w io.Writer, title string, success bool, entries ...FancyMapEntry) {
+func PrintFancyMap(w io.Writer, color func(...string) string, title string, entries ...FancyMapEntry) {
 	keyPad, valPad, bracketPad := 0, 0, 0
 
 	for _, entry := range entries {
@@ -38,13 +38,6 @@ func PrintFancyMap(w io.Writer, title string, success bool, entries ...FancyMapE
 		if newLen := len(entry.Right); newLen > bracketPad {
 			bracketPad = newLen
 		}
-	}
-
-	var color func(...string) string
-	if success {
-		color = tui.TextGreen
-	} else {
-		color = tui.TextRed
 	}
 
 	fmt.Fprintf(w, "\n")
