@@ -16,10 +16,8 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/cli/kraft/utils"
-	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network"
@@ -27,12 +25,11 @@ import (
 )
 
 type StartOptions struct {
-	All        bool   `long:"all" usage:"Start all machines"`
-	Detach     bool   `long:"detach" short:"d" usage:"Run in background"`
-	Platform   string `noattribute:"true"`
-	Prefix     string `long:"prefix" usage:"Prefix each log line with the given string"`
-	PrefixName bool   `long:"prefix-name" usage:"Prefix each log line with the machine name"`
-	Remove     bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	All      bool   `long:"all" usage:"Start all machines"`
+	Detach   bool   `long:"detach" short:"d" usage:"Run in background"`
+	NoPrefix bool   `long:"no-prefix" usage:"When starting multiple machines, do not prefix each log line with the name"`
+	Platform string `noattribute:"true"`
+	Remove   bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 }
 
 func NewCmd() *cobra.Command {
@@ -138,7 +135,7 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 	}
 
 	var errGroup []error
-	observations := waitgroup.WaitGroup[*machineapi.Machine]{}
+	loggedMachines := []string{}
 
 	for _, machine := range machines {
 		machine := machine // Go closures
@@ -163,56 +160,44 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 			continue
 		}
 
-		observations.Add(&machine)
-
-		// Start a thread which tails the logs of this machine
-		go func(machine *machineapi.Machine) {
-			defer func() {
-				observations.Done(machine)
-			}()
-
-			if opts.PrefixName && opts.Prefix == "" || len(machines) > 1 {
-				opts.Prefix = machine.Name
-			}
-
-			consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, opts.Prefix)
-			if err != nil {
-				errGroup = append(errGroup, err)
-				return
-			}
-
-			// FollowLogs will block until either the machine exits or the context is
-			// cancelled.
-			exitErr := logs.FollowLogs(ctx, machine, machineController, consumer)
-
-			log.G(ctx).
-				WithField("machine", machine.Name).
-				Trace("stopping")
-
-			if _, err := machineController.Stop(ctx, machine); err != nil {
-				log.G(ctx).Errorf("could not stop: %v", err)
-			}
-
-			// Remove the instance on Ctrl+C if the --rm flag is passed
-			if opts.Remove {
-				log.G(ctx).
-					WithField("machine", machine.Name).
-					Trace("removing")
-
-				if _, err := machineController.Delete(ctx, machine); err != nil {
-					log.G(ctx).Errorf("could not remove: %v", err)
-				}
-			}
-
-			errGroup = append(errGroup, exitErr)
-		}(&machine)
+		loggedMachines = append(loggedMachines, machine.Name)
 	}
 
 	if opts.Detach {
 		return nil
 	}
 
-	observations.Wait()
+	logOptions := logs.LogOptions{
+		Follow:   true,
+		NoPrefix: opts.NoPrefix,
+		Platform: opts.Platform,
+	}
+
+	if err := logOptions.Run(ctx, loggedMachines); err != nil {
+		return err
+	}
+
+	for _, machine := range machines {
+		machine := machine // Go closures
+		log.G(ctx).
+			WithField("machine", machine.Name).
+			Trace("stopping")
+
+		if _, err := machineController.Stop(ctx, &machine); err != nil {
+			log.G(ctx).Errorf("could not stop: %v", err)
+		}
+
+		// Remove the instance on Ctrl+C if the --rm flag is passed
+		if opts.Remove {
+			log.G(ctx).
+				WithField("machine", machine.Name).
+				Trace("removing")
+
+			if _, err := machineController.Delete(ctx, &machine); err != nil {
+				log.G(ctx).Errorf("could not remove: %v", err)
+			}
+		}
+	}
 
 	var networkController networkapi.NetworkService
 

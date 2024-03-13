@@ -5,11 +5,13 @@
 package logs
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -17,23 +19,23 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
 type LogOptions struct {
-	Follow     bool   `long:"follow" short:"f" usage:"Follow log output"`
-	Platform   string `noattribute:"true"`
-	Prefix     string `long:"prefix" usage:"Prefix each log line with the given string"`
-	PrefixName bool   `long:"prefix-name" usage:"Prefix each log line with the machine name"`
+	Follow   bool   `long:"follow" short:"f" usage:"Follow log output"`
+	Platform string `noattribute:"true"`
+	NoPrefix bool   `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Fetch the logs of a unikernel",
 		Use:     "logs [FLAGS] MACHINE",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"log"},
 		Long: heredoc.Doc(`
 			Fetch the logs of a unikernel.
@@ -45,11 +47,8 @@ func NewCmd() *cobra.Command {
 			# Fetch the logs of a unikernel and follow the output
 			$ kraft logs --follow my-machine
 
-			# Fetch the logs of a unikernel and prefix each line with the machine name
-			$ kraft logs --prefix-name
-
-			# Fetch the logs of a unikernel and prefix each line with the given string
-			$ kraft logs --prefix "log: "
+			# Fetch the logs of multiple unikernels and follow the output
+			$ kraft logs --follow my-machine1 my-machine2
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "run",
@@ -116,47 +115,95 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	var machine *machineapi.Machine
+	loggedMachines := []*machineapi.Machine{}
 
+	// Although this looks duplicated, it allows us to check whether all arguments
+	// are a valid machine while also not having duplicated logging in case of
+	// multiple equal arguments (or both the name and UID).
 	for _, candidate := range machines.Items {
-		if args[0] == candidate.Name {
-			machine = &candidate
-			break
-		} else if string(candidate.UID) == args[0] {
-			machine = &candidate
-			break
+		for _, arg := range args {
+			if arg == candidate.Name || arg == string(candidate.UID) {
+				loggedMachines = append(loggedMachines, &candidate)
+				break
+			}
 		}
 	}
 
-	if machine == nil {
-		return fmt.Errorf("could not find instance %s", args[0])
-	}
-
-	if opts.PrefixName && opts.Prefix == "" {
-		opts.Prefix = machine.Name
-	}
-
-	if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {
-		consumer, err := NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, opts.Prefix)
-		if err != nil {
-			return err
+	for _, arg := range args {
+		found := false
+		for _, machine := range loggedMachines {
+			if arg == machine.Name || arg == string(machine.UID) {
+				found = true
+				break
+			}
 		}
 
-		if err = FollowLogs(ctx, machine, controller, consumer); err != nil {
-			return err
+		if !found {
+			return fmt.Errorf("could not find instance %s", arg)
+		}
+	}
+
+	longestName := 0
+
+	if len(loggedMachines) > 1 && !opts.NoPrefix {
+		for _, machine := range loggedMachines {
+			if len(machine.Name) > longestName {
+				longestName = len(machine.Name)
+			}
 		}
 	} else {
-		fd, err := os.Open(machine.Status.LogFile)
-		if err != nil {
-			return err
-		}
+		opts.NoPrefix = true
+	}
 
-		if _, err := io.Copy(iostreams.G(ctx).Out, fd); err != nil {
-			return err
+	var errGroup []error
+	observations := waitgroup.WaitGroup[*machineapi.Machine]{}
+
+	for _, machine := range loggedMachines {
+		prefix := ""
+		if !opts.NoPrefix {
+			prefix = machine.Name + strings.Repeat(" ", longestName-len(machine.Name))
+		}
+		consumer, err := NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, prefix)
+		if err != nil {
+			errGroup = append(errGroup, err)
+		}
+		if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {
+			observations.Add(machine)
+			go func(machine *machineapi.Machine) {
+				defer func() {
+					observations.Done(machine)
+				}()
+
+				if err = FollowLogs(ctx, machine, controller, consumer); err != nil {
+					errGroup = append(errGroup, err)
+					return
+				}
+			}(machine)
+		} else {
+			fd, err := os.Open(machine.Status.LogFile)
+			if err != nil {
+				return err
+			}
+			defer fd.Close()
+
+			if prefix == "" {
+				if _, err := io.Copy(iostreams.G(ctx).Out, fd); err != nil {
+					errGroup = append(errGroup, err)
+				}
+			} else {
+				scanner := bufio.NewScanner(fd)
+				for scanner.Scan() {
+					if err := consumer.Consume(scanner.Text() + "\n"); err != nil {
+						errGroup = append(errGroup, err)
+					}
+				}
+			}
 		}
 	}
 
-	return nil
+	observations.Wait()
+
+	return errors.Join(errGroup...)
 }
 
 // FollowLogs tracks the logs generated by a machine and prints them to the context out stream.

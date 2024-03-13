@@ -272,7 +272,7 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 		go func(service types.ServiceConfig) {
 			defer wg.Done()
 
-			if err := logService(ctx, service, longestName); err != nil {
+			if err := logService(ctx, service); err != nil {
 				log.G(ctx).WithError(err).Errorf("failed to log service %s", service.Name)
 			}
 		}(project.Services[i])
@@ -423,9 +423,7 @@ func runService(ctx context.Context, project *compose.Project, service types.Ser
 	return runOptions.Run(ctx, []string{service.Build.Context})
 }
 
-func logService(ctx context.Context, service types.ServiceConfig, prefixLength int) error {
-	prefix := service.Name + strings.Repeat(" ", prefixLength-len(service.Name))
-
+func logService(ctx context.Context, service types.ServiceConfig) error {
 	plat, _, err := platArchFromService(service)
 	if err != nil {
 		return err
@@ -434,7 +432,6 @@ func logService(ctx context.Context, service types.ServiceConfig, prefixLength i
 	logOptions := logs.LogOptions{
 		Follow:   true,
 		Platform: plat,
-		Prefix:   prefix,
 	}
 
 	return logOptions.Run(ctx, []string{service.Name})
