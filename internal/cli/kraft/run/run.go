@@ -371,10 +371,8 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	return start.Start(ctx, &start.StartOptions{
-		Detach:     opts.Detach,
-		Platform:   opts.platform.String(),
-		Prefix:     opts.Prefix,
-		PrefixName: opts.PrefixName,
-		Remove:     opts.Remove,
+		Detach:   opts.Detach,
+		Platform: opts.platform.String(),
+		Remove:   opts.Remove,
 	}, machine.Name)
 }
