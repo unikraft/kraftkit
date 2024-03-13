@@ -15,11 +15,10 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
-	"sdk.kraft.cloud/instances"
-	"sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -243,87 +242,30 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 				processtree.WithTimeout(opts.Timeout),
 			},
 			processtree.NewProcessTreeItem(
-				"draining",
+				"updating "+fmt.Sprintf("%d", len(sgs[0].Instances)-1)+" instances of "+sgs[0].Name,
 				"",
 				func(ctx context.Context) error {
-					// Specifically wait for first instance to start as it is not done by deploy
-					_, err = opts.Client.Instances().WithMetro(opts.Metro).
-						WaitByUUIDs(ctx, instances.StateRunning, int(time.Minute.Milliseconds()), insts[0].UUID)
-					if err != nil {
-						return fmt.Errorf("could not wait for the first new instance to start: %w", err)
-					}
-
-					var serviceGroup *services.GetResponseItem
-					if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
-						serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).
-							GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
-					} else {
-						serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).
-							GetByName(ctx, opts.ServiceGroupNameOrUUID)
-					}
-					if err != nil {
-						return fmt.Errorf("could not retrieve service group: %w", err)
-					}
-
-					if serviceGroup == nil {
-						return fmt.Errorf("empty service group")
-					}
-
-					log.G(ctx).WithField("service-group", serviceGroup.Name).Info("rolling all old instances in the service group")
-
-					// First stop one instance which is not the new one
-					for i, instance := range serviceGroup.Instances {
-						if instance == insts[0].UUID {
-							continue
-						}
-
-						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
-							return fmt.Errorf("could not stop the old instance: %w", err)
-						}
-
-						serviceGroup.Instances = append(serviceGroup.Instances[:i], serviceGroup.Instances[i+1:]...)
-						break
-					}
-
-					for _, instance := range serviceGroup.Instances {
-						if instance == insts[0].UUID {
-							continue
-						}
-
-						log.G(ctx).WithField("instance", instance).Info("rolling old instance in the service group")
-
-						// Create the rest of the instances and wait max 10s for them to start
-						timeout := int(time.Second.Milliseconds() * 10)
-						autoStart := true
-						_, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, instances.CreateRequest{
-							Image:    insts[0].Image,
-							Args:     insts[0].Args,
-							Env:      insts[0].Env,
-							MemoryMB: &opts.Memory,
-							ServiceGroup: &instances.CreateRequestServiceGroup{
-								UUID: &serviceGroup.UUID,
-							},
-							Autostart:     &autoStart,
-							WaitTimeoutMs: &timeout,
-						})
-						if err != nil {
-							return fmt.Errorf("could not create a new instance: %w", err)
-						}
-
-						if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-							StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
-							return fmt.Errorf("could not stop the old instance: %w", err)
-						}
-
-						_, err = opts.Client.Instances().WithMetro(opts.Metro).
-							WaitByUUIDs(ctx, instances.StateStopped, int(time.Minute.Milliseconds()), instance)
-						if err != nil {
-							return fmt.Errorf("could not wait for the old instance to stop: %w", err)
-						}
-					}
-
-					return nil
+					return create.Rollout(ctx, &create.CreateOptions{
+						Auth:                   opts.Auth,
+						Client:                 opts.Client,
+						Env:                    opts.Env,
+						Features:               opts.Features,
+						FQDN:                   opts.FQDN,
+						Image:                  insts[0].Image,
+						Memory:                 opts.Memory,
+						Metro:                  opts.Metro,
+						Name:                   opts.Name,
+						Output:                 opts.Output,
+						Ports:                  opts.Ports,
+						Replicas:               opts.Replicas,
+						Rollout:                opts.Rollout,
+						ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
+						Start:                  !opts.NoStart,
+						ScaleToZero:            opts.ScaleToZero,
+						SubDomain:              opts.SubDomain,
+						Token:                  opts.Token,
+						Volumes:                opts.Volumes,
+					}, &insts[0], &sgs[0])
 				},
 			),
 		)

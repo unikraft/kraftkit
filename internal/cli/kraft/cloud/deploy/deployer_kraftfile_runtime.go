@@ -148,7 +148,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
 			),
 			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(true),
+			processtree.WithHideOnSuccess(false),
 			processtree.WithTimeout(opts.Timeout),
 		},
 		processtree.NewProcessTreeItem(

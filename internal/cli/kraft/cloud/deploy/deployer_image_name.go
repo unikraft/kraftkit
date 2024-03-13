@@ -84,7 +84,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
 			),
 			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(true),
+			processtree.WithHideOnSuccess(false),
 			processtree.WithTimeout(opts.Timeout),
 		},
 		processtree.NewProcessTreeItem(
