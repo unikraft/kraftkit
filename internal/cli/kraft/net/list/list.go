@@ -14,6 +14,7 @@ import (
 
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -58,6 +59,11 @@ func NewCmd() *cobra.Command {
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Driver = cmd.Flag("driver").Value.String()
+
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
 	return nil
 }
 

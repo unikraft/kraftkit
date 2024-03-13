@@ -18,6 +18,7 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	pkgutils "kraftkit.sh/internal/cli/kraft/pkg/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -81,6 +82,10 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	if opts.Local && opts.Remote {
 		return fmt.Errorf("cannot use --local and --remote")
+	}
+
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
 	cmd.SetContext(ctx)

@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )
@@ -57,6 +58,10 @@ func (opts *PsOptions) Pre(cmd *cobra.Command, args []string) error {
 	opts.rootDir = cmd.Flag(flagRoot).Value.String()
 	if opts.rootDir == "" {
 		return fmt.Errorf("state directory (--%s flag) is not set", flagRoot)
+	}
+
+	if !utils.IsValidOutputFormat(opts.Format) {
+		return fmt.Errorf("invalid output format: %s", opts.Format)
 	}
 
 	return nil

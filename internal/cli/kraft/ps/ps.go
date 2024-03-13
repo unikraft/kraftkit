@@ -12,6 +12,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -75,6 +76,11 @@ func NewCmd() *cobra.Command {
 
 func (opts *PsOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.platform = cmd.Flag("plat").Value.String()
+
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
 	return nil
 }
 

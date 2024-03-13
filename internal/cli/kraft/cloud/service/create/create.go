@@ -208,6 +208,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		opts.FQDN = domain
 	}
 
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
 	return nil
 }
 

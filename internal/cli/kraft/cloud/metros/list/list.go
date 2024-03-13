@@ -16,6 +16,7 @@ import (
 	kraftcloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
@@ -57,6 +58,10 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
+	if !utils.IsValidOutputFormat(opts.Output) {
+		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
 	return nil
 }
 
