@@ -133,22 +133,18 @@ runs:
     run: |
       mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
 
+      cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      #!/usr/bin/env bash
+      if [ "$(id -u)" != "1001" ] || [ "$(id -g)" != "127" ]; then
+        sudo chown -R runner:runner /home/runner
+        sudo chown -R runner:runner /github/workspace
+      fi
+      ${{ inputs.before }}
+      EOF
+      chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+
       # Always dump the contents of the inputs into relevant files, and simply
       # remove if they do not contain any content.
-      touch "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      cat <<'EOF' >> "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      ${{ inputs.before }}
-      EOF
-      if [ "$(cat ${GITHUB_WORKSPACE}/.kraftkit/before.sh)" != "" ]; then
-        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      #!/usr/bin/env bash
-      ${{ inputs.before }}
-      EOF
-        chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      else
-        rm -f "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
-      fi
-
       touch "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
       cat <<'EOF' >> "${GITHUB_WORKSPACE}/.kraftkit/run.sh"
       ${{ inputs.run }}
