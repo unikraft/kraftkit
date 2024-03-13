@@ -7,11 +7,13 @@ package create
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -39,6 +41,7 @@ type CreateOptions struct {
 	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout                bool                  `local:"true" long:"rollout" short:"r" usage:"Roll out the instance in a service group"`
 	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
 	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
@@ -297,6 +300,106 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 	return &instances[0], serviceGroup, nil
 }
 
+// Rollout an instance in a service group.
+func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.GetResponseItem, newServiceGroup *kcservices.GetResponseItem) error {
+	_, err := opts.Client.Instances().WithMetro(opts.Metro).
+		WaitByUUIDs(ctx, kcinstances.StateRunning, int(time.Minute.Milliseconds()), newInstance.UUID)
+	if err != nil {
+		return fmt.Errorf("could not wait for the first new instance to start: %w", err)
+	}
+
+	if newServiceGroup == nil {
+		return fmt.Errorf("empty service group")
+	}
+
+	// First stop one instance which is not the new one
+	for i, instance := range newServiceGroup.Instances {
+		if instance == newInstance.UUID {
+			continue
+		}
+
+		log.G(ctx).
+			WithField("instance", instance).
+			WithField("service group", newServiceGroup.Name).
+			Info("draining old instance")
+
+		if _, err := opts.Client.Instances().WithMetro(opts.Metro).
+			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
+			return fmt.Errorf("could not stop the old instance: %w", err)
+		}
+
+		_, err = opts.Client.Instances().WithMetro(opts.Metro).
+			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance)
+		if err != nil {
+			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
+		}
+
+		log.G(ctx).
+			WithField("instance", instance).
+			WithField("service group", newServiceGroup.Name).
+			Info("drained old instance")
+
+		newServiceGroup.Instances = append(newServiceGroup.Instances[:i], newServiceGroup.Instances[i+1:]...)
+		break
+	}
+
+	for _, instance := range newServiceGroup.Instances {
+		if instance == newInstance.UUID {
+			continue
+		}
+
+		log.G(ctx).
+			WithField("service group", newServiceGroup.Name).
+			Info("starting new instance")
+
+		// Create the rest of the instances and wait max 10s for them to start
+		timeout := int(time.Second.Milliseconds() * 10)
+		autoStart := true
+		req := kcinstances.CreateRequest{
+			Image: newInstance.Image,
+			Args:  newInstance.Args,
+			Env:   newInstance.Env,
+			ServiceGroup: &kcinstances.CreateRequestServiceGroup{
+				UUID: &newServiceGroup.UUID,
+			},
+			Autostart:     &autoStart,
+			WaitTimeoutMs: &timeout,
+		}
+
+		if opts.Memory > 0 {
+			req.MemoryMB = &opts.Memory
+		}
+
+		_, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+		if err != nil {
+			return fmt.Errorf("could not create a new instance: %w", err)
+		}
+
+		log.G(ctx).
+			WithField("instance", instance).
+			WithField("service group", newServiceGroup.Name).
+			Info("draining old instance")
+
+		if _, err := opts.Client.Instances().WithMetro(opts.Metro).
+			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
+			return fmt.Errorf("could not stop the old instance: %w", err)
+		}
+
+		_, err = opts.Client.Instances().WithMetro(opts.Metro).
+			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance)
+		if err != nil {
+			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
+		}
+
+		log.G(ctx).
+			WithField("instance", instance).
+			WithField("service group", newServiceGroup.Name).
+			Info("drained old instance")
+	}
+
+	return nil
+}
+
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",
@@ -362,6 +465,14 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		opts.FQDN = domain
 	}
 
+	if opts.Rollout && opts.ServiceGroupNameOrUUID == "" {
+		return errors.New("cannot use --rollout without a --service-group")
+	}
+
+	if opts.Rollout && opts.Replicas > 0 {
+		return errors.New("cannot use --rollout with --replicas")
+	}
+
 	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }
@@ -372,6 +483,12 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	instance, serviceGroup, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
+	}
+
+	if opts.Rollout {
+		if err := Rollout(ctx, opts, instance, serviceGroup); err != nil {
+			return err
+		}
 	}
 
 	if opts.Output != "table" && opts.Output != "full" {
