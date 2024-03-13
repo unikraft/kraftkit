@@ -17,7 +17,7 @@ func Parse(args ...string) (Params, error) {
 	params := []Param{}
 
 	for _, arg := range args {
-		nameAndValue := strings.Split(arg, "=")
+		nameAndValue := strings.SplitN(arg, "=", 2)
 		if len(nameAndValue) != 2 {
 			return nil, fmt.Errorf("expected param to be in the format 'libname.param=value' but got: '%s'", arg)
 		}
