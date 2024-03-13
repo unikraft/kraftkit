@@ -296,17 +296,22 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 						// Create the rest of the instances and wait max 10s for them to start
 						timeout := int(time.Second.Milliseconds() * 10)
 						autoStart := true
-						_, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, instances.CreateRequest{
-							Image:    insts[0].Image,
-							Args:     insts[0].Args,
-							Env:      insts[0].Env,
-							MemoryMB: &opts.Memory,
+						req := instances.CreateRequest{
+							Image: insts[0].Image,
+							Args:  insts[0].Args,
+							Env:   insts[0].Env,
 							ServiceGroup: &instances.CreateRequestServiceGroup{
 								UUID: &serviceGroup.UUID,
 							},
 							Autostart:     &autoStart,
 							WaitTimeoutMs: &timeout,
-						})
+						}
+
+						if opts.Memory > 0 {
+							req.MemoryMB = &opts.Memory
+						}
+
+						_, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
 						if err != nil {
 							return fmt.Errorf("could not create a new instance: %w", err)
 						}
