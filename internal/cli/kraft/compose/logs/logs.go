@@ -28,7 +28,7 @@ import (
 type LogsOptions struct {
 	Follow bool `long:"follow" usage:"Follow log output"`
 
-	composefile string
+	Composefile string `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -55,10 +55,10 @@ func (opts *LogsOptions) Pre(cmd *cobra.Command, _ []string) error {
 	cmd.SetContext(ctx)
 
 	if cmd.Flag("file").Changed {
-		opts.composefile = cmd.Flag("file").Value.String()
+		opts.Composefile = cmd.Flag("file").Value.String()
 	}
 
-	log.G(cmd.Context()).WithField("composefile", opts.composefile).Debug("using")
+	log.G(cmd.Context()).WithField("composefile", opts.Composefile).Debug("using")
 
 	return nil
 }
@@ -69,7 +69,7 @@ func (opts *LogsOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.composefile)
+	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.Composefile)
 	if err != nil {
 		return err
 	}
