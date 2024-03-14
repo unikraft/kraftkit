@@ -26,6 +26,11 @@ type Strategy struct {
 	NewNetworkV1alpha1 NewStrategyConstructor[networkv1alpha1.NetworkService]
 }
 
+// DefaultStrategyName return the name of the default strategy of the platform.
+func DefaultStrategyName() string {
+	return defaultStrategyName
+}
+
 // Strategies returns the list of registered platform implementations.
 func Strategies() map[string]*Strategy {
 	base := hostSupportedStrategies()
