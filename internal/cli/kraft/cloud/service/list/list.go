@@ -90,7 +90,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	for _, sgItem := range sgListResp {
 		sg, err := client.WithMetro(opts.metro).GetByUUID(ctx, sgItem.UUID)
 		if err != nil {
-			return fmt.Errorf("getting details of service groups %s: %w", sg.UUID, err)
+			return fmt.Errorf("getting details of service groups %s: %w", sgItem.UUID, err)
 		}
 		sgs = append(sgs, *sg)
 	}

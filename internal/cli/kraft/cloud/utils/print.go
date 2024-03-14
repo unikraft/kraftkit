@@ -406,7 +406,16 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcs
 		}
 
 		table.AddField(strings.Join(services, " "), nil)
-		table.AddField(strings.Join(sg.Instances, " "), nil)
+
+		var sgInstances []string
+		for _, instance := range sg.Instances {
+			if instance.Name != "" {
+				sgInstances = append(sgInstances, instance.Name)
+			} else {
+				sgInstances = append(sgInstances, instance.UUID)
+			}
+		}
+		table.AddField(strings.Join(sgInstances, " "), nil)
 
 		var createdAt string
 		if len(sg.CreatedAt) > 0 {
