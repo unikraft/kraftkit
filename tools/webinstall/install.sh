@@ -1044,7 +1044,7 @@ install_linux_gnu() {
         _ilg_deb_path="deb [trusted=yes] https://deb.pkg.kraftkit.sh /"
 
         _ilg_deb_cmd=$(printf "%s%s"                    \
-            "echo ${_ilg_deb_path} | "                  \
+            "echo '${_ilg_deb_path}' | "                \
             "tee /etc/apt/sources.list.d/kraftkit.list" \
         )
 
