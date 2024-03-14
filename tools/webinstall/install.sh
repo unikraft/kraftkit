@@ -37,6 +37,7 @@ BREW=${BREW:-brew}
 CAT=${CAT:-cat}
 CURL=${CURL:-curl}
 CUT=${CUT:-cut}
+DIRNAME=${DIRNAME:-dirname}
 GIT=${GIT:-git}
 GREP=${GREP:-grep}
 HEAD=${HEAD:-head}
@@ -55,6 +56,7 @@ TAR=${TAR:-tar}
 TR=${TR:-tr}
 UNAME=${UNAME:-uname}
 WGET=${WGET:-wget}
+WHICH=${WHICH:-which}
 YUM=${YUM:-yum}
 
 set -u
@@ -1138,6 +1140,15 @@ install_windows() {
 # Returns:
 # Code: 1
 install_linux_manual() {
+    need_cmd "$CAT"
+    need_cmd "$GREP"
+    need_cmd "$MKDIR"
+    need_cmd "$TAR"
+    need_cmd "$INSTALL"
+    need_cmd "$RM"
+    need_cmd "$WHICH"
+    need_cmd "$DIRNAME"
+
     _ill_arch="$1"
 
     _ill_version_url="$INSTALL_SERVER/latest.txt"
@@ -1153,28 +1164,49 @@ install_linux_manual() {
     )
     _CLEANUP_VERSION="$_ill_version_file"
 
-    get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
-    _ill_answer="$_RETVAL"
+    # Check if binary already exists
+    if check_cmd "kraft"; then
+        _ill_kraft_path="$($WHICH kraft)"
+        _ill_prompt_msg=$(printf "%s%s%s"                                       \
+            "kraft binary already installed at \"$_ill_kraft_path\", "          \
+            "overwrite with the latest version ($($CAT $_ill_version_file))? "  \
+            "[y/N]: "                                                           \
+        )
 
-    if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-        :
-    elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
-        get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
-        PREFIX="$_RETVAL"
-    else
-        err "fatal: choose either yes or no."
-    fi
-
-    if [ ! -d "$PREFIX" ]; then
-        get_user_response "prefix does not exist, create? [y/N]: " "n"
+        get_user_response "$_ill_prompt_msg" "n"
         _ill_answer="$_RETVAL"
 
         if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            err "fatal: prefix does not exist."
+            err "fatal: kraft binary already installed."
         elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
-            do_cmd "$MKDIR -p $PREFIX"
+            PREFIX="$($DIRNAME "$_ill_kraft_path")"
         else
             err "fatal: choose either yes or no."
+        fi
+    else
+        get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
+        _ill_answer="$_RETVAL"
+
+        if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            :
+        elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
+            PREFIX="$_RETVAL"
+        else
+            err "fatal: choose either yes or no."
+        fi
+
+        if [ ! -d "$PREFIX" ]; then
+            get_user_response "prefix does not exist, create? [y/N]: " "n"
+            _ill_answer="$_RETVAL"
+
+            if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+                err "fatal: prefix does not exist."
+            elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+                do_cmd "$MKDIR -p $PREFIX"
+            else
+                err "fatal: choose either yes or no."
+            fi
         fi
     fi
 
@@ -1200,6 +1232,15 @@ install_linux_manual() {
 # Returns:
 # Code: 0 on success, 1 on error
 install_darwin_manual() {
+    need_cmd "$CAT"
+    need_cmd "$GREP"
+    need_cmd "$MKDIR"
+    need_cmd "$TAR"
+    need_cmd "$INSTALL"
+    need_cmd "$RM"
+    need_cmd "$WHICH"
+    need_cmd "$DIRNAME"
+
     _idr_arch="$1"
     _idr_arch_parsed="amd64"
 
@@ -1226,28 +1267,49 @@ install_darwin_manual() {
     )
     _CLEANUP_VERSION="$_idr_version_file"
 
-    get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
-    _idr_answer="$_RETVAL"
+    # Check if binary already exists
+    if check_cmd "kraft"; then
+        _idr_kraft_path="$($WHICH kraft)"
+        _idr_prompt_msg=$(printf "%s%s%s"                                       \
+            "kraft binary already installed at \"$_idr_kraft_path\", "          \
+            "overwrite with the latest version ($($CAT $_idr_version_file))? "  \
+            "[y/N]: "                                                           \
+        )
 
-    if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-        :
-    elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
-        get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
-        PREFIX="$_RETVAL"
-    else
-        err "fatal: choose either yes or no."
-    fi
-
-    if [ ! -d "$PREFIX" ]; then
-        get_user_response "prefix does not exist, create? [y/N]: " "n"
+        get_user_response "$_idr_prompt_msg" "n"
         _idr_answer="$_RETVAL"
 
         if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            err "fatal: prefix does not exist."
+            err "fatal: kraft binary already installed."
         elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
-            do_cmd "$MKDIR -p $PREFIX"
+            PREFIX="$($DIRNAME "$_idr_kraft_path")"
         else
             err "fatal: choose either yes or no."
+        fi
+    else
+        get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
+        _idr_answer="$_RETVAL"
+
+        if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+            :
+        elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
+            PREFIX="$_RETVAL"
+        else
+            err "fatal: choose either yes or no."
+        fi
+
+        if [ ! -d "$PREFIX" ]; then
+            get_user_response "prefix does not exist, create? [y/N]: " "n"
+            _idr_answer="$_RETVAL"
+
+            if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
+                err "fatal: prefix does not exist."
+            elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+                do_cmd "$MKDIR -p $PREFIX"
+            else
+                err "fatal: choose either yes or no."
+            fi
         fi
     fi
 
