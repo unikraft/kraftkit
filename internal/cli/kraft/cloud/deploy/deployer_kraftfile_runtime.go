@@ -239,5 +239,9 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		return nil, nil, err
 	}
 
+	if sg == nil {
+		return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{}, nil
+	}
+
 	return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{*sg}, nil
 }
