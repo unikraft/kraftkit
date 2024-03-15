@@ -107,12 +107,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 			return nil, nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
 		}
 		volume := kcinstances.CreateRequestVolume{
-			At: split[1],
+			At: &split[1],
 		}
 		if utils.IsUUID(split[0]) {
-			volume.UUID = split[0]
+			volume.UUID = &split[0]
 		} else {
-			volume.Name = split[0]
+			volume.Name = &split[0]
 		}
 		if len(split) == 3 && split[2] == "ro" {
 			trueVal := true
