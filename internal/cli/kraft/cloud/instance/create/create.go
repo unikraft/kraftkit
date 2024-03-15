@@ -107,12 +107,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 			return nil, nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
 		}
 		volume := kcinstances.CreateRequestVolume{
-			At: split[1],
+			At: &split[1],
 		}
 		if utils.IsUUID(split[0]) {
-			volume.UUID = split[0]
+			volume.UUID = &split[0]
 		} else {
-			volume.Name = split[0]
+			volume.Name = &split[0]
 		}
 		if len(split) == 3 && split[2] == "ro" {
 			trueVal := true
@@ -314,7 +314,7 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 
 	// First stop one instance which is not the new one
 	for i, instance := range newServiceGroup.Instances {
-		if instance == newInstance.UUID {
+		if instance.UUID == newInstance.UUID {
 			continue
 		}
 
@@ -324,12 +324,12 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 			Info("draining old instance")
 
 		if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
+			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance.UUID); err != nil {
 			return fmt.Errorf("could not stop the old instance: %w", err)
 		}
 
 		_, err = opts.Client.Instances().WithMetro(opts.Metro).
-			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance)
+			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance.UUID)
 		if err != nil {
 			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
 		}
@@ -344,7 +344,7 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 	}
 
 	for _, instance := range newServiceGroup.Instances {
-		if instance == newInstance.UUID {
+		if instance.UUID == newInstance.UUID {
 			continue
 		}
 
@@ -381,12 +381,12 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 			Info("draining old instance")
 
 		if _, err := opts.Client.Instances().WithMetro(opts.Metro).
-			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance); err != nil {
+			StopByUUIDs(ctx, int(time.Minute.Milliseconds()), false, instance.UUID); err != nil {
 			return fmt.Errorf("could not stop the old instance: %w", err)
 		}
 
 		_, err = opts.Client.Instances().WithMetro(opts.Metro).
-			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance)
+			WaitByUUIDs(ctx, kcinstances.StateStopped, int(time.Minute.Milliseconds()), instance.UUID)
 		if err != nil {
 			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
 		}

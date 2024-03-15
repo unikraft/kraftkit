@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcservices "sdk.kraft.cloud/services"
 )
 
 type DeployOptions struct {
@@ -280,6 +281,10 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(insts) == 1 && opts.Output == "" {
+		if len(sgs) == 0 {
+			sgs = append(sgs, kcservices.GetResponseItem{})
+		}
+
 		utils.PrettyPrintInstance(ctx, &insts[0], &sgs[0], !opts.NoStart)
 		return nil
 	}
