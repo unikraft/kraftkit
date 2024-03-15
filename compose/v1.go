@@ -88,9 +88,9 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 		}
 
 		for _, m := range machines.Items {
-			if m.Name == machine.Name && m.Status.State == machineapi.MachineStateRunning {
+			if m.Name == machine.Name {
 				runningMachines = append(runningMachines, machine)
-				if !isService {
+				if !isService && m.Status.State == machineapi.MachineStateRunning {
 					log.G(ctx).WithField("machine", machine.Name).Warn("found orphan machine")
 				}
 			}

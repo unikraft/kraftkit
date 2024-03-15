@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package network
 
+var defaultStrategyName = ""
+
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
 // Currently stubbed out for FreeBSD.

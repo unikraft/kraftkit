@@ -11,6 +11,8 @@ import (
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
 )
 
+var defaultStrategyName = "bridge"
+
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
 func hostSupportedStrategies() map[string]*Strategy {

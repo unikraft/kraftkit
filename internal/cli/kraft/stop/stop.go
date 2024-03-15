@@ -19,8 +19,8 @@ import (
 )
 
 type StopOptions struct {
-	All      bool `long:"all" usage:"Remove all machines"`
-	platform string
+	All      bool   `long:"all" usage:"Remove all machines"`
+	Platform string `noattribute:"true"`
 }
 
 // Stop a local Unikraft virtual machine.
@@ -70,7 +70,7 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please supply a machine ID or name or use the --all flag")
 	}
 
-	opts.platform = cmd.Flag("plat").Value.String()
+	opts.Platform = cmd.Flag("plat").Value.String()
 	return nil
 }
 
@@ -84,19 +84,19 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
-	if opts.All || opts.platform == "auto" {
+	if opts.All || opts.Platform == "auto" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		if opts.platform == "host" {
+		if opts.Platform == "host" {
 			platform, _, err = mplatform.Detect(ctx)
 			if err != nil {
 				return err
 			}
 		} else {
 			var ok bool
-			platform, ok = mplatform.PlatformsByName()[opts.platform]
+			platform, ok = mplatform.PlatformsByName()[opts.Platform]
 			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.platform)
+				return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 			}
 		}
 
@@ -123,9 +123,10 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			stop = append(stop, machine)
 			continue
 		}
-
-		if args[0] == machine.Name || args[0] == string(machine.UID) {
-			stop = append(stop, machine)
+		for _, arg := range args {
+			if arg == machine.Name || arg == string(machine.UID) {
+				stop = append(stop, machine)
+			}
 		}
 	}
 
