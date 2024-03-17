@@ -86,6 +86,10 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
+	if opts.DrainTimeout < time.Millisecond && opts.DrainTimeout != 0 {
+		return fmt.Errorf("drain timeout must be at least 1ms")
+	}
+
 	return nil
 }
 
@@ -98,10 +102,6 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	client := kraftcloud.NewInstancesClient(
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
-
-	if opts.DrainTimeout < time.Millisecond {
-		return fmt.Errorf("drain timeout must be at least 1ms")
-	}
 
 	timeout := int(opts.DrainTimeout / time.Millisecond)
 
