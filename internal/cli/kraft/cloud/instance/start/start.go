@@ -90,7 +90,7 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	if opts.WaitTimeout < time.Millisecond {
+	if opts.WaitTimeout < time.Millisecond && opts.WaitTimeout != 0 {
 		return fmt.Errorf("wait timeout must be greater than 1ms")
 	}
 
