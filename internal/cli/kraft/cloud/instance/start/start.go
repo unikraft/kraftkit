@@ -21,8 +21,8 @@ import (
 )
 
 type StartOptions struct {
-	WaitTimeout time.Duration `local:"true" long:"wait-timeout" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
-	Output      string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Wait   time.Duration `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	Output string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 	token string
@@ -90,11 +90,11 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	if opts.WaitTimeout < time.Millisecond && opts.WaitTimeout != 0 {
+	if opts.Wait < time.Millisecond && opts.Wait != 0 {
 		return fmt.Errorf("wait timeout must be greater than 1ms")
 	}
 
-	timeout := int(opts.WaitTimeout.Milliseconds())
+	timeout := int(opts.Wait.Milliseconds())
 	for _, arg := range args {
 		log.G(ctx).Infof("Starting %s", arg)
 
