@@ -22,6 +22,7 @@ import (
 )
 
 type StopOptions struct {
+	Wait         time.Duration `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
 	DrainTimeout time.Duration `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
 	Output       string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	All          bool          `long:"all" usage:"Stop all instances"`
@@ -57,6 +58,9 @@ func NewCmd() *cobra.Command {
 
 			# Stop all KraftCloud instances
 			$ kraft cloud instance stop --all
+
+			# Stop a KraftCloud instanace by name and wait for connections to drain for 5s
+			$ kraft cloud instance stop --wait 5s my-instance-431342
 		`),
 		Long: heredoc.Doc(`
 			Stop a KraftCloud instance.
@@ -86,8 +90,17 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
-	if opts.DrainTimeout < time.Millisecond && opts.DrainTimeout != 0 {
-		return fmt.Errorf("drain timeout must be at least 1ms")
+	if opts.DrainTimeout != 0 && opts.Wait != 0 {
+		return fmt.Errorf("drain-timeout and wait flags are mutually exclusive")
+	}
+
+	if opts.DrainTimeout != 0 && opts.Wait == 0 {
+		opts.Wait = opts.DrainTimeout
+		log.G(cmd.Context()).Warnf("drain-timeout flag is deprecated, use wait flag instead")
+	}
+
+	if opts.Wait < time.Millisecond && opts.Wait != 0 {
+		return fmt.Errorf("drain wait timeout must be at least 1ms")
 	}
 
 	return nil
@@ -103,7 +116,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	timeout := int(opts.DrainTimeout / time.Millisecond)
+	timeout := int(opts.Wait.Milliseconds())
 
 	if opts.All {
 		instListResp, err := client.WithMetro(opts.Metro).List(ctx)
