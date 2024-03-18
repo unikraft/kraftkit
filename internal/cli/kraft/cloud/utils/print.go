@@ -134,7 +134,12 @@ func PrintInstances(ctx context.Context, format string, instances ...kcinstances
 		}
 
 		table.AddField(instance.Name, nil)
-		table.AddField(instance.FQDN, nil)
+
+		var fqdn string
+		if instance.ServiceGroup != nil && len(instance.ServiceGroup.Domains) > 0 {
+			fqdn = instance.ServiceGroup.Domains[0].FQDN
+		}
+		table.AddField(fqdn, nil)
 
 		if format != "table" {
 			table.AddField(instance.PrivateFQDN, nil)
@@ -393,7 +398,12 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcs
 		}
 
 		table.AddField(sg.Name, nil)
-		table.AddField(sg.FQDN, nil)
+
+		var fqdn string
+		if len(sg.Domains) > 0 {
+			fqdn = sg.Domains[0].FQDN
+		}
+		table.AddField(fqdn, nil)
 
 		var services []string
 		for _, service := range sg.Services {
@@ -678,7 +688,11 @@ func PrintCertificates(ctx context.Context, format string, certs ...kccerts.GetR
 // PrettyPrintInstance outputs a single instance and information about it.
 func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseItem, serviceGroup *kcservices.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
-	fqdn := instance.FQDN
+
+	var fqdn string
+	if instance.ServiceGroup != nil && len(instance.ServiceGroup.Domains) > 0 {
+		fqdn = instance.ServiceGroup.Domains[0].FQDN
+	}
 
 	if serviceGroup != nil && fqdn != "" {
 		for _, port := range serviceGroup.Services {
@@ -720,7 +734,7 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 		},
 	}
 
-	if len(fqdn) > 0 {
+	if fqdn != "" {
 		if strings.HasPrefix(fqdn, "https://") {
 			entries = append(entries, fancymap.FancyMapEntry{
 				Key:   "url",
