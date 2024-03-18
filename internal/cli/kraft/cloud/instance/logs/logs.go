@@ -7,6 +7,7 @@ package logs
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -62,6 +63,12 @@ func NewCmd() *cobra.Command {
 
 			# Get the last 20 lines of a kraftcloud instance by name
 			$ kraft cloud instance logs my-instance-431342 --tail 20
+
+			# Get the last lines of a kraftcloud instance by name continuously
+			$ kraft cloud instance logs my-instance-431342 --follow
+
+			# Get the last 10 lines of a kraftcloud instance by name continuously
+			$ kraft cloud instance logs my-instance-431342 --follow --tail 10
 		`),
 		Long: heredoc.Doc(`
 			Get console output of an instance.
@@ -88,7 +95,7 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	if opts.Follow && opts.Tail == -1 {
-		return fmt.Errorf("cannot use --follow without --tail")
+		opts.Tail = 100
 	}
 
 	return nil
@@ -134,6 +141,9 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 		for {
 			output, resp, err := opts.logsFetchDecode(ctx, client, args[0], offset, limit)
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
 				return err
 			}
 
