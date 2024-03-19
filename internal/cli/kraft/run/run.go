@@ -26,7 +26,6 @@ import (
 	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/selection"
-	"kraftkit.sh/unikraft/arch"
 	ukarch "kraftkit.sh/unikraft/arch"
 )
 
@@ -184,6 +183,17 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot use both --port and --network flags together")
 	}
 
+	if opts.Memory != "" {
+		qty, err := resource.ParseQuantity(opts.Memory)
+		if err != nil {
+			return fmt.Errorf("could not parse memory quantity: %w", err)
+		}
+
+		if qty.Value() < 1024*1024 {
+			return fmt.Errorf("memory must be at least 1Mi")
+		}
+	}
+
 	return nil
 }
 
@@ -242,7 +252,7 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(opts.Architecture) > 0 {
-		if _, found := arch.ArchitecturesByName()[opts.Architecture]; !found {
+		if _, found := ukarch.ArchitecturesByName()[opts.Architecture]; !found {
 			log.G(ctx).WithFields(logrus.Fields{
 				"arch": opts.Architecture,
 			}).Warn("unknown or incompatible")
