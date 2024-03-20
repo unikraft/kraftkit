@@ -520,6 +520,11 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rollout {
+		if len(serviceGroup.Instances) == 1 {
+			log.G(ctx).Warn("cannot perform a rolling update on no instances")
+			return nil
+		}
+
 		if err := Rollout(ctx, opts, instance, serviceGroup); err != nil {
 			return err
 		}

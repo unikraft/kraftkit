@@ -236,6 +236,11 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rollout {
+		if len(sgs[0].Instances) == 1 {
+			log.G(ctx).Warn("cannot perform a rolling update on no instances")
+			return nil
+		}
+
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
