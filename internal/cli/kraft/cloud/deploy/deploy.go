@@ -276,6 +276,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 						SubDomain:              opts.SubDomain,
 						Token:                  opts.Token,
 						Volumes:                opts.Volumes,
+						WaitForImage:           true,
 					}, &insts[0], &sgs[0])
 				},
 			),
