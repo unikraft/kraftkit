@@ -65,7 +65,7 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 	}
 
-	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("could not open initramfs file: %w", err)
 	}
