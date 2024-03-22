@@ -99,6 +99,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 
 	packs, err := pkg.Pkg(ctx, &pkg.PkgOptions{
 		Architecture: "x86_64",
+		Compress:     opts.Compress,
 		Format:       "oci",
 		Kraftfile:    opts.Kraftfile,
 		Name:         pkgName,

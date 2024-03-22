@@ -33,6 +33,7 @@ import (
 type DeployOptions struct {
 	Auth                   *config.AuthConfig        `noattribute:"true"`
 	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
+	Compress               bool                      `local:"true" long:"compress" short:"z" usage:"Compress the initrd package (experimental)"`
 	DeployAs               string                    `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
 	DotConfig              string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
