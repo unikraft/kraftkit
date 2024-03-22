@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose"
 	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
 	"kraftkit.sh/internal/cli/kraft/cloud/img"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
@@ -108,6 +109,9 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-metro", Title: "METRO COMMANDS"})
 	cmd.AddCommand(metros.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "COMPOSE COMMANDS"})
+	cmd.AddCommand(compose.NewCmd())
 
 	return cmd
 }

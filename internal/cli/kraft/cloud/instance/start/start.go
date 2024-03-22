@@ -24,8 +24,8 @@ type StartOptions struct {
 	Wait   time.Duration `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 	Output string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
-	metro string
-	token string
+	Metro string
+	Token string
 }
 
 // Start a KraftCloud instance.
@@ -68,9 +68,9 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
-		return fmt.Errorf("could not populate metro and token: %w", err)
+		return fmt.Errorf("could not populate Metro and Token: %w", err)
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
@@ -81,7 +81,7 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *StartOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
@@ -99,9 +99,9 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		log.G(ctx).Infof("Starting %s", arg)
 
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.metro).StartByUUIDs(ctx, timeout, arg)
+			_, err = client.WithMetro(opts.Metro).StartByUUIDs(ctx, timeout, arg)
 		} else {
-			_, err = client.WithMetro(opts.metro).StartByNames(ctx, timeout, arg)
+			_, err = client.WithMetro(opts.Metro).StartByNames(ctx, timeout, arg)
 		}
 		if err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")
