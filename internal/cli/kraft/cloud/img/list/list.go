@@ -146,7 +146,8 @@ imgloop:
 	table.AddField("NAME", cs.Bold)
 	table.AddField("VERSION", cs.Bold)
 	if opts.Output != "table" {
-		table.AddField("ARGS", cs.Bold)
+		table.AddField("APP ARGS", cs.Bold)
+		table.AddField("KERNEL ARGS", cs.Bold)
 	}
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
@@ -166,13 +167,14 @@ imgloop:
 			versions = append(versions, tag.TagStr())
 		}
 
-		slices.Sort[[]string](versions)
+		slices.Sort(versions)
 
 		table.AddField(name, nil)
 		table.AddField(strings.Join(versions, ", "), nil)
 
 		if opts.Output != "table" {
 			table.AddField(image.Args, nil)
+			table.AddField(image.KernelArgs, nil)
 		}
 
 		table.AddField(humanize.Bytes(uint64(image.SizeInBytes)), nil)
