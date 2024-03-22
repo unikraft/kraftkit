@@ -247,11 +247,15 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 			dnsName := strings.TrimSuffix(opts.SubDomain, ".")
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					DNSName:  &dnsName,
+					Domains: []kcservices.CreateRequestDomain{{
+						Name: dnsName,
+					}},
 					Services: services,
 				}
 			} else {
-				req.ServiceGroup.DNSName = &dnsName
+				req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{{
+					Name: dnsName,
+				}}
 			}
 		} else if opts.FQDN != "" {
 			if !strings.HasSuffix(".", opts.FQDN) {
@@ -260,11 +264,15 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					DNSName:  &opts.FQDN,
+					Domains: []kcservices.CreateRequestDomain{{
+						Name: opts.FQDN,
+					}},
 					Services: services,
 				}
 			} else {
-				req.ServiceGroup.DNSName = &opts.FQDN
+				req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{{
+					Name: opts.FQDN,
+				}}
 			}
 		}
 	}

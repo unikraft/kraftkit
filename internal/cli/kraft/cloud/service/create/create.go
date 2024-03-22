@@ -155,13 +155,17 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 
 	if len(opts.SubDomain) > 0 {
 		dnsName := strings.TrimSuffix(opts.SubDomain, ".")
-		req.DNSName = &dnsName
+		req.Domains = []kcservices.CreateRequestDomain{{
+			Name: dnsName,
+		}}
 	} else if len(opts.FQDN) > 0 {
 		if !strings.HasSuffix(".", opts.FQDN) {
 			opts.FQDN += "."
 		}
 
-		req.DNSName = &opts.FQDN
+		req.Domains = []kcservices.CreateRequestDomain{{
+			Name: opts.FQDN,
+		}}
 	}
 
 	return opts.Client.WithMetro(opts.Metro).Create(ctx, req)
