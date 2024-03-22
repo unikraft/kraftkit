@@ -5,8 +5,10 @@
 package initrd
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
 	"math/rand"
 	"net"
@@ -392,6 +394,47 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return nil
 	}); err != nil {
 		return "", fmt.Errorf("could not walk output path: %w", err)
+	}
+
+	if initrd.opts.compress {
+		err := writer.Close()
+		if err != nil {
+			return "", fmt.Errorf("could not close CPIO writer: %w", err)
+		}
+
+		_, err = f.Seek(0, io.SeekStart)
+		if err != nil {
+			return "", fmt.Errorf("could not seek to start of file: %w", err)
+		}
+
+		fw, err := os.OpenFile(initrd.opts.output+".gz", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+		if err != nil {
+			return "", fmt.Errorf("could not open initramfs file: %w", err)
+		}
+
+		gw := gzip.NewWriter(fw)
+
+		if _, err := io.Copy(gw, f); err != nil {
+			return "", fmt.Errorf("could not compress initramfs file: %w", err)
+		}
+
+		err = gw.Close()
+		if err != nil {
+			return "", fmt.Errorf("could not close gzip writer: %w", err)
+		}
+
+		err = fw.Close()
+		if err != nil {
+			return "", fmt.Errorf("could not close compressed initramfs file: %w", err)
+		}
+
+		if err := os.Remove(initrd.opts.output); err != nil {
+			return "", fmt.Errorf("could not remove uncompressed initramfs: %w", err)
+		}
+
+		if err := os.Rename(initrd.opts.output+".gz", initrd.opts.output); err != nil {
+			return "", fmt.Errorf("could not rename compressed initramfs: %w", err)
+		}
 	}
 
 	return initrd.opts.output, nil
