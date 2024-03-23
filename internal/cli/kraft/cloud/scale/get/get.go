@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
@@ -96,7 +97,11 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 
 	// Look up the configuration by name
 	if !utils.IsUUID(args[0]) {
-		conf, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		confResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		if err != nil {
+			return fmt.Errorf("could not get configuration: %w", err)
+		}
+		conf, err := confResp.FirstOrErr()
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
@@ -137,16 +142,20 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		return nil
 
 	} else {
-		var autoscale *kcautoscale.GetResponseItem
+		var confResp *kcclient.ServiceResponse[kcautoscale.GetResponseItem]
 		if utils.IsUUID(args[0]) {
-			autoscale, err = opts.Client.Autoscale().WithMetro(opts.Metro).GetConfigurationByUUID(ctx, args[0])
+			confResp, err = opts.Client.Autoscale().WithMetro(opts.Metro).GetConfigurationByUUID(ctx, args[0])
 		} else {
-			autoscale, err = opts.Client.Autoscale().WithMetro(opts.Metro).GetConfigurationByName(ctx, args[0])
+			confResp, err = opts.Client.Autoscale().WithMetro(opts.Metro).GetConfigurationByName(ctx, args[0])
 		}
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
+		conf, err := confResp.FirstOrErr()
+		if err != nil {
+			return fmt.Errorf("could not get configuration: %w", err)
+		}
 
-		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, *autoscale)
+		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, *conf)
 	}
 }

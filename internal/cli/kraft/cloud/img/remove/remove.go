@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudimages "sdk.kraft.cloud/images"
+	kcimages "sdk.kraft.cloud/images"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -23,11 +23,11 @@ import (
 )
 
 type RemoveOptions struct {
-	All    bool                           `long:"all" usage:"Remove all images"`
-	Auth   *config.AuthConfig             `noattribute:"true"`
-	Client kraftcloudimages.ImagesService `noattribute:"true"`
-	Metro  string                         `noattribute:"true"`
-	Token  string                         `noattribute:"true"`
+	All    bool                   `long:"all" usage:"Remove all images"`
+	Auth   *config.AuthConfig     `noattribute:"true"`
+	Client kcimages.ImagesService `noattribute:"true"`
+	Metro  string                 `noattribute:"true"`
+	Token  string                 `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -99,9 +99,13 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.All {
-		images, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		resp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
-			return fmt.Errorf("could not get list of all images: %w", err)
+			return fmt.Errorf("listing images: %w", err)
+		}
+		images, err := resp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("listing images: %w", err)
 		}
 
 		var notFoundMessagesCount int

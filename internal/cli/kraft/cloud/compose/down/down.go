@@ -114,13 +114,17 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 			if service.Name != opts.project.Name+"-"+requestedService {
 				continue
 			}
-			instance, err := opts.Client.WithMetro(opts.Metro).GetByNames(ctx, service.Name)
+			instanceResp, err := opts.Client.WithMetro(opts.Metro).GetByNames(ctx, service.Name)
 			if err != nil {
-				return err
+				return fmt.Errorf("getting instance %s: %w", service.Name, err)
 			}
-			if instance[0].State == string(kcinstances.StateStopped) ||
-				instance[0].State == string(kcinstances.StateStopping) ||
-				instance[0].State == string(kcinstances.StateDraining) {
+			instance, err := instanceResp.FirstOrErr()
+			if err != nil {
+				return fmt.Errorf("getting instance %s: %w", service.Name, err)
+			}
+			if instance.State == string(kcinstances.StateStopped) ||
+				instance.State == string(kcinstances.StateStopping) ||
+				instance.State == string(kcinstances.StateDraining) {
 				log.G(ctx).WithField("service", service.Name).Info("service already stopped")
 				continue
 			}

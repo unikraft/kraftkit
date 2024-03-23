@@ -76,17 +76,26 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list instances: %w", err)
 	}
-	if len(instListResp) == 0 {
+	instList, err := instListResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("could not list instances: %w", err)
+	}
+	if len(instList) == 0 {
 		return nil
 	}
 
-	uuids := make([]string, 0, len(instListResp))
-	for _, instItem := range instListResp {
+	uuids := make([]string, 0, len(instList))
+	for _, instItem := range instList {
 		uuids = append(uuids, instItem.UUID)
 	}
-	instances, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+
+	instancesResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
 	if err != nil {
-		return fmt.Errorf("getting details of %d instance(s): %w", len(instListResp), err)
+		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
+	}
+	instances, err := instancesResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 	}
 
 	return utils.PrintInstances(ctx, opts.Output, instances...)

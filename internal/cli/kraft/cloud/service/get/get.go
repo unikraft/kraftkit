@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
@@ -83,14 +84,18 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var sg *kcservices.GetResponseItem
+	var sgResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
 	if utils.IsUUID(args[0]) {
-		sg, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+		sgResp, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
 	} else {
-		sg, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		sgResp, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
 	if err != nil {
-		return fmt.Errorf("could not get service: %w", err)
+		return fmt.Errorf("could not get service %s: %w", args[0], err)
+	}
+	sg, err := sgResp.FirstOrErr()
+	if err != nil {
+		return fmt.Errorf("could not get service %s: %w", args[0], err)
 	}
 
 	return utils.PrintServiceGroups(ctx, opts.Output, *sg)

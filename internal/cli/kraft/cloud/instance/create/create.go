@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -128,13 +129,18 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 	var serviceGroup *kcservices.GetResponseItem
 
 	if opts.ServiceGroupNameOrUUID != "" {
+		var resp *kcclient.ServiceResponse[kcservices.GetResponseItem]
 		if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
-			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
+			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
 		} else {
-			serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, opts.ServiceGroupNameOrUUID)
+			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, opts.ServiceGroupNameOrUUID)
 		}
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not use service '%s': %w", opts.ServiceGroupNameOrUUID, err)
+			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
+		}
+		serviceGroup, err = resp.FirstOrErr()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
 		}
 
 		log.G(ctx).
@@ -289,23 +295,35 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 		}
 	}
 
-	newInstance, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+	newInstanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	newInstance, err := newInstanceResp.FirstOrErr()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	instances, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, newInstance.UUID)
+	instanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, newInstance.UUID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
+	}
+	instance, err := instanceResp.FirstOrErr()
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
-	if sg := instances[0].ServiceGroup; sg != nil && sg.UUID != "" {
-		if serviceGroup, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, sg.UUID); err != nil {
+	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
+		serviceGroupResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, sg.UUID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
+		}
+		if serviceGroup, err = serviceGroupResp.FirstOrErr(); err != nil {
 			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}
 	}
 
-	return &instances[0], serviceGroup, nil
+	return instance, serviceGroup, nil
 }
 
 // Rollout an instance in a service group.

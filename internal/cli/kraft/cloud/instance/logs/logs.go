@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
@@ -103,23 +104,27 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *LogOptions) logsFetchDecode(ctx context.Context, client kcinstances.InstancesService, image string, offset, limit int) ([]byte, *kcinstances.LogResponseItem, error) {
 	var err error
-	var resp *kcinstances.LogResponseItem
 
+	var logResp *kcclient.ServiceResponse[kcinstances.LogResponseItem]
 	if utils.IsUUID(image) {
-		resp, err = client.WithMetro(opts.metro).LogByUUID(ctx, image, offset, limit)
+		logResp, err = client.WithMetro(opts.metro).LogByUUID(ctx, image, offset, limit)
 	} else {
-		resp, err = client.WithMetro(opts.metro).LogByName(ctx, image, offset, limit)
+		logResp, err = client.WithMetro(opts.metro).LogByName(ctx, image, offset, limit)
 	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not retrieve logs: %w", err)
 	}
+	log, err := logResp.FirstOrErr()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not retrieve logs: %w", err)
+	}
 
-	outputPart, err := base64.StdEncoding.DecodeString(resp.Output)
+	outputPart, err := base64.StdEncoding.DecodeString(log.Output)
 	if err != nil {
 		return nil, nil, fmt.Errorf("decoding base64 console output: %w", err)
 	}
 
-	return outputPart, resp, nil
+	return outputPart, log, nil
 }
 
 func (opts *LogOptions) Run(ctx context.Context, args []string) error {

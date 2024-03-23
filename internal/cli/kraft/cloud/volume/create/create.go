@@ -51,7 +51,16 @@ func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponse
 		)
 	}
 
-	return opts.Client.WithMetro(opts.Metro).Create(ctx, opts.Name, opts.SizeMB)
+	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, opts.Name, opts.SizeMB)
+	if err != nil {
+		return nil, fmt.Errorf("creating volume: %w", err)
+	}
+	create, err := createResp.FirstOrErr()
+	if err != nil {
+		return nil, fmt.Errorf("creating volume: %w", err)
+	}
+
+	return create, nil
 }
 
 func NewCmd() *cobra.Command {

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudautoscale "sdk.kraft.cloud/services/autoscale"
+	kcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -21,10 +21,10 @@ import (
 )
 
 type RemoveOptions struct {
-	Auth   *config.AuthConfig                   `noattribute:"true"`
-	Client kraftcloudautoscale.AutoscaleService `noattribute:"true"`
-	Metro  string                               `noattribute:"true"`
-	Token  string                               `noattribute:"true"`
+	Auth   *config.AuthConfig           `noattribute:"true"`
+	Client kcautoscale.AutoscaleService `noattribute:"true"`
+	Metro  string                       `noattribute:"true"`
+	Token  string                       `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {

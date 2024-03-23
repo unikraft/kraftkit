@@ -93,7 +93,11 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 
 	// Look up the configuration by name
 	if !utils.IsUUID(args[0]) {
-		conf, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		confResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		if err != nil {
+			return fmt.Errorf("could not get configuration: %w", err)
+		}
+		conf, err := confResp.FirstOrErr()
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
@@ -120,23 +124,31 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
-		if len(instListResp) == 0 {
+		instList, err := instListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
+		if len(instList) == 0 {
 			return fmt.Errorf("no instance found in service group")
 		}
 
-		if len(instListResp) == 1 {
-			master.UUID = &instListResp[0].UUID
+		if len(instList) == 1 {
+			master.UUID = &instList[0].UUID
 		} else {
 			var possible []stringerInstance
 
-			uuids := make([]string, 0, len(instListResp))
-			for _, instItem := range instListResp {
+			uuids := make([]string, 0, len(instList))
+			for _, instItem := range instList {
 				uuids = append(uuids, instItem.UUID)
 			}
 
-			instances, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, uuids...)
+			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, uuids...)
 			if err != nil {
-				return fmt.Errorf("getting details of %d instance(s): %w", len(instListResp), err)
+				return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
+			}
+			instances, err := instancesResp.AllOrErr()
+			if err != nil {
+				return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 			}
 
 			for _, inst := range instances {

@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
@@ -60,11 +61,21 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolume
 		)
 	}
 
+	var attachResp *kcclient.ServiceResponse[kcvolumes.AttachResponseItem]
 	if utils.IsUUID(args[0]) {
-		return opts.Client.WithMetro(opts.metro).AttachByUUID(ctx, args[0], opts.To, opts.At, false)
+		attachResp, err = opts.Client.WithMetro(opts.metro).AttachByUUID(ctx, args[0], opts.To, opts.At, false)
+	} else {
+		attachResp, err = opts.Client.WithMetro(opts.metro).AttachByName(ctx, args[0], opts.To, opts.At, false)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("attaching volume %s: %w", args[0], err)
+	}
+	attach, err := attachResp.FirstOrErr()
+	if err != nil {
+		return nil, fmt.Errorf("attaching volume %s: %w", args[0], err)
 	}
 
-	return opts.Client.WithMetro(opts.metro).AttachByName(ctx, args[0], opts.To, opts.At, false)
+	return attach, nil
 }
 
 func NewCmd() *cobra.Command {

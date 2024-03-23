@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudservices "sdk.kraft.cloud/services"
+	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,11 +22,11 @@ import (
 )
 
 type RemoveOptions struct {
-	All    bool                               `long:"all" usage:"Remove all services"`
-	Auth   *config.AuthConfig                 `noattribute:"true"`
-	Client kraftcloudservices.ServicesService `noattribute:"true"`
-	Metro  string                             `noattribute:"true"`
-	Token  string                             `noattribute:"true"`
+	All    bool                       `long:"all" usage:"Remove all services"`
+	Auth   *config.AuthConfig         `noattribute:"true"`
+	Client kcservices.ServicesService `noattribute:"true"`
+	Metro  string                     `noattribute:"true"`
+	Token  string                     `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -90,16 +90,20 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.All {
-		groups, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		sgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
-			return fmt.Errorf("could not get list of all instances: %w", err)
+			return fmt.Errorf("listing service groups: %w", err)
+		}
+		sgs, err := sgListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("listing service groups: %w", err)
 		}
 
-		for _, group := range groups {
-			log.G(ctx).Infof("removing %s (%s)", group.Name, group.UUID)
+		for _, sg := range sgs {
+			log.G(ctx).Infof("Removing %s (%s)", sg.Name, sg.UUID)
 
-			if _, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, group.UUID); err != nil {
-				log.G(ctx).Errorf("could not delete service group: %s", err.Error())
+			if _, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, sg.UUID); err != nil {
+				log.G(ctx).WithError(err).Error("Could not delete service group")
 			}
 		}
 	}

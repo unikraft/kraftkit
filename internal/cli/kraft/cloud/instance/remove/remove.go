@@ -116,14 +116,22 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
+		instList, err := instListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
 
-		uuids := make([]string, 0, len(instListResp))
-		for _, instItem := range instListResp {
+		uuids := make([]string, 0, len(instList))
+		for _, instItem := range instList {
 			uuids = append(uuids, instItem.UUID)
 		}
 
 		if opts.Stopped {
-			instInfos, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+			instInfosResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+			if err != nil {
+				return fmt.Errorf("could not get instances: %w", err)
+			}
+			instInfos, err := instInfosResp.AllOrErr()
 			if err != nil {
 				return fmt.Errorf("could not get instances: %w", err)
 			}

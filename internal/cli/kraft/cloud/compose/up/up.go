@@ -116,10 +116,13 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 			}
 			log.G(ctx).WithField("service", service.Name).Info("starting service")
 
-			instance, err := opts.Client.WithMetro(opts.Metro).GetByNames(ctx, service.Name)
+			instanceResp, err := opts.Client.WithMetro(opts.Metro).GetByNames(ctx, service.Name)
 			if err != nil {
+				return fmt.Errorf("getting instance %s: %w", service.Name, err)
+			}
+			if instance, err := instanceResp.FirstOrErr(); err != nil {
 				if !strings.Contains(err.Error(), "(code=8)") {
-					return err
+					return fmt.Errorf("getting instance %s: %w", service.Name, err)
 				}
 
 				// if the service does not exist, create it
@@ -151,9 +154,9 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 					return err
 				}
 			} else {
-				if instance[0].State == string(kcinstances.StateRunning) ||
-					instance[0].State == string(kcinstances.StateStarting) ||
-					instance[0].State == string(kcinstances.StateStandby) {
+				if instance.State == string(kcinstances.StateRunning) ||
+					instance.State == string(kcinstances.StateStarting) ||
+					instance.State == string(kcinstances.StateStandby) {
 					log.G(ctx).WithField("service", service.Name).Info("service already running")
 					continue
 				}

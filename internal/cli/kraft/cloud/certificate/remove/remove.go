@@ -102,16 +102,20 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list certificates: %w", err)
 		}
+		certList, err := certListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list certificates: %w", err)
+		}
 
-		log.G(ctx).Infof("Removing %d certificate(s)", len(certListResp))
+		log.G(ctx).Infof("Removing %d certificate(s)", len(certList))
 
-		uuids := make([]string, 0, len(certListResp))
-		for _, certItem := range certListResp {
+		uuids := make([]string, 0, len(certList))
+		for _, certItem := range certList {
 			uuids = append(uuids, certItem.UUID)
 		}
 
 		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
-			return fmt.Errorf("removing %d certificate(s): %w", len(certListResp), err)
+			return fmt.Errorf("removing %d certificate(s): %w", len(certList), err)
 		}
 		return nil
 	}

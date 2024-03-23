@@ -105,7 +105,11 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 
 	// Look up the configuration by name
 	if !utils.IsUUID(args[0]) {
-		conf, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		confResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, args[0])
+		if err != nil {
+			return fmt.Errorf("could not get configuration: %w", err)
+		}
+		conf, err := confResp.FirstOrErr()
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}

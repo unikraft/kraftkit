@@ -85,12 +85,23 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
 	}
+	sgList, err := sgListResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("could not list service groups: %w", err)
+	}
+	if len(sgList) == 0 {
+		return nil
+	}
 
-	sgs := make([]kcservices.GetResponseItem, 0, len(sgListResp))
-	for _, sgItem := range sgListResp {
-		sg, err := client.WithMetro(opts.metro).GetByUUID(ctx, sgItem.UUID)
+	sgs := make([]kcservices.GetResponseItem, 0, len(sgList))
+	for _, sgItem := range sgList {
+		sgResp, err := client.WithMetro(opts.metro).GetByUUID(ctx, sgItem.UUID)
 		if err != nil {
-			return fmt.Errorf("getting details of service groups %s: %w", sgItem.UUID, err)
+			return fmt.Errorf("getting details of service group %s: %w", sgItem.UUID, err)
+		}
+		sg, err := sgResp.FirstOrErr()
+		if err != nil {
+			return fmt.Errorf("getting details of service group %s: %w", sgItem.UUID, err)
 		}
 		sgs = append(sgs, *sg)
 	}

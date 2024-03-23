@@ -168,7 +168,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 		}}
 	}
 
-	return opts.Client.WithMetro(opts.Metro).Create(ctx, req)
+	sgResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("creating service: %w", err)
+	}
+	sg, err := sgResp.FirstOrErr()
+	if err != nil {
+		return nil, fmt.Errorf("creating service: %w", err)
+	}
+
+	return sg, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -225,7 +234,11 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("creating service group: %w", err)
 	}
 
-	sg, err := opts.Client.WithMetro(opts.Metro).GetByUUID(ctx, newSg.UUID)
+	sgResp, err := opts.Client.WithMetro(opts.Metro).GetByUUID(ctx, newSg.UUID)
+	if err != nil {
+		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
+	}
+	sg, err := sgResp.FirstOrErr()
 	if err != nil {
 		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
 	}

@@ -13,7 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+	kcclient "sdk.kraft.cloud/client"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,8 +23,8 @@ import (
 )
 
 type DetachOptions struct {
-	Auth   *config.AuthConfig               `noattribute:"true"`
-	Client kraftcloudvolumes.VolumesService `noattribute:"true"`
+	Auth   *config.AuthConfig       `noattribute:"true"`
+	Client kcvolumes.VolumesService `noattribute:"true"`
 
 	metro string
 	token string
@@ -76,17 +77,20 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	var volume *kraftcloudvolumes.DetachResponseItem
-
+	var detachResp *kcclient.ServiceResponse[kcvolumes.DetachResponseItem]
 	if utils.IsUUID(args[0]) {
-		volume, err = opts.Client.WithMetro(opts.metro).DetachByUUID(ctx, args[0])
+		detachResp, err = opts.Client.WithMetro(opts.metro).DetachByUUID(ctx, args[0])
 	} else {
-		volume, err = opts.Client.WithMetro(opts.metro).DetachByName(ctx, args[0])
+		detachResp, err = opts.Client.WithMetro(opts.metro).DetachByName(ctx, args[0])
 	}
 	if err != nil {
-		return fmt.Errorf("could not create volume: %w", err)
+		return fmt.Errorf("could not detach volume: %w", err)
+	}
+	detach, err := detachResp.FirstOrErr()
+	if err != nil {
+		return fmt.Errorf("could not detach volume: %w", err)
 	}
 
-	_, err = fmt.Fprintln(iostreams.G(ctx).Out, volume.UUID)
+	_, err = fmt.Fprintln(iostreams.G(ctx).Out, detach.UUID)
 	return err
 }

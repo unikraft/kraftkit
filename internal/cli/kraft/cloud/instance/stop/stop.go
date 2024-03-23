@@ -123,11 +123,15 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
+		instList, err := instListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
 
-		log.G(ctx).Infof("Stopping %d instance(s)", len(instListResp))
+		log.G(ctx).Infof("Stopping %d instance(s)", len(instList))
 
-		uuids := make([]string, 0, len(instListResp))
-		for _, instItem := range instListResp {
+		uuids := make([]string, 0, len(instList))
+		for _, instItem := range instList {
 			uuids = append(uuids, instItem.UUID)
 		}
 

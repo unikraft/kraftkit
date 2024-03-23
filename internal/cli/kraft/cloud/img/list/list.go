@@ -89,7 +89,11 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	images, err := client.WithMetro(opts.metro).List(ctx)
+	resp, err := client.WithMetro(opts.metro).List(ctx)
+	if err != nil {
+		return fmt.Errorf("could not list images: %w", err)
+	}
+	images, err := resp.AllOrErr()
 	if err != nil {
 		return fmt.Errorf("could not list images: %w", err)
 	}

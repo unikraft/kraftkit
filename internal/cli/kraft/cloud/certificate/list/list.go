@@ -76,18 +76,26 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list certificates: %w", err)
 	}
-	if len(certListResp) == 0 {
+	certList, err := certListResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("could not list certificates: %w", err)
+	}
+	if len(certList) == 0 {
 		return nil
 	}
 
-	uuids := make([]string, 0, len(certListResp))
-	for _, certItem := range certListResp {
+	uuids := make([]string, 0, len(certList))
+	for _, certItem := range certList {
 		uuids = append(uuids, certItem.UUID)
 	}
-	certificates, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+	certsResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
 	if err != nil {
-		return fmt.Errorf("getting details of %d certificate(s): %w", len(certListResp), err)
+		return fmt.Errorf("getting details of %d certificate(s): %w", len(certList), err)
+	}
+	certs, err := certsResp.AllOrErr()
+	if err != nil {
+		return err
 	}
 
-	return utils.PrintCertificates(ctx, opts.Output, certificates...)
+	return utils.PrintCertificates(ctx, opts.Output, certs...)
 }

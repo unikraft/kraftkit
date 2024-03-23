@@ -82,14 +82,22 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list volumes: %w", err)
 	}
+	volList, err := volListResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("could not list volumes: %w", err)
+	}
 
-	vols := make([]kcvolumes.GetResponseItem, 0, len(volListResp))
-	for _, volItem := range volListResp {
-		v, err := client.WithMetro(opts.metro).GetByUUID(ctx, volItem.UUID)
+	vols := make([]kcvolumes.GetResponseItem, 0, len(volList))
+	for _, volItem := range volList {
+		volResp, err := client.WithMetro(opts.metro).GetByUUID(ctx, volItem.UUID)
 		if err != nil {
 			return fmt.Errorf("getting details of volume %s: %w", volItem.UUID, err)
 		}
-		vols = append(vols, *v)
+		vol, err := volResp.FirstOrErr()
+		if err != nil {
+			return fmt.Errorf("getting details of volume %s: %w", volItem.UUID, err)
+		}
+		vols = append(vols, *vol)
 	}
 
 	return utils.PrintVolumes(ctx, opts.Output, vols...)

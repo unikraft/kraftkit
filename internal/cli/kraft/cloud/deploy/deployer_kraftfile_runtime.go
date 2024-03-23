@@ -7,6 +7,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -172,10 +173,15 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
 					defer cancel()
 
-					images, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
-					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
-						continue
-					} else if err != nil {
+					imagesResp, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							continue
+						}
+						return fmt.Errorf("could not check list of images: %w", err)
+					}
+					images, err := imagesResp.AllOrErr()
+					if err != nil {
 						return fmt.Errorf("could not check list of images: %w", err)
 					}
 

@@ -13,7 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kraftcloudvolumes "sdk.kraft.cloud/volumes"
+	kcclient "sdk.kraft.cloud/client"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -86,14 +87,18 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var vol *kraftcloudvolumes.GetResponseItem
+	var volResp *kcclient.ServiceResponse[kcvolumes.GetResponseItem]
 	if utils.IsUUID(args[0]) {
-		vol, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+		volResp, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
 	} else {
-		vol, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		volResp, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
 	}
 	if err != nil {
-		return fmt.Errorf("could not get volume: %w", err)
+		return fmt.Errorf("could not get volume %s: %w", args[0], err)
+	}
+	vol, err := volResp.FirstOrErr()
+	if err != nil {
+		return fmt.Errorf("could not get volume %s: %w", args[0], err)
 	}
 
 	return utils.PrintVolumes(ctx, opts.Output, *vol)
