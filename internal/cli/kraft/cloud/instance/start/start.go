@@ -24,8 +24,8 @@ type StartOptions struct {
 	Wait   time.Duration `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 	Output string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
-	Metro string
-	Token string
+	Metro string `noattribute:"true"`
+	Token string `noattribute:"true"`
 }
 
 // Start a KraftCloud instance.
