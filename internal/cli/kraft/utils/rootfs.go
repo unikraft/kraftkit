@@ -21,7 +21,7 @@ import (
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.Target) (string, error) {
+func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targets ...target.Target) (string, error) {
 	if rootfs == "" {
 		return "", nil
 	}
@@ -49,6 +49,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, targets ...target.
 				"rootfs-cache",
 			)),
 			initrd.WithArchitecture(arch),
+			initrd.WithCompression(compress),
 		)
 		if err != nil {
 			return "", fmt.Errorf("could not initialize initramfs builder: %w", err)

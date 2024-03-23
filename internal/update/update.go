@@ -113,7 +113,7 @@ Or use the globally accessible flag '--no-check-updates'.
 			return
 		}
 
-		file, err := os.OpenFile(localCheckPath, os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0o644)
+		file, err := os.OpenFile(localCheckPath, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_TRUNC, 0o644)
 		if err != nil {
 			return
 		}

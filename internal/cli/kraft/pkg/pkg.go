@@ -36,6 +36,7 @@ import (
 type PkgOptions struct {
 	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
 	Args         []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
+	Compress     bool                      `local:"true" long:"compress" short:"c" usage:"Compress the initrd package (experimental)"`
 	Dbg          bool                      `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
 	Force        bool                      `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
 	Format       string                    `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`

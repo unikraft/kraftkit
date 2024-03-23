@@ -5,12 +5,21 @@
 package initrd
 
 type InitrdOptions struct {
+	compress bool
 	output   string
 	cacheDir string
 	arch     string
 }
 
 type InitrdOption func(*InitrdOptions) error
+
+// WithCompression sets the compression of the resulting CPIO archive file.
+func WithCompression(compress bool) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.compress = compress
+		return nil
+	}
+}
 
 // WithOutput sets the location of the output location of the resulting CPIO
 // archive file.
