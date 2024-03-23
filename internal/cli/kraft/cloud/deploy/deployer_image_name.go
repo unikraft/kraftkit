@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -70,10 +71,10 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 	return true, nil
 }
 
-func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
+func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
 	var err error
 
-	var inst *kcinstances.GetResponseItem
+	var instResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
 	var sg *kcservices.GetResponseItem
 
 	paramodel, err := processtree.NewProcessTree(
@@ -91,7 +92,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			"deploying",
 			"",
 			func(ctx context.Context) error {
-				inst, sg, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
+				instResp, sg, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
 					Env:                    opts.Env,
 					Features:               opts.Features,
 					FQDN:                   opts.FQDN,
@@ -123,5 +124,5 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 		return nil, nil, err
 	}
 
-	return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{*sg}, nil
+	return instResp, []kcservices.GetResponseItem{*sg}, nil
 }

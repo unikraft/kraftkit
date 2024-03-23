@@ -52,7 +52,7 @@ type CreateOptions struct {
 }
 
 // Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstances.GetResponseItem, *kcservices.GetResponseItem, error) {
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcservices.GetResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -323,7 +323,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcinstan
 		}
 	}
 
-	return instance, serviceGroup, nil
+	return instanceResp, serviceGroup, nil
 }
 
 // Rollout an instance in a service group.
@@ -510,7 +510,11 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	opts.Image = args[0]
 
-	instance, serviceGroup, err := Create(ctx, opts, args[1:]...)
+	instanceResp, serviceGroup, err := Create(ctx, opts, args[1:]...)
+	if err != nil {
+		return err
+	}
+	instance, err := instanceResp.FirstOrErr()
 	if err != nil {
 		return err
 	}
@@ -522,7 +526,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Output != "table" && opts.Output != "full" {
-		return utils.PrintInstances(ctx, opts.Output, *instance)
+		return utils.PrintInstances(ctx, opts.Output, instanceResp)
 	}
 	utils.PrettyPrintInstance(ctx, instance, serviceGroup, opts.Start)
 

@@ -7,7 +7,6 @@ package list
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -19,6 +18,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
+	kcimages "sdk.kraft.cloud/images"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -93,42 +94,16 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list images: %w", err)
 	}
+
+	if opts.Output == "raw" {
+		printRaw(ctx, resp)
+		return nil
+	}
+
 	images, err := resp.AllOrErr()
 	if err != nil {
 		return fmt.Errorf("could not list images: %w", err)
 	}
-
-	filteredImages := images[:0]
-
-imgloop:
-	for _, image := range images {
-		if len(image.Tags) == 0 {
-			continue
-		}
-
-		var name string
-		for _, taggedImgRef := range image.Tags {
-			tag, err := parseTagReference(taggedImgRef)
-			if err != nil {
-				log.G(ctx).Warn("Invalid tagged image reference: ", err)
-				continue
-			}
-			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
-				continue imgloop
-			}
-		}
-
-		filteredImages = append(filteredImages, image)
-	}
-
-	if opts.Output == "json" {
-		return printJSON(ctx, filteredImages)
-	}
-
-	// Sort by digest lexically. This ensures that comparisons between versions are symmetric.
-	sort.Slice(filteredImages, func(i, j int) bool {
-		return filteredImages[i].Digest < filteredImages[j].Digest
-	})
 
 	err = iostreams.G(ctx).StartPager()
 	if err != nil {
@@ -146,6 +121,12 @@ imgloop:
 		return err
 	}
 
+	// Sort the features lexically.  This ensures that comparisons between
+	// versions are symmetric.
+	sort.Slice(images, func(i, j int) bool {
+		return images[i].Digest < images[j].Digest
+	})
+
 	// Header row
 	table.AddField("NAME", cs.Bold)
 	table.AddField("VERSION", cs.Bold)
@@ -156,7 +137,12 @@ imgloop:
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
 
-	for _, image := range filteredImages {
+imgloop:
+	for _, image := range images {
+		if len(image.Tags) == 0 {
+			continue
+		}
+
 		var name string
 		versions := make([]string, 0, len(image.Tags))
 
@@ -167,7 +153,10 @@ imgloop:
 				continue
 			}
 
-			name = tag.RepositoryStr()
+			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
+				continue imgloop
+			}
+
 			versions = append(versions, tag.TagStr())
 		}
 
@@ -230,11 +219,6 @@ func isNamespacedRepository(repo string) bool {
 	return strings.ContainsRune(repo, regNsDelimiter)
 }
 
-func printJSON(ctx context.Context, data any) error {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("serializing data to JSON: %w", err)
-	}
-	fmt.Fprintln(iostreams.G(ctx).Out, string(b))
-	return nil
+func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcimages.ListResponseItem]) {
+	fmt.Fprintln(iostreams.G(ctx).Out, string(resp.RawBody()))
 }

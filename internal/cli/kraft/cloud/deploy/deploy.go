@@ -226,9 +226,13 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("deployer", d.Name()).Debug("using")
 
-	insts, sgs, err := d.Deploy(ctx, opts, args...)
+	instsResp, sgs, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
+	}
+	insts, err := instsResp.AllOrErr()
+	if err != nil {
+		return err
 	}
 
 	if opts.Rollout {
@@ -290,5 +294,5 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, insts...)
+	return utils.PrintInstances(ctx, opts.Output, instsResp)
 }

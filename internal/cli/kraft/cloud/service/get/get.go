@@ -93,10 +93,6 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not get service %s: %w", args[0], err)
 	}
-	sg, err := sgResp.FirstOrErr()
-	if err != nil {
-		return fmt.Errorf("could not get service %s: %w", args[0], err)
-	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *sg)
+	return utils.PrintServiceGroups(ctx, opts.Output, sgResp)
 }

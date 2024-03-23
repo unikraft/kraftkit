@@ -93,10 +93,6 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 	}
-	instances, err := instancesResp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
-	}
 
-	return utils.PrintInstances(ctx, opts.Output, instances...)
+	return utils.PrintInstances(ctx, opts.Output, instancesResp)
 }

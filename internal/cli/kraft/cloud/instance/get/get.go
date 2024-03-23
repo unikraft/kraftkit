@@ -87,19 +87,15 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var resp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
+	var instanceResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
 	if utils.IsUUID(args[0]) {
-		resp, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
+		instanceResp, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
 	} else {
-		resp, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
+		instanceResp, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
 	}
-	if err != nil {
-		return fmt.Errorf("could not get instance %s: %w", args[0], err)
-	}
-	instance, err := resp.FirstOrErr()
 	if err != nil {
 		return fmt.Errorf("could not get instance %s: %w", args[0], err)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, *instance)
+	return utils.PrintInstances(ctx, opts.Output, instanceResp)
 }

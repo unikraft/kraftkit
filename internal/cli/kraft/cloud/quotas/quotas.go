@@ -81,14 +81,9 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("could not get quotas: %w", err)
 	}
-	quotas, err := quotasResp.FirstOrErr()
-	if err != nil {
-		return fmt.Errorf("could not get quotas: %w", err)
-	}
 
 	if opts.Limits {
-		return utils.PrintLimits(ctx, opts.Output, *quotas)
-	} else {
-		return utils.PrintQuotas(ctx, opts.Output, *quotas)
+		return utils.PrintLimits(ctx, opts.Output, quotasResp)
 	}
+	return utils.PrintQuotas(ctx, opts.Output, quotasResp)
 }

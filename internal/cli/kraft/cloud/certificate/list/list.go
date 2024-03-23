@@ -92,10 +92,6 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("getting details of %d certificate(s): %w", len(certList), err)
 	}
-	certs, err := certsResp.AllOrErr()
-	if err != nil {
-		return err
-	}
 
-	return utils.PrintCertificates(ctx, opts.Output, certs...)
+	return utils.PrintCertificates(ctx, opts.Output, certsResp)
 }

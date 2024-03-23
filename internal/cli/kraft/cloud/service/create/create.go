@@ -238,10 +238,6 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
 	}
-	sg, err := sgResp.FirstOrErr()
-	if err != nil {
-		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
-	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *sg)
+	return utils.PrintServiceGroups(ctx, opts.Output, sgResp)
 }

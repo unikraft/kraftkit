@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -47,7 +48,7 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 	return true, nil
 }
 
-func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
+func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
 	if err := build.Build(ctx, &build.BuildOptions{
 		Architecture: "x86_64",
 		DotConfig:    opts.DotConfig,

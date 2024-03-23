@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -70,7 +71,7 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	return true, nil
 }
 
-func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) ([]kcinstances.GetResponseItem, []kcservices.GetResponseItem, error) {
+func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
 	var pkgName string
 
 	if len(opts.Name) > 0 {
@@ -136,7 +137,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		digest = m.Value
 	}
 
-	var inst *kcinstances.GetResponseItem
+	var instResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
 	var sg *kcservices.GetResponseItem
 
 	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -208,7 +209,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
 					defer cancel()
 
-					inst, sg, err = create.Create(ctxTimeout, &create.CreateOptions{
+					instResp, sg, err = create.Create(ctxTimeout, &create.CreateOptions{
 						Env:                    opts.Env,
 						FQDN:                   opts.FQDN,
 						Image:                  pkgName,
@@ -246,9 +247,10 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		return nil, nil, err
 	}
 
-	if sg == nil {
-		return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{}, nil
+	sgItems := make([]kcservices.GetResponseItem, 0, 1)
+	if sg != nil {
+		sgItems = append(sgItems, *sg)
 	}
 
-	return []kcinstances.GetResponseItem{*inst}, []kcservices.GetResponseItem{*sg}, nil
+	return instResp, sgItems, nil
 }

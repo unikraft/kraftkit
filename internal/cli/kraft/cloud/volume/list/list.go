@@ -13,11 +13,13 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/iostreams"
 )
 
 type ListOptions struct {
@@ -82,6 +84,12 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list volumes: %w", err)
 	}
+	// TODO(antoineco): implement batch GET of service groups in the KraftCloud
+	// SDK to avoid this special case.
+	if opts.Output == "raw" {
+		printRaw(ctx, volListResp)
+		return nil
+	}
 	volList, err := volListResp.AllOrErr()
 	if err != nil {
 		return fmt.Errorf("could not list volumes: %w", err)
@@ -100,5 +108,9 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		vols = append(vols, *vol)
 	}
 
-	return utils.PrintVolumes(ctx, opts.Output, vols...)
+	return utils.PrintVolumesCompat(ctx, opts.Output, vols...)
+}
+
+func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcvolumes.ListResponseItem]) {
+	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
 }

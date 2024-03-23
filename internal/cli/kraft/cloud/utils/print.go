@@ -7,13 +7,13 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
+
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/internal/tableprinter"
@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/tui"
 
 	kccerts "sdk.kraft.cloud/certificates"
+	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 	kcautoscale "sdk.kraft.cloud/services/autoscale"
@@ -65,12 +66,16 @@ var (
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
-func PrintInstances(ctx context.Context, format string, instances ...kcinstances.GetResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, instances)
+func PrintInstances(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
-	var err error
+	instances, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -184,11 +189,26 @@ func PrintInstances(ctx context.Context, format string, instances ...kcinstances
 
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
-func PrintVolumes(ctx context.Context, format string, volumes ...kcvolumes.GetResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, volumes)
+func PrintVolumes(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcvolumes.GetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
+	volumes, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	return PrintVolumesCompat(ctx, format, volumes...)
+}
+
+// PrintVolumesCompat pretty-prints the provided set of volumes or returns an
+// error if unable to send to stdout via the provided context.
+//
+// TODO(antoineco): implement batch GET of service groups in the KraftCloud SDK to
+// avoid this compatibility function. Its only caller is in volume/list/list.go
+func PrintVolumesCompat(ctx context.Context, format string, volumes ...kcvolumes.GetResponseItem) error {
 	var err error
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
@@ -257,12 +277,16 @@ func PrintVolumes(ctx context.Context, format string, volumes ...kcvolumes.GetRe
 
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
-func PrintAutoscaleConfiguration(ctx context.Context, format string, aconf kcautoscale.GetResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, aconf)
+func PrintAutoscaleConfiguration(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
-	var err error
+	aconf, err := resp.FirstOrErr()
+	if err != nil {
+		return err
+	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -358,11 +382,26 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, aconf kcaut
 
 // PrintServiceGroups pretty-prints the provided set of service groups or returns
 // an error if unable to send to stdout via the provided context.
-func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcservices.GetResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, serviceGroups)
+func PrintServiceGroups(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
+	serviceGroups, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	return PrintServiceGroupsCompat(ctx, format, serviceGroups...)
+}
+
+// PrintServiceGroupsCompat pretty-prints the provided set of service groups or
+// returns an error if unable to send to stdout via the provided context.
+//
+// TODO(antoineco): implement batch GET of service groups in the KraftCloud SDK to
+// avoid this compatibility function. Its only caller is in service/list/list.go
+func PrintServiceGroupsCompat(ctx context.Context, format string, serviceGroups ...kcservices.GetResponseItem) error {
 	var err error
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
@@ -451,12 +490,16 @@ func PrintServiceGroups(ctx context.Context, format string, serviceGroups ...kcs
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, quotas)
+func PrintQuotas(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
-	var err error
+	quotas, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -511,12 +554,16 @@ func PrintQuotas(ctx context.Context, format string, quotas ...kcusers.QuotasRes
 
 // PrintLimits pretty-prints the provided set of user limits or returns
 // an error if unable to send to stdout via the provided context.
-func PrintLimits(ctx context.Context, format string, quotas ...kcusers.QuotasResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, quotas)
+func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
-	var err error
+	quotas, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -576,12 +623,16 @@ func PrintLimits(ctx context.Context, format string, quotas ...kcusers.QuotasRes
 
 // PrintCertificates pretty-prints the provided set of certificates or returns
 // an error if unable to send to stdout via the provided context.
-func PrintCertificates(ctx context.Context, format string, certs ...kccerts.GetResponseItem) error {
-	if format == "json" {
-		return printJSON(ctx, certs)
+func PrintCertificates(ctx context.Context, format string, resp *kcclient.ServiceResponse[kccerts.GetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
 	}
 
-	var err error
+	certs, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
@@ -815,13 +866,8 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 	}
 }
 
-func printJSON(ctx context.Context, data any) error {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("serializing data to JSON: %w", err)
-	}
-	fmt.Fprintln(iostreams.G(ctx).Out, string(b))
-	return nil
+func printRaw[T any](ctx context.Context, resp *kcclient.ServiceResponse[T]) {
+	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
 }
 
 func IsValidOutputFormat(format string) bool {
@@ -829,5 +875,6 @@ func IsValidOutputFormat(format string) bool {
 		format == "table" ||
 		format == "yaml" ||
 		format == "list" ||
+		format == "raw" ||
 		format == ""
 }

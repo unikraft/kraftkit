@@ -96,10 +96,6 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not get volume %s: %w", args[0], err)
 	}
-	vol, err := volResp.FirstOrErr()
-	if err != nil {
-		return fmt.Errorf("could not get volume %s: %w", args[0], err)
-	}
 
-	return utils.PrintVolumes(ctx, opts.Output, *vol)
+	return utils.PrintVolumes(ctx, opts.Output, volResp)
 }

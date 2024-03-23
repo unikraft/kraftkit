@@ -13,11 +13,13 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
 	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/iostreams"
 )
 
 type ListOptions struct {
@@ -85,6 +87,12 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
 	}
+	// TODO(antoineco): implement batch GET of service groups in the KraftCloud
+	// SDK to avoid this special case.
+	if opts.Output == "raw" {
+		printRaw(ctx, sgListResp)
+		return nil
+	}
 	sgList, err := sgListResp.AllOrErr()
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
@@ -106,5 +114,9 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		sgs = append(sgs, *sg)
 	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, sgs...)
+	return utils.PrintServiceGroupsCompat(ctx, opts.Output, sgs...)
+}
+
+func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcservices.ListResponseItem]) {
+	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
 }

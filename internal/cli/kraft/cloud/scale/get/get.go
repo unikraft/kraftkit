@@ -151,11 +151,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
-		conf, err := confResp.FirstOrErr()
-		if err != nil {
-			return fmt.Errorf("could not get configuration: %w", err)
-		}
 
-		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, *conf)
+		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, confResp)
 	}
 }
