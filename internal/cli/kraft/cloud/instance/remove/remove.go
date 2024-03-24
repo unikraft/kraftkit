@@ -191,7 +191,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			} else {
 				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
 			}
-
 			if err != nil {
 				return fmt.Errorf("could not remove instance %s: %w", arg, err)
 			}

@@ -131,9 +131,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.ServiceGroupNameOrUUID != "" {
 		var resp *kcclient.ServiceResponse[kcservices.GetResponseItem]
 		if utils.IsUUID(opts.ServiceGroupNameOrUUID) {
-			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, opts.ServiceGroupNameOrUUID)
+			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByUUIDs(ctx, opts.ServiceGroupNameOrUUID)
 		} else {
-			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByName(ctx, opts.ServiceGroupNameOrUUID)
+			resp, err = opts.Client.Services().WithMetro(opts.Metro).GetByNames(ctx, opts.ServiceGroupNameOrUUID)
 		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
@@ -314,7 +314,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
-		serviceGroupResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUID(ctx, sg.UUID)
+		serviceGroupResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByUUIDs(ctx, sg.UUID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}

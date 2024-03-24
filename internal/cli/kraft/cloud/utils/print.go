@@ -200,17 +200,6 @@ func PrintVolumes(ctx context.Context, format string, resp *kcclient.ServiceResp
 		return err
 	}
 
-	return PrintVolumesCompat(ctx, format, volumes...)
-}
-
-// PrintVolumesCompat pretty-prints the provided set of volumes or returns an
-// error if unable to send to stdout via the provided context.
-//
-// TODO(antoineco): implement batch GET of service groups in the KraftCloud SDK to
-// avoid this compatibility function. Its only caller is in volume/list/list.go
-func PrintVolumesCompat(ctx context.Context, format string, volumes ...kcvolumes.GetResponseItem) error {
-	var err error
-
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -392,17 +381,6 @@ func PrintServiceGroups(ctx context.Context, format string, resp *kcclient.Servi
 	if err != nil {
 		return err
 	}
-
-	return PrintServiceGroupsCompat(ctx, format, serviceGroups...)
-}
-
-// PrintServiceGroupsCompat pretty-prints the provided set of service groups or
-// returns an error if unable to send to stdout via the provided context.
-//
-// TODO(antoineco): implement batch GET of service groups in the KraftCloud SDK to
-// avoid this compatibility function. Its only caller is in service/list/list.go
-func PrintServiceGroupsCompat(ctx context.Context, format string, serviceGroups ...kcservices.GetResponseItem) error {
-	var err error
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)

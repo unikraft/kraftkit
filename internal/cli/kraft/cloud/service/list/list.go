@@ -13,13 +13,10 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/iostreams"
 )
 
 type ListOptions struct {
@@ -87,12 +84,6 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
 	}
-	// TODO(antoineco): implement batch GET of service groups in the KraftCloud
-	// SDK to avoid this special case.
-	if opts.Output == "raw" {
-		printRaw(ctx, sgListResp)
-		return nil
-	}
 	sgList, err := sgListResp.AllOrErr()
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
@@ -101,22 +92,15 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	sgs := make([]kcservices.GetResponseItem, 0, len(sgList))
+	uuids := make([]string, 0, len(sgList))
 	for _, sgItem := range sgList {
-		sgResp, err := client.WithMetro(opts.metro).GetByUUID(ctx, sgItem.UUID)
-		if err != nil {
-			return fmt.Errorf("getting details of service group %s: %w", sgItem.UUID, err)
-		}
-		sg, err := sgResp.FirstOrErr()
-		if err != nil {
-			return fmt.Errorf("getting details of service group %s: %w", sgItem.UUID, err)
-		}
-		sgs = append(sgs, *sg)
+		uuids = append(uuids, sgItem.UUID)
 	}
 
-	return utils.PrintServiceGroupsCompat(ctx, opts.Output, sgs...)
-}
+	sgResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+	if err != nil {
+		return fmt.Errorf("getting details of %d service group(s): %w", len(uuids), err)
+	}
 
-func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcservices.ListResponseItem]) {
-	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
+	return utils.PrintServiceGroups(ctx, opts.Output, sgResp)
 }

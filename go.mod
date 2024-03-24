@@ -75,7 +75,7 @@ require (
 	k8s.io/apimachinery v0.29.2
 	k8s.io/apiserver v0.29.2
 	oras.land/oras-go/v2 v2.4.0
-	sdk.kraft.cloud v0.5.5-0.20240324092701-81cc0f19c11b
+	sdk.kraft.cloud v0.5.5-0.20240324162937-97e7a02629be
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 )
 
