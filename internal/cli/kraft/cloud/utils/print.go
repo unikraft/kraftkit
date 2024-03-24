@@ -866,7 +866,7 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 	}
 }
 
-func printRaw[T any](ctx context.Context, resp *kcclient.ServiceResponse[T]) {
+func printRaw[T kcclient.APIResponseDataEntry](ctx context.Context, resp *kcclient.ServiceResponse[T]) {
 	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
 }
 
