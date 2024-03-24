@@ -89,9 +89,9 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 
 	var volResp *kcclient.ServiceResponse[kcvolumes.GetResponseItem]
 	if utils.IsUUID(args[0]) {
-		volResp, err = client.WithMetro(opts.metro).GetByUUID(ctx, args[0])
+		volResp, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
 	} else {
-		volResp, err = client.WithMetro(opts.metro).GetByName(ctx, args[0])
+		volResp, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
 	}
 	if err != nil {
 		return fmt.Errorf("could not get volume %s: %w", args[0], err)

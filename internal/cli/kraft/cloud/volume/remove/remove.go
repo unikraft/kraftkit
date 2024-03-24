@@ -17,7 +17,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 )
 
 type RemoveOptions struct {
@@ -77,19 +77,42 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
+	log.G(ctx).Infof("Deleting %d volume(s)", len(args))
+
+	allUUIDs := true
+	allNames := true
 	for _, arg := range args {
 		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.metro).DeleteByUUID(ctx, arg)
+			allNames = false
 		} else {
-			_, err = client.WithMetro(opts.metro).DeleteByName(ctx, arg)
+			allUUIDs = false
 		}
-		if err != nil {
-			return fmt.Errorf("could not delete volume: %w", err)
+		if !(allUUIDs || allNames) {
+			break
 		}
+	}
 
-		_, err = fmt.Fprintln(iostreams.G(ctx).Out, arg)
-		if err != nil {
-			return fmt.Errorf("could not write volume UUID: %w", err)
+	switch {
+	case allUUIDs:
+		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+		}
+	case allNames:
+		if _, err := client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+		}
+	default:
+		for _, arg := range args {
+			log.G(ctx).Infof("Deleting volume %s", arg)
+
+			if utils.IsUUID(arg) {
+				_, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
+			} else {
+				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
+			}
+			if err != nil {
+				return fmt.Errorf("could not delete volume %s: %w", arg, err)
+			}
 		}
 	}
 

@@ -94,32 +94,62 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("listing service groups: %w", err)
 		}
-		sgs, err := sgListResp.AllOrErr()
+		sgList, err := sgListResp.AllOrErr()
 		if err != nil {
 			return fmt.Errorf("listing service groups: %w", err)
 		}
 
-		for _, sg := range sgs {
-			log.G(ctx).Infof("Removing %s (%s)", sg.Name, sg.UUID)
+		uuids := make([]string, 0, len(sgList))
+		for _, sgItem := range sgList {
+			uuids = append(uuids, sgItem.UUID)
+		}
 
-			if _, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, sg.UUID); err != nil {
-				log.G(ctx).WithError(err).Error("Could not delete service group")
+		log.G(ctx).Infof("Removing %d service group(s)", len(uuids))
+
+		if _, err := opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
+		}
+		return nil
+	}
+
+	log.G(ctx).Infof("Removing %d service group(s)", len(args))
+
+	allUUIDs := true
+	allNames := true
+	for _, arg := range args {
+		if utils.IsUUID(arg) {
+			allNames = false
+		} else {
+			allUUIDs = false
+		}
+		if !(allUUIDs || allNames) {
+			break
+		}
+	}
+
+	switch {
+	case allUUIDs:
+		if _, err := opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, args...); err != nil {
+			return fmt.Errorf("removing %d service group(s): %w", len(args), err)
+		}
+	case allNames:
+		if _, err := opts.Client.WithMetro(opts.Metro).DeleteByNames(ctx, args...); err != nil {
+			return fmt.Errorf("removing %d service group(s): %w", len(args), err)
+		}
+	default:
+		for _, arg := range args {
+			log.G(ctx).Infof("Removing %s", arg)
+
+			if utils.IsUUID(arg) {
+				_, err = opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, arg)
+			} else {
+				_, err = opts.Client.WithMetro(opts.Metro).DeleteByNames(ctx, arg)
+			}
+			if err != nil {
+				return fmt.Errorf("could not delete service group: %w", err)
 			}
 		}
 	}
 
-	for _, arg := range args {
-		log.G(ctx).Infof("removing %s", arg)
-
-		if utils.IsUUID(arg) {
-			_, err = opts.Client.WithMetro(opts.Metro).DeleteByUUID(ctx, arg)
-		} else {
-			_, err = opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg)
-		}
-		if err != nil {
-			return fmt.Errorf("could not delete service group: %w", err)
-		}
-	}
-
-	return err
+	return nil
 }
