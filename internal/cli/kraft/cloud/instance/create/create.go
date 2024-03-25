@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
+	"kraftkit.sh/tui/processtree"
 )
 
 type CreateOptions struct {
@@ -49,6 +50,7 @@ type CreateOptions struct {
 	SubDomain              string                `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
 	Token                  string                `noattribute:"true"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage           bool                  `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
 }
 
 // Create a KraftCloud instance.
@@ -69,6 +71,69 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		opts.Client = kraftcloud.NewClient(
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
+	}
+
+	// Check if the image exists before creating the instance
+	if opts.WaitForImage {
+		imageClient := kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+
+		paramodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+				processtree.WithTimeout(60),
+			},
+			processtree.NewProcessTreeItem(
+				"waiting for the image to be available",
+				"",
+				func(ctx context.Context) error {
+					if !strings.Contains(opts.Image, ":") {
+						opts.Image += ":latest"
+					}
+
+					opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
+					opts.Image = strings.TrimPrefix(opts.Image, "official/")
+
+					for {
+						imgs, err := imageClient.Images().WithMetro(opts.Metro).List(ctx)
+						if err != nil {
+							return fmt.Errorf("could not list images: %w", err)
+						}
+
+						for _, img := range imgs.Data.Entries {
+							if strings.Contains(opts.Image, "@") {
+								if img.Digest == opts.Image {
+									return nil
+								}
+							} else {
+								for _, tag := range img.Tags {
+									if tag == opts.Image {
+										return nil
+									}
+								}
+							}
+						}
+
+						time.Sleep(time.Second)
+					}
+				},
+			),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not start the process tree: %w", err)
+		}
+
+		err = paramodel.Start()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not wait for image be available: %w", err)
+		}
 	}
 
 	var features []kcinstances.Feature
@@ -345,7 +410,7 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 		}
 
 		log.G(ctx).
-			WithField("instance", instance).
+			WithField("instance", instance.Name).
 			WithField("service group", newServiceGroup.Name).
 			Info("draining old instance")
 
@@ -520,8 +585,37 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rollout {
-		if err := Rollout(ctx, opts, instance, serviceGroup); err != nil {
-			return err
+		if len(serviceGroup.Instances) == 1 {
+			log.G(ctx).Warn("cannot perform a rolling update on no instances")
+			return nil
+		}
+
+		paramodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(false),
+				processtree.WithTimeout(60),
+			},
+			processtree.NewProcessTreeItem(
+				"updating "+fmt.Sprintf("%d", len(serviceGroup.Instances)-1)+" instances of "+serviceGroup.Name,
+				"",
+				func(ctx context.Context) error {
+					return Rollout(ctx, opts, instance, serviceGroup)
+				},
+			),
+		)
+		if err != nil {
+			return nil
+		}
+
+		err = paramodel.Start()
+		if err != nil {
+			return fmt.Errorf("could not start the process tree: %w", err)
 		}
 	}
 
