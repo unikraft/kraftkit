@@ -83,12 +83,21 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 		return err
 	}
 
+	if hasAliases(cmd) {
+		buf.WriteString("## Aliases\n\n")
+		buf.WriteString("The `" + name + "` command can also be run as:\n\n")
+		buf.WriteString("```\n")
+		buf.WriteString(strings.Join(cmd.Aliases, ", ") + "\n")
+		buf.WriteString("```\n\n")
+	}
+
 	if hasSeeAlso(cmd) {
 		buf.WriteString("## See Also\n\n")
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			pname := parent.CommandPath()
-			link := "/docs/cli/reference/" + strings.ReplaceAll(pname, " ", "/")
+			link := "/cli/" + strings.ReplaceAll(pname, " ", "/")
+			link = strings.ReplaceAll(link, "/kraft/cloud", "")
 			buf.WriteString(fmt.Sprintf("* [`%s`](%s): %s\n", pname, link, parent.Short))
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
@@ -106,8 +115,9 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 			}
 
 			cname := name + " " + child.Name()
-			link := "/docs/cli/reference/" + cname
+			link := "/cli/" + cname
 			link = strings.ReplaceAll(link, " ", "/")
+			link = strings.ReplaceAll(link, "/kraft/cloud", "")
 			buf.WriteString(fmt.Sprintf("* [`%s`](%s): %s\n", cname, link, child.Short))
 		}
 
@@ -160,6 +170,10 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+func hasAliases(cmd *cobra.Command) bool {
+	return len(cmd.Aliases) > 0
 }
 
 // Test to see if we have a reason to print See Also information in docs
