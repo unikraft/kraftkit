@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kccerts "sdk.kraft.cloud/certificates"
+	kcclient "sdk.kraft.cloud/client"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -97,6 +99,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
+	var delResp *kcclient.ServiceResponse[kccerts.DeleteResponseItem]
+
 	if opts.All {
 		certListResp, err := client.WithMetro(opts.metro).List(ctx)
 		if err != nil {
@@ -106,6 +110,9 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list certificates: %w", err)
 		}
+		if len(certList) == 0 {
+			return nil
+		}
 
 		log.G(ctx).Infof("Removing %d certificate(s)", len(certList))
 
@@ -114,7 +121,10 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			uuids = append(uuids, certItem.UUID)
 		}
 
-		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+			return fmt.Errorf("removing %d certificate(s): %w", len(certList), err)
+		}
+		if _, err = delResp.AllOrErr(); err != nil {
 			return fmt.Errorf("removing %d certificate(s): %w", len(certList), err)
 		}
 		return nil
@@ -137,11 +147,11 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	switch {
 	case allUUIDs:
-		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
 			return fmt.Errorf("removing %d certificate(s): %w", len(args), err)
 		}
 	case allNames:
-		if _, err := client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
 			return fmt.Errorf("removing %d certificate(s): %w", len(args), err)
 		}
 	default:
@@ -149,14 +159,17 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			log.G(ctx).Infof("Removing certificate %s", arg)
 
 			if utils.IsUUID(arg) {
-				_, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
 			} else {
-				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
 			}
 			if err != nil {
 				return fmt.Errorf("could not remove certificate %s: %w", arg, err)
 			}
 		}
+	}
+	if _, err = delResp.AllOrErr(); err != nil {
+		return fmt.Errorf("removing certificate(s): %w", err)
 	}
 
 	return nil

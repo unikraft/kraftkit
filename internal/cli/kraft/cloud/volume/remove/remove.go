@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -92,13 +94,15 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
+	var delResp *kcclient.ServiceResponse[kcvolumes.DeleteResponseItem]
+
 	switch {
 	case allUUIDs:
-		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
 			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
 		}
 	case allNames:
-		if _, err := client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
 			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
 		}
 	default:
@@ -106,14 +110,17 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			log.G(ctx).Infof("Deleting volume %s", arg)
 
 			if utils.IsUUID(arg) {
-				_, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
 			} else {
-				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
 			}
 			if err != nil {
 				return fmt.Errorf("could not delete volume %s: %w", arg, err)
 			}
 		}
+	}
+	if _, err = delResp.AllOrErr(); err != nil {
+		return fmt.Errorf("removing volume(s): %w", err)
 	}
 
 	return nil
