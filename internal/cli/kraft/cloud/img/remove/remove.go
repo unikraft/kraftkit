@@ -99,17 +99,20 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.All {
-		resp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		imgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("listing images: %w", err)
 		}
-		images, err := resp.AllOrErr()
+		imgList, err := imgListResp.AllOrErr()
 		if err != nil {
 			return fmt.Errorf("listing images: %w", err)
+		}
+		if len(imgList) == 0 {
+			return nil
 		}
 
 		var notFoundMessagesCount int
-		for _, image := range images {
+		for _, image := range imgList {
 			if !strings.HasPrefix(image.Digest, strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")) {
 				continue
 			}

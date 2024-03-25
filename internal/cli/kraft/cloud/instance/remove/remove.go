@@ -11,9 +11,10 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
-	"sdk.kraft.cloud/instances"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -111,6 +112,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
+	var delResp *kcclient.ServiceResponse[kcinstances.DeleteResponseItem]
+
 	if opts.All || opts.Stopped {
 		instListResp, err := client.WithMetro(opts.metro).List(ctx)
 		if err != nil {
@@ -119,6 +122,9 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		instList, err := instListResp.AllOrErr()
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
+		}
+		if len(instList) == 0 {
+			return nil
 		}
 
 		uuids := make([]string, 0, len(instList))
@@ -138,21 +144,23 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 			var stoppedUuids []string
 			for _, instInfo := range instInfos {
-				if instances.State(instInfo.State) == instances.StateStopped {
+				if kcinstances.State(instInfo.State) == kcinstances.StateStopped {
 					stoppedUuids = append(stoppedUuids, instInfo.UUID)
 				}
+			}
+			if len(stoppedUuids) == 0 {
+				return nil
 			}
 
 			uuids = stoppedUuids
 		}
 
-		if len(uuids) == 0 {
-			return nil
-		}
-
 		log.G(ctx).Infof("Removing %d instance(s)", len(uuids))
 
-		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
+		}
+		if _, err = delResp.AllOrErr(); err != nil {
 			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
 		}
 		return nil
@@ -175,11 +183,11 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	switch {
 	case allUUIDs:
-		if _, err := client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
 			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
 		}
 	case allNames:
-		if _, err := client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
+		if delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
 			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
 		}
 	default:
@@ -187,14 +195,17 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			log.G(ctx).Infof("Removing instance %s", arg)
 
 			if utils.IsUUID(arg) {
-				_, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
 			} else {
-				_, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
+				delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
 			}
 			if err != nil {
 				return fmt.Errorf("could not remove instance %s: %w", arg, err)
 			}
 		}
+	}
+	if _, err = delResp.AllOrErr(); err != nil {
+		return fmt.Errorf("removing instances(s): %w", err)
 	}
 
 	return nil
