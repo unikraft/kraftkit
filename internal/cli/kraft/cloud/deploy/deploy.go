@@ -64,7 +64,7 @@ type DeployOptions struct {
 	ServiceGroupNameOrUUID string                    `long:"service-group" short:"g" usage:"Attach the new deployment to an existing service group"`
 	Strategy               packmanager.MergeStrategy `noattribute:"true"`
 	SubDomain              string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
-	Timeout                time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls"`
+	Timeout                time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls" default:"60s"`
 	Token                  string                    `noattribute:"true"`
 	Volumes                []string                  `long:"volume" short:"v" usage:"Specify the volume mapping(s) in the form NAME:DEST or NAME:DEST:OPTIONS"`
 	Workdir                string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
