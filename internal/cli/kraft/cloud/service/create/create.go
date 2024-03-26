@@ -234,7 +234,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("creating service group: %w", err)
 	}
 
-	sgResp, err := opts.Client.WithMetro(opts.Metro).GetByUUIDs(ctx, newSg.UUID)
+	sgResp, err := opts.Client.WithMetro(opts.Metro).Get(ctx, newSg.UUID)
 	if err != nil {
 		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
 	}

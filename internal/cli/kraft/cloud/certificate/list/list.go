@@ -88,7 +88,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	for _, certItem := range certList {
 		uuids = append(uuids, certItem.UUID)
 	}
-	certsResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+	certsResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
 	if err != nil {
 		return fmt.Errorf("getting details of %d certificate(s): %w", len(certList), err)
 	}

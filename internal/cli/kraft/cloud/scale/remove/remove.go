@@ -85,7 +85,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	delResp, err := opts.Client.WithMetro(opts.Metro).DeletePolicyByName(ctx, args[0], args[1])
+	delResp, err := opts.Client.WithMetro(opts.Metro).DeletePolicy(ctx, args[0], args[1])
 	if err != nil {
 		return fmt.Errorf("could not delete policy: %w", err)
 	}

@@ -99,12 +99,7 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	for _, arg := range args {
 		log.G(ctx).Infof("Starting %s", arg)
 
-		if utils.IsUUID(arg) {
-			_, err = client.WithMetro(opts.Metro).StartByUUIDs(ctx, timeout, arg)
-		} else {
-			_, err = client.WithMetro(opts.Metro).StartByNames(ctx, timeout, arg)
-		}
-		if err != nil {
+		if _, err = client.WithMetro(opts.Metro).Start(ctx, timeout, arg); err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")
 			continue
 		}

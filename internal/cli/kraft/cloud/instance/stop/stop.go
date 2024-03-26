@@ -127,6 +127,9 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
+		if len(instList) == 0 {
+			return nil
+		}
 
 		log.G(ctx).Infof("Stopping %d instance(s)", len(instList))
 
@@ -135,51 +138,24 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 			uuids = append(uuids, instItem.UUID)
 		}
 
-		if _, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, uuids...); err != nil {
-			log.G(ctx).Error("could not stop instance: %w", err)
+		stopResp, err := client.WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, uuids...)
+		if err != nil {
+			return fmt.Errorf("stopping %d instance(s): %w", len(uuids), err)
 		}
-
+		if _, err = stopResp.AllOrErr(); err != nil {
+			return fmt.Errorf("stopping %d instance(s): %w", len(uuids), err)
+		}
 		return nil
 	}
 
 	log.G(ctx).Infof("Stopping %d instance(s)", len(args))
 
-	allUUIDs := true
-	allNames := true
-	for _, arg := range args {
-		if utils.IsUUID(arg) {
-			allNames = false
-		} else {
-			allUUIDs = false
-		}
-		if !(allUUIDs || allNames) {
-			break
-		}
+	stopResp, err := client.WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, args...)
+	if err != nil {
+		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 	}
-
-	switch {
-	case allUUIDs:
-		if _, err := client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, args...); err != nil {
-			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
-		}
-	case allNames:
-		if _, err := client.WithMetro(opts.Metro).StopByNames(ctx, timeout, opts.Force, args...); err != nil {
-			return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
-		}
-	default:
-		for _, arg := range args {
-			log.G(ctx).Infof("Stopping instance %s", arg)
-
-			if utils.IsUUID(arg) {
-				_, err = client.WithMetro(opts.Metro).StopByUUIDs(ctx, timeout, opts.Force, arg)
-			} else {
-				_, err = client.WithMetro(opts.Metro).StopByNames(ctx, timeout, opts.Force, arg)
-			}
-
-			if err != nil {
-				return fmt.Errorf("could not stop instance %s: %w", arg, err)
-			}
-		}
+	if _, err = stopResp.AllOrErr(); err != nil {
+		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 	}
 
 	return nil

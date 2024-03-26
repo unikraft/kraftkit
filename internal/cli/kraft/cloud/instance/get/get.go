@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -87,12 +85,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var instanceResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
-	if utils.IsUUID(args[0]) {
-		instanceResp, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
-	} else {
-		instanceResp, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
-	}
+	instanceResp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not get instance %s: %w", args[0], err)
 	}

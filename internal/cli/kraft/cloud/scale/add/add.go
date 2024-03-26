@@ -103,9 +103,11 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
+	id := args[0]
+
 	// Look up the configuration by name
-	if !utils.IsUUID(args[0]) {
-		confResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByNames(ctx, args[0])
+	if !utils.IsUUID(id) {
+		confResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
@@ -114,7 +116,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
 
-		args[0] = conf.UUID
+		id = conf.UUID
 	}
 
 	steps := []stepFormat{}
@@ -187,7 +189,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		stepPol.Steps = append(stepPol.Steps, s)
 	}
 
-	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, args[0], stepPol); err != nil {
+	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, id, stepPol); err != nil {
 		return fmt.Errorf("could not add configuration: %w", err)
 	}
 

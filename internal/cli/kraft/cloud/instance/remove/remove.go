@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
@@ -112,8 +111,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var delResp *kcclient.ServiceResponse[kcinstances.DeleteResponseItem]
-
 	if opts.All || opts.Stopped {
 		instListResp, err := client.WithMetro(opts.metro).List(ctx)
 		if err != nil {
@@ -133,7 +130,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if opts.Stopped {
-			instInfosResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+			instInfosResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
 			if err != nil {
 				return fmt.Errorf("could not get instances: %w", err)
 			}
@@ -157,7 +154,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 		log.G(ctx).Infof("Removing %d instance(s)", len(uuids))
 
-		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+		delResp, err := client.WithMetro(opts.metro).Delete(ctx, uuids...)
+		if err != nil {
 			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
 		}
 		if _, err = delResp.AllOrErr(); err != nil {
@@ -168,44 +166,12 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).Infof("Removing %d instance(s)", len(args))
 
-	allUUIDs := true
-	allNames := true
-	for _, arg := range args {
-		if utils.IsUUID(arg) {
-			allNames = false
-		} else {
-			allUUIDs = false
-		}
-		if !(allUUIDs || allNames) {
-			break
-		}
-	}
-
-	switch {
-	case allUUIDs:
-		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
-			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
-		}
-	case allNames:
-		if delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
-			return fmt.Errorf("removing %d instance(s): %w", len(args), err)
-		}
-	default:
-		for _, arg := range args {
-			log.G(ctx).Infof("Removing instance %s", arg)
-
-			if utils.IsUUID(arg) {
-				delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
-			} else {
-				delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
-			}
-			if err != nil {
-				return fmt.Errorf("could not remove instance %s: %w", arg, err)
-			}
-		}
+	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("removing %d instance(s): %w", len(args), err)
 	}
 	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("removing instances(s): %w", err)
+		return fmt.Errorf("removing %d instances(s): %w", len(args), err)
 	}
 
 	return nil
