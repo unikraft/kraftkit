@@ -124,5 +124,9 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 		return nil, nil, err
 	}
 
-	return instResp, []kcservices.GetResponseItem{*sg}, nil
+	if sg != nil {
+		return instResp, []kcservices.GetResponseItem{*sg}, nil
+	}
+
+	return instResp, nil, nil
 }
