@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
@@ -103,14 +102,7 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *LogOptions) logsFetchDecode(ctx context.Context, client kcinstances.InstancesService, image string, offset, limit int) ([]byte, *kcinstances.LogResponseItem, error) {
-	var err error
-
-	var logResp *kcclient.ServiceResponse[kcinstances.LogResponseItem]
-	if utils.IsUUID(image) {
-		logResp, err = client.WithMetro(opts.metro).LogByUUID(ctx, image, offset, limit)
-	} else {
-		logResp, err = client.WithMetro(opts.metro).LogByName(ctx, image, offset, limit)
-	}
+	logResp, err := client.WithMetro(opts.metro).Log(ctx, image, offset, limit)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not retrieve logs: %w", err)
 	}

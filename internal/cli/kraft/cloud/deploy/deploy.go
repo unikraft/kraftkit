@@ -159,12 +159,11 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	// Preflight check: check if `--name` is already taken:
 	if len(opts.Name) > 0 {
-		resp, err := opts.Client.Instances().WithMetro(opts.Metro).GetByNames(ctx, opts.Name)
+		resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, opts.Name)
 		if err != nil {
 			return err
 		}
-		_, err = resp.AllOrErr()
-		if err == nil {
+		if _, err = resp.AllOrErr(); err == nil {
 			return fmt.Errorf("instance name '%s' is already taken", opts.Name)
 		}
 	}

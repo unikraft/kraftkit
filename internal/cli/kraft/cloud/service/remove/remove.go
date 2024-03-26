@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
 	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
@@ -90,8 +89,6 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	var delResp *kcclient.ServiceResponse[kcservices.DeleteResponseItem]
-
 	if opts.All {
 		sgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
 		if err != nil {
@@ -112,7 +109,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 		log.G(ctx).Infof("Removing %d service group(s)", len(uuids))
 
-		if delResp, err = opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, uuids...); err != nil {
+		delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, uuids...)
+		if err != nil {
 			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
 		}
 		if _, err = delResp.AllOrErr(); err != nil {
@@ -123,44 +121,12 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).Infof("Removing %d service group(s)", len(args))
 
-	allUUIDs := true
-	allNames := true
-	for _, arg := range args {
-		if utils.IsUUID(arg) {
-			allNames = false
-		} else {
-			allUUIDs = false
-		}
-		if !(allUUIDs || allNames) {
-			break
-		}
-	}
-
-	switch {
-	case allUUIDs:
-		if delResp, err = opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, args...); err != nil {
-			return fmt.Errorf("removing %d service group(s): %w", len(args), err)
-		}
-	case allNames:
-		if delResp, err = opts.Client.WithMetro(opts.Metro).DeleteByNames(ctx, args...); err != nil {
-			return fmt.Errorf("removing %d service group(s): %w", len(args), err)
-		}
-	default:
-		for _, arg := range args {
-			log.G(ctx).Infof("Removing %s", arg)
-
-			if utils.IsUUID(arg) {
-				delResp, err = opts.Client.WithMetro(opts.Metro).DeleteByUUIDs(ctx, arg)
-			} else {
-				delResp, err = opts.Client.WithMetro(opts.Metro).DeleteByNames(ctx, arg)
-			}
-			if err != nil {
-				return fmt.Errorf("could not delete service group: %w", err)
-			}
-		}
+	delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
 	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("removing service group(s): %w", err)
+		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
 
 	return nil

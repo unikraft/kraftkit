@@ -116,7 +116,7 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 			}
 			log.G(ctx).WithField("service", service.Name).Info("starting service")
 
-			instanceResp, err := opts.Client.WithMetro(opts.Metro).GetByNames(ctx, service.Name)
+			instanceResp, err := opts.Client.WithMetro(opts.Metro).Get(ctx, service.Name)
 			if err != nil {
 				return fmt.Errorf("getting instance %s: %w", service.Name, err)
 			}

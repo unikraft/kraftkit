@@ -81,12 +81,11 @@ func (opts *ResetOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	if utils.IsUUID(args[0]) {
-		_, err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByUUID(ctx, args[0])
-	} else {
-		_, err = opts.Client.WithMetro(opts.Metro).DeleteConfigurationByName(ctx, args[0])
-	}
+	delResp, err := opts.Client.WithMetro(opts.Metro).DeleteConfiguration(ctx, args[0])
 	if err != nil {
+		return fmt.Errorf("could not reset configuration: %w", err)
+	}
+	if _, err := delResp.AllOrErr(); err != nil {
 		return fmt.Errorf("could not reset configuration: %w", err)
 	}
 

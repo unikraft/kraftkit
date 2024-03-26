@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kccerts "sdk.kraft.cloud/certificates"
-	kcclient "sdk.kraft.cloud/client"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -87,12 +85,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	var certResp *kcclient.ServiceResponse[kccerts.GetResponseItem]
-	if utils.IsUUID(args[0]) {
-		certResp, err = client.WithMetro(opts.metro).GetByUUIDs(ctx, args[0])
-	} else {
-		certResp, err = client.WithMetro(opts.metro).GetByNames(ctx, args[0])
-	}
+	certResp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not get certificate %s: %w", args[0], err)
 	}

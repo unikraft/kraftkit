@@ -89,7 +89,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		uuids = append(uuids, instItem.UUID)
 	}
 
-	instancesResp, err := client.WithMetro(opts.metro).GetByUUIDs(ctx, uuids...)
+	instancesResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
 	if err != nil {
 		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 	}

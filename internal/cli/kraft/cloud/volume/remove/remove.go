@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -81,46 +79,12 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).Infof("Deleting %d volume(s)", len(args))
 
-	allUUIDs := true
-	allNames := true
-	for _, arg := range args {
-		if utils.IsUUID(arg) {
-			allNames = false
-		} else {
-			allUUIDs = false
-		}
-		if !(allUUIDs || allNames) {
-			break
-		}
-	}
-
-	var delResp *kcclient.ServiceResponse[kcvolumes.DeleteResponseItem]
-
-	switch {
-	case allUUIDs:
-		if delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, args...); err != nil {
-			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
-		}
-	case allNames:
-		if delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, args...); err != nil {
-			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
-		}
-	default:
-		for _, arg := range args {
-			log.G(ctx).Infof("Deleting volume %s", arg)
-
-			if utils.IsUUID(arg) {
-				delResp, err = client.WithMetro(opts.metro).DeleteByUUIDs(ctx, arg)
-			} else {
-				delResp, err = client.WithMetro(opts.metro).DeleteByNames(ctx, arg)
-			}
-			if err != nil {
-				return fmt.Errorf("could not delete volume %s: %w", arg, err)
-			}
-		}
+	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
 	}
 	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("removing volume(s): %w", err)
+		return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
 	}
 
 	return nil

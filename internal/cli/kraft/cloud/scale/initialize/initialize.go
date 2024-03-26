@@ -91,9 +91,11 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
+	id := args[0]
+
 	// Look up the configuration by name
-	if !utils.IsUUID(args[0]) {
-		confResp, err := opts.Client.Services().WithMetro(opts.Metro).GetByNames(ctx, args[0])
+	if !utils.IsUUID(id) {
+		confResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
@@ -102,7 +104,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
 
-		args[0] = conf.UUID
+		id = conf.UUID
 	}
 
 	if opts.WarmupTime < time.Millisecond {
@@ -142,7 +144,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 				uuids = append(uuids, instItem.UUID)
 			}
 
-			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).GetByUUIDs(ctx, uuids...)
+			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, uuids...)
 			if err != nil {
 				return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 			}
@@ -155,7 +157,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 				if inst.ServiceGroup == nil {
 					continue
 				}
-				if inst.ServiceGroup.UUID != args[0] {
+				if inst.ServiceGroup.UUID != id {
 					continue
 				}
 
@@ -181,7 +183,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	req := kcautoscale.CreateRequest{
-		UUID:   &args[0],
+		UUID:   &id,
 		Master: master,
 	}
 	if opts.MinSize > 0 {

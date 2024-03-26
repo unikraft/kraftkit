@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
 	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
@@ -77,12 +76,7 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	var detachResp *kcclient.ServiceResponse[kcvolumes.DetachResponseItem]
-	if utils.IsUUID(args[0]) {
-		detachResp, err = opts.Client.WithMetro(opts.metro).DetachByUUID(ctx, args[0])
-	} else {
-		detachResp, err = opts.Client.WithMetro(opts.metro).DetachByName(ctx, args[0])
-	}
+	detachResp, err := opts.Client.WithMetro(opts.metro).Detach(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not detach volume: %w", err)
 	}
