@@ -73,6 +73,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		)
 	}
 
+	if !strings.Contains(opts.Image, ":") {
+		opts.Image += ":latest"
+	}
+
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
 		imageClient := kraftcloud.NewClient(
@@ -94,10 +98,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				"waiting for the image to be available",
 				"",
 				func(ctx context.Context) error {
-					if !strings.Contains(opts.Image, ":") {
-						opts.Image += ":latest"
-					}
-
 					opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
 					opts.Image = strings.TrimPrefix(opts.Image, "official/")
 
