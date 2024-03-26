@@ -392,6 +392,11 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		networks = append(networks, fmt.Sprintf("%s:%s", project.Networks[name].Name, network.Ipv4Address))
 	}
 
+	volumes := []string{}
+	for _, vol := range service.Volumes {
+		volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Source, vol.Target))
+	}
+
 	runOptions := run.RunOptions{
 		Architecture: arch,
 		Detach:       true,
@@ -399,6 +404,7 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		Networks:     networks,
 		NoStart:      true,
 		Platform:     plat,
+		Volumes:      volumes,
 	}
 
 	if service.Image != "" {
