@@ -189,8 +189,10 @@ func (opts *RunOptions) parseVolumes(ctx context.Context, machine *machineapi.Ma
 
 	var err error
 	controllers := map[string]volumeapi.VolumeService{}
-	machine.Spec.Volumes = []volumeapi.Volume{}
 
+	if machine.Spec.Volumes == nil {
+		machine.Spec.Volumes = make([]volumeapi.Volume, 0)
+	}
 	for _, volLine := range opts.Volumes {
 		var hostPath, mountPath string
 		split := strings.Split(volLine, ":")
