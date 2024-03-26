@@ -1078,7 +1078,7 @@ install_linux_gnu() {
         _ilg_msg=$(printf "error: %s%s%s"                               \
             "Unsupported Linux distribution. "                          \
             "Try downloading the tar.gz file from "                     \
-            "https://github/unikraft/kraftkit or switch to manual mode" \
+            "https://github.com/unikraft/kraftkit or switch to manual mode" \
         )
         err "$_ilg_msg"
     fi
@@ -1102,7 +1102,7 @@ install_linux_musl() {
         _ilm_msg=$(printf "error: %s%s%s"                               \
             "Unsupported Linux distribution. "                          \
             "Try downloading the tar.gz file from "                     \
-            "https://github/unikraft/kraftkit or switch to manual mode" \
+            "https://github.com/unikraft/kraftkit or switch to manual mode" \
         )
         err "$_ilm_msg"
     fi
