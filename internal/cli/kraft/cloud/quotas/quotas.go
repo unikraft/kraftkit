@@ -85,5 +85,5 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 	if opts.Limits {
 		return utils.PrintLimits(ctx, opts.Output, quotasResp)
 	}
-	return utils.PrintQuotas(ctx, opts.Output, quotasResp)
+	return utils.PrintQuotas(ctx, *auth, opts.Output, quotasResp)
 }
