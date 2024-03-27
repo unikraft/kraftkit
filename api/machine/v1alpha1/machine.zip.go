@@ -84,6 +84,9 @@ type MachineSpec struct {
 	// Volumes associated with this machine.
 	Volumes []volumev1alpha1.Volume `json:"volumes,omitempty"`
 
+	// Environment variables associated with this machine
+	Env map[string]string `json:"env,omitempty"`
+
 	// Resources describes the compute resources (requests and limits) required by
 	// this machine.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
