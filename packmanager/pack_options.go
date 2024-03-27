@@ -9,6 +9,7 @@ package packmanager
 type PackOptions struct {
 	appSourceFiles                   bool
 	args                             []string
+	env                              []string
 	initrd                           string
 	kconfig                          bool
 	kernelDbg                        bool
@@ -38,6 +39,11 @@ func (popts *PackOptions) PackAppSourceFiles() bool {
 // Args returns the arguments to pass to the kernel.
 func (popts *PackOptions) Args() []string {
 	return popts.args
+}
+
+// Env returns the environment variables to be passed to the kernel.
+func (popts *PackOptions) Env() []string {
+	return popts.env
 }
 
 // Initrd returns the path of the initrd file that should be packaged.
@@ -179,5 +185,12 @@ func PackOutput(output string) PackOption {
 func PackMergeStrategy(strategy MergeStrategy) PackOption {
 	return func(popts *PackOptions) {
 		popts.mergeStrategy = strategy
+	}
+}
+
+// PackWithEnv adds the environment variables to the package.
+func PackWithEnvs(envs []string) PackOption {
+	return func(popts *PackOptions) {
+		popts.env = envs
 	}
 }
