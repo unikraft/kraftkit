@@ -558,13 +558,9 @@ func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceRespo
 		return err
 	}
 
-	if format != "table" {
-		table.AddField("UUID", cs.Bold)
-	}
-
-	table.AddField("MEMORY SIZE (MIN|MAX)", cs.Bold)
-	table.AddField("VOLUME SIZE (MIN|MAX)", cs.Bold)
-	table.AddField("AUTOSCALE SIZE (MIN|MAX)", cs.Bold)
+	table.AddField("MEMORY SIZE (MIN/MAX)", cs.Bold)
+	table.AddField("VOLUME SIZE (MIN/MAX)", cs.Bold)
+	table.AddField("AUTOSCALE SIZE (MIN/MAX)", cs.Bold)
 	table.EndRow()
 
 	for _, quota := range quotas {
@@ -573,21 +569,21 @@ func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceRespo
 		}
 
 		table.AddField(
-			fmt.Sprintf("%s|%s",
+			fmt.Sprintf("%s/%s",
 				humanize.IBytes(uint64(quota.Limits.MinMemoryMb)*humanize.MiByte),
 				humanize.IBytes(uint64(quota.Limits.MaxMemoryMb)*humanize.MiByte),
 			), nil,
 		)
 
 		table.AddField(
-			fmt.Sprintf("%s|%s",
+			fmt.Sprintf("%s/%s",
 				humanize.IBytes(uint64(quota.Limits.MinVolumeMb)*humanize.MiByte),
 				humanize.IBytes(uint64(quota.Limits.MaxVolumeMb)*humanize.MiByte),
 			), nil,
 		)
 
 		table.AddField(
-			fmt.Sprintf("%d|%d",
+			fmt.Sprintf("%d/%d",
 				quota.Limits.MinAutoscaleSize,
 				quota.Limits.MaxAutoscaleSize,
 			), nil,
