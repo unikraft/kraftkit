@@ -20,6 +20,7 @@ import (
 
 type UpOptions struct {
 	composefile string
+	Detach      bool `long:"detach" short:"d" usage:"Run in background"`
 }
 
 func NewCmd() *cobra.Command {
@@ -70,6 +71,7 @@ func (opts *UpOptions) Run(ctx context.Context, _ []string) error {
 
 	startOptions := start.StartOptions{
 		Composefile: opts.composefile,
+		Detach:      opts.Detach,
 	}
 
 	return startOptions.Run(ctx, []string{})
