@@ -44,11 +44,13 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 		}
 
 		// Fallback to local config
-	} else if auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
-		return &auth, nil
+	} else if localAuth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
+		auth = localAuth
 	} else {
 		return nil, fmt.Errorf("could not determine kraftcloud user token: try setting `KRAFTCLOUD_TOKEN`")
 	}
+
+	auth.User = maybePrependRobot(auth.User)
 
 	return &auth, nil
 }
@@ -74,4 +76,21 @@ func HydrateKraftCloudAuthInContext(ctx context.Context) (context.Context, error
 	G[KraftKit](ctx).Auth["index.unikraft.io"] = *auth
 
 	return ctx, nil
+}
+
+// NOTE(antoineco): this function exists because some tokens were issued
+// without the Harbor `robot$` prefix in the username, causing requests to
+// Harbor to fail (e.g. image pull/push).
+func maybePrependRobot(user string) string {
+	const (
+		robotUserPrefix = "robot$"
+		robotUserSuffix = ".users.kraftcloud"
+	)
+	if !strings.HasSuffix(user, robotUserSuffix) {
+		return user
+	}
+	if strings.HasPrefix(user, robotUserPrefix) {
+		return user
+	}
+	return robotUserPrefix + user
 }
