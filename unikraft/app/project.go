@@ -177,6 +177,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithExtensions(app.extensions),
 		WithKraftfile(popts.kraftfile),
 		WithVolumes(app.volumes...),
+		WithEnv(app.env),
 	)
 	if err != nil {
 		return nil, err
