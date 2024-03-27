@@ -102,7 +102,7 @@ type PsEntry struct {
 type colorFunc func(string) string
 
 var (
-	machineStateColor = map[machineapi.MachineState]colorFunc{
+	MachineStateColor = map[machineapi.MachineState]colorFunc{
 		machineapi.MachineStateUnknown:    iostreams.Gray,
 		machineapi.MachineStateCreated:    iostreams.Blue,
 		machineapi.MachineStateFailed:     iostreams.Red,
@@ -113,7 +113,7 @@ var (
 		machineapi.MachineStateExited:     iostreams.Gray,
 		machineapi.MachineStateErrored:    iostreams.Red,
 	}
-	machineStateColorNil = map[machineapi.MachineState]colorFunc{
+	MachineStateColorNil = map[machineapi.MachineState]colorFunc{
 		machineapi.MachineStateUnknown:    nil,
 		machineapi.MachineStateCreated:    nil,
 		machineapi.MachineStateFailed:     nil,
@@ -248,7 +248,7 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
-		machineStateColor = machineStateColorNil
+		MachineStateColor = MachineStateColorNil
 	}
 
 	for _, item := range items {
@@ -259,7 +259,7 @@ func (opts *PsOptions) PrintPsTable(ctx context.Context, items []PsEntry) error 
 		table.AddField(item.Kernel, nil)
 		table.AddField(item.Args, nil)
 		table.AddField(item.Created, nil)
-		table.AddField(item.State.String(), machineStateColor[item.State])
+		table.AddField(item.State.String(), MachineStateColor[item.State])
 		table.AddField(item.Mem, nil)
 		table.AddField(item.Ports, nil)
 		if opts.Long {
