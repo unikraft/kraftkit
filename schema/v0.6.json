@@ -11,6 +11,8 @@
 
     "/^name$/": { "type": "string" },
 
+    "/^readme$/": { "type": "string" },
+
     "/^outdir$/": { "type": "string" },
 
     "/^template$/": {

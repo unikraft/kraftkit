@@ -20,6 +20,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
@@ -40,6 +41,17 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		name, ok = n.(string)
 		if !ok {
 			return nil, errors.New("project name must be a string")
+		}
+	}
+
+	if r, ok := iface["readme"]; ok {
+		app.readme, ok = r.(string)
+		if !ok {
+			return nil, errors.New("readme must be a string")
+		}
+
+		if readmeBytes, err := os.ReadFile(app.readme); err == nil {
+			app.readme = string(readmeBytes)
 		}
 	}
 

@@ -163,6 +163,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	project, err := NewApplicationFromOptions(
 		WithName(projectName),
+		WithReadme(app.readme),
 		WithWorkingDir(popts.workdir),
 		WithFilename(app.filename),
 		WithOutDir(app.outDir),
