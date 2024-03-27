@@ -39,6 +39,11 @@
       ]
     },
 
+    "/^env$/": {
+      "id": "#/properties/env",
+      "$ref": "#/definitions/list_or_dict"
+    },
+
     "/^unikraft$/": {
       "id": "#/properties/unikraft",
       "$ref": "#/definitions/unikraft",
