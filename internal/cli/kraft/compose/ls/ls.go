@@ -13,11 +13,15 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/ps"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 
 	composeapi "kraftkit.sh/api/compose/v1"
+	machineapi "kraftkit.sh/api/machine/v1alpha1"
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/packmanager"
 )
 
@@ -86,24 +90,53 @@ func (opts *LsOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	machineController, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return err
+	}
+
+	machines, err := machineController.List(ctx, &machineapi.MachineList{})
+	if err != nil {
+		return err
+	}
+
 	table.AddField("NAME", cs.Bold)
 	table.AddField("STATUS", cs.Bold)
 	table.AddField("COMPOSEFILE", cs.Bold)
 	table.EndRow()
 
+	if config.G[config.KraftKit](ctx).NoColor {
+		ps.MachineStateColor = ps.MachineStateColorNil
+	}
+
 	for _, project := range projects.Items {
-		var status string
-		if len(project.Status.Machines) == 0 {
-			if !opts.ShowAll {
-				continue
+		status := machineapi.MachineStateExited
+
+		for _, projectMachine := range project.Status.Machines {
+			for _, machine := range machines.Items {
+				if projectMachine.Name != machine.Name {
+					continue
+				}
+				if machine.Status.State == machineapi.MachineStateRunning {
+					status = machineapi.MachineStateRunning
+					break
+				}
+				if machine.Status.State == machineapi.MachineStateCreated {
+					status = machineapi.MachineStateCreated
+				}
 			}
-			status = "Stopped"
-		} else {
-			status = "Running"
+
+			if status == machineapi.MachineStateRunning {
+				break
+			}
+		}
+
+		if !opts.ShowAll && status != machineapi.MachineStateRunning {
+			continue
 		}
 
 		table.AddField(project.Name, nil)
-		table.AddField(status, nil)
+		table.AddField(status.String(), ps.MachineStateColor[status])
 
 		composefile := filepath.Join(project.Spec.Workdir, project.Spec.Composefile)
 		table.AddField(composefile, nil)
