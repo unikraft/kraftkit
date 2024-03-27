@@ -362,5 +362,9 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		return err
 	}
 
+	if err := opts.parseKraftfileEnv(ctx, runner.project, machine); err != nil {
+		return err
+	}
+
 	return nil
 }
