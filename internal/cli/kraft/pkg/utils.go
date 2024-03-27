@@ -7,6 +7,8 @@ package pkg
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"kraftkit.sh/unikraft/app"
 )
@@ -33,4 +35,33 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// aggregateEnvs aggregates the environment variables from the project and
+// the cli options, filling in missing values with the host environment.
+func (opts *PkgOptions) aggregateEnvs() []string {
+	envs := make(map[string]string)
+
+	if opts.Project.Env() != nil {
+		envs = opts.Project.Env()
+	}
+
+	// Add the cli environment
+	for _, env := range opts.Env {
+		if strings.ContainsRune(env, '=') {
+			parts := strings.SplitN(env, "=", 2)
+			envs[parts[0]] = parts[1]
+			continue
+		}
+
+		envs[env] = os.Getenv(env)
+	}
+
+	// Aggregate all the environment variables
+	var env []string
+	for k, v := range envs {
+		env = append(env, k+"="+v)
+	}
+
+	return env
 }

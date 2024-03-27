@@ -270,6 +270,9 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
 	ocipack.manifest.SetArchitecture(ctx, ocipack.Architecture().Name())
+	log.G(ctx).Debugf("popts env: %v", popts.Env())
+	ocipack.manifest.SetEnv(ctx, popts.Env())
+	log.G(ctx).Debugf("manifest env: %v", ocipack.manifest.config.Config.Env)
 
 	switch popts.MergeStrategy() {
 	case packmanager.StrategyMerge, packmanager.StrategyExit:
@@ -800,6 +803,13 @@ func (ocipack *ociPackage) Unpack(ctx context.Context, dir string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	// Set the environment variables
+	switch v := ocipack.Metadata().(type) {
+	case *ocispec.Image:
+		v.Config.Env = image.Config.Env
+	default:
 	}
 
 	return nil

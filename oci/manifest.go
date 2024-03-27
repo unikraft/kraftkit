@@ -36,13 +36,12 @@ type Manifest struct {
 
 	handle handler.Handler
 
-	v1Image  v1.Image
-	config   *ocispec.Image
-	manifest *ocispec.Manifest
-	desc     *ocispec.Descriptor
-	layers   []*Layer
-	pushed   sync.Map // wraps map[digest.Digest]bool
-
+	v1Image     v1.Image
+	config      *ocispec.Image
+	manifest    *ocispec.Manifest
+	desc        *ocispec.Descriptor
+	layers      []*Layer
+	pushed      sync.Map // wraps map[digest.Digest]bool
 	annotations map[string]string
 }
 
@@ -231,6 +230,11 @@ func (manifest *Manifest) SetOSFeature(_ context.Context, feature ...string) {
 // Set the command of the image.
 func (manifest *Manifest) SetCmd(_ context.Context, cmd []string) {
 	manifest.config.Config.Cmd = cmd
+}
+
+// Set the environment variables of the image.
+func (manifest *Manifest) SetEnv(_ context.Context, env []string) {
+	manifest.config.Config.Env = env
 }
 
 // Save the image.
