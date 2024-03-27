@@ -35,6 +35,7 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/machine/qemu/qmp"
 	qmpapi "kraftkit.sh/machine/qemu/qmp/v7alpha2"
+	"kraftkit.sh/unikraft/export/v0/posixenviron"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
 	"kraftkit.sh/unikraft/export/v0/vfscore"
@@ -369,6 +370,17 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	if len(fstab) > 0 {
 		kernelArgs = append(kernelArgs,
 			vfscore.ParamVfsFstab.WithValue(fstab),
+		)
+	}
+
+	var environ []string
+	for k, v := range machine.Spec.Env {
+		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	if len(environ) > 0 {
+		kernelArgs = append(kernelArgs,
+			posixenviron.ParamEnvVars.WithValue(environ),
 		)
 	}
 
