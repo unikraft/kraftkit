@@ -1,10 +1,6 @@
 # Ignore distributables folder
 dist/
 
-# Ignore vscode folder
-.vscode/
-!.vscode/settings.json
-
 # Ignore idea (GoLand) folder
 .idea/
 
