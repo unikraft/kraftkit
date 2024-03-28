@@ -230,7 +230,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 						SubDomain:              opts.SubDomain,
 						Token:                  opts.Token,
 						Volumes:                opts.Volumes,
-					}, args...)
+					}, deployer.args...)
 					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
 						continue
 					} else if err != nil {
