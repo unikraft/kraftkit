@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/unikraft/target"
 )
 
 type deployerKraftfileRuntime struct {
@@ -135,6 +136,11 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		}
 
 		digest = m.Value
+	}
+
+	if len(deployer.args) == 0 {
+		p := packs[0].(target.Target)
+		deployer.args = p.Command()
 	}
 
 	var instResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
