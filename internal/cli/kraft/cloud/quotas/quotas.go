@@ -20,8 +20,9 @@ import (
 )
 
 type QuotasOptions struct {
-	Limits bool   `long:"limits" short:"l" usage:"Show usage limits"`
-	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Limits   bool   `long:"limits" short:"l" usage:"Show usage limits"`
+	Features bool   `long:"features" short:"f" usage:"Show enabled features"`
+	Output   string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
 	metro string
 	token string
@@ -64,6 +65,10 @@ func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
+	if opts.Limits && opts.Features {
+		return fmt.Errorf("cannot use both limits and features flags")
+	}
+
 	return nil
 }
 
@@ -83,7 +88,12 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 	}
 
 	if opts.Limits {
-		return utils.PrintLimits(ctx, opts.Output, quotasResp)
+		return utils.PrintQuotasLimits(ctx, opts.Output, quotasResp)
 	}
+
+	if opts.Features {
+		return utils.PrintQuotasFeatures(ctx, opts.Output, quotasResp)
+	}
+
 	return utils.PrintQuotas(ctx, *auth, opts.Output, quotasResp)
 }
