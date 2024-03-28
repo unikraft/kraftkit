@@ -40,9 +40,9 @@ type KraftKit struct {
 	} `yaml:"paths,omitempty"`
 
 	Log struct {
-		Level      string `yaml:"level" env:"KRAFTKIT_LOG_LEVEL" long:"log-level" usage:"Log level verbosity" default:"info"`
+		Level      string `yaml:"level" env:"KRAFTKIT_LOG_LEVEL" long:"log-level" usage:"Log level verbosity. Choice of: [panic, fatal, error, warn, info, debug, trace]" default:"info"`
 		Timestamps bool   `yaml:"timestamps" env:"KRAFTKIT_LOG_TIMESTAMPS" long:"log-timestamps" usage:"Enable log timestamps"`
-		Type       string `yaml:"type" env:"KRAFTKIT_LOG_TYPE" long:"log-type" usage:"Log type" default:"fancy"`
+		Type       string `yaml:"type" env:"KRAFTKIT_LOG_TYPE" long:"log-type" usage:"Log type. Choice of: [fancy, basic, json]" default:"fancy"`
 	} `yaml:"log"`
 
 	Unikraft struct {
