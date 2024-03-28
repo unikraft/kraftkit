@@ -158,6 +158,11 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 					)
 				}
 
+				envs := opts.aggregateEnvs()
+				if len(envs) > 0 {
+					popts = append(popts, packmanager.PackWithEnvs(envs))
+				}
+
 				more, err := opts.pm.Pack(ctx, targ, popts...)
 				if err != nil {
 					return err

@@ -202,3 +202,11 @@ func WithVolumes(volumes ...*volume.VolumeConfig) ApplicationOption {
 		return nil
 	}
 }
+
+// WithEnv sets the list of environment variables.
+func WithEnv(env map[string]string) ApplicationOption {
+	return func(ac *application) error {
+		ac.env = env
+		return nil
+	}
+}

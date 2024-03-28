@@ -96,6 +96,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(runtime.Runtime{}):               runtime.TransformFromSchema,
 		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
 		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
+		reflect.TypeOf(target.Env{}):                    transformEnv,
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -189,4 +190,25 @@ var transformKConfig TransformerFunc = func(_ context.Context, data interface{})
 	}
 
 	return kconf, nil
+}
+
+var transformEnv TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
+	config, err := transformMappingOrList(data, "=", false)
+	if err != nil {
+		return nil, err
+	}
+
+	env := make(map[string]string)
+
+	for k, v := range config.(map[string]interface{}) {
+		// If the value is a string, use it
+		if v, ok := v.(string); ok {
+			env[k] = v
+			continue
+		}
+
+		return nil, errors.Errorf("expected string for environmental variable %s, got %T", k, v)
+	}
+
+	return env, nil
 }

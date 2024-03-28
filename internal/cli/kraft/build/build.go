@@ -35,6 +35,7 @@ type BuildOptions struct {
 	All          bool           `long:"all" usage:"Build all targets"`
 	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
 	DotConfig    string         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Env          []string       `long:"env" short:"e" usage:"Set environment variables to be built in the unikernel"`
 	ForcePull    bool           `long:"force-pull" usage:"Force pulling packages before building"`
 	Jobs         int            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg    bool           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`

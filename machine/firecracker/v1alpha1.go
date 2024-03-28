@@ -31,6 +31,7 @@ import (
 	"kraftkit.sh/internal/run"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network/macaddr"
+	"kraftkit.sh/unikraft/export/v0/posixenviron"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
 	"kraftkit.sh/unikraft/export/v0/vfscore"
@@ -243,6 +244,17 @@ watch:
 	if len(fstab) > 0 {
 		kernelArgs = append(kernelArgs,
 			vfscore.ParamVfsFstab.WithValue(fstab),
+		)
+	}
+
+	var environ []string
+	for k, v := range machine.Spec.Env {
+		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	if len(environ) > 0 {
+		kernelArgs = append(kernelArgs,
+			posixenviron.ParamEnvVars.WithValue(environ),
 		)
 	}
 
