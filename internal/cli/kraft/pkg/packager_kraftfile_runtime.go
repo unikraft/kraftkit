@@ -292,9 +292,14 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
-	if err != nil {
-		return nil, err
+	args = []string{}
+
+	// Only parse arguments if they have been provided.
+	if len(opts.Args) > 0 {
+		args, err = shellwords.Parse(fmt.Sprintf("'%s'", strings.Join(opts.Args, "' '")))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var result []pack.Package
@@ -312,7 +317,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			targ.Platform().Name()+"/"+targ.Architecture().Name(),
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
-					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackArgs(args...),
 					packmanager.PackInitrd(opts.Rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),

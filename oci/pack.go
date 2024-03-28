@@ -266,6 +266,8 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	if len(ocipack.Command()) > 0 {
 		ocipack.manifest.SetCmd(ctx, ocipack.Command())
+	} else if ocipack.original != nil {
+		ocipack.manifest.SetCmd(ctx, ocipack.original.manifest.config.Config.Cmd)
 	}
 
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
