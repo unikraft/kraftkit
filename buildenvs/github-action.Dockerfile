@@ -102,12 +102,18 @@ WORKDIR /github/workspace
 
 RUN set -xe; \
     groupadd -g 127 runner; \
+    groupadd -g 1000 arunner; \
+    groupadd -g 1001 brunner; \
+    groupadd -g 1002 crunner; \
     useradd -rm -d /home/runner -s /bin/bash -g runner -G sudo -u 1001 runner; \
     sed -i /etc/sudoers -re 's/^%sudo.*/%sudo ALL=(ALL:ALL) NOPASSWD: ALL/g'; \
     sed -i /etc/sudoers -re 's/^root.*/root ALL=(ALL:ALL) NOPASSWD: ALL/g'; \
     sed -i /etc/sudoers -re 's/^#includedir.*/## **Removed the include directive** ##"/g'; \
     echo "runner ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers; \
-    chown -R runner:runner /github/workspace
+    chown -R runner:runner /github/workspace; \
+    usermod -aG 1000 runner; \
+    usermod -aG 1001 runner; \
+    usermod -aG 1002 runner;
 USER runner
 
 ENV CLICOLOR_FORCE=1

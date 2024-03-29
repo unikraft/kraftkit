@@ -32,6 +32,10 @@ inputs:
     description: Path to store runtime artifacts
     required: false
     default: /github/workspace/.kraftkit/runtime
+  grouprwx:
+    description: Set group read/write/execute permissions on all files
+    required: false
+    default: "true"
 
   #
   # Project flags
@@ -133,14 +137,26 @@ runs:
     run: |
       mkdir -p "${GITHUB_WORKSPACE}/.kraftkit"
 
-      cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      if [ "${{ inputs.grouprwx }}" = "true" ] && ([ "$(id -u)" != "1001" ] || [ "$(id -g)" != "127" ]); then
+        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
       #!/usr/bin/env bash
-      if [ "$(id -u)" != "1001" ] || [ "$(id -g)" != "127" ]; then
-        sudo chown -R runner:runner /home/runner
-        sudo chown -R runner:runner /github/workspace
+
+      sudo find /home/runner -exec chmod g+rwx {} +
+      sudo find /github/workspace -exec chmod g+rwx {} +
+      sudo chmod g+rwx . || true;
+      sudo chmod g+rwx "${{ inputs.runtimedir }}" || true;
+      if [ -n "${{ inputs.workdir }}" ]; then
+          sudo chmod g+rwx "${{ inputs.workdir }}" || true;
       fi
       ${{ inputs.before }}
       EOF
+      else
+        cat <<'EOF' > "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
+      #!/usr/bin/env bash
+
+      ${{ inputs.before }}
+      EOF
+      fi
       chmod +x "${GITHUB_WORKSPACE}/.kraftkit/before.sh"
 
       # Always dump the contents of the inputs into relevant files, and simply
