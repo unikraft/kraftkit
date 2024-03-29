@@ -468,7 +468,7 @@ func PrintServiceGroups(ctx context.Context, format string, resp *kcclient.Servi
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -495,8 +495,12 @@ func PrintQuotas(ctx context.Context, format string, resp *kcclient.ServiceRespo
 	}
 
 	if format != "table" {
-		table.AddField("UUID", cs.Bold)
+		table.AddField("USER UUID", cs.Bold)
 	}
+
+	table.AddField("USER NAME", cs.Bold)
+
+	user := strings.TrimSuffix(strings.TrimPrefix(auth.User, "robot$"), ".users.kraftcloud")
 
 	table.AddField("LIVE INSTANCES", cs.Bold)
 	table.AddField("TOTAL INSTANCES", cs.Bold)
@@ -511,6 +515,7 @@ func PrintQuotas(ctx context.Context, format string, resp *kcclient.ServiceRespo
 		if format != "table" {
 			table.AddField(quota.UUID, nil)
 		}
+		table.AddField(user, nil)
 		table.AddField(fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances), nil)
 		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances), nil)
 		table.AddField(fmt.Sprintf("%s/%s",
@@ -558,13 +563,9 @@ func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceRespo
 		return err
 	}
 
-	if format != "table" {
-		table.AddField("UUID", cs.Bold)
-	}
-
-	table.AddField("MEMORY SIZE (MIN|MAX)", cs.Bold)
-	table.AddField("VOLUME SIZE (MIN|MAX)", cs.Bold)
-	table.AddField("AUTOSCALE SIZE (MIN|MAX)", cs.Bold)
+	table.AddField("MEMORY SIZE (MIN/MAX)", cs.Bold)
+	table.AddField("VOLUME SIZE (MIN/MAX)", cs.Bold)
+	table.AddField("AUTOSCALE SIZE (MIN/MAX)", cs.Bold)
 	table.EndRow()
 
 	for _, quota := range quotas {
@@ -573,21 +574,21 @@ func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceRespo
 		}
 
 		table.AddField(
-			fmt.Sprintf("%s|%s",
+			fmt.Sprintf("%s/%s",
 				humanize.IBytes(uint64(quota.Limits.MinMemoryMb)*humanize.MiByte),
 				humanize.IBytes(uint64(quota.Limits.MaxMemoryMb)*humanize.MiByte),
 			), nil,
 		)
 
 		table.AddField(
-			fmt.Sprintf("%s|%s",
+			fmt.Sprintf("%s/%s",
 				humanize.IBytes(uint64(quota.Limits.MinVolumeMb)*humanize.MiByte),
 				humanize.IBytes(uint64(quota.Limits.MaxVolumeMb)*humanize.MiByte),
 			), nil,
 		)
 
 		table.AddField(
-			fmt.Sprintf("%d|%d",
+			fmt.Sprintf("%d/%d",
 				quota.Limits.MinAutoscaleSize,
 				quota.Limits.MaxAutoscaleSize,
 			), nil,
