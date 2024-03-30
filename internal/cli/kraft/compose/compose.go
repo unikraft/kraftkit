@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/compose/ps"
 	"kraftkit.sh/internal/cli/kraft/compose/start"
 	"kraftkit.sh/internal/cli/kraft/compose/stop"
+	"kraftkit.sh/internal/cli/kraft/compose/unpause"
 	"kraftkit.sh/internal/cli/kraft/compose/up"
 )
 
@@ -59,6 +60,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
+	cmd.AddCommand(unpause.NewCmd())
 	cmd.AddCommand(up.NewCmd())
 
 	return cmd
