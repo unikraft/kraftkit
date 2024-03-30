@@ -109,6 +109,14 @@ func (opts *LsOptions) Run(ctx context.Context, args []string) error {
 		ps.MachineStateColor = ps.MachineStateColorNil
 	}
 
+	// Heuristic to determine project status based on machine status
+	statePriority := map[machineapi.MachineState]int{
+		machineapi.MachineStateRunning: 0,
+		machineapi.MachineStatePaused:  1,
+		machineapi.MachineStateCreated: 2,
+		machineapi.MachineStateExited:  3,
+	}
+
 	for _, project := range projects.Items {
 		status := machineapi.MachineStateExited
 
@@ -117,17 +125,10 @@ func (opts *LsOptions) Run(ctx context.Context, args []string) error {
 				if projectMachine.Name != machine.Name {
 					continue
 				}
-				if machine.Status.State == machineapi.MachineStateRunning {
-					status = machineapi.MachineStateRunning
-					break
-				}
-				if machine.Status.State == machineapi.MachineStateCreated {
-					status = machineapi.MachineStateCreated
-				}
-			}
 
-			if status == machineapi.MachineStateRunning {
-				break
+				if statePriority[machine.Status.State] < statePriority[status] {
+					status = machine.Status.State
+				}
 			}
 		}
 
