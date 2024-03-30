@@ -20,6 +20,7 @@ import (
 	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/internal/cli"
 	"kraftkit.sh/internal/cli/kraft/lib"
+	"kraftkit.sh/internal/cli/kraft/pause"
 	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
@@ -96,6 +97,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(run.NewCmd())
 	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
+	cmd.AddCommand(pause.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
 	cmd.AddCommand(net.NewCmd())
