@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/compose-spec/compose-go/loader"
-	"github.com/compose-spec/compose-go/types"
+	"github.com/compose-spec/compose-go/v2/cli"
+	"github.com/compose-spec/compose-go/v2/types"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network/iputils"
@@ -57,15 +57,14 @@ func NewProjectFromComposeFile(ctx context.Context, workdir, composefile string)
 
 	fullpath := filepath.Join(workdir, composefile)
 
-	config := types.ConfigDetails{
-		ConfigFiles: []types.ConfigFile{
-			{
-				Filename: fullpath,
-			},
-		},
+	options, err := cli.NewProjectOptions(
+		[]string{fullpath},
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	project, err := loader.Load(config)
+	project, err := cli.ProjectFromOptions(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +78,7 @@ func NewProjectFromComposeFile(ctx context.Context, workdir, composefile string)
 // Validate performs some early checks on the project to ensure it is valid,
 // as well as fill in some unspecified fields.
 func (project *Project) Validate(ctx context.Context) error {
+	var err error
 	// Check that each service has at least an image name or a build context
 	for _, service := range project.Services {
 		if service.Image == "" && service.Build == nil {
@@ -93,27 +93,27 @@ func (project *Project) Validate(ctx context.Context) error {
 		project.Name = parts[len(parts)-1]
 	}
 
-	// Fill in any missing image names and prepend the project name
-	for i, service := range project.Services {
-		project.Services[i].Name = fmt.Sprint(project.Name, "-", service.Name)
-	}
-
-	// Fill in any missing platforms
-	for i, service := range project.Services {
+	project.Project, err = project.WithServicesTransform(func(name string, service types.ServiceConfig) (types.ServiceConfig, error) {
+		service.Name = fmt.Sprint(project.Name, "-", name)
 		if service.Platform == "" {
 			hostPlatform, _, err := mplatform.Detect(ctx)
 			if err != nil {
-				return err
+				return service, err
 			}
 
 			hostArch, err := ukarch.HostArchitecture()
 			if err != nil {
-				return err
+				return service, err
 			}
 
-			project.Services[i].Platform = fmt.Sprint(hostPlatform, "/", hostArch)
-
+			service.Platform = fmt.Sprint(hostPlatform, "/", hostArch)
 		}
+
+		return service, nil
+	},
+	)
+	if err != nil {
+		return err
 	}
 
 	for i, network := range project.Networks {
@@ -127,6 +127,7 @@ func (project *Project) Validate(ctx context.Context) error {
 }
 
 func (project *Project) AssignIPs(ctx context.Context) error {
+	var err error
 	usedAddresses := make(map[string]map[string]struct{})
 	for i, network := range project.Networks {
 		if len(network.Ipam.Config) == 0 {
@@ -187,14 +188,13 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 
 	activeNetworks := make(map[string]struct{})
 
-	// Run through the services again and assign an IP address to each
-	for i, service := range project.Services {
+	project.Project, err = project.WithServicesTransform(func(name string, service types.ServiceConfig) (types.ServiceConfig, error) {
 		if service.Networks == nil {
-			continue
+			return service, nil
 		}
 		for name, network := range service.Networks {
 			if _, ok := project.Networks[name]; !ok {
-				return fmt.Errorf("service %s references non-existent network %s", service.Name, name)
+				return service, fmt.Errorf("service %s references non-existent network %s", service.Name, name)
 			}
 
 			activeNetworks[name] = struct{}{}
@@ -206,19 +206,19 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 
 			if network.Ipv4Address != "" {
 				if project.Networks[name].Ipam.Config == nil || len(project.Networks[name].Ipam.Config) == 0 {
-					return fmt.Errorf("cannot assign IP address to service %s on network %s without IPAM config", service.Name, name)
+					return service, fmt.Errorf("cannot assign IP address to service %s on network %s without IPAM config", service.Name, name)
 				}
 			} else if len(project.Networks[name].Ipam.Config) > 0 {
 				// Start at the network's subnet IP and increment until we find
 				// a free one
 				_, subnet, err := net.ParseCIDR(project.Networks[name].Ipam.Config[0].Subnet)
 				if err != nil {
-					return err
+					return service, err
 				}
 
 				if subnet == nil {
 					// This should not be possible
-					return fmt.Errorf("failed to parse network %s subnet", name)
+					return service, fmt.Errorf("failed to parse network %s subnet", name)
 				}
 
 				ip := subnet.IP
@@ -228,13 +228,18 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 				}
 
 				if !subnet.Contains(ip) {
-					return fmt.Errorf("not enough free IP addresses in network %s", name)
+					return service, fmt.Errorf("not enough free IP addresses in network %s", name)
 				}
 
-				project.Services[i].Networks[name].Ipv4Address = ip.String()
+				service.Networks[name].Ipv4Address = ip.String()
 				usedAddresses[name][ip.String()] = struct{}{}
 			}
 		}
+
+		return service, nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Remove the networks that are not used from the project

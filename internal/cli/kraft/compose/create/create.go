@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/compose-spec/compose-go/types"
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
