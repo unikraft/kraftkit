@@ -16,10 +16,12 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 )
 
 type BuildOptions struct {
@@ -72,20 +74,69 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	topLevelRender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	oldLogType := config.G[config.KraftKit](ctx).Log.Type
+	config.G[config.KraftKit](ctx).Log.Type = log.LoggerTypeToString(log.BASIC)
+	defer func() {
+		config.G[config.KraftKit](ctx).Log.Type = oldLogType
+	}()
+
+	buildProcesses := make([]*processtree.ProcessTreeItem, 0)
+	pkgProcesses := make([]*processtree.ProcessTreeItem, 0)
 	for _, service := range project.Services {
 		if service.Build == nil {
 			continue
 		}
 
-		if err := buildService(ctx, service); err != nil {
-			return err
-		}
+		buildProcesses = append(buildProcesses, processtree.NewProcessTreeItem(
+			fmt.Sprintf("building service %s", service.Name),
+			"",
+			func(ctx context.Context) error {
+				return buildService(ctx, service)
+			},
+		))
 
 		if service.Image != "" {
-			if err := pkgService(ctx, service); err != nil {
-				return err
-			}
+			pkgProcesses = append(pkgProcesses, processtree.NewProcessTreeItem(
+				fmt.Sprintf("packaging service %s", service.Name),
+				"",
+				func(ctx context.Context) error {
+					return pkgService(ctx, service)
+				},
+			))
 		}
+	}
+
+	model, err := processtree.NewProcessTree(ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.WithHideOnSuccess(false),
+			processtree.WithRenderer(topLevelRender),
+			processtree.IsParallel(false),
+		},
+		buildProcesses...,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := model.Start(); err != nil {
+		return err
+	}
+
+	model, err = processtree.NewProcessTree(ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.WithHideOnSuccess(false),
+			processtree.WithRenderer(topLevelRender),
+			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+		},
+		pkgProcesses...,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := model.Start(); err != nil {
+		return err
 	}
 
 	return nil
@@ -113,8 +164,6 @@ func buildService(ctx context.Context, service types.ServiceConfig) error {
 		return err
 	}
 
-	log.G(ctx).Infof("Building service %s...", service.Name)
-
 	buildOptions := build.BuildOptions{Platform: plat, Architecture: arch}
 
 	return buildOptions.Run(ctx, []string{service.Build.Context})
@@ -125,8 +174,6 @@ func pkgService(ctx context.Context, service types.ServiceConfig) error {
 	if err != nil {
 		return err
 	}
-
-	log.G(ctx).Infof("packaging service %s...", service.Name)
 
 	pkgOptions := pkg.PkgOptions{
 		Architecture: arch,
