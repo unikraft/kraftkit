@@ -23,7 +23,7 @@ require (
 	github.com/containerd/nerdctl v1.7.5
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/docker/cli v25.0.3+incompatible
+	github.com/docker/cli v26.0.0+incompatible
 	github.com/docker/docker v25.0.5+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
