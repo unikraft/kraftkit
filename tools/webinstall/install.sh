@@ -1713,7 +1713,9 @@ main() {
     _main_kraft_ret="$?"
 
     # Install kraftkit completions
-    install_completions "$_main_arch"
+    if [ "$NEED_TTY" = "y" ]; then
+        install_completions "$_main_arch"
+    fi
 
     return $_main_kraft_ret
 }
