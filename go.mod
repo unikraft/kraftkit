@@ -73,7 +73,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
-	k8s.io/apiserver v0.29.2
+	k8s.io/apiserver v0.29.3
 	oras.land/oras-go/v2 v2.5.0
 	sdk.kraft.cloud v0.5.5-0.20240326115105-3db0329eacfe
 	sigs.k8s.io/kustomize/kyaml v0.14.3
