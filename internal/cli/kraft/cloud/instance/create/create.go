@@ -454,7 +454,11 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 			req.MemoryMB = &opts.Memory
 		}
 
-		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req); err != nil {
+		cresp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+		if err != nil {
+			return fmt.Errorf("could not create a new instance: %w", err)
+		}
+		if _, err = cresp.FirstOrErr(); err != nil {
 			return fmt.Errorf("could not create a new instance: %w", err)
 		}
 
@@ -463,11 +467,19 @@ func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.
 			WithField("service group", newServiceGroup.Name).
 			Info("draining old instance")
 
-		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, oneMinute, false, instance.UUID); err != nil {
+		sresp, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, oneMinute, false, instance.UUID)
+		if err != nil {
+			return fmt.Errorf("could not stop the old instance: %w", err)
+		}
+		if _, err = sresp.FirstOrErr(); err != nil {
 			return fmt.Errorf("could not stop the old instance: %w", err)
 		}
 
-		if _, err = opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateStopped, oneMinute, instance.UUID); err != nil {
+		wresp, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateStopped, oneMinute, instance.UUID)
+		if err != nil {
+			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
+		}
+		if _, err = wresp.FirstOrErr(); err != nil {
 			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
 		}
 

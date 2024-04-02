@@ -110,7 +110,12 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(opts.Policy) > 0 {
-		policy, err := opts.Client.Autoscale().WithMetro(opts.Metro).GetPolicy(ctx, id, opts.Policy)
+		policyResp, err := opts.Client.Autoscale().WithMetro(opts.Metro).GetPolicy(ctx, id, opts.Policy)
+		if err != nil {
+			return fmt.Errorf("could not get configuration: %w", err)
+		}
+
+		policy, err := policyResp.FirstOrErr()
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}

@@ -535,9 +535,9 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	return table.Render(iostreams.G(ctx).Out)
 }
 
-// PrintLimits pretty-prints the provided set of user limits or returns
+// PrintQuotasLimits pretty-prints the provided set of user limits or returns
 // an error if unable to send to stdout via the provided context.
-func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotasLimits(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -593,6 +593,72 @@ func PrintLimits(ctx context.Context, format string, resp *kcclient.ServiceRespo
 				quota.Limits.MaxAutoscaleSize,
 			), nil,
 		)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
+// PrintQuotasFeatures pretty-prints the provided set of user quotas features
+// or returns an error if unable to send to stdout via the provided context.
+func PrintQuotasFeatures(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
+	}
+
+	quotas, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+
+	table.AddField("AUTOSCALE", cs.Bold)
+	table.AddField("SCALE TO ZERO", cs.Bold)
+	table.AddField("VOLUMES", cs.Bold)
+	table.EndRow()
+
+	for _, quota := range quotas {
+		if format != "table" {
+			table.AddField(quota.UUID, nil)
+		}
+
+		if quota.Limits.MaxAutoscaleSize == 1 {
+			table.AddField("disabled", nil)
+		} else {
+			table.AddField("enabled", nil)
+		}
+
+		if quota.Limits.MinAutoscaleSize == 0 {
+			table.AddField("enabled", nil)
+		} else {
+			table.AddField("disabled", nil)
+		}
+
+		if quota.Limits.MaxVolumeMb == 0 {
+			table.AddField("disabled", nil)
+		} else {
+			table.AddField("enabled", nil)
+		}
 
 		table.EndRow()
 	}
