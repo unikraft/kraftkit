@@ -189,7 +189,11 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		stepPol.Steps = append(stepPol.Steps, s)
 	}
 
-	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, id, stepPol); err != nil {
+	addPolicyResp, err := opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, id, stepPol)
+	if err != nil {
+		return fmt.Errorf("could not add configuration: %w", err)
+	}
+	if _, err = addPolicyResp.AllOrErr(); err != nil {
 		return fmt.Errorf("could not add configuration: %w", err)
 	}
 

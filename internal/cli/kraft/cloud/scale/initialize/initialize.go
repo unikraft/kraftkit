@@ -201,9 +201,14 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		req.CooldownTimeMs = &cooldownTimeMs
 	}
 
-	if _, err = opts.Client.Autoscale().WithMetro(opts.Metro).CreateConfiguration(ctx, req); err != nil {
+	scaleResp, err := opts.Client.Autoscale().WithMetro(opts.Metro).CreateConfiguration(ctx, req)
+	if err != nil {
 		return fmt.Errorf("could not create configuration: %w", err)
 	}
+	if _, err = scaleResp.AllOrErr(); err != nil {
+		return fmt.Errorf("could not create configuration: %w", err)
+	}
+
 	return nil
 }
 
