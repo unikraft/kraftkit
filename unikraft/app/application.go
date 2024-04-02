@@ -753,7 +753,7 @@ func (app application) Build(ctx context.Context, tc target.Target, opts ...Buil
 	//
 	// [0]: https://github.com/unikraft/unikraft/pull/1169
 	if tc.Platform().Name() == "kraftcloud" {
-		mopts = append(mopts, make.WithVar("UK_IMAGE_NAME_OVERWRITE", fmt.Sprintf("%s_kraftcloud-%s", app.name, tc.Architecture().Name())))
+		mopts = append(mopts, make.WithVar("UK_IMAGE_NAME_OVERWRITE", fmt.Sprintf("%s_kraftcloud-%s", tc.Name(), tc.Architecture().Name())))
 	}
 
 	bopts.mopts = append(bopts.mopts, mopts...)
