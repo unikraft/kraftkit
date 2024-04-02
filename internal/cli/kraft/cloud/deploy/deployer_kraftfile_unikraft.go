@@ -69,5 +69,5 @@ func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *Dep
 	}
 
 	// Re-use the runtime deployer, which also handles packaging.
-	return (*deployerKraftfileRuntime)(nil).Deploy(ctx, opts, args...)
+	return (&deployerKraftfileRuntime{}).Deploy(ctx, opts, args...)
 }
