@@ -47,7 +47,8 @@ func NewCmd() *cobra.Command {
 			$ kraft events ID
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "run",
+			cmdfactory.AnnotationHelpGroup:  "run",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

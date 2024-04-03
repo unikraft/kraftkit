@@ -75,7 +75,8 @@ func NewCmd() *cobra.Command {
 			# Fetch a project at a given path
 			$ kraft fetch path/to/app`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "build",
+			cmdfactory.AnnotationHelpGroup:  "build",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

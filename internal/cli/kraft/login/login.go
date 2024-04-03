@@ -38,9 +38,6 @@ func NewCmd() *cobra.Command {
 			# Login to a remote service
 			$ kraft login https://github.com
 		`),
-		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "misc",
-		},
 	})
 	if err != nil {
 		panic(err)

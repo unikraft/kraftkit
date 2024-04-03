@@ -75,7 +75,8 @@ func NewCmd() *cobra.Command {
 			$ kraft unset -w path/to/app LIBDEVFS_DEV_STDOUT LWIP_TCP_SND_BUF
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "build",
+			cmdfactory.AnnotationHelpGroup:  "build",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {
