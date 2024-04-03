@@ -109,13 +109,11 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "KRAFT CLOUD SERVICE GROUP COMMANDS"})
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "KRAFT CLOUD AUTOSCALE COMMANDS"})
 
-	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
-	cmd.AddCommand(login.NewCmd())
-	cmd.AddCommand(version.NewCmd())
-
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
+	cmd.AddCommand(login.NewCmd())
+	cmd.AddCommand(version.NewCmd())
 	cmd.AddCommand(x.NewCmd())
 
 	return cmd

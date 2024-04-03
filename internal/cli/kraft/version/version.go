@@ -29,9 +29,6 @@ func NewCmd() *cobra.Command {
 			# Show kraft version information
 			$ kraft version
 		`),
-		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "misc",
-		},
 	})
 	if err != nil {
 		panic(err)
