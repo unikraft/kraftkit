@@ -109,9 +109,9 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	model, err := processtree.NewProcessTree(ctx,
 		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
 			processtree.WithHideOnSuccess(false),
 			processtree.WithRenderer(topLevelRender),
-			processtree.IsParallel(false),
 		},
 		buildProcesses...,
 	)
@@ -125,9 +125,9 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	model, err = processtree.NewProcessTree(ctx,
 		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
 			processtree.WithHideOnSuccess(false),
 			processtree.WithRenderer(topLevelRender),
-			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
 		},
 		pkgProcesses...,
 	)

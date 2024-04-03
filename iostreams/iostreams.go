@@ -188,7 +188,7 @@ func (s *IOStreams) IsStdoutTTY() bool {
 	}
 
 	// support KRAFTKIT_FORCE_TTY
-	if s.term.IsTerminalOutput() {
+	if s.term != nil && s.term.IsTerminalOutput() {
 		return true
 	}
 
