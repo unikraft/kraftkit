@@ -402,6 +402,12 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			defer manifestWriter.Close()
 
 			if _, err = manifestWriter.Write(manifestRaw); err != nil {
+				if err2 := manifestWriter.Close(); err2 != nil {
+					return fmt.Errorf("%w: could not close manifest writer: %w", err, err2)
+				}
+				if err2 := os.RemoveAll(manifestPath); err2 != nil {
+					return fmt.Errorf("%w: could not remove manifest: %w", err, err2)
+				}
 				return fmt.Errorf("could not write manifest: %w", err)
 			}
 		}
@@ -452,6 +458,12 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			defer configWriter.Close()
 
 			if _, err = configWriter.Write(configRaw); err != nil {
+				if err2 := configWriter.Close(); err2 != nil {
+					return fmt.Errorf("%w: could not close raw config writer: %w", err, err2)
+				}
+				if err2 := os.RemoveAll(configPath); err2 != nil {
+					return fmt.Errorf("%w: could not remove raw config: %w", err, err2)
+				}
 				return fmt.Errorf("could not write raw config: %w", err)
 			}
 		}
@@ -542,8 +554,15 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		if err != nil {
 			return fmt.Errorf("could not create layer: %w", err)
 		}
+		defer blob.Close()
 
 		if _, err := io.Copy(blob, progresReader); err != nil {
+			if err2 := blob.Close(); err2 != nil {
+				return fmt.Errorf("%w: could not close blob: %w", err, err2)
+			}
+			if err2 := os.RemoveAll(layerPath); err2 != nil {
+				return fmt.Errorf("%w: could not remove blob: %w", err, err2)
+			}
 			return fmt.Errorf("could not write layer: %w", err)
 		}
 
@@ -572,6 +591,7 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 	if err != nil {
 		return fmt.Errorf("could not create blob: %w", err)
 	}
+	defer blob.Close()
 
 	var progresReader io.Reader
 	if onProgress != nil {
@@ -590,6 +610,12 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 		Trace("saving")
 
 	if _, err := io.Copy(blob, progresReader); err != nil {
+		if err2 := blob.Close(); err2 != nil {
+			return fmt.Errorf("%w: could not close blob: %w", err, err2)
+		}
+		if err2 := os.RemoveAll(blobPath); err2 != nil {
+			return fmt.Errorf("%w: could not remove blob: %w", err, err2)
+		}
 		return err
 	}
 
@@ -926,6 +952,12 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 		defer indexFile.Close()
 
 		if _, err := indexFile.Write(indexJson); err != nil {
+			if err2 := indexFile.Close(); err2 != nil {
+				return fmt.Errorf("%w: could not close index writer: %w", err, err2)
+			}
+			if err2 := os.RemoveAll(indexPath); err2 != nil {
+				return fmt.Errorf("%w: could not remove index: %w", err, err2)
+			}
 			return fmt.Errorf("could not write index file: %w", err)
 		}
 	}
@@ -1249,6 +1281,12 @@ func (handle *DirectoryHandler) UnpackImage(ctx context.Context, fullref string,
 			defer writer.Close()
 
 			if _, err = io.Copy(writer, tr); err != nil {
+				if err2 := writer.Close(); err2 != nil {
+					return nil, fmt.Errorf("%w: could not close unpack blob: %w", err, err2)
+				}
+				if err2 := os.RemoveAll(path); err2 != nil {
+					return nil, fmt.Errorf("%w: could not remove unpack blob: %w", err, err2)
+				}
 				return nil, fmt.Errorf("writing file: %w", err)
 			}
 		}
