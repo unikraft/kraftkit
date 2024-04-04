@@ -153,8 +153,14 @@ imgloop:
 				continue
 			}
 
-			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
-				continue imgloop
+			if name = tag.RepositoryStr(); isOfficial(name) {
+				if !opts.All {
+					continue imgloop
+				} else {
+					if isOfficialKraftcloudImage(name) {
+						name = "official/" + name
+					}
+				}
 			}
 
 			versions = append(versions, tag.TagStr())
@@ -216,7 +222,11 @@ func isOfficial(repo string) bool {
 // namespaced.
 func isNamespacedRepository(repo string) bool {
 	const regNsDelimiter = '/'
-	return strings.ContainsRune(repo, regNsDelimiter)
+	return strings.ContainsRune(repo, regNsDelimiter) && !isOfficialKraftcloudImage(repo)
+}
+
+func isOfficialKraftcloudImage(repo string) bool {
+	return strings.HasPrefix(repo, "kraftcloud/")
 }
 
 func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcimages.ListResponseItem]) {
