@@ -203,42 +203,25 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					}
 				}
 
-			attemptDeployment:
-				for {
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("context cancelled")
-					default:
-					}
-
-					// Introduce a new context that is used only for iteration
-					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
-					defer cancel()
-
-					insts, groups, err = create.Create(ctxTimeout, &create.CreateOptions{
-						Env:                    opts.Env,
-						Domain:                 opts.Domain,
-						Image:                  pkgName,
-						Memory:                 opts.Memory,
-						Metro:                  opts.Metro,
-						Name:                   strings.ReplaceAll(opts.Name, "/", "-"),
-						Ports:                  opts.Ports,
-						Replicas:               opts.Replicas,
-						ScaleToZero:            opts.ScaleToZero,
-						ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
-						Start:                  !opts.NoStart,
-						SubDomain:              opts.SubDomain,
-						Token:                  opts.Token,
-						Volumes:                opts.Volumes,
-					}, deployer.args...)
-					if err != nil && strings.HasSuffix(err.Error(), "context deadline exceeded") {
-						continue
-					} else if err != nil {
-						return fmt.Errorf("could not create instance: %w", err)
-					}
-
-					cancel()
-					break attemptDeployment
+				insts, groups, err = create.Create(ctx, &create.CreateOptions{
+					Env:                    opts.Env,
+					Domain:                 opts.Domain,
+					Image:                  pkgName,
+					Memory:                 opts.Memory,
+					Metro:                  opts.Metro,
+					Name:                   opts.Name,
+					Ports:                  opts.Ports,
+					Replicas:               opts.Replicas,
+					Rollout:                opts.Rollout,
+					ScaleToZero:            opts.ScaleToZero,
+					ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
+					Start:                  !opts.NoStart,
+					SubDomain:              opts.SubDomain,
+					Token:                  opts.Token,
+					Volumes:                opts.Volumes,
+				}, deployer.args...)
+				if err != nil {
+					return fmt.Errorf("could not create instance: %w", err)
 				}
 
 				return nil
