@@ -90,5 +90,5 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not get certificate %s: %w", args[0], err)
 	}
 
-	return utils.PrintCertificates(ctx, opts.Output, certResp)
+	return utils.PrintCertificates(ctx, opts.Output, *certResp)
 }

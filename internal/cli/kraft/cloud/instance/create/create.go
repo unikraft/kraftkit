@@ -616,7 +616,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(insts) > 1 || opts.Output == "table" {
-		return utils.PrintInstances(ctx, opts.Output, resp)
+		return utils.PrintInstances(ctx, opts.Output, *resp)
 	}
 	utils.PrettyPrintInstance(ctx, insts[0], opts.Start)
 

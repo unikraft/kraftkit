@@ -147,11 +147,11 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		return nil
 
 	} else {
-		confResp, err := opts.Client.Autoscale().WithMetro(opts.Metro).GetConfiguration(ctx, id)
+		resp, err := opts.Client.Autoscale().WithMetro(opts.Metro).GetConfiguration(ctx, id)
 		if err != nil {
 			return fmt.Errorf("could not get configuration: %w", err)
 		}
 
-		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, confResp)
+		return utils.PrintAutoscaleConfiguration(ctx, opts.Output, *resp)
 	}
 }

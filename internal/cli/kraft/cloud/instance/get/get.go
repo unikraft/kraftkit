@@ -85,10 +85,10 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	instanceResp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
+	resp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not get instance %s: %w", args[0], err)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, instanceResp)
+	return utils.PrintInstances(ctx, opts.Output, *resp)
 }

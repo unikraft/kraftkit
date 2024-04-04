@@ -93,5 +93,5 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("getting details of %d certificate(s): %w", len(certList), err)
 	}
 
-	return utils.PrintCertificates(ctx, opts.Output, certsResp)
+	return utils.PrintCertificates(ctx, opts.Output, *certsResp)
 }

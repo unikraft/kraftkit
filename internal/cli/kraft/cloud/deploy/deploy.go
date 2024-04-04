@@ -288,5 +288,5 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, instsResp)
+	return utils.PrintInstances(ctx, opts.Output, *instsResp)
 }

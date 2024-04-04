@@ -94,10 +94,10 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		uuids = append(uuids, volItem.UUID)
 	}
 
-	volsResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
+	resp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
 	if err != nil {
 		return fmt.Errorf("getting details of %d volume(s): %w", len(uuids), err)
 	}
 
-	return utils.PrintVolumes(ctx, opts.Output, volsResp)
+	return utils.PrintVolumes(ctx, opts.Output, *resp)
 }
