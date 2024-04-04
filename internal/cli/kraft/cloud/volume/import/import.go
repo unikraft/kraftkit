@@ -159,6 +159,11 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 		)
 	}()
 
+	// FIXME(antoineco): due to a bug in KraftKit, paraprogress.Start() returns a
+	// nil error upon context cancellation. We temporarily handle potential copy
+	// errors ourselves here.
+	var copyCPIOErr error
+
 	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
 		func(ctx context.Context, callback func(float64)) (retErr error) {
 			instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
@@ -172,14 +177,19 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
-			return copyCPIO(ctx, conn, authStr, cpioPath, cpioSize, callback)
+			err = copyCPIO(ctx, conn, authStr, cpioPath, cpioSize, callback)
+			copyCPIOErr = err
+			return err
 		},
 	)
 	if err != nil {
 		return err
 	}
 	if err = paraprogress.Start(); err != nil {
-		return NotLoggable(err) // already logged by runner
+		return err
+	}
+	if copyCPIOErr != nil {
+		return copyCPIOErr
 	}
 
 	fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
