@@ -139,7 +139,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if authStr, err = genRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-
 			instID, instFQDN, err = runVolimport(ctx, icli, volUUID, authStr)
 			return err
 		},
@@ -166,10 +165,9 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 				retErr = errors.Join(retErr, conn.Close())
 			}()
 
-			if err = copyCPIO(conn, authStr, cpioPath, cpioSize, callback); err != nil {
-				return fmt.Errorf("copying data to volume data import instance: %w", err)
-			}
-			return nil
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			return copyCPIO(ctx, conn, authStr, cpioPath, cpioSize, callback)
 		},
 	)
 	if err != nil {

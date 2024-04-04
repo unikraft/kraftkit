@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"kraftkit.sh/initrd"
 )
@@ -45,12 +46,21 @@ func buildCPIO(ctx context.Context, source string) (path string, size int64, err
 }
 
 // copyCPIO copies the CPIO archive at the given path over the provided tls.Conn.
-func copyCPIO(conn *tls.Conn, auth, path string, size int64, callback progressCallbackFunc) error {
+func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, size int64, callback progressCallbackFunc) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	// NOTE(antoineco): this call is critical as it allows writes to be later
+	// cancelled, because the deadline applies to all future and pending I/O and
+	// can be dynamically extended or reduced.
+	_ = conn.SetWriteDeadline(noNetTimeout)
+	go func() {
+		<-ctx.Done()
+		_ = conn.SetWriteDeadline(immediateNetCancel)
+	}()
 
 	if _, err = io.Copy(conn, strings.NewReader(auth)); err != nil {
 		return err
@@ -58,6 +68,9 @@ func copyCPIO(conn *tls.Conn, auth, path string, size int64, callback progressCa
 
 	n, err := io.Copy(conn, newFileProgress(f, size, callback))
 	if err != nil {
+		// NOTE(antoineco): such error can be expected if volimport exited early or
+		// a deadline was set due to cancellation. What we should convey in the error
+		// is that the data import didn't complete, not the low-level network error.
 		if !isNetClosedError(err) {
 			return err
 		}
@@ -69,8 +82,15 @@ func copyCPIO(conn *tls.Conn, auth, path string, size int64, callback progressCa
 	return nil
 }
 
+var (
+	// zero time value used to prevent network operations from timing out.
+	noNetTimeout = time.Time{}
+	// non-zero time far in the past used for immediate cancellation of network operations.
+	immediateNetCancel = time.Unix(1, 0)
+)
+
 // isNetClosedError reports whether err is an error encountered while writing a
-// response over the network, potentially when the server has gone away
+// response over the network, potentially when the server has gone away.
 func isNetClosedError(err error) bool {
 	if oe := (*net.OpError)(nil); errors.As(err, &oe) && oe.Op == "write" {
 		return true
