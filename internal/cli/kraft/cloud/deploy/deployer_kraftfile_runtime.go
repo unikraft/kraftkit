@@ -72,7 +72,7 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	return true, nil
 }
 
-func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
+func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	var pkgName string
 
 	if len(opts.Name) > 0 {
@@ -143,8 +143,8 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		deployer.args = p.Command()
 	}
 
-	var instResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
-	var sg *kcservices.GetResponseItem
+	var insts *kcclient.ServiceResponse[kcinstances.GetResponseItem]
+	var groups *kcclient.ServiceResponse[kcservices.GetResponseItem]
 
 	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer deployCancel()
@@ -215,7 +215,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
 					defer cancel()
 
-					instResp, sg, err = create.Create(ctxTimeout, &create.CreateOptions{
+					insts, groups, err = create.Create(ctxTimeout, &create.CreateOptions{
 						Env:                    opts.Env,
 						Domain:                 opts.Domain,
 						Image:                  pkgName,
@@ -253,10 +253,5 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		return nil, nil, err
 	}
 
-	sgItems := make([]kcservices.GetResponseItem, 0, 1)
-	if sg != nil {
-		sgItems = append(sgItems, *sg)
-	}
-
-	return instResp, sgItems, nil
+	return insts, groups, nil
 }

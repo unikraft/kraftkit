@@ -54,7 +54,7 @@ type CreateOptions struct {
 }
 
 // Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcservices.GetResponseItem, error) {
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	var err error
 
 	if opts == nil {
@@ -381,17 +381,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
+	var serviceGroupResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
+
 	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
-		serviceGroupResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
+		serviceGroupResp, err = opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
-		}
-		if serviceGroup, err = serviceGroupResp.FirstOrErr(); err != nil {
 			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}
 	}
 
-	return instanceResp, serviceGroup, nil
+	return instanceResp, serviceGroupResp, nil
 }
 
 // Rollout an instance in a service group.
@@ -571,11 +570,12 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	opts.Image = args[0]
 
-	instanceResp, serviceGroup, err := Create(ctx, opts, args[1:]...)
+	resp, _, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
 	}
-	instance, err := instanceResp.FirstOrErr()
+
+	insts, err := resp.AllOrErr()
 	if err != nil {
 		return err
 	}
@@ -615,10 +615,10 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	if opts.Output != "table" && opts.Output != "full" {
-		return utils.PrintInstances(ctx, opts.Output, instanceResp)
+	if len(insts) > 1 || opts.Output == "table" {
+		return utils.PrintInstances(ctx, opts.Output, resp)
 	}
-	utils.PrettyPrintInstance(ctx, instance, serviceGroup, opts.Start)
+	utils.PrettyPrintInstance(ctx, insts[0], opts.Start)
 
 	return nil
 }

@@ -48,7 +48,7 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 	return true, nil
 }
 
-func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
+func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	if err := build.Build(ctx, &build.BuildOptions{
 		Architecture: "x86_64",
 		DotConfig:    opts.DotConfig,

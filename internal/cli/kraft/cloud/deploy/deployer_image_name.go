@@ -71,11 +71,11 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 	return true, nil
 }
 
-func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error) {
+func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	var err error
 
-	var instResp *kcclient.ServiceResponse[kcinstances.GetResponseItem]
-	var sg *kcservices.GetResponseItem
+	var insts *kcclient.ServiceResponse[kcinstances.GetResponseItem]
+	var groups *kcclient.ServiceResponse[kcservices.GetResponseItem]
 
 	paramodel, err := processtree.NewProcessTree(
 		ctx,
@@ -92,7 +92,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			"deploying",
 			"",
 			func(ctx context.Context) error {
-				instResp, sg, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
+				insts, groups, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
 					Env:                    opts.Env,
 					Features:               opts.Features,
 					Domain:                 opts.Domain,
@@ -124,9 +124,5 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 		return nil, nil, err
 	}
 
-	if sg != nil {
-		return instResp, []kcservices.GetResponseItem{*sg}, nil
-	}
-
-	return instResp, nil, nil
+	return insts, groups, nil
 }

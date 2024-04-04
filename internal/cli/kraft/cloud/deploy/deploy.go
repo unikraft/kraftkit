@@ -217,10 +217,11 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("deployer", d.Name()).Debug("using")
 
-	instsResp, sgs, err := d.Deploy(ctx, opts, args...)
+	instsResp, _, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
+
 	insts, err := instsResp.AllOrErr()
 	if err != nil {
 		return err
@@ -283,11 +284,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(insts) == 1 && opts.Output == "" {
-		if len(sgs) == 0 {
-			sgs = append(sgs, kcservices.GetResponseItem{})
-		}
-
-		utils.PrettyPrintInstance(ctx, &insts[0], &sgs[0], !opts.NoStart)
+		utils.PrettyPrintInstance(ctx, insts[0], !opts.NoStart)
 		return nil
 	}
 
