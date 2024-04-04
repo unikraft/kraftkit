@@ -23,6 +23,13 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 )
 
+const (
+	// defaultNetworkMaxSize is the maximum size of a network name on Linux.
+	// We subtract 5 to account for the network interface suffix '@if%d%d%d'.
+	// The value 16 is taken from the glibc headers.
+	defaultNetworkNameMaxSize = 15 - 5
+)
+
 type v1alpha1Network struct{}
 
 func NewNetworkServiceV1alpha1(ctx context.Context, opts ...any) (networkv1alpha1.NetworkService, error) {
@@ -33,6 +40,10 @@ func NewNetworkServiceV1alpha1(ctx context.Context, opts ...any) (networkv1alpha
 func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
 	if network.Name == "" {
 		return nil, fmt.Errorf("cannot create network without name")
+	}
+
+	if len(network.Name) > defaultNetworkNameMaxSize {
+		return nil, fmt.Errorf("network name is too long, must be less than %d characters", defaultNetworkNameMaxSize)
 	}
 
 	if network.ObjectMeta.UID == "" {
