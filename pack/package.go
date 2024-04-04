@@ -24,6 +24,9 @@ func (pf PackageFormat) String() string {
 type Package interface {
 	unikraft.Nameable
 
+	// ID returns a unique identifier for the package.
+	ID() string
+
 	// Metadata returns any additional metadata associated with this package.
 	Metadata() interface{}
 

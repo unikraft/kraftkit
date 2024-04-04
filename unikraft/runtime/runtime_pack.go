@@ -108,6 +108,11 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 	return &elfloader, nil
 }
 
+// ID implements kraftkit.sh/pack.Package
+func (runtime *Runtime) ID() string {
+	return runtime.pack.ID()
+}
+
 // Columns implements kraftkit.sh/pack.Package
 func (elfloader *Runtime) Columns() []tableprinter.Column {
 	return elfloader.pack.Columns()
