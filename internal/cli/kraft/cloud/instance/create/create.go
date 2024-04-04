@@ -87,10 +87,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
-		imageClient := kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
-		)
-
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -107,7 +103,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				"",
 				func(ctx context.Context) error {
 					for {
-						imgs, err := imageClient.Images().WithMetro(opts.Metro).List(ctx)
+						imgs, err := opts.Client.Images().WithMetro(opts.Metro).List(ctx)
 						if err != nil {
 							return fmt.Errorf("could not list images: %w", err)
 						}
