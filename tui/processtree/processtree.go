@@ -199,8 +199,13 @@ func (pti *ProcessTreeItem) Close() error {
 
 func (pt *ProcessTree) Start() error {
 	teaOpts := []tea.ProgramOption{
-		tea.WithInput(nil),
 		tea.WithContext(pt.ctx),
+	}
+
+	if iostreams.G(pt.ctx).IsStdinTTY() {
+		teaOpts = append(teaOpts, tea.WithInput(iostreams.G(pt.ctx).In))
+	} else {
+		teaOpts = append(teaOpts, tea.WithInput(nil))
 	}
 
 	// Restore the old output for the IOStreams which is manipulated per process.
