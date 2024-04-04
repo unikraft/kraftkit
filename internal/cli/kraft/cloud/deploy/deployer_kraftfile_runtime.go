@@ -122,6 +122,8 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Ports:                  opts.Ports,
 		Replicas:               opts.Replicas,
 		Rollout:                opts.Rollout,
+		RolloutQualifier:       opts.RolloutQualifier,
+		RolloutWait:            opts.RolloutWait,
 		ScaleToZero:            opts.ScaleToZero,
 		ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
 		Start:                  !opts.NoStart,
