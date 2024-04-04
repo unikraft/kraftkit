@@ -121,9 +121,17 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 			j := 0
 			for {
 				ifname := fmt.Sprintf("%s@if%d", network.Name, j)
-				if _, err := netlink.LinkByName(ifname); err != nil && err.Error() == "Link not found" {
-					iface.Spec.IfName = ifname
-					break
+				if _, err := netlink.LinkByName(ifname); err != nil {
+					if err.Error() == "Link not found" {
+						iface.Spec.IfName = ifname
+						break
+					}
+
+					if err.Error() == "numerical result out of range" {
+						return network, fmt.Errorf("interface name is too long: %s, consider using a shorter network name", ifname)
+					}
+
+					return network, err
 				}
 				j++
 			}
@@ -269,9 +277,17 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 			j := 0
 			for {
 				ifname := fmt.Sprintf("%s@if%d", network.Name, j)
-				if _, err := netlink.LinkByName(ifname); err != nil && err.Error() == "Link not found" {
-					iface.Spec.IfName = ifname
-					break
+				if _, err := netlink.LinkByName(ifname); err != nil {
+					if err.Error() == "Link not found" {
+						iface.Spec.IfName = ifname
+						break
+					}
+
+					if err.Error() == "numerical result out of range" {
+						return network, fmt.Errorf("interface name is too long: %s, consider using a shorter network name", ifname)
+					}
+
+					return network, err
 				}
 				j++
 			}
