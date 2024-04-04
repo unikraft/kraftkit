@@ -84,6 +84,9 @@ func (opts *ImportOptions) Run(ctx context.Context, _ []string) error {
 	}
 
 	if err = importVolumeData(ctx, opts); err != nil {
+		if IsLoggable(err) {
+			return fmt.Errorf("could not import volume data: %w", err)
+		}
 		return errors.New("could not import volume data")
 	}
 	return nil
@@ -112,7 +115,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 		return err
 	}
 	if err = paramodel.Start(); err != nil {
-		return err
+		return NotLoggable(err) // already logged by runner
 	}
 
 	defer func() {
@@ -126,7 +129,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	var volUUID string
 	var volSize int64
 	if volUUID, volSize, err = volumeSanityCheck(ctx, vcli, opts.VolID, cpioSize); err != nil {
-		log.G(ctx).WithError(err).Error("Volume sanity check failed")
 		return err
 	}
 
@@ -147,7 +149,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 		return err
 	}
 	if err = paramodel.Start(); err != nil {
-		return err
+		return NotLoggable(err) // already logged by runner
 	}
 
 	defer func() {
@@ -174,7 +176,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 		return err
 	}
 	if err = paraprogress.Start(); err != nil {
-		return err
+		return NotLoggable(err) // already logged by runner
 	}
 
 	fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
