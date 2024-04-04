@@ -153,7 +153,10 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	}
 
 	defer func() {
-		retErr = errors.Join(retErr, terminateVolimport(ctx, icli, instID))
+		noInterrupt := context.Background()
+		retErr = errors.Join(retErr,
+			terminateVolimport(noInterrupt, icli, instID),
+		)
 	}()
 
 	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),

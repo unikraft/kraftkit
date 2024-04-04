@@ -73,14 +73,19 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, volUUID
 // terminateVolimport deletes the volume data import instance once it has
 // reached the "stopped" state.
 func terminateVolimport(ctx context.Context, icli kcinstances.InstancesService, instID string) error {
-	err := retrytimeout.RetryTimeout(3*time.Second, func() error {
+	err := retrytimeout.RetryTimeout(3*time.Second, func() (retErr error) {
+		defer func() {
+			if retErr != nil {
+				time.Sleep(time.Millisecond * 100)
+			}
+		}()
 		getinstResp, err := icli.Get(ctx, instID)
 		if err != nil {
-			return fmt.Errorf("getting status of volume data import instance '%s': %w", instID, err)
+			return fmt.Errorf("getting instance status: %w", err)
 		}
 		inst, err := getinstResp.FirstOrErr()
 		if err != nil {
-			return fmt.Errorf("getting status of volume data import instance '%s': %w", instID, err)
+			return fmt.Errorf("getting instance status: %w", err)
 		}
 		if inst.State != "stopped" {
 			return fmt.Errorf("instance has not yet stopped (state: %s)", inst.State)
