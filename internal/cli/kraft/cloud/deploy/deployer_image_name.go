@@ -95,7 +95,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 				instResp, sg, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
 					Env:                    opts.Env,
 					Features:               opts.Features,
-					FQDN:                   opts.FQDN,
+					Domain:                 opts.Domain,
 					Image:                  deployer.imageName,
 					Memory:                 opts.Memory,
 					Metro:                  opts.Metro,

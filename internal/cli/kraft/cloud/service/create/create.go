@@ -26,8 +26,8 @@ import (
 type CreateOptions struct {
 	Auth      *config.AuthConfig         `noattribute:"true"`
 	Client    kcservices.ServicesService `noattribute:"true"`
-	FQDN      string                     `local:"true" long:"fqdn" short:"d" usage:"Specify the fully qualified domain name of the service"`
-	SubDomain string                     `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
+	Domain    []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
+	SubDomain []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Metro     string                     `noattribute:"true"`
 	Name      string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
 	Output    string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
@@ -42,9 +42,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 		opts = &CreateOptions{}
 	}
 
-	if len(opts.SubDomain) > 0 && len(opts.FQDN) > 0 {
-		return nil, fmt.Errorf("the `--subdomain|-s` option is mutually exclusive with `--fqdn|--domain|-d`")
-	}
+	// if len(opts.SubDomain) > 0 && len(opts.FQDN) > 0 {
+	// 	return nil, fmt.Errorf("the `--subdomain|-s` option is mutually exclusive with `--fqdn|--domain|-d`")
+	// }
 
 	if opts.Auth == nil {
 		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
@@ -148,24 +148,27 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 
 	req := kcservices.CreateRequest{
 		Services: services,
+		Domains:  []kcservices.CreateRequestDomain{},
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
 
-	if len(opts.SubDomain) > 0 {
-		dnsName := strings.TrimSuffix(opts.SubDomain, ".")
-		req.Domains = []kcservices.CreateRequestDomain{{
-			Name: dnsName,
-		}}
-	} else if len(opts.FQDN) > 0 {
-		if !strings.HasSuffix(".", opts.FQDN) {
-			opts.FQDN += "."
+	for _, fqdn := range opts.Domain {
+		if !strings.HasSuffix(".", fqdn) {
+			fqdn += "."
 		}
 
-		req.Domains = []kcservices.CreateRequestDomain{{
-			Name: opts.FQDN,
-		}}
+		req.Domains = append(req.Domains, kcservices.CreateRequestDomain{
+			Name: fqdn,
+		})
+	}
+
+	for _, subdomain := range opts.SubDomain {
+		dnsName := strings.TrimSuffix(subdomain, ".")
+		req.Domains = append(req.Domains, kcservices.CreateRequestDomain{
+			Name: dnsName,
+		})
 	}
 
 	sgResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, req)
@@ -199,12 +202,6 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.Flags().String(
-		"domain",
-		"",
-		"Alias for --fqdn|-d",
-	)
-
 	return cmd
 }
 
@@ -212,13 +209,6 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
-	}
-
-	domain := cmd.Flag("domain").Value.String()
-	if len(domain) > 0 && len(opts.FQDN) > 0 {
-		return fmt.Errorf("cannot use --domain and --fqdn together")
-	} else if len(domain) > 0 && len(opts.FQDN) == 0 {
-		opts.FQDN = domain
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {

@@ -35,11 +35,11 @@ type DeployOptions struct {
 	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
 	Compress               bool                      `local:"true" long:"compress" short:"z" usage:"Compress the initrd package (experimental)"`
 	DeployAs               string                    `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
+	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
 	DotConfig              string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
 	ForcePull              bool                      `long:"force-pull" usage:"Force pulling packages before building"`
-	FQDN                   string                    `local:"true" long:"fqdn" short:"d" usage:"Set the fully qualified domain name for the service"`
 	Jobs                   int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg              bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile              string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
@@ -63,7 +63,7 @@ type DeployOptions struct {
 	ScaleToZero            bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
 	ServiceGroupNameOrUUID string                    `long:"service-group" short:"g" usage:"Attach the new deployment to an existing service group"`
 	Strategy               packmanager.MergeStrategy `noattribute:"true"`
-	SubDomain              string                    `local:"true" long:"subdomain" short:"s" usage:"Set the name to use when provisioning a subdomain"`
+	SubDomain              []string                  `local:"true" long:"subdomain" short:"s" usage:"Set the names to use when provisioning subdomains"`
 	Timeout                time.Duration             `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls" default:"60s"`
 	Token                  string                    `noattribute:"true"`
 	Volumes                []string                  `long:"volume" short:"v" usage:"Specify the volume mapping(s) in the form NAME:DEST or NAME:DEST:OPTIONS"`
@@ -101,12 +101,6 @@ func NewCmd() *cobra.Command {
 		"When a package of the same name exists, use this strategy when applying targets.",
 	)
 
-	cmd.Flags().String(
-		"domain",
-		"",
-		"Alias for --fqdn|-d",
-	)
-
 	return cmd
 }
 
@@ -117,13 +111,6 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
-
-	domain := cmd.Flag("domain").Value.String()
-	if len(domain) > 0 && len(opts.FQDN) > 0 {
-		return fmt.Errorf("cannot use --domain and --fqdn together")
-	} else if len(domain) > 0 && len(opts.FQDN) == 0 {
-		opts.FQDN = domain
-	}
 
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
@@ -265,7 +252,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 						Client:                 opts.Client,
 						Env:                    opts.Env,
 						Features:               opts.Features,
-						FQDN:                   opts.FQDN,
+						Domain:                 opts.Domain,
 						Image:                  insts[0].Image,
 						Memory:                 opts.Memory,
 						Metro:                  opts.Metro,
