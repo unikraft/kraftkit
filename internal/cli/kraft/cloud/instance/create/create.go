@@ -51,6 +51,7 @@ type CreateOptions struct {
 	Token                  string                `noattribute:"true"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage           bool                  `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout    time.Duration         `local:"true" long:"wait-for-image-timeout" short:"W" usage:"Timeout for waiting for the image to be available" default:"50s"`
 }
 
 // Create a KraftCloud instance.
@@ -77,6 +78,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		opts.Image += ":latest"
 	}
 
+	// Sanitize image name
+	opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
+	opts.Image = strings.TrimPrefix(opts.Image, "official/")
+
+	// Replace all slashes in the name with dashes.
+	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
+
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
 		imageClient := kraftcloud.NewClient(
@@ -92,15 +100,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				),
 				processtree.WithFailFast(true),
 				processtree.WithHideOnSuccess(true),
-				processtree.WithTimeout(60),
+				processtree.WithTimeout(opts.WaitForImageTimeout),
 			},
 			processtree.NewProcessTreeItem(
 				"waiting for the image to be available",
 				"",
 				func(ctx context.Context) error {
-					opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
-					opts.Image = strings.TrimPrefix(opts.Image, "official/")
-
 					for {
 						imgs, err := imageClient.Images().WithMetro(opts.Metro).List(ctx)
 						if err != nil {
@@ -120,8 +125,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 								}
 							}
 						}
-
-						time.Sleep(time.Second)
 					}
 				},
 			),

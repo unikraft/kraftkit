@@ -7,22 +7,16 @@ package deploy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
-	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
-	"kraftkit.sh/log"
-	"kraftkit.sh/tui/processtree"
-	"kraftkit.sh/unikraft/target"
 )
 
 type deployerKraftfileRuntime struct {
@@ -118,123 +112,23 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		return nil, nil, fmt.Errorf("could not package: %w", err)
 	}
 
-	// TODO(nderjung): This is a quirk that will be removed.  Remove the `index.`
-	// from the name.
-	if pkgName[0:17] == "index.unikraft.io" {
-		pkgName = pkgName[6:]
-	}
-	if pkgName[0:12] == "unikraft.io/" {
-		pkgName = pkgName[12:]
-	}
-
-	// FIXME(nderjung): Gathering the digest like this really dirty.
-	metadata := packs[0].Columns()
-	var digest string
-	for _, m := range metadata {
-		if m.Name != "index" {
-			continue
-		}
-
-		digest = m.Value
-	}
-
-	if len(deployer.args) == 0 {
-		p := packs[0].(target.Target)
-		deployer.args = p.Command()
-	}
-
-	var insts *kcclient.ServiceResponse[kcinstances.GetResponseItem]
-	var groups *kcclient.ServiceResponse[kcservices.GetResponseItem]
-
-	ctx, deployCancel := context.WithTimeout(ctx, 60*time.Second)
-	defer deployCancel()
-
-	paramodel, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
-			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(false),
-			processtree.WithTimeout(opts.Timeout),
-		},
-		processtree.NewProcessTreeItem(
-			"deploying",
-			"",
-			func(ctx context.Context) error {
-				var ctxTimeout context.Context
-				var cancel context.CancelFunc
-
-			checkRemoteImages:
-				for {
-					// First check if the context has been cancelled
-					select {
-					case <-ctx.Done():
-						return fmt.Errorf("context cancelled")
-					default:
-					}
-
-					// Introduce a new context that is used only for iteration
-					ctxTimeout, cancel = context.WithTimeout(context.TODO(), 5*time.Second)
-					defer cancel()
-
-					imagesResp, err := opts.Client.Images().WithMetro(opts.Metro).List(ctxTimeout)
-					if err != nil {
-						if errors.Is(err, context.DeadlineExceeded) {
-							continue
-						}
-						return fmt.Errorf("could not check list of images: %w", err)
-					}
-					images, err := imagesResp.AllOrErr()
-					if err != nil {
-						return fmt.Errorf("could not check list of images: %w", err)
-					}
-
-					for _, image := range images {
-						split := strings.Split(image.Digest, "@sha256:")
-						if !strings.HasPrefix(split[len(split)-1], digest) {
-							continue
-						}
-
-						cancel()
-						break checkRemoteImages
-					}
-				}
-
-				insts, groups, err = create.Create(ctx, &create.CreateOptions{
-					Env:                    opts.Env,
-					Domain:                 opts.Domain,
-					Image:                  pkgName,
-					Memory:                 opts.Memory,
-					Metro:                  opts.Metro,
-					Name:                   opts.Name,
-					Ports:                  opts.Ports,
-					Replicas:               opts.Replicas,
-					Rollout:                opts.Rollout,
-					ScaleToZero:            opts.ScaleToZero,
-					ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
-					Start:                  !opts.NoStart,
-					SubDomain:              opts.SubDomain,
-					Token:                  opts.Token,
-					Volumes:                opts.Volumes,
-				}, deployer.args...)
-				if err != nil {
-					return fmt.Errorf("could not create instance: %w", err)
-				}
-
-				return nil
-			},
-		),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := paramodel.Start(); err != nil {
-		return nil, nil, err
-	}
-
-	return insts, groups, nil
+	return create.Create(ctx, &create.CreateOptions{
+		Env:                    opts.Env,
+		Domain:                 opts.Domain,
+		Image:                  packs[0].ID(),
+		Memory:                 opts.Memory,
+		Metro:                  opts.Metro,
+		Name:                   opts.Name,
+		Ports:                  opts.Ports,
+		Replicas:               opts.Replicas,
+		Rollout:                opts.Rollout,
+		ScaleToZero:            opts.ScaleToZero,
+		ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
+		Start:                  !opts.NoStart,
+		SubDomain:              opts.SubDomain,
+		Token:                  opts.Token,
+		Volumes:                opts.Volumes,
+		WaitForImage:           true,
+		WaitForImageTimeout:    opts.Timeout,
+	}, deployer.args...)
 }
