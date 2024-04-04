@@ -83,7 +83,7 @@ var _ = Describe("kraft net create", func() {
 	When("invoked with one positional argument and a network without a subnet", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--network", "172.45.1.1")
-			cmd.Args = append(cmd.Args, "test-create-0")
+			cmd.Args = append(cmd.Args, "t-cr-0")
 		})
 
 		It("should print an error and exit with an error", func() {
@@ -98,7 +98,7 @@ var _ = Describe("kraft net create", func() {
 	When("invoked with one positional argument and a network without a complete ip", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--network", "172.45.2/24")
-			cmd.Args = append(cmd.Args, "test-create-1")
+			cmd.Args = append(cmd.Args, "test-cr-1")
 		})
 
 		It("should print an error and exit with an error", func() {
@@ -113,7 +113,7 @@ var _ = Describe("kraft net create", func() {
 	When("invoked with one positional argument and an invalid network", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--network", "1234")
-			cmd.Args = append(cmd.Args, "test-create-2")
+			cmd.Args = append(cmd.Args, "t-cr-2")
 		})
 
 		It("should print an error and exit with an error", func() {
@@ -129,7 +129,7 @@ var _ = Describe("kraft net create", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--driver", "unknown")
 			cmd.Args = append(cmd.Args, "--network", "172.45.3.1/24")
-			cmd.Args = append(cmd.Args, "test-create-3")
+			cmd.Args = append(cmd.Args, "t-cr-3")
 		})
 
 		It("should print an error and exit", func() {
@@ -146,7 +146,7 @@ var _ = Describe("kraft net create", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
 			cmd.Args = append(cmd.Args, "--network", "172.45.4.1/24")
-			cmd.Args = append(cmd.Args, "test-create-4")
+			cmd.Args = append(cmd.Args, "t-cr-4")
 		})
 
 		AfterEach(func() {
@@ -154,7 +154,7 @@ var _ = Describe("kraft net create", func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
-			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-create-4")
+			cmdRm.Args = append(cmdRm.Args, "net", "rm", "t-cr-4")
 
 			err := cmdRm.Run()
 			if err != nil {
@@ -170,7 +170,7 @@ var _ = Describe("kraft net create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^test-create-4\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^t-cr-4\n$`))
 
 			// Check that the network exists
 			stdoutLs := fcmd.NewIOStream()
@@ -184,13 +184,13 @@ var _ = Describe("kraft net create", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdoutLs.String()).To(MatchRegexp(`test-create-4[\t ]+172.45.4.1/24[\t ]+bridge[\t ]+up`))
+			Expect(stdoutLs.String()).To(MatchRegexp(`t-cr-4[\t ]+172.45.4.1/24[\t ]+bridge[\t ]+up`))
 		})
 	})
 
 	When("invoked with one positional argument without a network", func() {
 		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "test-create-5")
+			cmd.Args = append(cmd.Args, "t-cr-5")
 		})
 
 		AfterEach(func() {
@@ -198,7 +198,7 @@ var _ = Describe("kraft net create", func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
-			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-create-5")
+			cmdRm.Args = append(cmdRm.Args, "net", "rm", "t-cr-5")
 
 			err := cmdRm.Run()
 			if err != nil {
@@ -214,7 +214,7 @@ var _ = Describe("kraft net create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^test-create-5\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^t-cr-5\n$`))
 
 			// Check that the network exists
 			stdoutLs := fcmd.NewIOStream()
@@ -228,7 +228,7 @@ var _ = Describe("kraft net create", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdoutLs.String()).To(MatchRegexp(`test-create-5[\t ]+172.18.0.1/16[\t ]+bridge[\t ]+up`))
+			Expect(stdoutLs.String()).To(MatchRegexp(`t-cr-5[\t ]+172.18.0.1/16[\t ]+bridge[\t ]+up`))
 		})
 	})
 })

@@ -53,7 +53,7 @@ var _ = Describe("kraft net inspect", func() {
 	When("invoked with a non-existing network", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-inspect-0")
+			cmd.Args = append(cmd.Args, "t-in-0")
 		})
 
 		It("should error out and exit with an error", func() {
@@ -61,7 +61,7 @@ var _ = Describe("kraft net inspect", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"could not get link test-inspect-0: Link not found"}\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"could not get link t-in-0: Link not found"}\n$`))
 		})
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("kraft net inspect", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.50.0.1/24")
-			cmdCreate.Args = append(cmdCreate.Args, "test-inspect-1")
+			cmdCreate.Args = append(cmdCreate.Args, "t-in-1")
 
 			err := cmdCreate.Run()
 			if err != nil {
@@ -83,17 +83,17 @@ var _ = Describe("kraft net inspect", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrCreate.String()).To(BeEmpty())
-			Expect(stdoutCreate.String()).To(MatchRegexp(`^test-inspect-1\n$`))
+			Expect(stdoutCreate.String()).To(MatchRegexp(`^t-in-1\n$`))
 
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-inspect-1")
+			cmd.Args = append(cmd.Args, "t-in-1")
 		})
 
 		AfterEach(func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
-			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-inspect-1")
+			cmdRm.Args = append(cmdRm.Args, "net", "rm", "t-in-1")
 			err := cmdRm.Run()
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
@@ -118,7 +118,7 @@ var _ = Describe("kraft net inspect", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Check if network is correct
-			Expect(inspectData["spec"].(map[string]interface{})["ifName"]).To(Equal("test-inspect-1"))
+			Expect(inspectData["spec"].(map[string]interface{})["ifName"]).To(Equal("t-in-1"))
 			// Check if the network is up
 			Expect(inspectData["status"].(map[string]interface{})["state"]).To(Equal("up"))
 		})
