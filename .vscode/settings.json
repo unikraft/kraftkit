@@ -1,0 +1,16 @@
+{
+  "files.associations": {
+    "Kraftfile": "yaml",
+  },
+  "editor.rulers": [80],
+  "editor.wordWrapColumn": 80,
+  "go.formatTool": "goimports",
+  "go.useLanguageServer": true,
+  "[go]": {
+    "editor.insertSpaces": false,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+  },
+}
