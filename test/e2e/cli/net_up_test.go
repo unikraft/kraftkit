@@ -52,7 +52,7 @@ var _ = Describe("kraft net up", func() {
 	When("invoked with a non-existing network", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-up-0")
+			cmd.Args = append(cmd.Args, "t-up-0")
 		})
 
 		It("should error out and exit with an error", func() {
@@ -60,7 +60,7 @@ var _ = Describe("kraft net up", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge test-up-0 failed: Link not found"}\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge t-up-0 failed: Link not found"}\n$`))
 		})
 	})
 
@@ -74,7 +74,7 @@ var _ = Describe("kraft net up", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.49.0.1/24")
-			cmdCreate.Args = append(cmdCreate.Args, "test-up-1")
+			cmdCreate.Args = append(cmdCreate.Args, "t-up-1")
 
 			err := cmdCreate.Run()
 			if err != nil {
@@ -84,14 +84,14 @@ var _ = Describe("kraft net up", func() {
 			Expect(stderrCreate.String()).To(BeEmpty())
 
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-up-1")
+			cmd.Args = append(cmd.Args, "t-up-1")
 		})
 
 		AfterEach(func() {
 			stdoutRm := fcmd.NewIOStream()
 			stderrRm := fcmd.NewIOStream()
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
-			cmdRm.Args = append(cmdRm.Args, "net", "rm", "test-up-1")
+			cmdRm.Args = append(cmdRm.Args, "net", "rm", "t-up-1")
 			err := cmdRm.Run()
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
@@ -106,7 +106,7 @@ var _ = Describe("kraft net up", func() {
 			cmdDown := fcmd.NewKraftPrivileged(stdoutDown, stderrDown, cfg.Path())
 			cmdDown.Args = append(cmdDown.Args, "net", "down", "--log-level", "info", "--log-type", "json")
 			cmdDown.Args = append(cmdDown.Args, "--driver", "bridge")
-			cmdDown.Args = append(cmdDown.Args, "test-up-1")
+			cmdDown.Args = append(cmdDown.Args, "t-up-1")
 
 			err := cmdDown.Run()
 			if err != nil {
@@ -114,7 +114,7 @@ var _ = Describe("kraft net up", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrDown.String()).To(BeEmpty())
-			Expect(stdoutDown.String()).To(MatchRegexp(`^test-up-1\n$`))
+			Expect(stdoutDown.String()).To(MatchRegexp(`^t-up-1\n$`))
 
 			// Check if the network is down
 			stdoutLs := fcmd.NewIOStream()
@@ -129,7 +129,7 @@ var _ = Describe("kraft net up", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdoutLs.String()).To(MatchRegexp(`test-up-1[\t ]+172.49.0.1/24[\t ]+bridge[\t ]+down`))
+			Expect(stdoutLs.String()).To(MatchRegexp(`t-up-1[\t ]+172.49.0.1/24[\t ]+bridge[\t ]+down`))
 
 			// Bring the network back up
 			err = cmd.Run()
@@ -152,7 +152,7 @@ var _ = Describe("kraft net up", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdoutLs.String()).To(MatchRegexp(`test-up-1[\t ]+172.49.0.1/24[\t ]+bridge[\t ]+up`))
+			Expect(stdoutLs.String()).To(MatchRegexp(`t-up-1[\t ]+172.49.0.1/24[\t ]+bridge[\t ]+up`))
 		})
 	})
 

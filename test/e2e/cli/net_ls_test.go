@@ -61,7 +61,7 @@ var _ = Describe("kraft net ls", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.47.0.1/24")
-			cmdCreate.Args = append(cmdCreate.Args, "test-ls-0")
+			cmdCreate.Args = append(cmdCreate.Args, "t-ls-0")
 
 			err := cmdCreate.Run()
 			if err != nil {
@@ -79,7 +79,7 @@ var _ = Describe("kraft net ls", func() {
 			stderrRm := fcmd.NewIOStream()
 			cmdRm := fcmd.NewKraftPrivileged(stdoutRm, stderrRm, cfg.Path())
 			cmdRm.Args = append(cmdRm.Args, "net", "rm", "--log-level", "info", "--log-type", "json")
-			cmdRm.Args = append(cmdRm.Args, "test-ls-0")
+			cmdRm.Args = append(cmdRm.Args, "t-ls-0")
 
 			err := cmdRm.Run()
 			if err != nil {
@@ -97,7 +97,7 @@ var _ = Describe("kraft net ls", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdout.String()).To(MatchRegexp(`test-ls-0[\t ]+172.47.0.1/24[\t ]+bridge[\t ]+up`))
+			Expect(stdout.String()).To(MatchRegexp(`t-ls-0[\t ]+172.47.0.1/24[\t ]+bridge[\t ]+up`))
 		})
 	})
 

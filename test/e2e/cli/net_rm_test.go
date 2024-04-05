@@ -89,7 +89,7 @@ var _ = Describe("kraft net rm", func() {
 			cmdCreate.Args = append(cmdCreate.Args, "net", "create", "--log-level", "info", "--log-type", "json")
 			cmdCreate.Args = append(cmdCreate.Args, "--driver", "bridge")
 			cmdCreate.Args = append(cmdCreate.Args, "--network", "172.46.0.1/24")
-			cmdCreate.Args = append(cmdCreate.Args, "test-rm-0")
+			cmdCreate.Args = append(cmdCreate.Args, "t-rm-0")
 
 			err := cmdCreate.Run()
 			if err != nil {
@@ -99,7 +99,7 @@ var _ = Describe("kraft net rm", func() {
 			Expect(stderr.String()).To(BeEmpty())
 
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-rm-0")
+			cmd.Args = append(cmd.Args, "t-rm-0")
 		})
 
 		It("should delete the network, print the network name, and exit", func() {
@@ -109,7 +109,7 @@ var _ = Describe("kraft net rm", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^test-rm-0\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^t-rm-0\n$`))
 
 			// Check that the network no longer exists
 			stdoutLs := fcmd.NewIOStream()
@@ -124,7 +124,7 @@ var _ = Describe("kraft net rm", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderrLs.String()).To(BeEmpty())
 			Expect(stdoutLs.String()).To(MatchRegexp(`^NAME[\t ]+NETWORK[\t ]+DRIVER[\t ]+STATUS\n`))
-			Expect(stdoutLs.String()).ToNot(MatchRegexp(`test-rm-0[\t ]+172.46.0.1/24[\t ]+bridge[\t ]+up`))
+			Expect(stdoutLs.String()).ToNot(MatchRegexp(`t-rm-0[\t ]+172.46.0.1/24[\t ]+bridge[\t ]+up`))
 		})
 	})
 
@@ -132,7 +132,7 @@ var _ = Describe("kraft net rm", func() {
 	When("invoked with one positional argument, valid driver, and an invalid network", func() {
 		BeforeEach(func() {
 			cmd.Args = append(cmd.Args, "--driver", "bridge")
-			cmd.Args = append(cmd.Args, "test-rm-1")
+			cmd.Args = append(cmd.Args, "t-rm-1")
 		})
 
 		It("should delete the network, print the network name, and exit", func() {
@@ -140,7 +140,7 @@ var _ = Describe("kraft net rm", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge test-rm-1 failed: Link not found"}\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge t-rm-1 failed: Link not found"}\n$`))
 		})
 	})
 })
