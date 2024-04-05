@@ -212,6 +212,7 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 		if d.timeout != 0 && d.timer.Elapsed() > d.timeout {
 			d.err = fmt.Errorf("process timedout after %s", d.timeout.String())
 			d.Status = StatusFailed
+			cmds = append(cmds, tea.Quit)
 		}
 
 		d.spinner, cmd = d.spinner.Update(msg)

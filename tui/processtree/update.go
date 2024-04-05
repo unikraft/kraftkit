@@ -46,6 +46,10 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pti.timeout != 0 && pti.timer.Elapsed() > pti.timeout {
 				pti.err = fmt.Errorf("process timedout after %s", pti.timeout.String())
 				pti.status = StatusFailed
+				if pt.failFast {
+					pt.quitting = true
+					cmd = tea.Quit
+				}
 			} else {
 				pti.spinner, cmd = pti.spinner.Update(msg)
 			}
