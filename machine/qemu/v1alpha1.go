@@ -234,51 +234,22 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		)
 	}
 
-	if len(machine.Spec.Ports) > 0 {
-		// Start MAC addresses iteratively.
-		startMac, err := macaddr.GenerateMacAddress(true)
-		if err != nil {
-			return machine, err
-		}
-
-		for i, port := range machine.Spec.Ports {
-			mac := port.MacAddress
-			if mac == "" {
-				startMac = macaddr.IncrementMacAddress(startMac)
-				mac = startMac.String()
-			}
-
-			hostnetid := fmt.Sprintf("hostnet%d", i)
-			qopts = append(qopts,
-				WithDevice(QemuDeviceVirtioNetPci{
-					Mac:    mac,
-					Netdev: hostnetid,
-				}),
-				WithNetDevice(QemuNetDevUser{
-					Id:      hostnetid,
-					Hostfwd: fmt.Sprintf("%s::%d-:%d", port.Protocol, port.HostPort, port.MachinePort),
-				}),
-			)
-		}
-	}
-
 	kernelArgs, err := ukargparse.Parse(machine.Spec.KernelArgs...)
 	if err != nil {
 		return machine, err
 	}
 
+	hostnetCounter := 0
+	// Start MAC addresses iteratively.  Each interface will have the last
+	// hexdecimal byte increase by 1 starting at 1, allowing for easy-to-spot
+	// interface IDs from the MAC address.  The return value below returns `:00`
+	// as the last byte.
+	startMac, err := macaddr.GenerateMacAddress(true)
+	if err != nil {
+		return machine, err
+	}
+
 	if len(machine.Spec.Networks) > 0 {
-		// Start MAC addresses iteratively.  Each interface will have the last
-		// hexdecimal byte increase by 1 starting at 1, allowing for easy-to-spot
-		// interface IDs from the MAC address.  The return value below returns `:00`
-		// as the last byte.
-		startMac, err := macaddr.GenerateMacAddress(true)
-		if err != nil {
-			return machine, err
-		}
-
-		i := 0 // host network ID.
-
 		// Iterate over each interface of each network interface associated with
 		// this machine and attach it as a device.
 		for _, network := range machine.Spec.Networks {
@@ -291,7 +262,9 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 					mac = startMac.String()
 				}
 
-				hostnetid := fmt.Sprintf("hostnet%d", i)
+				hostnetid := fmt.Sprintf("hostnet%d", hostnetCounter)
+				hostnetCounter++
+
 				qopts = append(qopts,
 					// TODO(nderjung): The network device should be customizable based on
 					// the network spec or machine spec.  Additional insight can be provided
@@ -321,10 +294,30 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 						Domain:   iface.Spec.Domain,
 					}),
 				)
-
-				// Increment the host network ID for additional interfaces.
-				i++
 			}
+		}
+	}
+
+	if len(machine.Spec.Ports) > 0 {
+		for _, port := range machine.Spec.Ports {
+			mac := port.MacAddress
+			if mac == "" {
+				startMac = macaddr.IncrementMacAddress(startMac)
+				mac = startMac.String()
+			}
+
+			hostnetid := fmt.Sprintf("hostnet%d", hostnetCounter)
+			hostnetCounter++
+			qopts = append(qopts,
+				WithDevice(QemuDeviceVirtioNetPci{
+					Mac:    mac,
+					Netdev: hostnetid,
+				}),
+				WithNetDevice(QemuNetDevUser{
+					Id:      hostnetid,
+					Hostfwd: fmt.Sprintf("%s::%d-:%d", port.Protocol, port.HostPort, port.MachinePort),
+				}),
+			)
 		}
 	}
 
