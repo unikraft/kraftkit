@@ -99,9 +99,38 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 		opts.pm = packmanager.G(ctx)
 	}
 
-	exists, err := opts.pm.Catalog(ctx,
-		packmanager.WithName(opts.Name),
+	var exists []pack.Package
+
+	paramodel, err := processtree.NewProcessTree(
+		ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithRenderer(
+				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+			),
+			processtree.WithFailFast(true),
+			processtree.WithHideOnSuccess(true),
+		},
+		processtree.NewProcessTreeItem(
+			fmt.Sprintf("searching for %s", opts.Name),
+			"",
+			func(ctx context.Context) error {
+				exists, err = opts.pm.Catalog(ctx,
+					packmanager.WithName(opts.Name),
+				)
+				return err
+			},
+		),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("could not start the process tree: %w", err)
+	}
+
+	err = paramodel.Start()
+	if err != nil {
+		return nil, fmt.Errorf("could not wait for image be available: %w", err)
+	}
+
 	if err == nil && len(exists) > 0 {
 		if opts.Strategy == packmanager.StrategyPrompt {
 			strategy, err := selection.Select[packmanager.MergeStrategy](
