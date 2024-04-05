@@ -267,6 +267,7 @@ func (opts *RunOptions) parseKraftfileVolumes(ctx context.Context, project app.A
 				}
 
 				if _, ok := controllers[sname]; !ok {
+					log.G(ctx).WithField("volume strategy", sname).Debug("found volume strategy")
 					controllers[sname], err = strategy.NewVolumeV1alpha1(ctx)
 					if err != nil {
 						return fmt.Errorf("could not prepare %s volume service: %w", sname, err)
@@ -274,6 +275,21 @@ func (opts *RunOptions) parseKraftfileVolumes(ctx context.Context, project app.A
 				}
 
 				driver = sname
+			}
+		} else {
+			strategy, exists := volume.Strategies()[driver]
+			if !exists {
+				return fmt.Errorf("unknown volume driver %s specified", driver)
+			}
+			if ok, _ := strategy.IsCompatible(volcfg.Source(), nil); !ok || err != nil {
+				return fmt.Errorf("volume driver %s is incompatible with source %s", driver, volcfg.Source())
+			}
+			if _, ok := controllers[driver]; !ok {
+				log.G(ctx).WithField("volume strategy", driver).Debug("found volume strategy")
+				controllers[driver], err = strategy.NewVolumeV1alpha1(ctx)
+				if err != nil {
+					return fmt.Errorf("could not prepare %s volume service: %w", driver, err)
+				}
 			}
 		}
 
