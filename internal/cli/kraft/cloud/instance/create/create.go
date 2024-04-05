@@ -35,7 +35,7 @@ type CreateOptions struct {
 	Client                 kraftcloud.KraftCloud `noattribute:"true"`
 	Env                    []string              `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features               []string              `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	FQDN                   string                `local:"true" long:"fqdn" short:"d" usage:"The Fully Qualified Domain Name to use for the service"`
+	Domain                 []string              `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image                  string                `noattribute:"true"`
 	Memory                 int                   `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
 	Metro                  string                `noattribute:"true"`
@@ -47,7 +47,7 @@ type CreateOptions struct {
 	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
 	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
-	SubDomain              string                `local:"true" long:"subdomain" short:"s" usage:"Set the subdomain to use when creating the service"`
+	SubDomain              []string              `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token                  string                `noattribute:"true"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage           bool                  `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
@@ -309,36 +309,44 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				Services: services,
 			}
 		}
-		if opts.SubDomain != "" {
-			dnsName := strings.TrimSuffix(opts.SubDomain, ".")
+		if len(opts.SubDomain) > 0 {
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					Domains: []kcservices.CreateRequestDomain{{
-						Name: dnsName,
-					}},
+					Domains:  []kcservices.CreateRequestDomain{},
 					Services: services,
 				}
 			} else {
-				req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{{
-					Name: dnsName,
-				}}
+				if req.ServiceGroup.Domains == nil {
+					req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{}
+				}
 			}
-		} else if opts.FQDN != "" {
-			if !strings.HasSuffix(".", opts.FQDN) {
-				opts.FQDN += "."
+			for _, subDomain := range opts.SubDomain {
+				dnsName := strings.TrimSuffix(subDomain, ".")
+
+				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
+					Name: dnsName,
+				})
+			}
+		} else if len(opts.Domain) > 0 {
+			if req.ServiceGroup == nil {
+				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+					Domains:  []kcservices.CreateRequestDomain{},
+					Services: services,
+				}
+			} else {
+				if req.ServiceGroup.Domains == nil {
+					req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{}
+				}
 			}
 
-			if req.ServiceGroup == nil {
-				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					Domains: []kcservices.CreateRequestDomain{{
-						Name: opts.FQDN,
-					}},
-					Services: services,
+			for _, fqdn := range opts.Domain {
+				if !strings.HasSuffix(".", fqdn) {
+					fqdn += "."
 				}
-			} else {
-				req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{{
-					Name: opts.FQDN,
-				}}
+
+				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
+					Name: fqdn,
+				})
 			}
 		}
 	}
@@ -535,12 +543,6 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.Flags().String(
-		"domain",
-		"",
-		"Alias for --fqdn|-d",
-	)
-
 	return cmd
 }
 
@@ -548,13 +550,6 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
-	}
-
-	domain := cmd.Flag("domain").Value.String()
-	if domain != "" && opts.FQDN != "" {
-		return fmt.Errorf("cannot use --domain and --fqdn together")
-	} else if domain != "" && opts.FQDN == "" {
-		opts.FQDN = domain
 	}
 
 	if opts.Rollout && opts.ServiceGroupNameOrUUID == "" {

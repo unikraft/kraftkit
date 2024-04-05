@@ -217,7 +217,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 
 					instResp, sg, err = create.Create(ctxTimeout, &create.CreateOptions{
 						Env:                    opts.Env,
-						FQDN:                   opts.FQDN,
+						Domain:                 opts.Domain,
 						Image:                  pkgName,
 						Memory:                 opts.Memory,
 						Metro:                  opts.Metro,
