@@ -2,7 +2,7 @@
 // Copyright (c) 2024, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package stop
+package unpause
 
 import (
 	"context"
@@ -17,23 +17,25 @@ import (
 	"kraftkit.sh/packmanager"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	kernelstop "kraftkit.sh/internal/cli/kraft/stop"
+	"kraftkit.sh/internal/cli/kraft/compose/logs"
+	kernelstart "kraftkit.sh/internal/cli/kraft/start"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type StopOptions struct {
-	composefile string
+type UnpauseOptions struct {
+	Composefile string `noattribute:"true"`
+	Detach      bool   `long:"detach" short:"d" usage:"Run in background"`
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short:   "Stop a compose project",
-		Use:     "stop [FLAGS]",
+	cmd, err := cmdfactory.New(&UnpauseOptions{}, cobra.Command{
+		Short:   "Unpause a compose project",
+		Use:     "unpause [FLAGS]",
 		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
-			# Stop a compose project
-			$ kraft compose stop 
+			# Unpause a compose project
+			$ kraft compose unpause 
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
@@ -46,7 +48,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *StopOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *UnpauseOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -55,20 +57,20 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, _ []string) error {
 	cmd.SetContext(ctx)
 
 	if cmd.Flag("file").Changed {
-		opts.composefile = cmd.Flag("file").Value.String()
+		opts.Composefile = cmd.Flag("file").Value.String()
 	}
 
-	log.G(cmd.Context()).WithField("composefile", opts.composefile).Debug("using")
+	log.G(cmd.Context()).WithField("composefile", opts.Composefile).Debug("using")
 	return nil
 }
 
-func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
+func (opts *UnpauseOptions) Run(ctx context.Context, _ []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.composefile)
+	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.Composefile)
 	if err != nil {
 		return err
 	}
@@ -87,24 +89,34 @@ func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	machinesToStop := []string{}
+	machinesToUnpause := []string{}
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
-			if service.Name == machine.Name &&
-				(machine.Status.State == machineapi.MachineStateRunning ||
-					machine.Status.State == machineapi.MachineStatePaused) {
-				machinesToStop = append(machinesToStop, machine.Name)
+			if service.Name == machine.Name {
+				if machine.Status.State == machineapi.MachineStatePaused {
+					machinesToUnpause = append(machinesToUnpause, machine.Name)
+				}
 			}
 		}
 	}
 
-	if len(machinesToStop) == 0 {
-		return nil
-	}
-
-	kernelStopOptions := kernelstop.StopOptions{
+	kernelStartOptions := kernelstart.StartOptions{
+		Detach:   true,
 		Platform: "auto",
 	}
 
-	return kernelStopOptions.Run(ctx, machinesToStop)
+	if err := kernelStartOptions.Run(ctx, machinesToUnpause); err != nil {
+		return err
+	}
+
+	if opts.Detach {
+		return nil
+	}
+
+	logsOptions := logs.LogsOptions{
+		Composefile: opts.Composefile,
+		Follow:      true,
+	}
+
+	return logsOptions.Run(ctx, []string{})
 }

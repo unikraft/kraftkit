@@ -2,7 +2,7 @@
 // Copyright (c) 2024, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
-package stop
+package pause
 
 import (
 	"context"
@@ -17,23 +17,23 @@ import (
 	"kraftkit.sh/packmanager"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	kernelstop "kraftkit.sh/internal/cli/kraft/stop"
+	kernelpause "kraftkit.sh/internal/cli/kraft/pause"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
-type StopOptions struct {
+type PauseOptions struct {
 	composefile string
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short:   "Stop a compose project",
-		Use:     "stop [FLAGS]",
+	cmd, err := cmdfactory.New(&PauseOptions{}, cobra.Command{
+		Short:   "Pause a compose project",
+		Use:     "pause [FLAGS]",
 		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
-			# Stop a compose project
-			$ kraft compose stop 
+			# Pause a compose project
+			$ kraft compose pause 
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
@@ -46,7 +46,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *StopOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *PauseOptions) Pre(cmd *cobra.Command, _ []string) error {
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
+func (opts *PauseOptions) Run(ctx context.Context, _ []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -87,24 +87,22 @@ func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	machinesToStop := []string{}
+	machinesToPause := []string{}
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
-			if service.Name == machine.Name &&
-				(machine.Status.State == machineapi.MachineStateRunning ||
-					machine.Status.State == machineapi.MachineStatePaused) {
-				machinesToStop = append(machinesToStop, machine.Name)
+			if service.Name == machine.Name && machine.Status.State == machineapi.MachineStateRunning {
+				machinesToPause = append(machinesToPause, machine.Name)
 			}
 		}
 	}
 
-	if len(machinesToStop) == 0 {
+	if len(machinesToPause) == 0 {
 		return nil
 	}
 
-	kernelStopOptions := kernelstop.StopOptions{
+	kernelPauseOptions := kernelpause.PauseOptions{
 		Platform: "auto",
 	}
 
-	return kernelStopOptions.Run(ctx, machinesToStop)
+	return kernelPauseOptions.Run(ctx, machinesToPause)
 }
