@@ -7,7 +7,6 @@ package create
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -28,6 +27,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/selection"
 )
 
 type CreateOptions struct {
@@ -43,7 +43,9 @@ type CreateOptions struct {
 	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout                bool                  `local:"true" long:"rollout" short:"r" usage:"Roll out the instance in a service group"`
+	Rollout                RolloutStrategy       `noattribute:"true"`
+	RolloutQualifier       RolloutQualifier      `noattribute:"true"`
+	RolloutWait            time.Duration         `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
 	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
 	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
@@ -51,10 +53,11 @@ type CreateOptions struct {
 	Token                  string                `noattribute:"true"`
 	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage           bool                  `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout    time.Duration         `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
 }
 
 // Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcservices.GetResponseItem, error) {
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	var err error
 
 	if opts == nil {
@@ -73,16 +76,29 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		)
 	}
 
+	// Check if the user tries to use a service group and a rollout strategy is
+	// set to prompt so that we can use this information later.  We do this very
+	// early on such that we can fail-fast in case prompting is not possible (e.g.
+	// in non-TTY environments).
+	if opts.ServiceGroupNameOrUUID != "" && opts.Rollout == StrategyPrompt {
+		if config.G[config.KraftKit](ctx).NoPrompt {
+			return nil, nil, fmt.Errorf("prompting disabled")
+		}
+	}
+
 	if !strings.Contains(opts.Image, ":") {
 		opts.Image += ":latest"
 	}
 
+	// Sanitize image name
+	opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
+	opts.Image = strings.TrimPrefix(opts.Image, "official/")
+
+	// Replace all slashes in the name with dashes.
+	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
+
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
-		imageClient := kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
-		)
-
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -92,17 +108,14 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				),
 				processtree.WithFailFast(true),
 				processtree.WithHideOnSuccess(true),
-				processtree.WithTimeout(60),
+				processtree.WithTimeout(opts.WaitForImageTimeout),
 			},
 			processtree.NewProcessTreeItem(
 				"waiting for the image to be available",
 				"",
 				func(ctx context.Context) error {
-					opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
-					opts.Image = strings.TrimPrefix(opts.Image, "official/")
-
 					for {
-						imgs, err := imageClient.Images().WithMetro(opts.Metro).List(ctx)
+						imgs, err := opts.Client.Images().WithMetro(opts.Metro).List(ctx)
 						if err != nil {
 							return fmt.Errorf("could not list images: %w", err)
 						}
@@ -120,8 +133,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 								}
 							}
 						}
-
-						time.Sleep(time.Second)
 					}
 				},
 			),
@@ -192,13 +203,23 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	var serviceGroup *kcservices.GetResponseItem
+	var qualifiedInstances []kcinstances.GetResponseItem
 
-	if opts.ServiceGroupNameOrUUID != "" {
-		resp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, opts.ServiceGroupNameOrUUID)
+	// Since an existing service group has been provided, we should now
+	// preemptively look up information about it.  Based on whether there are
+	// active instances inside of this service group, we can then decide how to
+	// proceed with the deployment (aka rollout strategies).
+	if len(opts.ServiceGroupNameOrUUID) > 0 {
+		log.G(ctx).
+			WithField("group", opts.ServiceGroupNameOrUUID).
+			Trace("looking up service")
+
+		groupResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, opts.ServiceGroupNameOrUUID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
 		}
-		serviceGroup, err = resp.FirstOrErr()
+
+		serviceGroup, err = groupResp.FirstOrErr()
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
 		}
@@ -207,8 +228,103 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			WithField("uuid", serviceGroup.UUID).
 			Debug("using service group")
 
+		// Save the UUID of the service group to be used in the create request
+		// later.
 		req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 			UUID: &serviceGroup.UUID,
+		}
+
+		// Find out if there are any existing instances in this service group.
+		allInstanceUUIDs := make([]string, len(serviceGroup.Instances))
+		for i, instance := range serviceGroup.Instances {
+			allInstanceUUIDs[i] = instance.UUID
+		}
+
+		var instances []kcinstances.GetResponseItem
+		if len(allInstanceUUIDs) > 0 {
+			log.G(ctx).
+				WithField("group", opts.ServiceGroupNameOrUUID).
+				Trace("getting instances in service")
+
+			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, allInstanceUUIDs...)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not get instances of service group '%s': %w", opts.ServiceGroupNameOrUUID, err)
+			}
+
+			instances, err = instancesResp.AllOrErr()
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not get instances of service group '%s': %w", opts.ServiceGroupNameOrUUID, err)
+			}
+		} else {
+			log.G(ctx).
+				WithField("group", opts.ServiceGroupNameOrUUID).
+				Trace("no existing instances in service group")
+		}
+
+		switch opts.RolloutQualifier {
+		case RolloutQualifierImageName:
+			imageBase := opts.Image
+			if strings.Contains(opts.Image, "@") {
+				imageBase, _, _ = strings.Cut(opts.Image, "@")
+			} else if strings.Contains(opts.Image, ":") {
+				imageBase, _, _ = strings.Cut(opts.Image, ":")
+			}
+
+			for _, instance := range instances {
+				instImageBase, _, _ := strings.Cut(instance.Image, "@")
+				if instImageBase == imageBase {
+					qualifiedInstances = append(qualifiedInstances, instance)
+				}
+			}
+
+		case RolloutQualifierInstanceName:
+			for _, instance := range instances {
+				if instance.Name == opts.Name {
+					qualifiedInstances = append(qualifiedInstances, instance)
+				}
+			}
+
+		case RolloutQualifierAll:
+			qualifiedInstances = instances
+
+		case RolloutQualifierNone:
+			// No-op
+		}
+
+		if len(qualifiedInstances) > 0 {
+			var batch []string
+			for _, instance := range qualifiedInstances {
+				batch = append(batch, instance.UUID)
+			}
+
+			if opts.Rollout == StrategyPrompt {
+				strategy, err := selection.Select(
+					fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstances)),
+					RolloutStrategies()...,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
+
+				opts.Rollout = *strategy
+			}
+
+			switch opts.Rollout {
+			case RolloutStrategyExit:
+				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
+
+			case RolloutStrategyStop:
+				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
+					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
+				}
+
+			case RolloutStrategyRemove:
+				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
+					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
+				}
+			}
 		}
 	}
 
@@ -372,6 +488,58 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, err
 	}
 
+	// Handle the rollout only after the new instance has been created.
+	// KraftCloud's service group load balancer will temporarily handle blue-green
+	// deployments.
+	if len(qualifiedInstances) > 0 {
+		paramodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				"waiting for new instance to start before performing rollout action",
+				"",
+				func(ctx context.Context) error {
+					_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
+					return err
+				},
+			),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not start wait process: %w", err)
+		}
+
+		err = paramodel.Start()
+		if err != nil {
+			log.G(ctx).
+				WithError(err).
+				Error("aborting rollout: could not wait for new instance to start")
+		} else {
+			var batch []string
+			for _, instance := range qualifiedInstances {
+				batch = append(batch, instance.UUID)
+			}
+
+			switch opts.Rollout {
+			case RolloutStrategyStop:
+				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
+					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
+				}
+
+			case RolloutStrategyRemove:
+				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
+					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
+				}
+			}
+		}
+	}
+
 	instanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, newInstance.UUID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
@@ -381,123 +549,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
+	var serviceGroupResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
+
 	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
-		serviceGroupResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
+		serviceGroupResp, err = opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}
-		if serviceGroup, err = serviceGroupResp.FirstOrErr(); err != nil {
-			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
-		}
 	}
 
-	return instanceResp, serviceGroup, nil
-}
-
-// Rollout an instance in a service group.
-func Rollout(ctx context.Context, opts *CreateOptions, newInstance *kcinstances.GetResponseItem, newServiceGroup *kcservices.GetResponseItem) error {
-	oneMinute := int(time.Minute.Milliseconds())
-
-	_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, oneMinute, newInstance.UUID)
-	if err != nil {
-		return fmt.Errorf("could not wait for the first new instance to start: %w", err)
-	}
-
-	if newServiceGroup == nil {
-		return fmt.Errorf("empty service group")
-	}
-
-	// First stop one instance which is not the new one
-	for i, instance := range newServiceGroup.Instances {
-		if instance.UUID == newInstance.UUID {
-			continue
-		}
-
-		log.G(ctx).
-			WithField("instance", instance.Name).
-			WithField("service group", newServiceGroup.Name).
-			Info("draining old instance")
-
-		if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, oneMinute, false, instance.UUID); err != nil {
-			return fmt.Errorf("could not stop the old instance: %w", err)
-		}
-
-		if _, err = opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateStopped, oneMinute, instance.UUID); err != nil {
-			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
-		}
-
-		log.G(ctx).
-			WithField("instance", instance).
-			WithField("service group", newServiceGroup.Name).
-			Info("drained old instance")
-
-		newServiceGroup.Instances = append(newServiceGroup.Instances[:i], newServiceGroup.Instances[i+1:]...)
-		break
-	}
-
-	for _, instance := range newServiceGroup.Instances {
-		if instance.UUID == newInstance.UUID {
-			continue
-		}
-
-		log.G(ctx).
-			WithField("service group", newServiceGroup.Name).
-			Info("starting new instance")
-
-		// Create the rest of the instances and wait max 10s for them to start
-		timeout := int(time.Second.Milliseconds() * 10)
-		autoStart := true
-		req := kcinstances.CreateRequest{
-			Image: newInstance.Image,
-			Args:  newInstance.Args,
-			Env:   newInstance.Env,
-			ServiceGroup: &kcinstances.CreateRequestServiceGroup{
-				UUID: &newServiceGroup.UUID,
-			},
-			Autostart:     &autoStart,
-			WaitTimeoutMs: &timeout,
-		}
-
-		if opts.Memory > 0 {
-			req.MemoryMB = &opts.Memory
-		}
-
-		cresp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
-		if err != nil {
-			return fmt.Errorf("could not create a new instance: %w", err)
-		}
-		if _, err = cresp.FirstOrErr(); err != nil {
-			return fmt.Errorf("could not create a new instance: %w", err)
-		}
-
-		log.G(ctx).
-			WithField("instance", instance).
-			WithField("service group", newServiceGroup.Name).
-			Info("draining old instance")
-
-		sresp, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, oneMinute, false, instance.UUID)
-		if err != nil {
-			return fmt.Errorf("could not stop the old instance: %w", err)
-		}
-		if _, err = sresp.FirstOrErr(); err != nil {
-			return fmt.Errorf("could not stop the old instance: %w", err)
-		}
-
-		wresp, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateStopped, oneMinute, instance.UUID)
-		if err != nil {
-			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
-		}
-		if _, err = wresp.FirstOrErr(); err != nil {
-			return fmt.Errorf("could not wait for the old instance to stop: %w", err)
-		}
-
-		log.G(ctx).
-			WithField("instance", instance).
-			WithField("service group", newServiceGroup.Name).
-			Info("drained old instance")
-	}
-
-	return nil
+	return instanceResp, serviceGroupResp, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -543,6 +604,24 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[RolloutStrategy](
+			append(RolloutStrategies(), StrategyPrompt),
+			StrategyPrompt,
+		),
+		"rollout",
+		"Set the rollout strategy for an instance which has been previously run in the provided service group.",
+	)
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[RolloutQualifier](
+			RolloutQualifiers(),
+			RolloutQualifierImageName,
+		),
+		"rollout-qualifier",
+		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service group.",
+	)
+
 	return cmd
 }
 
@@ -552,13 +631,8 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	if opts.Rollout && opts.ServiceGroupNameOrUUID == "" {
-		return errors.New("cannot use --rollout without a --service-group")
-	}
-
-	if opts.Rollout && opts.Replicas > 0 {
-		return errors.New("cannot use --rollout with --replicas")
-	}
+	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
+	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 
 	if !utils.IsValidOutputFormat(opts.Output) {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
@@ -571,54 +645,20 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	opts.Image = args[0]
 
-	instanceResp, serviceGroup, err := Create(ctx, opts, args[1:]...)
-	if err != nil {
-		return err
-	}
-	instance, err := instanceResp.FirstOrErr()
+	resp, _, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
 	}
 
-	if opts.Rollout {
-		if len(serviceGroup.Instances) == 1 {
-			log.G(ctx).Warn("cannot perform a rolling update on no instances")
-			return nil
-		}
-
-		paramodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(false),
-				processtree.WithRenderer(
-					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-				),
-				processtree.WithFailFast(true),
-				processtree.WithHideOnSuccess(false),
-				processtree.WithTimeout(60),
-			},
-			processtree.NewProcessTreeItem(
-				"updating "+fmt.Sprintf("%d", len(serviceGroup.Instances)-1)+" instances of "+serviceGroup.Name,
-				"",
-				func(ctx context.Context) error {
-					return Rollout(ctx, opts, instance, serviceGroup)
-				},
-			),
-		)
-		if err != nil {
-			return nil
-		}
-
-		err = paramodel.Start()
-		if err != nil {
-			return fmt.Errorf("could not start the process tree: %w", err)
-		}
+	insts, err := resp.AllOrErr()
+	if err != nil {
+		return err
 	}
 
-	if opts.Output != "table" && opts.Output != "full" {
-		return utils.PrintInstances(ctx, opts.Output, instanceResp)
+	if len(insts) > 1 || opts.Output == "table" {
+		return utils.PrintInstances(ctx, opts.Output, *resp)
 	}
-	utils.PrettyPrintInstance(ctx, instance, serviceGroup, opts.Start)
+	utils.PrettyPrintInstance(ctx, insts[0], opts.Start)
 
 	return nil
 }

@@ -76,6 +76,10 @@ func (mp mpack) Name() string {
 	return mp.manifest.Name
 }
 
+func (mp mpack) ID() string {
+	return fmt.Sprintf("%s/%s:%s", mp.manifest.Type, mp.manifest.Name, mp.version)
+}
+
 // Name implements fmt.Stringer
 func (mp mpack) String() string {
 	return mp.manifest.Name

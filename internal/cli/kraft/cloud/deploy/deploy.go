@@ -22,12 +22,10 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcservices "sdk.kraft.cloud/services"
 )
 
 type DeployOptions struct {
@@ -56,7 +54,9 @@ type DeployOptions struct {
 	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project                app.Application           `noattribute:"true"`
 	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout                bool                      `local:"true" long:"rollout" short:"r" usage:"Whether to perform a rolling update of all instances in a service group"`
+	Rollout                create.RolloutStrategy    `noattribute:"true"`
+	RolloutQualifier       create.RolloutQualifier   `noattribute:"true"`
+	RolloutWait            time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
 	Rootfs                 string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	Runtime                string                    `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog           string                    `long:"build-log" usage:"Use the specified file to save the output from the build"`
@@ -93,6 +93,24 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[create.RolloutStrategy](
+			append(create.RolloutStrategies(), create.StrategyPrompt),
+			create.StrategyPrompt,
+		),
+		"rollout",
+		"Set the rollout strategy for an instance which has been previously run in the provided service group.",
+	)
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[create.RolloutQualifier](
+			create.RolloutQualifiers(),
+			create.RolloutQualifierImageName,
+		),
+		"rollout-qualifier",
+		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service group.",
+	)
+
+	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
 			append(packmanager.MergeStrategies(), packmanager.StrategyPrompt),
 			packmanager.StrategyOverwrite,
@@ -110,19 +128,13 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
+	opts.Rollout = create.RolloutStrategy(cmd.Flag("rollout").Value.String())
+	opts.RolloutQualifier = create.RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
 
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
-	}
-
-	if opts.Rollout && opts.ServiceGroupNameOrUUID == "" {
-		return errors.New("cannot use --rollout without a --service-group")
-	}
-
-	if opts.Rollout && opts.Replicas > 0 {
-		return errors.New("cannot use --rollout with --replicas")
 	}
 
 	cmd.SetContext(ctx)
@@ -143,17 +155,6 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	)
 
 	// TODO: Preflight check: check if `--subdomain` is already taken
-
-	// Preflight check: check if `--name` is already taken:
-	if len(opts.Name) > 0 {
-		resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, opts.Name)
-		if err != nil {
-			return err
-		}
-		if _, err = resp.AllOrErr(); err == nil {
-			return fmt.Errorf("instance name '%s' is already taken", opts.Name)
-		}
-	}
 
 	if len(args) > 0 {
 		if fi, err := os.Stat(args[0]); err == nil && fi.IsDir() {
@@ -217,79 +218,20 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("deployer", d.Name()).Debug("using")
 
-	instsResp, sgs, err := d.Deploy(ctx, opts, args...)
+	instsResp, _, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
+
 	insts, err := instsResp.AllOrErr()
 	if err != nil {
 		return err
 	}
 
-	if opts.Rollout {
-		if len(sgs[0].Instances) == 1 {
-			log.G(ctx).Warn("cannot perform a rolling update on no instances")
-			return nil
-		}
-
-		paramodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(false),
-				processtree.WithRenderer(
-					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-				),
-				processtree.WithFailFast(true),
-				processtree.WithHideOnSuccess(false),
-				processtree.WithTimeout(opts.Timeout),
-			},
-			processtree.NewProcessTreeItem(
-				"updating "+fmt.Sprintf("%d", len(sgs[0].Instances)-1)+" instances of "+sgs[0].Name,
-				"",
-				func(ctx context.Context) error {
-					return create.Rollout(ctx, &create.CreateOptions{
-						Auth:                   opts.Auth,
-						Client:                 opts.Client,
-						Env:                    opts.Env,
-						Features:               opts.Features,
-						Domain:                 opts.Domain,
-						Image:                  insts[0].Image,
-						Memory:                 opts.Memory,
-						Metro:                  opts.Metro,
-						Name:                   opts.Name,
-						Output:                 opts.Output,
-						Ports:                  opts.Ports,
-						Replicas:               opts.Replicas,
-						Rollout:                opts.Rollout,
-						ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
-						Start:                  !opts.NoStart,
-						ScaleToZero:            opts.ScaleToZero,
-						SubDomain:              opts.SubDomain,
-						Token:                  opts.Token,
-						Volumes:                opts.Volumes,
-						WaitForImage:           true,
-					}, &insts[0], &sgs[0])
-				},
-			),
-		)
-		if err != nil {
-			return nil
-		}
-
-		err = paramodel.Start()
-		if err != nil {
-			return fmt.Errorf("could not start the process tree: %w", err)
-		}
-	}
-
 	if len(insts) == 1 && opts.Output == "" {
-		if len(sgs) == 0 {
-			sgs = append(sgs, kcservices.GetResponseItem{})
-		}
-
-		utils.PrettyPrintInstance(ctx, &insts[0], &sgs[0], !opts.NoStart)
+		utils.PrettyPrintInstance(ctx, insts[0], !opts.NoStart)
 		return nil
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, instsResp)
+	return utils.PrintInstances(ctx, opts.Output, *instsResp)
 }

@@ -661,6 +661,11 @@ func (ocipack *ociPackage) Name() string {
 	return ocipack.ref.Context().Name()
 }
 
+// ID implements pack.Package
+func (ocipack *ociPackage) ID() string {
+	return fmt.Sprintf("%s@%s", ocipack.Name(), ocipack.index.desc.Digest.String())
+}
+
 // Name implements fmt.Stringer
 func (ocipack *ociPackage) String() string {
 	return fmt.Sprintf("%s (%s/%s)", ocipack.imageRef(), ocipack.Platform().Name(), ocipack.Architecture().Name())

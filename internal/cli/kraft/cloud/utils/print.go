@@ -66,7 +66,7 @@ var (
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
-func PrintInstances(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
+func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -189,7 +189,7 @@ func PrintInstances(ctx context.Context, format string, resp *kcclient.ServiceRe
 
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
-func PrintVolumes(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcvolumes.GetResponseItem]) error {
+func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceResponse[kcvolumes.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -266,7 +266,7 @@ func PrintVolumes(ctx context.Context, format string, resp *kcclient.ServiceResp
 
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
-func PrintAutoscaleConfiguration(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
+func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -371,7 +371,7 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp *kccli
 
 // PrintServiceGroups pretty-prints the provided set of service groups or returns
 // an error if unable to send to stdout via the provided context.
-func PrintServiceGroups(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
+func PrintServiceGroups(ctx context.Context, format string, resp kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -468,7 +468,7 @@ func PrintServiceGroups(ctx context.Context, format string, resp *kcclient.Servi
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -537,7 +537,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 
 // PrintQuotasLimits pretty-prints the provided set of user limits or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotasLimits(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotasLimits(ctx context.Context, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -602,7 +602,7 @@ func PrintQuotasLimits(ctx context.Context, format string, resp *kcclient.Servic
 
 // PrintQuotasFeatures pretty-prints the provided set of user quotas features
 // or returns an error if unable to send to stdout via the provided context.
-func PrintQuotasFeatures(ctx context.Context, format string, resp *kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotasFeatures(ctx context.Context, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -668,7 +668,7 @@ func PrintQuotasFeatures(ctx context.Context, format string, resp *kcclient.Serv
 
 // PrintCertificates pretty-prints the provided set of certificates or returns
 // an error if unable to send to stdout via the provided context.
-func PrintCertificates(ctx context.Context, format string, resp *kcclient.ServiceResponse[kccerts.GetResponseItem]) error {
+func PrintCertificates(ctx context.Context, format string, resp kcclient.ServiceResponse[kccerts.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -782,22 +782,8 @@ func PrintCertificates(ctx context.Context, format string, resp *kcclient.Servic
 }
 
 // PrettyPrintInstance outputs a single instance and information about it.
-func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseItem, serviceGroup *kcservices.GetResponseItem, autoStart bool) {
+func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
-
-	var fqdn string
-	if instance.ServiceGroup != nil && len(instance.ServiceGroup.Domains) > 0 {
-		fqdn = instance.ServiceGroup.Domains[0].FQDN
-	}
-
-	if serviceGroup != nil && fqdn != "" {
-		for _, port := range serviceGroup.Services {
-			if port.Port == 443 {
-				fqdn = "https://" + fqdn
-				break
-			}
-		}
-	}
 
 	var title string
 	var color func(...string) string
@@ -830,16 +816,11 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 		},
 	}
 
-	if fqdn != "" {
-		if strings.HasPrefix(fqdn, "https://") {
+	if instance.ServiceGroup != nil {
+		for _, domain := range instance.ServiceGroup.Domains {
 			entries = append(entries, fancymap.FancyMapEntry{
-				Key:   "url",
-				Value: fqdn,
-			})
-		} else {
-			entries = append(entries, fancymap.FancyMapEntry{
-				Key:   "fqdn",
-				Value: fqdn,
+				Key:   "domain",
+				Value: domain.FQDN,
 			})
 		}
 	}
@@ -911,8 +892,10 @@ func PrettyPrintInstance(ctx context.Context, instance *kcinstances.GetResponseI
 	}
 }
 
-func printRaw[T kcclient.APIResponseDataEntry](ctx context.Context, resp *kcclient.ServiceResponse[T]) {
-	fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
+func printRaw[T kcclient.APIResponseDataEntry](ctx context.Context, resps ...kcclient.ServiceResponse[T]) {
+	for _, resp := range resps {
+		fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
+	}
 }
 
 func IsValidOutputFormat(format string) bool {

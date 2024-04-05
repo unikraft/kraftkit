@@ -31,7 +31,7 @@ type deployer interface {
 	Deployable(context.Context, *DeployOptions, ...string) (bool, error)
 
 	// Deploy performs the deployment based on the determined implementation.
-	Deploy(context.Context, *DeployOptions, ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], []kcservices.GetResponseItem, error)
+	Deploy(context.Context, *DeployOptions, ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error)
 }
 
 // deployers is the list of built-in deployers which are checked

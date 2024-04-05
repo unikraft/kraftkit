@@ -82,18 +82,18 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	quotasResp, err := client.WithMetro(opts.metro).Quotas(ctx)
+	resp, err := client.WithMetro(opts.metro).Quotas(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get quotas: %w", err)
 	}
 
 	if opts.Limits {
-		return utils.PrintQuotasLimits(ctx, opts.Output, quotasResp)
+		return utils.PrintQuotasLimits(ctx, opts.Output, *resp)
 	}
 
 	if opts.Features {
-		return utils.PrintQuotasFeatures(ctx, opts.Output, quotasResp)
+		return utils.PrintQuotasFeatures(ctx, opts.Output, *resp)
 	}
 
-	return utils.PrintQuotas(ctx, *auth, opts.Output, quotasResp)
+	return utils.PrintQuotas(ctx, *auth, opts.Output, *resp)
 }
