@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/golang/glog v1.2.0
+	github.com/golang/glog v1.2.1
 	github.com/iancoleman/strcase v0.3.0
 	kraftkit.sh v0.8.2
 	mvdan.cc/gofumpt v0.6.0
