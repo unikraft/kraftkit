@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/build"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/down"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/logs"
@@ -50,6 +51,9 @@ func NewCmd() *cobra.Command {
 			# Build a KraftCloud deployment service.
 			$ kraft cloud compose build nginx
 
+			# Create a service image from a KraftCloud deployment.
+			$ kraft cloud compose create
+
 			# Push a KraftCloud deployment service.
 			$ kraft cloud compose push nginx
 
@@ -72,6 +76,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(list.NewCmd())
 	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(build.NewCmd())
+	cmd.AddCommand(create.NewCmd())
 	cmd.AddCommand(push.NewCmd())
 	cmd.AddCommand(logs.NewCmd())
 

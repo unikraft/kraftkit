@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -29,6 +30,7 @@ type StartOptions struct {
 	Metro       string                `noattribute:"true"`
 	Project     *compose.Project      `noattribute:"true"`
 	Token       string                `noattribute:"true"`
+	Wait        time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -126,5 +128,6 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		Client: opts.Client,
 		Metro:  opts.Metro,
 		Token:  opts.Token,
+		Wait:   opts.Wait,
 	}, instances...)
 }
