@@ -545,8 +545,8 @@ github.com/gogo/protobuf v1.3.0/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXP
 github.com/gogo/protobuf v1.3.1/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
 github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
-github.com/goharbor/go-client v0.28.2 h1:qD4wNqVSyuJm4Q2qZkTD3TC+ZcFxQ7f+MU4rtKdMZjs=
-github.com/goharbor/go-client v0.28.2/go.mod h1:XMWHucuHU9VTRx6U6wYwbRuyCVhE6ffJGRjaeo0nvwo=
+github.com/goharbor/go-client v0.210.0 h1:QwgLcWNSC3MFhBe7lq3BxDPtKQiD3k6hf6Lt26NChOI=
+github.com/goharbor/go-client v0.210.0/go.mod h1:XMWHucuHU9VTRx6U6wYwbRuyCVhE6ffJGRjaeo0nvwo=
 github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
 github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -1677,8 +1677,8 @@ oras.land/oras-go/v2 v2.5.0/go.mod h1:z4eisnLP530vwIOUOJeBIj0aGI0L1C3d53atvCBqZH
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sdk.kraft.cloud v0.5.5-0.20240326115105-3db0329eacfe h1:B1+Hz3PJGMusV1TI0Imeb/XIKcpqSd4wlrzQWbQlPX8=
-sdk.kraft.cloud v0.5.5-0.20240326115105-3db0329eacfe/go.mod h1:nan+XwhrD9FC/gntnkVGg+n55q/ExKUwrUhAh+xor+g=
+sdk.kraft.cloud v0.5.5-0.20240408121712-ec441de26d77 h1:gfJ1OWQ5Uo7qJVA5/2hAzYFCw7SrZ7r0woDV10NidQc=
+sdk.kraft.cloud v0.5.5-0.20240408121712-ec441de26d77/go.mod h1:u88mmv6PoEASnMLNkyYgrMCzJ4tkMGurV8ZMvXA9a2I=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14/go.mod h1:LEScyzhFmoF5pso/YSeBstl57mOzx9xlU9n85RGrDQg=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.15/go.mod h1:LEScyzhFmoF5pso/YSeBstl57mOzx9xlU9n85RGrDQg=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 h1:TgtAeesdhpm2SGwkQasmbeqDo8th5wOBA5h/AjTKA4I=
