@@ -14,6 +14,7 @@ import (
 
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/down"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/ps"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/start"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/stop"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/up"
@@ -39,6 +40,9 @@ func NewCmd() *cobra.Command {
 
 			# Stop the current KraftCloud deployment.
 			$ kraft cloud compose down
+
+			# List the services in a KraftCloud deployment.
+			$ kraft cloud compose ps
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-compose",
@@ -54,6 +58,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
 	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(ps.NewCmd())
 
 	return cmd
 }
