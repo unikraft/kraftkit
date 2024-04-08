@@ -81,7 +81,7 @@ func (opts *ResetOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	delResp, err := opts.Client.WithMetro(opts.Metro).DeleteConfiguration(ctx, args[0])
+	delResp, err := opts.Client.WithMetro(opts.Metro).DeleteConfigurations(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("could not reset configuration: %w", err)
 	}

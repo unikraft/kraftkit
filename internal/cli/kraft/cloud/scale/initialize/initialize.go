@@ -164,7 +164,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 				possible = append(possible, stringerInstance{&inst})
 			}
 
-			result, err := selection.Select[stringerInstance](
+			result, err := selection.Select(
 				"select master instance",
 				possible...,
 			)
