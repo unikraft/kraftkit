@@ -661,7 +661,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if len(insts) > 1 || opts.Output == "table" {
+	if len(insts) > 1 || opts.Output == "table" || opts.Output == "list" {
 		return utils.PrintInstances(ctx, opts.Output, *instResp)
 	}
 
