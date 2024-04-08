@@ -563,6 +563,10 @@ func PrintQuotasLimits(ctx context.Context, format string, resp kcclient.Service
 		return err
 	}
 
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+
 	table.AddField("MEMORY SIZE (MIN/MAX)", cs.Bold)
 	table.AddField("VOLUME SIZE (MIN/MAX)", cs.Bold)
 	table.AddField("AUTOSCALE SIZE (MIN/MAX)", cs.Bold)
