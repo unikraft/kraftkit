@@ -20,12 +20,12 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
-	kcstop "kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
+	kcremove "kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
-type UpOptions struct {
+type DownOptions struct {
 	Auth   *config.AuthConfig           `noattribute:"true"`
 	Client kcinstances.InstancesService `noattribute:"true"`
 	Metro  string                       `noattribute:"true"`
@@ -36,7 +36,7 @@ type UpOptions struct {
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
+	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
 		Short:   "Stop a KraftCloud deployment",
 		Use:     "down [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
@@ -49,7 +49,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose down
 
 			# Stop a KraftCloud deployment with two specific components.
-			$ kraft cloud compose stop nginx component2
+			$ kraft cloud compose down nginx component2
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
@@ -62,7 +62,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *UpOptions) Pre(cmd *cobra.Command, args []string) error {
+func (opts *DownOptions) Pre(cmd *cobra.Command, args []string) error {
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
@@ -71,7 +71,7 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *UpOptions) Run(ctx context.Context, args []string) error {
+func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
@@ -137,8 +137,8 @@ func (opts *UpOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("no services to stop")
 	}
 
-	// if service is running, stop it
-	stopOpts := kcstop.StopOptions{
+	// if service is running, remove it
+	stopOpts := kcremove.RemoveOptions{
 		Output: "list",
 		Metro:  opts.Metro,
 		Token:  opts.Token,
