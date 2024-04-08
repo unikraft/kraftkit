@@ -22,6 +22,7 @@ import (
 )
 
 type StartOptions struct {
+	All    bool          `long:"all" usage:"Start all instances"`
 	Wait   time.Duration `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 	Output string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 
@@ -96,10 +97,47 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	timeout := int(opts.Wait.Milliseconds())
+
+	if opts.All {
+		instListResp, err := client.WithMetro(opts.Metro).List(ctx)
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
+		instList, err := instListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
+		if len(instList) == 0 {
+			return nil
+		}
+
+		log.G(ctx).Infof("Starting %d instance(s)", len(instList))
+
+		uuids := make([]string, 0, len(instList))
+		for _, instItem := range instList {
+			uuids = append(uuids, instItem.UUID)
+		}
+
+		stopResp, err := client.WithMetro(opts.Metro).Start(ctx, timeout, uuids...)
+		if err != nil {
+			return fmt.Errorf("starting %d instance(s): %w", len(uuids), err)
+		}
+		if _, err = stopResp.AllOrErr(); err != nil {
+			return fmt.Errorf("starting %d instance(s): %w", len(uuids), err)
+		}
+		return nil
+	}
+
 	for _, arg := range args {
 		log.G(ctx).Infof("Starting %s", arg)
 
-		if _, err = client.WithMetro(opts.Metro).Start(ctx, timeout, arg); err != nil {
+		startInst, err := client.WithMetro(opts.Metro).Start(ctx, timeout, arg)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("could not start instance")
+			continue
+		}
+
+		if _, err = startInst.FirstOrErr(); err != nil {
 			log.G(ctx).WithError(err).Error("could not start instance")
 			continue
 		}
