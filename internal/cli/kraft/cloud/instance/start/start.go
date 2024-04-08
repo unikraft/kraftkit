@@ -120,12 +120,11 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 
 	log.G(ctx).Infof("starting %d instance(s)", len(args))
 
-	startInst, err := opts.Client.Instances().WithMetro(opts.Metro).Start(ctx, timeout, args...)
+	resp, err := opts.Client.Instances().WithMetro(opts.Metro).Start(ctx, timeout, args...)
 	if err != nil {
 		return fmt.Errorf("starting instance: %w", err)
 	}
-
-	if _, err = startInst.FirstOrErr(); err != nil {
+	if _, err = resp.FirstOrErr(); err != nil {
 		return fmt.Errorf("starting instance: %w", err)
 	}
 

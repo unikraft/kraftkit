@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/down"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/start"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/up"
 
 	"kraftkit.sh/cmdfactory"
@@ -48,6 +49,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(up.NewCmd())
 	cmd.AddCommand(down.NewCmd())
+	cmd.AddCommand(start.NewCmd())
 
 	return cmd
 }
