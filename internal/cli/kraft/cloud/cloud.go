@@ -21,6 +21,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/quotas"
 	"kraftkit.sh/internal/cli/kraft/cloud/scale"
 	"kraftkit.sh/internal/cli/kraft/cloud/service"
+	"kraftkit.sh/internal/cli/kraft/cloud/tunnel"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume"
 
 	"kraftkit.sh/cmdfactory"
@@ -88,6 +89,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(deploy.NewCmd())
 	cmd.AddCommand(quotas.NewCmd())
+	cmd.AddCommand(tunnel.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "IMAGE COMMANDS"})
 	cmd.AddCommand(img.NewCmd())
