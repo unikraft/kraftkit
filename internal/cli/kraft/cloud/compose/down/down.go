@@ -7,37 +7,37 @@ package down
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
-	kcremove "kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
+	svcrm "kraftkit.sh/internal/cli/kraft/cloud/service/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
 
 type DownOptions struct {
-	Auth   *config.AuthConfig           `noattribute:"true"`
-	Client kcinstances.InstancesService `noattribute:"true"`
-	Metro  string                       `noattribute:"true"`
-	Token  string                       `noattribute:"true"`
-
-	project     *compose.Project
-	composeFile string
+	Auth        *config.AuthConfig    `noattribute:"true"`
+	Client      kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile string                `noattribute:"true"`
+	Metro       string                `noattribute:"true"`
+	Project     *compose.Project      `noattribute:"true"`
+	Token       string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
-		Short:   "Stop a KraftCloud deployment",
+		Short:   "Stop and remove the services in a KraftCloud compose project deployment",
 		Use:     "down [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"d"},
@@ -82,66 +82,109 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewInstancesClient(
+		opts.Client = kraftcloud.NewClient(
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
-	workdir, err := os.Getwd()
-	if err != nil {
+	if opts.Project == nil {
+		workdir, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		opts.Project, err = compose.NewProjectFromComposeFile(ctx, workdir, opts.Composefile)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := opts.Project.Validate(ctx); err != nil {
 		return err
 	}
 
-	opts.project, err = compose.NewProjectFromComposeFile(ctx, workdir, opts.composeFile)
-	if err != nil {
-		return err
-	}
+	var instances []string
 
-	if err := opts.project.Validate(ctx); err != nil {
-		return err
-	}
-
-	// if no services are specified, stop all services
+	// If no services are specified, remove all services.
 	if len(args) == 0 {
-		for _, service := range opts.project.Services {
-			args = append(args, strings.SplitN(service.Name, "-", 2)[1])
+		for _, service := range opts.Project.Services {
+			instances = append(instances, service.Name)
+		}
+	} else {
+		for _, arg := range args {
+			service, ok := opts.Project.Services[arg]
+			if !ok {
+				return fmt.Errorf("service '%s' not found", arg)
+			}
+
+			instances = append(instances, service.Name)
 		}
 	}
 
-	var services []string
-	for _, service := range opts.project.Services {
-		for _, requestedService := range args {
-			if service.Name != opts.project.Name+"-"+requestedService {
-				continue
-			}
-			instanceResp, err := opts.Client.WithMetro(opts.Metro).Get(ctx, service.Name)
-			if err != nil {
-				return fmt.Errorf("getting instance %s: %w", service.Name, err)
-			}
-			instance, err := instanceResp.FirstOrErr()
-			if err != nil {
-				return fmt.Errorf("getting instance %s: %w", service.Name, err)
-			}
-			if instance.State == string(kcinstances.StateStopped) ||
-				instance.State == string(kcinstances.StateStopping) ||
-				instance.State == string(kcinstances.StateDraining) {
-				log.G(ctx).WithField("service", service.Name).Info("service already stopped")
+	var errGroup []error
+	var groups []string
+
+	instResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instances...)
+	if err != nil {
+		return fmt.Errorf("getting instances: %w", err)
+	}
+
+	instances = []string{}
+
+	for _, instance := range instResp.Data.Entries {
+		if instance.Message != "" {
+			log.G(ctx).Error(instance.Message)
+			continue
+		}
+
+		instances = append(instances, instance.Name)
+	}
+
+	if len(instances) > 0 {
+		log.G(ctx).Infof("stopping %d instance(s)", len(instances))
+
+		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, instances...); err != nil {
+			errGroup = append(errGroup, fmt.Errorf("removing instances: %w", err))
+		}
+
+		// Remove based on associated service groups.
+		for _, instance := range instResp.Data.Entries {
+			if instance.ServiceGroup == nil || instance.Message != "" {
 				continue
 			}
 
-			services = append(services, service.Name)
+			if slices.Contains(groups, instance.ServiceGroup.Name) {
+				continue
+			}
+
+			groups = append(groups, instance.ServiceGroup.Name)
+		}
+
+	} else {
+		// If no instances from the compose project were found, try to remove the
+		// service group based on declared networks.
+		for _, network := range opts.Project.Networks {
+			name := strings.ReplaceAll(network.Name, "_", "-")
+			if slices.Contains(instances, name) {
+				continue
+			}
+			groups = append(groups, name)
 		}
 	}
 
-	if len(services) == 0 {
-		return fmt.Errorf("no services to stop")
+	// If the total number of instances is the same as the amount of compose
+	// services, we can also remove the service group.
+	if len(groups) > 0 {
+		if err := svcrm.Remove(ctx, &svcrm.RemoveOptions{
+			Auth:      opts.Auth,
+			Client:    opts.Client,
+			Metro:     opts.Metro,
+			Token:     opts.Token,
+			WaitEmpty: true,
+		}, groups...); err != nil {
+			errGroup = append(errGroup, fmt.Errorf("removing service groups: %w", err))
+		}
 	}
 
-	// if service is running, remove it
-	stopOpts := kcremove.RemoveOptions{
-		Output: "list",
-		Metro:  opts.Metro,
-		Token:  opts.Token,
-	}
-	return stopOpts.Run(ctx, services)
+	return errors.Join(errGroup...)
 }
