@@ -100,7 +100,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 	var err error
 
-	if opts.Auth != nil {
+	if opts.Auth == nil {
 		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
