@@ -16,14 +16,14 @@ type LogConsumer interface {
 	Consume(line string) error
 }
 
-type colorfulConsumer struct {
+type ColorfulConsumer struct {
 	streams *iostreams.IOStreams
 	color   rainbow.ColorFunc
 	prefix  string
 }
 
 // NewColorfulConsumer creates a new log consumer which prefixes each line with a colorful prefix.
-func NewColorfulConsumer(streams *iostreams.IOStreams, color bool, prefix string) (*colorfulConsumer, error) {
+func NewColorfulConsumer(streams *iostreams.IOStreams, color bool, prefix string) (*ColorfulConsumer, error) {
 	if streams == nil {
 		return nil, fmt.Errorf("cannot create a colorful consumer with nil IOStreams")
 	}
@@ -36,11 +36,11 @@ func NewColorfulConsumer(streams *iostreams.IOStreams, color bool, prefix string
 	}
 
 	colorFunc = rainbow.NextColor()
-	return &colorfulConsumer{streams: streams, color: colorFunc, prefix: prefix}, nil
+	return &ColorfulConsumer{streams: streams, color: colorFunc, prefix: prefix}, nil
 }
 
 // Consume implements logConsumer
-func (c *colorfulConsumer) Consume(s string) error {
+func (c *ColorfulConsumer) Consume(s string) error {
 	if c.prefix != "" {
 		s = fmt.Sprintf("%s | %s", c.color(c.prefix), s)
 	}
