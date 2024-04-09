@@ -17,6 +17,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/pack"
@@ -26,6 +27,7 @@ import (
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/export/v0/posixenviron"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -424,6 +426,46 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
 	}
 
+	allEnvs := map[string]string{}
+	for k, v := range opts.project.Env() {
+		allEnvs[k] = v
+
+		if v == "" {
+			allEnvs[k] = os.Getenv(k)
+		}
+	}
+
+	for _, env := range opts.Env {
+		if strings.ContainsRune(env, '=') {
+			parts := strings.SplitN(env, "=", 2)
+			allEnvs[parts[0]] = parts[1]
+		} else {
+			allEnvs[env] = os.Getenv(env)
+		}
+	}
+
+	// There might already be environment variables in the project Kconfig,
+	// so we need to be careful with indexing
+	counter := 1
+	envKconfig := kconfig.KeyValueMap{}
+	for k, v := range allEnvs {
+		for counter <= posixenviron.DefaultCompiledInLimit {
+			val, found := opts.project.KConfig().Get(fmt.Sprintf("LIBPOSIX_ENVIRON_ENVP%d", counter))
+			if !found || val.Value == "" {
+				break
+			}
+			counter += 1
+		}
+
+		if counter > posixenviron.DefaultCompiledInLimit {
+			log.G(ctx).Warnf("cannot compile in more than %d environment variables, skipping %s", posixenviron.DefaultCompiledInLimit, k)
+			continue
+		}
+
+		envKconfig.Set(fmt.Sprintf("CONFIG_LIBPOSIX_ENVIRON_ENVP%d", counter), fmt.Sprintf("%s=%s", k, v))
+		counter++
+	}
+
 	if !opts.NoConfigure {
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("configuring %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
@@ -431,7 +473,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 				return opts.project.Configure(
 					ctx,
 					*opts.Target, // Target-specific options
-					nil,          // No extra configuration options
+					envKconfig,   // Extra Kconfigs for compiled in environment variables
 					make.WithProgressFunc(w),
 					make.WithSilent(true),
 					make.WithExecOptions(

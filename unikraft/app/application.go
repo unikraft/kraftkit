@@ -141,6 +141,9 @@ type Application interface {
 	// Volumes to be used during runtime of an application.
 	Volumes() []*volume.VolumeConfig
 
+	// Env variables to be used during building and runtime of application.
+	Env() map[string]string
+
 	// Removes library from the project directory
 	RemoveLibrary(ctx context.Context, libraryName string) error
 
@@ -162,6 +165,7 @@ type application struct {
 	libraries     map[string]*lib.LibraryConfig
 	targets       []*target.TargetConfig
 	volumes       []*volume.VolumeConfig
+	env           target.Env
 	command       []string
 	rootfs        string
 	kraftfile     *Kraftfile
@@ -1092,6 +1096,11 @@ func (app application) Save(ctx context.Context) error {
 // Volumes implemenets Application.
 func (app application) Volumes() []*volume.VolumeConfig {
 	return app.volumes
+}
+
+// Env implements Application
+func (app application) Env() map[string]string {
+	return app.env
 }
 
 func (app application) RemoveLibrary(ctx context.Context, libraryName string) error {

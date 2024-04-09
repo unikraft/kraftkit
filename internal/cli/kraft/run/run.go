@@ -33,6 +33,7 @@ type RunOptions struct {
 	Architecture  string   `long:"arch" short:"m" usage:"Set the architecture"`
 	Detach        bool     `long:"detach" short:"d" usage:"Run unikernel in background"`
 	DisableAccel  bool     `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
+	Env           []string `long:"env" short:"e" usage:"Set environment variables, int the format key[=value]"`
 	InitRd        string   `long:"initrd" usage:"Use the specified initrd (readonly)" hidden:"true"`
 	IP            string   `long:"ip" usage:"Assign the provided IP address"`
 	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
@@ -361,6 +362,10 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if err := opts.prepareRootfs(ctx, machine); err != nil {
+		return err
+	}
+
+	if err := opts.parseEnvs(ctx, machine); err != nil {
 		return err
 	}
 

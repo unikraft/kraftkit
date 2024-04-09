@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -375,4 +376,45 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 	}
 
 	return treemodel.Start()
+}
+
+func (opts *RunOptions) parseKraftfileEnv(_ context.Context, project app.Application, machine *machineapi.Machine) error {
+	if project.Env() == nil {
+		return nil
+	}
+
+	if machine.Spec.Env == nil {
+		machine.Spec.Env = make(map[string]string)
+	}
+
+	for k, v := range project.Env() {
+		if v != "" {
+			machine.Spec.Env[k] = v
+			continue
+		}
+
+		hostVal := os.Getenv(k)
+		if hostVal != "" {
+			machine.Spec.Env[k] = hostVal
+		}
+	}
+
+	return nil
+}
+
+func (opts *RunOptions) parseEnvs(_ context.Context, machine *machineapi.Machine) error {
+	if machine.Spec.Env == nil {
+		machine.Spec.Env = make(map[string]string)
+	}
+
+	for _, env := range opts.Env {
+		if strings.ContainsRune(env, '=') {
+			split := strings.SplitN(env, "=", 2)
+			machine.Spec.Env[split[0]] = split[1]
+		} else {
+			machine.Spec.Env[env] = os.Getenv(env)
+		}
+	}
+
+	return nil
 }

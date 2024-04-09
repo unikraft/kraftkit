@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -26,6 +27,8 @@ import (
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/target"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // runnerPackage is a runner for a package defined through a respective
@@ -333,6 +336,24 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 				Destination: "/",
 			},
 		})
+	}
+
+	switch v := selected.Metadata().(type) {
+	case *ocispec.Image:
+		if machine.Spec.Env == nil {
+			machine.Spec.Env = make(map[string]string)
+		}
+
+		for _, env := range v.Config.Env {
+			if strings.ContainsRune(env, '=') {
+				parts := strings.SplitN(env, "=", 2)
+				machine.Spec.Env[parts[0]] = parts[1]
+				continue
+			}
+
+			machine.Spec.Env[env] = ""
+		}
+	default:
 	}
 
 	return nil

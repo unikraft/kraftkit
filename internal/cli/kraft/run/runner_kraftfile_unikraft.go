@@ -202,5 +202,9 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 		return err
 	}
 
+	if err := opts.parseKraftfileEnv(ctx, runner.project, machine); err != nil {
+		return err
+	}
+
 	return nil
 }
