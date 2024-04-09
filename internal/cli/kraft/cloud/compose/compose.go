@@ -16,6 +16,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/down"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/ps"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/push"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/start"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/stop"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/up"
@@ -47,6 +48,9 @@ func NewCmd() *cobra.Command {
 
 			# Build a KraftCloud deployment service.
 			$ kraft cloud compose build nginx
+
+			# Push a KraftCloud deployment service.
+			$ kraft cloud compose push nginx
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-compose",
@@ -64,6 +68,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(list.NewCmd())
 	cmd.AddCommand(ps.NewCmd())
 	cmd.AddCommand(build.NewCmd())
+	cmd.AddCommand(push.NewCmd())
 
 	return cmd
 }
