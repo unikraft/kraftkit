@@ -6,6 +6,7 @@ package start
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -13,8 +14,10 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/internal/cli/kraft/compose/logs"
@@ -89,24 +92,50 @@ func (opts *StartOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	machinesToStart := []string{}
+	topLevelRender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	oldLogType := config.G[config.KraftKit](ctx).Log.Type
+	config.G[config.KraftKit](ctx).Log.Type = log.LoggerTypeToString(log.BASIC)
+	defer func() {
+		config.G[config.KraftKit](ctx).Log.Type = oldLogType
+	}()
+
+	processes := make([]*processtree.ProcessTreeItem, 0)
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name {
 				if machine.Status.State == machineapi.MachineStateCreated || machine.Status.State == machineapi.MachineStateExited {
-					machinesToStart = append(machinesToStart, machine.Name)
+					processes = append(processes, processtree.NewProcessTreeItem(
+						fmt.Sprintf("starting service %s", service.Name),
+						"",
+						func(ctx context.Context) error {
+							kernelStartOptions := kernelstart.StartOptions{
+								Detach:   true,
+								Platform: "auto",
+							}
+							return kernelStartOptions.Run(ctx, []string{service.Name})
+						},
+					))
 				}
 			}
 		}
 	}
 
-	kernelStartOptions := kernelstart.StartOptions{
-		Detach:   true,
-		Platform: "auto",
-	}
+	if len(processes) != 0 {
+		model, err := processtree.NewProcessTree(ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithHideOnSuccess(false),
+				processtree.WithRenderer(topLevelRender),
+			},
+			processes...,
+		)
+		if err != nil {
+			return err
+		}
 
-	if err := kernelStartOptions.Run(ctx, machinesToStart); err != nil {
-		return err
+		if err := model.Start(); err != nil {
+			return err
+		}
 	}
 
 	if opts.Detach {
