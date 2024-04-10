@@ -186,8 +186,6 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 		project.Networks[i] = network
 	}
 
-	activeNetworks := make(map[string]struct{})
-
 	project.Project, err = project.WithServicesTransform(func(name string, service types.ServiceConfig) (types.ServiceConfig, error) {
 		if service.Networks == nil {
 			return service, nil
@@ -196,8 +194,6 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 			if _, ok := project.Networks[name]; !ok {
 				return service, fmt.Errorf("service %s references non-existent network %s", service.Name, name)
 			}
-
-			activeNetworks[name] = struct{}{}
 
 			if network == nil {
 				service.Networks[name] = &types.ServiceNetworkConfig{}
@@ -242,8 +238,14 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 		return err
 	}
 
-	// Remove the networks that are not used from the project
+	activeNetworks := make(map[string]struct{})
+	for _, service := range project.Services {
+		for name := range service.Networks {
+			activeNetworks[name] = struct{}{}
+		}
+	}
 
+	// Remove the networks that are not used from the project
 	usedProjectNetworks := make(map[string]types.NetworkConfig)
 	for name := range project.Networks {
 		if _, ok := activeNetworks[name]; ok {
