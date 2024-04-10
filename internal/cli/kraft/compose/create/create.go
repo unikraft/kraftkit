@@ -397,9 +397,20 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Source, vol.Target))
 	}
 
+	environ := []string{}
+	for k, v := range service.Environment {
+		if v == nil {
+			environ = append(environ, k)
+			continue
+		}
+
+		environ = append(environ, fmt.Sprintf("%s=%s", k, *v))
+	}
+
 	runOptions := run.RunOptions{
 		Architecture: arch,
 		Detach:       true,
+		Env:          environ,
 		Name:         service.Name,
 		Networks:     networks,
 		NoStart:      true,
