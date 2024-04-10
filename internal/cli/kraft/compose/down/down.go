@@ -7,6 +7,7 @@ package down
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -15,10 +16,12 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
 	networkremove "kraftkit.sh/internal/cli/kraft/net/remove"
 	machineremove "kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
@@ -91,12 +94,24 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	topLevelRender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	oldLogType := config.G[config.KraftKit](ctx).Log.Type
+	config.G[config.KraftKit](ctx).Log.Type = log.LoggerTypeToString(log.BASIC)
+	defer func() {
+		config.G[config.KraftKit](ctx).Log.Type = oldLogType
+	}()
+
+	processes := make([]*processtree.ProcessTreeItem, 0)
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name {
-				if err := removeService(ctx, service); err != nil {
-					return err
-				}
+				processes = append(processes, processtree.NewProcessTreeItem(
+					fmt.Sprintf("removing service %s", service.Name),
+					"",
+					func(ctx context.Context) error {
+						return removeService(ctx, service)
+					},
+				))
 			}
 		}
 	}
@@ -114,25 +129,39 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	for _, projectNetwork := range project.Networks {
 		for _, network := range networks.Items {
 			if projectNetwork.Name == network.Name {
-				if err := removeNetwork(ctx, projectNetwork); err != nil {
-					return err
-				}
+				processes = append(processes, processtree.NewProcessTreeItem(
+					fmt.Sprintf("removing network %s", projectNetwork.Name),
+					"",
+					func(ctx context.Context) error {
+						return removeNetwork(ctx, projectNetwork)
+					},
+				))
 			}
 		}
 	}
 
-	return nil
+	model, err := processtree.NewProcessTree(ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithHideOnSuccess(false),
+			processtree.WithRenderer(topLevelRender),
+		},
+		processes...,
+	)
+	if err != nil {
+		return err
+	}
+
+	return model.Start()
 }
 
 func removeService(ctx context.Context, service types.ServiceConfig) error {
-	log.G(ctx).Infof("removing service %s...", service.Name)
 	removeOptions := machineremove.RemoveOptions{Platform: "auto"}
 
 	return removeOptions.Run(ctx, []string{service.Name})
 }
 
 func removeNetwork(ctx context.Context, network types.NetworkConfig) error {
-	log.G(ctx).Infof("removing network %s...", network.Name)
 	driver := "bridge"
 	if network.Driver != "" {
 		driver = network.Driver
