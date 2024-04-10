@@ -6,6 +6,7 @@ package stop
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
@@ -13,8 +14,10 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	kernelstop "kraftkit.sh/internal/cli/kraft/stop"
@@ -87,24 +90,49 @@ func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	machinesToStop := []string{}
+	topLevelRender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	oldLogType := config.G[config.KraftKit](ctx).Log.Type
+	config.G[config.KraftKit](ctx).Log.Type = log.LoggerTypeToString(log.BASIC)
+	defer func() {
+		config.G[config.KraftKit](ctx).Log.Type = oldLogType
+	}()
+
+	processes := make([]*processtree.ProcessTreeItem, 0)
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name &&
 				(machine.Status.State == machineapi.MachineStateRunning ||
 					machine.Status.State == machineapi.MachineStatePaused) {
-				machinesToStop = append(machinesToStop, machine.Name)
+				processes = append(processes, processtree.NewProcessTreeItem(
+					fmt.Sprintf("stopping service %s", service.Name),
+					"",
+					func(ctx context.Context) error {
+						kernelStopOptions := kernelstop.StopOptions{
+							Platform: "auto",
+						}
+
+						return kernelStopOptions.Run(ctx, []string{machine.Name})
+					},
+				))
 			}
 		}
 	}
 
-	if len(machinesToStop) == 0 {
+	if len(processes) == 0 {
 		return nil
 	}
 
-	kernelStopOptions := kernelstop.StopOptions{
-		Platform: "auto",
+	model, err := processtree.NewProcessTree(ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithHideOnSuccess(false),
+			processtree.WithRenderer(topLevelRender),
+		},
+		processes...,
+	)
+	if err != nil {
+		return err
 	}
 
-	return kernelStopOptions.Run(ctx, machinesToStop)
+	return model.Start()
 }
