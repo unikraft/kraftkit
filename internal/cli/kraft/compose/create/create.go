@@ -17,6 +17,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/net/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
@@ -25,6 +26,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/run"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,6 +141,14 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	orderedNetworks := append(subnetNetworks, emptyNetworks...)
 
+	topLevelRender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
+	oldLogType := config.G[config.KraftKit](ctx).Log.Type
+	config.G[config.KraftKit](ctx).Log.Type = log.LoggerTypeToString(log.BASIC)
+	defer func() {
+		config.G[config.KraftKit](ctx).Log.Type = oldLogType
+	}()
+
+	processes := make([]*processtree.ProcessTreeItem, 0)
 	for _, networkName := range orderedNetworks {
 		network := project.Networks[networkName]
 		alreadyRunning := false
@@ -161,24 +171,31 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		if len(network.Ipam.Config) > 0 {
 			subnet = network.Ipam.Config[0].Subnet
 		}
-		createOptions := create.CreateOptions{
-			Driver:  driver,
-			Network: subnet,
-		}
 
-		log.G(ctx).Infof("creating network %s...", network.Name)
-		if err := createOptions.Run(ctx, []string{network.Name}); err != nil {
-			return err
-		}
+		processes = append(processes, processtree.NewProcessTreeItem(
+			fmt.Sprintf("creating network %s", network.Name),
+			"",
+			func(ctx context.Context) error {
+				createOptions := create.CreateOptions{
+					Driver:  driver,
+					Network: subnet,
+				}
 
-		if network, err := networkController.Get(ctx, &networkapi.Network{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: network.Name,
+				if err := createOptions.Run(ctx, []string{network.Name}); err != nil {
+					return err
+				}
+
+				if network, err := networkController.Get(ctx, &networkapi.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: network.Name,
+					},
+				}); err == nil && network.Status.State == networkapi.NetworkStateUp {
+					projectNetworks = append(projectNetworks, network.ObjectMeta)
+				}
+
+				return nil
 			},
-		}); err == nil && network.Status.State == networkapi.NetworkStateUp {
-			projectNetworks = append(projectNetworks, network.ObjectMeta)
-		}
-
+		))
 	}
 
 	projectMachines := []metav1.ObjectMeta{}
@@ -198,6 +215,8 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	for _, service := range project.Services {
+		children := make([]*processtree.ProcessTreeItem, 0)
+
 		alreadyCreated := false
 		for _, machine := range machines.Items {
 			if service.Name != machine.Name {
@@ -207,14 +226,22 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 				alreadyCreated = true
 				break
 			}
-			rmOpts := remove.RemoveOptions{
-				Platform: machine.Spec.Platform,
-			}
 
-			if err := rmOpts.Run(ctx, []string{service.Name}); err != nil {
-				return err
-			}
+			children = append(children, processtree.NewProcessTreeItem(
+				fmt.Sprintf("removing stopped service %s", service.Name),
+				"",
+				func(ctx context.Context) error {
+					rmOpts := remove.RemoveOptions{
+						Platform: machine.Spec.Platform,
+					}
 
+					if err := rmOpts.Run(ctx, []string{service.Name}); err != nil {
+						return err
+					}
+
+					return nil
+				},
+			))
 			for i, m := range projectMachines {
 				if m.Name == machine.Name {
 					projectMachines = append(projectMachines[:i], projectMachines[i+1:]...)
@@ -227,26 +254,77 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 			continue
 		}
 		if service.Image == "" {
-			if err := buildService(ctx, service); err != nil {
-				return err
-			}
-		} else if err := ensureServiceIsPackaged(ctx, service); err != nil {
-			return err
+			children = append(children, processtree.NewProcessTreeItem(
+				fmt.Sprintf("building service %s", service.Name),
+				"",
+				func(ctx context.Context) error {
+					return buildService(ctx, service)
+				},
+			))
+		} else {
+			children = append(children, processtree.NewProcessTreeItem(
+				fmt.Sprintf("finding package for service %s", service.Name),
+				"",
+				func(ctx context.Context) error {
+					return ensureServiceIsPackaged(ctx, service)
+				},
+			))
 		}
 
-		if err := createService(ctx, project, service); err != nil {
-			log.G(ctx).WithError(err).Errorf("failed to create service %s", service.Name)
-		}
+		processes = append(processes, processtree.NewProcessTreeItem(
+			fmt.Sprintf("creating service %s", service.Name),
+			"",
+			func(ctx context.Context) error {
+				model, err := processtree.NewProcessTree(ctx,
+					[]processtree.ProcessTreeOption{
+						processtree.IsParallel(false),
+						processtree.WithHideOnSuccess(false),
+						processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+					},
+					children...,
+				)
+				if err != nil {
+					return err
+				}
 
-		if machine, err := machineController.Get(ctx, &machineapi.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: service.Name,
+				if err := model.Start(); err != nil {
+					return err
+				}
+				if err := createService(ctx, project, service); err != nil {
+					return err
+				}
+				if machine, err := machineController.Get(ctx, &machineapi.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: service.Name,
+					},
+				}); err == nil && machine.Status.State == machineapi.MachineStateCreated {
+					projectMachines = append(projectMachines, machine.ObjectMeta)
+				} else if err != nil {
+					return err
+				}
+				return nil
 			},
-		}); err == nil && machine.Status.State == machineapi.MachineStateCreated {
-			projectMachines = append(projectMachines, machine.ObjectMeta)
-		} else if err != nil {
-			return err
-		}
+		))
+	}
+
+	if len(processes) == 0 {
+		return nil
+	}
+
+	model, err := processtree.NewProcessTree(ctx,
+		[]processtree.ProcessTreeOption{
+			processtree.IsParallel(false),
+			processtree.WithHideOnSuccess(false),
+			processtree.WithRenderer(topLevelRender),
+		},
+		processes...,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := model.Start(); err != nil {
+		return err
 	}
 
 	if _, err := composeController.Update(ctx, &composeapi.Compose{
@@ -384,8 +462,6 @@ func createService(ctx context.Context, project *compose.Project, service types.
 	if err != nil {
 		return err
 	}
-
-	log.G(ctx).Infof("creating service %s...", service.Name)
 
 	networks := []string{}
 	for name, network := range service.Networks {
