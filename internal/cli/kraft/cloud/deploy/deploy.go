@@ -38,6 +38,7 @@ type DeployOptions struct {
 	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
 	ForcePull              bool                      `long:"force-pull" usage:"Force pulling packages before building"`
+	Image                  string                    `long:"image" short:"i" usage:"Set the image name to use"`
 	Jobs                   int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg              bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile              string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`

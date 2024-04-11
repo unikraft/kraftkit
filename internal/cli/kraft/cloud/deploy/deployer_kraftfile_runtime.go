@@ -69,9 +69,11 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	var pkgName string
 
-	if len(opts.Name) > 0 {
+	if opts.Image != "" {
+		pkgName = opts.Image
+	} else if opts.Name != "" {
 		pkgName = opts.Name
-	} else if opts.Project != nil && len(opts.Project.Name()) > 0 {
+	} else if opts.Project != nil && opts.Project.Name() != "" {
 		pkgName = opts.Project.Name()
 	} else {
 		pkgName = filepath.Base(opts.Workdir)
