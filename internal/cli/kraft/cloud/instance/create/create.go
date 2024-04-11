@@ -334,6 +334,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --port|-p")
 	}
 
+	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// supports updating service groups.
+	if opts.ServiceGroupNameOrUUID != "" && len(opts.Domain) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --domain|-d")
+	}
+
 	var services []kcservices.CreateRequestService
 
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
