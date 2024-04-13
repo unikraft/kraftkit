@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,11 +21,11 @@ import (
 )
 
 type RemoveOptions struct {
-	All    bool                       `long:"all" usage:"Remove all services"`
-	Auth   *config.AuthConfig         `noattribute:"true"`
-	Client kcservices.ServicesService `noattribute:"true"`
-	Metro  string                     `noattribute:"true"`
-	Token  string                     `noattribute:"true"`
+	All    bool                  `long:"all" usage:"Remove all services"`
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -74,6 +73,10 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	return Remove(ctx, opts, args...)
+}
+
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
@@ -84,48 +87,43 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewServicesClient(
+		opts.Client = kraftcloud.NewClient(
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
 	if opts.All {
-		sgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		sgListResp, err := opts.Client.Services().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("listing service groups: %w", err)
 		}
-		sgList, err := sgListResp.AllOrErr()
-		if err != nil {
-			return fmt.Errorf("listing service groups: %w", err)
-		}
-		if len(sgList) == 0 {
+
+		if len(sgListResp.Data.Entries) == 0 {
+			log.G(ctx).Info("no service groups found")
 			return nil
 		}
 
-		uuids := make([]string, 0, len(sgList))
-		for _, sgItem := range sgList {
+		uuids := make([]string, 0, len(sgListResp.Data.Entries))
+		for _, sgItem := range sgListResp.Data.Entries {
 			uuids = append(uuids, sgItem.UUID)
 		}
 
-		log.G(ctx).Infof("Removing %d service group(s)", len(uuids))
+		log.G(ctx).Infof("removing %d service group(s)", len(uuids))
 
-		delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, uuids...)
-		if err != nil {
+		if _, err := opts.Client.Services().WithMetro(opts.Metro).Delete(ctx, uuids...); err != nil {
 			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
 		}
-		if _, err = delResp.AllOrErr(); err != nil {
-			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
-		}
+
 		return nil
 	}
 
-	log.G(ctx).Infof("Removing %d service group(s)", len(args))
+	log.G(ctx).Infof("removing %d service group(s)", len(args))
 
-	delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, args...)
+	resp, err := opts.Client.Services().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
-	if _, err = delResp.AllOrErr(); err != nil {
+	if _, err := resp.AllOrErr(); err != nil {
 		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
 
