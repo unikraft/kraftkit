@@ -44,7 +44,9 @@ func NewProjectFromComposeFile(ctx context.Context, workdir, composefile string)
 		for _, file := range DefaultFileNames {
 			fullpath := filepath.Join(workdir, file)
 			if _, err := os.Stat(fullpath); err == nil {
-				log.G(ctx).Debugf("Found compose file: %s", file)
+				log.G(ctx).
+					WithField("composefile", fullpath).
+					Debugf("using")
 				composefile = file
 				break
 			}
