@@ -31,6 +31,8 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
+var ErrContextNotBuildable = fmt.Errorf("could not determine what or how to build from the given context")
+
 type BuildOptions struct {
 	All          bool           `long:"all" usage:"Build all targets"`
 	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
@@ -115,7 +117,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	if build == nil {
-		return fmt.Errorf("could not determine what or how to build from the given context")
+		return ErrContextNotBuildable
 	}
 
 	log.G(ctx).WithField("builder", build.String()).Debug("using")
