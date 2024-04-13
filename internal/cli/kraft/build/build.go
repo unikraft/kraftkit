@@ -44,6 +44,7 @@ type BuildOptions struct {
 	NoConfigure  bool           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFast       bool           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
 	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoRootfs     bool           `long:"no-rootfs" usage:"Do not build the root file system (initramfs)"`
 	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	PrintStats   bool           `long:"print-stats" usage:"Print build statistics"`

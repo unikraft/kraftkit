@@ -27,6 +27,10 @@ func (build *builderKraftfileRuntime) String() string {
 
 // Buildable implements builder.
 func (build *builderKraftfileRuntime) Buildable(ctx context.Context, opts *BuildOptions, args ...string) (bool, error) {
+	if opts.NoRootfs {
+		return false, fmt.Errorf("building rootfs disabled")
+	}
+
 	if opts.project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
