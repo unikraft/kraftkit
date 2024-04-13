@@ -68,13 +68,15 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		opts = &BuildOptions{}
 	}
 
-	if len(args) == 0 {
-		opts.Workdir, err = os.Getwd()
-		if err != nil {
-			return err
+	if len(opts.Workdir) == 0 {
+		if len(args) == 0 {
+			opts.Workdir, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		} else {
+			opts.Workdir = args[0]
 		}
-	} else if len(opts.Workdir) == 0 {
-		opts.Workdir = args[0]
 	}
 
 	popts := []app.ProjectOption{
