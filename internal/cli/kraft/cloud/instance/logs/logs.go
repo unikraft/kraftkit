@@ -21,11 +21,13 @@ import (
 )
 
 type LogOptions struct {
-	Follow bool `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
-	Tail   int  `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
-
-	metro string
-	token string
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	Follow bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
+	Metro  string                `noattribute:"true"`
+	Prefix string                `local:"true" long:"prefix" short:"p" usage:"Prefix the logs with a given string"`
+	Tail   int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
+	Token  string                `noattribute:"true"`
 }
 
 // Log retrieves the console output from a KraftCloud instance.
@@ -74,7 +76,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -87,16 +89,26 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *LogOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+	return Logs(ctx, opts, args...)
+}
+
+func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
+	var err error
+
+	if opts.Auth != nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
 
-	logChan, errChan, err := client.TailLogs(ctx, args[0], opts.Follow, opts.Tail, 500*time.Millisecond)
+	logChan, errChan, err := opts.Client.Instances().TailLogs(ctx, args[0], opts.Follow, opts.Tail, 500*time.Millisecond)
 	if err != nil {
 		return fmt.Errorf("initializing log tailing: %w", err)
 	}
