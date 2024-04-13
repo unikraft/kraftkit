@@ -18,7 +18,9 @@ import (
 	"kraftkit.sh/cmdfactory"
 )
 
-type ComposeOptions struct{}
+type ComposeOptions struct {
+	Composefile string `long:"file" usage:"Set the Compose file."`
+}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ComposeOptions{}, cobra.Command{
