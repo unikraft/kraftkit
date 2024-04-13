@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -51,8 +52,13 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 		err      error
 	)
 
+	name := opts.project.Runtime().Name()
+	if opts.Platform == "kraftcloud" || (opts.project.Runtime().Platform() != nil && opts.project.Runtime().Platform().Name() == "kraftcloud") {
+		name = utils.RewrapAsKraftCloudPackage(name)
+	}
+
 	qopts := []packmanager.QueryOption{
-		packmanager.WithName(opts.project.Runtime().Name()),
+		packmanager.WithName(name),
 		packmanager.WithVersion(opts.project.Runtime().Version()),
 	}
 
@@ -69,7 +75,7 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 		processtree.NewProcessTreeItem(
 			fmt.Sprintf(
 				"searching for %s:%s",
-				opts.project.Runtime().Name(),
+				name,
 				opts.project.Runtime().Version(),
 			),
 			"",
