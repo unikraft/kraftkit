@@ -22,21 +22,12 @@ import (
 )
 
 type RemoveOptions struct {
-	Output  string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	All     bool   `long:"all" short:"a" usage:"Remove all instances"`
-	Stopped bool   `long:"stopped" short:"s" usage:"Remove all stopped instances"`
-
-	metro string
-	token string
-}
-
-// Remove a KraftCloud instance.
-func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
-	if opts == nil {
-		opts = &RemoveOptions{}
-	}
-
-	return opts.Run(ctx, args)
+	Auth    *config.AuthConfig    `noattribute:"true"`
+	Client  kraftcloud.KraftCloud `noattribute:"true"`
+	All     bool                  `long:"all" short:"a" usage:"Remove all instances"`
+	Stopped bool                  `long:"stopped" short:"s" usage:"Remove all stopped instances"`
+	Metro   string                `noattribute:"true"`
+	Token   string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -76,6 +67,22 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
+	}
+
+	return nil
+}
+
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	return Remove(ctx, opts, args...)
+}
+
+// Remove KraftCloud instance(s).
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	var err error
+
 	if !opts.Stopped && !opts.All && len(args) == 0 {
 		return fmt.Errorf("either specify an instance name or UUID, or use the --all flag")
 	}
@@ -89,58 +96,43 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot specify instances and use --all together")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
-	if err != nil {
-		return fmt.Errorf("could not populate metro and token: %w", err)
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("invalid output format: %s", opts.Output)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
 	}
-
-	return nil
-}
-
-func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
-	}
-
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
 
 	if opts.All || opts.Stopped {
-		instListResp, err := client.WithMetro(opts.metro).List(ctx)
+		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
-		instList, err := instListResp.AllOrErr()
-		if err != nil {
-			return fmt.Errorf("could not list instances: %w", err)
-		}
-		if len(instList) == 0 {
+
+		if len(instListResp.Data.Entries) == 0 {
+			log.G(ctx).Info("no instances found")
 			return nil
 		}
 
-		uuids := make([]string, 0, len(instList))
-		for _, instItem := range instList {
+		uuids := make([]string, 0, len(instListResp.Data.Entries))
+		for _, instItem := range instListResp.Data.Entries {
 			uuids = append(uuids, instItem.UUID)
 		}
 
 		if opts.Stopped {
-			instInfosResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
-			if err != nil {
-				return fmt.Errorf("could not get instances: %w", err)
-			}
-			instInfos, err := instInfosResp.AllOrErr()
+			instInfosResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, uuids...)
 			if err != nil {
 				return fmt.Errorf("could not get instances: %w", err)
 			}
 
 			var stoppedUuids []string
-			for _, instInfo := range instInfos {
+			for _, instInfo := range instInfosResp.Data.Entries {
 				if kcinstances.State(instInfo.State) == kcinstances.StateStopped {
 					stoppedUuids = append(stoppedUuids, instInfo.UUID)
 				}
@@ -152,26 +144,23 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			uuids = stoppedUuids
 		}
 
-		log.G(ctx).Infof("Removing %d instance(s)", len(uuids))
+		log.G(ctx).Infof("removing %d instance(s)", len(uuids))
 
-		delResp, err := client.WithMetro(opts.metro).Delete(ctx, uuids...)
-		if err != nil {
+		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, uuids...); err != nil {
 			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
 		}
-		if _, err = delResp.AllOrErr(); err != nil {
-			return fmt.Errorf("removing %d instance(s): %w", len(uuids), err)
-		}
+
 		return nil
 	}
 
-	log.G(ctx).Infof("Removing %d instance(s)", len(args))
+	log.G(ctx).Infof("removing %d instance(s)", len(args))
 
-	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
+	resp, err := opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("removing %d instance(s): %w", len(args), err)
 	}
-	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("removing %d instances(s): %w", len(args), err)
+	if _, err := resp.AllOrErr(); err != nil {
+		return fmt.Errorf("removing %d instance(s): %w", len(args), err)
 	}
 
 	return nil
