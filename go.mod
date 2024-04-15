@@ -19,7 +19,7 @@ require (
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/compose-spec/compose-go/v2 v2.0.2
-	github.com/containerd/containerd v1.7.14
+	github.com/containerd/containerd v1.7.15
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl v1.7.5
 	github.com/cyphar/filepath-securejoin v0.2.4
