@@ -17,14 +17,12 @@ import (
 	"kraftkit.sh/packmanager"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	"kraftkit.sh/internal/cli/kraft/compose/logs"
 	kernelstart "kraftkit.sh/internal/cli/kraft/start"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
 type UnpauseOptions struct {
 	Composefile string `noattribute:"true"`
-	Detach      bool   `long:"detach" short:"d" usage:"Run in background"`
 }
 
 func NewCmd() *cobra.Command {
@@ -113,14 +111,5 @@ func (opts *UnpauseOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if opts.Detach {
-		return nil
-	}
-
-	logsOptions := logs.LogsOptions{
-		Composefile: opts.Composefile,
-		Follow:      true,
-	}
-
-	return logsOptions.Run(ctx, []string{})
+	return nil
 }
