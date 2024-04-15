@@ -31,7 +31,6 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UnpauseOptions{}, cobra.Command{
 		Short:   "Unpause a compose project",
 		Use:     "unpause [FLAGS]",
-		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
 			# Unpause a compose project
@@ -64,7 +63,7 @@ func (opts *UnpauseOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *UnpauseOptions) Run(ctx context.Context, _ []string) error {
+func (opts *UnpauseOptions) Run(ctx context.Context, args []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -89,8 +88,13 @@ func (opts *UnpauseOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
 	machinesToUnpause := []string{}
-	for _, service := range project.Services {
+	for _, service := range services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name {
 				if machine.Status.State == machineapi.MachineStatePaused {

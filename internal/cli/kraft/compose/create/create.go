@@ -43,7 +43,6 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a compose project",
 		Use:     "create [FLAGS]",
-		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Long:    "Create the services and networks for a project.",
 		Example: heredoc.Doc(`
@@ -197,7 +196,12 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	for _, service := range project.Services {
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range services {
 		alreadyCreated := false
 		for _, machine := range machines.Items {
 			if service.Name != machine.Name {
