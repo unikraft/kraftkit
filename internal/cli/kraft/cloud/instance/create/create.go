@@ -651,20 +651,23 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	opts.Image = args[0]
 
-	resp, _, err := Create(ctx, opts, args[1:]...)
+	instResp, svcResp, err := Create(ctx, opts, args[1:]...)
 	if err != nil {
 		return err
 	}
 
-	insts, err := resp.AllOrErr()
+	insts, err := instResp.AllOrErr()
 	if err != nil {
 		return err
 	}
 
 	if len(insts) > 1 || opts.Output == "table" {
-		return utils.PrintInstances(ctx, opts.Output, *resp)
+		return utils.PrintInstances(ctx, opts.Output, *instResp)
 	}
-	utils.PrettyPrintInstance(ctx, insts[0], opts.Start)
+
+	// No need to check for error, we check if-nil inside PrettyPrintInstance.
+	svc, _ := svcResp.FirstOrErr()
+	utils.PrettyPrintInstance(ctx, insts[0], svc, opts.Start)
 
 	return nil
 }

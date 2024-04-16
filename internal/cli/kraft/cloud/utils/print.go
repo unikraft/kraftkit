@@ -786,7 +786,7 @@ func PrintCertificates(ctx context.Context, format string, resp kcclient.Service
 }
 
 // PrettyPrintInstance outputs a single instance and information about it.
-func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseItem, autoStart bool) {
+func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseItem, service *kcservices.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
 
 	var title string
@@ -820,11 +820,19 @@ func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseIt
 		},
 	}
 
-	if instance.ServiceGroup != nil {
-		for _, domain := range instance.ServiceGroup.Domains {
+	if service != nil {
+		for _, domain := range service.Domains {
+			fqdn := domain.FQDN
+			for _, port := range service.Services {
+				if port.Port == 443 {
+					fqdn = "https://" + fqdn
+					break
+				}
+			}
+
 			entries = append(entries, fancymap.FancyMapEntry{
 				Key:   "domain",
-				Value: domain.FQDN,
+				Value: fqdn,
 			})
 		}
 	}
