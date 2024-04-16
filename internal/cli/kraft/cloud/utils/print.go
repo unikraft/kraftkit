@@ -72,12 +72,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		return nil
 	}
 
-	instances, err := resp.AllOrErr()
-	if err != nil {
-		return err
-	}
-
-	if err = iostreams.G(ctx).StartPager(); err != nil {
+	if err := iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
@@ -119,7 +114,34 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		instanceStateColor = instanceStateColorNil
 	}
 
-	for _, instance := range instances {
+	for _, instance := range resp.Data.Entries {
+		if instance.Message != "" {
+			// Header row
+			if format != "table" {
+				table.AddField(instance.UUID, nil)
+			}
+			table.AddField(instance.Name, nil)
+			table.AddField("", nil) // FQDN
+			if format != "table" {
+				table.AddField("", nil) // PRIVATE FQDN
+				table.AddField("", nil) // PRIVATE IP
+			}
+			table.AddField(instance.Message, nil)
+			table.AddField("", nil) // CREATED AT
+			table.AddField("", nil) // IMAGE
+			table.AddField("", nil) // MEMORY
+			table.AddField("", nil) // ARGS
+			if format != "table" {
+				table.AddField("", nil) // ENV
+				table.AddField("", nil) // VOLUMES
+				table.AddField("", nil) // SERVICE GROUP
+			}
+			table.AddField("", nil) // BOOT TIME
+			table.EndRow()
+
+			continue
+		}
+
 		var createdAt string
 
 		if len(instance.CreatedAt) > 0 {

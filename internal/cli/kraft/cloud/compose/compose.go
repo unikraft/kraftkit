@@ -12,13 +12,23 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/build"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/down"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/logs"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/ps"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/push"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/start"
+	"kraftkit.sh/internal/cli/kraft/cloud/compose/stop"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/up"
 
 	"kraftkit.sh/cmdfactory"
 )
 
-type ComposeOptions struct{}
+type ComposeOptions struct {
+	Composefile string `long:"file" usage:"Set the Compose file."`
+}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ComposeOptions{}, cobra.Command{
@@ -34,6 +44,21 @@ func NewCmd() *cobra.Command {
 
 			# Stop the current KraftCloud deployment.
 			$ kraft cloud compose down
+
+			# List the services in a KraftCloud deployment.
+			$ kraft cloud compose ps
+
+			# Build a KraftCloud deployment service.
+			$ kraft cloud compose build nginx
+
+			# Create a service image from a KraftCloud deployment.
+			$ kraft cloud compose create
+
+			# Push a KraftCloud deployment service.
+			$ kraft cloud compose push nginx
+
+			# Log a KraftCloud deployment service.
+			$ kraft cloud compose log nginx
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-compose",
@@ -46,6 +71,14 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(up.NewCmd())
 	cmd.AddCommand(down.NewCmd())
+	cmd.AddCommand(start.NewCmd())
+	cmd.AddCommand(stop.NewCmd())
+	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(ps.NewCmd())
+	cmd.AddCommand(build.NewCmd())
+	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(push.NewCmd())
+	cmd.AddCommand(logs.NewCmd())
 
 	return cmd
 }

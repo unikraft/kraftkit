@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2024, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
+
+package ps
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/MakeNowJust/heredoc"
+	"github.com/spf13/cobra"
+
+	kraftcloud "sdk.kraft.cloud"
+	kcclient "sdk.kraft.cloud/client"
+
+	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/compose"
+	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+)
+
+type PsOptions struct {
+	Auth        *config.AuthConfig    `noattribute:"true"`
+	Client      kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile string                `noattribute:"true"`
+	Metro       string                `noattribute:"true"`
+	Output      string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Project     *compose.Project      `noattribute:"true"`
+	Token       string                `noattribute:"true"`
+}
+
+func NewCmd() *cobra.Command {
+	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
+		Short: "List the services of compose project deployed to KraftCloud",
+		Use:   "ps [FLAGS]",
+		Args:  cobra.NoArgs,
+		Long: heredoc.Doc(`
+		List the services of compose project deployed to KraftCloud.
+		`),
+		Example: heredoc.Doc(`
+			# List the services in a KraftCloud deployment.
+			$ kraft cloud compose ps
+		`),
+		Annotations: map[string]string{
+			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return cmd
+}
+
+func (opts *PsOptions) Pre(cmd *cobra.Command, args []string) error {
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	if err != nil {
+		return fmt.Errorf("could not populate metro and token: %w", err)
+	}
+
+	return nil
+}
+
+func (opts *PsOptions) Run(ctx context.Context, args []string) error {
+	var err error
+
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
+	}
+
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
+
+	if opts.Project == nil {
+		workdir, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		opts.Project, err = compose.NewProjectFromComposeFile(ctx, workdir, opts.Composefile)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := opts.Project.Validate(ctx); err != nil {
+		return err
+	}
+
+	// if no services are specified, start all services
+	if len(args) == 0 {
+		for _, service := range opts.Project.Services {
+			args = append(args, strings.SplitN(service.Name, "-", 2)[1])
+		}
+	}
+
+	var instances []string
+
+	for _, serviceName := range args {
+		service, ok := opts.Project.Services[serviceName]
+		if !ok {
+			return fmt.Errorf("service '%s' not found", serviceName)
+		}
+
+		instances = append(instances, service.Name)
+	}
+
+	instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instances...)
+	if err != nil {
+		return fmt.Errorf("getting instances: %w", err)
+	}
+
+	if len(instances) == 0 {
+		return fmt.Errorf("no instances found")
+	}
+
+	for i, instance := range instancesResp.Data.Entries {
+		if instance.Error != nil && *instance.Error == kcclient.APIHTTPErrorNotFound {
+			instancesResp.Data.Entries[i].Message = "not deployed"
+		}
+	}
+
+	return utils.PrintInstances(ctx, opts.Output, *instancesResp)
+}

@@ -6,7 +6,9 @@ package logs
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -17,15 +19,20 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/internal/cli/kraft/logs"
+	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/iostreams"
 )
 
 type LogOptions struct {
-	Follow bool `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
-	Tail   int  `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
-
-	metro string
-	token string
+	Auth     *config.AuthConfig    `noattribute:"true"`
+	Client   kraftcloud.KraftCloud `noattribute:"true"`
+	Follow   bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
+	Metro    string                `noattribute:"true"`
+	NoPrefix bool                  `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
+	Prefix   string                `local:"true" long:"prefix" short:"p" usage:"Prefix the logs with a given string"`
+	Tail     int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
+	Token    string                `noattribute:"true"`
 }
 
 // Log retrieves the console output from a KraftCloud instance.
@@ -41,7 +48,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
 		Short:   "Get console output of an instance",
 		Use:     "logs [FLAG] UUID|NAME",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"log"},
 		Example: heredoc.Doc(`
 			# Get all console output of a kraftcloud instance by UUID
@@ -74,7 +81,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -87,30 +94,81 @@ func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *LogOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
-	}
+	return Logs(ctx, opts, args...)
+}
 
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
+	var err error
 
-	logChan, errChan, err := client.TailLogs(ctx, args[0], opts.Follow, opts.Tail, 500*time.Millisecond)
-	if err != nil {
-		return fmt.Errorf("initializing log tailing: %w", err)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case err := <-errChan:
-			return err
-		case line, ok := <-logChan:
-			if ok {
-				fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", line)
-			}
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
+
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
+
+	longestName := 0
+
+	if len(args) > 1 && !opts.NoPrefix {
+		for _, instance := range args {
+			if len(instance) > longestName {
+				longestName = len(instance)
+			}
+		}
+	} else {
+		opts.NoPrefix = true
+	}
+
+	var errGroup []error
+	observations := waitgroup.WaitGroup[string]{}
+
+	for _, instance := range args {
+		prefix := ""
+		if !opts.NoPrefix {
+			prefix = instance + strings.Repeat(" ", longestName-len(instance))
+		}
+
+		consumer, err := logs.NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, prefix)
+		if err != nil {
+			errGroup = append(errGroup, err)
+		}
+
+		logChan, errChan, err := opts.Client.Instances().WithMetro(opts.Metro).TailLogs(ctx, instance, opts.Follow, opts.Tail, 500*time.Millisecond)
+		if err != nil {
+			return fmt.Errorf("initializing log tailing: %w", err)
+		}
+
+		observations.Add(instance)
+
+		go func() {
+			defer observations.Done(instance)
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case err := <-errChan:
+					errGroup = append(errGroup, err)
+					return
+				case line, ok := <-logChan:
+					if ok {
+						if err := consumer.Consume(fmt.Sprintf("%s\n", line)); err != nil {
+							errGroup = append(errGroup, err)
+							return
+						}
+					}
+				}
+			}
+		}()
+	}
+
+	observations.Wait()
+
+	return errors.Join(errGroup...)
 }

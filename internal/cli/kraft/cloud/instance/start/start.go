@@ -22,21 +22,12 @@ import (
 )
 
 type StartOptions struct {
-	All    bool          `long:"all" usage:"Start all instances"`
-	Wait   time.Duration `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
-	Output string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-
-	Metro string `noattribute:"true"`
-	Token string `noattribute:"true"`
-}
-
-// Start a KraftCloud instance.
-func Start(ctx context.Context, opts *StartOptions, args ...string) error {
-	if opts == nil {
-		opts = &StartOptions{}
-	}
-
-	return opts.Run(ctx, args)
+	All    bool                  `long:"all" usage:"Start all instances"`
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
+	Wait   time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -75,22 +66,29 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate Metro and Token: %w", err)
 	}
 
-	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("invalid output format: %s", opts.Output)
-	}
-
 	return nil
 }
 
 func (opts *StartOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+	return Start(ctx, opts, args...)
+}
+
+// Start KraftCloud instance(s).
+func Start(ctx context.Context, opts *StartOptions, args ...string) error {
+	var err error
+
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
 
 	if opts.Wait < time.Millisecond && opts.Wait != 0 {
 		return fmt.Errorf("wait timeout must be greater than 1ms")
@@ -99,48 +97,35 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	timeout := int(opts.Wait.Milliseconds())
 
 	if opts.All {
-		instListResp, err := client.WithMetro(opts.Metro).List(ctx)
+		args = []string{}
+
+		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
+
 		instList, err := instListResp.AllOrErr()
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
 		if len(instList) == 0 {
+			log.G(ctx).Info("no instances found")
 			return nil
 		}
 
-		log.G(ctx).Infof("Starting %d instance(s)", len(instList))
-
-		uuids := make([]string, 0, len(instList))
 		for _, instItem := range instList {
-			uuids = append(uuids, instItem.UUID)
+			args = append(args, instItem.UUID)
 		}
-
-		stopResp, err := client.WithMetro(opts.Metro).Start(ctx, timeout, uuids...)
-		if err != nil {
-			return fmt.Errorf("starting %d instance(s): %w", len(uuids), err)
-		}
-		if _, err = stopResp.AllOrErr(); err != nil {
-			return fmt.Errorf("starting %d instance(s): %w", len(uuids), err)
-		}
-		return nil
 	}
 
-	for _, arg := range args {
-		log.G(ctx).Infof("Starting %s", arg)
+	log.G(ctx).Infof("starting %d instance(s)", len(args))
 
-		startInst, err := client.WithMetro(opts.Metro).Start(ctx, timeout, arg)
-		if err != nil {
-			log.G(ctx).WithError(err).Error("could not start instance")
-			continue
-		}
-
-		if _, err = startInst.FirstOrErr(); err != nil {
-			log.G(ctx).WithError(err).Error("could not start instance")
-			continue
-		}
+	resp, err := opts.Client.Instances().WithMetro(opts.Metro).Start(ctx, timeout, args...)
+	if err != nil {
+		return fmt.Errorf("starting instance: %w", err)
+	}
+	if _, err = resp.FirstOrErr(); err != nil {
+		return fmt.Errorf("starting instance: %w", err)
 	}
 
 	return nil

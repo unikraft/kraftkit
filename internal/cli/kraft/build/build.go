@@ -31,6 +31,8 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
+var ErrContextNotBuildable = fmt.Errorf("could not determine what or how to build from the given context")
+
 type BuildOptions struct {
 	All          bool           `long:"all" usage:"Build all targets"`
 	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
@@ -44,6 +46,7 @@ type BuildOptions struct {
 	NoConfigure  bool           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
 	NoFast       bool           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
 	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoRootfs     bool           `long:"no-rootfs" usage:"Do not build the root file system (initramfs)"`
 	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
 	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
 	PrintStats   bool           `long:"print-stats" usage:"Print build statistics"`
@@ -65,13 +68,15 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		opts = &BuildOptions{}
 	}
 
-	if len(args) == 0 {
-		opts.Workdir, err = os.Getwd()
-		if err != nil {
-			return err
+	if len(opts.Workdir) == 0 {
+		if len(args) == 0 {
+			opts.Workdir, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		} else {
+			opts.Workdir = args[0]
 		}
-	} else if len(opts.Workdir) == 0 {
-		opts.Workdir = args[0]
 	}
 
 	popts := []app.ProjectOption{
@@ -114,7 +119,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	if build == nil {
-		return fmt.Errorf("could not determine what or how to build from the given context")
+		return ErrContextNotBuildable
 	}
 
 	log.G(ctx).WithField("builder", build.String()).Debug("using")

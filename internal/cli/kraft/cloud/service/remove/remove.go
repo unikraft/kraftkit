@@ -13,20 +13,22 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcservices "sdk.kraft.cloud/services"
+	kcclient "sdk.kraft.cloud/client"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
+	"kraftkit.sh/tui/processtree"
 )
 
 type RemoveOptions struct {
-	All    bool                       `long:"all" usage:"Remove all services"`
-	Auth   *config.AuthConfig         `noattribute:"true"`
-	Client kcservices.ServicesService `noattribute:"true"`
-	Metro  string                     `noattribute:"true"`
-	Token  string                     `noattribute:"true"`
+	All       bool                  `long:"all" usage:"Remove all services"`
+	Auth      *config.AuthConfig    `noattribute:"true"`
+	Client    kraftcloud.KraftCloud `noattribute:"true"`
+	Metro     string                `noattribute:"true"`
+	Token     string                `noattribute:"true"`
+	WaitEmpty bool                  `long:"wait-empty" usage:"Wait for the service group to be empty before removing it"`
 }
 
 func NewCmd() *cobra.Command {
@@ -74,6 +76,10 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	return Remove(ctx, opts, args...)
+}
+
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
@@ -84,48 +90,97 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewServicesClient(
+		opts.Client = kraftcloud.NewClient(
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
 	if opts.All {
-		sgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		sgListResp, err := opts.Client.Services().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("listing service groups: %w", err)
 		}
-		sgList, err := sgListResp.AllOrErr()
-		if err != nil {
-			return fmt.Errorf("listing service groups: %w", err)
-		}
-		if len(sgList) == 0 {
+
+		if len(sgListResp.Data.Entries) == 0 {
+			log.G(ctx).Info("no service groups found")
 			return nil
 		}
 
-		uuids := make([]string, 0, len(sgList))
-		for _, sgItem := range sgList {
-			uuids = append(uuids, sgItem.UUID)
+		args = []string{}
+		for _, sgItem := range sgListResp.Data.Entries {
+			args = append(args, sgItem.Name)
+		}
+	}
+
+	if opts.WaitEmpty {
+		var processes []*processtree.ProcessTreeItem
+
+		groups := args
+		args = []string{}
+
+		for _, group := range groups {
+			processes = append(processes,
+				processtree.NewProcessTreeItem(
+					fmt.Sprintf("waiting for %s to be empty", group),
+					"",
+					func(ctx context.Context) error {
+						for {
+							sgResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, group)
+							if err != nil {
+								return fmt.Errorf("could not get service group: %w", err)
+							}
+
+							sg, err := sgResp.FirstOrErr()
+							if err != nil && *sg.Error == kcclient.APIHTTPErrorNotFound {
+								return nil
+							} else if err != nil {
+								return err
+							}
+
+							if len(sg.Instances) == 0 {
+								args = append(args, group)
+								break
+							}
+						}
+
+						return nil
+					},
+				),
+			)
 		}
 
-		log.G(ctx).Infof("Removing %d service group(s)", len(uuids))
-
-		delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, uuids...)
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(true),
+				processtree.WithRenderer(
+					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
+				),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processes...,
+		)
 		if err != nil {
-			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
+			return err
 		}
-		if _, err = delResp.AllOrErr(); err != nil {
-			return fmt.Errorf("removing %d service group(s): %w", len(uuids), err)
+
+		if err := treemodel.Start(); err != nil {
+			return err
 		}
+	}
+
+	if len(args) == 0 {
 		return nil
 	}
 
-	log.G(ctx).Infof("Removing %d service group(s)", len(args))
+	log.G(ctx).Infof("removing %d service group(s)", len(args))
 
-	delResp, err := opts.Client.WithMetro(opts.Metro).Delete(ctx, args...)
+	resp, err := opts.Client.Services().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
-	if _, err = delResp.AllOrErr(); err != nil {
+	if _, err := resp.AllOrErr(); err != nil {
 		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
 	}
 

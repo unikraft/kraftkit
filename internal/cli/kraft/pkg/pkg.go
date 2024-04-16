@@ -67,12 +67,16 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 		opts = &PkgOptions{}
 	}
 
-	if len(args) == 0 {
-		opts.Workdir, err = os.Getwd()
-		if err != nil {
-			return nil, err
+	if opts.Workdir == "" {
+		if len(args) == 0 {
+			opts.Workdir, err = os.Getwd()
+			if err != nil {
+				return nil, err
+			}
 		}
-	} else if len(opts.Workdir) == 0 {
+	}
+
+	if len(args) != 0 {
 		opts.Workdir = args[0]
 	}
 

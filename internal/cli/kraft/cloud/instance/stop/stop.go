@@ -22,22 +22,14 @@ import (
 )
 
 type StopOptions struct {
-	Wait         time.Duration `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
-	DrainTimeout time.Duration `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	Output       string        `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	All          bool          `long:"all" usage:"Stop all instances"`
-	Force        bool          `long:"force" short:"f" usage:"Force stop the instance(s)"`
-	Metro        string        `noattribute:"true"`
-	Token        string        `noattribute:"true"`
-}
-
-// Stop a KraftCloud instance.
-func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
-	if opts == nil {
-		opts = &StopOptions{}
-	}
-
-	return opts.Run(ctx, args)
+	Auth         *config.AuthConfig    `noattribute:"true"`
+	Client       kraftcloud.KraftCloud `noattribute:"true"`
+	Wait         time.Duration         `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
+	DrainTimeout time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	All          bool                  `long:"all" usage:"Stop all instances"`
+	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
+	Metro        string                `noattribute:"true"`
+	Token        string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -86,9 +78,16 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("invalid output format: %s", opts.Output)
-	}
+	return nil
+}
+
+func (opts *StopOptions) Run(ctx context.Context, args []string) error {
+	return Stop(ctx, opts, args...)
+}
+
+// Stop KraftCloud instance(s).
+func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
+	var err error
 
 	if opts.DrainTimeout != 0 && opts.Wait != 0 {
 		return fmt.Errorf("drain-timeout and wait flags are mutually exclusive")
@@ -96,61 +95,60 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	if opts.DrainTimeout != 0 && opts.Wait == 0 {
 		opts.Wait = opts.DrainTimeout
-		log.G(cmd.Context()).Warnf("drain-timeout flag is deprecated, use wait flag instead")
+		log.G(ctx).Warnf("drain timeout is deprecated, use wait instead")
 	}
 
 	if opts.Wait < time.Millisecond && opts.Wait != 0 {
 		return fmt.Errorf("drain wait timeout must be at least 1ms")
 	}
 
-	return nil
-}
-
-func (opts *StopOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
 
 	timeout := int(opts.Wait.Milliseconds())
 
 	if opts.All {
-		instListResp, err := client.WithMetro(opts.Metro).List(ctx)
+		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
+
 		instList, err := instListResp.AllOrErr()
 		if err != nil {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
 		if len(instList) == 0 {
+			log.G(ctx).Info("no instances to stop")
 			return nil
 		}
 
-		log.G(ctx).Infof("Stopping %d instance(s)", len(instList))
+		log.G(ctx).Infof("stopping %d instance(s)", len(instList))
 
 		uuids := make([]string, 0, len(instList))
 		for _, instItem := range instList {
 			uuids = append(uuids, instItem.UUID)
 		}
 
-		stopResp, err := client.WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, uuids...)
-		if err != nil {
+		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, uuids...); err != nil {
 			return fmt.Errorf("stopping %d instance(s): %w", len(uuids), err)
 		}
-		if _, err = stopResp.AllOrErr(); err != nil {
-			return fmt.Errorf("stopping %d instance(s): %w", len(uuids), err)
-		}
+
 		return nil
 	}
 
-	log.G(ctx).Infof("Stopping %d instance(s)", len(args))
+	log.G(ctx).Infof("stopping %d instance(s)", len(args))
 
-	stopResp, err := client.WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, args...)
+	stopResp, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, args...)
 	if err != nil {
 		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 	}

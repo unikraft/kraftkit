@@ -37,6 +37,10 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 
 		archs = append(archs, arch)
 
+		if !filepath.IsAbs(rootfs) {
+			rootfs = filepath.Join(workdir, rootfs)
+		}
+
 		ramfs, err := initrd.New(ctx, rootfs,
 			initrd.WithOutput(filepath.Join(
 				workdir,
