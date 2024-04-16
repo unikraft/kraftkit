@@ -58,7 +58,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud --metro fra0 instance list
 
 			# Create a new NGINX instance in Frankfurt and start it immediately
-			$ kraft cloud instance create -S \
+			$ kraft cloud --metro fra0 instance create -S \
 				-p 80:443/http+redirect \
 				-p 443:8080/http+tls \
 				nginx:latest
