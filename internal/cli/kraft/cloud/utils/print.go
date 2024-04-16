@@ -64,6 +64,22 @@ var (
 	}
 )
 
+func parseTime(dateTime, format, uuid string) (string, error) {
+	if len(dateTime) > 0 {
+		createdTime, err := time.Parse(time.RFC3339, dateTime)
+		if err != nil {
+			return "", fmt.Errorf("could not parse time for '%s': %w", uuid, err)
+		}
+		if format != "table" {
+			return dateTime, nil
+		} else {
+			return humanize.Time(createdTime), nil
+		}
+	}
+
+	return "", nil
+}
+
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
 func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
@@ -99,6 +115,15 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 	}
 	table.AddField("STATE", cs.Bold)
 	table.AddField("CREATED AT", cs.Bold)
+	if format != "table" {
+		table.AddField("STARTED AT", cs.Bold)
+		table.AddField("STOPPED AT", cs.Bold)
+		table.AddField("START COUNT", cs.Bold)
+		table.AddField("RESTART COUNT", cs.Bold)
+		table.AddField("RESTART ATTEMPTS", cs.Bold)
+		table.AddField("RESTART NEXT AT", cs.Bold)
+	}
+	table.AddField("RESTART POLICY", cs.Bold)
 	table.AddField("IMAGE", cs.Bold)
 	table.AddField("MEMORY", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
@@ -108,6 +133,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("SERVICE GROUP", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
+	table.AddField("UP TIME", cs.Bold)
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
@@ -143,17 +169,29 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		}
 
 		var createdAt string
+		var stoppedAt string
+		var startedAt string
+		var restartNextAt string
 
-		if len(instance.CreatedAt) > 0 {
-			createdTime, err := time.Parse(time.RFC3339, instance.CreatedAt)
+		createdAt, err = parseTime(instance.CreatedAt, format, instance.UUID)
+		if err != nil {
+			return err
+		}
+		startedAt, err = parseTime(instance.StartedAt, format, instance.UUID)
+		if err != nil {
+			return err
+		}
+		stoppedAt, err = parseTime(instance.StoppedAt, format, instance.UUID)
+		if err != nil {
+			return err
+		}
+		if instance.Restart != nil {
+			restartNextAt, err = parseTime(instance.Restart.NextAt, format, instance.UUID)
 			if err != nil {
-				return fmt.Errorf("could not parse time for '%s': %w", instance.UUID, err)
+				return err
 			}
-			if format != "table" {
-				createdAt = instance.CreatedAt
-			} else {
-				createdAt = humanize.Time(createdTime)
-			}
+		} else {
+			restartNextAt = ""
 		}
 
 		if format != "table" {
@@ -175,6 +213,21 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 
 		table.AddField(string(instance.State), instanceStateColor[instance.State])
 		table.AddField(createdAt, nil)
+
+		if format != "table" {
+			table.AddField(startedAt, nil)
+			table.AddField(stoppedAt, nil)
+			table.AddField(strconv.Itoa(instance.StartCount), nil)
+			table.AddField(strconv.Itoa(instance.RestartCount), nil)
+			if instance.Restart != nil {
+				table.AddField(strconv.Itoa(instance.Restart.Attempt), nil)
+				table.AddField(restartNextAt, nil)
+			} else {
+				table.AddField("", nil)
+				table.AddField("", nil)
+			}
+		}
+		table.AddField(string(instance.RestartPolicy), nil)
 		table.AddField(instance.Image, nil)
 		table.AddField(humanize.IBytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
 		table.AddField(strings.Join(instance.Args, " "), nil)
@@ -202,6 +255,12 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		}
 
 		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUs)/1000), nil)
+
+		duration, err := time.ParseDuration(fmt.Sprintf("%dms", instance.UptimeMs))
+		if err != nil {
+			return fmt.Errorf("could not parse uptime for '%s': %w", instance.UUID, err)
+		}
+		table.AddField(duration.String(), nil)
 
 		table.EndRow()
 	}

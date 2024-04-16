@@ -31,29 +31,30 @@ import (
 )
 
 type CreateOptions struct {
-	Auth                   *config.AuthConfig    `noattribute:"true"`
-	Client                 kraftcloud.KraftCloud `noattribute:"true"`
-	Env                    []string              `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features               []string              `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	Domain                 []string              `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
-	Image                  string                `noattribute:"true"`
-	Memory                 int                   `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
-	Metro                  string                `noattribute:"true"`
-	Name                   string                `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output                 string                `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Ports                  []string              `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Replicas               int                   `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout                RolloutStrategy       `noattribute:"true"`
-	RolloutQualifier       RolloutQualifier      `noattribute:"true"`
-	RolloutWait            time.Duration         `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
-	ServiceGroupNameOrUUID string                `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
-	Start                  bool                  `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
-	ScaleToZero            bool                  `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
-	SubDomain              []string              `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Token                  string                `noattribute:"true"`
-	Volumes                []string              `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage           bool                  `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout    time.Duration         `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+	Auth                   *config.AuthConfig        `noattribute:"true"`
+	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
+	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
+	Image                  string                    `noattribute:"true"`
+	Memory                 int                       `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
+	Metro                  string                    `noattribute:"true"`
+	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
+	Output                 string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	RestartPolicy          kcinstances.RestartPolicy `noattribute:"true"`
+	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout                RolloutStrategy           `noattribute:"true"`
+	RolloutQualifier       RolloutQualifier          `noattribute:"true"`
+	RolloutWait            time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
+	ServiceGroupNameOrUUID string                    `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
+	Start                  bool                      `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero            bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
+	SubDomain              []string                  `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Token                  string                    `noattribute:"true"`
+	Volumes                []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage           bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout    time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
 }
 
 // Create a KraftCloud instance.
@@ -161,9 +162,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	req := kcinstances.CreateRequest{
-		Autostart: &opts.Start,
-		Features:  features,
-		Image:     opts.Image,
+		Autostart:     &opts.Start,
+		Features:      features,
+		Image:         opts.Image,
+		RestartPolicy: &opts.RestartPolicy,
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name
@@ -616,7 +618,7 @@ func NewCmd() *cobra.Command {
 			StrategyPrompt,
 		),
 		"rollout",
-		"Set the rollout strategy for an instance which has been previously run in the provided service group.",
+		"Set the rollout strategy for an instance which has been previously run in the provided service group",
 	)
 
 	cmd.Flags().Var(
@@ -625,7 +627,16 @@ func NewCmd() *cobra.Command {
 			RolloutQualifierImageName,
 		),
 		"rollout-qualifier",
-		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service group.",
+		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service group",
+	)
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[kcinstances.RestartPolicy](
+			kcinstances.RestartPolicies(),
+			kcinstances.RestartPolicyNever,
+		),
+		"restart",
+		"Set the restart policy for the instance (never/always/on-failure)",
 	)
 
 	return cmd
