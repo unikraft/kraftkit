@@ -36,7 +36,7 @@ var (
 	instanceStateColor = map[string]colorFunc{
 		"draining": iostreams.Yellow,
 		"running":  iostreams.Green,
-		"standby":  iostreams.Blue,
+		"standby":  iostreams.Cyan,
 		"starting": iostreams.Green,
 		"stopped":  iostreams.Red,
 		"stopping": iostreams.Yellow,
