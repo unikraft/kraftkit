@@ -218,7 +218,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).WithField("deployer", d.Name()).Debug("using")
 
-	instsResp, _, err := d.Deploy(ctx, opts, args...)
+	instsResp, svcResp, err := d.Deploy(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not prepare deployment: %w", err)
 	}
@@ -229,7 +229,9 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(insts) == 1 && opts.Output == "" {
-		utils.PrettyPrintInstance(ctx, insts[0], !opts.NoStart)
+		// No need to check for error, we check if-nil inside PrettyPrintInstance.
+		svc, _ := svcResp.FirstOrErr()
+		utils.PrettyPrintInstance(ctx, insts[0], svc, !opts.NoStart)
 		return nil
 	}
 
