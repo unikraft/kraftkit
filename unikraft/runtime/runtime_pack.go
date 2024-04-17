@@ -150,12 +150,20 @@ func (runtime *Runtime) Format() pack.PackageFormat {
 
 // Architecture implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) Architecture() arch.Architecture {
-	return runtime.pack.(target.Target).Architecture()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.Architecture()
+	}
+
+	return nil
 }
 
 // Platform implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) Platform() plat.Platform {
-	return runtime.pack.(target.Target).Platform()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.Platform()
+	}
+
+	return nil
 }
 
 // Kernel implements kraftkit.sh/unikraft.target.Target
@@ -173,22 +181,38 @@ func (runtime *Runtime) Kernel() string {
 
 // KernelDbg implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) KernelDbg() string {
-	return runtime.pack.(target.Target).KernelDbg()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.KernelDbg()
+	}
+
+	return ""
 }
 
 // Initrd implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) Initrd() initrd.Initrd {
-	return runtime.pack.(target.Target).Initrd()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.Initrd()
+	}
+
+	return nil
 }
 
 // Command implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) Command() []string {
-	return runtime.pack.(target.Target).Command()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.Command()
+	}
+
+	return nil
 }
 
 // ConfigFilename implements kraftkit.sh/unikraft.target.Target
 func (runtime *Runtime) ConfigFilename() string {
-	return runtime.pack.(target.Target).ConfigFilename()
+	if t, ok := runtime.pack.(target.Target); ok {
+		return t.ConfigFilename()
+	}
+
+	return ""
 }
 
 func (runtime *Runtime) AddRootfs(path string) error {
