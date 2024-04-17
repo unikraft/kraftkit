@@ -28,8 +28,10 @@ const (
 )
 
 // NewRuntime prepares a pre-built unikernel application for use.
-func NewRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime, error) {
-	runtime := Runtime{}
+func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Runtime, error) {
+	runtime := Runtime{
+		name: name,
+	}
 
 	for _, opt := range pbopts {
 		if err := opt(&runtime); err != nil {
@@ -37,13 +39,13 @@ func NewRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime, error) 
 		}
 	}
 
-	if defaultRuntime == "" {
-		defaultRuntime = DefaultPrebuilt
+	if runtime.name == "" {
+		runtime.name = DefaultPrebuilt
 	} else {
 		// Return early if the user provided a custom elfloader unikernel
 		// application.
-		if ok, _ := unikraft.IsFileUnikraftUnikernel(defaultRuntime); ok {
-			runtime.kernel = defaultRuntime
+		if ok, _ := unikraft.IsFileUnikraftUnikernel(runtime.name); ok {
+			runtime.kernel = runtime.name
 			return &runtime, nil
 		}
 	}

@@ -121,7 +121,7 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *RunOptions, args
 
 // Prepare implements Runner.
 func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
-	loader, err := runtime.NewRuntime(ctx)
+	loader, err := runtime.NewRuntime(ctx, opts.Runtime)
 	if err != nil {
 		return err
 	}

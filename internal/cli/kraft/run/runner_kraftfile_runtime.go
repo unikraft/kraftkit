@@ -81,7 +81,7 @@ func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *RunOpt
 		return false, fmt.Errorf("could not instantiate project directory %s: %v", opts.workdir, err)
 	}
 
-	if runner.project.Runtime() == nil {
+	if runner.project.Runtime() == nil && len(opts.Runtime) == 0 {
 		return false, fmt.Errorf("cannot run project without runtime directive")
 	}
 
@@ -94,9 +94,19 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	var targ target.Target
 
 	targets := runner.project.Targets()
-	qopts := []packmanager.QueryOption{
-		packmanager.WithName(runner.project.Runtime().Name()),
-		packmanager.WithVersion(runner.project.Runtime().Version()),
+	var qopts []packmanager.QueryOption
+	var runtimeName string
+	if len(opts.Runtime) > 0 {
+		runtimeName = opts.Runtime
+		qopts = []packmanager.QueryOption{
+			packmanager.WithName(opts.Runtime),
+		}
+	} else {
+		runtimeName = fmt.Sprintf("%s:%s", runner.project.Runtime().Name(), runner.project.Runtime().Version())
+		qopts = []packmanager.QueryOption{
+			packmanager.WithName(runner.project.Runtime().Name()),
+			packmanager.WithVersion(runner.project.Runtime().Version()),
+		}
 	}
 
 	if len(targets) == 1 {
@@ -154,11 +164,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			processtree.WithHideOnSuccess(true),
 		},
 		processtree.NewProcessTreeItem(
-			fmt.Sprintf(
-				"searching for %s:%s",
-				runner.project.Runtime().Name(),
-				runner.project.Runtime().Version(),
-			),
+			fmt.Sprintf("searching for %s", runtimeName),
 			"",
 			func(ctx context.Context) error {
 				packs, err = packmanager.G(ctx).Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
@@ -224,7 +230,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		// platform, prompt with previous available set of packages.
 		if len(compatible) == 0 {
 			if !config.G[config.KraftKit](ctx).NoPrompt {
-				log.G(ctx).Warnf("could not find package '%s:%s' based on %s/%s", runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
+				log.G(ctx).Warnf("could not find package '%s' based on %s/%s", runtimeName, opts.Platform, opts.Architecture)
 				p, err := selection.Select("select alternative package with same name to continue", packs...)
 				if err != nil {
 					return fmt.Errorf("could not select package: %w", err)
@@ -232,13 +238,13 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 
 				found = *p
 			} else {
-				return fmt.Errorf("could not find package '%s:%s' based on %s/%s but %d others found but prompting has been disabled", runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture, len(packs))
+				return fmt.Errorf("could not find package '%s' based on %s/%s but %d others found but prompting has been disabled", runtimeName, opts.Platform, opts.Architecture, len(packs))
 			}
 		} else if len(compatible) == 1 { // An exact match was found!
 			found = compatible[0]
 		} else { // More than 1 match found, provide a selection prompt if possible.
 			if !config.G[config.KraftKit](ctx).NoPrompt {
-				log.G(ctx).Infof("found %d packages named '%s:%s' based on %s/%s", len(compatible), runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
+				log.G(ctx).Infof("found %d packages named '%s' based on %s/%s", len(compatible), runtimeName, opts.Platform, opts.Architecture)
 				p, err := selection.Select("select package to continue", compatible...)
 				if err != nil {
 					return fmt.Errorf("could not select package: %w", err)
@@ -246,7 +252,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 
 				found = *p
 			} else {
-				return fmt.Errorf("found %d packages named '%s:%s' based on %s/%s but prompting has been disabled", len(compatible), runner.project.Runtime().Name(), runner.project.Runtime().Version(), opts.Platform, opts.Architecture)
+				return fmt.Errorf("found %d packages named '%s' based on %s/%s but prompting has been disabled", len(compatible), runtimeName, opts.Platform, opts.Architecture)
 			}
 		}
 
