@@ -129,6 +129,9 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	subnetNetworks := []string{}
 	emptyNetworks := []string{}
 	for name, network := range project.Networks {
+		if network.External {
+			continue
+		}
 		if network.Ipam.Config == nil || len(network.Ipam.Config) == 0 {
 			emptyNetworks = append(emptyNetworks, name)
 		} else {
