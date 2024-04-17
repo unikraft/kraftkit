@@ -55,6 +55,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name != 'push' }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -91,6 +98,8 @@ jobs:
           file: ./buildenvs/github-action.Dockerfile
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+        env:
+          KRAFTKIT_VERSION: blahblahblah
 
       - name: Fetch helloworld
         uses: actions/checkout@v4

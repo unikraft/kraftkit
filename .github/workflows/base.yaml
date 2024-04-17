@@ -67,6 +67,15 @@ jobs:
   myself:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name != 'push' }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -94,6 +103,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/myself.tar
+        env:
+          IMAGE_TAG: blahblahblah
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v3
@@ -117,6 +128,15 @@ jobs:
     needs: [qemu, myself]
 
     steps:
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name != 'push' }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
