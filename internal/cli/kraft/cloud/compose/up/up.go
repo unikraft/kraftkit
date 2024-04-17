@@ -269,7 +269,9 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 // to multiple service groups it also acts a checking mechanism to determine if
 // the compose project's networks are valid with respect to the capabilities of
 // the KraftCloud API.
-func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args ...string) (map[string]*kcclient.ServiceResponse[kcservices.CreateResponseItem], error) {
+func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args ...string) (map[string]*kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+	svcResps := make(map[string]*kcclient.ServiceResponse[kcservices.GetResponseItem])
+
 	// First, create a map of networks which are used by individual services.
 	// These represent service groups and we'll create them only if they don't
 	// exist and use the port mapping of the individual service to hydrate the
@@ -331,6 +333,7 @@ func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args 
 
 		log.G(ctx).Warnf("network '%s' already exists as a service group '%s'", network.Name, *service.Name)
 		delete(svcReqs, alias)
+		svcResps[alias] = respSvc
 	}
 
 	// Iterate through each service and grab the associated port mappings.  This
@@ -404,8 +407,6 @@ func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args 
 		}
 	}
 
-	svcResps := make(map[string]*kcclient.ServiceResponse[kcservices.CreateResponseItem])
-
 	// Create all service groups.
 	for alias, req := range svcReqs {
 		if len(req.Services) == 0 {
@@ -417,12 +418,22 @@ func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args 
 
 		log.G(ctx).WithField("network", *req.Name).Info("creating service group")
 
-		resp, err := opts.Client.Services().WithMetro(opts.Metro).Create(ctx, req)
+		createResp, err := opts.Client.Services().WithMetro(opts.Metro).Create(ctx, req)
 		if err != nil {
 			return nil, fmt.Errorf("creating service group: %w", err)
 		}
 
-		svcResps[alias] = resp
+		svc, err := createResp.FirstOrErr()
+		if err != nil {
+			return nil, err
+		}
+
+		getResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, svc.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("creating service group: %w", err)
+		}
+
+		svcResps[alias] = getResp
 	}
 
 	return svcResps, nil
