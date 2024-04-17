@@ -9,7 +9,7 @@ on:
     branches: [staging]
     paths:
       - 'internal/cli/kraft/cloud/**'
-      - '.github/workflows/cloudtests.yaml'
+      - '.github/workflows/cloud-tests.yaml'
 
 jobs:
   e2e-ubuntu-cli:
