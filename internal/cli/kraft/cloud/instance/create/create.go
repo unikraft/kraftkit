@@ -293,40 +293,24 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			// No-op
 		}
 
-		if len(qualifiedInstancesToRolloutOver) > 0 {
-			var batch []string
-			for _, instance := range qualifiedInstancesToRolloutOver {
-				batch = append(batch, instance.UUID)
+		if len(qualifiedInstancesToRolloutOver) > 0 && opts.Rollout == StrategyPrompt {
+			strategy, err := selection.Select(
+				fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
+				RolloutStrategies()...,
+			)
+			if err != nil {
+				return nil, nil, err
 			}
 
-			if opts.Rollout == StrategyPrompt {
-				strategy, err := selection.Select(
-					fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
-					RolloutStrategies()...,
-				)
-				if err != nil {
-					return nil, nil, err
-				}
+			log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
 
-				log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
+			opts.Rollout = *strategy
+		}
 
-				opts.Rollout = *strategy
-			}
-
-			switch opts.Rollout {
-			case RolloutStrategyExit:
-				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
-
-			case RolloutStrategyStop:
-				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
-					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
-				}
-
-			case RolloutStrategyRemove:
-				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
-					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
-				}
-			}
+		// Return early if the rollout strategy is set to exit on conflict and there
+		// are existing instances in the service group.
+		if opts.Rollout == RolloutStrategyExit {
+			return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
 		}
 	}
 
