@@ -205,7 +205,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	var serviceGroup *kcservices.GetResponseItem
-	var qualifiedInstances []kcinstances.GetResponseItem
+	var qualifiedInstancesToRolloutOver []kcinstances.GetResponseItem
 
 	// Since an existing service group has been provided, we should now
 	// preemptively look up information about it.  Based on whether there are
@@ -275,58 +275,42 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			for _, instance := range instances {
 				instImageBase, _, _ := strings.Cut(instance.Image, "@")
 				if instImageBase == imageBase {
-					qualifiedInstances = append(qualifiedInstances, instance)
+					qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
 				}
 			}
 
 		case RolloutQualifierInstanceName:
 			for _, instance := range instances {
 				if instance.Name == opts.Name {
-					qualifiedInstances = append(qualifiedInstances, instance)
+					qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
 				}
 			}
 
 		case RolloutQualifierAll:
-			qualifiedInstances = instances
+			qualifiedInstancesToRolloutOver = instances
 
-		case RolloutQualifierNone:
+		default: // case RolloutQualifierNone:
 			// No-op
 		}
 
-		if len(qualifiedInstances) > 0 {
-			var batch []string
-			for _, instance := range qualifiedInstances {
-				batch = append(batch, instance.UUID)
+		if len(qualifiedInstancesToRolloutOver) > 0 && opts.Rollout == StrategyPrompt {
+			strategy, err := selection.Select(
+				fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
+				RolloutStrategies()...,
+			)
+			if err != nil {
+				return nil, nil, err
 			}
 
-			if opts.Rollout == StrategyPrompt {
-				strategy, err := selection.Select(
-					fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstances)),
-					RolloutStrategies()...,
-				)
-				if err != nil {
-					return nil, nil, err
-				}
+			log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
 
-				log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
+			opts.Rollout = *strategy
+		}
 
-				opts.Rollout = *strategy
-			}
-
-			switch opts.Rollout {
-			case RolloutStrategyExit:
-				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
-
-			case RolloutStrategyStop:
-				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
-					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
-				}
-
-			case RolloutStrategyRemove:
-				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
-					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
-				}
-			}
+		// Return early if the rollout strategy is set to exit on conflict and there
+		// are existing instances in the service group.
+		if opts.Rollout == RolloutStrategyExit {
+			return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
 		}
 	}
 
@@ -499,7 +483,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// Handle the rollout only after the new instance has been created.
 	// KraftCloud's service group load balancer will temporarily handle blue-green
 	// deployments.
-	if len(qualifiedInstances) > 0 {
+	if len(qualifiedInstancesToRolloutOver) > 0 {
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -523,24 +507,28 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			return nil, nil, fmt.Errorf("could not start wait process: %w", err)
 		}
 
-		err = paramodel.Start()
-		if err != nil {
+		if err = paramodel.Start(); err != nil {
 			log.G(ctx).
 				WithError(err).
 				Error("aborting rollout: could not wait for new instance to start")
 		} else {
 			var batch []string
-			for _, instance := range qualifiedInstances {
+			for _, instance := range qualifiedInstancesToRolloutOver {
+				log.G(ctx).
+					WithField("instance", instance.UUID).
+					Debug("qualified")
 				batch = append(batch, instance.UUID)
 			}
 
 			switch opts.Rollout {
 			case RolloutStrategyStop:
+				log.G(ctx).Infof("stopping %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
 					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
 				}
 
 			case RolloutStrategyRemove:
+				log.G(ctx).Infof("removing %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
 					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
 				}
