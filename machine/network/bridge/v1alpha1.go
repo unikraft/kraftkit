@@ -23,13 +23,6 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 )
 
-const (
-	// defaultNetworkMaxSize is the maximum size of a network name on Linux.
-	// We subtract 5 to account for the network interface suffix '@if%d%d%d'.
-	// The value 16 is taken from the glibc headers.
-	defaultNetworkNameMaxSize = 15 - 5
-)
-
 type v1alpha1Network struct{}
 
 func NewNetworkServiceV1alpha1(ctx context.Context, opts ...any) (networkv1alpha1.NetworkService, error) {
@@ -42,13 +35,11 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 		return nil, fmt.Errorf("cannot create network without name")
 	}
 
-	if len(network.Name) > defaultNetworkNameMaxSize {
-		return nil, fmt.Errorf("network name is too long, must be less than %d characters", defaultNetworkNameMaxSize)
+	if network.ObjectMeta.UID != "" {
+		return network, fmt.Errorf("network already exists: %s", network.Name)
 	}
 
-	if network.ObjectMeta.UID == "" {
-		network.ObjectMeta.UID = uuid.NewUUID()
-	}
+	network.ObjectMeta.UID = uuid.NewUUID()
 
 	if network.Spec.IfName == "" {
 		network.Spec.IfName = network.Name
@@ -59,10 +50,10 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 
 	// Validate the options.
 	if len(network.Spec.Gateway) == 0 {
-		return network, fmt.Errorf("gateway cannot be empty")
+		return nil, fmt.Errorf("gateway cannot be empty")
 	}
 	if len(network.Spec.Netmask) == 0 {
-		return network, fmt.Errorf("netmask cannot be empty")
+		return nil, fmt.Errorf("netmask cannot be empty")
 	}
 
 	bridge := &netlink.Bridge{
@@ -71,22 +62,40 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 
 	bridge.LinkAttrs.MTU = DefaultMTU
 
-	_, err := net.InterfaceByName(network.Name)
+	_, err := net.InterfaceByName(network.Spec.IfName)
 	if err == nil {
 		// Bridge already exists, return early.
-		return network, fmt.Errorf("network already exists: %s", network.Name)
+		return nil, fmt.Errorf("network already exists: %s", network.Name)
 	} else if !strings.Contains(err.Error(), "no such network interface") {
-		return network, fmt.Errorf("getting interface %s failed: %v", network.Name, err)
+		return nil, fmt.Errorf("getting interface %s failed: %v", network.Name, err)
 	}
 
-	// Create the bridge.
 	la := netlink.NewLinkAttrs()
 	la.Name = network.Name
 	la.MTU = bridge.MTU
+
 	br := &netlink.Bridge{LinkAttrs: la}
-	if err := netlink.LinkAdd(br); err != nil {
-		return network, fmt.Errorf("bridge creation for %s failed: %v", network.Name, err)
+
+	for {
+		// Create the bridge.
+		err := netlink.LinkAdd(br)
+		if err == nil {
+			break
+		}
+
+		if err.Error() == "numerical result out of range" {
+			// The bridge name is too long for the generic naming scheme,
+			// try a shorter name by generating new hash.
+
+			// Generate the name as br-<first 8 characters of the hash>
+			la.Name = fmt.Sprintf("br-%s", uuid.NewUUID()[:8])
+			br = &netlink.Bridge{LinkAttrs: la}
+		} else {
+			return nil, fmt.Errorf("creating bridge %s failed: %v", network.Name, err)
+		}
 	}
+
+	network.Spec.IfName = la.Name
 
 	// br.Promisc = 1 // TODO(nderjung): Should the bridge be promiscuous?
 
@@ -100,19 +109,19 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 		},
 	}
 	if err := netlink.AddrAdd(br, addr); err != nil {
-		return network, fmt.Errorf("adding address %s to bridge %s failed: %v", addr.String(), network.Name, err)
+		return nil, fmt.Errorf("adding address %s to bridge %s failed: %v", addr.String(), network.Name, err)
 	}
 
 	// Bring the bridge up.
 	if err := netlink.LinkSetUp(br); err != nil {
-		return network, fmt.Errorf("bringing bridge %s up failed: %v", network.Name, err)
+		return nil, fmt.Errorf("bringing bridge %s up failed: %v", network.Name, err)
 	}
 
 	network.CreationTimestamp = metav1.Now()
 
-	link, err := netlink.LinkByName(network.Name)
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
-		return network, fmt.Errorf("could not get bridge %s details: %v", network.Name, err)
+		return nil, fmt.Errorf("could not get bridge %s details: %v", network.Name, err)
 	}
 
 	// Use the internal network bridge networking system to determine
@@ -139,12 +148,28 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 					}
 
 					if err.Error() == "numerical result out of range" {
-						return network, fmt.Errorf("interface name is too long: %s, consider using a shorter network name", ifname)
+						break
 					}
 
-					return network, err
+					return nil, err
 				}
 				j++
+			}
+		}
+
+		// If the usual naming scheme fails, try a shorter name by generating new hash.
+		if iface.Spec.IfName == "" {
+			for {
+				ifname := fmt.Sprintf("br-%s", uuid.NewUUID()[:8])
+				if _, err := netlink.LinkByName(ifname); err != nil {
+					if err.Error() == "Link not found" {
+						iface.Spec.IfName = ifname
+						break
+					}
+
+					return nil, err
+				}
+
 			}
 		}
 
@@ -157,15 +182,15 @@ func (service *v1alpha1Network) Create(ctx context.Context, network *networkv1al
 		tap.MasterIndex = bridge.Attrs().Index
 		tap.HardwareAddr, err = net.ParseMAC(iface.Spec.MacAddress)
 		if err != nil {
-			return network, err
+			return nil, err
 		}
 
 		if err := netlink.LinkAdd(tap); err != nil {
-			return network, err
+			return nil, err
 		}
 
 		if err := netlink.LinkSetAlias(tap, fmt.Sprintf("%s:%s", network.ObjectMeta.UID, iface.ObjectMeta.UID)); err != nil {
-			return network, err
+			return nil, err
 		}
 
 		network.Spec.Interfaces[i] = iface
@@ -189,7 +214,7 @@ func (service *v1alpha1Network) Start(ctx context.Context, network *networkv1alp
 	}
 
 	// Get the bridge link.
-	link, err := netlink.LinkByName(network.Name)
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
 		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
 	}
@@ -228,7 +253,7 @@ func (service *v1alpha1Network) Stop(ctx context.Context, network *networkv1alph
 	}
 
 	// Get the bridge link.
-	link, err := netlink.LinkByName(network.Name)
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
 		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
 	}
@@ -246,7 +271,7 @@ func (service *v1alpha1Network) Stop(ctx context.Context, network *networkv1alph
 // Update implements kraftkit.sh/api/network/v1alpha1.Update.  This method only
 // supports updating any provided
 func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
-	link, err := netlink.LinkByName(network.Name)
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
 		return network, fmt.Errorf("could not get bridge link: %v", err)
 	}
@@ -295,12 +320,27 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 					}
 
 					if err.Error() == "numerical result out of range" {
-						return network, fmt.Errorf("interface name is too long: %s, consider using a shorter network name", ifname)
+						break
 					}
 
 					return network, err
 				}
 				j++
+			}
+		}
+
+		// If the usual naming scheme fails, try a shorter name by generating new hash.
+		if iface.Spec.IfName == "" {
+			for {
+				ifname := fmt.Sprintf("br-%s", uuid.NewUUID()[:8])
+				if _, err := netlink.LinkByName(ifname); err != nil {
+					if err.Error() == "Link not found" {
+						iface.Spec.IfName = ifname
+						break
+					}
+
+					return network, err
+				}
 			}
 		}
 
@@ -432,7 +472,7 @@ func (service *v1alpha1Network) Delete(ctx context.Context, network *networkv1al
 	}
 
 	// Get the bridge link.
-	link, err := netlink.LinkByName(network.Name)
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
 		return network, fmt.Errorf("getting bridge %s failed: %v", network.Name, err)
 	}
@@ -479,9 +519,13 @@ func mapBridgeStatistics(network *networkv1alpha1.Network, bridge *netlink.Bridg
 
 // Get implements kraftkit.sh/api/network/v1alpha1.Get
 func (service *v1alpha1Network) Get(ctx context.Context, network *networkv1alpha1.Network) (*networkv1alpha1.Network, error) {
-	link, err := netlink.LinkByName(network.Name)
+	if network.UID == "" {
+		return nil, fmt.Errorf("no such network: %s", network.Name)
+	}
+
+	link, err := netlink.LinkByName(network.Spec.IfName)
 	if err != nil {
-		return network, fmt.Errorf("could not get link %s: %v", network.Name, err)
+		return network, fmt.Errorf("could not get link %s: %v", network.Spec.IfName, err)
 	}
 
 	if network.ObjectMeta.CreationTimestamp == *new(metav1.Time) {
@@ -583,6 +627,7 @@ func (service *v1alpha1Network) List(ctx context.Context, networks *networkv1alp
 		}
 
 		network.Spec = networkv1alpha1.NetworkSpec{
+			IfName:  bridge.Name,
 			Gateway: addrs[0].IP.String(),
 			Netmask: net.IP(addrs[0].Mask).String(),
 		}

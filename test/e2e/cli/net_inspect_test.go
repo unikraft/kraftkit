@@ -61,7 +61,7 @@ var _ = Describe("kraft net inspect", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"could not get link t-in-0: Link not found"}\n$`))
+			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"no such network: t-in-0"}\n$`))
 		})
 	})
 
