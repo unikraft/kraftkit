@@ -123,6 +123,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Name:                   opts.Name,
 		Ports:                  opts.Ports,
 		Replicas:               opts.Replicas,
+		RestartPolicy:          opts.RestartPolicy,
 		Rollout:                opts.Rollout,
 		RolloutQualifier:       opts.RolloutQualifier,
 		RolloutWait:            opts.RolloutWait,
