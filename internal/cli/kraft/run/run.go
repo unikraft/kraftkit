@@ -50,6 +50,7 @@ type RunOptions struct {
 	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
 	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
+	Runtime       string   `long:"runtime" short:"r" usage:"Set an alternative unikernel runtime"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
 	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`

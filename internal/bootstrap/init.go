@@ -14,7 +14,6 @@ import (
 	"kraftkit.sh/manifest"
 	"kraftkit.sh/oci"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/unikraft/runtime"
 )
 
 // InitKraftkit performs a set of kraftkit setup steps.
@@ -31,7 +30,6 @@ func InitKraftkit(ctx context.Context) error {
 }
 
 func registerAdditionalFlags() {
-	runtime.RegisterFlags()
 	manifest.RegisterFlags()
 	qemu.RegisterFlags()
 }
