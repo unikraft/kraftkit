@@ -22,7 +22,10 @@ import (
 )
 
 type PsOptions struct {
-	ShowAll bool `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
+	Long    bool   `long:"long" short:"l" usage:"Show more information"`
+	Output  string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Quiet   bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
+	ShowAll bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
 
 	composefile string
 }
@@ -80,7 +83,9 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	pslistOptions := pslist.PsOptions{
-		Output:  "table",
+		Long:    opts.Long,
+		Output:  opts.Output,
+		Quiet:   opts.Quiet,
 		ShowAll: opts.ShowAll,
 	}
 
