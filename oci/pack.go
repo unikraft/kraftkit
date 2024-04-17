@@ -280,7 +280,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 	switch popts.MergeStrategy() {
 	case packmanager.StrategyMerge, packmanager.StrategyExit:
-		ocipack.index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.String())
+		ocipack.index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.Name())
 		if err != nil {
 			ocipack.index, err = NewIndex(ctx, ocipack.handle)
 			if err != nil {
@@ -291,7 +291,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 
 	case packmanager.StrategyOverwrite:
-		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.String(), true); err != nil {
+		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.Name(), true); err != nil {
 			return nil, fmt.Errorf("could not remove existing index: %w", err)
 		}
 
