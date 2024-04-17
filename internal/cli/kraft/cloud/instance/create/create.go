@@ -523,8 +523,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			return nil, nil, fmt.Errorf("could not start wait process: %w", err)
 		}
 
-		err = paramodel.Start()
-		if err != nil {
+		if err = paramodel.Start(); err != nil {
 			log.G(ctx).
 				WithError(err).
 				Error("aborting rollout: could not wait for new instance to start")
