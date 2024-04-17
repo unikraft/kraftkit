@@ -289,7 +289,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		case RolloutQualifierAll:
 			qualifiedInstancesToRolloutOver = instances
 
-		case RolloutQualifierNone:
+		default: // case RolloutQualifierNone:
 			// No-op
 		}
 
