@@ -514,16 +514,21 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		} else {
 			var batch []string
 			for _, instance := range qualifiedInstancesToRolloutOver {
+				log.G(ctx).
+					WithField("instance", instance.UUID).
+					Debug("qualified")
 				batch = append(batch, instance.UUID)
 			}
 
 			switch opts.Rollout {
 			case RolloutStrategyStop:
+				log.G(ctx).Infof("stopping %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
 					return nil, nil, fmt.Errorf("could not stop instance(s): %w", err)
 				}
 
 			case RolloutStrategyRemove:
+				log.G(ctx).Infof("removing %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
 					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
 				}
