@@ -81,7 +81,7 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: oci-images
+          name: qemu-oci-image
           path: /tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
 
       - name: Push OCI Image
@@ -166,7 +166,7 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: oci-images
+          name: myself-oci-image
           path: /tmp/myself.tar
 
       - name: Push OCI Image
@@ -233,7 +233,14 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/download-artifact@v4
         with:
-          name: oci-images
+          name: myself-oci-image
+          path: /tmp
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: qemu-oci-image
           path: /tmp
 
       - name: Load Docker image
@@ -260,7 +267,7 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: oci-images
+          name: base-oci-image
           path: /tmp/base.tar
 
       - name: Push OCI Image
@@ -317,7 +324,21 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/download-artifact@v4
         with:
-          name: oci-images
+          name: myself-oci-image
+          path: /tmp
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: qemu-oci-image
+          path: /tmp
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: base-oci-image
           path: /tmp
 
       - name: Load Docker image
@@ -344,7 +365,7 @@ jobs:
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: oci-images
+          name: base-golang-oci-image
           path: /tmp/base-golang.tar
 
       - name: Push OCI Image
@@ -402,11 +423,19 @@ jobs:
         with:
           driver: docker
 
+
       - name: Download artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
         uses: actions/download-artifact@v4
         with:
-          name: oci-images
+          name: myself-oci-image
+          path: /tmp
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: qemu-oci-image
           path: /tmp
 
       - name: Load Docker image
