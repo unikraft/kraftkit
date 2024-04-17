@@ -1,0 +1,466 @@
+name: buildenvs
+
+on:
+  push:
+    branches: [stable]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - 'buildenvs/qemu.Dockerfile'
+      - 'buildenvs/myself.Dockerfile'
+      - 'buildenvs/base.Dockerfile'
+      - 'buildenvs/base-golang.Dockerfile'
+      - 'buildenvs/github-action.Dockerfile'
+      - '.github/workflows/buildenvs.yaml'
+      - 'tools/github-action/**'
+      - 'action.yml'
+
+jobs:
+  qemu:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - QEMU_VERSION: 8.2.0
+
+    steps:
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check should run
+        id: check-run
+        if: >
+          github.event_name == 'pull_request' &&
+          (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/qemu.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base-golang.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/github-action.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'tools/github-action/') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'action.yml')
+          ) ||
+          github.event_name == 'push'
+        run: |
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to OCI registry
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/login-action@v3
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build OCI image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          file: ./buildenvs/qemu.Dockerfile
+          tags: kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
+
+      - name: Upload Docker image artifact
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
+
+      - name: Push OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
+          platforms: linux/amd64
+          file: ./buildenvs/qemu.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  myself:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check should run
+        id: check-run
+        if: >
+          github.event_name == 'pull_request' &&
+          (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/myself.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base-golang.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/github-action.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'tools/github-action/') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'action.yml')
+          ) ||
+          github.event_name == 'push'
+        run: |
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
+
+      - name: Set up QEMU
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to OCI registry
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/login-action@v3
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build OCI image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          load: true
+          file: ./buildenvs/myself.Dockerfile
+          tags: kraftkit.sh/myself:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/myself.tar
+        env:
+          IMAGE_TAG: blahblahblah
+
+      - name: Upload Docker image artifact
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp/myself.tar
+
+      - name: Push OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/myself:latest
+          platforms: linux/amd64
+          file: ./buildenvs/myself.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  base:
+    runs-on: ubuntu-latest
+    needs: [qemu, myself]
+
+    steps:
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check should run
+        id: check-run
+        if: >
+          github.event_name == 'pull_request' &&
+          (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/myself.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base-golang.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml')
+          ) ||
+          github.event_name == 'push'
+        run: |
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
+
+      - name: Set up QEMU
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to OCI registry
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/login-action@v3
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp
+
+      - name: Load Docker image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        run: |
+          for I in /tmp/*.tar; do docker load --input "${I}"; done
+
+      - name: Build OCI image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          load: true
+          file: ./buildenvs/base.Dockerfile
+          tags: kraftkit.sh/base:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/base.tar
+
+      - name: Upload Docker image artifact
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp/base.tar
+
+      - name: Push OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/base:latest
+          platforms: linux/amd64
+          file: ./buildenvs/base.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  base-golang:
+    runs-on: ubuntu-latest
+    needs: [base]
+    steps:
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check should run
+        id: check-run
+        if: >
+          github.event_name == 'pull_request' &&
+          (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/myself.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base-golang.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml')
+          ) ||
+          github.event_name == 'push'
+        run: |
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to OCI registry
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/login-action@v3
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp
+
+      - name: Load Docker image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        run: |
+          for I in /tmp/*.tar; do docker load --input "${I}"; done
+
+      - name: Build OCI image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          load: true
+          file: ./buildenvs/base-golang.Dockerfile
+          tags: kraftkit.sh/base-golang:latest
+          platforms: linux/amd64
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/base-golang.tar
+
+      - name: Upload Docker image artifact
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp/base-golang.tar
+
+      - name: Push OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/base-golang:latest
+          platforms: linux/amd64
+          file: ./buildenvs/base-golang.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  github-action:
+    runs-on: ubuntu-latest
+    needs: [qemu, myself]
+
+    steps:
+      - name: Get changed files
+        if: ${{ github.event_name == 'pull_request' }}
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check should run
+        id: check-run
+        if: >
+          github.event_name == 'pull_request' &&
+          (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/qemu.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/github-action.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'tools/github-action/') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'action.yml')
+          ) ||
+          github.event_name == 'push'
+        run: |
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
+
+      - name: Set up QEMU
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Download artifacts
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: oci-images
+          path: /tmp
+
+      - name: Load Docker image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        run: |
+          for I in /tmp/*.tar; do docker load --input "${I}"; done
+
+      - name: Login to Registry
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/login-action@v3
+        with:
+          registry: index.unikraft.io
+          username: ${{ secrets.REG_USERNAME }}
+          password: ${{ secrets.REG_TOKEN }}
+
+      - name: Build OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: false
+          tags: kraftkit.sh/github-action:v0
+          platforms: linux/amd64
+          file: ./buildenvs/github-action.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+        env:
+          KRAFTKIT_VERSION: blahblahblah
+
+      - name: Fetch helloworld
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
+        uses: actions/checkout@v4
+        with:
+          repository: unikraft/app-helloworld
+          fetch-depth: 1
+          path: _helloworld
+
+      - name: Integration test
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
+        uses: ./
+        with:
+          loglevel: debug
+          workdir: _helloworld
+          arch: x86_64
+          plat: qemu
+          name: helloworld
+          execute: true
+
+      - name: Push OCI Image
+        if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: index.unikraft.io/kraftkit.sh/github-action:v0
+          platforms: linux/amd64
+          file: ./buildenvs/github-action.Dockerfile
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
