@@ -27,52 +27,43 @@ const (
 	DefaultPrebuilt  = "unikraft.org/base:latest"
 )
 
-// NewELFLoaderRuntime prepares a "ELF loader" application that has been
-// pre-built and is accessible from a remote registry.
-func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime, error) {
-	elfloader := Runtime{}
+// NewRuntime prepares a pre-built unikernel application for use.
+func NewRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime, error) {
+	runtime := Runtime{}
 
 	for _, opt := range pbopts {
-		if err := opt(&elfloader); err != nil {
+		if err := opt(&runtime); err != nil {
 			return nil, err
 		}
 	}
 
-	if defaultRuntime != "" {
+	if defaultRuntime == "" {
+		defaultRuntime = DefaultPrebuilt
+	} else {
 		// Return early if the user provided a custom elfloader unikernel
 		// application.
 		if ok, _ := unikraft.IsFileUnikraftUnikernel(defaultRuntime); ok {
-			elfloader.kernel = defaultRuntime
-			return &elfloader, nil
+			runtime.kernel = defaultRuntime
+			return &runtime, nil
 		}
-
-		elfloader.source = defaultRuntime
-	} else if len(elfloader.kernel) > 0 {
-		return &elfloader, nil
-	} else if len(elfloader.name) == 0 {
-		elfloader.name = DefaultPrebuilt
 	}
 
 	var err error
-	elfloader.registry = packmanager.G(ctx)
-	if elfloader.registry == nil {
-		elfloader.registry, err = oci.NewOCIManager(ctx,
+	runtime.registry = packmanager.G(ctx)
+	if runtime.registry == nil {
+		runtime.registry, err = oci.NewOCIManager(ctx,
 			oci.WithDetectHandler(),
 		)
 	} else {
-		elfloader.registry, err = elfloader.registry.From(oci.OCIFormat)
+		runtime.registry, err = runtime.registry.From(oci.OCIFormat)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	if err := elfloader.registry.SetSources(ctx, PrebuiltRegistry); err != nil {
-		return nil, err
-	}
-
 	// First try locally
-	results, err := elfloader.registry.Catalog(ctx,
-		packmanager.WithName(elfloader.name),
+	results, err := runtime.registry.Catalog(ctx,
+		packmanager.WithName(runtime.name),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 	)
 	if err != nil {
@@ -80,8 +71,8 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 	}
 
 	if len(results) == 0 {
-		results, err = elfloader.registry.Catalog(ctx,
-			packmanager.WithName(elfloader.name),
+		results, err = runtime.registry.Catalog(ctx,
+			packmanager.WithName(runtime.name),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithRemote(true),
 		)
@@ -91,7 +82,7 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("could not find elfloader")
+		return nil, fmt.Errorf("could not find runtime")
 	} else if len(results) > 1 {
 		options := make([]string, len(results))
 		for i, result := range results {
@@ -100,12 +91,12 @@ func NewELFLoaderRuntime(ctx context.Context, pbopts ...RuntimeOption) (*Runtime
 		return nil, fmt.Errorf("too many options: %v", options)
 	}
 
-	elfloader.pack = results[0]
-	elfloader.name = results[0].Name()
-	elfloader.version = results[0].Version()
-	elfloader.source = results[0].Name()
+	runtime.pack = results[0]
+	runtime.name = results[0].Name()
+	runtime.version = results[0].Version()
+	runtime.source = results[0].Name()
 
-	return &elfloader, nil
+	return &runtime, nil
 }
 
 // ID implements kraftkit.sh/pack.Package
@@ -114,66 +105,66 @@ func (runtime *Runtime) ID() string {
 }
 
 // Columns implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Columns() []tableprinter.Column {
-	return elfloader.pack.Columns()
+func (runtime *Runtime) Columns() []tableprinter.Column {
+	return runtime.pack.Columns()
 }
 
 // Metadata implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Metadata() interface{} {
-	return elfloader.pack.Metadata()
+func (runtime *Runtime) Metadata() interface{} {
+	return runtime.pack.Metadata()
 }
 
 // Push implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Push(ctx context.Context, opts ...pack.PushOption) error {
-	panic("not implemented: kraftkit.sh/unikraft/elfloader.Runtime.Push")
+func (runtime *Runtime) Push(ctx context.Context, opts ...pack.PushOption) error {
+	panic("not implemented: kraftkit.sh/unikraft/runtime.Runtime.Push")
 }
 
 // Unpack implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Unpack(ctx context.Context, dir string) error {
-	return elfloader.pack.Unpack(ctx, dir)
+func (runtime *Runtime) Unpack(ctx context.Context, dir string) error {
+	return runtime.pack.Unpack(ctx, dir)
 }
 
 // Pull implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Pull(ctx context.Context, opts ...pack.PullOption) error {
-	return elfloader.pack.Pull(ctx, opts...)
+func (runtime *Runtime) Pull(ctx context.Context, opts ...pack.PullOption) error {
+	return runtime.pack.Pull(ctx, opts...)
 }
 
 // Pull implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) PulledAt(ctx context.Context) (bool, time.Time, error) {
-	return elfloader.pack.PulledAt(ctx)
+func (runtime *Runtime) PulledAt(ctx context.Context) (bool, time.Time, error) {
+	return runtime.pack.PulledAt(ctx)
 }
 
-func (elfloader *Runtime) Delete(ctx context.Context) error {
-	return elfloader.pack.Delete(ctx)
+func (runtime *Runtime) Delete(ctx context.Context) error {
+	return runtime.pack.Delete(ctx)
 }
 
 // Save implements kraftkit.sh/pack.Package
-func (elfloader *Runtime) Save(ctx context.Context) error {
-	return elfloader.pack.Save(ctx)
+func (runtime *Runtime) Save(ctx context.Context) error {
+	return runtime.pack.Save(ctx)
 }
 
 // Format implements kraftkit.sh/unikraft.component.Component
-func (elfloader *Runtime) Format() pack.PackageFormat {
-	return elfloader.pack.Format()
+func (runtime *Runtime) Format() pack.PackageFormat {
+	return runtime.pack.Format()
 }
 
 // Architecture implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) Architecture() arch.Architecture {
-	return elfloader.pack.(target.Target).Architecture()
+func (runtime *Runtime) Architecture() arch.Architecture {
+	return runtime.pack.(target.Target).Architecture()
 }
 
 // Platform implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) Platform() plat.Platform {
-	return elfloader.pack.(target.Target).Platform()
+func (runtime *Runtime) Platform() plat.Platform {
+	return runtime.pack.(target.Target).Platform()
 }
 
 // Kernel implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) Kernel() string {
-	if len(elfloader.kernel) > 0 {
-		return elfloader.kernel
+func (runtime *Runtime) Kernel() string {
+	if len(runtime.kernel) > 0 {
+		return runtime.kernel
 	}
 
-	if t, ok := elfloader.pack.(target.Target); ok {
+	if t, ok := runtime.pack.(target.Target); ok {
 		return t.Kernel()
 	}
 
@@ -181,21 +172,25 @@ func (elfloader *Runtime) Kernel() string {
 }
 
 // KernelDbg implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) KernelDbg() string {
-	return elfloader.pack.(target.Target).KernelDbg()
+func (runtime *Runtime) KernelDbg() string {
+	return runtime.pack.(target.Target).KernelDbg()
 }
 
 // Initrd implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) Initrd() initrd.Initrd {
-	return elfloader.pack.(target.Target).Initrd()
+func (runtime *Runtime) Initrd() initrd.Initrd {
+	return runtime.pack.(target.Target).Initrd()
 }
 
 // Command implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) Command() []string {
-	return elfloader.pack.(target.Target).Command()
+func (runtime *Runtime) Command() []string {
+	return runtime.pack.(target.Target).Command()
 }
 
 // ConfigFilename implements kraftkit.sh/unikraft.target.Target
-func (elfloader *Runtime) ConfigFilename() string {
-	return elfloader.pack.(target.Target).ConfigFilename()
+func (runtime *Runtime) ConfigFilename() string {
+	return runtime.pack.(target.Target).ConfigFilename()
+}
+
+func (runtime *Runtime) AddRootfs(path string) error {
+	return nil
 }
