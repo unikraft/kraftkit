@@ -414,6 +414,11 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		environ = append(environ, fmt.Sprintf("%s=%s", k, *v))
 	}
 
+	ports := []string{}
+	for _, port := range service.Ports {
+		ports = append(ports, fmt.Sprintf("%s:%s:%d/%s", port.HostIP, port.Published, port.Target, port.Protocol))
+	}
+
 	runOptions := run.RunOptions{
 		Architecture: arch,
 		Detach:       true,
@@ -422,6 +427,7 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		Networks:     networks,
 		NoStart:      true,
 		Platform:     plat,
+		Ports:        ports,
 		Volumes:      volumes,
 	}
 
