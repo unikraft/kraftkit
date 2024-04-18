@@ -61,7 +61,7 @@ jobs:
         env:
           KRAFTCLOUD_METRO: ${{ secrets.KRAFTCLOUD_METRO }}
           KRAFTCLOUD_TOKEN: ${{ secrets.KRAFTCLOUD_TOKEN }}
-          KRAFTCLOUD_USER: ${{ secrets.KRAFTCLOUD_USER }}
+          KRAFTCLOUD_USER: ${{ env.KRAFTCLOUD_USER }}
           KRAFTKIT_NO_CHECK_UPDATES: true
           KRAFTKIT_NO_WARN_SUDO: true
           DOCKER: ''
