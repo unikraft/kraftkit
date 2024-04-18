@@ -36,9 +36,11 @@ func (printer *TablePrinter) renderList(w io.Writer) error {
 				return err
 			}
 
-			_, err := fmt.Fprintf(w, "%s: ", headerText)
-			if err != nil {
-				return err
+			if headerText != "" {
+				_, err := fmt.Fprintf(w, "%s: ", headerText)
+				if err != nil {
+					return err
+				}
 			}
 
 			for i, value := range strings.Split(field.text, ", ") {
