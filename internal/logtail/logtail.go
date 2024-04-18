@@ -117,7 +117,7 @@ func peekAndRead(file *os.File, reader *bufio.Reader, logs *chan string, errs *c
 	}
 
 	if len(s) > discarded {
-		*logs <- string(s[discarded:])
+		*logs <- string(s[discarded : len(s)-1])
 	}
 
 	return false

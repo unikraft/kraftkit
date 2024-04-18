@@ -193,9 +193,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 			} else {
 				scanner := bufio.NewScanner(fd)
 				for scanner.Scan() {
-					if err := consumer.Consume(scanner.Text() + "\n"); err != nil {
-						errGroup = append(errGroup, err)
-					}
+					consumer.Consume(scanner.Text())
 				}
 			}
 		}
@@ -285,10 +283,7 @@ loop:
 		// Wait on either channel
 		select {
 		case line := <-logs:
-			if err := consumer.Consume(line); err != nil {
-				log.G(ctx).Errorf("could not consume log line: %v", err)
-				return err
-			}
+			consumer.Consume(line)
 
 		case err := <-errs:
 			eof = true

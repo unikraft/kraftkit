@@ -158,10 +158,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 					return
 				case line, ok := <-logChan:
 					if ok {
-						if err := consumer.Consume(fmt.Sprintf("%s\n", line)); err != nil {
-							errGroup = append(errGroup, err)
-							return
-						}
+						consumer.Consume(line)
 					}
 				}
 			}

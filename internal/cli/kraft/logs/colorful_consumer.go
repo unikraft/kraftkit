@@ -13,7 +13,7 @@ import (
 )
 
 type LogConsumer interface {
-	Consume(line string) error
+	Consume(line ...string)
 }
 
 type ColorfulConsumer struct {
@@ -40,12 +40,12 @@ func NewColorfulConsumer(streams *iostreams.IOStreams, color bool, prefix string
 }
 
 // Consume implements logConsumer
-func (c *ColorfulConsumer) Consume(s string) error {
-	if c.prefix != "" {
-		s = fmt.Sprintf("%s | %s", c.color(c.prefix), s)
+func (c *ColorfulConsumer) Consume(strs ...string) {
+	for _, s := range strs {
+		if c.prefix != "" {
+			s = fmt.Sprintf("%s | %s", c.color(c.prefix), s)
+		}
+
+		fmt.Fprintf(c.streams.Out, "%s\n", s)
 	}
-
-	fmt.Fprint(c.streams.Out, s)
-
-	return nil
 }
