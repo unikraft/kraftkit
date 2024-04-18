@@ -33,21 +33,21 @@ import (
 type colorFunc func(string) string
 
 var (
-	instanceStateColor = map[string]colorFunc{
-		"draining": iostreams.Yellow,
-		"running":  iostreams.Green,
-		"standby":  iostreams.Cyan,
-		"starting": iostreams.Green,
-		"stopped":  iostreams.Red,
-		"stopping": iostreams.Yellow,
+	instanceStateColor = map[kcinstances.InstanceState]colorFunc{
+		kcinstances.InstanceStateDraining: iostreams.Yellow,
+		kcinstances.InstanceStateRunning:  iostreams.Green,
+		kcinstances.InstanceStateStandby:  iostreams.Cyan,
+		kcinstances.InstanceStateStarting: iostreams.Green,
+		kcinstances.InstanceStateStopped:  iostreams.Red,
+		kcinstances.InstanceStateStopping: iostreams.Yellow,
 	}
-	instanceStateColorNil = map[string]colorFunc{
-		"draining": nil,
-		"running":  nil,
-		"standby":  nil,
-		"starting": nil,
-		"stopped":  nil,
-		"stopping": nil,
+	instanceStateColorNil = map[kcinstances.InstanceState]colorFunc{
+		kcinstances.InstanceStateDraining: nil,
+		kcinstances.InstanceStateRunning:  nil,
+		kcinstances.InstanceStateStandby:  nil,
+		kcinstances.InstanceStateStarting: nil,
+		kcinstances.InstanceStateStopped:  nil,
+		kcinstances.InstanceStateStopping: nil,
 	}
 )
 
@@ -114,16 +114,21 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("PRIVATE IP", cs.Bold)
 	}
 	table.AddField("STATE", cs.Bold)
-	table.AddField("CREATED AT", cs.Bold)
-	if format != "table" {
-		table.AddField("STARTED AT", cs.Bold)
-		table.AddField("STOPPED AT", cs.Bold)
+	if format == "table" {
+		table.AddField("STATUS", cs.Bold)
+	} else {
+		table.AddField("CREATED", cs.Bold)
+		table.AddField("STARTED", cs.Bold)
+		table.AddField("STOPPED", cs.Bold)
 		table.AddField("START COUNT", cs.Bold)
 		table.AddField("RESTART COUNT", cs.Bold)
 		table.AddField("RESTART ATTEMPTS", cs.Bold)
-		table.AddField("RESTART NEXT AT", cs.Bold)
+		table.AddField("NEXT RESTART", cs.Bold)
+		table.AddField("RESTART POLICY", cs.Bold)
+		table.AddField("STOP ORIGIN", cs.Bold)
+		table.AddField("STOP REASON", cs.Bold)
+		table.AddField("APP EXIT CODE", cs.Bold)
 	}
-	table.AddField("RESTART POLICY", cs.Bold)
 	table.AddField("IMAGE", cs.Bold)
 	table.AddField("MEMORY", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
@@ -133,7 +138,9 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("SERVICE GROUP", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
-	table.AddField("UP TIME", cs.Bold)
+	if format != "table" {
+		table.AddField("UP TIME", cs.Bold)
+	}
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
@@ -152,8 +159,21 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil) // PRIVATE FQDN
 				table.AddField("", nil) // PRIVATE IP
 			}
-			table.AddField(instance.Message, nil)
-			table.AddField("", nil) // CREATED AT
+			table.AddField("", cs.Bold) // STATE
+			if format == "table" {
+				table.AddField(instance.Message, nil)
+			} else {
+				table.AddField("", cs.Bold) // CREATED
+				table.AddField("", cs.Bold) // STARTED
+				table.AddField("", cs.Bold) // STOPPED
+				table.AddField("", cs.Bold) // START COUNT
+				table.AddField("", cs.Bold) // RESTART COUNT
+				table.AddField("", cs.Bold) // RESTART ATTEMPTS
+				table.AddField("", cs.Bold) // RESTART NEXT
+				table.AddField("", cs.Bold) // RESTART POLICY
+				table.AddField("", cs.Bold) // STOP ORIGIN
+				table.AddField("", cs.Bold) // APP EXIT CODE
+			}
 			table.AddField("", nil) // IMAGE
 			table.AddField("", nil) // MEMORY
 			table.AddField("", nil) // ARGS
@@ -163,6 +183,9 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil) // SERVICE GROUP
 			}
 			table.AddField("", nil) // BOOT TIME
+			if format != "table" {
+				table.AddField("", nil) // UP TIME
+			}
 			table.EndRow()
 
 			continue
@@ -212,22 +235,35 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		}
 
 		table.AddField(string(instance.State), instanceStateColor[instance.State])
-		table.AddField(createdAt, nil)
-
-		if format != "table" {
+		if format == "table" {
+			table.AddField(instance.DescribeStatus(), nil)
+		} else {
+			table.AddField(createdAt, nil)
 			table.AddField(startedAt, nil)
 			table.AddField(stoppedAt, nil)
-			table.AddField(strconv.Itoa(instance.StartCount), nil)
-			table.AddField(strconv.Itoa(instance.RestartCount), nil)
+			table.AddField(fmt.Sprintf("%d", instance.StartCount), nil)
+			table.AddField(fmt.Sprintf("%d", instance.RestartCount), nil)
 			if instance.Restart != nil {
-				table.AddField(strconv.Itoa(instance.Restart.Attempt), nil)
+				table.AddField(fmt.Sprintf("%d", instance.Restart.Attempt), nil)
 				table.AddField(restartNextAt, nil)
 			} else {
 				table.AddField("", nil)
 				table.AddField("", nil)
 			}
+			table.AddField(string(instance.RestartPolicy), nil)
+			if instance.State == kcinstances.InstanceStateStopped {
+				table.AddField(fmt.Sprintf("%s (%s)", instance.DescribeStopOrigin(), instance.StopOriginCode()), nil)
+				table.AddField(fmt.Sprintf("%s (%s)", instance.DescribeStopReason(), instance.StopReasonCode()), nil)
+			} else {
+				table.AddField("", nil)
+				table.AddField("", nil)
+			}
+			if instance.ExitCode != nil {
+				table.AddField(fmt.Sprintf("%d", *instance.ExitCode), nil)
+			} else {
+				table.AddField("", nil)
+			}
 		}
-		table.AddField(string(instance.RestartPolicy), nil)
 		table.AddField(instance.Image, nil)
 		table.AddField(humanize.IBytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
 		table.AddField(strings.Join(instance.Args, " "), nil)
@@ -256,11 +292,13 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 
 		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUs)/1000), nil)
 
-		duration, err := time.ParseDuration(fmt.Sprintf("%dms", instance.UptimeMs))
-		if err != nil {
-			return fmt.Errorf("could not parse uptime for '%s': %w", instance.UUID, err)
+		if format != "table" {
+			duration, err := time.ParseDuration(fmt.Sprintf("%dms", instance.UptimeMs))
+			if err != nil {
+				return fmt.Errorf("could not parse uptime for '%s': %w", instance.UUID, err)
+			}
+			table.AddField(duration.String(), nil)
 		}
-		table.AddField(duration.String(), nil)
 
 		table.EndRow()
 	}
@@ -897,8 +935,15 @@ func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseIt
 		},
 		{
 			Key:   "state",
-			Value: color(instance.State),
+			Value: color(string(instance.State)),
 		},
+	}
+
+	if instance.State == "stopped" {
+		entries = append(entries, fancymap.FancyMapEntry{
+			Key:   "stop reason",
+			Value: instance.DescribeStopReason(),
+		})
 	}
 
 	if service != nil {
