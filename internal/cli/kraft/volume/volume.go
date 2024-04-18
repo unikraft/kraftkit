@@ -13,6 +13,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/volume/create"
+	"kraftkit.sh/internal/cli/kraft/volume/inspect"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/volume"
 )
@@ -36,6 +37,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(inspect.NewCmd())
 
 	return cmd
 }
