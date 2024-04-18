@@ -72,7 +72,12 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	for _, service := range project.Services {
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range services {
 		if service.Build == nil {
 			continue
 		}

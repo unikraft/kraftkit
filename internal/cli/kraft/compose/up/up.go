@@ -13,7 +13,9 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/compose/create"
+	"kraftkit.sh/internal/cli/kraft/compose/logs"
 	"kraftkit.sh/internal/cli/kraft/compose/start"
+	"kraftkit.sh/internal/cli/kraft/compose/stop"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 )
@@ -71,8 +73,33 @@ func (opts *UpOptions) Run(ctx context.Context, _ []string) error {
 
 	startOptions := start.StartOptions{
 		Composefile: opts.composefile,
-		Detach:      opts.Detach,
 	}
 
-	return startOptions.Run(ctx, []string{})
+	if err := startOptions.Run(ctx, []string{}); err != nil {
+		return err
+	}
+
+	if opts.Detach {
+		return nil
+	}
+
+	logsOptions := logs.LogsOptions{
+		Composefile: opts.composefile,
+		Follow:      true,
+	}
+
+	if err := logsOptions.Run(ctx, []string{}); err != nil {
+		return err
+	}
+
+	// If we get here it means the context was cancelled, stop the machines
+	log.G(ctx).Infof("stopping machines...")
+	stopOptions := stop.StopOptions{
+		Composefile: opts.composefile,
+	}
+
+	if err := stopOptions.Run(ctx, []string{}); err != nil {
+		return err
+	}
+	return nil
 }

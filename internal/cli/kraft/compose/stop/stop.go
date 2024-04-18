@@ -22,14 +22,13 @@ import (
 )
 
 type StopOptions struct {
-	composefile string
+	Composefile string
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
 		Short:   "Stop a compose project",
 		Use:     "stop [FLAGS]",
-		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
 			# Stop a compose project
@@ -55,20 +54,20 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, _ []string) error {
 	cmd.SetContext(ctx)
 
 	if cmd.Flag("file").Changed {
-		opts.composefile = cmd.Flag("file").Value.String()
+		opts.Composefile = cmd.Flag("file").Value.String()
 	}
 
-	log.G(cmd.Context()).WithField("composefile", opts.composefile).Debug("using")
+	log.G(cmd.Context()).WithField("composefile", opts.Composefile).Debug("using")
 	return nil
 }
 
-func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
+func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.composefile)
+	project, err := compose.NewProjectFromComposeFile(ctx, workdir, opts.Composefile)
 	if err != nil {
 		return err
 	}
@@ -87,8 +86,13 @@ func (opts *StopOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
 	machinesToStop := []string{}
-	for _, service := range project.Services {
+	for _, service := range services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name &&
 				(machine.Status.State == machineapi.MachineStateRunning ||

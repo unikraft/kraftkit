@@ -83,8 +83,13 @@ func (opts *LogsOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
 	machinesToLog := []string{}
-	for _, service := range project.Services {
+	for _, service := range services {
 		machine, _ := controller.Get(ctx, &machineapi.Machine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: service.Name,

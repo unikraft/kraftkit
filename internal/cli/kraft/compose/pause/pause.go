@@ -29,7 +29,6 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PauseOptions{}, cobra.Command{
 		Short:   "Pause a compose project",
 		Use:     "pause [FLAGS]",
-		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
 			# Pause a compose project
@@ -62,7 +61,7 @@ func (opts *PauseOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *PauseOptions) Run(ctx context.Context, _ []string) error {
+func (opts *PauseOptions) Run(ctx context.Context, args []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -87,8 +86,13 @@ func (opts *PauseOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
 	machinesToPause := []string{}
-	for _, service := range project.Services {
+	for _, service := range services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name && machine.Status.State == machineapi.MachineStateRunning {
 				machinesToPause = append(machinesToPause, machine.Name)

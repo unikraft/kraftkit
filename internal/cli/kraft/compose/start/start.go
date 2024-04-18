@@ -17,21 +17,18 @@ import (
 	"kraftkit.sh/packmanager"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
-	"kraftkit.sh/internal/cli/kraft/compose/logs"
 	kernelstart "kraftkit.sh/internal/cli/kraft/start"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
 type StartOptions struct {
 	Composefile string `noattribute:"true"`
-	Detach      bool   `long:"detach" short:"d" usage:"Run in background"`
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short:   "Start a compose project",
 		Use:     "start [FLAGS]",
-		Args:    cobra.NoArgs,
 		Aliases: []string{},
 		Example: heredoc.Doc(`
 			# Start a compose project
@@ -64,7 +61,7 @@ func (opts *StartOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *StartOptions) Run(ctx context.Context, _ []string) error {
+func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -89,8 +86,13 @@ func (opts *StartOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
+	services, err := project.GetServices(args...)
+	if err != nil {
+		return err
+	}
+
 	machinesToStart := []string{}
-	for _, service := range project.Services {
+	for _, service := range services {
 		for _, machine := range machines.Items {
 			if service.Name == machine.Name {
 				if machine.Status.State == machineapi.MachineStateCreated || machine.Status.State == machineapi.MachineStateExited {
@@ -109,14 +111,5 @@ func (opts *StartOptions) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	if opts.Detach {
-		return nil
-	}
-
-	logsOptions := logs.LogsOptions{
-		Composefile: opts.Composefile,
-		Follow:      true,
-	}
-
-	return logsOptions.Run(ctx, []string{})
+	return nil
 }
