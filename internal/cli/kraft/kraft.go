@@ -45,6 +45,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/stop"
 	"kraftkit.sh/internal/cli/kraft/unset"
 	"kraftkit.sh/internal/cli/kraft/version"
+	"kraftkit.sh/internal/cli/kraft/volume"
 	"kraftkit.sh/internal/cli/kraft/x"
 
 	// Additional initializers
@@ -113,6 +114,9 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "vol", Title: "LOCAL VOLUME COMMANDS"})
+	cmd.AddCommand(volume.NewCmd())
 
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
