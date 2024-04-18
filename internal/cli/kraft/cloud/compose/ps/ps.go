@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -99,8 +98,8 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 
 	// if no services are specified, start all services
 	if len(args) == 0 {
-		for _, service := range opts.Project.Services {
-			args = append(args, strings.SplitN(service.Name, "-", 2)[1])
+		for service := range opts.Project.Services {
+			args = append(args, service)
 		}
 	}
 
