@@ -246,7 +246,11 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 
 		switch v.Interface().(type) {
 		case time.Duration:
-			flags.DurationVarP((*time.Duration)(unsafe.Pointer(v.Addr().Pointer())), name, alias, time.Duration(defInt), usage)
+			dur, err := time.ParseDuration(defValue)
+			if err != nil {
+				dur = 0
+			}
+			flags.DurationVarP((*time.Duration)(unsafe.Pointer(v.Addr().Pointer())), name, alias, dur, usage)
 			continue
 		}
 
