@@ -39,6 +39,10 @@ type VolumeSpec struct {
 
 	// Mark whether the volume is readonly.
 	ReadOnly bool `json:"readOnly,omitempty"`
+
+	// Managed is a flag that indicates whether the volume is managed
+	// by kraftkit or not.
+	Managed bool `json:"managed,omitempty"`
 }
 
 // VolumeTemplateSpec describes the data a volume should have when created
@@ -87,6 +91,7 @@ type VolumeService interface {
 	Delete(context.Context, *Volume) (*Volume, error)
 	Get(context.Context, *Volume) (*Volume, error)
 	List(context.Context, *VolumeList) (*VolumeList, error)
+	Update(context.Context, *Volume) (*Volume, error)
 }
 
 // VolumeServiceHandler provides a Zip API Object Framework service for the
@@ -96,6 +101,7 @@ type VolumeServiceHandler struct {
 	delete zip.MethodStrategy[*Volume, *Volume]
 	get    zip.MethodStrategy[*Volume, *Volume]
 	list   zip.MethodStrategy[*VolumeList, *VolumeList]
+	update zip.MethodStrategy[*Volume, *Volume]
 }
 
 // Create implements VolumeService
@@ -116,6 +122,11 @@ func (client *VolumeServiceHandler) Get(ctx context.Context, req *Volume) (*Volu
 // List implements VolumeService
 func (client *VolumeServiceHandler) List(ctx context.Context, req *VolumeList) (*VolumeList, error) {
 	return client.list.Do(ctx, req)
+}
+
+// Update implements VolumeService
+func (client *VolumeServiceHandler) Update(ctx context.Context, req *Volume) (*Volume, error) {
+	return client.update.Do(ctx, req)
 }
 
 // NewVolumeServiceHandler returns a service based on an inline API
@@ -145,10 +156,16 @@ func NewVolumeServiceHandler(ctx context.Context, impl VolumeService, opts ...zi
 		return nil, err
 	}
 
+	update, err := zip.NewMethodClient(ctx, impl.Update, opts...)
+	if err != nil {
+		return nil, err
+	}
+
 	return &VolumeServiceHandler{
 		create,
 		delete,
 		get,
 		list,
+		update,
 	}, nil
 }
