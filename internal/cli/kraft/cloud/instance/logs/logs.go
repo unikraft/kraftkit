@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -154,7 +155,33 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 				case <-ctx.Done():
 					return
 				case err := <-errChan:
-					errGroup = append(errGroup, err)
+					if err != nil {
+						errGroup = append(errGroup, err)
+					}
+
+					resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
+					if err != nil {
+						errGroup = append(errGroup, err)
+						return
+					}
+
+					inst, err := resp.FirstOrErr()
+					if err != nil {
+						errGroup = append(errGroup, err)
+					}
+
+					if inst.StopCodeReason() != kcinstances.StopCodeReasonOK {
+						message := []string{
+							"",
+							"It looks like the instance exited fatally.  To see more details about why, run:",
+							"",
+							fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+							"",
+						}
+
+						consumer.Consume(message...)
+					}
+
 					return
 				case line, ok := <-logChan:
 					if ok {
