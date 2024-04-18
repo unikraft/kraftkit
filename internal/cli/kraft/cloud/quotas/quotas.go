@@ -15,14 +15,14 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 
 	kraftcloud "sdk.kraft.cloud"
 )
 
 type QuotasOptions struct {
-	Limits   bool   `long:"limits" short:"l" usage:"Show usage limits"`
-	Features bool   `long:"features" short:"f" usage:"Show enabled features"`
-	Output   string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
+	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 
 	metro string
 	token string
@@ -65,10 +65,6 @@ func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
-	if opts.Limits && opts.Features {
-		return fmt.Errorf("cannot use both limits and features flags")
-	}
-
 	return nil
 }
 
@@ -87,13 +83,11 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 		return fmt.Errorf("could not get quotas: %w", err)
 	}
 
-	if opts.Limits {
-		return utils.PrintQuotasLimits(ctx, opts.Output, *resp)
+	if err = iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
 
-	if opts.Features {
-		return utils.PrintQuotasFeatures(ctx, opts.Output, *resp)
-	}
+	defer iostreams.G(ctx).StopPager()
 
 	return utils.PrintQuotas(ctx, *auth, opts.Output, *resp)
 }
