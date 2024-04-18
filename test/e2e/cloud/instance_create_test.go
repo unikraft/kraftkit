@@ -82,7 +82,7 @@ var _ = Describe("kraft cloud instance create", func() {
 	When("invoked without flags or positional arguments", func() {
 		It("should error and print an error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -112,7 +112,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should print the instance as running and the url should work", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -132,7 +132,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -154,7 +154,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -174,7 +174,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should print the command's help", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -206,7 +206,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should boot up with the default memory size (128 MiB) and respond to requests", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -226,7 +226,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -248,7 +248,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -281,7 +281,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should boot up with the custom memory size (57 MiB) and respond to requests", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -301,7 +301,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -323,7 +323,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -356,7 +356,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out from KraftKit with a parse error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
@@ -385,7 +385,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out from the API with a bounds error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
@@ -414,7 +414,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out from kraftkit with a parsing error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
@@ -443,7 +443,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out from kraftkit with a parsing error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
@@ -472,7 +472,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should boot up with the custom memory size (57 MiB) and respond to requests", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -492,7 +492,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -514,7 +514,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -552,7 +552,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -588,7 +588,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -624,7 +624,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -660,7 +660,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -696,7 +696,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -730,7 +730,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -764,7 +764,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should start correctly and set the name with lowercase", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -786,7 +786,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -843,7 +843,7 @@ var _ = Describe("kraft cloud instance create", func() {
 				)
 
 				err := cmd.Run()
-				time.Sleep(1 * time.Second)
+				time.Sleep(2 * time.Second)
 				if err == nil {
 					fmt.Println("Failed for character: ", string(char))
 				}
@@ -877,7 +877,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should print the instance as stopped and the url should not work", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -896,7 +896,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -915,7 +915,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -949,7 +949,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should work, but the instance should not be accessible", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -976,7 +976,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1011,7 +1011,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should show all up in the service group details", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1034,7 +1034,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = serviceCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(serviceCmd.DumpError(stdout, stderr, err))
 			}
@@ -1057,7 +1057,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1090,7 +1090,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should print the instance as running and the url should work", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1110,7 +1110,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -1132,7 +1132,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1164,7 +1164,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1194,7 +1194,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1224,7 +1224,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1254,7 +1254,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1284,7 +1284,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with a Kraftkit error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1314,7 +1314,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with a Kraftkit error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1348,7 +1348,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should report information about a single replica, but 'instance ls' should show two", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1368,7 +1368,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -1388,7 +1388,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = lsCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(lsCmd.DumpError(stdout, stderr, err))
 			}
@@ -1419,7 +1419,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1439,7 +1439,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = cleanReplicaCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanReplicaCmd.DumpError(stdout, stderr, err))
 			}
@@ -1473,7 +1473,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should report information about no replicas, and 'instance ls' should show only one instance", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1493,7 +1493,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -1513,7 +1513,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = lsCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(lsCmd.DumpError(stdout, stderr, err))
 			}
@@ -1539,7 +1539,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1571,7 +1571,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with a KraftKit error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1601,7 +1601,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with a KraftKit error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1631,7 +1631,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with a KraftKit error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1664,7 +1664,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should show the instance as running and with the custom domain", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1688,7 +1688,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1708,7 +1708,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = certCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(certCmd.DumpError(stdout, stderr, err))
 			}
@@ -1729,7 +1729,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = cleanCertCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCertCmd.DumpError(stdout, stderr, err))
 			}
@@ -1761,7 +1761,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1791,7 +1791,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1821,7 +1821,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error out with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -1852,7 +1852,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should show the instance as being in standby and it should respond to requests", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1872,7 +1872,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -1894,7 +1894,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -1929,7 +1929,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should enable set the env flag in the machine and run it", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -1949,7 +1949,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -1971,7 +1971,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2006,7 +2006,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should set both envs in the machine and run it", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2026,7 +2026,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -2048,7 +2048,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2082,7 +2082,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should set the env flag in the machine and run it", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2102,7 +2102,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -2124,7 +2124,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2163,7 +2163,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should work somehow, but the image will be stopped", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2187,7 +2187,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2279,7 +2279,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = createServiceCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(createServiceCmd.DumpError(stdout, stderr, err))
 			}
@@ -2291,7 +2291,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should attach the instance to that service group", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2311,7 +2311,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -2333,7 +2333,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2351,7 +2351,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = cleanServiceCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanServiceCmd.DumpError(stdout, stderr, err))
 			}
@@ -2385,7 +2385,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -2416,7 +2416,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -2447,7 +2447,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should enable scale to zero and work", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2467,7 +2467,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
@@ -2489,7 +2489,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err := cleanCmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
 			}
@@ -2523,7 +2523,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
@@ -2554,7 +2554,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should error with an API error", func() {
 			err := cmd.Run()
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
