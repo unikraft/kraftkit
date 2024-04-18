@@ -22,7 +22,7 @@ func (printer *TablePrinter) renderJSON(w io.Writer) error {
 		m := make(map[string]string)
 
 		for j, column := range row {
-			m[strings.ToLower(header[j].text)] = column.text
+			m[strings.ReplaceAll(strings.ToLower(header[j].text), " ", "_")] = column.text
 		}
 
 		if len(m) > 0 {
