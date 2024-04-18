@@ -650,8 +650,8 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		table.AddField("", nil)
 	}
 
+	table.AddField("EXPOSED SERVICES", cs.Bold)
 	table.AddField("SERVICE GROUPS", cs.Bold)
-	table.AddField("SERVICES", cs.Bold)
 
 	// Blank line on list view
 	if format == "list" {
@@ -734,6 +734,14 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		table.AddField("", nil)
 	}
 
+	// EXPOSED SERVICES
+	var exposedServices string
+	if format == "list" {
+		exposedServices = printBar(quota.Used.Services, quota.Hard.Services) + " "
+	}
+	exposedServices += fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services)
+	table.AddField(exposedServices, nil)
+
 	// SERVICE GROUPS
 	var serviceGroups string
 	if format == "list" {
@@ -741,14 +749,6 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	}
 	serviceGroups += fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups)
 	table.AddField(serviceGroups, nil)
-
-	// SERVICES
-	var services string
-	if format == "list" {
-		services = printBar(quota.Used.Services, quota.Hard.Services) + " "
-	}
-	services += fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services)
-	table.AddField(services, nil)
 
 	// Blank line on list view
 	if format == "list" {
