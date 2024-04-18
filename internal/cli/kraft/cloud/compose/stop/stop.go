@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -118,8 +117,8 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 
 	// If no services are specified, stop all services.
 	if len(args) == 0 {
-		for _, service := range opts.Project.Services {
-			args = append(args, strings.SplitN(service.Name, "-", 2)[1])
+		for service := range opts.Project.Services {
+			args = append(args, service)
 		}
 	}
 
