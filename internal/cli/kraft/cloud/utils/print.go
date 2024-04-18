@@ -671,7 +671,9 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	}
 
 	table.AddField("AUTOSCALE", cs.Bold)
-	table.AddField("AUTOSCALE LIMIT", cs.Bold)
+	if quota.Limits.MaxAutoscaleSize > 1 {
+		table.AddField("AUTOSCALE LIMIT", cs.Bold)
+	}
 	table.AddField("SCALE-TO-ZERO", cs.Bold)
 
 	table.EndRow()
@@ -801,15 +803,10 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		table.AddField("enabled", cs.Green)
 
 		// AUTOSCALE LIMIT
-		var autoscaleLimit string
-		if format == "list" {
-			autoscaleLimit = printBar(quota.Limits.MinAutoscaleSize, quota.Limits.MaxAutoscaleSize) + " "
-		}
-		autoscaleLimit += fmt.Sprintf("%d/%d",
+		table.AddField(fmt.Sprintf("%d-%d",
 			quota.Limits.MinAutoscaleSize,
 			quota.Limits.MaxAutoscaleSize,
-		)
-		table.AddField(autoscaleLimit, nil)
+		), nil)
 	}
 
 	// SCALE-TO-ZERO
