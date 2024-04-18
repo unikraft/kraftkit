@@ -9,7 +9,7 @@ on:
     branches: [staging]
     paths:
       - 'internal/cli/kraft/cloud/**'
-      - '.github/workflows/cloudtests.yaml'
+      - '.github/workflows/cloud-tests.yaml'
 
 jobs:
   e2e-ubuntu-cli:
@@ -51,6 +51,9 @@ jobs:
             ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Run framework unit tests
+        env:
+          KRAFTKIT_NO_WARN_SUDO: true
+          KRAFTKIT_NO_CHECK_UPDATES: true
         run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
 
       - name: Run cloud e2e tests
@@ -59,5 +62,6 @@ jobs:
           KRAFTCLOUD_TOKEN: ${{ secrets.KRAFTCLOUD_TOKEN }}
           KRAFTCLOUD_USER: ${{ secrets.KRAFTCLOUD_USER }}
           KRAFTKIT_NO_CHECK_UPDATES: true
+          KRAFTKIT_NO_WARN_SUDO: true
           DOCKER: ''
         run: go run github.com/onsi/ginkgo/v2/ginkgo -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
