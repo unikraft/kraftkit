@@ -118,7 +118,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Env:                    opts.Env,
 		Domain:                 opts.Domain,
 		Image:                  packs[0].ID(),
-		Memory:                 opts.Memory,
+		Memory:                 uint(opts.Memory),
 		Metro:                  opts.Metro,
 		Name:                   opts.Name,
 		Ports:                  opts.Ports,

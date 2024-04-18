@@ -110,7 +110,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			return nil
 		}
 
-		log.G(ctx).Infof("Removing %d certificate(s)", len(certList))
+		log.G(ctx).Infof("removing %d certificate(s)", len(certList))
 
 		uuids := make([]string, 0, len(certList))
 		for _, certItem := range certList {
@@ -127,7 +127,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	log.G(ctx).Infof("Removing %d certificate(s)", len(args))
+	log.G(ctx).Infof("removing %d certificate(s)", len(args))
 
 	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
 	if err != nil {

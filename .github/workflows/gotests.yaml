@@ -84,7 +84,8 @@ jobs:
         env:
           KRAFTKIT_NO_WARN_SUDO: true
           KRAFTKIT_NO_CHECK_UPDATES: true
-        run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
+          DOCKER: ''
+        run: make test-framework DISTDIR="$(go env GOPATH)"/bin
 
       - name: Run e2e tests
         env:
