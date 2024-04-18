@@ -8,6 +8,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -585,6 +586,21 @@ func PrintServiceGroups(ctx context.Context, format string, resp kcclient.Servic
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// An internal utility method for printing a bar based on the provided progress
+// and max values and the width of the bar.
+func printBar(progress, max int) string {
+	width := 36
+
+	var ret strings.Builder
+
+	percent := math.Floor(float64(progress) / float64(max) * float64(width))
+
+	ret.WriteString(strings.Repeat("█", int(percent)))
+	ret.WriteString(strings.Repeat("░", width-int(percent)))
+
+	return ret.String()
+}
+
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
 func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
@@ -593,16 +609,10 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		return nil
 	}
 
-	quotas, err := resp.AllOrErr()
+	quota, err := resp.FirstOrErr()
 	if err != nil {
 		return err
 	}
-
-	if err = iostreams.G(ctx).StartPager(); err != nil {
-		log.G(ctx).Errorf("error starting pager: %v", err)
-	}
-
-	defer iostreams.G(ctx).StopPager()
 
 	cs := iostreams.G(ctx).ColorScheme()
 	table, err := tableprinter.NewTablePrinter(ctx,
@@ -619,172 +629,197 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 
 	table.AddField("USER NAME", cs.Bold)
 
-	user := strings.TrimSuffix(strings.TrimPrefix(auth.User, "robot$"), ".users.kraftcloud")
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
 
-	table.AddField("LIVE INSTANCES", cs.Bold)
+	table.AddField("ACTIVE INSTANCES", cs.Bold)
 	table.AddField("TOTAL INSTANCES", cs.Bold)
-	table.AddField("LIVE MEMORY", cs.Bold)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	table.AddField("ACTIVE USED MEMORY", cs.Bold)
+	table.AddField("MEMORY SIZE LIMITS", cs.Bold)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
 	table.AddField("SERVICE GROUPS", cs.Bold)
 	table.AddField("SERVICES", cs.Bold)
-	table.AddField("TOTAL VOLUME SIZE", cs.Bold)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
 	table.AddField("VOLUMES", cs.Bold)
+	if quota.Limits.MaxVolumeMb > 0 {
+		table.AddField("ACTIVE VOLUMES", cs.Bold)
+		table.AddField("USED VOLUME SPACE", cs.Bold)
+		table.AddField("VOLUME SIZE LIMITS", cs.Bold)
+	}
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	table.AddField("AUTOSCALE", cs.Bold)
+	table.AddField("AUTOSCALE LIMIT", cs.Bold)
+	table.AddField("SCALE-TO-ZERO", cs.Bold)
+
 	table.EndRow()
-
-	for _, quota := range quotas {
-		if format != "table" {
-			table.AddField(quota.UUID, nil)
-		}
-		table.AddField(user, nil)
-		table.AddField(fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances), nil)
-		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances), nil)
-		table.AddField(fmt.Sprintf("%s/%s",
-			humanize.IBytes(uint64(quota.Used.LiveMemoryMb)*humanize.MiByte),
-			humanize.IBytes(uint64(quota.Hard.LiveMemoryMb)*humanize.MiByte),
-		), nil)
-		table.AddField(fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups), nil)
-		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services), nil)
-		table.AddField(fmt.Sprintf("%s/%s",
-			humanize.IBytes(uint64(quota.Used.TotalVolumeMb)*humanize.MiByte),
-			humanize.IBytes(uint64(quota.Hard.TotalVolumeMb)*humanize.MiByte),
-		), nil)
-		table.AddField(fmt.Sprintf("%d/%d", quota.Used.Volumes, quota.Hard.Volumes), nil)
-		table.EndRow()
-	}
-
-	return table.Render(iostreams.G(ctx).Out)
-}
-
-// PrintQuotasLimits pretty-prints the provided set of user limits or returns
-// an error if unable to send to stdout via the provided context.
-func PrintQuotasLimits(ctx context.Context, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
-	if format == "raw" {
-		printRaw(ctx, resp)
-		return nil
-	}
-
-	quotas, err := resp.AllOrErr()
-	if err != nil {
-		return err
-	}
-
-	if err = iostreams.G(ctx).StartPager(); err != nil {
-		log.G(ctx).Errorf("error starting pager: %v", err)
-	}
-
-	defer iostreams.G(ctx).StopPager()
-
-	cs := iostreams.G(ctx).ColorScheme()
-	table, err := tableprinter.NewTablePrinter(ctx,
-		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
-		tableprinter.WithOutputFormatFromString(format),
-	)
-	if err != nil {
-		return err
-	}
 
 	if format != "table" {
-		table.AddField("UUID", cs.Bold)
+		// USER UUID
+		table.AddField(quota.UUID, nil)
 	}
 
-	table.AddField("MEMORY SIZE (MIN/MAX)", cs.Bold)
-	table.AddField("VOLUME SIZE (MIN/MAX)", cs.Bold)
-	table.AddField("AUTOSCALE SIZE (MIN/MAX)", cs.Bold)
-	table.EndRow()
+	// USER NAME
+	table.AddField(strings.TrimSuffix(strings.TrimPrefix(auth.User, "robot$"), ".users.kraftcloud"), nil)
 
-	for _, quota := range quotas {
-		if format != "table" {
-			table.AddField(quota.UUID, nil)
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	// ACTIVE INSTANCES
+	var activeInstances string
+	if format == "list" {
+		activeInstances = printBar(quota.Used.LiveInstances, quota.Hard.LiveInstances) + " "
+	}
+	activeInstances += fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances)
+	table.AddField(activeInstances, nil)
+
+	// TOTAL INSTANCES
+	var totalInstances string
+	if format == "list" {
+		totalInstances = printBar(quota.Used.Instances, quota.Hard.Instances) + " "
+	}
+	totalInstances += fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances)
+	table.AddField(totalInstances, nil)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	// ACTIVE USED MEMORY
+	var activeUsedMemory string
+	if format == "list" {
+		activeUsedMemory = printBar(quota.Used.LiveMemoryMb, quota.Hard.LiveMemoryMb) + " "
+	}
+	activeUsedMemory += fmt.Sprintf("%s/%s",
+		humanize.IBytes(uint64(quota.Used.LiveMemoryMb)*humanize.MiByte),
+		humanize.IBytes(uint64(quota.Hard.LiveMemoryMb)*humanize.MiByte),
+	)
+	table.AddField(activeUsedMemory, nil)
+
+	// MEMORY SIZE LIMITS
+	table.AddField(
+		fmt.Sprintf("%s-%s",
+			humanize.IBytes(uint64(quota.Limits.MinMemoryMb)*humanize.MiByte),
+			humanize.IBytes(uint64(quota.Limits.MaxMemoryMb)*humanize.MiByte),
+		), nil,
+	)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	// SERVICE GROUPS
+	var serviceGroups string
+	if format == "list" {
+		serviceGroups = printBar(quota.Used.ServiceGroups, quota.Hard.ServiceGroups) + " "
+	}
+	serviceGroups += fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups)
+	table.AddField(serviceGroups, nil)
+
+	// SERVICES
+	var services string
+	if format == "list" {
+		services = printBar(quota.Used.Services, quota.Hard.Services) + " "
+	}
+	services += fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services)
+	table.AddField(services, nil)
+
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	// VOLUMES
+	if quota.Limits.MaxVolumeMb == 0 {
+		table.AddField("disabled", cs.Gray)
+	} else {
+		table.AddField("enabled", cs.Green)
+
+		// ACTIVE VOLUMES
+		var activeVolumes string
+		if format == "list" {
+			activeVolumes = printBar(quota.Used.Volumes, quota.Hard.Volumes) + " "
 		}
+		activeVolumes += fmt.Sprintf("%d/%d", quota.Used.Volumes, quota.Hard.Volumes)
+		table.AddField(activeVolumes, nil)
 
-		table.AddField(
-			fmt.Sprintf("%s/%s",
-				humanize.IBytes(uint64(quota.Limits.MinMemoryMb)*humanize.MiByte),
-				humanize.IBytes(uint64(quota.Limits.MaxMemoryMb)*humanize.MiByte),
-			), nil,
+		// USED VOLUME SPACE
+		var usedVolumeSpace string
+		if format == "list" {
+			usedVolumeSpace = printBar(quota.Used.TotalVolumeMb, quota.Hard.TotalVolumeMb) + " "
+		}
+		usedVolumeSpace += fmt.Sprintf("%s/%s",
+			humanize.IBytes(uint64(quota.Used.TotalVolumeMb)*humanize.MiByte),
+			humanize.IBytes(uint64(quota.Hard.TotalVolumeMb)*humanize.MiByte),
 		)
+		table.AddField(usedVolumeSpace, nil)
 
+		// VOLUME SIZE LIMITS
 		table.AddField(
-			fmt.Sprintf("%s/%s",
+			fmt.Sprintf("%s-%s",
 				humanize.IBytes(uint64(quota.Limits.MinVolumeMb)*humanize.MiByte),
 				humanize.IBytes(uint64(quota.Limits.MaxVolumeMb)*humanize.MiByte),
 			), nil,
 		)
+	}
 
-		table.AddField(
-			fmt.Sprintf("%d/%d",
-				quota.Limits.MinAutoscaleSize,
-				quota.Limits.MaxAutoscaleSize,
-			), nil,
+	// Blank line on list view
+	if format == "list" {
+		table.AddField("", nil)
+	}
+
+	// AUTOSCALE
+	if quota.Limits.MaxAutoscaleSize == 1 {
+		table.AddField("disabled", cs.Gray)
+	} else {
+		table.AddField("enabled", cs.Green)
+
+		// AUTOSCALE LIMIT
+		var autoscaleLimit string
+		if format == "list" {
+			autoscaleLimit = printBar(quota.Limits.MinAutoscaleSize, quota.Limits.MaxAutoscaleSize) + " "
+		}
+		autoscaleLimit += fmt.Sprintf("%d/%d",
+			quota.Limits.MinAutoscaleSize,
+			quota.Limits.MaxAutoscaleSize,
 		)
-
-		table.EndRow()
+		table.AddField(autoscaleLimit, nil)
 	}
 
-	return table.Render(iostreams.G(ctx).Out)
-}
-
-// PrintQuotasFeatures pretty-prints the provided set of user quotas features
-// or returns an error if unable to send to stdout via the provided context.
-func PrintQuotasFeatures(ctx context.Context, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
-	if format == "raw" {
-		printRaw(ctx, resp)
-		return nil
+	// SCALE-TO-ZERO
+	if quota.Limits.MinAutoscaleSize == 0 {
+		table.AddField("enabled", cs.Green)
+	} else {
+		table.AddField("disabled", cs.Gray)
 	}
 
-	quotas, err := resp.AllOrErr()
-	if err != nil {
-		return err
-	}
-
-	if err = iostreams.G(ctx).StartPager(); err != nil {
-		log.G(ctx).Errorf("error starting pager: %v", err)
-	}
-
-	defer iostreams.G(ctx).StopPager()
-
-	cs := iostreams.G(ctx).ColorScheme()
-	table, err := tableprinter.NewTablePrinter(ctx,
-		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
-		tableprinter.WithOutputFormatFromString(format),
-	)
-	if err != nil {
-		return err
-	}
-
-	if format != "table" {
-		table.AddField("UUID", cs.Bold)
-	}
-
-	table.AddField("AUTOSCALE", cs.Bold)
-	table.AddField("SCALE TO ZERO", cs.Bold)
-	table.AddField("VOLUMES", cs.Bold)
 	table.EndRow()
-
-	for _, quota := range quotas {
-		if format != "table" {
-			table.AddField(quota.UUID, nil)
-		}
-
-		if quota.Limits.MaxAutoscaleSize == 1 {
-			table.AddField("disabled", nil)
-		} else {
-			table.AddField("enabled", nil)
-		}
-
-		if quota.Limits.MinAutoscaleSize == 0 {
-			table.AddField("enabled", nil)
-		} else {
-			table.AddField("disabled", nil)
-		}
-
-		if quota.Limits.MaxVolumeMb == 0 {
-			table.AddField("disabled", nil)
-		} else {
-			table.AddField("enabled", nil)
-		}
-
-		table.EndRow()
-	}
 
 	return table.Render(iostreams.G(ctx).Out)
 }
