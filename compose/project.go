@@ -132,7 +132,7 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 	var err error
 	usedAddresses := make(map[string]map[string]struct{})
 	for i, network := range project.Networks {
-		if len(network.Ipam.Config) == 0 {
+		if network.External || len(network.Ipam.Config) == 0 {
 			continue
 		}
 

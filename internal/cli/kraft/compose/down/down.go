@@ -112,6 +112,9 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	for _, projectNetwork := range project.Networks {
+		if projectNetwork.External {
+			continue
+		}
 		for _, network := range networks.Items {
 			if projectNetwork.Name == network.Name {
 				if err := removeNetwork(ctx, projectNetwork); err != nil {

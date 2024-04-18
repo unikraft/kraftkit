@@ -90,6 +90,9 @@ func (opts *LogsOptions) Run(ctx context.Context, args []string) error {
 
 	machinesToLog := []string{}
 	for _, service := range services {
+		if len(args) == 0 && service.Attach != nil && !*service.Attach {
+			continue
+		}
 		machine, _ := controller.Get(ctx, &machineapi.Machine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: service.Name,
