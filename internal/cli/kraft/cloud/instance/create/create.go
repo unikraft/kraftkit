@@ -37,13 +37,13 @@ type CreateOptions struct {
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image                  string                    `noattribute:"true"`
-	Memory                 int                       `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
+	Memory                 uint                      `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
 	Metro                  string                    `noattribute:"true"`
 	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
 	Output                 string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	RestartPolicy          kcinstances.RestartPolicy `noattribute:"true"`
-	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Replicas               uint                      `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Rollout                RolloutStrategy           `noattribute:"true"`
 	RolloutQualifier       RolloutQualifier          `noattribute:"true"`
 	RolloutWait            time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
@@ -174,10 +174,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		req.Args = args
 	}
 	if opts.Memory > 0 {
-		req.MemoryMB = &opts.Memory
+		req.MemoryMB = ptr(int(opts.Memory))
 	}
 	if opts.Replicas > 0 {
-		req.Replicas = &opts.Replicas
+		req.Replicas = ptr(int(opts.Replicas))
 	}
 
 	for _, vol := range opts.Volumes {
@@ -671,3 +671,5 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	return nil
 }
+
+func ptr[T comparable](v T) *T { return &v }
