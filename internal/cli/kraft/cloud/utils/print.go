@@ -254,7 +254,30 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			table.AddField(string(instance.RestartPolicy), nil)
 			if instance.State == kcinstances.InstanceStateStopped {
 				table.AddField(fmt.Sprintf("%s (%s)", instance.DescribeStopOrigin(), instance.StopOriginCode()), nil)
-				table.AddField(fmt.Sprintf("%s (%s)", instance.DescribeStopReason(), instance.StopReasonCode()), nil)
+				stopReason := instance.DescribeStopReason()
+				switch stopReason {
+				case "shutdown":
+					stopReason = "Successful shutdown."
+				case "assertion error":
+					stopReason = "Execution failed due to an unexpected state. Check instance logs."
+				case "out of memory":
+					stopReason = "Out of memory. Try increasing instance's memory (see -M flag)."
+				case "illegal memory access", "segmentation fault":
+					stopReason = "Illegal memory access. Check instance logs."
+				case "page fault":
+					stopReason = "Paging error. Check instance logs."
+				case "arithmetic error":
+					stopReason = "Arithmetic error. Check instance logs."
+				case "instruction error":
+					stopReason = "Invalid CPU instruction or instruction error. Check instance logs."
+				case "hardware error":
+					stopReason = "Hardware reported error. Check instance logs."
+				case "security violation":
+					stopReason = "Security violation. Check instance logs."
+				default:
+					stopReason = "Unexpected error Check instance logs."
+				}
+				table.AddField(fmt.Sprintf("%s (%s)", stopReason, instance.StopReasonCode()), nil)
 			} else {
 				table.AddField("", nil)
 				table.AddField("", nil)
