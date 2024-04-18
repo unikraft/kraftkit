@@ -38,13 +38,13 @@ type InitOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InitOptions{}, cobra.Command{
 		Short:   "Initialize autoscale configuration for a service group",
-		Use:     "initialize [FLAGS] NAME|UUID",
+		Use:     "init [FLAGS] NAME|UUID",
 		Args:    cobra.ExactArgs(1),
-		Aliases: []string{"init", "initialise", "i"},
+		Aliases: []string{"init", "initialise", "initialize", "i"},
 		Long:    "Initialize autoscale configuration for a service group.",
 		Example: heredoc.Doc(`
 			# Initialize an autoscale configuration
-			kraft cloud scale initialize my-service-group \
+			kraft cloud scale init my-service-group \
 				--master my-instance-name \
 				--min-size 1 \
 				--max-size 10 \
