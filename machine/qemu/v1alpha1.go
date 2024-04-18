@@ -782,6 +782,7 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 				if strings.Contains(line, "Booting from ") {
 					qcfg.ShowSGABiosPreamble = true
 					machine.Status.PlatformConfig = qcfg
+					return out, errOut, nil
 				}
 				continue
 			}
