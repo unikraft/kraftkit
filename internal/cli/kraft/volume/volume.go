@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/volume/create"
 	"kraftkit.sh/internal/cli/kraft/volume/inspect"
 	"kraftkit.sh/internal/cli/kraft/volume/list"
+	"kraftkit.sh/internal/cli/kraft/volume/remove"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/volume"
 )
@@ -40,6 +41,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(create.NewCmd())
 	cmd.AddCommand(inspect.NewCmd())
 	cmd.AddCommand(list.NewCmd())
+	cmd.AddCommand(remove.NewCmd())
 
 	return cmd
 }
