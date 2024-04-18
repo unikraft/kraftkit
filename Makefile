@@ -181,7 +181,7 @@ cicheck: ## Run CI checks.
 	$(GOCILINT) run
 
 .PHONY: test
-test: test-unit test-e2e ## Run all tests.
+test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
 
 .PHONY: test-unit
 test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/ tools/
@@ -192,6 +192,14 @@ test-unit: ## Run unit tests.
 .PHONY: test-e2e
 test-e2e: kraft ## Run CLI end-to-end tests.
 	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all test/e2e/cli/...
+
+.PHONY: test-framework
+test-framework: kraft ## Run framework tests.
+	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
+
+.PHONY: test-cloud-e2e
+test-cloud-e2e: ## Run cloud end-to-end tests.
+	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
 
 .PHONY: install-golangci-lint
 install-golangci-lint: GOLANGCI_LINT_VERSION     ?= 1.51.2
