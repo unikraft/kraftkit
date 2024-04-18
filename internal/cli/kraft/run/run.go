@@ -354,11 +354,11 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if err := opts.parseVolumes(ctx, machine); err != nil {
+	if err := opts.assignName(ctx, machine); err != nil {
 		return err
 	}
 
-	if err := opts.assignName(ctx, machine); err != nil {
+	if err := opts.parseVolumes(ctx, machine); err != nil {
 		return err
 	}
 
