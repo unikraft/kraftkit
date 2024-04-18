@@ -205,6 +205,15 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			memory = int(service.MemReservation)
 		}
 
+		if service.Image == "" {
+			user := strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")
+			service.Image = fmt.Sprintf(
+				"index.unikraft.io/%s/%s:latest",
+				user,
+				strings.ReplaceAll(service.Name, "_", "-"),
+			)
+		}
+
 		log.G(ctx).WithField("image", service.Image).Info("deploying")
 
 		var serviceGroup string
