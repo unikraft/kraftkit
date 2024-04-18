@@ -26,6 +26,7 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 )
 
 type DeployOptions struct {
@@ -55,6 +56,7 @@ type DeployOptions struct {
 	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	Project                app.Application           `noattribute:"true"`
 	Replicas               int                       `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	RestartPolicy          kcinstances.RestartPolicy `noattribute:"true"`
 	Rollout                create.RolloutStrategy    `noattribute:"true"`
 	RolloutQualifier       create.RolloutQualifier   `noattribute:"true"`
 	RolloutWait            time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
@@ -94,6 +96,15 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[kcinstances.RestartPolicy](
+			kcinstances.RestartPolicies(),
+			kcinstances.RestartPolicyNever,
+		),
+		"restart",
+		"Set the restart policy for the instance (never/always/on-failure)",
+	)
+
+	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[create.RolloutStrategy](
 			append(create.RolloutStrategies(), create.StrategyPrompt),
 			create.StrategyPrompt,
@@ -129,6 +140,7 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
+	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
 	opts.Rollout = create.RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = create.RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())

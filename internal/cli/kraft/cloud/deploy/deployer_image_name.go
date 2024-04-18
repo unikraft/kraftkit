@@ -102,6 +102,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 					Name:                   opts.Name,
 					Ports:                  opts.Ports,
 					Replicas:               opts.Replicas,
+					RestartPolicy:          opts.RestartPolicy,
 					ScaleToZero:            opts.ScaleToZero,
 					ServiceGroupNameOrUUID: opts.ServiceGroupNameOrUUID,
 					Rollout:                opts.Rollout,
