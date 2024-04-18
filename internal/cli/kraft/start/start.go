@@ -15,6 +15,7 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/cli/kraft/utils"
@@ -22,6 +23,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
+	"kraftkit.sh/machine/volume"
 )
 
 type StartOptions struct {
@@ -137,6 +139,11 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 	var errGroup []error
 	loggedMachines := []string{}
 
+	volumeController, err := volume.NewVolumeV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return fmt.Errorf("instantiating volume service controller iterator: %w", err)
+	}
+
 	for _, machine := range machines {
 		machine := machine // Go closures
 
@@ -152,6 +159,13 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 
 		if _, err := machineController.Start(ctx, &machine); err != nil {
 			return err
+		}
+
+		for _, vol := range machine.Spec.Volumes {
+			vol.Status.State = volumeapi.VolumeStateBound
+			if _, err := volumeController.Update(ctx, &vol); err != nil {
+				errGroup = append(errGroup, err)
+			}
 		}
 
 		if opts.Detach {
@@ -202,9 +216,12 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 	var networkController networkapi.NetworkService
 
 	for _, machine := range machines {
+		if !opts.Remove || opts.Detach {
+			continue
+		}
 		// Set up a clean up method to remove the interface if the machine exits and
 		// we are requesting to remove the machine.
-		if opts.Remove && !opts.Detach && len(machine.Spec.Networks) > 0 {
+		if len(machine.Spec.Networks) > 0 {
 			if networkController == nil {
 				networkController, err = network.NewNetworkV1alpha1ServiceIterator(ctx)
 				if err != nil {
@@ -235,6 +252,38 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 
 				if _, err = networkController.Update(ctx, found); err != nil {
 					return fmt.Errorf("could not update network %s: %v", network.IfName, err)
+				}
+			}
+		}
+
+		// Also update information about the volumes.
+		for _, vol := range machine.Spec.Volumes {
+			allMachines, err := machineController.List(ctx, &machineapi.MachineList{})
+			if err != nil {
+				return err
+			}
+
+			stillUsed := false
+			for _, m := range allMachines.Items {
+				if m.ObjectMeta.UID == machine.ObjectMeta.UID {
+					continue
+				}
+				for _, v := range m.Spec.Volumes {
+					if v.ObjectMeta.UID == vol.ObjectMeta.UID {
+						stillUsed = true
+						break
+					}
+				}
+
+				if stillUsed {
+					break
+				}
+			}
+
+			if !stillUsed {
+				vol.Status.State = volumeapi.VolumeStatePending
+				if _, err := volumeController.Update(ctx, &vol); err != nil {
+					errGroup = append(errGroup, err)
 				}
 			}
 		}
