@@ -110,7 +110,9 @@ func (t *testcontainersPrintf) Printf(format string, v ...interface{}) {
 
 type dockerfile struct {
 	opts       InitrdOptions
+	args       []string
 	dockerfile string
+	env        []string
 	files      []string
 	workdir    string
 }
@@ -398,6 +400,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not read image: %w", err)
 	}
 
+	initrd.args = append(initrd.args, img.Metadata.Config.Config.Entrypoint...)
+	initrd.args = append(initrd.args, img.Metadata.Config.Config.Cmd...)
+	initrd.env = img.Metadata.Config.Config.Env
+
 	err = tempgen.Cleanup()
 	if err != nil {
 		return "", fmt.Errorf("could not cleanup temp dir generator: %w", err)
@@ -546,4 +552,14 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 // Files implements Initrd.
 func (initrd *dockerfile) Files() []string {
 	return initrd.files
+}
+
+// Env implements Initrd.
+func (initrd *dockerfile) Env() []string {
+	return initrd.env
+}
+
+// Args implements Initrd.
+func (initrd *dockerfile) Args() []string {
+	return initrd.args
 }

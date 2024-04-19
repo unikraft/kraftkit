@@ -67,3 +67,13 @@ func (initrd *file) Build(_ context.Context) (string, error) {
 func (initrd *file) Files() []string {
 	return initrd.files
 }
+
+// Env implements Initrd.
+func (initrd *file) Env() []string {
+	return nil
+}
+
+// Args implements Initrd.
+func (initrd *file) Args() []string {
+	return nil
+}
