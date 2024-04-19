@@ -5,6 +5,7 @@
 package initrd
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -18,11 +19,14 @@ import (
 	"strings"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 
 	"github.com/cavaliergopher/cpio"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -109,6 +113,12 @@ type dockerfile struct {
 	workdir    string
 }
 
+func fixedWriteCloser(wc io.WriteCloser) filesync.FileOutputFunc {
+	return func(map[string]string) (io.WriteCloser, error) {
+		return wc, nil
+	}
+}
+
 // NewFromDockerfile accepts an input path which represents a Dockerfile that
 // can be constructed via buildkit to become a CPIO archive.
 func NewFromDockerfile(ctx context.Context, path string, opts ...InitrdOption) (Initrd, error) {
@@ -146,10 +156,19 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not make temporary directory: %w", err)
 	}
+	defer os.RemoveAll(outputDir)
+
+	tarOutput, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("could not make temporary file: %w", err)
+	}
+	defer tarOutput.Close()
+	defer os.RemoveAll(tarOutput.Name())
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
 	copts := []client.ClientOpt{
-		client.WithFailFast(),
+		// Might not be needed, previously was `client.WithFailFast()`
+		client.WithGRPCDialOption(grpc.FailOnNonTempDialError(true)),
 	}
 
 	c, _ := client.New(ctx, buildkitAddr, copts...)
@@ -208,11 +227,12 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			Started: true,
 			Logger:  printf,
 			ContainerRequest: testcontainers.ContainerRequest{
-				Image:        "moby/buildkit:latest",
-				WaitingFor:   wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
-				Privileged:   true,
-				ExposedPorts: []string{fmt.Sprintf("%d:%d/tcp", port, port)},
-				Cmd:          []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
+				AlwaysPullImage: true,
+				Image:           "moby/buildkit:latest",
+				WaitingFor:      wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
+				Privileged:      true,
+				ExposedPorts:    []string{fmt.Sprintf("%d:%d/tcp", port, port)},
+				Cmd:             []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
 				Mounts: testcontainers.ContainerMounts{
 					{
 						Source: testcontainers.GenericVolumeMountSource{
@@ -259,10 +279,11 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	}
 
 	solveOpt := &client.SolveOpt{
+		Ref: identity.NewID(),
 		Exports: []client.ExportEntry{
 			{
-				Type:      client.ExporterLocal,
-				OutputDir: outputDir,
+				Type:   client.ExporterTar,
+				Output: fixedWriteCloser(tarOutput),
 			},
 		},
 		CacheExports: cacheExports,
@@ -292,7 +313,12 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	})
 
 	eg.Go(func() error {
-		_, err = progressui.DisplaySolveStatus(ctx, nil, log.G(ctx).Writer(), ch)
+		d, err := progressui.NewDisplay(log.G(ctx).Writer(), progressui.AutoMode)
+		if err != nil {
+			return fmt.Errorf("could not create progress display: %w", err)
+		}
+
+		_, err = d.UpdateFrom(ctx, ch)
 		if err != nil {
 			return fmt.Errorf("could not display output progress: %w", err)
 		}
@@ -302,6 +328,40 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 	if err := eg.Wait(); err != nil {
 		return "", fmt.Errorf("could not wait for err group: %w", err)
+	}
+
+	tarArchive, err := os.Open(tarOutput.Name())
+	if err != nil {
+		return "", fmt.Errorf("could not open output tarball: %w", err)
+	}
+
+	tarReader := tar.NewReader(tarArchive)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not read tar header: %w", err)
+		}
+
+		targetPath := filepath.Join(outputDir, header.Name)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(targetPath, 0o755); err != nil {
+				return "", fmt.Errorf("could not create directory: %w", err)
+			}
+		case tar.TypeReg:
+			file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return "", fmt.Errorf("could not open file: %w", err)
+			}
+			defer file.Close()
+			if _, err := io.Copy(file, tarReader); err != nil {
+				return "", fmt.Errorf("could not write file: %w", err)
+			}
+		}
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
