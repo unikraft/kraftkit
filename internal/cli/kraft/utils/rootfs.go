@@ -21,13 +21,15 @@ import (
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targets ...target.Target) (string, error) {
+func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targets ...target.Target) (string, [][]string, [][]string, error) {
 	if rootfs == "" {
-		return "", nil
+		return "", nil, nil, nil
 	}
 
 	var processes []*processtree.ProcessTreeItem
 	var archs []string
+	var cmds [][]string
+	var envs [][]string
 
 	for _, targ := range targets {
 		arch := targ.Architecture().String()
@@ -56,7 +58,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 			initrd.WithCompression(compress),
 		)
 		if err != nil {
-			return "", fmt.Errorf("could not initialize initramfs builder: %w", err)
+			return "", nil, nil, fmt.Errorf("could not initialize initramfs builder: %w", err)
 		}
 
 		processes = append(processes,
@@ -64,10 +66,14 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 				"building rootfs",
 				arch,
 				func(ctx context.Context) error {
+					// TODO
 					rootfs, err = ramfs.Build(ctx)
 					if err != nil {
 						return err
 					}
+
+					cmds = append(cmds, ramfs.Args())
+					envs = append(envs, ramfs.Env())
 
 					return nil
 				},
@@ -84,12 +90,12 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 		processes...,
 	)
 	if err != nil {
-		return "", err
+		return "", nil, nil, err
 	}
 
 	if err := model.Start(); err != nil {
-		return "", err
+		return "", nil, nil, err
 	}
 
-	return rootfs, nil
+	return rootfs, cmds, envs, nil
 }

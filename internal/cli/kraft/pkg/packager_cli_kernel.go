@@ -68,8 +68,22 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 		return nil, fmt.Errorf("could not prepare phony target: %w", err)
 	}
 
-	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
+	var cmds [][]string
+	var envs [][]string
+	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
+	}
+
+	if len(opts.Args) == 0 {
+		if cmds[0] != nil {
+			opts.Args = cmds[0]
+		}
+	}
+
+	if len(opts.Env) == 0 {
+		if envs[0] != nil {
+			opts.Env = envs[0]
+		}
 	}
 
 	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
@@ -98,6 +112,13 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
 				)
+
+				envs := opts.aggregateEnvs()
+				if len(envs) > 0 {
+					popts = append(popts, packmanager.PackWithEnvs(envs))
+				} else if len(opts.Env) > 0 {
+					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
+				}
 
 				more, err := opts.pm.Pack(ctx, targ, popts...)
 				if err != nil {

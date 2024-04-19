@@ -86,6 +86,9 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		return nil, fmt.Errorf("nothing selected to package")
 	}
 
+	var cmds [][]string
+	var envs [][]string
+
 	// Reset the rootfs, such that it is not packaged as an initrd if it is
 	// already embedded inside of the kernel.
 	if opts.Project.KConfig().AnyYes(
@@ -95,7 +98,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 	) {
 		opts.Rootfs = ""
 	} else {
-		if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, selected...); err != nil {
+		if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, selected...); err != nil {
 			return nil, fmt.Errorf("could not build rootfs: %w", err)
 		}
 	}
@@ -110,10 +113,8 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		baseopts := opts.packopts
 		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
-		// If no arguments have been specified, use the ones which are default and
-		// that have been included in the package.
-		if len(opts.Args) == 0 {
-			opts.Args = targ.Command()
+		if envs[i] != nil && len(envs[i]) > 0 {
+			opts.Env = envs[i]
 		}
 
 		// If no arguments have been specified, use the ones which are default and
@@ -123,6 +124,8 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 				opts.Args = opts.Project.Command()
 			} else if len(targ.Command()) > 0 {
 				opts.Args = targ.Command()
+			} else if cmds[i] != nil && len(cmds[i]) > 0 {
+				opts.Args = cmds[i]
 			}
 		}
 
@@ -161,6 +164,8 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 				envs := opts.aggregateEnvs()
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
+				} else if len(opts.Env) > 0 {
+					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
 				}
 
 				more, err := opts.pm.Pack(ctx, targ, popts...)
