@@ -25,7 +25,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v26.0.1+incompatible
-	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/docker v26.0.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
@@ -170,6 +170,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
