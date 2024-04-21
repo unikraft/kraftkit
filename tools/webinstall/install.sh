@@ -199,6 +199,27 @@ get_user_response() {
     _RETVAL="$_gur_read_answer"
 }
 
+# prompt_user_yes_no asks the user a question which must be answered with yes or no. Returns a boolean value.
+# $1: question
+# $2: default answer
+# Returns:
+# _RETVAL: true for "yes", false for "no"
+prompt_user_yes_no() {
+  while true;
+  do
+      get_user_response "$1" "$2"
+      _answer="$_RETVAL"
+
+      if printf "%s" "$_answer" | "$GREP" -q -E "$_NO_ANS"; then
+          return 1
+      elif printf "%s" "$_answer" | "$GREP" -q -E "$_YES_ANS"; then
+          return 0
+      else
+          printf "Invalid input. Please try again or exit with Ctrl+C\n"
+      fi
+    done
+}
+
 # do_cmd runs a command and asks the user if they want to retry with root
 # if it fails
 # $@: command
@@ -217,16 +238,9 @@ do_cmd() {
         # Inform the user that the command failed
         say "command failed: $*"
 
-        # Ask the user if they want to retry with root
-        get_user_response "do you want to retry with root? [y/N]: " "n"
-        _answer="$_RETVAL"
-
         # Retry with root if the user wants to, otherwise exit
         # with the return value of the command
-        if printf "%s" "$_answer" | "$GREP" -q -E "$_NO_ANS"; then
-            exit "$_cmd_retval"
-        elif printf "%s" "$_answer" | "$GREP" -q -E "$_YES_ANS"; then
-
+        if prompt_user_yes_no "do you want to retry with root? [y/N]: " "n"; then
             # Check if we have a tty and run with it if we do,
             # otherwise exit with an error
             # This is because sudo requires a tty to input the password
@@ -237,7 +251,7 @@ do_cmd() {
                 err "fatal: cannot retry with root without a tty."
             fi
         else
-            err "error: choose either yes or no."
+            exit "$_cmd_retval"
         fi
     fi
 }
@@ -1050,16 +1064,13 @@ install_linux_gnu() {
             "tee /etc/apt/sources.list.d/kraftkit.list" \
         )
 
-        get_user_response "install recommended dependencies? [y/N]: " "n"
-        _idd_answer="$_RETVAL"
 
         _idd_recommended=""
-        if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            _idd_recommended="--install-recommends"
-        elif printf "%s" "$_idd_answer" | "$GREP" -q -E "$_YES_ANS"; then
+
+        if prompt_user_yes_no "install recommended dependencies? [y/N]: " "n"; then
             _idd_recommended="--no-install-recommends"
         else
-            err "fatal: choose either yes or no."
+            _idd_recommended="--install-recommends"
         fi
 
         do_cmd "$_ilg_deb_cmd"
@@ -1173,39 +1184,23 @@ install_linux_manual() {
             "[y/N]: "                                                           \
         )
 
-        get_user_response "$_ill_prompt_msg" "n"
-        _ill_answer="$_RETVAL"
-
-        if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            err "fatal: kraft binary already installed."
-        elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        if prompt_user_yes_no "$_ill_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_ill_kraft_path")"
         else
-            err "fatal: choose either yes or no."
+            err "fatal: kraft binary already installed."
         fi
     else
-        get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
-        _ill_answer="$_RETVAL"
 
-        if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            :
-        elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        if prompt_user_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
             get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
-        else
-            err "fatal: choose either yes or no."
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            get_user_response "prefix does not exist, create? [y/N]: " "n"
-            _ill_answer="$_RETVAL"
-
-            if printf "%s" "$_ill_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-                err "fatal: prefix does not exist."
-            elif printf "%s" "$_ill_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            if prompt_user_yes_no "prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
-                err "fatal: choose either yes or no."
+                err "fatal: prefix does not exist."
             fi
         fi
     fi
@@ -1276,39 +1271,22 @@ install_darwin_manual() {
             "[y/N]: "                                                           \
         )
 
-        get_user_response "$_idr_prompt_msg" "n"
-        _idr_answer="$_RETVAL"
-
-        if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            err "fatal: kraft binary already installed."
-        elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        if prompt_user_yes_no "$_idr_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_idr_kraft_path")"
         else
-            err "fatal: choose either yes or no."
+            err "fatal: kraft binary already installed."
         fi
     else
-        get_user_response "change the install prefix? [$PREFIX] [y/N]: " "n"
-        _idr_answer="$_RETVAL"
-
-        if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            :
-        elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        if prompt_user_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
             get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
-        else
-            err "fatal: choose either yes or no."
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            get_user_response "prefix does not exist, create? [y/N]: " "n"
-            _idr_answer="$_RETVAL"
-
-            if printf "%s" "$_idr_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-                err "fatal: prefix does not exist."
-            elif printf "%s" "$_idr_answer" | "$GREP" -q -E "$_YES_ANS"; then
+            if prompt_user_yes_no "prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
-                err "fatal: choose either yes or no."
+                err "fatal: prefix does not exist."
             fi
         fi
     fi
@@ -1446,16 +1424,13 @@ install_dependencies_gnu() {
         do_cmd "$APT --allow-unauthenticated update"
 
         say_debug "Installing dependencies: $_idd_list"
-        get_user_response "install recommended dependencies? [y/N]: " "n"
-        _idd_answer="$_RETVAL"
 
         _idd_recommended=""
-        if printf "%s" "$_idd_answer" | "$GREP" -q -E "$_NO_ANS_DEFAULT"; then
-            _idd_recommended="--install-recommends"
-        elif printf "%s" "$_idd_answer" | "$GREP" -q -E "$_YES_ANS"; then
+        if prompt_user_yes_no "install recommended dependencies? [y/N]: " "n"; then
             _idd_recommended="--no-install-recommends"
         else
-            err "fatal: choose either yes or no."
+            _idd_recommended="--install-recommends"
+
         fi
 
         do_cmd "$APT install $_idd_recommended -y $_idd_list"
@@ -1539,52 +1514,49 @@ install_completions() {
 
     _inc_arch="$1"
 
-    get_user_response "Do you want to install command completions? [Y/n]: " "y"
-    _inc_answer="$_RETVAL"
-
-    if printf "%s" "$_inc_answer" | "$GREP" -q -E "$_NO_ANS"; then
+    if ! prompt_user_yes_no "Do you want to install command completions? [Y/n]: " "y"; then
         return 0
-    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
-        :
-    else
-        err "fatal: choose either yes or no."
     fi
-
-    get_user_response "What shell are you using? [bash/zsh/fish]: " ""
-    _inc_answer=$(printf "%s" "$_RETVAL" | "$TR" '[:upper:]' '[:lower:]')
 
     # Check if the shell is supported
     _inc_shell=""
     _inc_config_file=""
     _inc_kraft_config_file=""
-    if printf "%s" "$_inc_answer" | "$GREP" -q -E "bash"; then
-        _inc_shell="bash"
-        _inc_config_file="$HOME/.bashrc"
-        _inc_kraft_config_file="$HOME/.bash_kraft_completion"
-    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "zsh"; then
-        _inc_shell="zsh"
-        _inc_config_file="$HOME/.zshrc"
-        _inc_kraft_config_file="$HOME/.zsh_kraft_completion"
-    elif printf "%s" "$_inc_answer" | "$GREP" -q -E "fish"; then
-        _inc_shell="fish"
-        _inc_config_file="$HOME/.config/fish/config.fish"
-        _inc_kraft_config_file="$HOME/.config/fish/kraft_completion.fish"
-    elif [ -z "$_inc_answer" ]; then
-        err "fatal: no shell provided."
-    else
-        err "fatal: unsupported shell: $_inc_answer"
-    fi
+
+    # Prompt user until they provide a valid answer or exit
+    while true;
+    do
+      get_user_response "What shell are you using? [bash/zsh/fish]: " ""
+      _inc_answer=$(printf "%s" "$_RETVAL" | "$TR" '[:upper:]' '[:lower:]')
+
+      if printf "%s" "$_inc_answer" | "$GREP" -q -E "bash"; then
+          _inc_shell="bash"
+          _inc_config_file="$HOME/.bashrc"
+          _inc_kraft_config_file="$HOME/.bash_kraft_completion"
+          break
+
+      elif printf "%s" "$_inc_answer" | "$GREP" -q -E "zsh"; then
+          _inc_shell="zsh"
+          _inc_config_file="$HOME/.zshrc"
+          _inc_kraft_config_file="$HOME/.zsh_kraft_completion"
+          break
+
+      elif printf "%s" "$_inc_answer" | "$GREP" -q -E "fish"; then
+          _inc_shell="fish"
+          _inc_config_file="$HOME/.config/fish/config.fish"
+          _inc_kraft_config_file="$HOME/.config/fish/kraft_completion.fish"
+          break
+
+      elif [ -z "$_inc_answer" ]; then
+          printf "No shell provided. Please try again or exit with Ctrl+C\n"
+      else
+          printf "Shell %s not supported. Please try again or exit with Ctrl+C\n" "$_inc_answer"
+      fi
+    done
 
     if [ -f "$_inc_kraft_config_file" ]; then
-        get_user_response "kraft completions already exist, overwrite? [Y/n]: " "y"
-        _inc_answer="$_RETVAL"
-
-        if printf "%s" "$_inc_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
-            :
-        elif printf "%s" "$_inc_answer" | "$GREP" -q -E "$_NO_ANS"; then
+        if ! prompt_user_yes_no "kraft completions already exist, overwrite? [Y/n]: " "y"; then
             return 0
-        else
-            err "fatal: choose either yes or no."
         fi
     fi
 
@@ -1655,17 +1627,12 @@ arg_parse() {
 # Returns:
 # _RETVAL: whether to install automatically: n or empty
 check_autoinstall() {
-    _cai_answer=""
-    get_user_response "install kraftkit using package manager? [Y/n]: " "y"
-    _cai_answer="$_RETVAL"
-
     _cai_auto_install=""
-    if printf "%s" "$_cai_answer" | "$GREP" -q -E "$_NO_ANS"; then
-        _cai_auto_install="n"
-    elif printf "%s" "$_cai_answer" | "$GREP" -q -E "$_YES_ANS_DEFAULT"; then
+
+    if prompt_user_yes_no "install kraftkit using package manager? [Y/n]: " "y"; then
         say "installing kraftkit via package manager..."
     else
-        err "fatal: choose either yes or no."
+        _cai_auto_install="n"
     fi
 
     _RETVAL="$_cai_auto_install"
