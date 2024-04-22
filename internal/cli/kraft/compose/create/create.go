@@ -18,6 +18,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/internal/cli/kraft/build"
+	"kraftkit.sh/internal/cli/kraft/compose/utils"
 	netcreate "kraftkit.sh/internal/cli/kraft/net/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/internal/cli/kraft/pkg/pull"
@@ -39,7 +40,8 @@ import (
 )
 
 type CreateOptions struct {
-	Composefile string `noattribute:"true"`
+	Composefile   string `noattribute:"true"`
+	RemoveOrphans bool   `long:"remove-orphans" usage:"Remove machines for services not defined in the Compose file"`
 }
 
 func NewCmd() *cobra.Command {
@@ -96,6 +98,12 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	if err := project.AssignIPs(ctx); err != nil {
 		return err
+	}
+
+	if opts.RemoveOrphans {
+		if err := utils.RemoveOrphans(ctx, project); err != nil {
+			return err
+		}
 	}
 
 	composeController, err := compose.NewComposeProjectV1(ctx)

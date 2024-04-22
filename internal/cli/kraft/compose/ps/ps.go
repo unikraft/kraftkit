@@ -23,6 +23,7 @@ import (
 
 type PsOptions struct {
 	Long    bool   `long:"long" short:"l" usage:"Show more information"`
+	Orphans bool   `long:"orphans" usage:"Include orphaned services (default: true)" default:"true"`
 	Output  string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
 	Quiet   bool   `long:"quiet" short:"q" usage:"Only display machine IDs"`
 	ShowAll bool   `long:"all" short:"a" usage:"Show all machines (default shows just running)"`
@@ -111,6 +112,18 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 	filteredPsTable := []pslist.PsEntry{}
 	for _, psEntry := range psTable {
 		for _, machine := range embeddedProject.Status.Machines {
+			orphaned := true
+			for _, service := range project.Services {
+				if service.Name == machine.Name {
+					orphaned = false
+					break
+				}
+			}
+
+			if orphaned && !opts.Orphans {
+				continue
+			}
+
 			if psEntry.Name == machine.Name {
 				filteredPsTable = append(filteredPsTable, psEntry)
 			}
