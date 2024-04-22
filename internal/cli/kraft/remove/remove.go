@@ -14,11 +14,13 @@ import (
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
+	"kraftkit.sh/machine/volume"
 )
 
 type RemoveOptions struct {
@@ -180,6 +182,43 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 				if _, err = netcontroller.Update(ctx, found); err != nil {
 					log.G(ctx).Warnf("could not update network %s: %v", net.IfName, err)
 					continue
+				}
+			}
+		}
+
+		// Update volume information.
+		if len(machine.Spec.Volumes) > 0 {
+			volumeController, err := volume.NewVolumeV1alpha1ServiceIterator(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get volume controller: %v", err)
+			}
+			for _, vol := range machine.Spec.Volumes {
+				stillUsed := false
+				allMachines, err := controller.List(ctx, &machineapi.MachineList{})
+				if err != nil {
+					return err
+				}
+				for _, m := range allMachines.Items {
+					if m.ObjectMeta.UID == machine.ObjectMeta.UID {
+						continue
+					}
+					for _, v := range m.Spec.Volumes {
+						if v.ObjectMeta.UID == vol.ObjectMeta.UID {
+							stillUsed = true
+							break
+						}
+					}
+
+					if stillUsed {
+						break
+					}
+				}
+
+				if !stillUsed {
+					vol.Status.State = volumeapi.VolumeStatePending
+					if _, err := volumeController.Update(ctx, &vol); err != nil {
+						log.G(ctx).Warnf("could not update volume %s: %v", vol.Name, err)
+					}
 				}
 			}
 		}
