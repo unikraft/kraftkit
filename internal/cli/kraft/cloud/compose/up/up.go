@@ -142,13 +142,6 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		}
 	}
 
-	// Preemptively create all the service groups from the compose project's
-	// supplied networks.
-	svcResps, err := createServiceGroupsFromNetworks(ctx, opts, args...)
-	if err != nil {
-		return err
-	}
-
 	// Build all services if the build flag is set.
 	if err := build.Build(ctx, &build.BuildOptions{
 		Auth:        opts.Auth,
@@ -158,6 +151,13 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		Token:       opts.Token,
 		Push:        true,
 	}, args...); err != nil {
+		return err
+	}
+
+	// Preemptively create all the service groups from the compose project's
+	// supplied networks.
+	svcResps, err := createServiceGroupsFromNetworks(ctx, opts, args...)
+	if err != nil {
 		return err
 	}
 
