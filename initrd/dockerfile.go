@@ -23,6 +23,8 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 
+	sfile "github.com/anchore/stereoscope/pkg/file"
+	soci "github.com/anchore/stereoscope/pkg/image/oci"
 	"github.com/cavaliergopher/cpio"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
@@ -165,6 +167,13 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	defer tarOutput.Close()
 	defer os.RemoveAll(tarOutput.Name())
 
+	ociOutput, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("could not make temporary file: %w", err)
+	}
+	defer ociOutput.Close()
+	defer os.RemoveAll(ociOutput.Name())
+
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
 	copts := []client.ClientOpt{
 		// Might not be needed, previously was `client.WithFailFast()`
@@ -285,6 +294,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 				Type:   client.ExporterTar,
 				Output: fixedWriteCloser(tarOutput),
 			},
+			{
+				Type:   client.ExporterOCI,
+				Output: fixedWriteCloser(ociOutput),
+			},
 		},
 		CacheExports: cacheExports,
 		LocalDirs: map[string]string{
@@ -362,6 +375,36 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 				return "", fmt.Errorf("could not write file: %w", err)
 			}
 		}
+	}
+
+	// parse the output directory with stereoscope
+	tempgen := sfile.NewTempDirGenerator("kraftkit")
+	if tempgen == nil {
+		return "", fmt.Errorf("could not create temp dir generator")
+	}
+
+	provider := soci.NewArchiveProvider(tempgen, ociOutput.Name())
+	if provider == nil {
+		return "", fmt.Errorf("could not create image provider")
+	}
+
+	img, err := provider.Provide(ctx)
+	if err != nil {
+		return "", fmt.Errorf("could not provide image: %w", err)
+	}
+
+	err = img.Read()
+	if err != nil {
+		return "", fmt.Errorf("could not read image: %w", err)
+	}
+
+	err = tempgen.Cleanup()
+	if err != nil {
+		return "", fmt.Errorf("could not cleanup temp dir generator: %w", err)
+	}
+	err = img.Cleanup()
+	if err != nil {
+		return "", fmt.Errorf("could not cleanup image: %w", err)
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
