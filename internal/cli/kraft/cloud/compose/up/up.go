@@ -15,12 +15,14 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
+	kcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -161,6 +163,11 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		return err
 	}
 
+	volResps, err := createVolumes(ctx, opts)
+	if err != nil {
+		return err
+	}
+
 	instResps := kcclient.ServiceResponse[kcinstances.GetResponseItem]{}
 
 	for _, serviceName := range args {
@@ -221,6 +228,16 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			serviceGroup = data.Data.Entries[0].UUID
 		}
 
+		var volumes []string
+		for _, volume := range service.Volumes {
+			vol, ok := volResps[volume.Source]
+			if !ok {
+				continue
+			}
+
+			volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Data.Entries[0].UUID, volume.Target))
+		}
+
 		instResp, _, err = create.Create(ctx, &create.CreateOptions{
 			Auth:                   opts.Auth,
 			Client:                 opts.Client,
@@ -233,6 +250,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Start:                  false,
 			Token:                  opts.Token,
 			WaitForImage:           true,
+			Volumes:                volumes,
 		}, service.Command...)
 		if err != nil {
 			return err
@@ -271,6 +289,61 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		Follow: true,
 		Tail:   -1,
 	}, instances...)
+}
+
+// createVolumes is used to create volumes for each service in the compose
+// project.  These volumes are used to persist data across instances.
+func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.ServiceResponse[kcvolumes.GetResponseItem], error) {
+	volResps := make(map[string]*kcclient.ServiceResponse[kcvolumes.GetResponseItem])
+
+	for alias, volume := range opts.Project.Volumes {
+		name := strings.ReplaceAll(volume.Name, "_", "-")
+
+		volResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Get(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("getting volume: %w", err)
+		}
+
+		vol, err := volResp.FirstOrErr()
+		if err != nil && vol != nil && *vol.Error == kcclient.APIHTTPErrorNotFound {
+
+			log.G(ctx).WithField("name", name).Info("creating volume")
+
+			size := 64
+			if sentry, ok := volume.DriverOpts["size"]; ok {
+				parsed, err := humanize.ParseBytes(sentry)
+				if err != nil {
+					return nil, fmt.Errorf("parsing volume size: %w", err)
+				}
+
+				size = int(parsed) / 1024 / 1024
+			}
+
+			createResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Create(ctx, name, size)
+			if err != nil {
+				return nil, fmt.Errorf("creating volume: %w", err)
+			}
+
+			vol, err := createResp.FirstOrErr()
+			if err != nil {
+				return nil, err
+			}
+
+			getResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Get(ctx, vol.UUID)
+			if err != nil {
+				return nil, fmt.Errorf("creating volume: %w", err)
+			}
+
+			volResps[alias] = getResp
+		} else if err != nil {
+			return nil, err
+		} else {
+			log.G(ctx).Warnf("volume '%s' already exists as '%s'", volume.Name, name)
+			volResps[alias] = volResp
+		}
+	}
+
+	return volResps, nil
 }
 
 // createServiceGroupsFromNetworks is used to map each compose service's
