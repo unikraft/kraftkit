@@ -118,13 +118,6 @@ func (project *Project) Validate(ctx context.Context) error {
 		return err
 	}
 
-	for i, network := range project.Networks {
-		if network.Name[0] == '_' {
-			network.Name = project.Name + network.Name
-			project.Networks[i] = network
-		}
-	}
-
 	return nil
 }
 
