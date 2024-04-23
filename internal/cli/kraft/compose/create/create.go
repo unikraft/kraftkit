@@ -18,11 +18,12 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/internal/cli/kraft/build"
-	"kraftkit.sh/internal/cli/kraft/net/create"
+	netcreate "kraftkit.sh/internal/cli/kraft/net/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/internal/cli/kraft/pkg/pull"
 	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/internal/cli/kraft/run"
+	volcreate "kraftkit.sh/internal/cli/kraft/volume/create"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft"
@@ -31,8 +32,10 @@ import (
 	composeapi "kraftkit.sh/api/compose/v1"
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	mnetwork "kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
+	mvolume "kraftkit.sh/machine/volume"
 )
 
 type CreateOptions struct {
@@ -163,7 +166,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		if len(network.Ipam.Config) > 0 {
 			subnet = network.Ipam.Config[0].Subnet
 		}
-		createOptions := create.CreateOptions{
+		createOptions := netcreate.CreateOptions{
 			Driver:  driver,
 			Network: subnet,
 		}
@@ -179,6 +182,65 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 			},
 		}); err == nil && network.Status.State == networkapi.NetworkStateUp {
 			projectNetworks = append(projectNetworks, network.ObjectMeta)
+		}
+
+	}
+
+	projectVolumes := []metav1.ObjectMeta{}
+	if embeddedProject != nil {
+		projectVolumes = embeddedProject.Status.Volumes
+	}
+
+	volumeController, err := mvolume.NewVolumeV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return err
+	}
+
+	volumes, err := volumeController.List(ctx, &volumeapi.VolumeList{})
+	if err != nil {
+		return err
+	}
+
+	for _, volume := range project.Volumes {
+		if volume.External {
+			continue
+		}
+		alreadyExisting := false
+		for _, v := range volumes.Items {
+			if v.Name == volume.Name {
+				alreadyExisting = true
+				break
+			}
+		}
+		if alreadyExisting {
+			continue
+		}
+
+		driver := mvolume.DefaultStrategyName()
+		if volume.Driver != "" {
+			driver = volume.Driver
+		}
+
+		createOptions := volcreate.CreateOptions{
+			Driver: driver,
+		}
+
+		log.G(ctx).Infof("creating volume %s...", volume.Name)
+		if err := createOptions.Run(ctx, []string{volume.Name}); err != nil {
+			return err
+		}
+
+		volume, err := volumeController.Get(ctx, &volumeapi.Volume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: volume.Name,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		if volume != nil {
+			projectVolumes = append(projectVolumes, volume.ObjectMeta)
 		}
 
 	}
@@ -267,6 +329,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		Status: composeapi.ComposeStatus{
 			Machines: projectMachines,
 			Networks: projectNetworks,
+			Volumes:  projectVolumes,
 		},
 	}); err != nil {
 		return err
@@ -401,7 +464,11 @@ func createService(ctx context.Context, project *compose.Project, service types.
 
 	volumes := []string{}
 	for _, vol := range service.Volumes {
-		volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Source, vol.Target))
+		if volume, ok := project.Volumes[vol.Source]; ok {
+			volumes = append(volumes, fmt.Sprintf("%s:%s", volume.Name, vol.Target))
+		} else {
+			volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Source, vol.Target))
+		}
 	}
 
 	environ := []string{}
