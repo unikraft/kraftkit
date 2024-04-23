@@ -5,6 +5,7 @@
 package initrd
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -18,11 +19,16 @@ import (
 	"strings"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 
+	sfile "github.com/anchore/stereoscope/pkg/file"
+	soci "github.com/anchore/stereoscope/pkg/image/oci"
 	"github.com/cavaliergopher/cpio"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -104,9 +110,17 @@ func (t *testcontainersPrintf) Printf(format string, v ...interface{}) {
 
 type dockerfile struct {
 	opts       InitrdOptions
+	args       []string
 	dockerfile string
+	env        []string
 	files      []string
 	workdir    string
+}
+
+func fixedWriteCloser(wc io.WriteCloser) filesync.FileOutputFunc {
+	return func(map[string]string) (io.WriteCloser, error) {
+		return wc, nil
+	}
 }
 
 // NewFromDockerfile accepts an input path which represents a Dockerfile that
@@ -146,10 +160,26 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not make temporary directory: %w", err)
 	}
+	defer os.RemoveAll(outputDir)
+
+	tarOutput, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("could not make temporary file: %w", err)
+	}
+	defer tarOutput.Close()
+	defer os.RemoveAll(tarOutput.Name())
+
+	ociOutput, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("could not make temporary file: %w", err)
+	}
+	defer ociOutput.Close()
+	defer os.RemoveAll(ociOutput.Name())
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
 	copts := []client.ClientOpt{
-		client.WithFailFast(),
+		// Might not be needed, previously was `client.WithFailFast()`
+		client.WithGRPCDialOption(grpc.FailOnNonTempDialError(true)),
 	}
 
 	c, _ := client.New(ctx, buildkitAddr, copts...)
@@ -208,11 +238,12 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			Started: true,
 			Logger:  printf,
 			ContainerRequest: testcontainers.ContainerRequest{
-				Image:        "moby/buildkit:latest",
-				WaitingFor:   wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
-				Privileged:   true,
-				ExposedPorts: []string{fmt.Sprintf("%d:%d/tcp", port, port)},
-				Cmd:          []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
+				AlwaysPullImage: true,
+				Image:           "moby/buildkit:latest",
+				WaitingFor:      wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
+				Privileged:      true,
+				ExposedPorts:    []string{fmt.Sprintf("%d:%d/tcp", port, port)},
+				Cmd:             []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
 				Mounts: testcontainers.ContainerMounts{
 					{
 						Source: testcontainers.GenericVolumeMountSource{
@@ -259,10 +290,15 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	}
 
 	solveOpt := &client.SolveOpt{
+		Ref: identity.NewID(),
 		Exports: []client.ExportEntry{
 			{
-				Type:      client.ExporterLocal,
-				OutputDir: outputDir,
+				Type:   client.ExporterTar,
+				Output: fixedWriteCloser(tarOutput),
+			},
+			{
+				Type:   client.ExporterOCI,
+				Output: fixedWriteCloser(ociOutput),
 			},
 		},
 		CacheExports: cacheExports,
@@ -292,7 +328,12 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	})
 
 	eg.Go(func() error {
-		_, err = progressui.DisplaySolveStatus(ctx, nil, log.G(ctx).Writer(), ch)
+		d, err := progressui.NewDisplay(log.G(ctx).Writer(), progressui.AutoMode)
+		if err != nil {
+			return fmt.Errorf("could not create progress display: %w", err)
+		}
+
+		_, err = d.UpdateFrom(ctx, ch)
 		if err != nil {
 			return fmt.Errorf("could not display output progress: %w", err)
 		}
@@ -302,6 +343,74 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 	if err := eg.Wait(); err != nil {
 		return "", fmt.Errorf("could not wait for err group: %w", err)
+	}
+
+	tarArchive, err := os.Open(tarOutput.Name())
+	if err != nil {
+		return "", fmt.Errorf("could not open output tarball: %w", err)
+	}
+
+	tarReader := tar.NewReader(tarArchive)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not read tar header: %w", err)
+		}
+
+		targetPath := filepath.Join(outputDir, header.Name)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(targetPath, 0o755); err != nil {
+				return "", fmt.Errorf("could not create directory: %w", err)
+			}
+		case tar.TypeReg:
+			file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return "", fmt.Errorf("could not open file: %w", err)
+			}
+			defer file.Close()
+			if _, err := io.Copy(file, tarReader); err != nil {
+				return "", fmt.Errorf("could not write file: %w", err)
+			}
+		}
+	}
+
+	// parse the output directory with stereoscope
+	tempgen := sfile.NewTempDirGenerator("kraftkit")
+	if tempgen == nil {
+		return "", fmt.Errorf("could not create temp dir generator")
+	}
+
+	provider := soci.NewArchiveProvider(tempgen, ociOutput.Name())
+	if provider == nil {
+		return "", fmt.Errorf("could not create image provider")
+	}
+
+	img, err := provider.Provide(ctx)
+	if err != nil {
+		return "", fmt.Errorf("could not provide image: %w", err)
+	}
+
+	err = img.Read()
+	if err != nil {
+		return "", fmt.Errorf("could not read image: %w", err)
+	}
+
+	initrd.args = append(initrd.args, img.Metadata.Config.Config.Entrypoint...)
+	initrd.args = append(initrd.args, img.Metadata.Config.Config.Cmd...)
+	initrd.env = img.Metadata.Config.Config.Env
+
+	err = tempgen.Cleanup()
+	if err != nil {
+		return "", fmt.Errorf("could not cleanup temp dir generator: %w", err)
+	}
+	err = img.Cleanup()
+	if err != nil {
+		return "", fmt.Errorf("could not cleanup image: %w", err)
 	}
 
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
@@ -443,4 +552,14 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 // Files implements Initrd.
 func (initrd *dockerfile) Files() []string {
 	return initrd.files
+}
+
+// Env implements Initrd.
+func (initrd *dockerfile) Env() []string {
+	return initrd.env
+}
+
+// Args implements Initrd.
+func (initrd *dockerfile) Args() []string {
+	return initrd.args
 }

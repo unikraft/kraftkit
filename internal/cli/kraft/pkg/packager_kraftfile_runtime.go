@@ -283,8 +283,16 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, fmt.Errorf("package does not convert to target")
 	}
 
-	if opts.Rootfs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
+	var cmds [][]string
+	var envs [][]string
+	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
+	}
+
+	if len(opts.Env) == 0 {
+		if envs[0] != nil {
+			opts.Env = envs[0]
+		}
 	}
 
 	// If no arguments have been specified, use the ones which are default and
@@ -294,6 +302,8 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			opts.Args = opts.Project.Command()
 		} else if len(targ.Command()) > 0 {
 			opts.Args = targ.Command()
+		} else if cmds[0] != nil {
+			opts.Args = cmds[0]
 		}
 	}
 
@@ -338,6 +348,8 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				envs := opts.aggregateEnvs()
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
+				} else if len(opts.Env) > 0 {
+					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
 				}
 
 				more, err := opts.pm.Pack(ctx, targ, popts...)

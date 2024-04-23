@@ -395,6 +395,14 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 					return err
 				}
 
+				for _, entry := range ramfs.Env() {
+					split := strings.SplitN(entry, "=", 2)
+
+					machine.Spec.Env[split[0]] = split[1]
+				}
+
+				machine.Spec.ApplicationArgs = ramfs.Args()
+
 				return nil
 			},
 		),

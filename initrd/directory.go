@@ -205,3 +205,13 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 func (initrd *directory) Files() []string {
 	return initrd.files
 }
+
+// Env implements Initrd.
+func (initrd *directory) Env() []string {
+	return nil
+}
+
+// Args implements Initrd.
+func (initrd *directory) Args() []string {
+	return nil
+}

@@ -323,12 +323,6 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	machine.Spec.Platform = runtime.Platform().Name()
 	machine.Spec.Kernel = fmt.Sprintf("%s://%s:%s", packs[0].Format(), runtime.Name(), runtime.Version())
 
-	if len(runner.project.Command()) > 0 {
-		machine.Spec.ApplicationArgs = runner.project.Command()
-	} else if len(runtime.Command()) > 0 {
-		machine.Spec.ApplicationArgs = runtime.Command()
-	}
-
 	// Use the symbolic debuggable kernel image?
 	if opts.WithKernelDbg {
 		machine.Status.KernelPath = runtime.KernelDbg()
@@ -344,7 +338,21 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			if err != nil {
 				return err
 			}
+
+			for _, entry := range runtime.Initrd().Env() {
+				split := strings.SplitN(entry, "=", 2)
+
+				machine.Spec.Env[split[0]] = split[1]
+			}
+
+			machine.Spec.ApplicationArgs = runtime.Initrd().Args()
 		}
+	}
+
+	if len(runner.project.Command()) > 0 {
+		machine.Spec.ApplicationArgs = runner.project.Command()
+	} else if len(runtime.Command()) > 0 {
+		machine.Spec.ApplicationArgs = runtime.Command()
 	}
 
 	// If automounting is enabled, and an initramfs is provided, set it as a

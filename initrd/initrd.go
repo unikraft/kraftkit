@@ -24,4 +24,10 @@ type Initrd interface {
 
 	// All directories and files that are contained within the initramfs.
 	Files() []string
+
+	// All environment variables that are set within.
+	Env() []string
+
+	// All arguments that are passed to the initramfs.
+	Args() []string
 }
