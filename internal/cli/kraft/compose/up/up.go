@@ -21,8 +21,10 @@ import (
 )
 
 type UpOptions struct {
+	Detach        bool `long:"detach" short:"d" usage:"Run in background"`
+	RemoveOrphans bool `long:"remove-orphans" usage:"Remove machines for services not defined in the Compose file."`
+
 	composefile string
-	Detach      bool `long:"detach" short:"d" usage:"Run in background"`
 }
 
 func NewCmd() *cobra.Command {
@@ -64,7 +66,8 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 func (opts *UpOptions) Run(ctx context.Context, _ []string) error {
 	createOptions := create.CreateOptions{
-		Composefile: opts.composefile,
+		Composefile:   opts.composefile,
+		RemoveOrphans: opts.RemoveOrphans,
 	}
 
 	if err := createOptions.Run(ctx, []string{}); err != nil {

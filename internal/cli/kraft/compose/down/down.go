@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
+	"kraftkit.sh/internal/cli/kraft/compose/utils"
 	networkremove "kraftkit.sh/internal/cli/kraft/net/remove"
 	machineremove "kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/log"
@@ -27,7 +28,8 @@ import (
 )
 
 type DownOptions struct {
-	composefile string
+	composefile   string
+	RemoveOrphans bool `long:"remove-orphans" usage:"Remove machines for services not defined in the Compose file."`
 }
 
 func NewCmd() *cobra.Command {
@@ -79,6 +81,12 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 
 	if err := project.Validate(ctx); err != nil {
 		return err
+	}
+
+	if opts.RemoveOrphans {
+		if err := utils.RemoveOrphans(ctx, project); err != nil {
+			return err
+		}
 	}
 
 	machineController, err := mplatform.NewMachineV1alpha1ServiceIterator(ctx)

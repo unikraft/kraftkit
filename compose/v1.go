@@ -86,6 +86,7 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 	runningMachines := []metav1.ObjectMeta{}
 
 	// Orphaned machines
+	orphanMachines := []string{}
 	for _, machine := range embeddedProject.Status.Machines {
 		isService := false
 		for _, service := range project.Services {
@@ -99,10 +100,15 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 			if m.Name == machine.Name {
 				runningMachines = append(runningMachines, machine)
 				if !isService && m.Status.State == machineapi.MachineStateRunning {
-					log.G(ctx).WithField("machine", machine.Name).Warn("found orphan machine")
+					orphanMachines = append(orphanMachines, machine.Name)
 				}
 			}
 		}
+	}
+
+	if len(orphanMachines) > 0 {
+		log.G(ctx).WithField("machines", orphanMachines).
+			Warn("found orphan machines for this project. You can run this command with the --remove-orphans flag to clean it up")
 	}
 
 	// Name collisions
