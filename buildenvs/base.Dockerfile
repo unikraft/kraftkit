@@ -6,8 +6,10 @@ ARG DEBIAN_VERSION=bookworm-20240513
 ARG KRAFTKIT_VERSION=latest
 ARG QEMU_VERSION=8.2.4
 ARG REGISTRY=kraftkit.sh
+ARG XEN_VERSION=4.18
 
 FROM ${REGISTRY}/qemu:${QEMU_VERSION}       AS qemu
+FROM ${REGISTRY}/xen:${XEN_VERSION}			AS xen
 FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS kraftkit
 FROM debian:${DEBIAN_VERSION}               AS base
 
@@ -15,6 +17,9 @@ COPY --from=qemu     /bin/        /usr/local/bin
 COPY --from=qemu     /share/qemu/ /share/qemu
 COPY --from=qemu     /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu
 COPY --from=kraftkit /kraft       /usr/local/bin
+COPY --from=xen 	 /usr/lib/x86_64-linux-gnu/*.a /lib/x86_64-linux-gnu
+COPY --from=xen 	 /usr/local/lib/libxen*.a /usr/local/lib/libxen*.so* /usr/local/lib
+COPY --from=xen		 /usr/local/include/* /usr/local/include
 
 # Install unikraft dependencies
 RUN set -xe; \

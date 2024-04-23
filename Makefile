@@ -140,16 +140,20 @@ $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
 else
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS ?= -s -w
 endif
+
+ifeq ($(XEN), y)
+$(addprefix $.PROXY), $(BIN)): TAGS ?= xen,
+endif
+$(addprefix $(.PROXY), $(BIN)): TAGS += containers_image_storage_stub,containers_image_openpgp
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(BIN)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
-$(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
 	$(GO) build \
 		-v \
-		-tags "containers_image_storage_stub,containers_image_openpgp" \
+		-tags '$(TAGS)' \
 		-buildmode=pie \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
@@ -164,6 +168,10 @@ $(addprefix $(.PROXY), $(TOOLS)): GO_GCFLAGS ?= -N -l
 else
 $(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS ?= -s -w
 endif
+ifeq ($(XEN), y)
+$(addprefix $.PROXY), $(TOOLS)): TAGS ?= xen,
+endif
+$(addprefix $(.PROXY), $(TOOLS)): TAGS += containers_image_storage_stub,containers_image_openpgp
 $(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.version=$(VERSION)"
 $(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.commit=$(GIT_SHA)"
 $(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.buildTime=$(shell date)"
@@ -264,6 +272,7 @@ buildenv-myself-full: ## OCI image containing the build environment for KraftKit
 buildenv-myself: ## OCI image containing KraftKit binaries.
 buildenv-qemu: ## OCI image containing a Unikraft-centric build of QEMU.
 buildenv-github-action: ## OCI image used when building Unikraft unikernels in GitHub Actions.
+buildenv-xen: ## OCI image containing a Unikraft-centric build of Xen.
 tools: ## Build all tools.
 kraft: ## The kraft binary.
 runu: ## The runu binary.

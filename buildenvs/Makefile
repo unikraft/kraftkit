@@ -22,6 +22,26 @@ PLATFORM     ?= linux/x86_64
 
 WITH_CACHE   ?= y
 
+.PHONY: xen
+xen: XEN_VERSION   ?= 4.18
+xen: MAKE_NPROC    ?= $(shell nproc)
+xen: ENVIRONMENT   ?= xen
+xen: IMAGE         ?= $(REGISTRY)/xen:$(XEN_VERSION)
+ifeq ($(WITH_CACHE),y)
+xen: _WITH_CACHE  := --cache-from $(IMAGE)
+else
+xen: _WITH_CACHE  := --no-cache
+endif
+xen:
+	$(DOCKER) build \
+		--platform $(PLATFORM) \
+		--build-arg XEN_VERSION=$(XEN_VERSION) \
+		--build-arg MAKE_NPROC=$(MAKE_NPROC) \
+		--tag $(IMAGE) \
+		$(_WITH_CACHE) \
+		--file $(BUILDENVSDIR)/xen.Dockerfile \
+		$(DOCKER_BUILD_EXTRA) $(WORKDIR)
+
 .PHONY: qemu
 qemu: QEMU_VERSION ?= 8.2.4
 qemu: MAKE_NPROC   ?= $(shell nproc)
@@ -47,6 +67,7 @@ myself: GO_VERSION  ?= 1.22.3
 myself: ENVIRONMENT ?= myself
 myself: IMAGE       ?= $(REGISTRY)/myself:$(IMAGE_TAG)
 myself: TARGET      ?= kraftkit
+myself: XEN_VERSION ?= 4.18
 ifeq ($(WITH_CACHE),y)
 myself: _WITH_CACHE := --cache-from $(IMAGE)
 else
@@ -56,6 +77,7 @@ myself:
 	$(DOCKER) build \
 		--platform $(PLATFORM) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg XEN_VERSION=$(XEN_VERSION) \
 		--tag $(IMAGE) \
 		--target $(TARGET) \
 		$(_WITH_CACHE) \
@@ -72,6 +94,7 @@ base: GO_VERSION       ?= 1.22.3
 base: IMAGE            ?= $(REGISTRY)/base:$(IMAGE_TAG)
 base: KRAFTKIT_VERSION ?= latest
 base: QEMU_VERSION     ?= 8.2.4
+base: XEN_VERSION      ?= 4.18
 ifeq ($(WITH_CACHE),y)
 base: _WITH_CACHE      := --cache-from $(IMAGE)
 else
@@ -82,6 +105,7 @@ base:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
+		--build-arg XEN_VERSION=$(XEN_VERSION) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \
@@ -94,6 +118,7 @@ base-golang: GO_VERSION       ?= 1.22.3
 base-golang: IMAGE            ?= $(REGISTRY)/base-golang:$(IMAGE_TAG)
 base-golang: KRAFTKIT_VERSION ?= latest
 base-golang: QEMU_VERSION     ?= 8.2.4
+base-golang: XEN_VERSION      ?= 4.18
 ifeq ($(WITH_CACHE),y)
 base-golang: _WITH_CACHE      := --cache-from $(IMAGE)
 else
@@ -105,6 +130,7 @@ base-golang:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
+		--build-arg XEN_VERSION=$(XEN_VERSION) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \
