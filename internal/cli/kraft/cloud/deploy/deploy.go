@@ -19,6 +19,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -37,7 +38,8 @@ type DeployOptions struct {
 	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
 	DotConfig              string                    `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features               []string                  `local:"true" long:"feature" short:"f" usage:"Specify the special features to enable"`
+	Features               []string                  `local:"true" long:"feature" usage:"Specify the special features to enable"`
+	Follow                 bool                      `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance"`
 	ForcePull              bool                      `long:"force-pull" usage:"Force pulling packages before building"`
 	Image                  string                    `long:"image" short:"i" usage:"Set the image name to use"`
 	Jobs                   int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
@@ -241,12 +243,28 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if len(insts) == 1 && opts.Output == "" {
-		// No need to check for error, we check if-nil inside PrettyPrintInstance.
-		svc, _ := svcResp.FirstOrErr()
-		utils.PrettyPrintInstance(ctx, insts[0], svc, !opts.NoStart)
-		return nil
+	if !opts.Follow {
+		if len(insts) == 1 && opts.Output == "" {
+			// No need to check for error, we check if-nil inside PrettyPrintInstance.
+			svc, _ := svcResp.FirstOrErr()
+			utils.PrettyPrintInstance(ctx, insts[0], svc, !opts.NoStart)
+			return nil
+		}
+
+		return utils.PrintInstances(ctx, opts.Output, *instsResp)
 	}
 
-	return utils.PrintInstances(ctx, opts.Output, *instsResp)
+	var uuids []string
+
+	for _, inst := range insts {
+		uuids = append(uuids, inst.UUID)
+	}
+
+	return logs.Logs(ctx, &logs.LogOptions{
+		Auth:   opts.Auth,
+		Client: opts.Client,
+		Metro:  opts.Metro,
+		Follow: true,
+		Tail:   -1,
+	}, uuids...)
 }
