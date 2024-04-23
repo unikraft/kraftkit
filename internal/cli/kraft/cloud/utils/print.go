@@ -611,15 +611,22 @@ func PrintServiceGroups(ctx context.Context, format string, resp kcclient.Servic
 
 // An internal utility method for printing a bar based on the provided progress
 // and max values and the width of the bar.
-func printBar(progress, max int) string {
+func printBar(cs *iostreams.ColorScheme, progress, max int) string {
 	width := 36
 
 	var ret strings.Builder
 
 	percent := math.Floor(float64(progress) / float64(max) * float64(width))
 
-	ret.WriteString(strings.Repeat("█", int(percent)))
-	ret.WriteString(strings.Repeat("░", width-int(percent)))
+	color := "green"
+	if percent > 30 { // ~83%
+		color = "red"
+	} else if percent > 20 { // ~56%
+		color = "yellow"
+	}
+
+	ret.WriteString(cs.ColorFromString(color)(strings.Repeat("█", int(percent))))
+	ret.WriteString(cs.ColorFromString(":243")(strings.Repeat(" ", width-int(percent))))
 
 	return ret.String()
 }
@@ -717,7 +724,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// ACTIVE INSTANCES
 	var activeInstances string
 	if format == "list" {
-		activeInstances = printBar(quota.Used.LiveInstances, quota.Hard.LiveInstances) + " "
+		activeInstances = printBar(cs, quota.Used.LiveInstances, quota.Hard.LiveInstances) + " "
 	}
 	activeInstances += fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances)
 	table.AddField(activeInstances, nil)
@@ -725,7 +732,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// TOTAL INSTANCES
 	var totalInstances string
 	if format == "list" {
-		totalInstances = printBar(quota.Used.Instances, quota.Hard.Instances) + " "
+		totalInstances = printBar(cs, quota.Used.Instances, quota.Hard.Instances) + " "
 	}
 	totalInstances += fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances)
 	table.AddField(totalInstances, nil)
@@ -738,7 +745,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// ACTIVE USED MEMORY
 	var activeUsedMemory string
 	if format == "list" {
-		activeUsedMemory = printBar(quota.Used.LiveMemoryMb, quota.Hard.LiveMemoryMb) + " "
+		activeUsedMemory = printBar(cs, quota.Used.LiveMemoryMb, quota.Hard.LiveMemoryMb) + " "
 	}
 	activeUsedMemory += fmt.Sprintf("%s/%s",
 		humanize.IBytes(uint64(quota.Used.LiveMemoryMb)*humanize.MiByte),
@@ -762,7 +769,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// EXPOSED SERVICES
 	var exposedServices string
 	if format == "list" {
-		exposedServices = printBar(quota.Used.Services, quota.Hard.Services) + " "
+		exposedServices = printBar(cs, quota.Used.Services, quota.Hard.Services) + " "
 	}
 	exposedServices += fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services)
 	table.AddField(exposedServices, nil)
@@ -770,7 +777,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// SERVICE GROUPS
 	var serviceGroups string
 	if format == "list" {
-		serviceGroups = printBar(quota.Used.ServiceGroups, quota.Hard.ServiceGroups) + " "
+		serviceGroups = printBar(cs, quota.Used.ServiceGroups, quota.Hard.ServiceGroups) + " "
 	}
 	serviceGroups += fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups)
 	table.AddField(serviceGroups, nil)
@@ -789,7 +796,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		// ACTIVE VOLUMES
 		var activeVolumes string
 		if format == "list" {
-			activeVolumes = printBar(quota.Used.Volumes, quota.Hard.Volumes) + " "
+			activeVolumes = printBar(cs, quota.Used.Volumes, quota.Hard.Volumes) + " "
 		}
 		activeVolumes += fmt.Sprintf("%d/%d", quota.Used.Volumes, quota.Hard.Volumes)
 		table.AddField(activeVolumes, nil)
@@ -797,7 +804,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 		// USED VOLUME SPACE
 		var usedVolumeSpace string
 		if format == "list" {
-			usedVolumeSpace = printBar(quota.Used.TotalVolumeMb, quota.Hard.TotalVolumeMb) + " "
+			usedVolumeSpace = printBar(cs, quota.Used.TotalVolumeMb, quota.Hard.TotalVolumeMb) + " "
 		}
 		usedVolumeSpace += fmt.Sprintf("%s/%s",
 			humanize.IBytes(uint64(quota.Used.TotalVolumeMb)*humanize.MiByte),
