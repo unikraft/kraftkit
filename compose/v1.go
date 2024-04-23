@@ -14,16 +14,19 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/network"
+	"kraftkit.sh/machine/volume"
 	"kraftkit.sh/store"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
+	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
 type v1Compose struct {
 	machineController machineapi.MachineService
 	networkController networkapi.NetworkService
+	volumeController  volumeapi.VolumeService
 }
 
 func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeService, error) {
@@ -45,6 +48,11 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 	}
 
 	service.networkController, err = network.NewNetworkV1alpha1ServiceIterator(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	service.volumeController, err = volume.NewVolumeV1alpha1ServiceIterator(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -149,11 +157,7 @@ func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProjec
 		return err
 	}
 
-	for i, network := range embeddedProject.Status.Networks {
-		if network.Name[0] == '_' {
-			network.Name = project.Name + network.Name
-			embeddedProject.Status.Networks[i] = network
-		}
+	for _, network := range embeddedProject.Status.Networks {
 		for _, n := range allNetworks.Items {
 			if n.Name == network.Name {
 				existingNetworks = append(existingNetworks, n.ObjectMeta)
@@ -165,6 +169,9 @@ func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProjec
 	embeddedProject.Status.Networks = existingNetworks
 
 	for _, network := range project.Networks {
+		if network.External {
+			continue
+		}
 		belongToProject := false
 		for _, existingNetwork := range existingNetworks {
 			if network.Name == existingNetwork.Name {
@@ -190,6 +197,79 @@ func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProjec
 	return nil
 }
 
+func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject *composev1.Compose) error {
+	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
+	if err != nil {
+		return err
+	}
+
+	if err := project.Validate(ctx); err != nil {
+		return err
+	}
+
+	existingVolumes := []metav1.ObjectMeta{}
+
+	allVolumes, err := v1.volumeController.List(ctx, &volumeapi.VolumeList{})
+	if err != nil {
+		return err
+	}
+
+	for _, volume := range embeddedProject.Status.Volumes {
+		for _, v := range allVolumes.Items {
+			if v.Name == volume.Name {
+				existingVolumes = append(existingVolumes, v.ObjectMeta)
+				break
+			}
+		}
+	}
+
+	embeddedProject.Status.Networks = existingVolumes
+
+	for _, volume := range project.Volumes {
+		if volume.External {
+			continue
+		}
+		belongToProject := false
+		for _, existingVolume := range existingVolumes {
+			if volume.Name == existingVolume.Name {
+				belongToProject = true
+				break
+			}
+		}
+
+		if belongToProject {
+			continue
+		}
+
+		for _, v := range allVolumes.Items {
+			if v.Name == volume.Name {
+				log.G(ctx).WithField("volume", volume.Name).Warn("volume already exists but does not belong to project")
+				break
+			}
+		}
+	}
+
+	embeddedProject.Status.Networks = existingVolumes
+
+	return nil
+}
+
+func (v1 *v1Compose) refreshStatus(ctx context.Context, embeddedProject *composev1.Compose) error {
+	if err := v1.refreshRunningServices(ctx, embeddedProject); err != nil {
+		return err
+	}
+
+	if err := v1.refreshExistingNetworks(ctx, embeddedProject); err != nil {
+		return err
+	}
+
+	if err := v1.refreshExistingVolumes(ctx, embeddedProject); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Create implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	return project, nil
@@ -197,11 +277,7 @@ func (v1 *v1Compose) Create(ctx context.Context, project *composev1.Compose) (*c
 
 // Delete implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := v1.refreshRunningServices(ctx, project); err != nil {
-		return project, err
-	}
-
-	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
+	if err := v1.refreshStatus(ctx, project); err != nil {
 		return project, err
 	}
 
@@ -211,11 +287,7 @@ func (v1 *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*c
 // List implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
 	for i := range projects.Items {
-		if err := v1.refreshRunningServices(ctx, &projects.Items[i]); err != nil {
-			return projects, err
-		}
-
-		if err := v1.refreshExistingNetworks(ctx, &projects.Items[i]); err != nil {
+		if err := v1.refreshStatus(ctx, &projects.Items[i]); err != nil {
 			return projects, err
 		}
 	}
@@ -225,11 +297,7 @@ func (v1 *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) 
 
 // Get implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
-	if err := v1.refreshRunningServices(ctx, project); err != nil {
-		return project, err
-	}
-
-	if err := v1.refreshExistingNetworks(ctx, project); err != nil {
+	if err := v1.refreshStatus(ctx, project); err != nil {
 		return project, err
 	}
 

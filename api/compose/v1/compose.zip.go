@@ -30,6 +30,7 @@ type ComposeSpec struct {
 type ComposeStatus struct {
 	Machines []v1.ObjectMeta `json:"machines,omitempty"`
 	Networks []v1.ObjectMeta `json:"networks,omitempty"`
+	Volumes  []v1.ObjectMeta `json:"volumes,omitempty"`
 }
 
 // ComposeService is the interface of available methods

@@ -17,6 +17,8 @@ import (
 	"kraftkit.sh/store"
 )
 
+var defaultStrategyName = "9pfs"
+
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
 func hostSupportedStrategies() map[string]*Strategy {
