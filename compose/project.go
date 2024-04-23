@@ -71,6 +71,8 @@ func NewProjectFromComposeFile(ctx context.Context, workdir, composefile string)
 		return nil, err
 	}
 
+	project = project.WithoutUnnecessaryResources()
+
 	project.ComposeFiles = []string{composefile}
 	project.WorkingDir = workdir
 
@@ -232,23 +234,6 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	activeNetworks := make(map[string]struct{})
-	for _, service := range project.Services {
-		for name := range service.Networks {
-			activeNetworks[name] = struct{}{}
-		}
-	}
-
-	// Remove the networks that are not used from the project
-	usedProjectNetworks := make(map[string]types.NetworkConfig)
-	for name := range project.Networks {
-		if _, ok := activeNetworks[name]; ok {
-			usedProjectNetworks[name] = project.Networks[name]
-		}
-	}
-
-	project.Networks = usedProjectNetworks
 
 	return nil
 }
