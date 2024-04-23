@@ -20,6 +20,11 @@ type NewStrategyConstructor[T any] func(context.Context, ...any) (T, error)
 // dynamically at runtime.
 var strategies = make(map[string]*Strategy)
 
+// DefaultStrategyName return the name of the default strategy of the platform.
+func DefaultStrategyName() string {
+	return defaultStrategyName
+}
+
 // Strategy represents canonical reference of a machine driver and their
 // platform.
 type Strategy struct {
