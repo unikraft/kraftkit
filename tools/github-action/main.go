@@ -287,7 +287,7 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 func main() {
 	cmd, err := cmdfactory.New(&GithubAction{}, cobra.Command{})
 	if err != nil {
-		fmt.Printf("prepare command: %w", err)
+		fmt.Printf("prepare command: %s", err)
 		os.Exit(1)
 	}
 
@@ -295,13 +295,13 @@ func main() {
 
 	cfg, err := config.NewDefaultKraftKitConfig()
 	if err != nil {
-		fmt.Printf("could not prepare internal configuration: %w", err)
+		fmt.Printf("could not prepare internal configuration: %s", err)
 		os.Exit(1)
 	}
 
 	cfgm, err := config.NewConfigManager(cfg)
 	if err != nil {
-		fmt.Printf("could initialize config manager: %w", err)
+		fmt.Printf("could initialize config manager: %s", err)
 		os.Exit(1)
 	}
 
@@ -310,12 +310,12 @@ func main() {
 
 	cmd, args, err := cmd.Find(os.Args[1:])
 	if err != nil {
-		fmt.Printf("could not find flag: %w", err)
+		fmt.Printf("could not find flag: %s", err)
 		os.Exit(1)
 	}
 
 	if err := cmdfactory.AttributeFlags(cmd, cfg, args...); err != nil {
-		fmt.Printf("could not attribute flags: %w", err)
+		fmt.Printf("could not attribute flags: %s", err)
 		os.Exit(1)
 	}
 

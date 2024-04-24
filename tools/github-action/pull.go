@@ -47,7 +47,7 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 				packmanager.WithTypes(template.Type()),
 				packmanager.WithVersion(template.Version()),
 				packmanager.WithSource(template.Source()),
-				packmanager.WithUpdate(true),
+				packmanager.WithRemote(true),
 				packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
 			)
 			if err != nil {
@@ -117,7 +117,7 @@ func (opts *GithubAction) pull(ctx context.Context) error {
 			packmanager.WithVersion(component.Version()),
 			packmanager.WithSource(component.Source()),
 			packmanager.WithAuthConfig(config.G[config.KraftKit](ctx).Auth),
-			packmanager.WithUpdate(true),
+			packmanager.WithRemote(true),
 		)
 		if err != nil {
 			return err
