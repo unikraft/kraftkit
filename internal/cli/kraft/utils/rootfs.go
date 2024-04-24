@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"slices"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
@@ -21,65 +20,56 @@ import (
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targets ...target.Target) (string, [][]string, [][]string, error) {
+func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targ target.Target) (string, []string, []string, error) {
 	if rootfs == "" {
 		return "", nil, nil, nil
 	}
 
 	var processes []*processtree.ProcessTreeItem
-	var archs []string
-	var cmds [][]string
-	var envs [][]string
+	var cmds []string
+	var envs []string
 
-	for _, targ := range targets {
-		arch := targ.Architecture().String()
-		if slices.Contains[[]string](archs, arch) {
-			continue
-		}
-
-		archs = append(archs, arch)
-
-		if !filepath.IsAbs(rootfs) {
-			rootfs = filepath.Join(workdir, rootfs)
-		}
-
-		ramfs, err := initrd.New(ctx, rootfs,
-			initrd.WithOutput(filepath.Join(
-				workdir,
-				unikraft.BuildDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch),
-			)),
-			initrd.WithCacheDir(filepath.Join(
-				workdir,
-				unikraft.VendorDir,
-				"rootfs-cache",
-			)),
-			initrd.WithArchitecture(arch),
-			initrd.WithCompression(compress),
-		)
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("could not initialize initramfs builder: %w", err)
-		}
-
-		processes = append(processes,
-			processtree.NewProcessTreeItem(
-				"building rootfs",
-				arch,
-				func(ctx context.Context) error {
-					// TODO
-					rootfs, err = ramfs.Build(ctx)
-					if err != nil {
-						return err
-					}
-
-					cmds = append(cmds, ramfs.Args())
-					envs = append(envs, ramfs.Env())
-
-					return nil
-				},
-			),
-		)
+	if !filepath.IsAbs(rootfs) {
+		rootfs = filepath.Join(workdir, rootfs)
 	}
+
+	ramfs, err := initrd.New(ctx, rootfs,
+		initrd.WithOutput(filepath.Join(
+			workdir,
+			unikraft.BuildDir,
+			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture().String()),
+		)),
+		initrd.WithCacheDir(filepath.Join(
+			workdir,
+			unikraft.VendorDir,
+			"rootfs-cache",
+		)),
+		initrd.WithArchitecture(targ.Architecture().String()),
+		initrd.WithCompression(compress),
+	)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("could not initialize initramfs builder: %w", err)
+	}
+
+	processes = append(processes,
+		processtree.NewProcessTreeItem(
+			"building rootfs",
+			targ.Architecture().String(),
+			func(ctx context.Context) error {
+				rootfs, err = ramfs.Build(ctx)
+				if err != nil {
+					return err
+				}
+
+				// Always overwrite the existing cmds and envs, considering this will
+				// be the same regardless of the target.
+				cmds = ramfs.Args()
+				envs = ramfs.Env()
+
+				return nil
+			},
+		),
+	)
 
 	model, err := processtree.NewProcessTree(
 		ctx,

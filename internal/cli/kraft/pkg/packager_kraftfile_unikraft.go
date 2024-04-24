@@ -86,35 +86,36 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		return nil, fmt.Errorf("nothing selected to package")
 	}
 
-	var cmds [][]string
-	var envs [][]string
-
-	// Reset the rootfs, such that it is not packaged as an initrd if it is
-	// already embedded inside of the kernel.
-	if opts.Project.KConfig().AnyYes(
-		"CONFIG_LIBVFSCORE_ROOTFS_EINITRD", // Deprecated
-		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
-		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
-	) {
-		opts.Rootfs = ""
-	} else {
-		if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, selected...); err != nil {
-			return nil, fmt.Errorf("could not build rootfs: %w", err)
-		}
-	}
-
 	i := 0
 
 	var result []pack.Package
 
 	for _, targ := range selected {
+		var cmds []string
+		var envs []string
+		rootfs := opts.Rootfs
+
+		// Reset the rootfs, such that it is not packaged as an initrd if it is
+		// already embedded inside of the kernel.
+		if opts.Project.KConfig().AnyYes(
+			"CONFIG_LIBVFSCORE_ROOTFS_EINITRD", // Deprecated
+			"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
+			"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+		) {
+			rootfs = ""
+		} else {
+			if rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, rootfs, opts.Compress, targ); err != nil {
+				return nil, fmt.Errorf("could not build rootfs: %w", err)
+			}
+		}
+
 		// See: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
 		targ := targ
 		baseopts := opts.packopts
 		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
 
-		if envs[i] != nil && len(envs[i]) > 0 {
-			opts.Env = envs[i]
+		if envs != nil {
+			opts.Env = append(opts.Env, envs...)
 		}
 
 		// If no arguments have been specified, use the ones which are default and
@@ -124,8 +125,8 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 				opts.Args = opts.Project.Command()
 			} else if len(targ.Command()) > 0 {
 				opts.Args = targ.Command()
-			} else if cmds[i] != nil && len(cmds[i]) > 0 {
-				opts.Args = cmds[i]
+			} else if cmds != nil {
+				opts.Args = cmds
 			}
 		}
 
@@ -149,7 +150,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			func(ctx context.Context) error {
 				popts := append(baseopts,
 					packmanager.PackArgs(cmdShellArgs...),
-					packmanager.PackInitrd(opts.Rootfs),
+					packmanager.PackInitrd(rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
