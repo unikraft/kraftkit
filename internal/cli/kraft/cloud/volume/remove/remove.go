@@ -21,17 +21,11 @@ import (
 )
 
 type RemoveOptions struct {
-	metro string
-	token string
-}
-
-// Remove a KraftCloud persistent volume.
-func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
-	if opts == nil {
-		opts = &RemoveOptions{}
-	}
-
-	return opts.Run(ctx, args)
+	All    bool                  `long:"all" short:"a" usage:"Remove all volumes"`
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -59,7 +53,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -67,25 +61,69 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+// Remove a KraftCloud volume.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
+	var err error
+
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	client := kraftcloud.NewVolumesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
-
-	log.G(ctx).Infof("Deleting %d volume(s)", len(args))
-
-	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
-	if err != nil {
-		return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
 	}
-	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+
+	if opts.All {
+		volListResp, err := opts.Client.Volumes().WithMetro(opts.Metro).List(ctx)
+		if err != nil {
+			return fmt.Errorf("listing volumes: %w", err)
+		}
+
+		volList, err := volListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("listing volumes: %w", err)
+		}
+
+		if len(volList) == 0 {
+			log.G(ctx).Info("no volumes found")
+			return nil
+		}
+
+		vols := make([]string, len(volList))
+		for i, vol := range volList {
+			vols[i] = vol.UUID
+		}
+
+		log.G(ctx).Infof("Deleting %d volume(s)", len(volList))
+
+		delResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Delete(ctx, vols...)
+		if err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(volList), err)
+		}
+
+		if _, err = delResp.AllOrErr(); err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(volList), err)
+		}
+	} else {
+		log.G(ctx).Infof("Deleting %d volume(s)", len(args))
+
+		delResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Delete(ctx, args...)
+		if err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+		}
+		if _, err = delResp.AllOrErr(); err != nil {
+			return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
+		}
 	}
 
 	return nil
+}
+
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	return Remove(ctx, opts, args...)
 }
