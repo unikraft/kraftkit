@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
-	kcimages "sdk.kraft.cloud/images"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -23,12 +22,12 @@ import (
 )
 
 type RemoveOptions struct {
-	AllowInsecure bool                   `noattribute:"true"`
-	All           bool                   `long:"all" usage:"Remove all images"`
-	Auth          *config.AuthConfig     `noattribute:"true"`
-	Client        kcimages.ImagesService `noattribute:"true"`
-	Metro         string                 `noattribute:"true"`
-	Token         string                 `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	All           bool                  `long:"all" usage:"Remove all images"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Metro         string                `noattribute:"true"`
+	Token         string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -83,7 +82,8 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+// Remove an image from your account.
+func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
@@ -94,14 +94,14 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewImagesClient(
+		opts.Client = kraftcloud.NewClient(
 			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
 	if opts.All {
-		imgListResp, err := opts.Client.WithMetro(opts.Metro).List(ctx)
+		imgListResp, err := opts.Client.Images().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("listing images: %w", err)
 		}
@@ -121,7 +121,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 			log.G(ctx).Infof("removing %s", image.Digest)
 
-			if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, image.Digest); err != nil {
+			if err := opts.Client.Images().WithMetro(opts.Metro).DeleteByName(ctx, image.Digest); err != nil {
 				log.G(ctx).Warnf("could not delete image: %s", err.Error())
 
 				if strings.Contains(err.Error(), "NOT_FOUND") {
@@ -138,7 +138,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	for _, arg := range args {
 		log.G(ctx).Infof("removing %s", arg)
 
-		if err := opts.Client.WithMetro(opts.Metro).DeleteByName(ctx, arg); err != nil {
+		if err := opts.Client.Images().WithMetro(opts.Metro).DeleteByName(ctx, arg); err != nil {
 			if strings.Contains(err.Error(), "NOT_FOUND") {
 				log.G(ctx).Warnf("%s not found. This is expected if you have already removed it.", arg)
 			} else {
@@ -148,4 +148,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	return err
+}
+
+func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
+	return Remove(ctx, opts, args...)
 }
