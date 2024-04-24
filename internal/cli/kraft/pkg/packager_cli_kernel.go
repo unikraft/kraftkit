@@ -80,7 +80,7 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 		}
 	}
 
-	if len(opts.Env) == 0 {
+	if len(opts.Env) == 0 && envs != nil {
 		if envs[0] != nil {
 			opts.Env = envs[0]
 		}

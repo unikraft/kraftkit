@@ -289,7 +289,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
-	if len(opts.Env) == 0 {
+	if len(opts.Env) == 0 && envs != nil {
 		if envs[0] != nil {
 			opts.Env = envs[0]
 		}
