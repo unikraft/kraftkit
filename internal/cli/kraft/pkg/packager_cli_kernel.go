@@ -68,22 +68,18 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 		return nil, fmt.Errorf("could not prepare phony target: %w", err)
 	}
 
-	var cmds [][]string
-	var envs [][]string
+	var cmds []string
+	var envs []string
 	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
-	if len(opts.Args) == 0 {
-		if cmds[0] != nil {
-			opts.Args = cmds[0]
-		}
+	if len(opts.Args) == 0 && cmds != nil {
+		opts.Args = cmds
 	}
 
-	if len(opts.Env) == 0 {
-		if envs[0] != nil {
-			opts.Env = envs[0]
-		}
+	if envs != nil {
+		opts.Env = append(opts.Env, envs...)
 	}
 
 	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
