@@ -28,6 +28,7 @@ INSTALL_SERVER=${INSTALL_SERVER:-https://get.kraftkit.sh}
 INSTALL_TLS=${INSTALL_TLS:-y}
 DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
+ASK_SUDO=${ASK_SUDO:-y}
 
 # Commands as variables to make them easier to override
 APK=${APK:-apk}
@@ -240,13 +241,15 @@ do_cmd() {
 
         # Retry with root if the user wants to, otherwise exit
         # with the return value of the command
-        if prompt_user_yes_no "do you want to retry with root? [y/N]: " "n"; then
+        if [ "$ASK_SUDO" = "n" ] || \
+            prompt_user_yes_no "do you want to retry with root from now on? [y/N]: " "n"; then
             # Check if we have a tty and run with it if we do,
             # otherwise exit with an error
             # This is because sudo requires a tty to input the password
             if [ "$NEED_TTY" = "y" ]; then
                 # shellcheck disable=SC2002
                 $SUDO sh -c "$@" < /dev/tty
+                ASK_SUDO="n"
             else
                 err "fatal: cannot retry with root without a tty."
             fi
