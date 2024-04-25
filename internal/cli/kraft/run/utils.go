@@ -396,9 +396,12 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 				}
 
 				for _, entry := range ramfs.Env() {
-					split := strings.SplitN(entry, "=", 2)
+					k, v, ok := strings.Cut(entry, "=")
+					if !ok {
+						continue
+					}
 
-					machine.Spec.Env[split[0]] = split[1]
+					machine.Spec.Env[k] = v
 				}
 
 				machine.Spec.ApplicationArgs = ramfs.Args()
@@ -429,9 +432,8 @@ func (opts *RunOptions) parseKraftfileEnv(_ context.Context, project app.Applica
 			continue
 		}
 
-		hostVal := os.Getenv(k)
-		if hostVal != "" {
-			machine.Spec.Env[k] = hostVal
+		if v, ok := os.LookupEnv(k); ok {
+			machine.Spec.Env[k] = v
 		}
 	}
 
@@ -444,11 +446,11 @@ func (opts *RunOptions) parseEnvs(_ context.Context, machine *machineapi.Machine
 	}
 
 	for _, env := range opts.Env {
-		if strings.ContainsRune(env, '=') {
-			split := strings.SplitN(env, "=", 2)
-			machine.Spec.Env[split[0]] = split[1]
-		} else {
-			machine.Spec.Env[env] = os.Getenv(env)
+		k, v, ok := strings.Cut(env, "=")
+		if ok {
+			machine.Spec.Env[k] = v
+		} else if v, ok := os.LookupEnv(k); ok {
+			machine.Spec.Env[k] = v
 		}
 	}
 

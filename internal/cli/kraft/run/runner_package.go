@@ -345,13 +345,12 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 
 		for _, env := range v.Config.Env {
-			if strings.ContainsRune(env, '=') {
-				parts := strings.SplitN(env, "=", 2)
-				machine.Spec.Env[parts[0]] = parts[1]
+			k, v, ok := strings.Cut(env, "=")
+			if !ok {
 				continue
 			}
 
-			machine.Spec.Env[env] = ""
+			machine.Spec.Env[k] = v
 		}
 	default:
 	}

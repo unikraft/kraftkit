@@ -340,9 +340,12 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			}
 
 			for _, entry := range runtime.Initrd().Env() {
-				split := strings.SplitN(entry, "=", 2)
+				k, v, ok := strings.Cut(entry, "=")
+				if !ok {
+					continue
+				}
 
-				machine.Spec.Env[split[0]] = split[1]
+				machine.Spec.Env[k] = v
 			}
 
 			machine.Spec.ApplicationArgs = runtime.Initrd().Args()
