@@ -459,3 +459,66 @@ func (opts *RunOptions) parseEnvs(_ context.Context, machine *machineapi.Machine
 
 	return nil
 }
+
+// GetArgs returns all the arguments of run command as an array of strings.
+func (opts *RunOptions) GetArgs() []string {
+	args := []string{}
+	if opts.Detach {
+		args = append(args, "--detach")
+	}
+	if opts.DisableAccel {
+		args = append(args, "--disable-acceleration")
+	}
+	if opts.PrefixName {
+		args = append(args, "--prefix-name")
+	}
+	if opts.WithKernelDbg {
+		args = append(args, "--symbolic")
+	}
+	if opts.Remove {
+		args = append(args, "--rm")
+	}
+	if len(opts.Name) > 0 {
+		args = append(args, "--name", opts.Name)
+	}
+	if len(opts.Architecture) > 0 {
+		args = append(args, "--arch", opts.Architecture)
+	}
+	if len(opts.RunAs) > 0 {
+		args = append(args, "--as", opts.RunAs)
+	}
+	if len(opts.KernelArgs) > 0 {
+		args = append(args, "--kernel-arg", strings.Join(opts.KernelArgs, " "))
+	}
+	if len(opts.Kraftfile) > 0 {
+		args = append(args, "--kraftfile", opts.Kraftfile)
+	}
+	if len(opts.MacAddress) > 0 {
+		args = append(args, "--mac", opts.MacAddress)
+	}
+	if len(opts.Memory) > 0 {
+		args = append(args, "--memory", opts.Memory)
+	}
+	if len(opts.Networks) > 0 {
+		args = append(args, "--network", strings.Join(opts.Networks, " "))
+	}
+	if len(opts.Platform) > 0 {
+		args = append(args, "--plat", opts.Platform)
+	}
+	if len(opts.Ports) > 0 {
+		args = append(args, "--port", strings.Join(opts.Ports, " "))
+	}
+	if len(opts.Prefix) > 0 {
+		args = append(args, "--prefix", opts.Prefix)
+	}
+	if len(opts.Rootfs) > 0 {
+		args = append(args, "--rootfs", opts.Rootfs)
+	}
+	if len(opts.Target) > 0 {
+		args = append(args, "--target ", opts.Target)
+	}
+	if len(opts.Volumes) > 0 {
+		args = append(args, "--volume", strings.Join(opts.Volumes, " "))
+	}
+	return args
+}

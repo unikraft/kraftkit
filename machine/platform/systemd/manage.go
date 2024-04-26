@@ -9,9 +9,12 @@ func (p *startStop) Start(s service.Service) error {
 	go p.run()
 	return nil
 }
-func (p *startStop) run() {
+
+func (p *startStop) run() error {
 	// Do work here
+	return nil
 }
+
 func (p *startStop) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
 	return nil
