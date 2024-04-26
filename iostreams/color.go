@@ -224,8 +224,12 @@ func (c *ColorScheme) ColorFromString(s string) func(string) string {
 	case "blue":
 		fn = c.Blue
 	default:
-		fn = func(s string) string {
-			return s
+		if c.enabled {
+			fn = ansi.ColorFunc(s)
+		} else {
+			fn = func(s string) string {
+				return s
+			}
 		}
 	}
 
