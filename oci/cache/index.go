@@ -26,13 +26,18 @@ func RemoteIndex(ref name.Reference, options ...remote.Option) (v1.ImageIndex, e
 	name := ref.Name()
 
 	if indexCache == nil {
+		indexCacheMu.Lock()
 		indexCache = make(map[string]v1.ImageIndex)
+		indexCacheMu.Unlock()
 		goto lookup
 	}
 
+	indexCacheMu.Lock()
 	if index, ok := indexCache[name]; ok {
+		indexCacheMu.Unlock()
 		return index, nil
 	}
+	indexCacheMu.Unlock()
 
 lookup:
 	v1ImageIndex, err := remote.Index(ref, options...)
