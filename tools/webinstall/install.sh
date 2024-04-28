@@ -1053,10 +1053,13 @@ install_linux_gnu() {
             "gpgcheck=0\n"                              \
         )
 
-        # Do command directly as the output is inconsistent
         say "Adding kraftkit package for RHEL/Fedora"
-        printf "%b" "${_ilg_rpm_path}" | tee /etc/yum.repos.d/kraftkit.repo
+        _ilg_yum_cmd=$(printf "%b%s"                \
+            "echo '${_ilg_rpm_path}'"               \
+            "| tee /etc/yum.repos.d/kraftkit.repo"  \
+        )
 
+        do_cmd "$_ilg_yum_cmd"
         do_cmd "$YUM makecache"
         do_cmd "$YUM install -y kraftkit"
     elif check_os_release "debian"; then
