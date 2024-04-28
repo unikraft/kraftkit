@@ -378,6 +378,9 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		return fmt.Errorf("could not prepare initramfs: %w", err)
 	}
 
+	if machine.Spec.Env == nil {
+		machine.Spec.Env = make(map[string]string)
+	}
 	treemodel, err := processtree.NewProcessTree(
 		ctx,
 		[]processtree.ProcessTreeOption{
