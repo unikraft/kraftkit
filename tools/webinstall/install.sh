@@ -28,6 +28,7 @@ INSTALL_SERVER=${INSTALL_SERVER:-https://get.kraftkit.sh}
 INSTALL_TLS=${INSTALL_TLS:-y}
 DEBUG=${DEBUG:-n}
 NEED_TTY=${NEED_TTY:-y}
+ASK_SUDO=${ASK_SUDO:-y}
 
 # Commands as variables to make them easier to override
 APK=${APK:-apk}
@@ -199,12 +200,13 @@ get_user_response() {
     _RETVAL="$_gur_read_answer"
 }
 
-# prompt_user_yes_no asks the user a question which must be answered with yes or no. Returns a boolean value.
+# prompt_yes_no asks the user a question which must be answered with yes or no.
+# Returns a boolean value.
 # $1: question
 # $2: default answer
 # Returns:
 # _RETVAL: true for "yes", false for "no"
-prompt_user_yes_no() {
+prompt_yes_no() {
   while true;
   do
       get_user_response "$1" "$2"
@@ -240,13 +242,15 @@ do_cmd() {
 
         # Retry with root if the user wants to, otherwise exit
         # with the return value of the command
-        if prompt_user_yes_no "do you want to retry with root? [y/N]: " "n"; then
+        if [ "$ASK_SUDO" = "n" ] || prompt_yes_no \
+            "do you want to retry with root from now on? [y/N]: " "n"; then
             # Check if we have a tty and run with it if we do,
             # otherwise exit with an error
             # This is because sudo requires a tty to input the password
             if [ "$NEED_TTY" = "y" ]; then
                 # shellcheck disable=SC2002
                 $SUDO sh -c "$@" < /dev/tty
+                ASK_SUDO="n"
             else
                 err "fatal: cannot retry with root without a tty."
             fi
@@ -1067,7 +1071,7 @@ install_linux_gnu() {
 
         _idd_recommended=""
 
-        if prompt_user_yes_no "install recommended dependencies? [y/N]: " "n"; then
+        if prompt_yes_no "install recommended dependencies? [y/N]: " "n"; then
             _idd_recommended="--no-install-recommends"
         else
             _idd_recommended="--install-recommends"
@@ -1086,9 +1090,9 @@ install_linux_gnu() {
         cd - 1> /dev/null || exit
         $RM -rf /tmp/kraftkit-bin
     else
-        _ilg_msg=$(printf "error: %s%s%s"                               \
-            "Unsupported Linux distribution. "                          \
-            "Try downloading the tar.gz file from "                     \
+        _ilg_msg=$(printf "error: %s%s%s"                                   \
+            "Unsupported Linux distribution. "                              \
+            "Try downloading the tar.gz file from "                         \
             "https://github.com/unikraft/kraftkit or switch to manual mode" \
         )
         err "$_ilg_msg"
@@ -1110,9 +1114,9 @@ install_linux_musl() {
         )
         do_cmd "$_ilm_cmd"
     else
-        _ilm_msg=$(printf "error: %s%s%s"                               \
-            "Unsupported Linux distribution. "                          \
-            "Try downloading the tar.gz file from "                     \
+        _ilm_msg=$(printf "error: %s%s%s"                                   \
+            "Unsupported Linux distribution. "                              \
+            "Try downloading the tar.gz file from "                         \
             "https://github.com/unikraft/kraftkit or switch to manual mode" \
         )
         err "$_ilm_msg"
@@ -1184,20 +1188,20 @@ install_linux_manual() {
             "[y/N]: "                                                           \
         )
 
-        if prompt_user_yes_no "$_ill_prompt_msg" "n"; then
+        if prompt_yes_no "$_ill_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_ill_kraft_path")"
         else
             err "fatal: kraft binary already installed."
         fi
     else
 
-        if prompt_user_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
+        if prompt_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
             get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            if prompt_user_yes_no "prefix does not exist, create? [y/N]: " "n"; then
+            if prompt_yes_no "prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
                 err "fatal: prefix does not exist."
@@ -1271,19 +1275,19 @@ install_darwin_manual() {
             "[y/N]: "                                                           \
         )
 
-        if prompt_user_yes_no "$_idr_prompt_msg" "n"; then
+        if prompt_yes_no "$_idr_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_idr_kraft_path")"
         else
             err "fatal: kraft binary already installed."
         fi
     else
-        if prompt_user_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
+        if prompt_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
             get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            if prompt_user_yes_no "prefix does not exist, create? [y/N]: " "n"; then
+            if prompt_yes_no "prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
                 err "fatal: prefix does not exist."
@@ -1426,7 +1430,7 @@ install_dependencies_gnu() {
         say_debug "Installing dependencies: $_idd_list"
 
         _idd_recommended=""
-        if prompt_user_yes_no "install recommended dependencies? [y/N]: " "n"; then
+        if prompt_yes_no "install recommended dependencies? [y/N]: " "n"; then
             _idd_recommended="--no-install-recommends"
         else
             _idd_recommended="--install-recommends"
@@ -1514,7 +1518,8 @@ install_completions() {
 
     _inc_arch="$1"
 
-    if ! prompt_user_yes_no "Do you want to install command completions? [Y/n]: " "y"; then
+    if ! prompt_yes_no \
+        "Do you want to install command completions? [Y/n]: " "y"; then
         return 0
     fi
 
@@ -1550,12 +1555,14 @@ install_completions() {
       elif [ -z "$_inc_answer" ]; then
           printf "No shell provided. Please try again or exit with Ctrl+C\n"
       else
-          printf "Shell %s not supported. Please try again or exit with Ctrl+C\n" "$_inc_answer"
+          printf "Shell %s not supported. " \
+            "Please try again or exit with Ctrl+C\n" "$_inc_answer"
       fi
     done
 
     if [ -f "$_inc_kraft_config_file" ]; then
-        if ! prompt_user_yes_no "kraft completions already exist, overwrite? [Y/n]: " "y"; then
+        if ! prompt_yes_no  \
+            "kraft completions already exist, overwrite? [Y/n]: " "y"; then
             return 0
         fi
     fi
@@ -1629,7 +1636,7 @@ arg_parse() {
 check_autoinstall() {
     _cai_auto_install=""
 
-    if prompt_user_yes_no "install kraftkit using package manager? [Y/n]: " "y"; then
+    if prompt_yes_no "install kraftkit using package manager? [Y/n]: " "y"; then
         say "installing kraftkit via package manager..."
     else
         _cai_auto_install="n"
