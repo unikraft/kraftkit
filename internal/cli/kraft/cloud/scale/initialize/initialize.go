@@ -107,12 +107,12 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		id = conf.UUID
 	}
 
-	if opts.WarmupTime < time.Millisecond {
-		return fmt.Errorf("warmup time must be at least 1ms")
+	if opts.WarmupTime < 10*time.Millisecond {
+		return fmt.Errorf("warmup time must be at least 10ms")
 	}
 
-	if opts.CooldownTime < time.Millisecond {
-		return fmt.Errorf("cooldown time must be at least 1ms")
+	if opts.CooldownTime < 10*time.Millisecond {
+		return fmt.Errorf("cooldown time must be at least 10ms")
 	}
 
 	var master kcautoscale.CreateRequestMaster
