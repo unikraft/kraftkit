@@ -494,10 +494,18 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		ports = append(ports, fmt.Sprintf("%s:%s:%d/%s", port.HostIP, port.Published, port.Target, port.Protocol))
 	}
 
+	memory := ""
+	if service.MemLimit > 0 {
+		memory = fmt.Sprintf("%d", service.MemLimit)
+	} else if service.MemReservation > 0 {
+		memory = fmt.Sprintf("%d", service.MemReservation)
+	}
+
 	runOptions := run.RunOptions{
 		Architecture: arch,
 		Detach:       true,
 		Env:          environ,
+		Memory:       memory,
 		Name:         service.Name,
 		Networks:     networks,
 		NoStart:      true,
