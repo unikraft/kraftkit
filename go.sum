@@ -1799,8 +1799,8 @@ oras.land/oras-go/v2 v2.5.0/go.mod h1:z4eisnLP530vwIOUOJeBIj0aGI0L1C3d53atvCBqZH
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sdk.kraft.cloud v0.5.9-0.20240417173611-0430af5a2dac h1:QNUuhSufx/MUtnlfKWlhS/BYuGsrUd7TvH8BSBdOirk=
-sdk.kraft.cloud v0.5.9-0.20240417173611-0430af5a2dac/go.mod h1:FX/8C4OFJPz+wnExu3WB/KnvEYsMuuyGEprNTB+LhxQ=
+sdk.kraft.cloud v0.5.9-0.20240430124855-83577e6062d6 h1:QNW7+eLtiNtvFG7oqxXNH/TVTbMxcYdCW13d1aCFusg=
+sdk.kraft.cloud v0.5.9-0.20240430124855-83577e6062d6/go.mod h1:FX/8C4OFJPz+wnExu3WB/KnvEYsMuuyGEprNTB+LhxQ=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14/go.mod h1:LEScyzhFmoF5pso/YSeBstl57mOzx9xlU9n85RGrDQg=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.15/go.mod h1:LEScyzhFmoF5pso/YSeBstl57mOzx9xlU9n85RGrDQg=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 h1:TgtAeesdhpm2SGwkQasmbeqDo8th5wOBA5h/AjTKA4I=
