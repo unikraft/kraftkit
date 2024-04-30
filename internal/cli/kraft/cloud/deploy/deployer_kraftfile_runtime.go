@@ -17,6 +17,7 @@ import (
 
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
+	"kraftkit.sh/log"
 )
 
 type deployerKraftfileRuntime struct {
@@ -111,6 +112,11 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Workdir:      opts.Workdir,
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "DENIED") && strings.Contains(err.Error(), "exceed") {
+			log.G(ctx).Warn("storage quota exceeded. please delete some images and try again in at most 15 minutes.")
+			log.G(ctx).Warn("see: kraft cloud image ls --help")
+			log.G(ctx).Warn("see: kraft cloud image delete --help")
+		}
 		return nil, nil, fmt.Errorf("could not package: %w", err)
 	}
 
