@@ -2136,7 +2136,7 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, and a long env flag", func() {
+	When("invoked with standard flags and positional arguments, and a 2KiB long env flag", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2161,7 +2161,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 		})
 
-		It("should work somehow, but the image will be stopped", func() {
+		It("should work, and the image will be running", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -2171,7 +2171,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"stopped"`))
+			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 		})
