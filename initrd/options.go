@@ -9,6 +9,7 @@ type InitrdOptions struct {
 	output   string
 	cacheDir string
 	arch     string
+	workdir  string
 }
 
 type InitrdOption func(*InitrdOptions) error
@@ -47,6 +48,16 @@ func WithCacheDir(dir string) InitrdOption {
 func WithArchitecture(arch string) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		opts.arch = arch
+		return nil
+	}
+}
+
+// WithWorkdir sets the working directory of the initramfs builder.  This is
+// used as a mechanism for storing temporary files and directories during the
+// serialization of the initramfs.
+func WithWorkdir(dir string) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.workdir = dir
 		return nil
 	}
 }
