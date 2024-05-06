@@ -90,7 +90,7 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 	for _, machine := range embeddedProject.Status.Machines {
 		isService := false
 		for _, service := range project.Services {
-			if service.Name == machine.Name {
+			if service.ContainerName == machine.Name {
 				isService = true
 				break
 			}
@@ -118,7 +118,7 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 		}
 		isService := false
 		for _, service := range project.Services {
-			if service.Name == m.Name {
+			if service.ContainerName == m.Name {
 				isService = true
 				break
 			}
@@ -198,8 +198,6 @@ func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProjec
 		}
 	}
 
-	embeddedProject.Status.Networks = existingNetworks
-
 	return nil
 }
 
@@ -229,7 +227,7 @@ func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject
 		}
 	}
 
-	embeddedProject.Status.Networks = existingVolumes
+	embeddedProject.Status.Volumes = existingVolumes
 
 	for _, volume := range project.Volumes {
 		if volume.External {
@@ -254,8 +252,6 @@ func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject
 			}
 		}
 	}
-
-	embeddedProject.Status.Networks = existingVolumes
 
 	return nil
 }
