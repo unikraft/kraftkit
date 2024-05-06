@@ -114,7 +114,7 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 		for _, machine := range embeddedProject.Status.Machines {
 			orphaned := true
 			for _, service := range project.Services {
-				if service.Name == machine.Name {
+				if service.ContainerName == machine.Name {
 					orphaned = false
 					break
 				}

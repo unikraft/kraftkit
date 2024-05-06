@@ -94,7 +94,7 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	machinesToStart := []string{}
 	for _, service := range services {
 		for _, machine := range machines.Items {
-			if service.Name == machine.Name {
+			if service.ContainerName == machine.Name {
 				if machine.Status.State == machineapi.MachineStateCreated || machine.Status.State == machineapi.MachineStateExited {
 					machinesToStart = append(machinesToStart, machine.Name)
 				}
