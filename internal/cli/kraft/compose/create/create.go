@@ -274,7 +274,9 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	for _, service := range services {
+	orderedServices := project.ServicesOrderedByDependencies(ctx, services, true)
+	for _, service := range orderedServices {
+		log.G(ctx).Debugf("creating service %s...", service.Name)
 		alreadyCreated := false
 		for _, machine := range machines.Items {
 			if service.ContainerName != machine.Name {

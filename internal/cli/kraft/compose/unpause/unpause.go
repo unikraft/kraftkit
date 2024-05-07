@@ -91,8 +91,9 @@ func (opts *UnpauseOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	orderedServices := project.ServicesOrderedByDependencies(ctx, services, true)
 	machinesToUnpause := []string{}
-	for _, service := range services {
+	for _, service := range orderedServices {
 		for _, machine := range machines.Items {
 			if service.ContainerName == machine.Name {
 				if machine.Status.State == machineapi.MachineStatePaused {
