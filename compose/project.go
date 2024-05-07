@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -186,50 +187,73 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 		project.Networks[i] = network
 	}
 
+	// Mark used IPs for services with static IPs
+	for _, service := range project.Services {
+		if service.Networks == nil {
+			continue
+		}
+
+		for name, network := range service.Networks {
+			if _, ok := project.Networks[name]; !ok {
+				return fmt.Errorf("service %s references non-existent network %s", service.Name, name)
+			}
+
+			if network != nil && network.Ipv4Address != "" {
+				if len(project.Networks[name].Ipam.Config) == 0 {
+					return fmt.Errorf("cannot assign IP address to service %s on network %s without IPAM config", service.Name, name)
+				}
+
+				usedAddresses[name][network.Ipv4Address] = struct{}{}
+			}
+		}
+	}
+
+	// WithServicesTransform runs in parallel and hence we need to protect the
+	// usedAddresses map
+	var mu sync.Mutex
 	project.Project, err = project.WithServicesTransform(func(name string, service types.ServiceConfig) (types.ServiceConfig, error) {
 		if service.Networks == nil {
 			return service, nil
 		}
 		for name, network := range service.Networks {
-			if _, ok := project.Networks[name]; !ok {
-				return service, fmt.Errorf("service %s references non-existent network %s", service.Name, name)
-			}
-
 			if network == nil {
 				service.Networks[name] = &types.ServiceNetworkConfig{}
 				network = service.Networks[name]
 			}
 
-			if network.Ipv4Address != "" {
-				if project.Networks[name].Ipam.Config == nil || len(project.Networks[name].Ipam.Config) == 0 {
-					return service, fmt.Errorf("cannot assign IP address to service %s on network %s without IPAM config", service.Name, name)
-				}
-			} else if len(project.Networks[name].Ipam.Config) > 0 {
-				// Start at the network's subnet IP and increment until we find
-				// a free one
-				_, subnet, err := net.ParseCIDR(project.Networks[name].Ipam.Config[0].Subnet)
-				if err != nil {
-					return service, err
-				}
-
-				if subnet == nil {
-					// This should not be possible
-					return service, fmt.Errorf("failed to parse network %s subnet", name)
-				}
-
-				ip := subnet.IP
-
-				for _, exists := usedAddresses[name][ip.String()]; subnet.Contains(ip) && exists; _, exists = usedAddresses[name][ip.String()] {
-					ip = iputils.IncreaseIP(ip)
-				}
-
-				if !subnet.Contains(ip) {
-					return service, fmt.Errorf("not enough free IP addresses in network %s", name)
-				}
-
-				service.Networks[name].Ipv4Address = ip.String()
-				usedAddresses[name][ip.String()] = struct{}{}
+			if network.Ipv4Address != "" || len(project.Networks[name].Ipam.Config) == 0 {
+				continue
 			}
+
+			// Start at the network's subnet IP and increment until we find
+			// a free one
+			_, subnet, err := net.ParseCIDR(project.Networks[name].Ipam.Config[0].Subnet)
+			if err != nil {
+				return service, err
+			}
+
+			if subnet == nil {
+				// This should not be possible
+				return service, fmt.Errorf("failed to parse network %s subnet", name)
+			}
+
+			ip := subnet.IP
+
+			mu.Lock()
+			for _, exists := usedAddresses[name][ip.String()]; subnet.Contains(ip) && exists; _, exists = usedAddresses[name][ip.String()] {
+				ip = iputils.IncreaseIP(ip)
+			}
+
+			if !subnet.Contains(ip) {
+				mu.Unlock()
+				return service, fmt.Errorf("not enough free IP addresses in network %s", name)
+			}
+
+			service.Networks[name].Ipv4Address = ip.String()
+			usedAddresses[name][ip.String()] = struct{}{}
+
+			// We have to unlock after we marked the ip as used in the map
+			mu.Unlock()
 		}
 
 		return service, nil
