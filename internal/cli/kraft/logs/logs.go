@@ -167,7 +167,9 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			errGroup = append(errGroup, err)
 		}
-		if opts.Follow && machine.Status.State == machineapi.MachineStateRunning {
+
+		// Sometimes the kernel can boot and exit faster than we can start tailing the logs
+		if opts.Follow && (machine.Status.State == machineapi.MachineStateRunning || machine.Status.State == machineapi.MachineStateExited) {
 			observations.Add(machine)
 			go func(machine *machineapi.Machine) {
 				defer func() {
