@@ -407,7 +407,9 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 					machine.Spec.Env[k] = v
 				}
 
-				machine.Spec.ApplicationArgs = ramfs.Args()
+				if len(machine.Spec.ApplicationArgs) == 0 {
+					machine.Spec.ApplicationArgs = ramfs.Args()
+				}
 
 				return nil
 			},
