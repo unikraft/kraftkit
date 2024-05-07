@@ -16,7 +16,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/volume/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume/detach"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume/get"
-	"kraftkit.sh/internal/cli/kraft/cloud/volume/import"
+	vimport "kraftkit.sh/internal/cli/kraft/cloud/volume/import"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/volume/remove"
 
