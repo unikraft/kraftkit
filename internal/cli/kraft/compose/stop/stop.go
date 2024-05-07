@@ -94,7 +94,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	machinesToStop := []string{}
 	for _, service := range services {
 		for _, machine := range machines.Items {
-			if service.Name == machine.Name &&
+			if service.ContainerName == machine.Name &&
 				(machine.Status.State == machineapi.MachineStateRunning ||
 					machine.Status.State == machineapi.MachineStatePaused) {
 				machinesToStop = append(machinesToStop, machine.Name)

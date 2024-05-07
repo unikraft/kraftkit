@@ -95,7 +95,7 @@ func (opts *LogsOptions) Run(ctx context.Context, args []string) error {
 		}
 		machine, _ := controller.Get(ctx, &machineapi.Machine{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: service.Name,
+				Name: service.ContainerName,
 			},
 		})
 		if machine != nil {

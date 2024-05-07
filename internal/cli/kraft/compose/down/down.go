@@ -101,7 +101,7 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 
 	for _, service := range project.Services {
 		for _, machine := range machines.Items {
-			if service.Name == machine.Name {
+			if service.ContainerName == machine.Name {
 				if err := removeService(ctx, service); err != nil {
 					return err
 				}
@@ -139,7 +139,7 @@ func removeService(ctx context.Context, service types.ServiceConfig) error {
 	log.G(ctx).Infof("removing service %s...", service.Name)
 	removeOptions := machineremove.RemoveOptions{Platform: "auto"}
 
-	return removeOptions.Run(ctx, []string{service.Name})
+	return removeOptions.Run(ctx, []string{service.ContainerName})
 }
 
 func removeNetwork(ctx context.Context, network types.NetworkConfig) error {

@@ -98,7 +98,10 @@ func (project *Project) Validate(ctx context.Context) error {
 	}
 
 	project.Project, err = project.WithServicesTransform(func(name string, service types.ServiceConfig) (types.ServiceConfig, error) {
-		service.Name = fmt.Sprint(project.Name, "-", name)
+		service.Name = name
+		if service.ContainerName == "" {
+			service.ContainerName = fmt.Sprint(project.Name, "-", name)
+		}
 		if service.Platform == "" {
 			hostPlatform, _, err := mplatform.Detect(ctx)
 			if err != nil {

@@ -277,7 +277,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	for _, service := range services {
 		alreadyCreated := false
 		for _, machine := range machines.Items {
-			if service.Name != machine.Name {
+			if service.ContainerName != machine.Name {
 				continue
 			}
 			if machine.Status.State == machineapi.MachineStateRunning || machine.Status.State == machineapi.MachineStateCreated {
@@ -288,7 +288,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 				Platform: machine.Spec.Platform,
 			}
 
-			if err := rmOpts.Run(ctx, []string{service.Name}); err != nil {
+			if err := rmOpts.Run(ctx, []string{service.ContainerName}); err != nil {
 				return err
 			}
 
@@ -317,7 +317,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 		if machine, err := machineController.Get(ctx, &machineapi.Machine{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: service.Name,
+				Name: service.ContainerName,
 			},
 		}); err == nil && machine.Status.State == machineapi.MachineStateCreated {
 			projectMachines = append(projectMachines, machine.ObjectMeta)
@@ -506,7 +506,7 @@ func createService(ctx context.Context, project *compose.Project, service types.
 		Detach:       true,
 		Env:          environ,
 		Memory:       memory,
-		Name:         service.Name,
+		Name:         service.ContainerName,
 		Networks:     networks,
 		NoStart:      true,
 		Platform:     plat,
