@@ -128,7 +128,7 @@ runs:
         --name buildkitd_${GITHUB_RUN_ID}_${SUFFIX} \
         -v /run/buildkit:/run/buildkit:rw \
         moby/buildkit:v0.13.1;
-      sleep 5; # wait for buildkit to start
+      timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done'
       sudo chmod 666 /run/buildkit/buildkitd.sock;
     env:
       SUFFIX: ${{ steps.suffix.outputs.suffix }}
