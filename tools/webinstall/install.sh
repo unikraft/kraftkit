@@ -1082,7 +1082,7 @@ install_linux_gnu() {
 
         do_cmd "$_ilg_deb_cmd"
         do_cmd "$APT --allow-unauthenticated update"
-        do_cmd "$APT install -y kraftkit"
+        do_cmd "$APT install -y $_idd_recommended kraftkit"
     elif check_os_release "arch"; then
         need_cmd "$GIT"
         need_cmd "$MAKEPKG"
