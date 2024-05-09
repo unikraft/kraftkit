@@ -37,14 +37,23 @@ func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID 
 }
 
 // runVolimport spawns a volume data import instance with the given volume attached.
-func runVolimport(ctx context.Context, cli kcinstances.InstancesService, volUUID, authStr string) (instID, fqdn string, err error) {
+func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64) (instID, fqdn string, err error) {
+	args := []string{
+		"-p", strconv.FormatUint(uint64(volimportPort), 10),
+		"-a", authStr,
+	}
+
+	if timeoutS > 0 {
+		// Note(craciunoiuc): Add a 10-second buffer to the timeout.
+		// This is to allow the client to close the connection first.
+		// Otherwise there is a chance that the volume becomes corrupted.
+		args = append(args, "-t", strconv.FormatUint(timeoutS+10, 10))
+	}
+
 	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
-		Image:    "official/kraftcloud/volimport:latest",
-		MemoryMB: ptr(32),
-		Args: []string{
-			"-p", strconv.FormatUint(uint64(volimportPort), 10),
-			"-a", authStr,
-		},
+		Image:    image,
+		MemoryMB: ptr(128),
+		Args:     args,
 		ServiceGroup: &kcinstances.CreateRequestServiceGroup{
 			Services: []kcservices.CreateRequestService{{
 				Port:            int(volimportPort),
@@ -58,12 +67,24 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, volUUID
 		}},
 		Autostart:     ptr(true),
 		WaitTimeoutMs: ptr(int((3 * time.Second).Milliseconds())),
+		Features:      []kcinstances.Feature{kcinstances.FeatureDeleteOnStop},
 	})
 	if err != nil {
 		return "", "", fmt.Errorf("creating volume data import instance: %w", err)
 	}
 	inst, err := crinstResp.FirstOrErr()
 	if err != nil {
+		if inst != nil && inst.Name != "" {
+			// Delete the instance if it was created but failed to start
+			crdelResp, err := cli.Delete(ctx, inst.UUID)
+			if err != nil {
+				return "", "", fmt.Errorf("deleting volume data import instance on fail: %w", err)
+			}
+
+			if _, err = crdelResp.FirstOrErr(); err != nil {
+				return "", "", fmt.Errorf("deleting volume data import instance on fail: %w", err)
+			}
+		}
 		return "", "", fmt.Errorf("creating volume data import instance: %w", err)
 	}
 

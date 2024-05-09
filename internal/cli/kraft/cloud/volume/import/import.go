@@ -35,8 +35,10 @@ type ImportOptions struct {
 	Token string             `noattribute:"true"`
 	Metro string             `noattribute:"true"`
 
-	Source string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile)" default:"."`
-	VolID  string `local:"true" long:"volume" short:"v" usage:"Identifier of an existing volume (name or UUID)"`
+	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"utils/volimport:latest"`
+	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile)" default:"."`
+	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds"`
+	VolID          string `local:"true" long:"volume" short:"v" usage:"Identifier of an existing volume (name or UUID)"`
 }
 
 const volimportPort uint16 = 42069
@@ -119,11 +121,13 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	}
 
 	defer func() {
-		err := os.Remove(cpioPath)
-		if err != nil {
-			err = fmt.Errorf("removing temp CPIO archive: %w", err)
+		if cpioPath != opts.Source {
+			err := os.Remove(cpioPath)
+			if err != nil {
+				err = fmt.Errorf("removing temp CPIO archive: %w", err)
+			}
+			retErr = errors.Join(retErr, err)
 		}
-		retErr = errors.Join(retErr, err)
 	}()
 
 	var volUUID string
@@ -141,7 +145,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if authStr, err = genRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			instID, instFQDN, err = runVolimport(ctx, icli, volUUID, authStr)
+			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
 			return err
 		},
 	)
@@ -169,7 +173,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
 			conn, err := tls.Dial("tcp4", instAddr, nil)
 			if err != nil {
-				return fmt.Errorf("connecting to volume data import instance: %w", err)
+				return fmt.Errorf("connecting to volume data import instance send port: %w", err)
 			}
 			defer func() {
 				retErr = errors.Join(retErr, conn.Close())
@@ -177,7 +181,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
-			err = copyCPIO(ctx, conn, authStr, cpioPath, cpioSize, callback)
+			err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Timeout)
 			copyCPIOErr = err
 			return err
 		},
