@@ -99,7 +99,8 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	for _, service := range project.Services {
+	orderedServices := project.ServicesReversedByDependencies(ctx, project.Services, false)
+	for _, service := range orderedServices {
 		for _, machine := range machines.Items {
 			if service.ContainerName == machine.Name {
 				if err := removeService(ctx, service); err != nil {

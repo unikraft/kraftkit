@@ -91,8 +91,9 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	orderedServices := project.ServicesReversedByDependencies(ctx, services, false)
 	machinesToStop := []string{}
-	for _, service := range services {
+	for _, service := range orderedServices {
 		for _, machine := range machines.Items {
 			if service.ContainerName == machine.Name &&
 				(machine.Status.State == machineapi.MachineStateRunning ||

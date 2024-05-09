@@ -91,8 +91,9 @@ func (opts *PauseOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	orderedServices := project.ServicesReversedByDependencies(ctx, services, false)
 	machinesToPause := []string{}
-	for _, service := range services {
+	for _, service := range orderedServices {
 		for _, machine := range machines.Items {
 			if service.ContainerName == machine.Name && machine.Status.State == machineapi.MachineStateRunning {
 				machinesToPause = append(machinesToPause, machine.Name)

@@ -91,8 +91,9 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	orderedServices := project.ServicesOrderedByDependencies(ctx, services, true)
 	machinesToStart := []string{}
-	for _, service := range services {
+	for _, service := range orderedServices {
 		for _, machine := range machines.Items {
 			if service.ContainerName == machine.Name {
 				if machine.Status.State == machineapi.MachineStateCreated || machine.Status.State == machineapi.MachineStateExited {
