@@ -240,3 +240,85 @@ func (project *Project) AssignIPs(ctx context.Context) error {
 
 	return nil
 }
+
+// ServicesOrderedByDependencies receives a list of services and generates a
+// new list ordered by dependencies. If expand is set, it will also include
+// dependencies not present in the original list.
+func (project *Project) ServicesOrderedByDependencies(ctx context.Context, services types.Services, expand bool) []types.ServiceConfig {
+	added := map[string]struct{}{}
+
+	var addDependenciesRecursevly func(service types.ServiceConfig)
+
+	orderedServices := []types.ServiceConfig{}
+	addDependenciesRecursevly = func(service types.ServiceConfig) {
+		added[service.Name] = struct{}{}
+		for name, dependency := range service.DependsOn {
+			_, ok := services[name]
+			if !ok && !expand {
+				continue
+			}
+
+			log.G(ctx).
+				WithField("service", service.Name).
+				WithField("on", name).
+				Debug("depends")
+
+			_, ok = added[name]
+			if !ok && dependency.Required {
+				addDependenciesRecursevly(project.Services[name])
+			}
+		}
+
+		orderedServices = append(orderedServices, service)
+	}
+
+	for _, service := range services {
+		_, ok := added[service.Name]
+		if !ok {
+			addDependenciesRecursevly(service)
+		}
+	}
+
+	return orderedServices
+}
+
+// ServicesReversedWithDependants receives a list of services and generates a
+// new list reverse ordered by dependencies. If expand is set, it will also
+// include dependendants not present in the original list.
+func (project *Project) ServicesReversedByDependencies(ctx context.Context, services types.Services, expand bool) []types.ServiceConfig {
+	added := map[string]struct{}{}
+
+	var addDependantsRecursevly func(service types.ServiceConfig)
+
+	reversedServices := []types.ServiceConfig{}
+	addDependantsRecursevly = func(service types.ServiceConfig) {
+		added[service.Name] = struct{}{}
+		for _, name := range service.GetDependents(project.Project) {
+			_, ok := services[name]
+			if !ok && !expand {
+				continue
+			}
+
+			log.G(ctx).
+				WithField("service", name).
+				WithField("on", service.Name).
+				Debug("depends")
+
+			_, ok = added[name]
+			if !ok && project.Services[name].DependsOn[service.Name].Required {
+				addDependantsRecursevly(project.Services[name])
+			}
+		}
+
+		reversedServices = append(reversedServices, service)
+	}
+
+	for _, service := range services {
+		_, ok := added[service.Name]
+		if !ok {
+			addDependantsRecursevly(service)
+		}
+	}
+
+	return reversedServices
+}
