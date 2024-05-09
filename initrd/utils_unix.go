@@ -11,7 +11,7 @@ import (
 	"io/fs"
 	"syscall"
 
-	"github.com/cavaliergopher/cpio"
+	"kraftkit.sh/cpio"
 )
 
 func populateCPIO(info fs.FileInfo, header *cpio.Header) {

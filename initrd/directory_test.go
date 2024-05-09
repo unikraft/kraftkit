@@ -10,8 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cavaliergopher/cpio"
-
+	"kraftkit.sh/cpio"
 	"kraftkit.sh/initrd"
 )
 
@@ -63,7 +62,7 @@ func TestNewFromDirectory(t *testing.T) {
 	}
 
 	for {
-		hdr, err := r.Next()
+		hdr, _, err := r.Next()
 		if err == io.EOF {
 			break
 		}

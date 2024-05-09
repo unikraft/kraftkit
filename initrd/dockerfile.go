@@ -16,11 +16,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"kraftkit.sh/config"
+	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
 
 	sfile "github.com/anchore/stereoscope/pkg/file"
 	soci "github.com/anchore/stereoscope/pkg/image/oci"
-	"github.com/cavaliergopher/cpio"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session/filesync"

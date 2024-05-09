@@ -12,13 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
 
 	"github.com/anchore/stereoscope"
 	scfile "github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
 	"github.com/anchore/stereoscope/pkg/filetree/filenode"
-	"github.com/cavaliergopher/cpio"
 	"github.com/containers/image/v5/copy"
 	ociarchive "github.com/containers/image/v5/oci/archive"
 	"github.com/containers/image/v5/signature"
