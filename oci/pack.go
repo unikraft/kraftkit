@@ -291,7 +291,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		}
 
 	case packmanager.StrategyOverwrite:
-		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.Name(), true); err != nil {
+		if err := ocipack.handle.DeleteIndex(ctx, ocipack.ref.Name(), false); err != nil {
 			return nil, fmt.Errorf("could not remove existing index: %w", err)
 		}
 
