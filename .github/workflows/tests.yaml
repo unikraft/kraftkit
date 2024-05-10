@@ -1,4 +1,4 @@
-name: Tests
+name: tests
 
 on:
   pull_request:
@@ -7,12 +7,17 @@ on:
     paths:
       - '**'
       - '!.github/**'
-      - '.github/workflows/gotests.yaml'
+      - '.github/workflows/tests.yaml'
 
 jobs:
-  gounit:
-    name: Go unit tests
-    runs-on: ubuntu-latest
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,8 +51,12 @@ jobs:
         run: make test-unit
 
   e2e-cli:
-    name: kraft CLI end-to-end
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -93,3 +102,59 @@ jobs:
           KRAFTKIT_NO_CHECK_UPDATES: true
           DOCKER: ''
         run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
+
+  e2e-cloud-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.0
+          cache: false
+
+      - name: Set Go variables
+        id: goenv
+        run: |
+          {
+            echo "cache=$(go env GOCACHE)"
+            echo "modcache=$(go env GOMODCACHE)"
+            echo "mod=$(go env GOMOD)"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Go caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.goenv.outputs.cache }}
+            ${{ steps.goenv.outputs.modcache }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Run framework unit tests
+        env:
+          KRAFTKIT_NO_WARN_SUDO: true
+          KRAFTKIT_NO_CHECK_UPDATES: true
+          DOCKER: ''
+        run: make test-framework DISTDIR="$(go env GOPATH)"/bin
+
+      - name: Run cloud e2e tests
+        env:
+          KRAFTCLOUD_METRO: ${{ secrets.KRAFTCLOUD_METRO }}
+          KRAFTCLOUD_TOKEN: ${{ secrets.KRAFTCLOUD_TOKEN }}
+          KRAFTCLOUD_USER: ${{ env.KRAFTCLOUD_USER }}
+          KRAFTKIT_NO_CHECK_UPDATES: true
+          KRAFTKIT_NO_WARN_SUDO: true
+          DOCKER: ''
+        run: make test-cloud-e2e DISTDIR="$(go env GOPATH)"/bin
