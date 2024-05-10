@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -488,6 +489,13 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			Mode:    cpio.FileMode(info.Mode().Perm()),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+		}
+
+		if sysInfo := info.Sys().(*syscall.Stat_t); sysInfo != nil {
+			header.Uid = int(sysInfo.Uid)
+			header.Guid = int(sysInfo.Gid)
+			header.Inode = int64(sysInfo.Ino)
+			header.Links = int(sysInfo.Nlink)
 		}
 
 		switch {

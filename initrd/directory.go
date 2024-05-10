@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/cavaliergopher/cpio"
 
@@ -130,6 +131,13 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 			Mode:    cpio.FileMode(info.Mode().Perm()),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+		}
+
+		if sysInfo := info.Sys().(*syscall.Stat_t); sysInfo != nil {
+			header.Uid = int(sysInfo.Uid)
+			header.Guid = int(sysInfo.Gid)
+			header.Inode = int64(sysInfo.Ino)
+			header.Links = int(sysInfo.Nlink)
 		}
 
 		switch {
