@@ -376,6 +376,16 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			if _, err := io.Copy(file, tarReader); err != nil {
 				return "", fmt.Errorf("could not write file: %w", err)
 			}
+		case tar.TypeSymlink:
+			if err := os.Symlink(header.Linkname, targetPath); err != nil {
+				return "", fmt.Errorf("could not create symlink: %w", err)
+			}
+		case tar.TypeLink:
+			if err := os.Link(header.Linkname, targetPath); err != nil {
+				return "", fmt.Errorf("could not create hard link: %w", err)
+			}
+		default:
+			return "", fmt.Errorf("unsupported file type: %c", header.Typeflag)
 		}
 	}
 
