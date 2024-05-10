@@ -39,7 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: go-vars
     container: kraftkit.sh/myself-full:latest
-    name: Build Check
     env:
       RUNGOGENERATE: false
     steps:
