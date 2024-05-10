@@ -1,5 +1,6 @@
 # Ignore distributables folder
 dist/
+goreleaser-*.yaml
 
 # Ignore vscode folder
 .vscode/
