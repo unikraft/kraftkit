@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -353,6 +352,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 	tarReader := tar.NewReader(tarArchive)
 
+	hardlinks := make(map[string]string)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -382,11 +382,32 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 				return "", fmt.Errorf("could not create symlink: %w", err)
 			}
 		case tar.TypeLink:
-			if err := os.Link(header.Linkname, targetPath); err != nil {
-				return "", fmt.Errorf("could not create hard link: %w", err)
-			}
+			hardlinks[header.Name] = header.Linkname
+		case tar.TypeBlock:
+			log.G(ctx).
+				WithField("file", header.Name).
+				Warn("ignoring block devices")
+		case tar.TypeChar:
+			log.G(ctx).
+				WithField("file", header.Name).
+				Warn("ignoring char devices")
+		case tar.TypeFifo:
+			log.G(ctx).
+				WithField("file", header.Name).
+				Warn("ignoring fifo files")
 		default:
 			return "", fmt.Errorf("unsupported file type: %c", header.Typeflag)
+		}
+	}
+
+	// Create hardlinks
+	// Note(craciunoiuc): This is done afterwards as the hardlink target might
+	// not have been created yet by the archive unpacker.
+	for src, dst := range hardlinks {
+		targetPath := filepath.Join(outputDir, src)
+		oldPath := filepath.Join(outputDir, dst)
+		if err := os.Link(oldPath, targetPath); err != nil {
+			return "", fmt.Errorf("could not create hardlink: %w", err)
 		}
 	}
 
@@ -491,12 +512,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			Size:    info.Size(),
 		}
 
-		if sysInfo := info.Sys().(*syscall.Stat_t); sysInfo != nil {
-			header.Uid = int(sysInfo.Uid)
-			header.Guid = int(sysInfo.Gid)
-			header.Inode = int64(sysInfo.Ino)
-			header.Links = int(sysInfo.Nlink)
-		}
+		// Populate platform specific information
+		populateCPIO(info, header)
 
 		switch {
 		case info.Mode().IsDir():
