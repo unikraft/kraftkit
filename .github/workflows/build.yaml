@@ -1,0 +1,54 @@
+name: build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [staging]
+    paths:
+      - '**'
+      - '!.github/**'
+      - '.github/workflows/build.yaml'
+      - '!buildenvs/**'
+      - '!tools/**'
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kraft:
+    container: kraftkit.sh/myself-full:latest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - GOOS: darwin
+          GOARCH: amd64
+        - GOOS: darwin
+          GOARCH: arm64
+        - GOOS: freebsd
+          GOARCH: amd64
+        - GOOS: freebsd
+          GOARCH: arm64
+        - GOOS: linux
+          GOARCH: amd64
+        - GOOS: linux
+          GOARCH: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Fetch all tags
+        run: |
+          git config --global --add safe.directory /__w/kraftkit/kraftkit
+          git fetch --force --tags
+
+      - name: Build
+        run: |
+          UNAME_OS=${{ matrix.GOOS }} UNAME_ARCH=${{ matrix.GOARCH }} make kraft
