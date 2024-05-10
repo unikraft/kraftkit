@@ -67,6 +67,11 @@ GIT         ?= git
 CURL        ?= curl
 CMAKE       ?= cmake
 
+YTT_VERSION        ?= v0.49.0
+YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
+GORELEASER_VERSION ?= v1.25.1
+GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
+
 # Misc
 Q           ?= @
 
@@ -114,6 +119,16 @@ endif
 .PHONY: all
 .DEFAULT: all
 all: help
+
+.PHONY: build
+build: CHANNEL ?= staging
+build: $(WORKDIR)/goreleaser-$(CHANNEL).yaml
+build: ## Build all KraftKit binary artifacts.
+	$(GORELEASER) build --config $(WORKDIR)/goreleaser-$(CHANNEL).yaml --clean --skip-validate
+
+$(WORKDIR)/goreleaser-$(CHANNEL).yaml: CHANNEL ?= staging
+$(WORKDIR)/goreleaser-$(CHANNEL).yaml:
+	$(YTT) -f .goreleaser-$(CHANNEL).yaml > goreleaser-$(CHANNEL).yaml
 
 ifeq ($(DEBUG),y)
 $(addprefix $(.PROXY), $(BIN)): GO_GCFLAGS ?= -N -l
