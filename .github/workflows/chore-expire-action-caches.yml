@@ -1,4 +1,4 @@
-name: Expire Action Caches
+name: chore/expire-action-caches
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 jobs:
 
   check-and-update:
-    name: Clean
     runs-on: ubuntu-latest
 
     permissions:

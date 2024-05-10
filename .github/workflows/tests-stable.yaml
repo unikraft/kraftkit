@@ -1,15 +1,15 @@
-name: Stable Tests
+name: tests/stable
 
 on:
   push:
     branches: [stable]
 
 jobs:
-  gounit-ubuntu:
+  unit:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-22.04, ubuntu-20.04, macos-11, macos-12, mac-m2-14]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -43,45 +43,7 @@ jobs:
       - name: Run tests
         run: make test-unit
 
-  gounit-mac:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-11, macos-12, mac-m2-14]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.22.0
-          cache: false
-
-      - name: Set Go variables
-        id: goenv
-        run: |
-          {
-            echo "cache=$(go env GOCACHE)"
-            echo "modcache=$(go env GOMODCACHE)"
-            echo "mod=$(go env GOMOD)"
-          } >>"$GITHUB_OUTPUT"
-
-      - name: Go caches
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ steps.goenv.outputs.cache }}
-            ${{ steps.goenv.outputs.modcache }}
-          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
-          restore-keys: |
-            ${{ github.job }}-${{ runner.os }}-go-
-
-      - name: Run tests
-        run: make test-unit
-
-  e2e-ubuntu-cli:
+  e2e-cli:
     strategy:
       fail-fast: false
       matrix:
@@ -132,11 +94,11 @@ jobs:
           DOCKER: ''
         run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
 
-  e2e-mac-cli:
+  e2e-cloud-cli:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-11, macos-12, mac-m2-14]
+        os: [ubuntu-22.04]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -174,11 +136,15 @@ jobs:
         env:
           KRAFTKIT_NO_WARN_SUDO: true
           KRAFTKIT_NO_CHECK_UPDATES: true
-        run: go run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
-
-      - name: Run e2e tests
-        env:
-          KRAFTKIT_NO_WARN_SUDO: true
-          KRAFTKIT_NO_CHECK_UPDATES: true
           DOCKER: ''
-        run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
+        run: make test-framework DISTDIR="$(go env GOPATH)"/bin
+
+      - name: Run cloud e2e tests
+        env:
+          KRAFTCLOUD_METRO: ${{ secrets.KRAFTCLOUD_METRO }}
+          KRAFTCLOUD_TOKEN: ${{ secrets.KRAFTCLOUD_TOKEN }}
+          KRAFTCLOUD_USER: ${{ env.KRAFTCLOUD_USER }}
+          KRAFTKIT_NO_CHECK_UPDATES: true
+          KRAFTKIT_NO_WARN_SUDO: true
+          DOCKER: ''
+        run: make test-cloud-e2e DISTDIR="$(go env GOPATH)"/bin

@@ -8,9 +8,8 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  action-lint:
+  actionlint:
     runs-on: ubuntu-latest
-    name: Action Lint
     steps:
       - uses: actions/checkout@v4
 

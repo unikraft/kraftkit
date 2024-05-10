@@ -1,4 +1,4 @@
-name: Go static checks
+name: check/static
 
 on:
   push:
@@ -12,9 +12,8 @@ on:
       - '.github/workflows/gochecks.yaml'
 
 jobs:
-  gochecks:
+  go:
     runs-on: ubuntu-latest
-    name: All
     env:
       RUNGOGENERATE: false
     steps:

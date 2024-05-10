@@ -1,4 +1,4 @@
-name: Commits Formatting Check
+name: check/pr
 
 on:
   pull_request:
@@ -6,17 +6,16 @@ on:
     branches: [staging]
 
 jobs:
-  commit:
-    name: Commit and PR Format Check
+  commits:
     runs-on: ubuntu-latest
     steps:
-      - name: Commit Format Check
+      - name: format
         if: always()
         uses: taskmedia/action-conventional-commits@v1.1.16
         with:
           types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
 
-      - name: Commit Lines Length Check
+      - name: length
         if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
@@ -28,7 +27,7 @@ jobs:
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Signed-off-by Check
+      - name: signed-off-by
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
@@ -39,7 +38,10 @@ jobs:
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: PR Title Check
+  pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: title-format
         if: always()
         uses: gsactions/commit-message-checker@v2
         with:
@@ -50,7 +52,7 @@ jobs:
           checkAllCommitMessages: 'false'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: PR Title Check Length
+      - name: title-length
         if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:
@@ -62,7 +64,7 @@ jobs:
           checkAllCommitMessages: 'false'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: PR Description Check
+      - name: description
         if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
         uses: gsactions/commit-message-checker@v2
         with:

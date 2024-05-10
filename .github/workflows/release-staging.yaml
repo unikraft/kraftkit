@@ -1,4 +1,4 @@
-name: pre-release-staging
+name: release/staging
 
 on:
   push:
