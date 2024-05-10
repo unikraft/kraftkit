@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"kraftkit.sh/internal/cli/kraft/cloud/volume/import"
+	vimport "kraftkit.sh/internal/cli/kraft/cloud/volume/import"
 )
 
 func TestLoggableError(t *testing.T) {
