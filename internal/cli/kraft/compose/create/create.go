@@ -37,6 +37,7 @@ import (
 	mnetwork "kraftkit.sh/machine/network"
 	mplatform "kraftkit.sh/machine/platform"
 	mvolume "kraftkit.sh/machine/volume"
+	"kraftkit.sh/unikraft/export/v0/uknetdev"
 )
 
 type CreateOptions struct {
@@ -468,8 +469,27 @@ func createService(ctx context.Context, project *compose.Project, service types.
 	log.G(ctx).Infof("creating service %s...", service.Name)
 
 	networks := []string{}
+	if len(service.DNS) > 2 {
+		log.G(ctx).Warnf("service %s has more than 2 DNS servers, only the first 2 will be used", service.Name)
+	}
+
+	dns0 := ""
+	dns1 := ""
+	if len(service.DNS) > 0 {
+		dns0 = service.DNS[0]
+	}
+	if len(service.DNS) > 1 {
+		dns1 = service.DNS[1]
+	}
 	for name, network := range service.Networks {
-		networks = append(networks, fmt.Sprintf("%s:%s", project.Networks[name].Name, network.Ipv4Address))
+		arg := uknetdev.NetdevIp{
+			CIDR:     network.Ipv4Address,
+			DNS0:     dns0,
+			DNS1:     dns1,
+			Hostname: service.Hostname,
+			Domain:   service.DomainName,
+		}
+		networks = append(networks, fmt.Sprintf("%s:%s", project.Networks[name].Name, arg.String()))
 	}
 
 	volumes := []string{}
