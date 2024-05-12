@@ -104,8 +104,8 @@ github.com/anchore/go-logger v0.0.0-20220728155337-03b66a5207d8 h1:imgMA0gN0TZx7
 github.com/anchore/go-logger v0.0.0-20220728155337-03b66a5207d8/go.mod h1:+gPap4jha079qzRTUaehv+UZ6sSdaNwkH0D3b6zhTuk=
 github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092 h1:aM1rlcoLz8y5B2r4tTLMiVTrMtpfY0O8EScKJxaSaEc=
 github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092/go.mod h1:rYqSE9HbjzpHTI74vwPvae4ZVYZd1lue2ta6xHPdblA=
-github.com/anchore/stereoscope v0.0.2-0.20240229175558-fe426d1b1c84 h1:/E74wU51M87fX5UWHubLZiENXbuAci+xtbSb+JFsIYg=
-github.com/anchore/stereoscope v0.0.2-0.20240229175558-fe426d1b1c84/go.mod h1:evQiJMQG56Z7/L5uhA8kfhhjF6ESJUZzUH9ms6bQ2Co=
+github.com/anchore/stereoscope v0.0.2 h1:UTFHB/I3w7dfKvgf0K8+3T5MLZ5/hGhgbNUPVU4T26s=
+github.com/anchore/stereoscope v0.0.2/go.mod h1:ckIamHiRMp8iBwWoTtE5Xkt9VQ5QC+6+O4VzwqyZr5Q=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuWl6zY27l47sB3qLNK6tF2fkHG55UZxx8oIVo4=
