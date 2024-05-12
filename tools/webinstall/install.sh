@@ -1342,11 +1342,9 @@ install_kraftkit() {
         case $_ikk_arch in
             *"linux-gnu"*)
                 install_linux_gnu
-                install_dependencies_gnu
                 ;;
             *"linux-musl"*)
                 install_linux_musl
-                install_dependencies_musl
                 ;;
             *"darwin"*)
                 install_darwin "$_ikk_arch"
@@ -1366,9 +1364,11 @@ install_kraftkit() {
         case $_ikk_arch in
             *"linux-gnu"*)
                 install_linux_manual "$_ikk_arch"
+                install_dependencies_gnu
                 ;;
             *"linux-musl"*)
                 install_linux_manual "$_ikk_arch"
+                install_dependencies_musl
                 ;;
             *"darwin"*)
                 install_darwin_manual "$_ikk_arch"
@@ -1399,6 +1399,10 @@ install_dependencies_gnu() {
         "unzip"                             \
         "wget"                              \
     )
+
+    if ! prompt_yes_no "Install recommended dependencies? [y/N]: " "n"; then
+        return 0
+    fi
 
     need_cmd "$AWK"
     need_cmd "$GREP"
@@ -1432,15 +1436,7 @@ install_dependencies_gnu() {
 
         say_debug "Installing dependencies: $_idd_list"
 
-        _idd_recommended=""
-        if prompt_yes_no "install recommended dependencies? [y/N]: " "n"; then
-            _idd_recommended="--no-install-recommends"
-        else
-            _idd_recommended="--install-recommends"
-
-        fi
-
-        do_cmd "$APT install $_idd_recommended -y $_idd_list"
+        do_cmd "$APT install -y $_idd_list"
     elif check_os_release "arch"; then
         _idd_list=$(printf "%s %s %s %s %s %s %s %s %s %s"   \
             "base-devel"                            \
@@ -1487,6 +1483,10 @@ install_dependencies_musl() {
         "unzip"                                 \
         "wget"                                  \
     )
+
+    if ! prompt_yes_no "Install recommended dependencies? [y/N]: " "n"; then
+        return 0
+    fi
 
     need_cmd "$AWK"
     need_cmd "$GREP"
