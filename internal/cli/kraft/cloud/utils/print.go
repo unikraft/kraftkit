@@ -24,6 +24,7 @@ import (
 
 	kccerts "sdk.kraft.cloud/certificates"
 	kcclient "sdk.kraft.cloud/client"
+	kcimages "sdk.kraft.cloud/images"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 	kcautoscale "sdk.kraft.cloud/services/autoscale"
@@ -633,7 +634,7 @@ func printBar(cs *iostreams.ColorScheme, progress, max int) string {
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem]) error {
+func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem], imageResp *kcimages.QuotasResponseItem) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -662,6 +663,15 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// Blank line on list view
 	if format == "list" {
 		table.AddField("", nil)
+	}
+
+	if imageResp != nil && imageResp.Hard > 0 {
+		table.AddField("IMAGE STORAGE", cs.Bold)
+
+		// Blank line on list view
+		if format == "list" {
+			table.AddField("", nil)
+		}
 	}
 
 	table.AddField("ACTIVE INSTANCES", cs.Bold)
@@ -719,6 +729,24 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// Blank line on list view
 	if format == "list" {
 		table.AddField("", nil)
+	}
+
+	// IMAGE STORAGE
+	if imageResp != nil && imageResp.Hard > 0 {
+		var storedImages string
+		if format == "list" {
+			storedImages = printBar(cs, int(imageResp.Used), int(imageResp.Hard)) + " "
+		}
+		storedImages += fmt.Sprintf("%s/%s",
+			humanize.IBytes(uint64(imageResp.Used)*humanize.Byte),
+			humanize.IBytes(uint64(imageResp.Hard)*humanize.Byte),
+		)
+		table.AddField(storedImages, nil)
+
+		// Blank line on list view
+		if format == "list" {
+			table.AddField("", nil)
+		}
 	}
 
 	// ACTIVE INSTANCES

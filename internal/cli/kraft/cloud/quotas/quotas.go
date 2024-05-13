@@ -74,13 +74,18 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewUsersClient(
+	client := kraftcloud.NewClient(
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	resp, err := client.WithMetro(opts.metro).Quotas(ctx)
+	resp, err := client.Users().WithMetro(opts.metro).Quotas(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get quotas: %w", err)
+	}
+
+	imageResp, err := client.Images().WithMetro(opts.metro).Quotas(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get image quotas: %w", err)
 	}
 
 	if err = iostreams.G(ctx).StartPager(); err != nil {
@@ -89,5 +94,5 @@ func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
 
 	defer iostreams.G(ctx).StopPager()
 
-	return utils.PrintQuotas(ctx, *auth, opts.Output, *resp)
+	return utils.PrintQuotas(ctx, *auth, opts.Output, *resp, imageResp)
 }
