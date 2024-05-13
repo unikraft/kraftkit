@@ -60,17 +60,22 @@ DOCKER_RUN  ?= $(DOCKER) run --rm $(1) \
                $(REGISTRY)/$(2):$(IMAGE_TAG) \
                  $(3)
 GO          ?= go
-GOFUMPT     ?= gofumpt
-GOCILINT    ?= golangci-lint
 MKDIR       ?= mkdir
 GIT         ?= git
 CURL        ?= curl
 CMAKE       ?= cmake
 
+# Go tools
+GOFUMPT_VERSION    ?= v0.6.0
+GOFUMPT            ?= $(GO) run mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
+GOCILINT_VERSION   ?= v1.58.1
+GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)
 YTT_VERSION        ?= v0.49.0
 YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 GORELEASER_VERSION ?= v1.25.1
 GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
+GINKGO_VERSION     ?= v2.17.3
+GINKGO             ?= $(GO) run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
 # Misc
 Q           ?= @
@@ -202,25 +207,19 @@ test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
 test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/ tools/
 test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
 test-unit: ## Run unit tests.
-	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all $(GOTEST_PKGS)
+	$(GINKGO) -v -p -randomize-all $(GOTEST_PKGS)
 
 .PHONY: test-e2e
 test-e2e: kraft ## Run CLI end-to-end tests.
-	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all test/e2e/cli/...
+	$(GINKGO) -v -p -randomize-all test/e2e/cli/...
 
 .PHONY: test-framework
 test-framework: kraft ## Run framework tests.
-	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -p -randomize-all ./test/e2e/framework/...
+	$(GINKGO) -v -p -randomize-all ./test/e2e/framework/...
 
 .PHONY: test-cloud-e2e
 test-cloud-e2e: ## Run cloud end-to-end tests.
-	$(GO) run github.com/onsi/ginkgo/v2/ginkgo -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
-
-.PHONY: install-golangci-lint
-install-golangci-lint: GOLANGCI_LINT_VERSION     ?= 1.51.2
-install-golangci-lint: GOLANGCI_LINT_INSTALL_DIR ?= $$($(GO) env GOPATH)/bin
-install-golangci-lint: ## Install the Golang CI lint tool
-	$(CURL) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOLANGCI_LINT_INSTALL_DIR) v$(GOLANGCI_LINT_VERSION)
+	$(GINKGO) -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
 
 .PHONY: clean
 clean:
