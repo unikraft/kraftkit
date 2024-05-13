@@ -72,14 +72,15 @@ trap cleanup_int TERM
 # usage prints the usage message to stderr
 usage() {
     $CAT 1>&2 <<EOF
-The installer for kraftkit.
+The KraftKit Installer.
+
 Build and use highly customized and ultra-lightweight unikernels.
 
 Documentation:    https://kraftkit.sh/
 Issues & support: https://github.com/unikraft/kraftkit/issues
 
 USAGE:
-    install [FLAGS] [OPTIONS]
+    $0 [FLAGS] [OPTIONS]
 FLAGS:
     -d, --debug             Enable debug output
     -y                      Disable confirmation prompt
@@ -98,17 +99,34 @@ _CLEANUP_ARCHIVE=""
 _CLEANUP_BINARY=""
 _CLEANUP_VERSION=""
 
-# say prints a message to stdout prefixed with "kraftkit: "
+# say prints a message to stdout prefixed with space prefix.
 # $1: message to print
 # Returns:
 say() {
-    printf '%s\n' "$1"
+    printf '    %s\n' "$1"
 }
 
+# say_ok prints a message to stdout with a success prefix.
+# $1: message to print
+# Returns:
+say_ok() {
+    printf '\e[38;5;10m[+]\033[0m %s\n' "$1"
+}
+
+# say_debug prints a message to stdout when DEBUG=y.
+# $1: message to print
+# Returns:
 say_debug() {
     if [ "$DEBUG" = "y" ]; then
-        printf '%s\n' "$1"
+        printf '\e[38;5;4m[D]\033[0m %s\n' "$1"
     fi
+}
+
+# say_warn prints a message to stdout with a warning prefix.
+# $1: message to print
+# Returns:
+say_warn() {
+    printf '\e[38;5;11m[!]\033[0m %s\n' "$1"
 }
 
 # err prints a message to stderr prefixed with "kraftkit: " and exits
@@ -116,7 +134,7 @@ say_debug() {
 # Returns:
 # Code: 1
 err() {
-    say "$1" >&2
+    printf '\e[38;5;1m<!>\033[0m %s\n' "$1" >&2
     exit 1
 }
 
@@ -184,7 +202,7 @@ get_user_response() {
     _gur_read_answer=""
 
     # Ask the question
-    printf "%s" "$_gur_question"
+    printf "[?] %s" "$_gur_question"
 
     # Check if we have a tty and read from it if we do
     if [ "$NEED_TTY" = "y" ]; then
@@ -217,7 +235,7 @@ prompt_yes_no() {
       elif printf "%s" "$_answer" | "$GREP" -q -E "$_YES_ANS"; then
           return 0
       else
-          printf "Invalid input. Please try again or exit with Ctrl+C\n"
+          printf "\e[38;5;1m<!>\033[0m Invalid input. Please try again or exit with Ctrl+C\n"
       fi
     done
 }
@@ -238,12 +256,12 @@ do_cmd() {
         _cmd_retval="$?"
 
         # Inform the user that the command failed
-        say "command failed: $*"
+        say_warn "command failed: $*"
 
         # Retry with root if the user wants to, otherwise exit
         # with the return value of the command
         if [ "$ASK_SUDO" = "n" ] || prompt_yes_no \
-            "do you want to retry with root from now on? [y/N]: " "n"; then
+            "Do you want to retry with root from now on? [y/N]: " "n"; then
             # Check if we have a tty and run with it if we do,
             # otherwise exit with an error
             # This is because sudo requires a tty to input the password
@@ -252,7 +270,7 @@ do_cmd() {
                 $SUDO sh -c "$@" < /dev/tty
                 ASK_SUDO="n"
             else
-                err "fatal: cannot retry with root without a tty."
+                err "Cannot retry with root without a tty."
             fi
         else
             exit "$_cmd_retval"
@@ -264,7 +282,7 @@ do_cmd() {
 # Returns:
 check_proc() {
     if ! test -L /proc/self/exe ; then
-        err "fatal: unable to find /proc/self/exe. Is /proc mounted?"\
+        err "Unable to find /proc/self/exe. Is /proc mounted?"\
         "Installation cannot proceed without /proc."
     fi
 }
@@ -302,7 +320,7 @@ check_help_for() {
                     _chf_ck_arg="$("$SW_VERS" "$_chf_ver_arg" | "$CUT" -d. -f2)"
                     if [ "$_chf_ck_arg" -lt 13 ]; then
                         # Older than 10.13
-                        say "warning: Detected macOS platform older than 10.13"
+                        say_warn "Detected macOS platform older than 10.13"
                         return 1
                     fi
                     ;;
@@ -311,9 +329,9 @@ check_help_for() {
                     ;;
                 *)
                     # Unknown product version, warn and continue
-                    say "warning: Detected unknown macOS major version:"\
-                    "$("$SW_VERS" "$_chf_ver_arg")"
-                    say "warning TLS capabilities detection may fail"
+                    say_warn "Detected unknown macOS major version:"\
+                        "$("$SW_VERS" "$_chf_ver_arg")"
+                    say_warn "TLS capabilities detection may fail."
                     ;;
             esac
         fi
@@ -423,7 +441,7 @@ get_endianness() {
     elif [ "$_ged_current_exe_endianness" = "$(printf '\002')" ]; then
         echo "${_ged_cputype}${_ged_suffix_eb}"
     else
-        err "unknown platform endianness"
+        err "Unknown platform endianness"
     fi
 }
 
@@ -546,7 +564,7 @@ resolve_os_type() {
             ;;
 
         *)
-            err "error: unrecognized OS type: $_rot_ostype"
+            err "Unrecognized OS type: $_rot_ostype"
             ;;
 
     esac
@@ -632,7 +650,7 @@ resolve_cpu_type() {
             _CPUTYPE=riscv64gc
             ;;
         *)
-            err "error: unknown CPU type: $_rct_cputype"
+            err "Unknown CPU type: $_rct_cputype"
 
     esac
 }
@@ -676,7 +694,7 @@ resolve_cpu_unknown() {
                 fi
                 ;;
             riscv64gc)
-                err "error: riscv64 with 32-bit userland unsupported"
+                err "riscv64 with 32-bit userland unsupported"
                 ;;
         esac
     fi
@@ -721,7 +739,7 @@ get_architecture() {
     # Check if the OS is Solaris or illumos based
     get_sunos_types "$_OSTYPE" "$_CPUTYPE"
 
-    say_debug "Gotten OS: $_OSTYPE, CPU: $_CPUTYPE, LIBC: $_CLIBTYPE"
+    say_debug "Detected OS: $_OSTYPE, CPU: $_CPUTYPE, LIBC: $_CLIBTYPE"
 
     # Check the OS variable and construct the first part of the return string
     resolve_os_type "$_OSTYPE" "$_CLIBTYPE"
@@ -890,9 +908,9 @@ download_using_curl() {
                 --location "$_duc_url" --output "$_duc_archive" 2>&1)
             _RETVAL=$?
         else
-            say "warning: Not enforcing strong cipher suites for TLS"
+            say_warn "Not enforcing strong cipher suites for TLS"
             if ! check_help_for "$_duc_arch" "$CURL" --proto --tlsv1.2; then
-                say "warning: Not enforcing TLS v1.2; less secure"
+                say_warn "Not enforcing TLS v1.2; less secure"
 
                 # shellcheck disable=SC2086
                 _duc_err=$("$CURL" $_duc_retry --silent --show-error \
@@ -908,7 +926,7 @@ download_using_curl() {
             fi
         fi
     else
-        say "warning: Not enforcing cipher suites for TLS; less secure"
+        say_warn "Not enforcing cipher suites for TLS; less secure"
 
         # shellcheck disable=SC2086
         _duc_err=$("$CURL" $_duc_retry --silent \
@@ -921,7 +939,7 @@ download_using_curl() {
         echo "$_duc_err" >&2
         if echo "$_duc_err" | $GREP -q 404$; then
             _duc_msg=""
-            _duc_msg=$(printf "error: %s%s"                         \
+            _duc_msg=$(printf "%s%s"                                \
                 "installer for platform '$_duc_arch' not found, "   \
                 "this may be unsupported"                           \
             )
@@ -947,7 +965,7 @@ download_using_wget() {
 
     if [ "$INSTALL_TLS" = "y" ]; then
         if [ "$_duw_chk_busybox" = "BusyBox" ]; then
-            say "warning: using the BusyBox version of $WGET."\
+            say_warn "Using the BusyBox version of $WGET."\
             "Not enforcing strong cipher suites for TLS or TLS v1.2"
             _duw_err=$("$WGET" "$_duw_url" -O "$_duw_archive" 2>&1)
             _RETVAL=$?
@@ -961,11 +979,11 @@ download_using_wget() {
                     -O "$_duw_archive" 2>&1)
                 _RETVAL=$?
             else
-                say "warning: Not enforcing strong suites for TLS; less secure"
+                say_warn "Not enforcing strong suites for TLS; less secure"
                 _help_chk=$(check_help_for "$_duw_arch" "$WGET" \
                             --https-only --secure-protocol)
                 if ! "$_help_chk"; then
-                    say "warning: Not enforcing TLS v1.2, this is less secure"
+                    say_warn "Not enforcing TLS v1.2, this is less secure"
                     _duw_err=$("$WGET" "$_duw_url" -O "$_duw_archive" 2>&1)
                     _RETVAL=$?
                 else
@@ -977,7 +995,7 @@ download_using_wget() {
             fi
         fi
     else
-        say "warning: Not enforcing  cipher suites for TLS; less secure"
+        warn "Not enforcing cipher suites for TLS; less secure"
         _duw_err=$("$WGET" "$_duw_url" -O "$_duw_archive" 2>&1)
         _RETVAL=$?
     fi
@@ -987,8 +1005,8 @@ download_using_wget() {
         echo "$_duw_err" >&2
         if echo "$_duw_err" | $GREP -q ' 404 Not Found$'; then
             _duc_msg=""
-            _duc_msg=$(printf "error: %s%s"                         \
-                "installer for platform '$_duw_arch' not found, "   \
+            _duc_msg=$(printf "%s%s"                                \
+                "Installer for platform '$_duw_arch' not found, "   \
                 "this may be unsupported"                           \
             )
             err "$_duc_msg"
@@ -1031,7 +1049,7 @@ downloader() {
         return $_RETVAL
     else
         # Should not reach this
-        err "fatal: unknown downloader"
+        err "Unknown downloader."
     fi
 }
 
@@ -1053,7 +1071,7 @@ install_linux_gnu() {
             "gpgcheck=0\n"                              \
         )
 
-        say "Adding kraftkit package for RHEL/Fedora"
+        say_ok "Adding kraftkit package for RHEL/Fedora"
         _ilg_yum_cmd=$(printf "%b%s"                \
             "echo '${_ilg_rpm_path}'"               \
             "| tee /etc/yum.repos.d/kraftkit.repo"  \
@@ -1074,10 +1092,10 @@ install_linux_gnu() {
 
         _idd_recommended=""
 
-        if prompt_yes_no "install recommended dependencies? [y/N]: " "n"; then
-            _idd_recommended="--no-install-recommends"
-        else
+        if prompt_yes_no "Install recommended dependencies? [y/N]: " "n"; then
             _idd_recommended="--install-recommends"
+        else
+            _idd_recommended="--no-install-recommends"
         fi
 
         do_cmd "$_ilg_deb_cmd"
@@ -1093,7 +1111,7 @@ install_linux_gnu() {
         cd - 1> /dev/null || exit
         $RM -rf /tmp/kraftkit-bin
     else
-        _ilg_msg=$(printf "error: %s%s%s"                                   \
+        _ilg_msg=$(printf "%s%s%s"                                          \
             "Unsupported Linux distribution. "                              \
             "Try downloading the tar.gz file from "                         \
             "https://github.com/unikraft/kraftkit or switch to manual mode" \
@@ -1148,7 +1166,7 @@ install_windows() {
     _inw_url="https://github.com/unikraft/kraftkit/issues/267"
     _inw_ext=".msi"
 
-    err "error: Windows architecture unsupported: $_inw_arch."\
+    err "Windows architecture unsupported: $_inw_arch."\
     "You can contribute at $_inw_url"
 }
 
@@ -1172,7 +1190,7 @@ install_linux_manual() {
     _ill_version_url="$INSTALL_SERVER/latest.txt"
     _ill_version_file="latest.txt"
     downloader "$_ill_version_url" "$_ill_version_file" "$_ill_arch"
-    say_debug "Got kraftkit version: $("$CAT" $_ill_version_file)"
+    say_debug "Latest KraftKit version is $("$CAT" $_ill_version_file)"
 
     _ill_url=$(printf "%s%s%s%s"                \
         "https://github.com/unikraft/kraftkit"  \
@@ -1186,7 +1204,7 @@ install_linux_manual() {
     if check_cmd "kraft"; then
         _ill_kraft_path="$($WHICH kraft)"
         _ill_prompt_msg=$(printf "%s%s%s"                                       \
-            "kraft binary already installed at \"$_ill_kraft_path\", "          \
+            "The kraft binary already installed at \"$_ill_kraft_path\", "      \
             "overwrite with the latest version ($($CAT $_ill_version_file))? "  \
             "[y/N]: "                                                           \
         )
@@ -1194,20 +1212,21 @@ install_linux_manual() {
         if prompt_yes_no "$_ill_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_ill_kraft_path")"
         else
-            err "fatal: kraft binary already installed."
+            say_ok "Already installed."
+            exit 0
         fi
     else
 
-        if prompt_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
-            get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
+        if prompt_yes_no "Change the install prefix? [$PREFIX] [y/N]: " "n"; then
+            get_user_response "What should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            if prompt_yes_no "prefix does not exist, create? [y/N]: " "n"; then
+            if prompt_yes_no "Prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
-                err "fatal: prefix does not exist."
+                err "Prefix does not exist."
             fi
         fi
     fi
@@ -1252,13 +1271,13 @@ install_darwin_manual() {
     elif printf "%s" "$_idr_arch" | "$GREP" -q -E "aarch64"; then
         _idr_arch_parsed="arm64"
     else
-        err "fatal: unsupported architecture: $_idr_arch"
+        err "Unsupported architecture: $_idr_arch"
     fi
 
     _idr_version_url="$INSTALL_SERVER/latest.txt"
     _idr_version_file="latest.txt"
     downloader "$_idr_version_url" "$_idr_version_file" "$_idr_arch"
-    say_debug "Got kraftkit version: $("$CAT" $_idr_version_file)"
+    say_debug "Latest KraftKit version is $("$CAT" $_idr_version_file)"
 
     _idr_url=$(printf "%s%s%s%s%s"              \
         "https://github.com/unikraft/kraftkit"  \
@@ -1273,7 +1292,7 @@ install_darwin_manual() {
     if check_cmd "kraft"; then
         _idr_kraft_path="$($WHICH kraft)"
         _idr_prompt_msg=$(printf "%s%s%s"                                       \
-            "kraft binary already installed at \"$_idr_kraft_path\", "          \
+            "The kraft binary already installed at \"$_idr_kraft_path\", "      \
             "overwrite with the latest version ($($CAT $_idr_version_file))? "  \
             "[y/N]: "                                                           \
         )
@@ -1281,19 +1300,20 @@ install_darwin_manual() {
         if prompt_yes_no "$_idr_prompt_msg" "n"; then
             PREFIX="$($DIRNAME "$_idr_kraft_path")"
         else
-            err "fatal: kraft binary already installed."
+            say_ok "Already installed."
+            exit 0
         fi
     else
-        if prompt_yes_no "change the install prefix? [$PREFIX] [y/N]: " "n"; then
-            get_user_response "what should the prefix be? [$PREFIX]: " "$PREFIX"
+        if prompt_yes_no "Change the install prefix? [$PREFIX] [y/N]: " "n"; then
+            get_user_response "What should the prefix be? [$PREFIX]: " "$PREFIX"
             PREFIX="$_RETVAL"
         fi
 
         if [ ! -d "$PREFIX" ]; then
-            if prompt_yes_no "prefix does not exist, create? [y/N]: " "n"; then
+            if prompt_yes_no "Prefix does not exist, create? [y/N]: " "n"; then
                 do_cmd "$MKDIR -p $PREFIX"
             else
-                err "fatal: prefix does not exist."
+                err "Prefix does not exist."
             fi
         fi
     fi
@@ -1324,7 +1344,7 @@ install_windows_manual() {
     _iwm_url="https://github.com/unikraft/kraftkit/issues/267"
     _iwm_ext=".msi"
 
-    err "error: Windows architecture unsupported: $_iwm_arch."\
+    err "Windows architecture unsupported: $_iwm_arch."\
     "You can contribute at $_iwm_url"
 }
 
@@ -1357,7 +1377,7 @@ install_kraftkit() {
                 install_windows "$_ikk_arch"
                 ;;
             *)
-                err "error: unsupported architecture: $_ikk_arch"
+                err "Unsupported architecture: $_ikk_arch"
                 ;;
         esac
     else
@@ -1366,9 +1386,11 @@ install_kraftkit() {
         case $_ikk_arch in
             *"linux-gnu"*)
                 install_linux_manual "$_ikk_arch"
+                install_dependencies_gnu
                 ;;
             *"linux-musl"*)
                 install_linux_manual "$_ikk_arch"
+                install_dependencies_musl
                 ;;
             *"darwin"*)
                 install_darwin_manual "$_ikk_arch"
@@ -1399,6 +1421,10 @@ install_dependencies_gnu() {
         "unzip"                             \
         "wget"                              \
     )
+
+    if ! prompt_yes_no "Install recommended dependencies? [y/N]: " "n"; then
+        return 0
+    fi
 
     need_cmd "$AWK"
     need_cmd "$GREP"
@@ -1432,15 +1458,7 @@ install_dependencies_gnu() {
 
         say_debug "Installing dependencies: $_idd_list"
 
-        _idd_recommended=""
-        if prompt_yes_no "install recommended dependencies? [y/N]: " "n"; then
-            _idd_recommended="--no-install-recommends"
-        else
-            _idd_recommended="--install-recommends"
-
-        fi
-
-        do_cmd "$APT install $_idd_recommended -y $_idd_list"
+        do_cmd "$APT install -y $_idd_list"
     elif check_os_release "arch"; then
         _idd_list=$(printf "%s %s %s %s %s %s %s %s %s %s"   \
             "base-devel"                            \
@@ -1459,7 +1477,7 @@ install_dependencies_gnu() {
 
         do_cmd "pacman -Syu --noconfirm $_idd_list"
     else
-        _idd_msg=$(printf "error: %s%s%s"                               \
+        _idd_msg=$(printf "%s%s%s"                                      \
             "Unsupported distribution. "                                \
             "Try downloading your architecture-equivalent packages for "\
             "this debian list: $_idd_list"                              \
@@ -1488,6 +1506,10 @@ install_dependencies_musl() {
         "wget"                                  \
     )
 
+    if ! prompt_yes_no "Install recommended dependencies? [y/N]: " "n"; then
+        return 0
+    fi
+
     need_cmd "$AWK"
     need_cmd "$GREP"
 
@@ -1497,7 +1519,7 @@ install_dependencies_musl() {
         say_debug "Installing dependencies: $_idm_list"
         do_cmd "$APK add --no-cache $_idm_list"
     else
-        _idm_msg=$(printf "error: %s%s%s"                               \
+        _idm_msg=$(printf "%s%s%s"                                      \
             "Unsupported distribution. "                                \
             "Try downloading your architecture-equivalent packages for "\
             "this alpine list: $_idm_list"                              \
@@ -1556,16 +1578,16 @@ install_completions() {
           break
 
       elif [ -z "$_inc_answer" ]; then
-          printf "No shell provided. Please try again or exit with Ctrl+C\n"
+          say "No shell provided. Please try again or exit with Ctrl+C\n"
       else
-          printf "Shell %s not supported. " \
+          say "Shell %s not supported. " \
             "Please try again or exit with Ctrl+C\n" "$_inc_answer"
       fi
     done
 
     if [ -f "$_inc_kraft_config_file" ]; then
         if ! prompt_yes_no  \
-            "kraft completions already exist, overwrite? [Y/n]: " "y"; then
+            "Completions already exist, overwrite? [Y/n]: " "y"; then
             return 0
         fi
     fi
@@ -1578,7 +1600,7 @@ install_completions() {
             "$MV" .kraft_tmp "$_inc_kraft_config_file"
     fi
 
-    say "Done please run the following commands to enable completions:"
+    say_ok "Done please run the following commands to enable completions:"
     say ""
     say "source $_inc_kraft_config_file;"
     say "echo 'source $_inc_kraft_config_file;' >> $_inc_config_file;"
@@ -1639,8 +1661,8 @@ arg_parse() {
 check_autoinstall() {
     _cai_auto_install=""
 
-    if prompt_yes_no "install kraftkit using package manager? [Y/n]: " "y"; then
-        say "installing kraftkit via package manager..."
+    if prompt_yes_no "Install KraftKit via package manager? [Y/n]: " "y"; then
+        say_ok "Installing kraftkit via package manager..."
     else
         _cai_auto_install="n"
     fi
@@ -1683,7 +1705,6 @@ main() {
 
     # Install kraftkit for the given architecture and its dependencies
     install_kraftkit "$_main_arch" "$_main_auto_install"
-    say "kraftkit was installed successfully to $PREFIX/kraft"
 
     # Check if kraft is installed and working
     kraft -h
@@ -1693,6 +1714,8 @@ main() {
     if [ "$NEED_TTY" = "y" ]; then
         install_completions "$_main_arch"
     fi
+
+    say_ok 'Happy Krafting!'
 
     return $_main_kraft_ret
 }
