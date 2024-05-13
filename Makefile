@@ -147,7 +147,8 @@ $(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
-	$(GO) build -v \
+	$(GO) build \
+		-tags "containers_image_storage_stub,containers_image_openpgp" \
 		-buildmode=pie \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
@@ -198,7 +199,7 @@ fmt: ## Format all files according to linting preferences.
 
 .PHONY: cicheck
 cicheck: ## Run CI checks.
-	$(GOCILINT) run
+	$(GOCILINT) run --build-tags "containers_image_storage_stub,containers_image_openpgp"
 
 .PHONY: test
 test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
@@ -207,7 +208,7 @@ test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
 test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/ tools/
 test-unit: GOTEST_PKGS := $(foreach pkg,$(filter-out $(GOTEST_EXCLUDE),$(wildcard */)),$(pkg)...)
 test-unit: ## Run unit tests.
-	$(GINKGO) -v -p -randomize-all $(GOTEST_PKGS)
+	$(GINKGO)  -v -p -randomize-all -tags "containers_image_storage_stub,containers_image_openpgp" $(GOTEST_PKGS)
 
 .PHONY: test-e2e
 test-e2e: kraft ## Run CLI end-to-end tests.

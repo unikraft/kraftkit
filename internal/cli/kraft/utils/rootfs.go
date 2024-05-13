@@ -29,11 +29,8 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 	var cmds []string
 	var envs []string
 
-	if !filepath.IsAbs(rootfs) {
-		rootfs = filepath.Join(workdir, rootfs)
-	}
-
 	ramfs, err := initrd.New(ctx, rootfs,
+		initrd.WithWorkdir(workdir),
 		initrd.WithOutput(filepath.Join(
 			workdir,
 			unikraft.BuildDir,
