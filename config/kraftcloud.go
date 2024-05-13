@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -18,6 +19,10 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 	auth := AuthConfig{
 		Endpoint:  "index.unikraft.io",
 		VerifySSL: true,
+	}
+
+	if flagToken == "" {
+		flagToken = os.Getenv("KRAFTCLOUD_TOKEN")
 	}
 
 	// Prioritize environmental variables
