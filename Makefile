@@ -148,6 +148,7 @@ $(addprefix $(.PROXY), $(BIN)):
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
 	$(GO) build \
+		-v \
 		-tags "containers_image_storage_stub,containers_image_openpgp" \
 		-buildmode=pie \
 		-gcflags=all='$(GO_GCFLAGS)' \
