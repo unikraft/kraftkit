@@ -147,7 +147,7 @@ $(addprefix $(.PROXY), $(BIN)): tidy
 $(addprefix $(.PROXY), $(BIN)):
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
-	$(GO) build \
+	$(GO) build -v \
 		-buildmode=pie \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
