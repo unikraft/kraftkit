@@ -77,26 +77,9 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	volListResp, err := client.WithMetro(opts.metro).List(ctx)
+	resp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list volumes: %w", err)
-	}
-	volList, err := volListResp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("could not list volumes: %w", err)
-	}
-	if len(volList) == 0 {
-		return nil
-	}
-
-	uuids := make([]string, 0, len(volList))
-	for _, volItem := range volList {
-		uuids = append(uuids, volItem.UUID)
-	}
-
-	resp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
-	if err != nil {
-		return fmt.Errorf("getting details of %d volume(s): %w", len(uuids), err)
 	}
 
 	return utils.PrintVolumes(ctx, opts.Output, *resp)

@@ -72,26 +72,10 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	certListResp, err := client.WithMetro(opts.metro).List(ctx)
+	resp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list certificates: %w", err)
 	}
-	certList, err := certListResp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("could not list certificates: %w", err)
-	}
-	if len(certList) == 0 {
-		return nil
-	}
 
-	uuids := make([]string, 0, len(certList))
-	for _, certItem := range certList {
-		uuids = append(uuids, certItem.UUID)
-	}
-	certsResp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
-	if err != nil {
-		return fmt.Errorf("getting details of %d certificate(s): %w", len(certList), err)
-	}
-
-	return utils.PrintCertificates(ctx, opts.Output, *certsResp)
+	return utils.PrintCertificates(ctx, opts.Output, *resp)
 }
