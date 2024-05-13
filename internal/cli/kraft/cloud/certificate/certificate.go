@@ -13,6 +13,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 
+	"kraftkit.sh/internal/cli/kraft/cloud/certificate/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate/get"
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate/remove"
@@ -35,6 +36,7 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.AddCommand(create.NewCmd())
 	cmd.AddCommand(list.NewCmd())
 	cmd.AddCommand(remove.NewCmd())
 	cmd.AddCommand(get.NewCmd())
