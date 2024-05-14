@@ -36,7 +36,8 @@ type ImportOptions struct {
 	Metro string             `noattribute:"true"`
 
 	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"utils/volimport:latest"`
-	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile)" default:"."`
+	Force          bool   `local:"true" long:"force" short:"f" usage:"Force import, even if it might fail"`
+	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile, Docker link, cpio file)" default:"."`
 	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds"`
 	VolID          string `local:"true" long:"volume" short:"v" usage:"Identifier of an existing volume (name or UUID)"`
 }
@@ -51,6 +52,15 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Import data from a local directory "path/to/data" to a volume named "my-volume"
 			$ kraft cloud volume import --source path/to/data --volume my-volume
+
+			# Import data from a local Dockerfile "path/to/Dockerfile" to a volume named "my-volume"
+			$ kraft cloud volume import --source path/to/Dockerfile --volume my-volume
+
+			# Import data from a docker registry "docker.io/nginx:latest" to a volume named "my-volume"
+			$ kraft cloud volume import --source docker.io/nginx:latest --volume my-volume
+
+			# Import data from a local cpio file "path/to/file" to a volume named "my-volume"
+			$ kraft cloud volume import --source path/to/file --volume my-volume
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
@@ -66,6 +76,10 @@ func NewCmd() *cobra.Command {
 func (opts *ImportOptions) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.VolID == "" {
 		return fmt.Errorf("must specify a value for the --volume flag")
+	}
+
+	if finfo, err := os.Stat(opts.Source); err == nil && !finfo.IsDir() {
+		return fmt.Errorf("local source path must be a directory")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
@@ -131,8 +145,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	}()
 
 	var volUUID string
-	var volSize int64
-	if volUUID, volSize, err = volumeSanityCheck(ctx, vcli, opts.VolID, cpioSize); err != nil {
+	if volUUID, _, err = volumeSanityCheck(ctx, vcli, opts.VolID, cpioSize); err != nil {
 		return err
 	}
 
@@ -167,6 +180,8 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	// nil error upon context cancellation. We temporarily handle potential copy
 	// errors ourselves here.
 	var copyCPIOErr error
+	var freeSpace uint64
+	var totalSpace uint64
 
 	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
 		func(ctx context.Context, callback func(float64)) (retErr error) {
@@ -175,13 +190,11 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if err != nil {
 				return fmt.Errorf("connecting to volume data import instance send port: %w", err)
 			}
-			defer func() {
-				retErr = errors.Join(retErr, conn.Close())
-			}()
+			defer conn.Close()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
-			err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Timeout, uint64(cpioSize), callback)
+			freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, opts.Timeout, uint64(cpioSize), callback)
 			copyCPIOErr = err
 			return err
 		},
@@ -202,12 +215,12 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			Value: opts.VolID,
 		},
 		fancymap.FancyMapEntry{
-			Key:   "imported",
-			Value: humanize.IBytes(uint64(cpioSize)),
+			Key:   "free",
+			Value: humanize.IBytes(freeSpace),
 		},
 		fancymap.FancyMapEntry{
-			Key:   "capacity",
-			Value: humanize.IBytes(uint64(volSize)),
+			Key:   "total",
+			Value: humanize.IBytes(totalSpace),
 		},
 	)
 
