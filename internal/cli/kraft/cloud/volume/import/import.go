@@ -181,7 +181,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
-			err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Timeout)
+			err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Timeout, uint64(cpioSize), callback)
 			copyCPIOErr = err
 			return err
 		},

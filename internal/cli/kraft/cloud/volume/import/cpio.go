@@ -129,8 +129,9 @@ func buildCPIO(ctx context.Context, source string) (path string, size int64, err
 }
 
 // copyCPIO copies the CPIO archive at the given path over the provided tls.Conn.
-func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS uint64) error {
+func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS, size uint64, callback progressCallbackFunc) error {
 	var resp okResponse
+	var currentSize uint64
 
 	// NOTE(antoineco): this call is critical as it allows writes to be later
 	// cancelled, because the deadline applies to all future and pending I/O and
@@ -201,6 +202,8 @@ func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS u
 		if err := resp.waitForOK(conn, "header copy failed"); err != nil {
 			return err
 		}
+		currentSize += uint64(len(raw.Bytes()))
+		updateProgress(float64(currentSize), float64(size), callback)
 
 		nameBytesToSend := []byte(hdr.Name)
 
@@ -222,6 +225,8 @@ func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS u
 		if err := resp.waitForOK(conn, "name copy failed"); err != nil {
 			return err
 		}
+		currentSize += uint64(len(nameBytesToSend))
+		updateProgress(float64(currentSize), float64(size), callback)
 
 		// 2'. Stop when `TRAILER!!!` met
 		if shouldStop {
@@ -263,6 +268,8 @@ func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS u
 				}
 
 				empty = false
+				currentSize += uint64(bread)
+				updateProgress(float64(currentSize), float64(size), callback)
 			}
 		} else {
 			bread := len(hdr.Linkname)
@@ -279,6 +286,8 @@ func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, timeoutS u
 			}
 
 			empty = false
+			currentSize += uint64(bread)
+			updateProgress(float64(currentSize), float64(size), callback)
 		}
 
 		// Don't wait for ok if nothing was written
@@ -306,4 +315,18 @@ func isNetClosedError(err error) bool {
 		return true
 	}
 	return false
+}
+
+type progressCallbackFunc func(progress float64)
+
+// updateProgress updates the progress bar with the current progress.
+// NOTE(craciunoiuc): Currently the entry pad nd the name pad are not taken
+// into consideration so the progress will fall behind at times by some bytes.
+func updateProgress(progress float64, size float64, callback progressCallbackFunc) {
+	pct := progress / size
+	// FIXME(antoineco): the TUI component does not turn green at the end of the
+	// copy if we call callback() with a value of 1.
+	if pct < 1.0 {
+		callback(pct)
+	}
 }
