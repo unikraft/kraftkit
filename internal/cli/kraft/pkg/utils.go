@@ -42,7 +42,7 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 func (opts *PkgOptions) aggregateEnvs() []string {
 	envs := make(map[string]string)
 
-	if opts.Project.Env() != nil {
+	if opts.Project != nil && opts.Project.Env() != nil {
 		envs = opts.Project.Env()
 	}
 
