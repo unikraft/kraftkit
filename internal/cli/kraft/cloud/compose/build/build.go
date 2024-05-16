@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -139,6 +140,18 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			)
 		}
 
+		// Detect whether the supplied Dockerfile exists before passing it to the
+		// packaging step.  If a non-empty value for the Rootfs attribute is
+		// supplied to the packaging step, it will trickle through the rootfs build
+		// system and may cause failure due to misconfiguration.  This is because
+		// the value of `service.Build.Dockerfile` is by default set to "Dockerfile"
+		// which may in fact not exist.  The packaging step relies on the present of
+		// a Kraftfile which supersedes the Dockerfile.
+		rootfs := filepath.Join(service.Build.Context, service.Build.Dockerfile)
+		if _, err := os.Stat(rootfs); err != nil && os.IsNotExist(err) {
+			rootfs = ""
+		}
+
 		if _, err = pkg.Pkg(ctx, &pkg.PkgOptions{
 			Architecture: "x86_64",
 			Compress:     false,
@@ -147,7 +160,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			NoPull:       true,
 			Platform:     "kraftcloud",
 			Push:         opts.Push,
-			Rootfs:       service.Build.Dockerfile,
+			Rootfs:       rootfs,
 			Workdir:      service.Build.Context,
 			Strategy:     packmanager.StrategyOverwrite,
 		}); err != nil {
