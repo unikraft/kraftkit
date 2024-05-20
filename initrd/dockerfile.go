@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
 
@@ -175,10 +174,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	defer os.RemoveAll(ociOutput.Name())
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
-	copts := []client.ClientOpt{
-		// Might not be needed, previously was `client.WithFailFast()`
-		client.WithGRPCDialOption(grpc.FailOnNonTempDialError(true)),
-	}
+	copts := []client.ClientOpt{}
 
 	c, _ := client.New(ctx, buildkitAddr, copts...)
 	buildKitInfo, err := c.Info(ctx)
