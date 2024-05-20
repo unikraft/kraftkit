@@ -2279,7 +2279,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 
 			err = createServiceCmd.Run()
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 			if err != nil {
 				fmt.Print(createServiceCmd.DumpError(stdout, stderr, err))
 			}
@@ -2291,7 +2291,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		It("should attach the instance to that service group", func() {
 			err := cmd.Run()
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
@@ -2311,7 +2311,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 			if err != nil {
 				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
 			}
