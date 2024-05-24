@@ -72,26 +72,9 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	instListResp, err := client.WithMetro(opts.metro).List(ctx)
+	resp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list instances: %w", err)
-	}
-	instList, err := instListResp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("could not list instances: %w", err)
-	}
-	if len(instList) == 0 {
-		return nil
-	}
-
-	uuids := make([]string, 0, len(instList))
-	for _, instItem := range instList {
-		uuids = append(uuids, instItem.UUID)
-	}
-
-	resp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
-	if err != nil {
-		return fmt.Errorf("getting details of %d instance(s): %w", len(instList), err)
 	}
 
 	return utils.PrintInstances(ctx, opts.Output, *resp)

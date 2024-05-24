@@ -80,26 +80,9 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	sgListResp, err := client.WithMetro(opts.metro).List(ctx)
+	resp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
 		return fmt.Errorf("could not list service groups: %w", err)
-	}
-	sgList, err := sgListResp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("could not list service groups: %w", err)
-	}
-	if len(sgList) == 0 {
-		return nil
-	}
-
-	uuids := make([]string, 0, len(sgList))
-	for _, sgItem := range sgList {
-		uuids = append(uuids, sgItem.UUID)
-	}
-
-	resp, err := client.WithMetro(opts.metro).Get(ctx, uuids...)
-	if err != nil {
-		return fmt.Errorf("getting details of %d service group(s): %w", len(uuids), err)
 	}
 
 	return utils.PrintServiceGroups(ctx, opts.Output, *resp)
