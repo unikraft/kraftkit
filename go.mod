@@ -22,7 +22,7 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.1.1
 	github.com/containerd/containerd v1.7.16
 	github.com/containerd/log v0.1.0
-	github.com/containerd/nerdctl v1.7.5
+	github.com/containerd/nerdctl v1.7.6
 	github.com/containers/image/v5 v5.30.1
 	github.com/cyphar/filepath-securejoin v0.2.5
 	github.com/dgraph-io/badger/v3 v3.2103.5
