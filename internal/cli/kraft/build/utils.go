@@ -27,7 +27,7 @@ func (opts *BuildOptions) initProject(ctx context.Context) error {
 	}
 
 	// Interpret the project directory
-	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
+	opts.Project, err = app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}

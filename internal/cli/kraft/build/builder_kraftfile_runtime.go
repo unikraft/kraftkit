@@ -31,18 +31,18 @@ func (build *builderKraftfileRuntime) Buildable(ctx context.Context, opts *Build
 		return false, fmt.Errorf("building rootfs disabled")
 	}
 
-	if opts.project == nil {
+	if opts.Project == nil {
 		if err := opts.initProject(ctx); err != nil {
 			return false, err
 		}
 	}
 
-	if opts.project.Runtime() == nil {
+	if opts.Project.Runtime() == nil {
 		return false, fmt.Errorf("cannot package without unikraft core specification")
 	}
 
-	if opts.project.Rootfs() != "" && opts.Rootfs == "" {
-		opts.Rootfs = opts.project.Rootfs()
+	if opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = opts.Project.Rootfs()
 	}
 
 	return true, nil
@@ -56,14 +56,14 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 		err      error
 	)
 
-	name := opts.project.Runtime().Name()
-	if opts.Platform == "kraftcloud" || (opts.project.Runtime().Platform() != nil && opts.project.Runtime().Platform().Name() == "kraftcloud") {
+	name := opts.Project.Runtime().Name()
+	if opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
 		name = utils.RewrapAsKraftCloudPackage(name)
 	}
 
 	qopts := []packmanager.QueryOption{
 		packmanager.WithName(name),
-		packmanager.WithVersion(opts.project.Runtime().Version()),
+		packmanager.WithVersion(opts.Project.Runtime().Version()),
 	}
 
 	treemodel, err := processtree.NewProcessTree(
@@ -80,7 +80,7 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 			fmt.Sprintf(
 				"searching for %s:%s",
 				name,
-				opts.project.Runtime().Version(),
+				opts.Project.Runtime().Version(),
 			),
 			"",
 			func(ctx context.Context) error {
@@ -117,8 +117,8 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 	if len(packs) == 0 {
 		return fmt.Errorf(
 			"could not find runtime '%s:%s'",
-			opts.project.Runtime().Name(),
-			opts.project.Runtime().Version(),
+			opts.Project.Runtime().Name(),
+			opts.Project.Runtime().Version(),
 		)
 	} else if len(packs) == 1 {
 		selected = &packs[0]
