@@ -56,6 +56,8 @@ type CreateOptions struct {
 	Volumes                []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage           bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
 	WaitForImageTimeout    time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+
+	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
 
 // Create a KraftCloud instance.
@@ -341,8 +343,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --domain|-d")
 	}
 
-	var services []kcservices.CreateRequestService
-
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
@@ -355,7 +355,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 
 		port443 := 443
-		services = []kcservices.CreateRequestService{
+		opts.Services = []kcservices.CreateRequestService{
 			{
 				Port:            443,
 				DestinationPort: &destPort,
@@ -422,21 +422,21 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				service.DestinationPort = &port
 			}
 
-			services = append(services, service)
+			opts.Services = append(opts.Services, service)
 		}
 	}
 
 	if len(opts.ServiceGroupNameOrUUID) == 0 {
-		if len(services) > 0 {
+		if len(opts.Services) > 0 {
 			req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-				Services: services,
+				Services: opts.Services,
 			}
 		}
 		if len(opts.SubDomain) > 0 {
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 					Domains:  []kcservices.CreateRequestDomain{},
-					Services: services,
+					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {
@@ -454,7 +454,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 					Domains:  []kcservices.CreateRequestDomain{},
-					Services: services,
+					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {

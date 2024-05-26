@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -156,13 +155,6 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		return err
 	}
 
-	// Preemptively create all the service groups from the compose project's
-	// supplied networks.
-	svcResps, err := createServiceGroupsFromNetworks(ctx, opts, args...)
-	if err != nil {
-		return err
-	}
-
 	volResps, err := createVolumes(ctx, opts)
 	if err != nil {
 		return err
@@ -181,14 +173,6 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			instResps.Data.Entries = append(instResps.Data.Entries, instResp.Data.Entries...)
 			log.G(ctx).WithField("name", service.Name).Info("service already exists")
 			continue
-		}
-
-		// There is only 1 network per service, so we can safely iterate over the
-		// networks and break after the first iteration.
-		var network string
-		for n := range service.Networks {
-			network = n
-			break
 		}
 
 		// Handle environmental variables.
@@ -223,11 +207,6 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 
 		log.G(ctx).WithField("image", service.Image).Info("deploying")
 
-		var serviceGroup string
-		if data, ok := svcResps[network]; ok {
-			serviceGroup = data.Data.Entries[0].UUID
-		}
-
 		var volumes []string
 		for _, volume := range service.Volumes {
 			vol, ok := volResps[volume.Source]
@@ -243,19 +222,69 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			name = cname
 		}
 
+		var services []kcservices.CreateRequestService
+
+		for _, port := range service.Ports {
+			if port.Protocol != "" && port.Protocol != "tls" && port.Protocol != "tcp" {
+				return fmt.Errorf("protocol '%s' is not supported", port.Protocol)
+			}
+
+			if port.Published == "443" {
+				services = append(services,
+					kcservices.CreateRequestService{
+						Port:            443,
+						DestinationPort: ptr(int(port.Target)),
+						Handlers: []kcservices.Handler{
+							kcservices.HandlerHTTP,
+							kcservices.HandlerTLS,
+						},
+					},
+					kcservices.CreateRequestService{
+						Port:            80,
+						DestinationPort: ptr(int(443)),
+						Handlers: []kcservices.Handler{
+							kcservices.HandlerHTTP,
+							kcservices.HandlerRedirect,
+						},
+					},
+				)
+			} else {
+				published, err := strconv.Atoi(port.Published)
+				if err != nil {
+					return fmt.Errorf("invalid external port: %w", err)
+				}
+
+				services = append(services,
+					kcservices.CreateRequestService{
+						Port:            published,
+						DestinationPort: ptr(int(port.Target)),
+						Handlers: []kcservices.Handler{
+							kcservices.HandlerTLS,
+						},
+					},
+				)
+			}
+		}
+
+		var domains []string
+		if len(service.DomainName) > 0 {
+			domains = []string{service.DomainName}
+		}
+
 		instResp, _, err = create.Create(ctx, &create.CreateOptions{
-			Auth:                   opts.Auth,
-			Client:                 opts.Client,
-			Env:                    env,
-			Image:                  service.Image,
-			Memory:                 fmt.Sprintf("%d", memory),
-			Metro:                  opts.Metro,
-			Name:                   name,
-			ServiceGroupNameOrUUID: serviceGroup,
-			Start:                  false,
-			Token:                  opts.Token,
-			WaitForImage:           true,
-			Volumes:                volumes,
+			Auth:         opts.Auth,
+			Client:       opts.Client,
+			Domain:       domains,
+			Env:          env,
+			Image:        service.Image,
+			Memory:       fmt.Sprintf("%d", memory),
+			Metro:        opts.Metro,
+			Name:         name,
+			Services:     services,
+			Start:        false,
+			Token:        opts.Token,
+			WaitForImage: true,
+			Volumes:      volumes,
 		}, service.Command...)
 		if err != nil {
 			return err
@@ -349,181 +378,6 @@ func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.S
 	}
 
 	return volResps, nil
-}
-
-// createServiceGroupsFromNetworks is used to map each compose service's
-// networks to a service group.  Since it is not possible to attach an instance
-// to multiple service groups it also acts a checking mechanism to determine if
-// the compose project's networks are valid with respect to the capabilities of
-// the KraftCloud API.
-func createServiceGroupsFromNetworks(ctx context.Context, opts *UpOptions, args ...string) (map[string]*kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
-	svcResps := make(map[string]*kcclient.ServiceResponse[kcservices.GetResponseItem])
-
-	// First, create a map of networks which are used by individual services.
-	// These represent service groups and we'll create them only if they don't
-	// exist and use the port mapping of the individual service to hydrate the
-	// create request for the service group.
-	svcReqs := make(map[string]kcservices.CreateRequest)
-	for alias, service := range opts.Project.Services {
-		if !slices.Contains(args, alias) {
-			continue
-		}
-
-		if len(service.Networks) > 1 {
-			return nil, fmt.Errorf("service '%s' has more than one network attached which is not supported", alias)
-		}
-
-		for network := range service.Networks {
-			// Skip the default network, in the situation where a possible alternative
-			// network can be supplied, we prefer this.  Only later if we detect that
-			// there are no networks associated with any of the services, we'll create
-			// a service group with the default network.
-			if network == "default" && len(service.Networks) > 1 {
-				continue
-			}
-
-			if _, ok := svcReqs[network]; ok {
-				continue
-			}
-
-			svcReqs[network] = kcservices.CreateRequest{}
-		}
-	}
-
-	// If none of the compose services are associated with a network, create a new
-	// service group for the default network.
-	if len(svcReqs) == 0 {
-		svcReqs["default"] = kcservices.CreateRequest{}
-	}
-
-	// Check each network to determine whether it exists as a service group.
-	for alias, network := range opts.Project.Networks {
-		service, ok := svcReqs[alias]
-		if !ok {
-			continue
-		}
-
-		service.Name = ptr(strings.ReplaceAll(network.Name, "_", "-"))
-		svcReqs[alias] = service
-
-		respSvc, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, *service.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		svc, err := respSvc.FirstOrErr()
-		if err != nil && *svc.Error == kcclient.APIHTTPErrorNotFound {
-			continue
-		} else if err != nil {
-			return nil, err
-		}
-
-		log.G(ctx).Warnf("network '%s' already exists as a service group '%s'", network.Name, *service.Name)
-		delete(svcReqs, alias)
-		svcResps[alias] = respSvc
-	}
-
-	// Iterate through each service and grab the associated port mappings.  This
-	// will be used later to hydrate the service group create request.
-	for alias, service := range opts.Project.Services {
-		if !slices.Contains(args, alias) {
-			continue
-		}
-
-		var services []kcservices.CreateRequestService
-		for _, port := range service.Ports {
-			if port.Protocol != "" && port.Protocol != "tls" && port.Protocol != "tcp" {
-				return nil, fmt.Errorf("protocol '%s' is not supported", port.Protocol)
-			}
-
-			if port.Published == "443" {
-				services = append(services,
-					kcservices.CreateRequestService{
-						Port:            443,
-						DestinationPort: ptr(int(port.Target)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerHTTP,
-							kcservices.HandlerTLS,
-						},
-					},
-					kcservices.CreateRequestService{
-						Port:            80,
-						DestinationPort: ptr(int(443)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerHTTP,
-							kcservices.HandlerRedirect,
-						},
-					},
-				)
-			} else {
-				published, err := strconv.Atoi(port.Published)
-				if err != nil {
-					return nil, fmt.Errorf("invalid external port: %w", err)
-				}
-
-				services = append(services,
-					kcservices.CreateRequestService{
-						Port:            published,
-						DestinationPort: ptr(int(port.Target)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerTLS,
-						},
-					},
-				)
-			}
-		}
-
-		// Expose all ports (services) to networks (service groups).
-		for alias, req := range svcReqs {
-			req.Services = append(req.Services, services...)
-
-			if len(service.DomainName) > 0 {
-				// If the domain contains a period, it is a fully qualified domain name,
-				// which means we should append a period to the end of the domain name
-				// to ensure it is a valid domain name for the KraftCloud API.
-				if strings.Contains(service.DomainName, ".") {
-					service.DomainName += "."
-				}
-
-				req.Domains = []kcservices.CreateRequestDomain{{
-					Name: service.DomainName,
-				}}
-			}
-
-			svcReqs[alias] = req
-		}
-	}
-
-	// Create all service groups.
-	for alias, req := range svcReqs {
-		if len(req.Services) == 0 {
-			log.G(ctx).
-				WithField("network", alias).
-				Warn("no exposed ports: skipping service group creation")
-			continue
-		}
-
-		log.G(ctx).WithField("network", *req.Name).Info("creating service group")
-
-		createResp, err := opts.Client.Services().WithMetro(opts.Metro).Create(ctx, req)
-		if err != nil {
-			return nil, fmt.Errorf("creating service group: %w", err)
-		}
-
-		svc, err := createResp.FirstOrErr()
-		if err != nil {
-			return nil, err
-		}
-
-		getResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, svc.UUID)
-		if err != nil {
-			return nil, fmt.Errorf("creating service group: %w", err)
-		}
-
-		svcResps[alias] = getResp
-	}
-
-	return svcResps, nil
 }
 
 func ptr[T comparable](v T) *T { return &v }
