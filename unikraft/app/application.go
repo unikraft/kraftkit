@@ -64,6 +64,10 @@ type Application interface {
 	// as the root filesystem.  This can either be an initramdisk or a volume.
 	Rootfs() string
 
+	// SetRootfs sets the root filesystem path for the application to the given
+	// value path.
+	SetRootfs(string)
+
 	// Command is the list of arguments passed to the application's runtime.
 	Command() []string
 
@@ -238,6 +242,10 @@ func (app *application) Targets() []target.Target {
 
 func (app *application) Rootfs() string {
 	return app.rootfs
+}
+
+func (app *application) SetRootfs(rootfs string) {
+	app.rootfs = rootfs
 }
 
 func (app *application) Command() []string {
