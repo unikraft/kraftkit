@@ -44,6 +44,8 @@ func (p *packagerCliKernel) Packagable(ctx context.Context, opts *PkgOptions, ar
 
 // Pack implements packager.
 func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
+	var err error
+
 	ac := arch.NewArchitectureFromOptions(
 		arch.WithName(opts.Architecture),
 	)
@@ -51,15 +53,12 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 		plat.WithName(opts.Platform),
 	)
 
-	targ, err := target.NewTargetFromOptions(
+	targ := target.NewTargetFromOptions(
 		target.WithArchitecture(ac),
 		target.WithPlatform(pc),
 		target.WithKernel(opts.Kernel),
 		target.WithCommand(opts.Args),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare phony target: %w", err)
-	}
 
 	var cmds []string
 	var envs []string

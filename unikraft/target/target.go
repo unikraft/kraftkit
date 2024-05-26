@@ -71,16 +71,14 @@ type TargetConfig struct {
 }
 
 // NewTargetFromOptions is a constructor for TargetConfig.
-func NewTargetFromOptions(opts ...TargetOption) (Target, error) {
+func NewTargetFromOptions(opts ...TargetOption) Target {
 	tc := TargetConfig{}
 
 	for _, opt := range opts {
-		if err := opt(&tc); err != nil {
-			return nil, err
-		}
+		opt(&tc)
 	}
 
-	return &tc, nil
+	return &tc
 }
 
 func (tc *TargetConfig) String() string {
