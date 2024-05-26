@@ -163,7 +163,7 @@ type application struct {
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
 	libraries     map[string]*lib.LibraryConfig
-	targets       []*target.TargetConfig
+	targets       []target.Target
 	volumes       []*volume.VolumeConfig
 	env           target.Env
 	command       []string
@@ -275,10 +275,7 @@ func (app application) MergeTemplate(ctx context.Context, merge Application) (Ap
 
 	// TODO(nderjung): This entire method and procedure needs to be re-thought to
 	// be better extensible.  For now, it is unused.  We can safely cast this:
-	app.targets = []*target.TargetConfig{}
-	for _, t := range merge.Targets() {
-		app.targets = append(app.targets, t.(*target.TargetConfig))
-	}
+	app.targets = merge.Targets()
 
 	for id, ext := range merge.Extensions() {
 		app.extensions[id] = ext
@@ -920,7 +917,7 @@ func (app application) PrintInfo(ctx context.Context) string {
 
 func (app application) WithTarget(targ target.Target) (Application, error) {
 	ret := app
-	ret.targets = []*target.TargetConfig{targ.(*target.TargetConfig)}
+	ret.targets = []target.Target{targ}
 	return ret, nil
 }
 
