@@ -47,13 +47,9 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 	ac := arch.NewArchitectureFromOptions(
 		arch.WithName(opts.Architecture),
 	)
-
-	pc, err := plat.NewPlatformFromOptions(
+	pc := plat.NewPlatformFromOptions(
 		plat.WithName(opts.Platform),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare architecture: %w", err)
-	}
 
 	targ, err := target.NewTargetFromOptions(
 		target.WithArchitecture(ac),
