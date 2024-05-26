@@ -44,12 +44,9 @@ func (p *packagerCliKernel) Packagable(ctx context.Context, opts *PkgOptions, ar
 
 // Pack implements packager.
 func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
-	ac, err := arch.NewArchitectureFromOptions(
+	ac := arch.NewArchitectureFromOptions(
 		arch.WithName(opts.Architecture),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare architecture: %w", err)
-	}
 
 	pc, err := plat.NewPlatformFromOptions(
 		plat.WithName(opts.Platform),
