@@ -24,6 +24,8 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 type ociimage struct {
@@ -37,8 +39,24 @@ type ociimage struct {
 
 // NewFromOCIImage creates a new initrd from a remote container image.
 func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (Initrd, error) {
+	var transport string
+	if strings.Contains(path, "://") {
+		transport, path, _ = strings.Cut(path, "://")
+	}
+
+	nref, err := name.ParseReference(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if desc, err := remote.Head(nref); err != nil || desc == nil {
+		return nil, fmt.Errorf("could not find image: %w", err)
+	}
+
 	if !strings.Contains("://", path) {
 		path = fmt.Sprintf("docker://%s", path)
+	} else {
+		path = fmt.Sprintf("%s://%s", transport, path)
 	}
 
 	ref, err := alltransports.ParseImageName(path)
