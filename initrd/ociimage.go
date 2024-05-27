@@ -213,7 +213,7 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		// No other file types are part of the archive.  As a result we only check
 		// whether the path is the same as the reference path which indicates
 		// whether the entry is a symbolic link.
-		if f.FileType == scfile.TypeSymLink {
+		if f.FileType == scfile.TypeSymLink || f.FileType == scfile.TypeHardLink {
 			header.Mode |= cpio.TypeSymlink
 			header.Linkname = info.Path
 			header.Size = int64(len(info.Path))
