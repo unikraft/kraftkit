@@ -63,6 +63,10 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 	}
 
+	if err := os.MkdirAll(filepath.Dir(initrd.opts.output), 0o755); err != nil {
+		return "", fmt.Errorf("could not create output directory: %w", err)
+	}
+
 	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("could not open initramfs file: %w", err)
