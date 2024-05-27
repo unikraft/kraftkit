@@ -24,7 +24,7 @@ var _ pack.Package = (*Runtime)(nil)
 
 const (
 	PrebuiltRegistry         = "unikraft.org"
-	DefaultPrebuilt          = "unikraft.org/base:latest"
+	DefaultRuntime           = "unikraft.org/base:latest"
 	DefaultKraftCloudRuntime = "index.unikraft.io/official/base:latest"
 )
 
@@ -41,7 +41,7 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	}
 
 	if runtime.name == "" {
-		runtime.name = DefaultPrebuilt
+		runtime.name = DefaultRuntime
 	} else {
 		// Return early if the user provided a custom elfloader unikernel
 		// application.
