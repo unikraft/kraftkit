@@ -16,6 +16,7 @@ import (
 
 	"github.com/anchore/stereoscope"
 	scfile "github.com/anchore/stereoscope/pkg/file"
+	"github.com/anchore/stereoscope/pkg/filetree"
 	"github.com/anchore/stereoscope/pkg/filetree/filenode"
 	"github.com/cavaliergopher/cpio"
 	"github.com/containers/image/v5/copy"
@@ -241,7 +242,15 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		}
 
 		return nil
-	}, nil); err != nil {
+	}, &filetree.WalkConditions{
+		LinkOptions: []filetree.LinkResolutionOption{},
+		ShouldVisit: func(path scfile.Path, f filenode.FileNode) bool {
+			return f.LinkPath == ""
+		},
+		ShouldContinueBranch: func(path scfile.Path, f filenode.FileNode) bool {
+			return f.LinkPath == ""
+		},
+	}); err != nil {
 		return "", fmt.Errorf("could not walk image: %w", err)
 	}
 
