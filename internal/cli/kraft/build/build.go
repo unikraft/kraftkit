@@ -130,7 +130,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if opts.Rootfs, _, _, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, false, *opts.Target); err != nil {
+	if opts.Rootfs, _, _, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, false, (*opts.Target).Architecture().String()); err != nil {
 		return err
 	}
 

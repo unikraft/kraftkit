@@ -104,7 +104,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		) {
 			rootfs = ""
 		} else {
-			if rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, rootfs, opts.Compress, targ); err != nil {
+			if rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, rootfs, opts.Compress, targ.Architecture().String()); err != nil {
 				return nil, fmt.Errorf("could not build rootfs: %w", err)
 			}
 		}

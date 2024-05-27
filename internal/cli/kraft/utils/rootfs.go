@@ -15,12 +15,11 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
-	"kraftkit.sh/unikraft/target"
 )
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, targ target.Target) (string, []string, []string, error) {
+func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, arch string) (string, []string, []string, error) {
 	if rootfs == "" {
 		return "", nil, nil, nil
 	}
@@ -34,14 +33,14 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 		initrd.WithOutput(filepath.Join(
 			workdir,
 			unikraft.BuildDir,
-			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture().String()),
+			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch),
 		)),
 		initrd.WithCacheDir(filepath.Join(
 			workdir,
 			unikraft.VendorDir,
 			"rootfs-cache",
 		)),
-		initrd.WithArchitecture(targ.Architecture().String()),
+		initrd.WithArchitecture(arch),
 		initrd.WithCompression(compress),
 	)
 	if err != nil {
@@ -51,7 +50,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, tar
 	processes = append(processes,
 		processtree.NewProcessTreeItem(
 			"building rootfs",
-			targ.Architecture().String(),
+			arch,
 			func(ctx context.Context) error {
 				rootfs, err = ramfs.Build(ctx)
 				if err != nil {
