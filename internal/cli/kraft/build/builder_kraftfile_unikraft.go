@@ -169,7 +169,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 						fmt.Sprintf("pulling %s",
 							unikraft.TypeNameVersion(template),
 						),
-						func(ctx context.Context, w func(progress float64)) error {
+						func(ctx context.Context, prompt func(), w func(progress float64)) error {
 							return templatePack.Pull(
 								ctx,
 								pack.WithPullProgressFunc(w),
@@ -296,7 +296,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 				fmt.Sprintf("pulling %s",
 					unikraft.TypeNameVersion(p),
 				),
-				func(ctx context.Context, w func(progress float64)) error {
+				func(ctx context.Context, prompt func(), w func(progress float64)) error {
 					return p.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
@@ -481,7 +481,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		if configure {
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
-				func(ctx context.Context, w func(progress float64)) error {
+				func(ctx context.Context, prompt func(), w func(progress float64)) error {
 					return opts.project.Configure(
 						ctx,
 						*opts.Target, // Target-specific options
@@ -504,7 +504,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 
 	processes = append(processes, paraprogress.NewProcess(
 		fmt.Sprintf("building %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
-		func(ctx context.Context, w func(progress float64)) error {
+		func(ctx context.Context, prompt func(), w func(progress float64)) error {
 			err := opts.project.Build(
 				ctx,
 				*opts.Target, // Target-specific options
@@ -551,7 +551,7 @@ func (build *builderKraftfileUnikraft) Statistics(ctx context.Context, opts *Bui
 
 	processes = append(processes, paraprogress.NewProcess(
 		fmt.Sprintf("statistics %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
-		func(ctx context.Context, w func(progress float64)) error {
+		func(ctx context.Context, prompt func(), w func(progress float64)) error {
 			lines, err := linesOfCode(ctx, opts)
 			if lines > 1 {
 				opts.statistics["lines of code"] = fmt.Sprintf("%d", lines)

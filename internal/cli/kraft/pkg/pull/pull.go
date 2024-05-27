@@ -259,7 +259,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 					fmt.Sprintf("pulling %s",
 						unikraft.TypeNameVersion(pullPack),
 					),
-					func(ctx context.Context, w func(progress float64)) error {
+					func(ctx context.Context, prompt func(), w func(progress float64)) error {
 						return pullPack.Pull(
 							ctx,
 							pack.WithPullProgressFunc(w),
@@ -457,7 +457,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		p := p
 		processes = append(processes, paraprogress.NewProcess(
 			fmt.Sprintf("pulling %s", p.String()),
-			func(ctx context.Context, w func(progress float64)) error {
+			func(ctx context.Context, prompt func(), w func(progress float64)) error {
 				return p.Pull(
 					ctx,
 					pack.WithPullProgressFunc(w),

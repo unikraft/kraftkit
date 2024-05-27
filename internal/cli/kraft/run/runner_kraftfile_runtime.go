@@ -277,7 +277,7 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", found.String()),
-				func(ctx context.Context, w func(progress float64)) error {
+				func(ctx context.Context, prompt func(), w func(progress float64)) error {
 					popts := []pack.PullOption{}
 					if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 						popts = append(popts, pack.WithPullProgressFunc(w))

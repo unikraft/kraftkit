@@ -67,8 +67,9 @@ type ProgressMsg struct {
 type Process struct {
 	id          int
 	percent     float64
-	processFunc func(context.Context, func(float64)) error
+	processFunc func(context.Context, func(), func(float64)) error
 	progress    progress.Model
+	prompting   bool
 	spinner     spinner.Model
 	timer       stopwatch.Model
 	timerWidth  int
@@ -85,7 +86,7 @@ type Process struct {
 	Status    ProcessStatus
 }
 
-func NewProcess(name string, processFunc func(context.Context, func(float64)) error) *Process {
+func NewProcess(name string, processFunc func(context.Context, func(), func(float64)) error) *Process {
 	d := &Process{
 		id:          nextID(),
 		Name:        name,
@@ -131,7 +132,7 @@ func (p *Process) Start() tea.Cmd {
 			log.G(p.ctx).Info(p.Name)
 		}
 
-		err := p.processFunc(p.ctx, p.onProgress)
+		err := p.processFunc(p.ctx, p.TogglePrompting, p.onProgress)
 		p.Status = StatusSuccess
 		if err != nil {
 			p.Status = StatusFailed
@@ -241,7 +242,11 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 	return d, tea.Batch(cmds...)
 }
 
-func (p Process) View() string {
+func (p *Process) TogglePrompting() {
+	p.prompting = !p.prompting
+}
+
+func (p *Process) View() string {
 	left := ""
 
 	switch p.Status {
@@ -302,6 +307,10 @@ func (p Process) View() string {
 		for _, line := range p.logs[truncate:] {
 			s += line + "\n"
 		}
+	}
+
+	if p.prompting {
+		return ""
 	}
 
 	return s

@@ -243,7 +243,7 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 			ctx,
 			[]*paraprogress.Process{paraprogress.NewProcess(
 				fmt.Sprintf("pulling %s", runner.packName),
-				func(ctx context.Context, w func(progress float64)) error {
+				func(ctx context.Context, prompt func(), w func(progress float64)) error {
 					return selected.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),

@@ -193,7 +193,7 @@ func (opts *MenuOptions) pull(ctx context.Context, project app.Application, work
 			fmt.Sprintf("pulling %s",
 				unikraft.TypeNameVersion(pullPack),
 			),
-			func(ctx context.Context, w func(progress float64)) error {
+			func(ctx context.Context, prompt func(), w func(progress float64)) error {
 				return pullPack.Pull(
 					ctx,
 					pack.WithPullProgressFunc(w),
@@ -337,7 +337,7 @@ func (opts *MenuOptions) pull(ctx context.Context, project app.Application, work
 				fmt.Sprintf("pulling %s",
 					unikraft.TypeNameVersion(p),
 				),
-				func(ctx context.Context, w func(progress float64)) error {
+				func(ctx context.Context, prompt func(), w func(progress float64)) error {
 					return p.Pull(
 						ctx,
 						pack.WithPullProgressFunc(w),
@@ -435,7 +435,7 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 			if configure {
 				processes = append(processes, paraprogress.NewProcess(
 					fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
-					func(ctx context.Context, w func(progress float64)) error {
+					func(ctx context.Context, prompt func(), w func(progress float64)) error {
 						return opts.project.Configure(
 							ctx,
 							targ, // Target-specific options
