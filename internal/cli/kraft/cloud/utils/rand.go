@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package vimport
+package utils
 
 import (
 	"crypto/rand"
@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// genRandAuth generates a random authentication string.
-func genRandAuth() (string, error) {
+// GenRandAuth generates a random authentication string.
+func GenRandAuth() (string, error) {
 	rndChars := []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	maxIdx := big.NewInt(int64(len(rndChars)))
 
