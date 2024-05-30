@@ -5,7 +5,7 @@
 
 ARG GO_VERSION=1.22.0
 
-FROM golang:${GO_VERSION}-bullseye AS kraftkit-full
+FROM golang:${GO_VERSION}-bookworm AS kraftkit-full
 
 # Install build dependencies
 RUN set -xe; \
