@@ -26,6 +26,7 @@ RUN set -ex; \
         bison \
         build-essential \
         curl \
+        git \
         flex \
         libaio-dev \
         libattr1-dev \
