@@ -170,6 +170,7 @@ $(addprefix $(.PROXY), $(TOOLS)): GO_LDFLAGS += -X "$(GOMOD)/internal/version.bu
 $(addprefix $(.PROXY), $(TOOLS)):
 	(cd $(WORKDIR)/tools/$@ && \
 		$(GO) build -v \
+		-tags "containers_image_storage_stub,containers_image_openpgp" \
 		-o $(DISTDIR)/$@ \
 		-gcflags=all='$(GO_GCFLAGS)' \
 		-ldflags='$(GO_LDFLAGS)' \
