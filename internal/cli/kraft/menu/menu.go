@@ -25,6 +25,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/make"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/confirm"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
@@ -421,23 +422,38 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 		targ := targ
 
 		if !opts.NoConfigure {
-			processes = append(processes, paraprogress.NewProcess(
-				fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
-				func(ctx context.Context, w func(progress float64)) error {
-					return opts.project.Configure(
-						ctx,
-						targ, // Target-specific options
-						nil,  // No extra configuration options
-						make.WithProgressFunc(w),
-						make.WithSilent(true),
-						make.WithExecOptions(
-							exec.WithStdin(iostreams.G(ctx).In),
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
-						),
-					)
-				},
-			))
+			var err error
+			configure := true
+
+			if opts.project.IsConfigured(targ) {
+				configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
+				if err != nil {
+					return err
+				}
+			}
+
+			if configure {
+				processes = append(processes, paraprogress.NewProcess(
+					fmt.Sprintf("configuring %s (%s)", targ.Name(), target.TargetPlatArchName(targ)),
+					func(ctx context.Context, w func(progress float64)) error {
+						return opts.project.Configure(
+							ctx,
+							targ, // Target-specific options
+							nil,  // No extra configuration options
+							make.WithProgressFunc(w),
+							make.WithSilent(true),
+							make.WithExecOptions(
+								exec.WithStdin(iostreams.G(ctx).In),
+								exec.WithStdout(log.G(ctx).Writer()),
+								exec.WithStderr(log.G(ctx).WriterLevel(logrus.ErrorLevel)),
+							),
+						)
+					},
+				))
+			} else {
+				log.G(ctx).Info("skipping configure step")
+				log.G(ctx).Info("to omit this prompt, use the '--no-configure' flag")
+			}
 		}
 	}
 

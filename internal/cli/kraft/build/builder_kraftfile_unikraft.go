@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/make"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/confirm"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
@@ -467,23 +468,38 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 	}
 
 	if !opts.NoConfigure {
-		processes = append(processes, paraprogress.NewProcess(
-			fmt.Sprintf("configuring %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
-			func(ctx context.Context, w func(progress float64)) error {
-				return opts.project.Configure(
-					ctx,
-					*opts.Target, // Target-specific options
-					envKconfig,   // Extra Kconfigs for compiled in environment variables
-					make.WithProgressFunc(w),
-					make.WithSilent(true),
-					make.WithExecOptions(
-						exec.WithStdin(iostreams.G(ctx).In),
-						exec.WithStdout(log.G(ctx).Writer()),
-						exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
-					),
-				)
-			},
-		))
+		var err error
+		configure := true
+
+		if opts.project.IsConfigured(*opts.Target) {
+			configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
+			if err != nil {
+				return err
+			}
+		}
+
+		if configure {
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf("configuring %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
+				func(ctx context.Context, w func(progress float64)) error {
+					return opts.project.Configure(
+						ctx,
+						*opts.Target, // Target-specific options
+						envKconfig,   // Extra Kconfigs for compiled in environment variables
+						make.WithProgressFunc(w),
+						make.WithSilent(true),
+						make.WithExecOptions(
+							exec.WithStdin(iostreams.G(ctx).In),
+							exec.WithStdout(log.G(ctx).Writer()),
+							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
+						),
+					)
+				},
+			))
+		} else {
+			log.G(ctx).Info("skipping configure step")
+			log.G(ctx).Info("to omit this prompt, use the '--no-configure' flag")
+		}
 	}
 
 	processes = append(processes, paraprogress.NewProcess(
