@@ -3,11 +3,11 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=bookworm-20230725
+ARG DEBIAN_VERSION=bookworm-20240513
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 
-ARG QEMU_VERSION=8.2.0
+ARG QEMU_VERSION=8.2.4
 ARG WITH_XEN=disable
 ARG WITH_KVM=enable
 
@@ -26,6 +26,7 @@ RUN set -ex; \
         bison \
         build-essential \
         curl \
+        git \
         flex \
         libaio-dev \
         libattr1-dev \
