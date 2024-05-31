@@ -1,6 +1,6 @@
 module github.com/unikraft/kraftkit/webinstall
 
-go 1.18
+go 1.22
 
 require (
 	github.com/rancher/wrangler v1.1.1
