@@ -248,7 +248,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Client:                 opts.Client,
 			Env:                    env,
 			Image:                  service.Image,
-			Memory:                 uint(memory),
+			Memory:                 fmt.Sprintf("%d", memory),
 			Metro:                  opts.Metro,
 			Name:                   name,
 			ServiceGroupNameOrUUID: serviceGroup,

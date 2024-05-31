@@ -8,9 +8,11 @@ package create
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	kraftcloud "sdk.kraft.cloud"
 	kcvolumes "sdk.kraft.cloud/volumes"
@@ -26,7 +28,7 @@ type CreateOptions struct {
 	Client kcvolumes.VolumesService `noattribute:"true"`
 	Metro  string                   `noattribute:"true"`
 	Name   string                   `local:"true" size:"name" short:"n"`
-	SizeMB int                      `local:"true" long:"size" short:"s" usage:"Size in MB"`
+	Size   string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments)"`
 	Token  string                   `noattribute:"true"`
 }
 
@@ -51,7 +53,23 @@ func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponse
 		)
 	}
 
-	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, opts.Name, opts.SizeMB)
+	if _, err := strconv.ParseUint(opts.Size, 10, 64); err == nil {
+		opts.Size = fmt.Sprintf("%sMi", opts.Size)
+	}
+
+	qty, err := resource.ParseQuantity(opts.Size)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse size quantity: %w", err)
+	}
+
+	if qty.Value() < 1024*1024 {
+		return nil, fmt.Errorf("size must be at least 1Mi")
+	}
+
+	// Convert to MiB
+	sizeMB := int(qty.Value() / (1024 * 1024))
+
+	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, opts.Name, sizeMB)
 	if err != nil {
 		return nil, fmt.Errorf("creating volume: %w", err)
 	}
@@ -88,7 +106,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	if opts.SizeMB == 0 {
+	if opts.Size == "" {
 		return fmt.Errorf("must specify --size flag")
 	}
 

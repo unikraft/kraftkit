@@ -45,7 +45,7 @@ type DeployOptions struct {
 	Jobs                   int                       `long:"jobs" short:"j" usage:"Allow N jobs at once"`
 	KernelDbg              bool                      `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile              string                    `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
-	Memory                 int                       `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
+	Memory                 string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
 	Metro                  string                    `noattribute:"true"`
 	Name                   string                    `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
 	NoCache                bool                      `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`

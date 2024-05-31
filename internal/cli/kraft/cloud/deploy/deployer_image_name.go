@@ -97,7 +97,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 					Features:               opts.Features,
 					Domain:                 opts.Domain,
 					Image:                  deployer.imageName,
-					Memory:                 uint(opts.Memory),
+					Memory:                 opts.Memory,
 					Metro:                  opts.Metro,
 					Name:                   opts.Name,
 					Ports:                  opts.Ports,

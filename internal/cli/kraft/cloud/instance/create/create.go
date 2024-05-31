@@ -16,6 +16,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
@@ -37,7 +38,7 @@ type CreateOptions struct {
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image                  string                    `noattribute:"true"`
-	Memory                 uint                      `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB)"`
+	Memory                 string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
 	Metro                  string                    `noattribute:"true"`
 	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
 	Output                 string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
@@ -173,8 +174,22 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if len(args) > 0 {
 		req.Args = args
 	}
-	if opts.Memory > 0 {
-		req.MemoryMB = ptr(int(opts.Memory))
+	if opts.Memory != "" {
+		if _, err := strconv.ParseUint(opts.Memory, 10, 64); err == nil {
+			opts.Memory = fmt.Sprintf("%sMi", opts.Memory)
+		}
+
+		qty, err := resource.ParseQuantity(opts.Memory)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not parse memory quantity: %w", err)
+		}
+
+		if qty.Value() < 1024*1024 {
+			return nil, nil, fmt.Errorf("memory must be at least 1Mi")
+		}
+
+		// Convert to MiB
+		req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
 	}
 	if opts.Replicas > 0 {
 		req.Replicas = ptr(int(opts.Replicas))
