@@ -111,7 +111,6 @@ type dockerfile struct {
 	dockerfile string
 	env        []string
 	files      []string
-	workdir    string
 }
 
 func fixedWriteCloser(wc io.WriteCloser) filesync.FileOutputFunc {
@@ -128,9 +127,10 @@ func NewFromDockerfile(ctx context.Context, path string, opts ...InitrdOption) (
 	}
 
 	initrd := dockerfile{
-		opts:       InitrdOptions{},
+		opts: InitrdOptions{
+			workdir: filepath.Dir(path),
+		},
 		dockerfile: path,
-		workdir:    filepath.Dir(path),
 	}
 
 	for _, opt := range opts {
@@ -297,8 +297,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		},
 		CacheExports: cacheExports,
 		LocalDirs: map[string]string{
-			"context":    initrd.workdir,
-			"dockerfile": filepath.Dir(initrd.dockerfile),
+			"context":    initrd.opts.workdir,
+			"dockerfile": filepath.Dir(filepath.Join(initrd.opts.workdir, initrd.dockerfile)),
 		},
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
