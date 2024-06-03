@@ -10,7 +10,6 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	networkapi "kraftkit.sh/api/network/v1alpha1"
@@ -157,14 +156,20 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 				netcontrollers[net.Driver] = netcontroller
 			}
 
-			// Get the latest version of the network.
-			found, err := netcontroller.Get(ctx, &networkapi.Network{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: net.IfName,
-				},
-			})
+			networks, err := netcontroller.List(ctx, &networkapi.NetworkList{})
 			if err != nil {
-				log.G(ctx).Warnf("could not get network information for %s: %v", net.IfName, err)
+				return err
+			}
+			var found *networkapi.Network
+
+			for _, network := range networks.Items {
+				if network.Spec.IfName == net.IfName {
+					found = &network
+					break
+				}
+			}
+			if found == nil {
+				log.G(ctx).Warnf("could not get network information for %s", net.IfName)
 				continue
 			}
 
