@@ -7,7 +7,10 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
+	"github.com/compose-spec/compose-go/v2/types"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/log"
@@ -72,4 +75,14 @@ func RemoveOrphans(ctx context.Context, project *compose.Project) error {
 	}
 
 	return removeOptions.Run(ctx, orphanMachines)
+}
+
+func PlatArchFromService(service types.ServiceConfig) (string, string, error) {
+	parts := strings.SplitN(service.Platform, "/", 2)
+
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid platform: %s for service %s", service.Platform, service.Name)
+	}
+
+	return parts[0], parts[1], nil
 }

@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
@@ -17,6 +16,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/internal/cli/kraft/build"
+	"kraftkit.sh/internal/cli/kraft/compose/utils"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -96,24 +96,12 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func platArchFromService(service types.ServiceConfig) (string, string, error) {
-	// The service platform should be in the form <platform>/<arch>
-
-	parts := strings.SplitN(service.Platform, "/", 2)
-
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid platform: %s for service %s", service.Platform, service.Name)
-	}
-
-	return parts[0], parts[1], nil
-}
-
 func buildService(ctx context.Context, service types.ServiceConfig) error {
 	if service.Build == nil {
 		return fmt.Errorf("service %s has no build context", service.Name)
 	}
 
-	plat, arch, err := platArchFromService(service)
+	plat, arch, err := utils.PlatArchFromService(service)
 	if err != nil {
 		return err
 	}
@@ -126,7 +114,7 @@ func buildService(ctx context.Context, service types.ServiceConfig) error {
 }
 
 func pkgService(ctx context.Context, service types.ServiceConfig) error {
-	plat, arch, err := platArchFromService(service)
+	plat, arch, err := utils.PlatArchFromService(service)
 	if err != nil {
 		return err
 	}
