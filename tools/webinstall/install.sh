@@ -186,6 +186,7 @@ cleanup_int() {
 cleanup() {
     if [ -n "$_CLEANUP_ARCHIVE" ] || \
         [ -n "$_CLEANUP_BINARY" ] || \
+        [ -n "$_CLEANUP_SCRIPT" ] || \
         [ -n "$_CLEANUP_VERSION" ]; then
         do_cmd "$RM -f $_CLEANUP_BINARY $_CLEANUP_ARCHIVE $_CLEANUP_VERSION"
     fi
@@ -1232,18 +1233,22 @@ install_linux_manual() {
     fi
 
     _ill_binary="kraft"
+    _ill_script="kraftld"
     _ill_archive="kraft.tar.gz"
     downloader "$_ill_url" "$_ill_archive" "$_ill_arch"
     _CLEANUP_ARCHIVE="$_ill_archive"
 
     do_cmd "$TAR -xzf $_ill_archive"
     _CLEANUP_BINARY="$_ill_binary"
+    _CLEANUP_SCRIPT="$_ill_script"
 
     do_cmd "$INSTALL $_ill_binary $PREFIX"
+    do_cmd "$INSTALL $_ill_script $PREFIX"
 
     cleanup
     _CLEANUP_ARCHIVE=""
     _CLEANUP_BINARY=""
+    _CLEANUP_SCRIPT=""
     _CLEANUP_VERSION=""
 }
 
@@ -1319,18 +1324,22 @@ install_darwin_manual() {
     fi
 
     _idr_binary="kraft"
+    _idr_script="kraftld"
     _idr_archive="kraftkit.tar.gz"
     downloader "$_idr_url" "$_idr_archive" "$_idr_arch"
     _CLEANUP_ARCHIVE="$_idr_archive"
 
     do_cmd "$TAR -xzf $_idr_archive"
     _CLEANUP_BINARY="$_idr_binary"
+    _CLEANUP_SCRIPT="$_idr_script"
 
     do_cmd "$INSTALL $_idr_binary $PREFIX"
+    do_cmd "$INSTALL $_idr_script $PREFIX"
 
     cleanup
     _CLEANUP_ARCHIVE=""
     _CLEANUP_BINARY=""
+    _CLEANUP_SCRIPT=""
     _CLEANUP_VERSION=""
 }
 
