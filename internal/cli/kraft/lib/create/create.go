@@ -95,7 +95,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	if !config.G[config.KraftKit](ctx).NoPrompt {
 		if !opts.GitInit {
-			opts.GitInit, err = confirm.NewConfirm("Do you want to intialise library with git:")
+			opts.GitInit, err = confirm.NewConfirm("Do you want to intialise library with git:", func() {})
 			if err != nil {
 				return err
 			}
@@ -124,7 +124,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if !opts.UpdateRefs {
-			opts.UpdateRefs, err = confirm.NewConfirm("Do you want to package it:")
+			opts.UpdateRefs, err = confirm.NewConfirm("Do you want to package it:", func() {})
 			if err != nil {
 				return err
 			}

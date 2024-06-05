@@ -13,7 +13,7 @@ import (
 
 // NewConfirm is a utility method used in a CLI context to prompt the user with
 // a yes/no question.
-func NewConfirm(question string) (bool, error) {
+func NewConfirm(question string, beforeAfter func()) (bool, error) {
 	input := confirmation.New(
 		tui.TextWhiteBgBlue("[?]")+" "+
 			question,
@@ -23,6 +23,9 @@ func NewConfirm(question string) (bool, error) {
 	input.ResultTemplate = confirmation.ResultTemplateYN
 	input.KeyMap.SelectYes = append(input.KeyMap.SelectYes, "+")
 	input.KeyMap.SelectNo = append(input.KeyMap.SelectNo, "-")
+
+	beforeAfter()
+	defer beforeAfter()
 
 	return input.RunPrompt()
 }

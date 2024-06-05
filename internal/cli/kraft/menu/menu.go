@@ -426,7 +426,7 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 			configure := true
 
 			if opts.project.IsConfigured(targ) {
-				configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
+				configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:", func() {})
 				if err != nil {
 					return err
 				}
