@@ -413,7 +413,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				}),
 				WithCPU(QemuCPU{
 					CPU: QemuCPUX86Qemu64,
-					On:  QemuCPUFeatures{QemuCPUFeaturePdpe1gb},
+					On:  QemuCPUFeatures{QemuCPUFeaturePdpe1gb, QemuCPUFeatureRdrand, QemuCPUFeatureRdseed},
 					Off: QemuCPUFeatures{QemuCPUFeatureVmx, QemuCPUFeatureSvm},
 				}),
 			)
