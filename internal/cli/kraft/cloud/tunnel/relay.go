@@ -6,8 +6,10 @@
 package tunnel
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +26,10 @@ type Relay struct {
 	rAddr string
 	ctype string
 	auth  string
+	name  string
 }
+
+const Heartbeat = "\xf0\x9f\x91\x8b\xf0\x9f\x90\x92\x00"
 
 func (r *Relay) Up(ctx context.Context) error {
 	l, err := r.listenLocal(ctx)
@@ -34,7 +39,7 @@ func (r *Relay) Up(ctx context.Context) error {
 	defer func() { l.Close() }()
 	go func() { <-ctx.Done(); l.Close() }()
 
-	log.G(ctx).Info("Tunnelling ", l.Addr(), " to ", r.rAddr)
+	log.G(ctx).Info("tunnelling ", l.Addr(), " to ", r.rAddr)
 
 	for {
 		conn, err := l.Accept()
@@ -46,7 +51,32 @@ func (r *Relay) Up(ctx context.Context) error {
 		}
 
 		c := r.newConnection(conn)
-		go c.handle(ctx, []byte(r.auth))
+		go c.handle(ctx, []byte(r.auth), r.name)
+	}
+}
+
+func (r *Relay) ControlUp(ctx context.Context, ready chan struct{}) error {
+	rc, err := r.dialRemote(ctx)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	go func() { <-ctx.Done(); rc.Close() }()
+
+	ready <- struct{}{}
+	close(ready)
+
+	// Heartbeat every minute to keep the connection alive
+	_, err = io.CopyN(rc, bytes.NewReader([]byte(r.auth+Heartbeat)), int64(len(r.auth)+9))
+	if err != nil {
+		return err
+	}
+	for {
+		time.Sleep(time.Minute)
+		_, err := io.CopyN(rc, bytes.NewReader([]byte(Heartbeat)), 9)
+		if err != nil {
+			return err
+		}
 	}
 }
 
@@ -78,20 +108,20 @@ type connection struct {
 
 // handle handles the client connection by relaying reads and writes from/to
 // the remote host.
-func (c *connection) handle(ctx context.Context, auth []byte) {
+func (c *connection) handle(ctx context.Context, auth []byte, instance string) {
 	defer func() {
 		c.conn.Close()
-		log.G(ctx).Info("Closed client connection ", c.conn.RemoteAddr())
+		log.G(ctx).Info("closed client connection ", c.conn.RemoteAddr())
 	}()
 
 	rc, err := c.relay.dialRemote(ctx)
 	if err != nil {
-		log.G(ctx).WithError(err).Error("Failed to connect to remote host")
+		log.G(ctx).WithError(err).Error("failed to connect to remote host")
 		return
 	}
 	defer rc.Close()
 
-	log.G(ctx).Info("Accepted client connection ", c.conn.RemoteAddr(), " to ", rc.LocalAddr(), "->", rc.RemoteAddr())
+	log.G(ctx).Info("accepted client connection ", c.conn.RemoteAddr(), " to ", rc.LocalAddr(), "->", rc.RemoteAddr())
 
 	// NOTE(antoineco): these calls are critical as they allow reads/writes to be
 	// later cancelled, because the deadline applies to all future and pending
@@ -106,7 +136,36 @@ func (c *connection) handle(ctx context.Context, auth []byte) {
 	if len(auth) > 0 {
 		_, err = rc.Write(auth)
 		if err != nil {
-			log.G(ctx).WithError(err).Error("Failed to write auth to remote host")
+			log.G(ctx).WithError(err).Error("failed to write auth to remote host")
+			return
+		}
+
+		var status []byte
+		statusRaw := bytes.NewBuffer(status)
+		n, err := io.CopyN(statusRaw, rc, 2)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("failed to read auth status from remote host")
+			return
+		}
+
+		if n != 2 {
+			log.G(ctx).Error("invalid auth status from remote host")
+			return
+		}
+
+		var statusParsed int16
+		err = binary.Read(statusRaw, binary.LittleEndian, &statusParsed)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("failed to parse auth status from remote host")
+			return
+		}
+
+		if statusParsed == 0 {
+			log.G(ctx).Error("no more available connections to remote host. Try again later")
+			return
+		} else if statusParsed < 0 {
+			log.G(ctx).Errorf("internal tunnel error (C=%d), to view logs run:", statusParsed)
+			fmt.Fprintf(log.G(ctx).Out, "\n    kraft cloud instance logs %s\n\n", instance)
 			return
 		}
 	}
@@ -124,7 +183,7 @@ func (c *connection) handle(ctx context.Context, auth []byte) {
 				return
 			}
 			if !isNetTimeoutError(err) {
-				log.G(ctx).WithError(err).Error("Failed to copy data from client to remote host")
+				log.G(ctx).WithError(err).Error("failed to copy data from client to remote host")
 			}
 		}
 	}()
@@ -132,7 +191,7 @@ func (c *connection) handle(ctx context.Context, auth []byte) {
 	_, err = io.Copy(c.conn, rc)
 	if err != nil {
 		if !isNetTimeoutError(err) {
-			log.G(ctx).WithError(err).Error("Failed to copy data from remote host to client")
+			log.G(ctx).WithError(err).Error("failed to copy data from remote host to client")
 		}
 	} else {
 		// Connection was closed remote so we just return to close our side
