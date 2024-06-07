@@ -113,7 +113,16 @@ RUN set -xe; \
     chown -R runner:runner /github/workspace; \
     usermod -aG 1000 runner; \
     usermod -aG 1001 runner; \
-    usermod -aG 1002 runner;
+    usermod -aG 1002 runner; \
+    mkdir -p /run/user/1000; \
+    mkdir -p /run/user/1001; \
+    mkdir -p /run/user/1002; \
+    chown -R runner:arunner /run/user/1000; \
+    chown -R runner:brunner /run/user/1001; \
+    chown -R runner:crunner /run/user/1002; \
+    chmod 0700 /run/user/1000; \
+    chmod 0700 /run/user/1001; \
+    chmod 0700 /run/user/1002;
 USER runner
 
 ENV CLICOLOR_FORCE=1
