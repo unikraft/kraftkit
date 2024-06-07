@@ -12,13 +12,13 @@ import (
 // New attempts to return the builder for a supplied path which
 // will allow the provided ...
 func New(ctx context.Context, path string, opts ...InitrdOption) (Initrd, error) {
-	if builder, err := NewFromOCIImage(ctx, path, opts...); err == nil {
-		return builder, nil
-	} else if builder, err := NewFromDockerfile(ctx, path, opts...); err == nil {
+	if builder, err := NewFromFile(ctx, path, opts...); err == nil {
 		return builder, nil
 	} else if builder, err := NewFromDirectory(ctx, path, opts...); err == nil {
 		return builder, nil
-	} else if builder, err := NewFromFile(ctx, path, opts...); err == nil {
+	} else if builder, err := NewFromDockerfile(ctx, path, opts...); err == nil {
+		return builder, nil
+	} else if builder, err := NewFromOCIImage(ctx, path, opts...); err == nil {
 		return builder, nil
 	}
 
