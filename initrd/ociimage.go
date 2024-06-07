@@ -42,7 +42,6 @@ func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (In
 
 	ref, err := alltransports.ParseImageName(path)
 	if err != nil {
-		log.G(ctx).Warnf("could not parse image name: %s", err.Error())
 		return nil, err
 	}
 
