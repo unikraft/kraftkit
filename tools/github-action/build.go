@@ -26,8 +26,8 @@ func (opts *GithubAction) build(ctx context.Context) error {
 	}
 
 	if opts.Rootfs != "" {
-		ramfs, err := initrd.New(ctx,
-			filepath.Join(opts.Workdir, opts.Rootfs),
+		ramfs, err := initrd.New(ctx, opts.Rootfs,
+			initrd.WithWorkdir(opts.Workdir),
 			initrd.WithOutput(filepath.Join(
 				opts.Workdir,
 				unikraft.BuildDir,
