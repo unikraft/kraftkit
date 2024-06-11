@@ -141,6 +141,19 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return build.Statistics(ctx, opts, args...)
 	}
 
+	// NOTE(craciunoiuc): This is currently a workaround to remove empty
+	// Makefile.uk files generated wrongly by the build system. Until this
+	// is fixed we just delete.
+	//
+	// See: https://github.com/unikraft/unikraft/issues/1456
+	make := filepath.Join(opts.Workdir, "Makefile.uk")
+	if finfo, err := os.Stat(make); err == nil && finfo.Size() == 0 {
+		err := os.Remove(make)
+		if err != nil {
+			return fmt.Errorf("removing empty Makefile.uk: %w", err)
+		}
+	}
+
 	return nil
 }
 
