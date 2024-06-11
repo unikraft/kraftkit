@@ -164,6 +164,7 @@ func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
 	// First, check $HOME/.docker/
 	var home string
 	var err error
+	var configPath string
 	foundDockerConfig := false
 
 	// If this is run in the context of GitHub actions, use an alternative path
@@ -174,12 +175,20 @@ func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
 		home, err = homedir.Dir()
 	}
 	if err == nil {
-		foundDockerConfig = fileExists(filepath.Join(home, ".docker/config.json"))
+		foundDockerConfig = fileExists(filepath.Join(home, ".docker", "config.json"))
+
+		if foundDockerConfig {
+			configPath = filepath.Join(home, ".docker")
+		}
 	}
 
 	// If $HOME/.docker/config.json isn't found, check $DOCKER_CONFIG (if set)
 	if !foundDockerConfig && os.Getenv("DOCKER_CONFIG") != "" {
 		foundDockerConfig = fileExists(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json"))
+
+		if foundDockerConfig {
+			configPath = os.Getenv("DOCKER_CONFIG")
+		}
 	}
 
 	// If either of those locations are found, load it using Docker's
@@ -190,11 +199,11 @@ func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
 	// Docker config.
 	var cf *configfile.ConfigFile
 	if foundDockerConfig {
-		cf, err = cliconfig.Load(os.Getenv("DOCKER_CONFIG"))
+		cf, err = cliconfig.Load(configPath)
 		if err != nil {
 			return nil, err
 		}
-	} else if f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json")); err == nil {
+	} else if f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers", "auth.json")); err == nil {
 		defer f.Close()
 
 		cf, err = cliconfig.LoadFromReader(f)
