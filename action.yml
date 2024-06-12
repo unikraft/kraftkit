@@ -28,6 +28,10 @@ inputs:
     description: Log-level of the action
     required: false
     default: error
+  privileged:
+    decription: Run kraft in a privileged container
+    required: false
+    default: "false"
   runtimedir:
     description: Path to store runtime artifacts
     required: false
@@ -194,6 +198,7 @@ runs:
     run: |
       ACTION_WORKSPACE=$(echo "${GITHUB_WORKSPACE}" | grep -Eo "^.*work")
       docker run \
+        $([ "${{ inputs.privileged }}" = "true" ] && echo -n "--privileged") \
         --workdir /github/workspace \
         --rm \
         --env-file <(env) \
