@@ -1,12 +1,8 @@
 name: buildenvs/myself-full
 
-# Build only on changes to the build environment itself
 on:
-  push:
-    branches: [stable]
-    paths:
-      - 'buildenvs/myself.Dockerfile'
-      - '.github/workflows/myself-full.yaml'
+  release:
+    types: [released]
 
 jobs:
   myself-full-push:
