@@ -1,10 +1,8 @@
 name: tools/webinstall
 
 on:
-  push:
-    branches: [stable]
-    paths:
-      - 'tools/webinstall/**'
+  release:
+    types: [released]
 
 jobs:
   myself-push:
@@ -19,6 +17,11 @@ jobs:
           registry: ghcr.io
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Build & Push OCI Image
         uses: docker/build-push-action@v6
