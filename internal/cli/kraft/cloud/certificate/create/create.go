@@ -101,7 +101,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud certificate create --name my-cert --cname '*.example.com' --pkey 'private-key.pem' --chain 'chain.pem'
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
 		},
 	})
 	if err != nil {
