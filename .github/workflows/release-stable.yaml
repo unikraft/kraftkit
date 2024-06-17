@@ -45,8 +45,8 @@ jobs:
       - name: Run GoReleaser
         run: |
           GORELEASER_PREVIOUS_TAG=$(curl -s "https://get.kraftkit.sh/latest.txt")
-          GORELEASER_PREVIOUS_TAG="v$GORELEASER_PREVIOUS_TAG"
-          export GORELEASER_PREVIOUS_TAG
+          export GORELEASER_PREVIOUS_TAG="v$GORELEASER_PREVIOUS_TAG"
+          export GORELEASER_CURRENT_TAG="${{  github.ref_name }}"
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
           goreleaser release \
             --config goreleaser-stable.yaml \
