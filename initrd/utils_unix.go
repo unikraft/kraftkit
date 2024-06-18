@@ -21,6 +21,7 @@ func populateCPIO(info fs.FileInfo, header *cpio.Header) {
 			header.Guid = int(stat.Gid)
 			header.Inode = int64(stat.Ino)
 			header.Links = int(stat.Nlink)
+			header.DeviceID = int(stat.Dev)
 		}
 	}
 }

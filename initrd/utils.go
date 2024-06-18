@@ -38,13 +38,19 @@ func walkFiles(ctx context.Context, outputDir string, writer *cpio.Writer, files
 		}
 
 		if d.Type().IsDir() {
-			if err := writer.WriteHeader(&cpio.Header{
-				Name: internal,
-				Mode: cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
-			}); err != nil {
-				return fmt.Errorf("could not write CPIO header: %w", err)
+			header := &cpio.Header{
+				Name:    internal,
+				Mode:    cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
+				ModTime: info.ModTime(),
+				Size:    0, // Directories have size 0 in cpio
 			}
 
+			// Populate platform specific information
+			populateCPIO(info, header)
+
+			if err := writer.WriteHeader(header); err != nil {
+				return fmt.Errorf("could not write CPIO header: %w", err)
+			}
 			return nil
 		}
 
@@ -80,9 +86,6 @@ func walkFiles(ctx context.Context, outputDir string, writer *cpio.Writer, files
 		populateCPIO(info, header)
 
 		switch {
-		case info.Mode().IsDir():
-			header.Mode |= cpio.TypeDir
-
 		case info.Mode().IsRegular():
 			header.Mode |= cpio.TypeReg
 

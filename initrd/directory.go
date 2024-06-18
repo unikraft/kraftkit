@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/cavaliergopher/cpio"
+	"kraftkit.sh/log"
 )
 
 type directory struct {
@@ -71,6 +72,11 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 
 	writer := cpio.NewWriter(f)
 	defer writer.Close()
+	defer func() {
+		if err := f.Sync(); err != nil {
+			log.G(ctx).Errorf("syncing cpio archive failed: %s", err)
+		}
+	}()
 
 	if err := walkFiles(ctx, initrd.path, writer, &initrd.files); err != nil {
 		return "", fmt.Errorf("could not walk output path: %w", err)
