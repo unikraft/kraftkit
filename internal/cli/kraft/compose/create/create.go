@@ -121,10 +121,32 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	projectMachines := []metav1.ObjectMeta{}
 	projectNetworks := []metav1.ObjectMeta{}
+	projectVolumes := []metav1.ObjectMeta{}
 	if embeddedProject != nil {
+		projectMachines = embeddedProject.Status.Machines
 		projectNetworks = embeddedProject.Status.Networks
+		projectVolumes = embeddedProject.Status.Volumes
 	}
+	defer func() {
+		if _, err := composeController.Update(ctx, &composeapi.Compose{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: project.Name,
+			},
+			Spec: composeapi.ComposeSpec{
+				Composefile: project.ComposeFiles[0],
+				Workdir:     project.WorkingDir,
+			},
+			Status: composeapi.ComposeStatus{
+				Machines: projectMachines,
+				Networks: projectNetworks,
+				Volumes:  projectVolumes,
+			},
+		}); err != nil {
+			log.G(ctx).WithError(err).Error("failed to update project")
+		}
+	}()
 
 	networkController, err := mnetwork.NewNetworkV1alpha1ServiceIterator(ctx)
 	if err != nil {
@@ -195,11 +217,6 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	}
 
-	projectVolumes := []metav1.ObjectMeta{}
-	if embeddedProject != nil {
-		projectVolumes = embeddedProject.Status.Volumes
-	}
-
 	volumeController, err := mvolume.NewVolumeV1alpha1ServiceIterator(ctx)
 	if err != nil {
 		return err
@@ -252,11 +269,6 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 			projectVolumes = append(projectVolumes, volume.ObjectMeta)
 		}
 
-	}
-
-	projectMachines := []metav1.ObjectMeta{}
-	if embeddedProject != nil {
-		projectMachines = embeddedProject.Status.Machines
 	}
 
 	// Check that none of the services are already running
