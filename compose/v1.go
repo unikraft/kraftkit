@@ -6,6 +6,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	zip "api.zip"
@@ -28,6 +29,8 @@ type v1Compose struct {
 	networkController networkapi.NetworkService
 	volumeController  volumeapi.VolumeService
 }
+
+var ErrInvalidComposefile = fmt.Errorf("the Composefile for the project is either missing or invalid")
 
 func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeService, error) {
 	embeddedStore, err := store.NewEmbeddedStore[composev1.ComposeSpec, composev1.ComposeStatus](
@@ -64,16 +67,7 @@ func NewComposeProjectV1(ctx context.Context, opts ...any) (composev1.ComposeSer
 	)
 }
 
-func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose) error {
-	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
-	if err != nil {
-		return err
-	}
-
-	if err := project.Validate(ctx); err != nil {
-		return err
-	}
-
+func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject *composev1.Compose, project *Project) error {
 	machines, err := v1.machineController.List(ctx, &machineapi.MachineList{})
 	if err != nil {
 		return err
@@ -146,16 +140,7 @@ func (v1 *v1Compose) refreshRunningServices(ctx context.Context, embeddedProject
 	return nil
 }
 
-func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Compose) error {
-	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
-	if err != nil {
-		return err
-	}
-
-	if err := project.Validate(ctx); err != nil {
-		return err
-	}
-
+func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProject *composev1.Compose, project *Project) error {
 	existingNetworks := []metav1.ObjectMeta{}
 
 	allNetworks, err := v1.networkController.List(ctx, &networkapi.NetworkList{})
@@ -201,16 +186,7 @@ func (v1 *v1Compose) refreshExistingNetworks(ctx context.Context, embeddedProjec
 	return nil
 }
 
-func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject *composev1.Compose) error {
-	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
-	if err != nil {
-		return err
-	}
-
-	if err := project.Validate(ctx); err != nil {
-		return err
-	}
-
+func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject *composev1.Compose, project *Project) error {
 	existingVolumes := []metav1.ObjectMeta{}
 
 	allVolumes, err := v1.volumeController.List(ctx, &volumeapi.VolumeList{})
@@ -257,15 +233,24 @@ func (v1 *v1Compose) refreshExistingVolumes(ctx context.Context, embeddedProject
 }
 
 func (v1 *v1Compose) refreshStatus(ctx context.Context, embeddedProject *composev1.Compose) error {
-	if err := v1.refreshRunningServices(ctx, embeddedProject); err != nil {
+	project, err := NewProjectFromComposeFile(ctx, embeddedProject.Spec.Workdir, embeddedProject.Spec.Composefile)
+	if err != nil {
+		return ErrInvalidComposefile
+	}
+
+	if err := project.Validate(ctx); err != nil {
+		return ErrInvalidComposefile
+	}
+
+	if err := v1.refreshRunningServices(ctx, embeddedProject, project); err != nil {
 		return err
 	}
 
-	if err := v1.refreshExistingNetworks(ctx, embeddedProject); err != nil {
+	if err := v1.refreshExistingNetworks(ctx, embeddedProject, project); err != nil {
 		return err
 	}
 
-	if err := v1.refreshExistingVolumes(ctx, embeddedProject); err != nil {
+	if err := v1.refreshExistingVolumes(ctx, embeddedProject, project); err != nil {
 		return err
 	}
 
@@ -288,18 +273,30 @@ func (v1 *v1Compose) Delete(ctx context.Context, project *composev1.Compose) (*c
 
 // List implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) List(ctx context.Context, projects *composev1.ComposeList) (*composev1.ComposeList, error) {
+	validItems := []composev1.Compose{}
 	for i := range projects.Items {
 		if err := v1.refreshStatus(ctx, &projects.Items[i]); err != nil {
+			if err == ErrInvalidComposefile {
+				continue
+			}
 			return projects, err
 		}
+
+		validItems = append(validItems, projects.Items[i])
 	}
 
+	projects.Items = validItems
 	return projects, nil
 }
 
 // Get implements kraftkit.sh/api/compose/v1.ComposeService
 func (v1 *v1Compose) Get(ctx context.Context, project *composev1.Compose) (*composev1.Compose, error) {
 	if err := v1.refreshStatus(ctx, project); err != nil {
+		// If there is no such Composefile, remove the project
+		if err == ErrInvalidComposefile {
+			return nil, nil
+		}
+
 		return project, err
 	}
 
