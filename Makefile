@@ -74,7 +74,7 @@ YTT_VERSION        ?= v0.49.0
 YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 GORELEASER_VERSION ?= v1.25.1
 GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
-GINKGO_VERSION     ?= v2.17.3
+GINKGO_VERSION     ?= v2.19.0
 GINKGO             ?= $(GO) run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
 # Misc
