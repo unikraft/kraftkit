@@ -233,7 +233,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			Logger:  printf,
 			ContainerRequest: testcontainers.ContainerRequest{
 				AlwaysPullImage: true,
-				Image:           "moby/buildkit:latest",
+				Image:           "moby/buildkit:v0.14.1",
 				WaitingFor:      wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
 				Privileged:      true,
 				ExposedPorts:    []string{fmt.Sprintf("%d:%d/tcp", port, port)},
