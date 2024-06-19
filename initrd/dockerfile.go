@@ -9,11 +9,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -206,27 +204,18 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			log.G(ctx).Warn("")
 		}()
 
-		// Generate a random port number between 4000 and 5000.  Try 10 times before
-		// giving up.
-		var port int
-		attempts := 0
-
-		for {
-			if attempts > 10 {
-				return "", fmt.Errorf("could not find an available port after 10 attempts")
-			}
-
-			port = rand.Intn(5000-4000+1) + 4000
-			listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-			if err != nil {
-				log.G(ctx).WithField("port", port).Debug("port is use")
-				attempts++
-				continue
-			}
-
-			listener.Close()
-			break
+		// Port 0 means "give me any free port"
+		addr, err := net.ResolveTCPAddr("tcp", ":0")
+		if err != nil {
+			return "", err
 		}
+		l, err := net.ListenTCP("tcp", addr)
+		if err != nil {
+			return "", err
+		}
+
+		port := l.Addr().(*net.TCPAddr).Port
+		l.Close()
 
 		buildkitd, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			Started: true,
