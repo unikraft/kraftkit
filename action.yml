@@ -29,7 +29,7 @@ inputs:
     required: false
     default: error
   privileged:
-    decription: Run kraft in a privileged container
+    description: Run kraft in a privileged container
     required: false
     default: "false"
   runtimedir:
