@@ -145,6 +145,12 @@ func main() {
 				line = strings.TrimSpace(line)
 				split := strings.Split(line, "=")
 				name := split[0]
+
+				// Check if this option is invalid
+				if strings.Contains(name, "not found") {
+					continue lineloop
+				}
+
 				camel := strcase.ToCamel(name)
 
 				// Check if this option does not already exist
