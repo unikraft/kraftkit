@@ -70,6 +70,21 @@ func Create(ctx context.Context, opts *CreateOptions) (*kccertificates.CreateRes
 		opts.PKey = string(b)
 	}
 
+	if _, err := os.Stat(opts.Chain); err != nil {
+		if os.IsNotExist(err) {
+			log.G(ctx).Info("reading chain from argument")
+		} else {
+			return nil, fmt.Errorf("could not read chain: %w", err)
+		}
+	} else {
+		b, err := os.ReadFile(opts.Chain)
+		if err != nil {
+			return nil, fmt.Errorf("could not read chain: %w", err)
+		}
+
+		opts.Chain = string(b)
+	}
+
 	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, &kccertificates.CreateRequest{
 		Chain: opts.Chain,
 		CN:    opts.CN,
@@ -98,7 +113,7 @@ func NewCmd() *cobra.Command {
 		`),
 		Example: heredoc.Doc(`
 			# Create a new certificate with a given common name, private key file and chain.
-			$ kraft cloud certificate create --name my-cert --cname '*.example.com' --pkey 'private-key.pem' --chain 'chain.pem'
+			$ kraft cloud certificate create --name my-cert --cn '*.example.com' --pkey 'private-key.pem' --chain 'chain.pem'
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
