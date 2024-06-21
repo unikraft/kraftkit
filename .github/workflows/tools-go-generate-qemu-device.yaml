@@ -74,6 +74,7 @@ jobs:
         run: |
           set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
+          export PATH="${GOROOT}/bin:$PATH"
           cd tools/go-generate-qemu-devices
           go build -o ../../dist/
 
