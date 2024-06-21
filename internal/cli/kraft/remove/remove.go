@@ -229,10 +229,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		// Stop the machine before deleting it.
-		if machine.Status.State == machineapi.MachineStateRunning {
-			if _, err := controller.Stop(ctx, &machine); err != nil {
-				log.G(ctx).Errorf("could not stop machine %s: %v", machine.Name, err)
-			}
+		if _, err := controller.Stop(ctx, &machine); err != nil {
+			log.G(ctx).Errorf("could not stop machine %s: %v", machine.Name, err)
 		}
 
 		// Now delete the machine.
