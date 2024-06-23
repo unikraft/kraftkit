@@ -21,7 +21,7 @@ jobs:
           password: ${{secrets.GITHUB_TOKEN}}
 
       - name: Build & Push OCI Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: true
           tags: ghcr.io/unikraft/kraftkit/webinstall:latest
