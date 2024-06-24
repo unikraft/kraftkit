@@ -8,8 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/kardianos/service"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -19,11 +23,14 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/remove"
 	"kraftkit.sh/internal/cli/kraft/start"
+	"kraftkit.sh/internal/cli/kraft/stop"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
+	"kraftkit.sh/machine/platform/systemd"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/selection"
 	ukarch "kraftkit.sh/unikraft/arch"
@@ -51,6 +58,7 @@ type RunOptions struct {
 	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
 	RunAs         string   `long:"as" usage:"Force a specific runner"`
 	Runtime       string   `long:"runtime" short:"r" usage:"Set an alternative unikernel runtime"`
+	Systemd       bool     `long:"systemd" usage:"runs unikernel as systemd process"`
 	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
 	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
 	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
@@ -376,15 +384,71 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if opts.NoStart {
+	if opts.NoStart && !opts.Systemd {
 		// Output the name of the instance such that it can be piped
 		fmt.Fprintf(iostreams.G(ctx).Out, "%s\n", machine.Name)
 		return nil
 	}
 
-	return start.Start(ctx, &start.StartOptions{
-		Detach:   opts.Detach,
+	err = start.Start(ctx, &start.StartOptions{
+		Detach:   opts.Systemd || opts.Detach,
 		Platform: opts.platform.String(),
 		Remove:   opts.Remove,
 	}, machine.Name)
+
+	// Installs systemd serivce that runs a new unikernel instance on each start.
+	if err == nil && opts.Systemd {
+		// Stops & removes the created testing instance if that is still runnning & present.
+		if err = stop.Stop(ctx, &stop.StopOptions{Platform: opts.platform.String()}, machine.Name); err != nil {
+			log.G(ctx).Debugf("instance %s was already stopped", machine.Name)
+		}
+		if err = remove.Remove(ctx, &remove.RemoveOptions{Platform: opts.platform.String()}, machine.Name); err != nil {
+			log.G(ctx).Errorf("could not remove %s", machine.Name)
+		}
+
+		opts.Name = machine.Name
+		opts.Remove = true
+		sysdArgs := []string{"run"}
+		sysdArgs = append(sysdArgs, opts.GetArgs()...)
+
+		if len(args) > 0 {
+			if strings.HasPrefix(args[0], ".") {
+				pwd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				args[0] = filepath.Join(pwd, args[0])
+			}
+			sysdArgs = append(sysdArgs, args[0])
+		} else {
+			sysdArgs = append(sysdArgs, opts.workdir)
+		}
+
+		svcConfig, err := systemd.NewMachineV1alpha1ServiceSystemdWrapper(
+			ctx,
+			systemd.WithName(machine.Name),
+			systemd.WithDescription("created by Kraftkit"),
+			systemd.WithArguments(sysdArgs),
+			systemd.WithOptions(service.KeyValue{
+				"Restart": "never",
+			}),
+		)
+		if err != nil {
+			return err
+		}
+
+		machine, err = svcConfig.Create(ctx, machine)
+		if err != nil {
+			return err
+		}
+		log.G(ctx).Infof("created a systemd process named %s ", svcConfig.Name)
+
+		_, err = svcConfig.Start(ctx, machine)
+		if err != nil {
+			return err
+		}
+		log.G(ctx).Infof("started running %s as systemd process", svcConfig.Name)
+	}
+
+	return err
 }

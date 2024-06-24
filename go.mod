@@ -40,6 +40,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
 	github.com/henvic/httpretty v0.1.3
+	github.com/kardianos/service v1.2.2
 	github.com/kubescape/go-git-url v0.0.30
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.20
