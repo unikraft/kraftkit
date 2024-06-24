@@ -23,7 +23,7 @@ require (
 	github.com/containerd/containerd v1.7.18
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl v1.7.6
-	github.com/containers/image/v5 v5.31.0
+	github.com/containers/image/v5 v5.31.1
 	github.com/cyphar/filepath-securejoin v0.2.5
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v26.1.4+incompatible
