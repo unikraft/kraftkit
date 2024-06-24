@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package packmanager
 
+import "kraftkit.sh/pack"
+
 // PackOptions contains the list of options which can be set when packaging a
 // component.
 type PackOptions struct {
@@ -20,6 +22,7 @@ type PackOptions struct {
 	name                             string
 	output                           string
 	mergeStrategy                    MergeStrategy
+	source                           pack.Package
 }
 
 // NewPackOptions returns an instantiated *NewPackOptions with default
@@ -95,6 +98,11 @@ func (popts *PackOptions) Output() string {
 // MergeStrategy ...
 func (popts *PackOptions) MergeStrategy() MergeStrategy {
 	return popts.mergeStrategy
+}
+
+// Source returns the source package to use as a base.
+func (popts *PackOptions) Source() pack.Package {
+	return popts.source
 }
 
 // PackOption is an option function which is used to modify PackOptions.
@@ -192,5 +200,12 @@ func PackMergeStrategy(strategy MergeStrategy) PackOption {
 func PackWithEnvs(envs []string) PackOption {
 	return func(popts *PackOptions) {
 		popts.env = envs
+	}
+}
+
+// PackSource provides a way to specify a source package as a base.
+func PackSource(source pack.Package) PackOption {
+	return func(popts *PackOptions) {
+		popts.source = source
 	}
 }
