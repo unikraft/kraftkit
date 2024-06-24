@@ -6,7 +6,6 @@ package build
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -76,26 +75,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			}
 		} else {
 			opts.Workdir = args[0]
-		}
-	}
-
-	if opts.Project == nil {
-		popts := []app.ProjectOption{
-			app.WithProjectWorkdir(opts.Workdir),
-		}
-
-		if len(opts.Kraftfile) > 0 {
-			popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-		} else {
-			popts = append(popts, app.WithProjectDefaultKraftfiles())
-		}
-
-		// Initialize at least the configuration options for a project
-		opts.Project, err = app.NewProjectFromOptions(ctx, popts...)
-		if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-			return fmt.Errorf("cannot build project directory without a Kraftfile")
-		} else if err != nil {
-			return fmt.Errorf("could not initialize project directory: %w", err)
 		}
 	}
 

@@ -43,6 +43,12 @@ func (build *builderKraftfileUnikraft) String() string {
 
 // Buildable implements builder.
 func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *BuildOptions, args ...string) (bool, error) {
+	if opts.Project == nil {
+		if err := opts.initProject(ctx); err != nil {
+			return false, err
+		}
+	}
+
 	if opts.Project.Unikraft(ctx) == nil && opts.Project.Template() == nil {
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
