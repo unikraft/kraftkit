@@ -109,7 +109,7 @@ func (opts *AttachOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *AttachOptions) Run(ctx context.Context, args []string) error {
 	volume, err := Attach(ctx, opts, args...)
 	if err != nil {
-		return fmt.Errorf("could not create volume: %w", err)
+		return fmt.Errorf("could not attach volume: %w", err)
 	}
 
 	_, err = fmt.Fprintln(iostreams.G(ctx).Out, volume.UUID)
