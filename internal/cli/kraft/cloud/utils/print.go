@@ -395,7 +395,11 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 
 		var attachedTo []string
 		for _, attch := range volume.AttachedTo {
-			attachedTo = append(attachedTo, attch.Name)
+			if attch.Name != "" {
+				attachedTo = append(attachedTo, attch.Name)
+			} else {
+				attachedTo = append(attachedTo, attch.UUID)
+			}
 		}
 
 		table.AddField(strings.Join(attachedTo, ","), nil)
