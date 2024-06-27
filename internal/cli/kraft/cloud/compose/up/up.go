@@ -147,6 +147,10 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		}
 	}
 
+	userName := strings.TrimSuffix(
+		strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud",
+	)
+
 	// Build all services if the build flag is set.
 	if err := build.Build(ctx, &build.BuildOptions{
 		Auth:        opts.Auth,
@@ -171,6 +175,45 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		service, ok := opts.Project.Services[serviceName]
 		if !ok {
 			return fmt.Errorf("service '%s' not found", serviceName)
+		}
+
+		var (
+			userPkgName     string
+			officialPkgName string
+		)
+
+		if service.Image != "" {
+			if !strings.Contains(service.Image, ":") {
+				service.Image += ":latest"
+			}
+
+			userPkgName = fmt.Sprintf(
+				"%s/%s",
+				userName,
+				strings.ReplaceAll(service.Image, "_", "-"),
+			)
+			officialPkgName = strings.ReplaceAll(service.Image, "_", "-")
+		} else {
+			userPkgName = fmt.Sprintf(
+				"%s/%s-%s:latest",
+				userName,
+				strings.ReplaceAll(opts.Project.Name, "_", "-"),
+				strings.ReplaceAll(service.Name, "_", "-"),
+			)
+		}
+
+		if exists, _ := opts.imageExists(ctx, userPkgName); userPkgName != "" && exists {
+			// Override the image name if it is set with the new package name.
+			service.Image = userPkgName
+			opts.Project.Services[serviceName] = service
+
+		} else if exists, _ := opts.imageExists(ctx, officialPkgName); officialPkgName != "" && exists {
+			// Override the image name if it is set with the new package name.
+			service.Image = officialPkgName
+			opts.Project.Services[serviceName] = service
+
+		} else if opts.NoBuild {
+			return fmt.Errorf("image '%s' not found in the catalog", service.Image)
 		}
 
 		instResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, service.Name)
@@ -201,16 +244,9 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			memory = int(service.MemReservation)
 		}
 
-		if service.Image == "" {
-			user := strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")
-			service.Image = fmt.Sprintf(
-				"index.unikraft.io/%s/%s:latest",
-				user,
-				strings.ReplaceAll(service.Name, "_", "-"),
-			)
-		}
-
-		log.G(ctx).WithField("image", service.Image).Info("deploying")
+		log.G(ctx).
+			WithField("image", service.Image).
+			Info("creating instance")
 
 		var volumes []string
 		for _, volume := range service.Volumes {
@@ -387,3 +423,28 @@ func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.S
 }
 
 func ptr[T comparable](v T) *T { return &v }
+
+// imageExists checks if an image exists in the KraftCloud registry.
+func (opts *UpOptions) imageExists(ctx context.Context, name string) (exists bool, err error) {
+	if name == "" {
+		return false, fmt.Errorf("image name is empty")
+	}
+
+	log.G(ctx).
+		WithField("image", name).
+		Trace("checking exists")
+
+	imageResp, err := opts.Client.Images().Get(ctx, name)
+	if err != nil {
+		return false, err
+	}
+
+	image, err := imageResp.FirstOrErr()
+	if err != nil {
+		return false, err
+	} else if image == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
