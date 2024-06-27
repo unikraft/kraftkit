@@ -266,7 +266,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			{
 				Type: "local",
 				Attrs: map[string]string{
-					"dest": initrd.opts.cacheDir,
+					"dest":         initrd.opts.cacheDir,
+					"ignore-error": "true",
 				},
 			},
 		}
