@@ -212,7 +212,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		}
 
 		port := l.Addr().(*net.TCPAddr).Port
-		l.Close()
+		_ = l.Close()
 
 		buildkitd, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			Started: true,
