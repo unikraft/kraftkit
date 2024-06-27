@@ -8,9 +8,7 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
@@ -74,11 +72,6 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 		opts.Env = append(opts.Env, envs...)
 	}
 
-	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
-	if err != nil {
-		return nil, err
-	}
-
 	var result []pack.Package
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
@@ -94,7 +87,7 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 			opts.Platform+"/"+opts.Architecture,
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
-					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackArgs(opts.Args...),
 					packmanager.PackInitrd(opts.Rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
