@@ -123,7 +123,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			},
 			processtree.NewProcessTreeItem(
 				"waiting for the image to be available",
-				"",
+				opts.Image,
 				func(ctx context.Context) error {
 					for {
 						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
