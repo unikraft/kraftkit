@@ -8,6 +8,7 @@ package create
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -206,6 +207,14 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 		// Convert to MiB
 		req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
+	} else {
+		// Set the default memory to the size of the image rounded to the nearest
+		// power of 2 with an arbitrary 10% buffer.  Only set the value if it is
+		// greater than 128 MiB.
+		mem := int(math.Round(math.Pow(2, math.Log2(float64(image.SizeInBytes/1024/1024)*1.1))))
+		if mem > 128 {
+			req.MemoryMB = &mem
+		}
 	}
 	if opts.Replicas > 0 {
 		req.Replicas = ptr(int(opts.Replicas))
