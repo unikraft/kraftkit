@@ -84,12 +84,10 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		OSChoice: "linux",
 	}
 
-	if initrd.opts.arch != "" {
-		if initrd.opts.arch == "x86_64" {
-			sysCtx.ArchitectureChoice = "amd64"
-		} else {
-			sysCtx.ArchitectureChoice = initrd.opts.arch
-		}
+	if initrd.opts.arch == "x86_64" {
+		sysCtx.ArchitectureChoice = "amd64"
+	} else if initrd.opts.arch != "" {
+		sysCtx.ArchitectureChoice = initrd.opts.arch
 	}
 
 	policy := &signature.Policy{
