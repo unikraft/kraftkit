@@ -113,6 +113,12 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return err
 	}
 
+	// Set the root file system for the project, since typically a packaging step
+	// may occur after a build, and the root file system is required for packaging
+	// and the packaging step may perform a build of the rootfs again.  Ultimately
+	// this prevents re-builds.
+	opts.Project.SetRootfs(opts.Rootfs)
+
 	err = build.Build(ctx, opts, args...)
 	if err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
