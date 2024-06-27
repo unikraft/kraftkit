@@ -172,9 +172,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	defer os.RemoveAll(ociOutput.Name())
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
-	copts := []client.ClientOpt{}
-
-	c, _ := client.New(ctx, buildkitAddr, copts...)
+	c, _ := client.New(ctx, buildkitAddr)
 	buildKitInfo, err := c.Info(ctx)
 	if err != nil {
 		log.G(ctx).Debugf("connecting to host buildkit client: %s", err)
@@ -248,7 +246,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 		buildkitAddr = fmt.Sprintf("tcp://localhost:%d", port)
 
-		c, _ = client.New(ctx, buildkitAddr, copts...)
+		c, _ = client.New(ctx, buildkitAddr)
 		buildKitInfo, err = c.Info(ctx)
 		if err != nil {
 			return "", fmt.Errorf("connecting to container buildkit client: %w", err)
