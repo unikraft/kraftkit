@@ -387,10 +387,14 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	// Note(craciunoiuc): This is done afterwards as the hardlink target might
 	// not have been created yet by the archive unpacker.
 	for src, dst := range hardlinks {
-		targetPath := filepath.Join(outputDir, dst)
-		oldPath := filepath.Join(outputDir, src)
-		if err := os.Link(oldPath, targetPath); err != nil {
-			return "", fmt.Errorf("could not create hardlink: %w", err)
+		dst = filepath.Join(outputDir, dst)
+		src = filepath.Join(outputDir, src)
+		if err := os.Link(src, dst); err != nil {
+			log.G(ctx).
+				WithField("src", src).
+				WithField("dst", dst).
+				WithError(err).
+				Warnf("could not create hardlink")
 		}
 	}
 
