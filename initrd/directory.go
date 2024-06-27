@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -23,11 +24,11 @@ type directory struct {
 
 // NewFromDirectory returns an instantiated Initrd interface which is is able to
 // serialize a rootfs from a given directory.
-func NewFromDirectory(_ context.Context, path string, opts ...InitrdOption) (Initrd, error) {
-	path = strings.TrimRight(path, string(filepath.Separator))
+func NewFromDirectory(_ context.Context, dir string, opts ...InitrdOption) (Initrd, error) {
+	dir = strings.TrimRight(dir, string(filepath.Separator))
 	rootfs := directory{
 		opts: InitrdOptions{},
-		path: path,
+		path: dir,
 	}
 
 	for _, opt := range opts {
@@ -36,13 +37,17 @@ func NewFromDirectory(_ context.Context, path string, opts ...InitrdOption) (Ini
 		}
 	}
 
-	fi, err := os.Stat(path)
+	if !path.IsAbs(dir) {
+		rootfs.path = filepath.Join(rootfs.opts.workdir, dir)
+	}
+
+	fi, err := os.Stat(rootfs.path)
 	if err != nil && os.IsNotExist(err) {
-		return nil, fmt.Errorf("file does not exist: %s", path)
+		return nil, fmt.Errorf("file does not exist: %s", rootfs.path)
 	} else if err != nil {
 		return nil, fmt.Errorf("could not check path: %w", err)
 	} else if !fi.IsDir() {
-		return nil, fmt.Errorf("supplied path is not a directory: %s", path)
+		return nil, fmt.Errorf("supplied path is not a directory: %s", rootfs.path)
 	}
 
 	return &rootfs, nil
