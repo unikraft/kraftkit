@@ -106,7 +106,12 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	// If no services are specified, remove all services.
 	if len(args) == 0 {
 		for _, service := range opts.Project.Services {
-			instances = append(instances, service.Name)
+			name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
+			if cname := service.ContainerName; len(cname) > 0 {
+				name = cname
+			}
+
+			instances = append(instances, name)
 		}
 	} else {
 		for _, arg := range args {
