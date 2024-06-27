@@ -31,7 +31,7 @@ type BuildOptions struct {
 	Composefile string             `noattribute:"true"`
 	Metro       string             `noattribute:"true"`
 	Project     *compose.Project   `noattribute:"true"`
-	Push        bool               `long:"push" description:"Push the built service images"`
+	Push        bool               `long:"push" usage:"Push the built service images"`
 	Token       string             `noattribute:"true"`
 }
 
