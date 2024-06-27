@@ -42,6 +42,7 @@ type UpOptions struct {
 	Detach      bool                  `local:"true" long:"detach" short:"d" usage:"Run the services in the background"`
 	Metro       string                `noattribute:"true"`
 	NoStart     bool                  `noattribute:"true"`
+	NoBuild     bool                  `local:"true" long:"no-build" usage:"Do not build the services before starting them"`
 	Project     *compose.Project      `noattribute:"true"`
 	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
 	Token       string                `noattribute:"true"`
@@ -151,17 +152,19 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud",
 	)
 
-	// Build all services if the build flag is set.
-	if err := build.Build(ctx, &build.BuildOptions{
-		Auth:        opts.Auth,
-		Composefile: opts.Composefile,
-		Metro:       opts.Metro,
-		Project:     opts.Project,
-		Runtimes:    opts.Runtimes,
-		Token:       opts.Token,
-		Push:        true,
-	}, args...); err != nil {
-		return err
+	if !opts.NoBuild {
+		// Build all services if the build flag is set.
+		if err := build.Build(ctx, &build.BuildOptions{
+			Auth:        opts.Auth,
+			Composefile: opts.Composefile,
+			Metro:       opts.Metro,
+			Project:     opts.Project,
+			Runtimes:    opts.Runtimes,
+			Token:       opts.Token,
+			Push:        true,
+		}, args...); err != nil {
+			return err
+		}
 	}
 
 	volResps, err := createVolumes(ctx, opts)
@@ -325,7 +328,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Services:     services,
 			Start:        false,
 			Token:        opts.Token,
-			WaitForImage: true,
+			WaitForImage: !opts.NoBuild,
 			Volumes:      volumes,
 		}, service.Command...)
 		if err != nil {
