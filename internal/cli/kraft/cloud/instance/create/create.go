@@ -458,6 +458,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				}
 			}
 			for _, subDomain := range opts.SubDomain {
+				if subDomain == "" {
+					continue
+				}
+
 				dnsName := strings.TrimSuffix(subDomain, ".")
 
 				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
@@ -477,6 +481,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			}
 
 			for _, fqdn := range opts.Domain {
+				if fqdn == "" {
+					continue
+				}
+
 				if !strings.HasSuffix(".", fqdn) {
 					fqdn += "."
 				}
