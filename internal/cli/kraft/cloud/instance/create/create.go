@@ -119,24 +119,17 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				"",
 				func(ctx context.Context) error {
 					for {
-						imgs, err := opts.Client.Images().WithMetro(opts.Metro).List(ctx)
+						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
 						if err != nil {
-							return fmt.Errorf("could not list images: %w", err)
+							continue
 						}
 
-						for _, img := range imgs.Data.Entries {
-							if strings.Contains(opts.Image, "@") {
-								if img.Digest == opts.Image {
-									return nil
-								}
-							} else {
-								for _, tag := range img.Tags {
-									if tag == opts.Image {
-										return nil
-									}
-								}
-							}
+						image, err := imageResp.FirstOrErr()
+						if err != nil || image == nil {
+							continue
 						}
+
+						return nil
 					}
 				},
 			),
