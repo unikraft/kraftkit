@@ -434,8 +434,9 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not read image: %w", err)
 	}
 
-	initrd.args = append(initrd.args, img.Metadata.Config.Config.Entrypoint...)
-	initrd.args = append(initrd.args, img.Metadata.Config.Config.Cmd...)
+	initrd.args = append(img.Metadata.Config.Config.Entrypoint,
+		img.Metadata.Config.Config.Cmd...,
+	)
 	initrd.env = img.Metadata.Config.Config.Env
 
 	err = tempgen.Cleanup()

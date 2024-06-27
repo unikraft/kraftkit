@@ -121,8 +121,9 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	initrd.args = ociImage.Config.Entrypoint
-	initrd.args = append(initrd.args, ociImage.Config.Cmd...)
+	initrd.args = append(ociImage.Config.Entrypoint,
+		ociImage.Config.Cmd...,
+	)
 	initrd.env = ociImage.Config.Env
 
 	if initrd.opts.output == "" {
