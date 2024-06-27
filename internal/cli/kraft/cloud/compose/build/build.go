@@ -35,6 +35,7 @@ type BuildOptions struct {
 	Metro       string             `noattribute:"true"`
 	Project     *compose.Project   `noattribute:"true"`
 	Push        bool               `long:"push" usage:"Push the built service images"`
+	Runtimes    []string           `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
 	Token       string             `noattribute:"true"`
 }
 
@@ -50,6 +51,9 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Build a compose project for KraftCloud
 			$ kraft cloud compose build
+
+			# (If applicable) Set or override a runtime for a particular service
+			$ kraft cloud compose build --runtime app=base:latest
 
 			# Push the service images after a successful build
 			$ kraft cloud compose build --push
@@ -104,6 +108,24 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		for service := range opts.Project.Services {
 			args = append(args, service)
 		}
+	}
+
+	runtimes := map[string]string{}
+
+	for _, runtime := range opts.Runtimes {
+		service, runtime, ok := strings.Cut(runtime, "=")
+		if !ok {
+			return fmt.Errorf("expected --runtime flag to be prefixed with service name, e.g. --runtime nginx=%s/nginx:latest", userName)
+		}
+
+		if _, ok := opts.Project.Services[service]; !ok {
+			log.G(ctx).
+				WithField("service", service).
+				Warn("supplied runtime does not exist in the compose project")
+			continue
+		}
+
+		runtimes[service] = runtime
 	}
 
 	for _, serviceName := range args {
@@ -198,7 +220,22 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			bopts.Project = project
 			popts.Project = project
 		} else {
-			rt, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime)
+			var runtimeName string
+			if found, ok := runtimes[serviceName]; ok {
+				if !strings.Contains(found, "/") {
+					found = fmt.Sprintf("index.unikraft.io/official/%s", found)
+				}
+				runtimeName = found
+			} else {
+				runtimeName = runtime.DefaultKraftCloudRuntime
+			}
+
+			log.G(ctx).
+				WithField("runtime", runtimeName).
+				WithField("service", serviceName).
+				Debug("using")
+
+			rt, err := runtime.NewRuntime(ctx, runtimeName)
 			if err != nil {
 				return fmt.Errorf("could not create runtime: %w", err)
 			}

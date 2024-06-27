@@ -43,6 +43,7 @@ type UpOptions struct {
 	Metro       string                `noattribute:"true"`
 	NoStart     bool                  `noattribute:"true"`
 	Project     *compose.Project      `noattribute:"true"`
+	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
 	Token       string                `noattribute:"true"`
 	Wait        time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
@@ -68,6 +69,9 @@ func NewCmd() *cobra.Command {
 
 			# Start a KraftCloud deployment with two specific components.
 			$ kraft cloud compose up nginx component
+
+			# (If applicable) Set or override a runtime for a particular service
+			$ kraft cloud compose up --runtime app=base:latest
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
@@ -149,6 +153,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		Composefile: opts.Composefile,
 		Metro:       opts.Metro,
 		Project:     opts.Project,
+		Runtimes:    opts.Runtimes,
 		Token:       opts.Token,
 		Push:        true,
 	}, args...); err != nil {
