@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/waitgroup"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 )
 
 type LogOptions struct {
@@ -130,6 +132,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 	observations := waitgroup.WaitGroup[string]{}
 
 	for _, instance := range args {
+		instance := instance
 		prefix := ""
 		if !opts.NoPrefix {
 			prefix = instance + strings.Repeat(" ", longestName-len(instance))
@@ -147,6 +150,35 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 
 		observations.Add(instance)
 
+		var inst *kcinstances.GetResponseItem
+
+		// Continuously check the state in a separate thread every 1 second.
+		go func() {
+			for {
+				resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
+				if err != nil {
+					// Likely there was an issue performing the request; so we'll just
+					// skip and attempt to retrieve more logs.
+					if !errors.Is(err, io.EOF) {
+						log.G(ctx).Error(err)
+					}
+
+					continue
+				}
+
+				inst, err = resp.FirstOrErr()
+				if err != nil {
+					errGroup = append(errGroup, err)
+				}
+
+				if len(observations.Items()) == 0 {
+					return
+				}
+
+				time.Sleep(time.Second)
+			}
+		}()
+
 		go func() {
 			defer observations.Done(instance)
 
@@ -155,37 +187,30 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 				case <-ctx.Done():
 					return
 				case err := <-errChan:
-					if err != nil {
-						errGroup = append(errGroup, err)
-					}
-
-					resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
-					if err != nil {
+					if err != nil && !strings.Contains(err.Error(), "operation timed out") && !errors.Is(err, io.EOF) {
 						errGroup = append(errGroup, err)
 						return
 					}
-
-					inst, err := resp.FirstOrErr()
-					if err != nil {
-						errGroup = append(errGroup, err)
-					}
-
-					if inst.StopCodeReason() != kcinstances.StopCodeReasonOK {
-						message := []string{
-							"",
-							"It looks like the instance exited fatally.  To see more details about why, run:",
-							"",
-							fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
-							"",
-						}
-
-						consumer.Consume(message...)
-					}
-
-					return
 				case line, ok := <-logChan:
 					if ok {
 						consumer.Consume(line)
+					}
+				case <-time.After(time.Second):
+					// If we have not received anything after 1 second through any of the
+					// other channels, check if the instance has stopped and exit if it
+					// has.
+					if inst != nil && inst.State == kcinstances.InstanceStateStopped {
+						consumer.Consume(
+							"",
+							fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+							"",
+							"To see more details about why, run:",
+							"",
+							fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+							"",
+						)
+
+						return
 					}
 				}
 			}
