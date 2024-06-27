@@ -348,10 +348,17 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		targetPath := filepath.Join(outputDir, header.Name)
 		switch header.Typeflag {
 		case tar.TypeDir:
+			log.G(ctx).
+				WithField("dst", targetPath).
+				Debug("mkdir")
 			if err := os.MkdirAll(targetPath, 0o755); err != nil {
 				return "", fmt.Errorf("could not create directory: %w", err)
 			}
 		case tar.TypeReg:
+			log.G(ctx).
+				WithField("src", header.Name).
+				WithField("dst", targetPath).
+				Debug("copying")
 			file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
 				return "", fmt.Errorf("could not open file: %w", err)
@@ -361,6 +368,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 				return "", fmt.Errorf("could not write file: %w", err)
 			}
 		case tar.TypeSymlink:
+			log.G(ctx).
+				WithField("src", header.Linkname).
+				WithField("dst", targetPath).
+				Debug("symlinking")
 			if err := os.Symlink(header.Linkname, targetPath); err != nil {
 				return "", fmt.Errorf("could not create symlink: %w", err)
 			}
@@ -389,6 +400,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	for src, dst := range hardlinks {
 		dst = filepath.Join(outputDir, dst)
 		src = filepath.Join(outputDir, src)
+		log.G(ctx).
+			WithField("src", src).
+			WithField("dst", dst).
+			Debug("hardlinking")
 		if err := os.Link(src, dst); err != nil {
 			log.G(ctx).
 				WithField("src", src).

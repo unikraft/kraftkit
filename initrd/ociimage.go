@@ -157,6 +157,10 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		SourceCtx:      sysCtx,
 	}
 
+	log.G(ctx).
+		WithField("image", initrd.ref.StringWithinTransport()).
+		Debug("pulling")
+
 	if _, err = copy.Image(ctx, policyCtx, dest, initrd.ref, &opts); err != nil {
 		return "", fmt.Errorf("failed to copy image: %w", err)
 	}
