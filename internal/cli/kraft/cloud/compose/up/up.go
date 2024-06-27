@@ -280,6 +280,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Auth:         opts.Auth,
 			Client:       opts.Client,
 			Domain:       domains,
+			Entrypoint:   service.Entrypoint,
 			Env:          env,
 			Image:        service.Image,
 			Memory:       fmt.Sprintf("%d", memory),
