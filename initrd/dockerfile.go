@@ -288,7 +288,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		CacheExports: cacheExports,
 		LocalDirs: map[string]string{
 			"context":    initrd.opts.workdir,
-			"dockerfile": filepath.Dir(filepath.Join(initrd.opts.workdir, initrd.dockerfile)),
+			"dockerfile": initrd.opts.workdir,
 		},
 		Frontend: "dockerfile.v0",
 		FrontendAttrs: map[string]string{
