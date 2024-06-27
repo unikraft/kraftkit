@@ -15,11 +15,13 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
+	kcimages "sdk.kraft.cloud/images"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -38,6 +40,7 @@ type CreateOptions struct {
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image                  string                    `noattribute:"true"`
+	Entrypoint             types.ShellCommand        `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
 	Memory                 string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
 	Metro                  string                    `noattribute:"true"`
 	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
@@ -101,6 +104,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// Replace all slashes in the name with dashes.
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
 
+	// Keep a reference of the image that we are going to use for the instance.
+	var image *kcimages.GetResponseItem
+
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
 		paramodel, err := processtree.NewProcessTree(
@@ -124,7 +130,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 							continue
 						}
 
-						image, err := imageResp.FirstOrErr()
+						image, err = imageResp.FirstOrErr()
 						if err != nil || image == nil {
 							continue
 						}
@@ -141,6 +147,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		err = paramodel.Start()
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not wait for image be available: %w", err)
+		}
+	} else {
+		imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get image: %w", err)
+		}
+
+		image, err = imageResp.FirstOrErr()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get image: %w", err)
 		}
 	}
 
@@ -166,8 +182,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
+	if opts.Entrypoint.IsZero() {
+		req.Args = []string{image.Args}
+	} else {
+		req.Args = opts.Entrypoint
+	}
 	if len(args) > 0 {
-		req.Args = args
+		req.Args = append(req.Args, args...)
 	}
 	if opts.Memory != "" {
 		if _, err := strconv.ParseUint(opts.Memory, 10, 64); err == nil {
