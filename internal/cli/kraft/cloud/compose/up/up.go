@@ -261,7 +261,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Data.Entries[0].UUID, volume.Target))
 		}
 
-		name := service.Name
+		name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
 		if cname := service.ContainerName; len(cname) > 0 {
 			name = cname
 		}
