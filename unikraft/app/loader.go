@@ -64,7 +64,7 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 	if n, ok := iface["cmd"]; ok {
 		switch v := n.(type) {
 		case string:
-			app.command = strings.Split(v, " ")
+			app.command = []string{v}
 		case []interface{}:
 			for _, cmd := range v {
 				app.command = append(app.command, cmd.(string))
