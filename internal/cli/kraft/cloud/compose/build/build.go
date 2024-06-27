@@ -47,6 +47,9 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Build a compose project for KraftCloud
 			$ kraft cloud compose build
+
+			# Push the service images after a successful build
+			$ kraft cloud compose build --push
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
