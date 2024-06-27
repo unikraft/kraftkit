@@ -173,9 +173,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
 	c, _ := client.New(ctx, buildkitAddr)
-	buildKitInfo, err := c.Info(ctx)
-	if err != nil {
-		log.G(ctx).Debugf("connecting to host buildkit client: %s", err)
+	buildKitInfo, connerr := c.Info(ctx)
+	if connerr != nil {
 		log.G(ctx).Info("creating ephemeral buildkit container")
 
 		testcontainers.DefaultLoggingHook = testcontainersLoggingHook
@@ -184,7 +183,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 		// Trap any errors with a helpful message for how to use buildkit
 		defer func() {
-			if err == nil {
+			if connerr == nil {
 				return
 			}
 
@@ -238,16 +237,19 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("creating buildkit container: %w", err)
 		}
+
 		defer func() {
-			if err := buildkitd.Terminate(context.TODO()); err != nil {
-				log.G(ctx).Warnf("terminating buildkit container: %s", err)
+			if err := buildkitd.Terminate(ctx); err != nil && !strings.Contains(err.Error(), "context cancelled") {
+				log.G(ctx).
+					WithError(err).
+					Debug("terminating buildkit container")
 			}
 		}()
 
 		buildkitAddr = fmt.Sprintf("tcp://localhost:%d", port)
 
 		c, _ = client.New(ctx, buildkitAddr)
-		buildKitInfo, err = c.Info(ctx)
+		buildKitInfo, connerr = c.Info(ctx)
 		if err != nil {
 			return "", fmt.Errorf("connecting to container buildkit client: %w", err)
 		}
