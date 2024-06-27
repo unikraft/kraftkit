@@ -37,6 +37,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.19.2
 	github.com/google/go-github/v32 v32.1.0
+	github.com/google/go-github/v39 v39.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
 	github.com/henvic/httpretty v0.1.3
