@@ -240,11 +240,11 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		// currently exist via the KraftCloud API, pick the limit if it is set as it
 		// represents the maximum value, otherwise check if the reservation has been
 		// set.
-		var memory int
+		var memory string
 		if service.MemLimit > 0 {
-			memory = int(service.MemLimit)
+			memory = fmt.Sprintf("%d", int(service.MemLimit)/1024/1024)
 		} else if service.MemReservation > 0 {
-			memory = int(service.MemReservation)
+			memory = fmt.Sprintf("%d", int(service.MemReservation)/1024/1024)
 		}
 
 		log.G(ctx).
@@ -322,7 +322,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Entrypoint:   service.Entrypoint,
 			Env:          env,
 			Image:        service.Image,
-			Memory:       fmt.Sprintf("%d", memory),
+			Memory:       memory,
 			Metro:        opts.Metro,
 			Name:         name,
 			Services:     services,
