@@ -156,6 +156,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		// Build all services if the build flag is set.
 		if err := build.Build(ctx, &build.BuildOptions{
 			Auth:        opts.Auth,
+			Client:      opts.Client,
 			Composefile: opts.Composefile,
 			Metro:       opts.Metro,
 			Project:     opts.Project,

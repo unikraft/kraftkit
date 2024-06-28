@@ -16,6 +16,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	kraftcloud "sdk.kraft.cloud"
+
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
@@ -30,13 +32,14 @@ import (
 )
 
 type BuildOptions struct {
-	Auth        *config.AuthConfig `noattribute:"true"`
-	Composefile string             `noattribute:"true"`
-	Metro       string             `noattribute:"true"`
-	Project     *compose.Project   `noattribute:"true"`
-	Push        bool               `long:"push" usage:"Push the built service images"`
-	Runtimes    []string           `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	Token       string             `noattribute:"true"`
+	Auth        *config.AuthConfig    `noattribute:"true"`
+	Composefile string                `noattribute:"true"`
+	Client      kraftcloud.KraftCloud `noattribute:"true"`
+	Metro       string                `noattribute:"true"`
+	Project     *compose.Project      `noattribute:"true"`
+	Push        bool                  `long:"push" usage:"Push the built service images"`
+	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	Token       string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -81,6 +84,12 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
+	}
+
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
 	}
 
 	userName := strings.TrimSuffix(
@@ -140,6 +149,11 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		)
 
 		if service.Image != "" {
+			if !strings.Contains(service.Image, ":") {
+				service.Image += ":latest"
+				opts.Project.Services[serviceName] = service
+			}
+
 			appName = strings.ReplaceAll(service.Image, "/", "-")
 			pkgName = fmt.Sprintf(
 				"index.unikraft.io/%s/%s",
@@ -219,6 +233,14 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			popts.Workdir = service.Build.Context
 			bopts.Project = project
 			popts.Project = project
+		} else if exists, _ := opts.imageExists(ctx, service.Image); exists {
+			// Nothing to do.
+			continue
+		} else if exists, _ := opts.imageExists(ctx, pkgName); exists {
+			// Override the image name if it is set with the new package name.
+			service.Image = pkgName
+			opts.Project.Services[serviceName] = service
+			continue
 		} else {
 			var runtimeName string
 			if found, ok := runtimes[serviceName]; ok {
@@ -309,4 +331,29 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	return Build(ctx, opts, args...)
+}
+
+// imageExists checks if an image exists in the KraftCloud registry.
+func (opts *BuildOptions) imageExists(ctx context.Context, name string) (exists bool, err error) {
+	if name == "" {
+		return false, fmt.Errorf("image name is empty")
+	}
+
+	log.G(ctx).
+		WithField("image", name).
+		Trace("checking exists")
+
+	imageResp, err := opts.Client.Images().Get(ctx, name)
+	if err != nil {
+		return false, err
+	}
+
+	image, err := imageResp.FirstOrErr()
+	if err != nil {
+		return false, err
+	} else if image == nil {
+		return false, nil
+	}
+
+	return true, nil
 }
