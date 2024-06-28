@@ -206,14 +206,14 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			)
 		}
 
-		if exists, _ := opts.imageExists(ctx, userPkgName); userPkgName != "" && exists {
-			// Override the image name if it is set with the new package name.
-			service.Image = userPkgName
-			opts.Project.Services[serviceName] = service
-
-		} else if exists, _ := opts.imageExists(ctx, officialPkgName); officialPkgName != "" && exists {
+		if exists, _ := opts.imageExists(ctx, officialPkgName); officialPkgName != "" && exists {
 			// Override the image name if it is set with the new package name.
 			service.Image = officialPkgName
+			opts.Project.Services[serviceName] = service
+
+		} else if exists, _ := opts.imageExists(ctx, userPkgName); userPkgName != "" && exists {
+			// Override the image name if it is set with the new package name.
+			service.Image = userPkgName
 			opts.Project.Services[serviceName] = service
 
 		} else if opts.NoBuild {
