@@ -37,6 +37,7 @@ import (
 type CreateOptions struct {
 	Auth                *config.AuthConfig            `noattribute:"true"`
 	Client              kraftcloud.KraftCloud         `noattribute:"true"`
+	Certificate         []string                      `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
 	Env                 []string                      `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features            []string                      `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	Domain              []string                      `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
@@ -72,6 +73,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	if opts == nil {
 		opts = &CreateOptions{}
+	}
+
+	if len(opts.Domain) > 0 && len(opts.Certificate) > 0 && len(opts.Domain) != len(opts.Certificate) {
+		return nil, nil, fmt.Errorf("number of certificates does not match number of domains")
 	}
 
 	if opts.Auth == nil {
@@ -380,6 +385,18 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("cannot use existing --service|-g and define new --domain|-d")
 	}
 
+	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// supports updating service groups.
+	if opts.ServiceNameOrUUID != "" && len(opts.Certificate) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --certificate|-c")
+	}
+
+	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// supports updating service groups.
+	if opts.ServiceNameOrUUID != "" && len(opts.SubDomain) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --subdomain|-s")
+	}
+
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
@@ -503,7 +520,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				}
 			}
 
-			for _, fqdn := range opts.Domain {
+			for i, fqdn := range opts.Domain {
 				if fqdn == "" {
 					continue
 				}
@@ -512,9 +529,23 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 					fqdn += "."
 				}
 
-				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
+				domainCreate := kcservices.CreateRequestDomain{
 					Name: fqdn,
-				})
+				}
+
+				if len(opts.Certificate) > i {
+					if utils.IsUUID(opts.Certificate[i]) {
+						domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+							UUID: opts.Certificate[i],
+						}
+					} else {
+						domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+							Name: opts.Certificate[i],
+						}
+					}
+				}
+
+				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, domainCreate)
 			}
 		}
 	}

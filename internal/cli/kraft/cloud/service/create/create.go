@@ -24,14 +24,15 @@ import (
 )
 
 type CreateOptions struct {
-	Auth      *config.AuthConfig         `noattribute:"true"`
-	Client    kcservices.ServicesService `noattribute:"true"`
-	Domain    []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
-	SubDomain []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Metro     string                     `noattribute:"true"`
-	Name      string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
-	Output    string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Token     string                     `noattribute:"true"`
+	Auth        *config.AuthConfig         `noattribute:"true"`
+	Client      kcservices.ServicesService `noattribute:"true"`
+	Certificate []string                   `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
+	Domain      []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
+	SubDomain   []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Metro       string                     `noattribute:"true"`
+	Name        string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
+	Output      string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Token       string                     `noattribute:"true"`
 }
 
 // Create a KraftCloud instance.
@@ -45,6 +46,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 	// if len(opts.SubDomain) > 0 && len(opts.FQDN) > 0 {
 	// 	return nil, fmt.Errorf("the `--subdomain|-s` option is mutually exclusive with `--fqdn|--domain|-d`")
 	// }
+
+	if len(opts.Domain) > 0 && len(opts.Certificate) > 0 && len(opts.Domain) != len(opts.Certificate) {
+		return nil, fmt.Errorf("number of certificates does not match number of domains")
+	}
 
 	if opts.Auth == nil {
 		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
@@ -154,14 +159,28 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 		req.Name = &opts.Name
 	}
 
-	for _, fqdn := range opts.Domain {
+	for i, fqdn := range opts.Domain {
 		if !strings.HasSuffix(".", fqdn) {
 			fqdn += "."
 		}
 
-		req.Domains = append(req.Domains, kcservices.CreateRequestDomain{
+		domainCreate := kcservices.CreateRequestDomain{
 			Name: fqdn,
-		})
+		}
+
+		if len(opts.Certificate) > i {
+			if utils.IsUUID(opts.Certificate[i]) {
+				domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+					UUID: opts.Certificate[i],
+				}
+			} else {
+				domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+					Name: opts.Certificate[i],
+				}
+			}
+		}
+
+		req.Domains = append(req.Domains, domainCreate)
 	}
 
 	for _, subdomain := range opts.SubDomain {
