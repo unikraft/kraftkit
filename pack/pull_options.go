@@ -16,6 +16,7 @@ type PullOptions struct {
 	onProgress        func(progress float64)
 	workdir           string
 	useCache          bool
+	unstructured      bool
 }
 
 // Auths returns the set authentication config for a given domain or nil if the
@@ -51,6 +52,11 @@ func (ppo *PullOptions) CalculateChecksum() bool {
 // available.
 func (ppo *PullOptions) UseCache() bool {
 	return ppo.useCache
+}
+
+// Unstructured returns whether the pull should happen to the workdir directly.
+func (ppo *PullOptions) Unstructured() bool {
+	return ppo.unstructured
 }
 
 // PullOption is an option function which is used to modify PullOptions.
@@ -117,6 +123,15 @@ func WithPullChecksum(calc bool) PullOption {
 func WithPullCache(cache bool) PullOption {
 	return func(opts *PullOptions) error {
 		opts.useCache = cache
+		return nil
+	}
+}
+
+// WithPullUnstructured to set whether the pull should happen to the workdir
+// directly.
+func WithPullUnstructured(unstructured bool) PullOption {
+	return func(opts *PullOptions) error {
+		opts.unstructured = unstructured
 		return nil
 	}
 }
