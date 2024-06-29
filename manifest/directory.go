@@ -101,13 +101,16 @@ func (dp DirectoryProvider) PullManifest(ctx context.Context, manifest *Manifest
 		return fmt.Errorf("cannot determine channel for directory provider")
 	}
 
-	local, err := unikraft.PlaceComponent(
-		popts.Workdir(),
-		manifest.Type,
-		manifest.Name,
-	)
-	if err != nil {
-		return fmt.Errorf("could not place component package: %s", err)
+	local := manifest.Name
+	if !popts.Unstructured() {
+		local, err = unikraft.PlaceComponent(
+			popts.Workdir(),
+			manifest.Type,
+			manifest.Name,
+		)
+		if err != nil {
+			return fmt.Errorf("could not place component package: %s", err)
+		}
 	}
 
 	f, err := os.Lstat(local)
