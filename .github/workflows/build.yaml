@@ -51,7 +51,7 @@ jobs:
 
       - name: Build
         run: |
-          UNAME_OS=${{ matrix.GOOS }} UNAME_ARCH=${{ matrix.GOARCH }} make kraft
+          VERSION=pr-${{ github.event.number }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make kraft
 
       - name: Upload build artifacts to GitHub
         uses: actions/upload-artifact@v4
