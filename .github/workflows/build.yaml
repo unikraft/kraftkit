@@ -28,10 +28,12 @@ jobs:
           GOARCH: amd64
         - GOOS: darwin
           GOARCH: arm64
-        - GOOS: freebsd
-          GOARCH: amd64
-        - GOOS: freebsd
-          GOARCH: arm64
+        # FIXME(craciunoiuc): Enable FreeBSD builds when the build environment
+        # contains the freebsd toolchain.
+        # - GOOS: freebsd
+        #   GOARCH: amd64
+        # - GOOS: freebsd
+        #   GOARCH: arm64
         - GOOS: linux
           GOARCH: amd64
         - GOOS: linux
