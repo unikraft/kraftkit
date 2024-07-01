@@ -28,10 +28,12 @@ jobs:
           GOARCH: amd64
         - GOOS: darwin
           GOARCH: arm64
-        - GOOS: freebsd
-          GOARCH: amd64
-        - GOOS: freebsd
-          GOARCH: arm64
+        # FIXME(craciunoiuc): Enable FreeBSD builds when the build environment
+        # contains the freebsd toolchain.
+        # - GOOS: freebsd
+        #   GOARCH: amd64
+        # - GOOS: freebsd
+        #   GOARCH: arm64
         - GOOS: linux
           GOARCH: amd64
         - GOOS: linux
@@ -51,4 +53,13 @@ jobs:
 
       - name: Build
         run: |
-          UNAME_OS=${{ matrix.GOOS }} UNAME_ARCH=${{ matrix.GOARCH }} make kraft
+          VERSION=pr-${{ github.event.number }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make kraft
+
+      - name: Upload build artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraft-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
+          path: ./dist/kraft
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
