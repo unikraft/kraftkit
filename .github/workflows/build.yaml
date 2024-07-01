@@ -52,3 +52,12 @@ jobs:
       - name: Build
         run: |
           UNAME_OS=${{ matrix.GOOS }} UNAME_ARCH=${{ matrix.GOARCH }} make kraft
+
+      - name: Upload build artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraft-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
+          path: ./dist/kraft
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
