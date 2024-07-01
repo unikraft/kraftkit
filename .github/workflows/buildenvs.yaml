@@ -1,8 +1,8 @@
 name: buildenvs
 
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [released]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [staging]

@@ -1,8 +1,7 @@
 name: mac-notarization
 
 on:
-  release:
-    types: [released]
+  workflow_dispatch:
 
 jobs:
   notarization:
