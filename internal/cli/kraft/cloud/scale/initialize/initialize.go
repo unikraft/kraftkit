@@ -8,6 +8,7 @@ package initialize
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -30,7 +31,7 @@ type InitOptions struct {
 	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
 	MaxSize      int                   `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
 	Metro        string                `noattribute:"true"`
-	MinSize      int                   `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	MinSize      string                `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
 	Token        string                `noattribute:"true"`
 	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
@@ -186,8 +187,14 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		UUID:   &id,
 		Master: master,
 	}
-	if opts.MinSize > 0 {
-		req.MinSize = &opts.MinSize
+
+	if opts.MinSize != "" {
+		minSize, err := strconv.ParseUint(opts.MinSize, 10, 64)
+		if err != nil {
+			return fmt.Errorf("could not parse minimum size: %w", err)
+		}
+		minSizeInt := int(minSize)
+		req.MinSize = &minSizeInt
 	}
 	if opts.MaxSize > 0 {
 		req.MaxSize = &opts.MaxSize
