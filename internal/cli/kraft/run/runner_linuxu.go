@@ -144,7 +144,7 @@ func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *RunOptions, machi
 		ctx,
 		[]*paraprogress.Process{paraprogress.NewProcess(
 			fmt.Sprintf("pulling %s", loader.Name()),
-			func(ctx context.Context, w func(progress float64)) error {
+			func(ctx context.Context, prompt func(), w func(progress float64)) error {
 				popts := []pack.PullOption{
 					pack.WithPullWorkdir(dir),
 				}

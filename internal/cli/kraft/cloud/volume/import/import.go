@@ -165,7 +165,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	var copyCPIOErr error
 
 	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
-		func(ctx context.Context, callback func(float64)) (retErr error) {
+		func(ctx context.Context, prompt func(), callback func(float64)) (retErr error) {
 			instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
 			conn, err := tls.Dial("tcp4", instAddr, nil)
 			if err != nil {
@@ -228,7 +228,7 @@ func processTree(ctx context.Context, txt string, fn processtree.SpinnerProcess)
 }
 
 // paraProgress returns a TUI ParaProgress configured to run the given function.
-func paraProgress(ctx context.Context, txt string, fn func(context.Context, func(float64)) error) (*paraprogress.ParaProgress, error) {
+func paraProgress(ctx context.Context, txt string, fn func(context.Context, func(), func(float64)) error) (*paraprogress.ParaProgress, error) {
 	return paraprogress.NewParaProgress(ctx, []*paraprogress.Process{
 		paraprogress.NewProcess(txt, fn),
 	})
