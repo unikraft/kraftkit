@@ -108,7 +108,6 @@ type dockerfile struct {
 	args       []string
 	dockerfile string
 	env        []string
-	files      []string
 }
 
 func fixedWriteCloser(wc io.WriteCloser) filesync.FileOutputFunc {
@@ -329,91 +328,6 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not wait for err group: %w", err)
 	}
 
-	tarArchive, err := os.Open(tarOutput.Name())
-	if err != nil {
-		return "", fmt.Errorf("could not open output tarball: %w", err)
-	}
-
-	tarReader := tar.NewReader(tarArchive)
-
-	hardlinks := make(map[string]string)
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return "", fmt.Errorf("could not read tar header: %w", err)
-		}
-
-		targetPath := filepath.Join(outputDir, header.Name)
-		switch header.Typeflag {
-		case tar.TypeDir:
-			log.G(ctx).
-				WithField("dst", targetPath).
-				Debug("mkdir")
-			if err := os.MkdirAll(targetPath, 0o755); err != nil {
-				return "", fmt.Errorf("could not create directory: %w", err)
-			}
-		case tar.TypeReg:
-			log.G(ctx).
-				WithField("src", header.Name).
-				WithField("dst", targetPath).
-				Debug("copying")
-			file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			if err != nil {
-				return "", fmt.Errorf("could not open file: %w", err)
-			}
-			defer file.Close()
-			if _, err := io.Copy(file, tarReader); err != nil {
-				return "", fmt.Errorf("could not write file: %w", err)
-			}
-		case tar.TypeSymlink:
-			log.G(ctx).
-				WithField("src", header.Linkname).
-				WithField("dst", targetPath).
-				Debug("symlinking")
-			if err := os.Symlink(header.Linkname, targetPath); err != nil {
-				return "", fmt.Errorf("could not create symlink: %w", err)
-			}
-		case tar.TypeLink:
-			hardlinks[header.Name] = header.Linkname
-		case tar.TypeBlock:
-			log.G(ctx).
-				WithField("file", header.Name).
-				Warn("ignoring block devices")
-		case tar.TypeChar:
-			log.G(ctx).
-				WithField("file", header.Name).
-				Warn("ignoring char devices")
-		case tar.TypeFifo:
-			log.G(ctx).
-				WithField("file", header.Name).
-				Warn("ignoring fifo files")
-		default:
-			return "", fmt.Errorf("unsupported file type: %c", header.Typeflag)
-		}
-	}
-
-	// Create hardlinks
-	// Note(craciunoiuc): This is done afterwards as the hardlink target might
-	// not have been created yet by the archive unpacker.
-	for src, dst := range hardlinks {
-		dst = filepath.Join(outputDir, dst)
-		src = filepath.Join(outputDir, src)
-		log.G(ctx).
-			WithField("src", src).
-			WithField("dst", dst).
-			Debug("hardlinking")
-		if err := os.Link(src, dst); err != nil {
-			log.G(ctx).
-				WithField("src", src).
-				WithField("dst", dst).
-				WithError(err).
-				Warnf("could not create hardlink")
-		}
-	}
-
 	// parse the output directory with stereoscope
 	tempgen := sfile.NewTempDirGenerator("kraftkit")
 	if tempgen == nil {
@@ -440,12 +354,11 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	)
 	initrd.env = img.Metadata.Config.Config.Env
 
-	err = tempgen.Cleanup()
-	if err != nil {
+	if err := tempgen.Cleanup(); err != nil {
 		return "", fmt.Errorf("could not cleanup temp dir generator: %w", err)
 	}
-	err = img.Cleanup()
-	if err != nil {
+
+	if err := img.Cleanup(); err != nil {
 		return "", fmt.Errorf("could not cleanup image: %w", err)
 	}
 
@@ -453,32 +366,146 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not create output directory: %w", err)
 	}
 
-	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+	cpioFile, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("could not open initramfs file: %w", err)
 	}
 
-	defer f.Close()
+	defer cpioFile.Close()
 
-	writer := cpio.NewWriter(f)
-	defer writer.Close()
+	cpioWriter := cpio.NewWriter(cpioFile)
 
-	if err := walkFiles(ctx, outputDir, writer, &initrd.files); err != nil {
-		return "", fmt.Errorf("could not walk output path: %w", err)
+	defer cpioWriter.Close()
+
+	tarArchive, err := os.Open(tarOutput.Name())
+	if err != nil {
+		return "", fmt.Errorf("could not open output tarball: %w", err)
+	}
+
+	defer tarArchive.Close()
+
+	tarReader := tar.NewReader(tarArchive)
+
+	for {
+		tarHeader, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not read tar header: %w", err)
+		}
+
+		internal := filepath.Clean(fmt.Sprintf("/%s", tarHeader.Name))
+
+		cpioHeader := &cpio.Header{
+			Name:    internal,
+			Mode:    cpio.FileMode(tarHeader.FileInfo().Mode().Perm()),
+			ModTime: tarHeader.FileInfo().ModTime(),
+			Size:    tarHeader.FileInfo().Size(),
+		}
+
+		// Populate platform specific information
+		populateCPIO(tarHeader.FileInfo(), cpioHeader)
+
+		switch tarHeader.Typeflag {
+		case tar.TypeBlock:
+			log.G(ctx).
+				WithField("file", tarHeader.Name).
+				Warn("ignoring block devices")
+			continue
+
+		case tar.TypeChar:
+			log.G(ctx).
+				WithField("file", tarHeader.Name).
+				Warn("ignoring char devices")
+			continue
+
+		case tar.TypeFifo:
+			log.G(ctx).
+				WithField("file", tarHeader.Name).
+				Warn("ignoring fifo files")
+			continue
+
+		case tar.TypeSymlink:
+			log.G(ctx).
+				WithField("src", tarHeader.Name).
+				WithField("link", tarHeader.Linkname).
+				Debug("symlinking")
+
+			cpioHeader.Mode |= cpio.TypeSymlink
+			cpioHeader.Linkname = tarHeader.Linkname
+			cpioHeader.Size = int64(len(tarHeader.Linkname))
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return "", fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+			if _, err := cpioWriter.Write([]byte(tarHeader.Linkname)); err != nil {
+				return "", fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+			}
+
+		case tar.TypeLink:
+			log.G(ctx).
+				WithField("src", tarHeader.Name).
+				WithField("link", tarHeader.Linkname).
+				Debug("hardlinking")
+
+			cpioHeader.Mode |= cpio.TypeReg
+			cpioHeader.Linkname = tarHeader.Linkname
+			cpioHeader.Size = 0
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return "", fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+		case tar.TypeReg:
+			log.G(ctx).
+				WithField("src", tarHeader.Name).
+				WithField("dst", internal).
+				Debug("copying")
+
+			cpioHeader.Mode |= cpio.TypeReg
+			cpioHeader.Linkname = tarHeader.Linkname
+			cpioHeader.Size = tarHeader.FileInfo().Size()
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return "", fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+			data, err := io.ReadAll(tarReader)
+			if err != nil {
+				return "", fmt.Errorf("could not read file: %w", err)
+			}
+
+			if _, err := cpioWriter.Write(data); err != nil {
+				return "", fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+			}
+
+		case tar.TypeDir:
+			log.G(ctx).
+				WithField("dst", internal).
+				Debug("mkdir")
+
+			cpioHeader.Mode |= cpio.TypeDir
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return "", fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+		default:
+			log.G(ctx).
+				WithField("file", tarHeader.Name).
+				WithField("type", tarHeader.Typeflag).
+				Warn("unsupported file type")
+		}
 	}
 
 	if initrd.opts.compress {
-		if err := compressFiles(initrd.opts.output, writer, f); err != nil {
+		if err := compressFiles(initrd.opts.output, cpioWriter, cpioFile); err != nil {
 			return "", fmt.Errorf("could not compress files: %w", err)
 		}
 	}
 
 	return initrd.opts.output, nil
-}
-
-// Files implements Initrd.
-func (initrd *dockerfile) Files() []string {
-	return initrd.files
 }
 
 // Env implements Initrd.

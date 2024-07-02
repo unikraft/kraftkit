@@ -13,9 +13,8 @@ import (
 )
 
 type file struct {
-	opts  InitrdOptions
-	path  string
-	files []string
+	opts InitrdOptions
+	path string
 }
 
 // NewFromFile accepts an input file which already represents a CPIO archive and
@@ -43,7 +42,7 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 
 	// Iterate through the files in the archive.
 	for {
-		hdr, err := reader.Next()
+		_, err := reader.Next()
 		if err == io.EOF {
 			// end of cpio archive
 			break
@@ -51,8 +50,6 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 		if err != nil {
 			return nil, err
 		}
-
-		initrd.files = append(initrd.files, hdr.Name)
 	}
 
 	return &initrd, nil
@@ -61,11 +58,6 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 // Build implements Initrd.
 func (initrd *file) Build(_ context.Context) (string, error) {
 	return initrd.path, nil
-}
-
-// Files implements Initrd.
-func (initrd *file) Files() []string {
-	return initrd.files
 }
 
 // Env implements Initrd.

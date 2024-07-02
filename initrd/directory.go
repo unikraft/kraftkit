@@ -7,6 +7,7 @@ package initrd
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,9 +18,8 @@ import (
 )
 
 type directory struct {
-	opts  InitrdOptions
-	path  string
-	files []string
+	opts InitrdOptions
+	path string
 }
 
 // NewFromDirectory returns an instantiated Initrd interface which is is able to
@@ -87,7 +87,92 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		}
 	}()
 
-	if err := walkFiles(ctx, initrd.path, writer, &initrd.files); err != nil {
+	// Recursively walk the output directory on successful build and serialize to
+	// the output
+	if err := filepath.WalkDir(initrd.path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("received error before parsing path: %w", err)
+		}
+
+		internal := strings.TrimPrefix(path, filepath.Clean(initrd.path))
+		if internal == "" {
+			return nil // Do not archive empty paths
+		}
+		internal = "." + filepath.ToSlash(internal)
+
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("could not get directory entry info: %w", err)
+		}
+
+		if d.Type().IsDir() {
+			header := &cpio.Header{
+				Name:    internal,
+				Mode:    cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
+				ModTime: info.ModTime(),
+				Size:    0, // Directories have size 0 in cpio
+			}
+
+			// Populate platform specific information
+			populateCPIO(info, header)
+
+			if err := writer.WriteHeader(header); err != nil {
+				return fmt.Errorf("could not write CPIO header: %w", err)
+			}
+			return nil
+		}
+
+		log.G(ctx).
+			WithField("file", internal).
+			Trace("archiving")
+
+		var data []byte
+		targetLink := ""
+		if info.Mode()&os.ModeSymlink != 0 {
+			targetLink, err = os.Readlink(path)
+			data = []byte(targetLink)
+		} else if d.Type().IsRegular() {
+			data, err = os.ReadFile(path)
+		} else {
+			log.G(ctx).Warnf("unsupported file: %s", path)
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("could not read file: %w", err)
+		}
+
+		header := &cpio.Header{
+			Name:    internal,
+			Mode:    cpio.FileMode(info.Mode().Perm()),
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		}
+
+		// Populate platform specific information
+		populateCPIO(info, header)
+
+		switch {
+		case info.Mode().IsRegular():
+			header.Mode |= cpio.TypeReg
+
+		case info.Mode()&fs.ModeSymlink != 0:
+			header.Mode |= cpio.TypeSymlink
+			header.Linkname = targetLink
+
+		case header.Links > 0:
+			header.Size = 0
+		}
+
+		if err := writer.WriteHeader(header); err != nil {
+			return fmt.Errorf("writing cpio header for %q: %w", internal, err)
+		}
+
+		if _, err := writer.Write(data); err != nil {
+			return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+		}
+
+		return nil
+	}); err != nil {
 		return "", fmt.Errorf("could not walk output path: %w", err)
 	}
 
@@ -98,11 +183,6 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 	}
 
 	return initrd.opts.output, nil
-}
-
-// Files implements Initrd.
-func (initrd *directory) Files() []string {
-	return initrd.files
 }
 
 // Env implements Initrd.

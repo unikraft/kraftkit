@@ -15,14 +15,14 @@ import (
 	"kraftkit.sh/initrd"
 )
 
-func TestNewFromDirectory(t *testing.T) {
-	const rootDir = "testdata/rootfs"
+func TestNewFromDockerfile(t *testing.T) {
+	const rootfsDockerfile = "testdata/rootfs.Dockerfile"
 
 	ctx := context.Background()
 
-	ird, err := initrd.NewFromDirectory(ctx, rootDir)
+	ird, err := initrd.NewFromDockerfile(ctx, rootfsDockerfile)
 	if err != nil {
-		t.Fatal("NewFromDirectory:", err)
+		t.Fatal("NewFromDockerfile:", err)
 	}
 
 	irdPath, err := ird.Build(ctx)
@@ -38,29 +38,34 @@ func TestNewFromDirectory(t *testing.T) {
 	r := cpio.NewReader(openFile(t, irdPath))
 
 	expectHeaders := map[string]cpio.Header{
-		"./entrypoint.sh": {
-			Mode: cpio.TypeReg,
-			Size: 25,
-		},
-		"./etc": {
+		"/a": {
 			Mode: cpio.TypeDir,
 		},
-		"./etc/app.conf": {
-			Mode: cpio.TypeReg,
-			Size: 16,
-		},
-		"./lib": {
+		"/a/b": {
 			Mode: cpio.TypeDir,
 		},
-		"./lib/libtest.so.1": {
+		"/a/b/c": {
+			Mode: cpio.TypeDir,
+		},
+		"/a/b/c/d": {
+			Mode: cpio.TypeReg,
+			Size: 13,
+		},
+		"/a/b/c/e-symlink": {
 			Mode:     cpio.TypeSymlink,
-			Linkname: "libtest.so.1.0.0",
+			Linkname: "./d",
 		},
-		"./lib/libtest.so.1.0.0": {
+		"/a/b/c/f-hardlink": {
 			Mode: cpio.TypeReg,
-			Size: 9,
+			Size: 0,
+		},
+		"/a/b/c/g-recursive-symlink": {
+			Mode:     cpio.TypeSymlink,
+			Linkname: ".",
 		},
 	}
+
+	var gotFiles []string
 
 	for {
 		hdr, err := r.Next()
@@ -70,6 +75,8 @@ func TestNewFromDirectory(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to read next cpio header:", err)
 		}
+
+		gotFiles = append(gotFiles, hdr.Name)
 
 		expectHdr, ok := expectHeaders[hdr.Name]
 		if !ok {
@@ -87,21 +94,8 @@ func TestNewFromDirectory(t *testing.T) {
 			t.Errorf("file [%s]: got size %d, expected %d", hdr.Name, hdr.Size, expectHdr.Size)
 		}
 	}
-}
 
-// openFile opens a file for reading, and closes it when the test completes.
-func openFile(t *testing.T, path string) io.Reader {
-	t.Helper()
-
-	f, err := os.Open(path)
-	if err != nil {
-		t.Fatal("Failed to open file for reading:", err)
+	if len(gotFiles) != len(expectHeaders) {
+		t.Errorf("Expected %d files, got %d: %#v", len(expectHeaders), len(gotFiles), gotFiles)
 	}
-	t.Cleanup(func() {
-		if err := f.Close(); err != nil {
-			t.Error("Failed to close file:", err)
-		}
-	})
-
-	return f
 }

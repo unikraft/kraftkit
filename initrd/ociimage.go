@@ -34,7 +34,6 @@ type ociimage struct {
 	args      []string
 	ref       types.ImageReference
 	env       []string
-	files     []string
 }
 
 // NewFromOCIImage creates a new initrd from a remote container image.
@@ -182,17 +181,17 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		_ = f.Close()
 	}()
 
-	writer := cpio.NewWriter(f)
+	cpioWriter := cpio.NewWriter(f)
 
 	defer func() {
-		_ = writer.Close()
+		_ = cpioWriter.Close()
 	}()
 
 	if err := image.SquashedTree().Walk(func(path scfile.Path, f filenode.FileNode) error {
 		if f.Reference == nil {
 			log.G(ctx).
 				WithField("path", path).
-				Warn("skipping: no reference")
+				Debug("skipping: no reference")
 			return nil
 		}
 
@@ -201,28 +200,9 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 			return err
 		}
 
-		internal := fmt.Sprintf(".%s", path)
+		internal := filepath.Clean(fmt.Sprintf("/%s", path))
 
-		if f.FileType == scfile.TypeDirectory {
-			if err := writer.WriteHeader(&cpio.Header{
-				Name: internal,
-				Mode: cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
-			}); err != nil {
-				return fmt.Errorf("could not write CPIO header: %w", err)
-			}
-
-			return nil
-		}
-
-		initrd.files = append(initrd.files, internal)
-
-		log.G(ctx).
-			WithField("file", path).
-			Trace("archiving")
-
-		var data []byte
-
-		header := &cpio.Header{
+		cpioHeader := &cpio.Header{
 			Name:    internal,
 			Mode:    cpio.FileMode(info.Mode().Perm()),
 			ModTime: info.ModTime(),
@@ -230,44 +210,106 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		}
 
 		// Populate platform specific information
-		populateCPIO(info, header)
+		populateCPIO(info, cpioHeader)
 
-		// No other file types are part of the archive.  As a result we only check
-		// whether the path is the same as the reference path which indicates
-		// whether the entry is a symbolic link.
-		if f.FileType == scfile.TypeSymLink || f.FileType == scfile.TypeHardLink {
-			header.Mode |= cpio.TypeSymlink
-			header.Linkname = info.Path
-			header.Size = int64(len(info.Path))
-			data = []byte(info.Path)
-		} else {
+		switch f.FileType {
+		case scfile.TypeBlockDevice:
+			log.G(ctx).
+				WithField("file", path).
+				Warn("ignoring block devices")
+			return nil
+
+		case scfile.TypeCharacterDevice:
+			log.G(ctx).
+				WithField("file", path).
+				Warn("ignoring char devices")
+			return nil
+
+		case scfile.TypeFIFO:
+			log.G(ctx).
+				WithField("file", path).
+				Warn("ignoring fifo files")
+			return nil
+
+		case scfile.TypeSymLink:
+			log.G(ctx).
+				WithField("src", path).
+				WithField("link", info.LinkDestination).
+				Debug("symlinking")
+
+			cpioHeader.Mode |= cpio.TypeSymlink
+			cpioHeader.Linkname = info.LinkDestination
+			cpioHeader.Size = int64(len(info.LinkDestination))
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+			if _, err := cpioWriter.Write([]byte(info.LinkDestination)); err != nil {
+				return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+			}
+
+		case scfile.TypeHardLink:
+			log.G(ctx).
+				WithField("src", path).
+				WithField("link", info.LinkDestination).
+				Debug("hardlinking")
+
+			cpioHeader.Mode |= cpio.TypeReg
+			cpioHeader.Linkname = info.LinkDestination
+			cpioHeader.Size = 0
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
+		case scfile.TypeRegular:
+			log.G(ctx).
+				WithField("src", path).
+				WithField("dst", internal).
+				Debug("copying")
+
+			cpioHeader.Mode |= cpio.TypeReg
+			cpioHeader.Linkname = info.LinkDestination
+			cpioHeader.Size = info.Size()
+
+			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
+				return fmt.Errorf("could not write CPIO header: %w", err)
+			}
+
 			reader, err := image.OpenPathFromSquash(path)
 			if err != nil {
 				return fmt.Errorf("could not open file: %w", err)
 			}
 
-			header.Mode |= cpio.TypeReg
-			header.Size = info.Size()
-			data, err = io.ReadAll(reader)
+			data, err := io.ReadAll(reader)
 			if err != nil {
 				return fmt.Errorf("could not read file: %w", err)
 			}
-		}
 
-		if err := writer.WriteHeader(header); err != nil {
-			return fmt.Errorf("writing cpio header for %q: %w", internal, err)
-		}
+			if _, err := cpioWriter.Write(data); err != nil {
+				return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+			}
 
-		if _, err := writer.Write(data); err != nil {
-			return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
+		case scfile.TypeDirectory:
+			log.G(ctx).
+				WithField("dst", internal).
+				Debug("mkdir")
+
+			cpioHeader.Mode |= cpio.TypeDir
+
+			return cpioWriter.WriteHeader(cpioHeader)
+
+		default:
+			log.G(ctx).
+				WithField("file", path).
+				WithField("type", f.FileType.String()).
+				Warn("unsupported file type")
 		}
 
 		return nil
 	}, &filetree.WalkConditions{
 		LinkOptions: []filetree.LinkResolutionOption{},
-		ShouldVisit: func(path scfile.Path, f filenode.FileNode) bool {
-			return f.LinkPath == ""
-		},
 		ShouldContinueBranch: func(path scfile.Path, f filenode.FileNode) bool {
 			return f.LinkPath == ""
 		},
@@ -276,17 +318,12 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 	}
 
 	if initrd.opts.compress {
-		if err := compressFiles(initrd.opts.output, writer, f); err != nil {
+		if err := compressFiles(initrd.opts.output, cpioWriter, f); err != nil {
 			return "", fmt.Errorf("could not compress files: %w", err)
 		}
 	}
 
 	return initrd.opts.output, nil
-}
-
-// Files implements Initrd.
-func (initrd *ociimage) Files() []string {
-	return initrd.files
 }
 
 // Env implements Initrd.
