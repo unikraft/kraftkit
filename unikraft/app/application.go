@@ -39,6 +39,9 @@ import (
 type Application interface {
 	component.Component
 
+	// Readme contains the application's README text.
+	Readme() string
+
 	// WorkingDir returns the path to the application's working directory
 	WorkingDir() string
 
@@ -153,6 +156,7 @@ type Application interface {
 
 type application struct {
 	name          string
+	readme        string
 	version       string
 	source        string
 	path          string
@@ -175,6 +179,10 @@ type application struct {
 
 func (app application) Name() string {
 	return app.name
+}
+
+func (app application) Readme() string {
+	return app.readme
 }
 
 func (app application) String() string {

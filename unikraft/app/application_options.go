@@ -70,6 +70,14 @@ func WithName(name string) ApplicationOption {
 	}
 }
 
+// WithReadme sets the application's readme
+func WithReadme(readme string) ApplicationOption {
+	return func(ac *application) error {
+		ac.readme = readme
+		return nil
+	}
+}
+
 // WithVersion sets the application version
 func WithVersion(version string) ApplicationOption {
 	return func(ac *application) error {

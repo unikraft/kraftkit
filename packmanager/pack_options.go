@@ -18,6 +18,7 @@ type PackOptions struct {
 	kernelSourceFiles                bool
 	kernelVersion                    string
 	name                             string
+	readme                           string
 	output                           string
 	mergeStrategy                    MergeStrategy
 }
@@ -85,6 +86,11 @@ func (popts *PackOptions) KernelVersion() string {
 // Name returns the name of the package.
 func (popts *PackOptions) Name() string {
 	return popts.name
+}
+
+// Readme returns the readme of the package.
+func (popts *PackOptions) Readme() string {
+	return popts.readme
 }
 
 // Output returns the location of the package.
@@ -170,6 +176,13 @@ func PackWithKernelVersion(version string) PackOption {
 func PackName(name string) PackOption {
 	return func(popts *PackOptions) {
 		popts.name = name
+	}
+}
+
+// PackReadme sets the readme of the package.
+func PackReadme(readme string) PackOption {
+	return func(popts *PackOptions) {
+		popts.readme = readme
 	}
 }
 

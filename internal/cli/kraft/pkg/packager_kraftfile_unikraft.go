@@ -135,6 +135,14 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			return nil, err
 		}
 
+		if len(opts.Readme) == 0 {
+			opts.Readme = opts.Project.Readme()
+		} else {
+			if readmeBytes, err := os.ReadFile(opts.Readme); err == nil {
+				opts.Readme = string(readmeBytes)
+			}
+		}
+
 		// When i > 0, we have already applied the merge strategy.  Now, for all
 		// targets, we actually do wish to merge these because they are part of
 		// the same execution lifecycle.
@@ -154,6 +162,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
+					packmanager.PackReadme(opts.Readme),
 				)
 
 				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
