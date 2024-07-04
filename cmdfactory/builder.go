@@ -16,6 +16,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -251,6 +252,9 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 				dur = 0
 			}
 			flags.DurationVarP((*time.Duration)(unsafe.Pointer(v.Addr().Pointer())), name, alias, dur, usage)
+			continue
+		case types.ShellCommand:
+			flags.StringSliceVarP((*[]string)(unsafe.Pointer(v.Addr().Pointer())), name, alias, nil, usage)
 			continue
 		}
 

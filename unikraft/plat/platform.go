@@ -40,16 +40,14 @@ type PlatformConfig struct {
 }
 
 // NewPlatformFromOptions is a constructor that configures a platform configuration.
-func NewPlatformFromOptions(opts ...PlatformOption) (Platform, error) {
+func NewPlatformFromOptions(opts ...PlatformOption) Platform {
 	pc := PlatformConfig{}
 
 	for _, opt := range opts {
-		if err := opt(&pc); err != nil {
-			return nil, err
-		}
+		opt(&pc)
 	}
 
-	return &pc, nil
+	return &pc
 }
 
 func (pc PlatformConfig) Name() string {

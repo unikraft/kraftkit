@@ -22,9 +22,6 @@ type Initrd interface {
 	// Build the rootfs and return the location of the result or error.
 	Build(context.Context) (string, error)
 
-	// All directories and files that are contained within the initramfs.
-	Files() []string
-
 	// All environment variables that are set within.
 	Env() []string
 

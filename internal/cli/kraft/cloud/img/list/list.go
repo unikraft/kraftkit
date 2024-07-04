@@ -219,6 +219,6 @@ func isNamespacedRepository(repo string) bool {
 	return strings.ContainsRune(repo, regNsDelimiter)
 }
 
-func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcimages.ListResponseItem]) {
+func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcimages.GetResponseItem]) {
 	fmt.Fprintln(iostreams.G(ctx).Out, string(resp.RawBody()))
 }

@@ -8,9 +8,7 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
@@ -44,33 +42,25 @@ func (p *packagerCliKernel) Packagable(ctx context.Context, opts *PkgOptions, ar
 
 // Pack implements packager.
 func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
-	ac, err := arch.NewArchitectureFromOptions(
+	var err error
+
+	ac := arch.NewArchitectureFromOptions(
 		arch.WithName(opts.Architecture),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare architecture: %w", err)
-	}
-
-	pc, err := plat.NewPlatformFromOptions(
+	pc := plat.NewPlatformFromOptions(
 		plat.WithName(opts.Platform),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare architecture: %w", err)
-	}
 
-	targ, err := target.NewTargetFromOptions(
+	targ := target.NewTargetFromOptions(
 		target.WithArchitecture(ac),
 		target.WithPlatform(pc),
 		target.WithKernel(opts.Kernel),
 		target.WithCommand(opts.Args),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare phony target: %w", err)
-	}
 
 	var cmds []string
 	var envs []string
-	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ); err != nil {
+	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ.Architecture().String()); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
@@ -80,11 +70,6 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 
 	if envs != nil {
 		opts.Env = append(opts.Env, envs...)
-	}
-
-	cmdShellArgs, err := shellwords.Parse(strings.Join(opts.Args, " "))
-	if err != nil {
-		return nil, err
 	}
 
 	var result []pack.Package
@@ -102,7 +87,7 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 			opts.Platform+"/"+opts.Architecture,
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
-					packmanager.PackArgs(cmdShellArgs...),
+					packmanager.PackArgs(opts.Args...),
 					packmanager.PackInitrd(opts.Rootfs),
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),

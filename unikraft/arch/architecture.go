@@ -108,16 +108,14 @@ func NewArchitectureFromSchema(value string) (ArchitectureConfig, error) {
 }
 
 // NewArchitectureFromOptions is a constructor that configures an architecture.
-func NewArchitectureFromOptions(opts ...ArchitectureOption) (Architecture, error) {
+func NewArchitectureFromOptions(opts ...ArchitectureOption) Architecture {
 	pc := ArchitectureConfig{}
 
 	for _, opt := range opts {
-		if err := opt(&pc); err != nil {
-			return nil, err
-		}
+		opt(&pc)
 	}
 
-	return &pc, nil
+	return &pc
 }
 
 func (ac ArchitectureConfig) Name() string {

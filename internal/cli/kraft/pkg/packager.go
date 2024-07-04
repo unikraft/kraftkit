@@ -37,5 +37,6 @@ func packagers() []packager {
 		&packagerKraftfileUnikraft{},
 		&packagerKraftfileRuntime{},
 		&packagerCliKernel{},
+		&packagerDockerfile{},
 	}
 }

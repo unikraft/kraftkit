@@ -16,6 +16,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
+	kraftcloud "sdk.kraft.cloud"
+
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
@@ -24,15 +26,20 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/runtime"
+	"kraftkit.sh/unikraft/target"
 )
 
 type BuildOptions struct {
-	Auth        *config.AuthConfig `noattribute:"true"`
-	Composefile string             `noattribute:"true"`
-	Metro       string             `noattribute:"true"`
-	Project     *compose.Project   `noattribute:"true"`
-	Push        bool               `long:"push" description:"Push the built service images"`
-	Token       string             `noattribute:"true"`
+	Auth        *config.AuthConfig    `noattribute:"true"`
+	Composefile string                `noattribute:"true"`
+	Client      kraftcloud.KraftCloud `noattribute:"true"`
+	Metro       string                `noattribute:"true"`
+	Project     *compose.Project      `noattribute:"true"`
+	Push        bool                  `long:"push" usage:"Push the built service images"`
+	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	Token       string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -47,6 +54,12 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Build a compose project for KraftCloud
 			$ kraft cloud compose build
+
+			# (If applicable) Set or override a runtime for a particular service
+			$ kraft cloud compose build --runtime app=base:latest
+
+			# Push the service images after a successful build
+			$ kraft cloud compose build --push
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
@@ -73,6 +86,16 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 	}
 
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
+
+	userName := strings.TrimSuffix(
+		strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud",
+	)
+
 	if opts.Project == nil {
 		workdir, err := os.Getwd()
 		if err != nil {
@@ -96,63 +119,65 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 	}
 
+	runtimes := map[string]string{}
+
+	for _, runtime := range opts.Runtimes {
+		service, runtime, ok := strings.Cut(runtime, "=")
+		if !ok {
+			return fmt.Errorf("expected --runtime flag to be prefixed with service name, e.g. --runtime nginx=%s/nginx:latest", userName)
+		}
+
+		if _, ok := opts.Project.Services[service]; !ok {
+			log.G(ctx).
+				WithField("service", service).
+				Warn("supplied runtime does not exist in the compose project")
+			continue
+		}
+
+		runtimes[service] = runtime
+	}
+
 	for _, serviceName := range args {
 		service, ok := opts.Project.Services[serviceName]
 		if !ok {
 			return fmt.Errorf("service '%s' not found", serviceName)
 		}
 
-		if service.Build == nil || service.Build.Context == "" {
-			log.G(ctx).WithField("service", service.Name).Debug("build context not defined")
-			continue
-		}
+		var (
+			pkgName string
+			appName string
+		)
 
-		if err := build.Build(ctx, &build.BuildOptions{
-			Platform:     "kraftcloud",
-			Architecture: "x86_64",
-			Workdir:      service.Build.Context,
-			NoRootfs:     true, // This will be built in the packaging step below.
-		}); err != nil && !errors.Is(err, build.ErrContextNotBuildable) {
-			return fmt.Errorf("could not build service %s: %w", service.Name, err)
-		}
-
-		var pkgName string
 		if service.Image != "" {
-			pkgName = service.Image
-		} else {
-			pkgName = service.Name
-		}
+			if !strings.Contains(service.Image, ":") {
+				service.Image += ":latest"
+				opts.Project.Services[serviceName] = service
+			}
 
-		user := strings.TrimSuffix(strings.TrimPrefix(opts.Auth.User, "robot$"), ".users.kraftcloud")
-		if split := strings.Split(pkgName, "/"); len(split) > 1 {
-			user = split[0]
-			pkgName = strings.Join(split[1:], "/")
-		}
-
-		if strings.HasPrefix(pkgName, "unikraft.io") {
-			pkgName = "index." + pkgName
-		}
-		if !strings.HasPrefix(pkgName, "index.unikraft.io") {
+			appName = strings.ReplaceAll(service.Image, "/", "-")
 			pkgName = fmt.Sprintf(
 				"index.unikraft.io/%s/%s",
-				user,
-				pkgName,
+				userName,
+				strings.ReplaceAll(service.Image, "_", "-"),
+			)
+		} else {
+			appName = opts.Project.Name + "-" + service.Name
+			pkgName = fmt.Sprintf(
+				"index.unikraft.io/%s/%s-%s",
+				userName,
+				strings.ReplaceAll(opts.Project.Name, "_", "-"),
+				strings.ReplaceAll(service.Name, "_", "-"),
 			)
 		}
 
-		// Detect whether the supplied Dockerfile exists before passing it to the
-		// packaging step.  If a non-empty value for the Rootfs attribute is
-		// supplied to the packaging step, it will trickle through the rootfs build
-		// system and may cause failure due to misconfiguration.  This is because
-		// the value of `service.Build.Dockerfile` is by default set to "Dockerfile"
-		// which may in fact not exist.  The packaging step relies on the present of
-		// a Kraftfile which supersedes the Dockerfile.
-		rootfs := filepath.Join(service.Build.Context, service.Build.Dockerfile)
-		if _, err := os.Stat(rootfs); err != nil && os.IsNotExist(err) {
-			rootfs = ""
+		var project app.Application
+		bopts := &build.BuildOptions{
+			Platform:     "kraftcloud",
+			Architecture: "x86_64",
+			NoRootfs:     true,
 		}
 
-		if _, err = pkg.Pkg(ctx, &pkg.PkgOptions{
+		popts := &pkg.PkgOptions{
 			Architecture: "x86_64",
 			Compress:     false,
 			Format:       "oci",
@@ -160,12 +185,126 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			NoPull:       true,
 			Platform:     "kraftcloud",
 			Push:         opts.Push,
-			Rootfs:       rootfs,
-			Workdir:      service.Build.Context,
+			Project:      project,
 			Strategy:     packmanager.StrategyOverwrite,
-		}); err != nil {
+		}
+
+		// If no build context can be determined, assume a build via a unikernel
+		// runtime.
+		if service.Build != nil {
+			// First determine whether the context has a Kraftfile as this determines
+			// whether we supply an artificial project defined with KraftCloud
+			// defaults.
+			project, err := app.NewProjectFromOptions(ctx,
+				app.WithProjectWorkdir(service.Build.Context),
+				app.WithProjectDefaultKraftfiles(),
+			)
+			if err != nil && errors.Is(err, app.ErrNoKraftfile) {
+				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime)
+				if err != nil {
+					return fmt.Errorf("could not create runtime: %w", err)
+				}
+
+				project, err = app.NewApplicationFromOptions(
+					app.WithRuntime(runtime),
+					app.WithName(appName),
+					app.WithTargets(target.DefaultKraftCloudTarget),
+					app.WithCommand(service.Command...),
+					app.WithWorkingDir(service.Build.Context),
+					app.WithRootfs(filepath.Join(service.Build.Context, service.Build.Dockerfile)),
+				)
+				if err != nil {
+					return fmt.Errorf("could not create unikernel application: %w", err)
+				}
+			} else if err != nil {
+				return err
+			}
+
+			// Only set the supplied dockerfile as the rootfs if it exists, this is
+			// because the contents of `service.Build.Dockerfile` is supplied with a
+			// default value even if a Dockerfile does not actually exist.
+			rootfs := filepath.Join(service.Build.Context, service.Build.Dockerfile)
+			if _, err := os.Stat(rootfs); err == nil {
+				bopts.Rootfs = rootfs
+				popts.Rootfs = rootfs
+			}
+
+			bopts.Workdir = service.Build.Context
+			popts.Workdir = service.Build.Context
+			bopts.Project = project
+			popts.Project = project
+		} else if exists, _ := opts.imageExists(ctx, service.Image); exists {
+			// Nothing to do.
+			continue
+		} else if exists, _ := opts.imageExists(ctx, pkgName); exists {
+			// Override the image name if it is set with the new package name.
+			service.Image = pkgName
+			opts.Project.Services[serviceName] = service
+			continue
+		} else {
+			var runtimeName string
+			if found, ok := runtimes[serviceName]; ok {
+				if !strings.Contains(found, "/") {
+					found = fmt.Sprintf("index.unikraft.io/official/%s", found)
+				}
+				runtimeName = found
+			} else {
+				runtimeName = runtime.DefaultKraftCloudRuntime
+			}
+
+			log.G(ctx).
+				WithField("runtime", runtimeName).
+				WithField("service", serviceName).
+				Debug("using")
+
+			rt, err := runtime.NewRuntime(ctx, runtimeName)
+			if err != nil {
+				return fmt.Errorf("could not create runtime: %w", err)
+			}
+
+			project, err = app.NewApplicationFromOptions(
+				app.WithRuntime(rt),
+				app.WithName(appName),
+				app.WithTargets(target.DefaultKraftCloudTarget),
+				app.WithRootfs(service.Image),
+			)
+			if err != nil {
+				return fmt.Errorf("could not create unikernel application: %w", err)
+			}
+
+			bopts.Project = project
+			popts.Project = project
+			popts.Name = pkgName
+		}
+
+		log.G(ctx).
+			WithField("service", serviceName).
+			Info("building")
+
+		if err := build.Build(ctx, bopts); err != nil {
+			if !errors.Is(err, build.ErrContextNotBuildable) {
+				return fmt.Errorf("could not build service %s: %w", service.Name, err)
+			}
+
+			log.G(ctx).
+				WithField("service", serviceName).
+				Trace("not a")
+		}
+
+		log.G(ctx).
+			WithField("service", serviceName).
+			Info("packaging")
+
+		p, err := pkg.Pkg(ctx, popts)
+		if err != nil {
 			return fmt.Errorf("could not package service %s: %w", service.Name, err)
 		}
+
+		// Override the image name with the ID associated with the package, which
+		// represents its exact name (i.e. one with a digest).  This guarantees in
+		// later steps that the image is correctly referenced.
+		service.Image = p[0].ID()
+		opts.Project.Services[serviceName] = service
 	}
 
 	return nil
@@ -192,4 +331,29 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	return Build(ctx, opts, args...)
+}
+
+// imageExists checks if an image exists in the KraftCloud registry.
+func (opts *BuildOptions) imageExists(ctx context.Context, name string) (exists bool, err error) {
+	if name == "" {
+		return false, fmt.Errorf("image name is empty")
+	}
+
+	log.G(ctx).
+		WithField("image", name).
+		Trace("checking exists")
+
+	imageResp, err := opts.Client.Images().Get(ctx, name)
+	if err != nil {
+		return false, err
+	}
+
+	image, err := imageResp.FirstOrErr()
+	if err != nil {
+		return false, err
+	} else if image == nil {
+		return false, nil
+	}
+
+	return true, nil
 }

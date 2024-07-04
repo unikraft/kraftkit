@@ -6,7 +6,6 @@ package build
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,29 +33,29 @@ import (
 var ErrContextNotBuildable = fmt.Errorf("could not determine what or how to build from the given context")
 
 type BuildOptions struct {
-	All          bool           `long:"all" usage:"Build all targets"`
-	Architecture string         `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
-	DotConfig    string         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Env          []string       `long:"env" short:"e" usage:"Set environment variables to be built in the unikernel"`
-	ForcePull    bool           `long:"force-pull" usage:"Force pulling packages before building"`
-	Jobs         int            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
-	KernelDbg    bool           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile    string         `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	NoCache      bool           `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
-	NoConfigure  bool           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast       bool           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
-	NoFetch      bool           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoRootfs     bool           `long:"no-rootfs" usage:"Do not build the root file system (initramfs)"`
-	NoUpdate     bool           `long:"no-update" usage:"Do not update package index before running the build"`
-	Platform     string         `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
-	PrintStats   bool           `long:"print-stats" usage:"Print build statistics"`
-	Rootfs       string         `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	SaveBuildLog string         `long:"build-log" usage:"Use the specified file to save the output from the build"`
-	Target       *target.Target `noattribute:"true"`
-	TargetName   string         `long:"target" short:"t" usage:"Build a particular known target"`
-	Workdir      string         `noattribute:"true"`
+	All          bool            `long:"all" usage:"Build all targets"`
+	Architecture string          `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	DotConfig    string          `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Env          []string        `long:"env" short:"e" usage:"Set environment variables to be built in the unikernel"`
+	ForcePull    bool            `long:"force-pull" usage:"Force pulling packages before building"`
+	Jobs         int             `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg    bool            `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile    string          `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	NoCache      bool            `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure  bool            `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast       bool            `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch      bool            `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoRootfs     bool            `long:"no-rootfs" usage:"Do not build the root file system (initramfs)"`
+	NoUpdate     bool            `long:"no-update" usage:"Do not update package index before running the build"`
+	Platform     string          `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	PrintStats   bool            `long:"print-stats" usage:"Print build statistics"`
+	Project      app.Application `noattribute:"true"`
+	Rootfs       string          `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	SaveBuildLog string          `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	Target       *target.Target  `noattribute:"true"`
+	TargetName   string          `long:"target" short:"t" usage:"Build a particular known target"`
+	Workdir      string          `noattribute:"true"`
 
-	project    app.Application
 	statistics map[string]string
 }
 
@@ -77,24 +76,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		} else {
 			opts.Workdir = args[0]
 		}
-	}
-
-	popts := []app.ProjectOption{
-		app.WithProjectWorkdir(opts.Workdir),
-	}
-
-	if len(opts.Kraftfile) > 0 {
-		popts = append(popts, app.WithProjectKraftfile(opts.Kraftfile))
-	} else {
-		popts = append(popts, app.WithProjectDefaultKraftfiles())
-	}
-
-	// Initialize at least the configuration options for a project
-	opts.project, err = app.NewProjectFromOptions(ctx, popts...)
-	if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-		return fmt.Errorf("cannot build project directory without a Kraftfile")
-	} else if err != nil {
-		return fmt.Errorf("could not initialize project directory: %w", err)
 	}
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
@@ -128,9 +109,15 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if opts.Rootfs, _, _, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, false, *opts.Target); err != nil {
+	if opts.Rootfs, _, _, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, false, (*opts.Target).Architecture().String()); err != nil {
 		return err
 	}
+
+	// Set the root file system for the project, since typically a packaging step
+	// may occur after a build, and the root file system is required for packaging
+	// and the packaging step may perform a build of the rootfs again.  Ultimately
+	// this prevents re-builds.
+	opts.Project.SetRootfs(opts.Rootfs)
 
 	err = build.Build(ctx, opts, args...)
 	if err != nil {
@@ -212,7 +199,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 	entries := []fancymap.FancyMapEntry{}
 
-	if opts.project.Unikraft(ctx) != nil {
+	if opts.Project.Unikraft(ctx) != nil {
 		kernelStat, err := os.Stat((*opts.Target).Kernel())
 		if err != nil {
 			return fmt.Errorf("getting kernel image size: %w", err)

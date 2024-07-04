@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -111,7 +112,12 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("service '%s' not found", serviceName)
 		}
 
-		instances = append(instances, service.Name)
+		name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
+		if cname := service.ContainerName; len(cname) > 0 {
+			name = cname
+		}
+
+		instances = append(instances, name)
 	}
 
 	instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instances...)

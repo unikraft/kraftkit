@@ -7,52 +7,46 @@ package plat
 import "kraftkit.sh/kconfig"
 
 // PlatformOption is a function that modifies a PlatformConfig.
-type PlatformOption func(*PlatformConfig) error
+type PlatformOption func(*PlatformConfig)
 
 // WithName sets the name of the platform.
 func WithName(name string) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.name = name
-		return nil
 	}
 }
 
 // WithVersion sets the version of the platform.
 func WithVersion(version string) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.version = version
-		return nil
 	}
 }
 
 // WithSource sets the source of the platform.
 func WithSource(source string) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.source = source
-		return nil
 	}
 }
 
 // WithPath sets the path of the platform.
 func WithPath(path string) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.path = path
-		return nil
 	}
 }
 
 // WithInternal sets the internal flag of the platform.
 func WithInternal(internal bool) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.internal = internal
-		return nil
 	}
 }
 
 // WithKConfig sets the kconfig of the platform.
 func WithKConfig(kconfig kconfig.KeyValueMap) PlatformOption {
-	return func(pc *PlatformConfig) error {
+	return func(pc *PlatformConfig) {
 		pc.kconfig = kconfig
-		return nil
 	}
 }

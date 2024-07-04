@@ -43,12 +43,18 @@ func (build *builderKraftfileUnikraft) String() string {
 
 // Buildable implements builder.
 func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *BuildOptions, args ...string) (bool, error) {
-	if opts.project.Unikraft(ctx) == nil && opts.project.Template() == nil {
+	if opts.Project == nil {
+		if err := opts.initProject(ctx); err != nil {
+			return false, err
+		}
+	}
+
+	if opts.Project.Unikraft(ctx) == nil && opts.Project.Template() == nil {
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
 
 	if opts.Rootfs == "" {
-		opts.Rootfs = opts.project.Rootfs()
+		opts.Rootfs = opts.Project.Rootfs()
 	}
 
 	return true, nil
@@ -90,7 +96,7 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	auths := config.G[config.KraftKit](ctx).Auth
 
-	if template := opts.project.Template(); template != nil {
+	if template := opts.Project.Template(); template != nil {
 		if stat, err := os.Stat(template.Path()); err != nil || !stat.IsDir() || opts.ForcePull {
 			var templatePack pack.Package
 			var packs []pack.Package
@@ -204,13 +210,13 @@ func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOpti
 		}
 
 		// Overwrite template with user options
-		opts.project, err = opts.project.MergeTemplate(ctx, templateProject)
+		opts.Project, err = opts.Project.MergeTemplate(ctx, templateProject)
 		if err != nil {
 			return err
 		}
 	}
 
-	components, err := opts.project.Components(ctx, *opts.Target)
+	components, err := opts.Project.Components(ctx, *opts.Target)
 	if err != nil {
 		return err
 	}
@@ -335,7 +341,7 @@ func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildO
 
 	if opts.Target == nil {
 		// Filter project targets by any provided CLI options
-		selected := opts.project.Targets()
+		selected := opts.Project.Targets()
 		if len(selected) == 0 {
 			return fmt.Errorf("no targets to build")
 		}
@@ -375,7 +381,7 @@ func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildO
 			build.nameWidth = newLen
 		}
 
-		components, err := opts.project.Components(ctx, *opts.Target)
+		components, err := opts.Project.Components(ctx, *opts.Target)
 		if err != nil {
 			return fmt.Errorf("could not get list of components: %w", err)
 		}
@@ -428,7 +434,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 	}
 
 	allEnvs := map[string]string{}
-	for k, v := range opts.project.Env() {
+	for k, v := range opts.Project.Env() {
 		allEnvs[k] = v
 
 		if v == "" {
@@ -451,7 +457,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 	envKconfig := kconfig.KeyValueMap{}
 	for k, v := range allEnvs {
 		for counter <= posixenviron.DefaultCompiledInLimit {
-			val, found := opts.project.KConfig().Get(fmt.Sprintf("LIBPOSIX_ENVIRON_ENVP%d", counter))
+			val, found := opts.Project.KConfig().Get(fmt.Sprintf("LIBPOSIX_ENVIRON_ENVP%d", counter))
 			if !found || val.Value == "" {
 				break
 			}
@@ -471,7 +477,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		var err error
 		configure := true
 
-		if opts.project.IsConfigured(*opts.Target) {
+		if opts.Project.IsConfigured(*opts.Target) {
 			configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
 			if err != nil {
 				return err
@@ -482,7 +488,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 			processes = append(processes, paraprogress.NewProcess(
 				fmt.Sprintf("configuring %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
 				func(ctx context.Context, w func(progress float64)) error {
-					return opts.project.Configure(
+					return opts.Project.Configure(
 						ctx,
 						*opts.Target, // Target-specific options
 						envKconfig,   // Extra Kconfigs for compiled in environment variables
@@ -505,7 +511,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 	processes = append(processes, paraprogress.NewProcess(
 		fmt.Sprintf("building %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
 		func(ctx context.Context, w func(progress float64)) error {
-			err := opts.project.Build(
+			err := opts.Project.Build(
 				ctx,
 				*opts.Target, // Target-specific options
 				app.WithBuildProgressFunc(w),

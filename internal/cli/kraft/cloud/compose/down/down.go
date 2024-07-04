@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -21,7 +20,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
-	svcrm "kraftkit.sh/internal/cli/kraft/cloud/service/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
@@ -108,7 +106,12 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	// If no services are specified, remove all services.
 	if len(args) == 0 {
 		for _, service := range opts.Project.Services {
-			instances = append(instances, service.Name)
+			name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
+			if cname := service.ContainerName; len(cname) > 0 {
+				name = cname
+			}
+
+			instances = append(instances, name)
 		}
 	} else {
 		for _, arg := range args {
@@ -122,7 +125,6 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	var errGroup []error
-	var groups []string
 
 	instResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instances...)
 	if err != nil {
@@ -145,44 +147,6 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 
 		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, instances...); err != nil {
 			errGroup = append(errGroup, fmt.Errorf("removing instances: %w", err))
-		}
-
-		// Remove based on associated service groups.
-		for _, instance := range instResp.Data.Entries {
-			if instance.ServiceGroup == nil || instance.Message != "" {
-				continue
-			}
-
-			if slices.Contains(groups, instance.ServiceGroup.Name) {
-				continue
-			}
-
-			groups = append(groups, instance.ServiceGroup.Name)
-		}
-
-	} else {
-		// If no instances from the compose project were found, try to remove the
-		// service group based on declared networks.
-		for _, network := range opts.Project.Networks {
-			name := strings.ReplaceAll(network.Name, "_", "-")
-			if slices.Contains(instances, name) {
-				continue
-			}
-			groups = append(groups, name)
-		}
-	}
-
-	// If the total number of instances is the same as the amount of compose
-	// services, we can also remove the service group.
-	if len(groups) > 0 {
-		if err := svcrm.Remove(ctx, &svcrm.RemoveOptions{
-			Auth:      opts.Auth,
-			Client:    opts.Client,
-			Metro:     opts.Metro,
-			Token:     opts.Token,
-			WaitEmpty: true,
-		}, groups...); err != nil {
-			errGroup = append(errGroup, fmt.Errorf("removing service groups: %w", err))
 		}
 	}
 

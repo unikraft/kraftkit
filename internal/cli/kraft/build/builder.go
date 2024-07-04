@@ -41,5 +41,6 @@ func builders() []builder {
 	return []builder{
 		&builderKraftfileUnikraft{},
 		&builderKraftfileRuntime{},
+		&builderDockerfile{},
 	}
 }

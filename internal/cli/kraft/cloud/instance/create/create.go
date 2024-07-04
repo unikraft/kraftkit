@@ -8,6 +8,7 @@ package create
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -15,11 +16,13 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
+	kcimages "sdk.kraft.cloud/images"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -38,6 +41,7 @@ type CreateOptions struct {
 	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
 	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image                  string                    `noattribute:"true"`
+	Entrypoint             types.ShellCommand        `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
 	Memory                 string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
 	Metro                  string                    `noattribute:"true"`
 	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
@@ -56,6 +60,8 @@ type CreateOptions struct {
 	Volumes                []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage           bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
 	WaitForImageTimeout    time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+
+	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
 
 // Create a KraftCloud instance.
@@ -99,6 +105,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// Replace all slashes in the name with dashes.
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
 
+	// Keep a reference of the image that we are going to use for the instance.
+	var image *kcimages.GetResponseItem
+
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
 		paramodel, err := processtree.NewProcessTree(
@@ -114,27 +123,20 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			},
 			processtree.NewProcessTreeItem(
 				"waiting for the image to be available",
-				"",
+				opts.Image,
 				func(ctx context.Context) error {
 					for {
-						imgs, err := opts.Client.Images().WithMetro(opts.Metro).List(ctx)
+						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
 						if err != nil {
-							return fmt.Errorf("could not list images: %w", err)
+							continue
 						}
 
-						for _, img := range imgs.Data.Entries {
-							if strings.Contains(opts.Image, "@") {
-								if img.Digest == opts.Image {
-									return nil
-								}
-							} else {
-								for _, tag := range img.Tags {
-									if tag == opts.Image {
-										return nil
-									}
-								}
-							}
+						image, err = imageResp.FirstOrErr()
+						if err != nil || image == nil {
+							continue
 						}
+
+						return nil
 					}
 				},
 			),
@@ -146,6 +148,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		err = paramodel.Start()
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not wait for image be available: %w", err)
+		}
+	} else {
+		imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get image: %w", err)
+		}
+
+		image, err = imageResp.FirstOrErr()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get image: %w", err)
 		}
 	}
 
@@ -171,8 +183,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
+	if opts.Entrypoint.IsZero() {
+		req.Args = []string{image.Args}
+	} else {
+		req.Args = opts.Entrypoint
+	}
 	if len(args) > 0 {
-		req.Args = args
+		req.Args = append(req.Args, args...)
 	}
 	if opts.Memory != "" {
 		if _, err := strconv.ParseUint(opts.Memory, 10, 64); err == nil {
@@ -190,6 +207,14 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 		// Convert to MiB
 		req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
+	} else {
+		// Set the default memory to the size of the image rounded to the nearest
+		// power of 2 with an arbitrary 10% buffer.  Only set the value if it is
+		// greater than 128 MiB.
+		mem := int(math.Round(math.Pow(2, math.Log2(float64(image.SizeInBytes/1024/1024)*1.1))))
+		if mem > 128 {
+			req.MemoryMB = &mem
+		}
 	}
 	if opts.Replicas > 0 {
 		req.Replicas = ptr(int(opts.Replicas))
@@ -341,8 +366,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --domain|-d")
 	}
 
-	var services []kcservices.CreateRequestService
-
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
@@ -355,7 +378,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 
 		port443 := 443
-		services = []kcservices.CreateRequestService{
+		opts.Services = []kcservices.CreateRequestService{
 			{
 				Port:            443,
 				DestinationPort: &destPort,
@@ -422,21 +445,21 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				service.DestinationPort = &port
 			}
 
-			services = append(services, service)
+			opts.Services = append(opts.Services, service)
 		}
 	}
 
 	if len(opts.ServiceGroupNameOrUUID) == 0 {
-		if len(services) > 0 {
+		if len(opts.Services) > 0 {
 			req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-				Services: services,
+				Services: opts.Services,
 			}
 		}
 		if len(opts.SubDomain) > 0 {
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 					Domains:  []kcservices.CreateRequestDomain{},
-					Services: services,
+					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {
@@ -444,6 +467,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				}
 			}
 			for _, subDomain := range opts.SubDomain {
+				if subDomain == "" {
+					continue
+				}
+
 				dnsName := strings.TrimSuffix(subDomain, ".")
 
 				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
@@ -454,7 +481,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			if req.ServiceGroup == nil {
 				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 					Domains:  []kcservices.CreateRequestDomain{},
-					Services: services,
+					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {
@@ -463,6 +490,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			}
 
 			for _, fqdn := range opts.Domain {
+				if fqdn == "" {
+					continue
+				}
+
 				if !strings.HasSuffix(".", fqdn) {
 					fqdn += "."
 				}

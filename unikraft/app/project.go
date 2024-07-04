@@ -172,7 +172,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithTemplate(app.template),
 		WithCommand(app.command...),
 		WithLibraries(app.libraries),
-		WithTargets(app.targets),
+		WithTargets(app.targets...),
 		WithConfiguration(popts.kconfig.Slice()...),
 		WithExtensions(app.extensions),
 		WithKraftfile(popts.kraftfile),

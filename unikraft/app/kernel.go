@@ -212,7 +212,7 @@ func addFieldToRecord(record *ComponentInfoRecord, tnum int, data []byte, byteor
 	return nil
 }
 
-func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, elfData []byte, ushortSize, uintSize int, byteorder binary.ByteOrder) (application, error) {
+func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, elfData []byte, ushortSize, uintSize int, byteorder binary.ByteOrder) (*application, error) {
 	hdrHdrLen := uintSize + ushortSize
 	recHdrLen := ushortSize + uintSize
 	seek := 0
@@ -226,7 +226,7 @@ func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, 
 		hdrLen := int(byteorder.Uint32(elfData[seek : seek+uintSize]))
 		seek += uintSize
 		if hdrLen > left {
-			return application{}, fmt.Errorf("invalid header size at byte position %d", seek)
+			return nil, fmt.Errorf("invalid header size at byte position %d", seek)
 		}
 		hdrVersion := int(byteorder.Uint16(elfData[seek : seek+ushortSize]))
 		seek += ushortSize
@@ -247,7 +247,7 @@ func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, 
 			recLen := int(byteorder.Uint32(elfData[recSeek : recSeek+uintSize]))
 			recSeek += uintSize
 			if recLen > recLeft {
-				return application{}, fmt.Errorf("invalid record size at byte position %d", recSeek)
+				return nil, fmt.Errorf("invalid record size at byte position %d", recSeek)
 			}
 			recData := elfData[recSeek : recSeek+(recLen-recHdrLen)]
 			recSeek += len(recData)
@@ -255,19 +255,19 @@ func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, 
 
 			err := addFieldToRecord(&record, recType, recData, byteorder, configFile)
 			if err != nil {
-				return application{}, err
+				return nil, err
 			}
 		}
 
 		if record.LibName == "" {
 			unikraft, err = unikraftFromRecord(ctx, record)
 			if err != nil {
-				return application{}, err
+				return nil, err
 			}
 		} else {
 			lib, err := libraryFromRecord(record)
 			if err != nil {
-				return application{}, err
+				return nil, err
 			}
 			libraries = append(libraries, lib)
 		}
@@ -307,7 +307,7 @@ func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, 
 		libs[i].SetKConfig(libConfig)
 	}
 
-	return application{
+	return &application{
 		name:      name,
 		unikraft:  unikraft,
 		libraries: libs,
@@ -320,7 +320,7 @@ func parseUKLibInfo(ctx context.Context, elfName, configFile, kraftFile string, 
 func NewApplicationFromKernel(ctx context.Context, elfPath, configFile, kraftFile string) (Application, error) {
 	fe, err := elf.Open(elfPath)
 	if err != nil {
-		return application{}, err
+		return nil, err
 	}
 
 	var libinfo_section *elf.Section
@@ -332,12 +332,12 @@ func NewApplicationFromKernel(ctx context.Context, elfPath, configFile, kraftFil
 	}
 
 	if libinfo_section == nil {
-		return application{}, fmt.Errorf("no %s section found", uk_ibinfo_section_name)
+		return nil, fmt.Errorf("no %s section found", uk_ibinfo_section_name)
 	}
 
 	elfData, err := libinfo_section.Data()
 	if err != nil {
-		return application{}, err
+		return nil, err
 	}
 
 	elfName := strings.Split(elfPath, "/")[len(strings.Split(elfPath, "/"))-1]
