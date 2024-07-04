@@ -43,6 +43,10 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		}
 	}
 
+	if err := Transform(ctx, getSection(iface, "labels"), &app.labels); err != nil {
+		return nil, err
+	}
+
 	app.name = name
 	app.path = popts.workdir
 

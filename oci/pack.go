@@ -72,6 +72,7 @@ type ociPackage struct {
 	kernelDbg string
 	initrd    initrd.Initrd
 	command   []string
+	labels    map[string]string
 
 	original *ociPackage
 }
@@ -100,6 +101,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		kernel:    targ.Kernel(),
 		kernelDbg: targ.KernelDbg(),
 		command:   popts.Args(),
+		labels:    popts.Labels(),
 	}
 
 	// It is possible that `NewPackageFromTarget` is called with an existing
@@ -388,6 +390,13 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 
 			ocipack.manifest.SetOSFeature(ctx, k.String())
 		}
+	}
+
+	for k, v := range ocipack.labels {
+		ocipack.manifest.SetLabel(ctx, k, v)
+		log.G(ctx).
+			WithField(k, v).
+			Trace("label")
 	}
 
 	if err := ocipack.index.AddManifest(ctx, ocipack.manifest); err != nil {

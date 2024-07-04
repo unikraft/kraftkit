@@ -135,6 +135,18 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			return nil, err
 		}
 
+		labels := opts.Project.Labels()
+		if len(opts.Labels) > 0 {
+			for _, label := range opts.Labels {
+				kv := strings.SplitN(label, "=", 2)
+				if len(kv) != 2 {
+					return nil, fmt.Errorf("invalid label format: %s", label)
+				}
+
+				labels[kv[0]] = kv[1]
+			}
+		}
+
 		// When i > 0, we have already applied the merge strategy.  Now, for all
 		// targets, we actually do wish to merge these because they are part of
 		// the same execution lifecycle.
@@ -154,6 +166,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
+					packmanager.PackLabels(labels),
 				)
 
 				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {
