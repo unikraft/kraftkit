@@ -28,27 +28,27 @@ type RemoveOptions struct {
 	Client    kraftcloud.KraftCloud `noattribute:"true"`
 	Metro     string                `noattribute:"true"`
 	Token     string                `noattribute:"true"`
-	WaitEmpty bool                  `long:"wait-empty" usage:"Wait for the service group to be empty before removing it"`
+	WaitEmpty bool                  `long:"wait-empty" usage:"Wait for the service to be empty before removing it"`
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Delete a service group",
+		Short:   "Delete a service",
 		Use:     "remove [FLAGS] [NAME|UUID [NAME|UUID]...]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"delete", "del", "rm"},
-		Long:    "Delete a service group.",
+		Long:    "Delete a service.",
 		Example: heredoc.Doc(`
-			# Remove a service group from your account by UUID.
+			# Remove a service from your account by UUID.
 			$ kraft cloud service remove fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Remove a service group from your account by name.
-			$ kraft cloud service remove my-service-group
+			# Remove a service from your account by name.
+			$ kraft cloud service remove my-service
 
-			# Remove multiple service groups from your account.
-			$ kraft cloud service remove my-service-group my-other-service-group
+			# Remove multiple service from your account.
+			$ kraft cloud service remove my-service my-other-service
 
-			# Remove all service groups from your account.
+			# Remove all service from your account.
 			$ kraft cloud service remove --all
 		`),
 		Annotations: map[string]string{
@@ -98,11 +98,11 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	if opts.All {
 		sgListResp, err := opts.Client.Services().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
-			return fmt.Errorf("listing service groups: %w", err)
+			return fmt.Errorf("listing service: %w", err)
 		}
 
 		if len(sgListResp.Data.Entries) == 0 {
-			log.G(ctx).Info("no service groups found")
+			log.G(ctx).Info("no service found")
 			return nil
 		}
 
@@ -115,22 +115,22 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	if opts.WaitEmpty {
 		var processes []*processtree.ProcessTreeItem
 
-		groups := args
+		services := args
 		args = []string{}
 
-		for _, group := range groups {
+		for _, service := range services {
 			processes = append(processes,
 				processtree.NewProcessTreeItem(
-					fmt.Sprintf("waiting for %s to be empty", group),
+					fmt.Sprintf("waiting for %s to be empty", service),
 					"",
 					func(ctx context.Context) error {
 						for {
-							sgResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, group)
+							serviceResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, service)
 							if err != nil {
-								return fmt.Errorf("could not get service group: %w", err)
+								return fmt.Errorf("could not get service: %w", err)
 							}
 
-							sg, err := sgResp.FirstOrErr()
+							sg, err := serviceResp.FirstOrErr()
 							if err != nil && *sg.Error == kcclient.APIHTTPErrorNotFound {
 								return nil
 							} else if err != nil {
@@ -138,7 +138,7 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 							}
 
 							if len(sg.Instances) == 0 {
-								args = append(args, group)
+								args = append(args, service)
 								break
 							}
 						}
@@ -174,14 +174,14 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 		return nil
 	}
 
-	log.G(ctx).Infof("removing %d service group(s)", len(args))
+	log.G(ctx).Infof("removing %d service(s)", len(args))
 
 	resp, err := opts.Client.Services().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
-		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
+		return fmt.Errorf("removing %d service(s): %w", len(args), err)
 	}
 	if _, err := resp.AllOrErr(); err != nil {
-		return fmt.Errorf("removing %d service group(s): %w", len(args), err)
+		return fmt.Errorf("removing %d service(s): %w", len(args), err)
 	}
 
 	return nil

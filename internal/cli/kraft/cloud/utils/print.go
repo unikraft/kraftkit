@@ -137,7 +137,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 	if format != "table" {
 		table.AddField("ENV", cs.Bold)
 		table.AddField("VOLUMES", cs.Bold)
-		table.AddField("SERVICE GROUP", cs.Bold)
+		table.AddField("SERVICE", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
 	if format != "table" {
@@ -182,7 +182,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			if format != "table" {
 				table.AddField("", nil) // ENV
 				table.AddField("", nil) // VOLUMES
-				table.AddField("", nil) // SERVICE GROUP
+				table.AddField("", nil) // SERVICE
 			}
 			table.AddField("", nil) // BOOT TIME
 			if format != "table" {
@@ -517,15 +517,15 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 	return table.Render(iostreams.G(ctx).Out)
 }
 
-// PrintServiceGroups pretty-prints the provided set of service groups or returns
+// PrintServices pretty-prints the provided set of service or returns
 // an error if unable to send to stdout via the provided context.
-func PrintServiceGroups(ctx context.Context, format string, resp kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
+func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
 	}
 
-	serviceGroups, err := resp.AllOrErr()
+	services, err := resp.AllOrErr()
 	if err != nil {
 		return err
 	}
@@ -557,7 +557,7 @@ func PrintServiceGroups(ctx context.Context, format string, resp kcclient.Servic
 	table.AddField("PERSISTENT", cs.Bold)
 	table.EndRow()
 
-	for _, sg := range serviceGroups {
+	for _, sg := range services {
 		if format != "table" {
 			table.AddField(sg.UUID, nil)
 		}
@@ -695,7 +695,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	}
 
 	table.AddField("EXPOSED SERVICES", cs.Bold)
-	table.AddField("SERVICE GROUPS", cs.Bold)
+	table.AddField("SERVICES", cs.Bold)
 
 	// Blank line on list view
 	if format == "list" {
@@ -806,13 +806,13 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	exposedServices += fmt.Sprintf("%d/%d", quota.Used.Services, quota.Hard.Services)
 	table.AddField(exposedServices, nil)
 
-	// SERVICE GROUPS
-	var serviceGroups string
+	// SERVICES
+	var services string
 	if format == "list" {
-		serviceGroups = printBar(cs, quota.Used.ServiceGroups, quota.Hard.ServiceGroups) + " "
+		services = printBar(cs, quota.Used.ServiceGroups, quota.Hard.ServiceGroups) + " "
 	}
-	serviceGroups += fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups)
-	table.AddField(serviceGroups, nil)
+	services += fmt.Sprintf("%d/%d", quota.Used.ServiceGroups, quota.Hard.ServiceGroups)
+	table.AddField(services, nil)
 
 	// Blank line on list view
 	if format == "list" {
@@ -931,7 +931,7 @@ func PrintCertificates(ctx context.Context, format string, resp kcclient.Service
 	}
 	table.AddField("CREATED AT", cs.Bold)
 	if format != "table" {
-		table.AddField("SERVICE GROUPS", cs.Bold)
+		table.AddField("SERVICES", cs.Bold)
 	}
 	table.EndRow()
 
@@ -1077,7 +1077,7 @@ func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseIt
 	if instance.ServiceGroup != nil && len(instance.ServiceGroup.Name) > 0 {
 		entries = append(entries, []fancymap.FancyMapEntry{
 			{
-				Key:   "service group",
+				Key:   "service",
 				Value: instance.ServiceGroup.Name,
 			},
 		}...)

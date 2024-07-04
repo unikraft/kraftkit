@@ -38,14 +38,14 @@ type InitOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InitOptions{}, cobra.Command{
-		Short:   "Initialize autoscale configuration for a service group",
+		Short:   "Initialize autoscale configuration for a service",
 		Use:     "init [FLAGS] NAME|UUID",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"init", "initialise", "initialize", "i"},
-		Long:    "Initialize autoscale configuration for a service group.",
+		Long:    "Initialize autoscale configuration for a service.",
 		Example: heredoc.Doc(`
 			# Initialize an autoscale configuration
-			kraft cloud scale init my-service-group \
+			kraft cloud scale init my-service \
 				--master my-instance-name \
 				--min-size 1 \
 				--max-size 10 \
@@ -65,7 +65,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *InitOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a service group name or UUID")
+		return fmt.Errorf("specify a service name or UUID")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
@@ -132,7 +132,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
 		if len(instList) == 0 {
-			return fmt.Errorf("no instance found in service group")
+			return fmt.Errorf("no instance found in service")
 		}
 
 		if len(instList) == 1 {

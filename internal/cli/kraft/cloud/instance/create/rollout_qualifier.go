@@ -19,10 +19,10 @@ const (
 	// The 'name' qualifier is used to capture instances which have the same name.
 	RolloutQualifierInstanceName = RolloutQualifier("name")
 
-	// The 'all' qualifier matches all instances in the service group.
+	// The 'all' qualifier matches all instances in the service.
 	RolloutQualifierAll = RolloutQualifier("all")
 
-	// The 'none' qualifier prevents matching any instances in the service group.
+	// The 'none' qualifier prevents matching any instances in the service.
 	RolloutQualifierNone = RolloutQualifier("none")
 )
 

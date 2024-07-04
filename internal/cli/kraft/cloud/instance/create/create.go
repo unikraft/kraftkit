@@ -35,31 +35,31 @@ import (
 )
 
 type CreateOptions struct {
-	Auth                   *config.AuthConfig        `noattribute:"true"`
-	Client                 kraftcloud.KraftCloud     `noattribute:"true"`
-	Env                    []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features               []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	Domain                 []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
-	Image                  string                    `noattribute:"true"`
-	Entrypoint             types.ShellCommand        `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
-	Memory                 string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
-	Metro                  string                    `noattribute:"true"`
-	Name                   string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output                 string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Ports                  []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	RestartPolicy          kcinstances.RestartPolicy `noattribute:"true"`
-	Replicas               uint                      `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout                RolloutStrategy           `noattribute:"true"`
-	RolloutQualifier       RolloutQualifier          `noattribute:"true"`
-	RolloutWait            time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
-	ServiceGroupNameOrUUID string                    `local:"true" long:"service-group" short:"g" usage:"Attach this instance to an existing service group"`
-	Start                  bool                      `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
-	ScaleToZero            bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
-	SubDomain              []string                  `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Token                  string                    `noattribute:"true"`
-	Volumes                []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage           bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout    time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+	Auth                *config.AuthConfig        `noattribute:"true"`
+	Client              kraftcloud.KraftCloud     `noattribute:"true"`
+	Env                 []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features            []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	Domain              []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
+	Image               string                    `noattribute:"true"`
+	Entrypoint          types.ShellCommand        `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
+	Memory              string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
+	Metro               string                    `noattribute:"true"`
+	Name                string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
+	Output              string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Ports               []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	RestartPolicy       kcinstances.RestartPolicy `noattribute:"true"`
+	Replicas            uint                      `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout             RolloutStrategy           `noattribute:"true"`
+	RolloutQualifier    RolloutQualifier          `noattribute:"true"`
+	RolloutWait         time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
+	ServiceNameOrUUID   string                    `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
+	Start               bool                      `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero         bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
+	SubDomain           []string                  `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Token               string                    `noattribute:"true"`
+	Volumes             []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage        bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
@@ -84,11 +84,11 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		)
 	}
 
-	// Check if the user tries to use a service group and a rollout strategy is
+	// Check if the user tries to use a service and a rollout strategy is
 	// set to prompt so that we can use this information later.  We do this very
 	// early on such that we can fail-fast in case prompting is not possible (e.g.
 	// in non-TTY environments).
-	if opts.ServiceGroupNameOrUUID != "" && opts.Rollout == StrategyPrompt {
+	if opts.ServiceNameOrUUID != "" && opts.Rollout == StrategyPrompt {
 		if config.G[config.KraftKit](ctx).NoPrompt {
 			return nil, nil, fmt.Errorf("prompting disabled")
 		}
@@ -244,63 +244,63 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		req.Volumes = append(req.Volumes, volume)
 	}
 
-	var serviceGroup *kcservices.GetResponseItem
+	var service *kcservices.GetResponseItem
 	var qualifiedInstancesToRolloutOver []kcinstances.GetResponseItem
 
-	// Since an existing service group has been provided, we should now
+	// Since an existing service has been provided, we should now
 	// preemptively look up information about it.  Based on whether there are
-	// active instances inside of this service group, we can then decide how to
+	// active instances inside of this service, we can then decide how to
 	// proceed with the deployment (aka rollout strategies).
-	if len(opts.ServiceGroupNameOrUUID) > 0 {
+	if len(opts.ServiceNameOrUUID) > 0 {
 		log.G(ctx).
-			WithField("group", opts.ServiceGroupNameOrUUID).
-			Trace("looking up service")
+			WithField("service", opts.ServiceNameOrUUID).
+			Trace("finding")
 
-		groupResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, opts.ServiceGroupNameOrUUID)
+		serviceResp, err := opts.Client.Services().WithMetro(opts.Metro).Get(ctx, opts.ServiceNameOrUUID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
+			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceNameOrUUID, err)
 		}
 
-		serviceGroup, err = groupResp.FirstOrErr()
+		service, err = serviceResp.FirstOrErr()
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceGroupNameOrUUID, err)
+			return nil, nil, fmt.Errorf("could not use service %s: %w", opts.ServiceNameOrUUID, err)
 		}
 
 		log.G(ctx).
-			WithField("uuid", serviceGroup.UUID).
-			Debug("using service group")
+			WithField("uuid", service.UUID).
+			Debug("using service")
 
-		// Save the UUID of the service group to be used in the create request
+		// Save the UUID of the service to be used in the create request
 		// later.
 		req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-			UUID: &serviceGroup.UUID,
+			UUID: &service.UUID,
 		}
 
-		// Find out if there are any existing instances in this service group.
-		allInstanceUUIDs := make([]string, len(serviceGroup.Instances))
-		for i, instance := range serviceGroup.Instances {
+		// Find out if there are any existing instances in this service.
+		allInstanceUUIDs := make([]string, len(service.Instances))
+		for i, instance := range service.Instances {
 			allInstanceUUIDs[i] = instance.UUID
 		}
 
 		var instances []kcinstances.GetResponseItem
 		if len(allInstanceUUIDs) > 0 {
 			log.G(ctx).
-				WithField("group", opts.ServiceGroupNameOrUUID).
-				Trace("getting instances in service")
+				WithField("service", opts.ServiceNameOrUUID).
+				Trace("getting instances in")
 
 			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, allInstanceUUIDs...)
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not get instances of service group '%s': %w", opts.ServiceGroupNameOrUUID, err)
+				return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
 			}
 
 			instances, err = instancesResp.AllOrErr()
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not get instances of service group '%s': %w", opts.ServiceGroupNameOrUUID, err)
+				return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
 			}
 		} else {
 			log.G(ctx).
-				WithField("group", opts.ServiceGroupNameOrUUID).
-				Trace("no existing instances in service group")
+				WithField("service", opts.ServiceNameOrUUID).
+				Trace("no existing instances in service")
 		}
 
 		switch opts.RolloutQualifier {
@@ -348,22 +348,22 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 
 		// Return early if the rollout strategy is set to exit on conflict and there
-		// are existing instances in the service group.
+		// are existing instances in the service.
 		if opts.Rollout == RolloutStrategyExit {
 			return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
 		}
 	}
 
 	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
-	// supports updating service groups.
-	if opts.ServiceGroupNameOrUUID != "" && len(opts.Ports) > 0 {
-		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --port|-p")
+	// supports updating service.
+	if opts.ServiceNameOrUUID != "" && len(opts.Ports) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service|-g and define new --port|-p")
 	}
 
 	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
-	// supports updating service groups.
-	if opts.ServiceGroupNameOrUUID != "" && len(opts.Domain) > 0 {
-		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --domain|-d")
+	// supports updating service.
+	if opts.ServiceNameOrUUID != "" && len(opts.Domain) > 0 {
+		return nil, nil, fmt.Errorf("cannot use existing --service|-g and define new --domain|-d")
 	}
 
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
@@ -449,7 +449,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
-	if len(opts.ServiceGroupNameOrUUID) == 0 {
+	if len(opts.ServiceNameOrUUID) == 0 {
 		if len(opts.Services) > 0 {
 			req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
 				Services: opts.Services,
@@ -527,7 +527,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	// Handle the rollout only after the new instance has been created.
-	// KraftCloud's service group load balancer will temporarily handle blue-green
+	// KraftCloud's service load balancer will temporarily handle blue-green
 	// deployments.
 	if len(qualifiedInstancesToRolloutOver) > 0 {
 		paramodel, err := processtree.NewProcessTree(
@@ -591,16 +591,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
-	var serviceGroupResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
+	var serviceResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
 
 	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
-		serviceGroupResp, err = opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
+		serviceResp, err = opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("getting details of service %s: %w", sg.UUID, err)
 		}
 	}
 
-	return instanceResp, serviceGroupResp, nil
+	return instanceResp, serviceResp, nil
 }
 
 func NewCmd() *cobra.Command {
@@ -652,7 +652,7 @@ func NewCmd() *cobra.Command {
 			StrategyPrompt,
 		),
 		"rollout",
-		"Set the rollout strategy for an instance which has been previously run in the provided service group",
+		"Set the rollout strategy for an instance which has been previously run in the provided service",
 	)
 
 	cmd.Flags().Var(
@@ -661,7 +661,7 @@ func NewCmd() *cobra.Command {
 			RolloutQualifierImageName,
 		),
 		"rollout-qualifier",
-		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service group",
+		"Set the rollout qualifier used to determine which instances should be affected by the strategy in the supplied service",
 	)
 
 	cmd.Flags().Var(

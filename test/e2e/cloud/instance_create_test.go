@@ -34,11 +34,11 @@ func urlParser(stdout *fcmd.IOStream) string {
 	return ""
 }
 
-func serviceGroupParser(stdout *fcmd.IOStream) string {
+func serviceParser(stdout *fcmd.IOStream) string {
 	if strings.Contains(stdout.String(), "service_group\":") {
-		serviceGroup := strings.SplitN(stdout.String(), "service_group\":\"", 2)[1]
-		serviceGroup = strings.SplitN(serviceGroup, "\"", 2)[0]
-		return serviceGroup
+		services := strings.SplitN(stdout.String(), "service_group\":\"", 2)[1]
+		services = strings.SplitN(services, "\"", 2)[0]
+		return services
 	}
 
 	return ""
@@ -1009,7 +1009,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 		})
 
-		It("should show all up in the service group details", func() {
+		It("should show all up in the service details", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -1021,8 +1021,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`"state":"stopped"`))
 
-			serviceGroup := serviceGroupParser(stdout)
-			Expect(serviceGroup).ToNot(BeEmpty())
+			service := serviceParser(stdout)
+			Expect(service).ToNot(BeEmpty())
 
 			serviceCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCmd.Args = append(serviceCmd.Args,
@@ -1030,7 +1030,7 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--log-level", "info",
 				"--log-type", "json",
 				"-o", "json",
-				serviceGroup,
+				service,
 			)
 
 			err = serviceCmd.Run()
@@ -2248,8 +2248,8 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 	})
 
-	// '--service-group' flag tests
-	When("invoked with standard flags and positional arguments, and a service group", func() {
+	// '--service' flag tests
+	When("invoked with standard flags and positional arguments, and a service", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2262,7 +2262,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			cmd.Args = append(cmd.Args,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--service-group", "smth-"+instanceNameFull,
+				"--service", "smth-"+instanceNameFull,
 				"--start",
 				imageName,
 			)
@@ -2289,7 +2289,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
-		It("should attach the instance to that service group", func() {
+		It("should attach the instance to that service", func() {
 			err := cmd.Run()
 			time.Sleep(3 * time.Second)
 			if err != nil {
@@ -2359,11 +2359,11 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 service group\(s\)`))
+			Expect(stdout.String()).To(MatchRegexp(`removing 1 service\(s\)`))
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, and a non-existent group", func() {
+	When("invoked with standard flags and positional arguments, and a non-existent service", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2377,7 +2377,7 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--service-group", "smth",
+				"--service", "smth",
 				"--start",
 				imageName,
 			)
@@ -2390,11 +2390,11 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`No service group with name 'smth`))
+			Expect(stdout.String()).To(MatchRegexp(`No service with name 'smth`))
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, and a special-character group", func() {
+	When("invoked with standard flags and positional arguments, and a special-character service", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2408,7 +2408,7 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--service-group", "șmth",
+				"--service", "șmth",
 				"--start",
 				imageName,
 			)

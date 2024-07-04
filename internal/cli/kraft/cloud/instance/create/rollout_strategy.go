@@ -8,7 +8,7 @@ package create
 import "fmt"
 
 // RolloutStrategy is the mechanism to describe how to approach managing
-// existing instances part of an existing service group during deployment.
+// existing instances part of an existing service during deployment.
 type RolloutStrategy string
 
 const (
@@ -17,15 +17,15 @@ const (
 	RolloutStrategyExit = RolloutStrategy("exit")
 
 	// The 'stop' strategy stops the qualified existing instance(s) within the
-	// same service group and starts the new instance(s).
+	// same service and starts the new instance(s).
 	RolloutStrategyStop = RolloutStrategy("stop")
 
 	// The 'stop' strategy stops the qualified existing instance(s) within the
-	// same service group and starts the new instance(s).
+	// same service and starts the new instance(s).
 	RolloutStrategyRemove = RolloutStrategy("remove")
 
 	// The 'keep' strategy keeps the existing qualified instance(s) within the
-	// same service group and starts the new instance(s).
+	// same service and starts the new instance(s).
 	RolloutStrategyKeep = RolloutStrategy("keep")
 
 	// The 'prompt' strategy is an "unlisted" strategy that's used in TTY contexts

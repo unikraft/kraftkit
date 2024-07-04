@@ -39,7 +39,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale remove fd1684ea-7970-4994-92d6-61dcc7905f2b my-policy
 
 			# Delete an autoscale configuration policy by name
-			$ kraft cloud scale remove my-service-group my-policy
+			$ kraft cloud scale remove my-service my-policy
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 || len(args) == 1 {
-		return fmt.Errorf("specify service group UUID and policy name")
+		return fmt.Errorf("specify service UUID and policy name")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
@@ -69,7 +69,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if !utils.IsUUID(args[0]) {
-		return fmt.Errorf("specify a valid service group UUID")
+		return fmt.Errorf("specify a valid service UUID")
 	}
 
 	if opts.Auth == nil {
