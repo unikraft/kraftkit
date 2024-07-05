@@ -315,6 +315,18 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
+	labels := opts.Project.Labels()
+	if len(opts.Labels) > 0 {
+		for _, label := range opts.Labels {
+			kv := strings.SplitN(label, "=", 2)
+			if len(kv) != 2 {
+				return nil, fmt.Errorf("invalid label format: %s", label)
+			}
+
+			labels[kv[0]] = kv[1]
+		}
+	}
+
 	var result []pack.Package
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
@@ -335,6 +347,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					packmanager.PackKConfig(!opts.NoKConfig),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
+					packmanager.PackLabels(labels),
 				)
 
 				if ukversion, ok := targ.KConfig().Get(unikraft.UK_FULLVERSION); ok {

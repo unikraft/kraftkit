@@ -171,6 +171,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithRootfs(app.rootfs),
 		WithTemplate(app.template),
 		WithCommand(app.command...),
+		WithLabels(app.labels),
 		WithLibraries(app.libraries),
 		WithTargets(app.targets...),
 		WithConfiguration(popts.kconfig.Slice()...),

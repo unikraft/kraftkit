@@ -9,6 +9,16 @@
       "description": "declared for backward compatibility, ignored."
     },
 
+    "/^labels$/": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9._-]+$": {
+          "type": ["string"]
+        }
+      },
+      "additionalProperties": true
+    },
+
     "/^name$/": { "type": "string" },
 
     "/^outdir$/": { "type": "string" },

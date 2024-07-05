@@ -17,6 +17,7 @@ type PackOptions struct {
 	kernelLibraryObjects             bool
 	kernelSourceFiles                bool
 	kernelVersion                    string
+	labels                           map[string]string
 	name                             string
 	output                           string
 	mergeStrategy                    MergeStrategy
@@ -90,6 +91,11 @@ func (popts *PackOptions) Name() string {
 // Output returns the location of the package.
 func (popts *PackOptions) Output() string {
 	return popts.output
+}
+
+// Labels returns the labels to be added to the package.
+func (popts *PackOptions) Labels() map[string]string {
+	return popts.labels
 }
 
 // MergeStrategy ...
@@ -192,5 +198,12 @@ func PackMergeStrategy(strategy MergeStrategy) PackOption {
 func PackWithEnvs(envs []string) PackOption {
 	return func(popts *PackOptions) {
 		popts.env = envs
+	}
+}
+
+// PackLabels adds the labels to the package.
+func PackLabels(labels map[string]string) PackOption {
+	return func(popts *PackOptions) {
+		popts.labels = labels
 	}
 }

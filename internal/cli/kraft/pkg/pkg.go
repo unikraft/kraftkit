@@ -43,6 +43,7 @@ type PkgOptions struct {
 	Format       string                    `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
 	Kernel       string                    `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile    string                    `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Labels       []string                  `local:"true" long:"label" short:"l" usage:"Set labels to be packed into the package (k=v)"`
 	Name         string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	NoPull       bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`

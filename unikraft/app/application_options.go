@@ -210,3 +210,21 @@ func WithEnv(env map[string]string) ApplicationOption {
 		return nil
 	}
 }
+
+func WithLabel(key, value string) ApplicationOption {
+	return func(ac *application) error {
+		if ac.labels == nil {
+			ac.labels = make(map[string]string)
+		}
+		ac.labels[key] = value
+		return nil
+	}
+}
+
+// WithLabels sets the list of labels.
+func WithLabels(labels map[string]string) ApplicationOption {
+	return func(ac *application) error {
+		ac.labels = labels
+		return nil
+	}
+}

@@ -125,6 +125,9 @@ type Application interface {
 	// information of the application
 	Build(context.Context, target.Target, ...BuildOption) error
 
+	// Labels returns the application's labels
+	Labels() map[string]string
+
 	// LibraryNames return names for all libraries in this Compose config
 	LibraryNames() []string
 
@@ -166,6 +169,7 @@ type application struct {
 	template      *template.TemplateConfig
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
+	labels        map[string]string
 	libraries     map[string]*lib.LibraryConfig
 	targets       []target.Target
 	volumes       []*volume.VolumeConfig
@@ -215,6 +219,10 @@ func (app *application) Runtime() *runtime.Runtime {
 
 func (app *application) Unikraft(ctx context.Context) *core.UnikraftConfig {
 	return app.unikraft
+}
+
+func (app *application) Labels() map[string]string {
+	return app.labels
 }
 
 func (app *application) Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error) {
