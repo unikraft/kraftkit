@@ -872,11 +872,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	}
 
 	// SCALE-TO-ZERO
-	if quota.Limits.MinAutoscaleSize == 0 {
-		table.AddField("enabled", cs.Green)
-	} else {
-		table.AddField("disabled", cs.Gray)
-	}
+	table.AddField("enabled", cs.Green)
 
 	table.EndRow()
 
