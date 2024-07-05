@@ -37,16 +37,16 @@ func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
-		Short:   "Retrieve the state of a service group",
+		Short:   "Retrieve the state of a service",
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},
 		Example: heredoc.Doc(`
-			# Retrieve information about a kraftcloud service group
+			# Retrieve information about a kraftcloud service
 			$ kraft cloud service get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Retrieve information about a kraftcloud service group
-			$ kraft cloud service get my-service-group
+			# Retrieve information about a kraftcloud service
+			$ kraft cloud service get my-service
 	`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
@@ -87,5 +87,5 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not get service %s: %w", args[0], err)
 	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *resp)
+	return utils.PrintServices(ctx, opts.Output, *resp)
 }

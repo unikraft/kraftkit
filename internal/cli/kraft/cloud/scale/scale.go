@@ -30,8 +30,8 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"autoscale", "scl"},
 		Long:    "Manage instance autoscale on KraftCloud.",
 		Example: heredoc.Doc(`
-			# Add an autoscale configuration to a service group
-			$ kraft cloud scale add my-service-group my-policy
+			# Add an autoscale configuration to a service
+			$ kraft cloud scale add my-service my-policy
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-scale",

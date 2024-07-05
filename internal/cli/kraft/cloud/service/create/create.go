@@ -185,13 +185,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
-		Short:   "Create a service group",
+		Short:   "Create a service",
 		Use:     "create [FLAGS] EXTERNAL:INTERNAL[/HANDLER[+HANDLER...]]",
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
-		Long:    "Create a service group.",
+		Long:    "Create a service.",
 		Example: heredoc.Doc(`
-			# Create a service group with a single service listening on port 443 named "my-service"
+			# Create a service with a single service listening on port 443 named "my-service"
 			$ kraft cloud service create --name my-service 443:8080/http+tls
 		`),
 		Annotations: map[string]string{
@@ -221,13 +221,13 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	newSg, err := Create(ctx, opts, args...)
 	if err != nil {
-		return fmt.Errorf("creating service group: %w", err)
+		return fmt.Errorf("creating service: %w", err)
 	}
 
 	resp, err := opts.Client.WithMetro(opts.Metro).Get(ctx, newSg.UUID)
 	if err != nil {
-		return fmt.Errorf("getting details of service group %s: %w", newSg.UUID, err)
+		return fmt.Errorf("getting details of service %s: %w", newSg.UUID, err)
 	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *resp)
+	return utils.PrintServices(ctx, opts.Output, *resp)
 }

@@ -29,21 +29,21 @@ type ListOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List all service groups at a metro for your account",
+		Short:   "List all service at a metro for your account",
 		Use:     "list [FLAGS]",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
-			List all service groups in your account.
+			List all service in your account.
 		`),
 		Example: heredoc.Doc(`
-			# List all service groups in your account.
+			# List all service in your account.
 			$ kraft cloud service list
 
-			# List all service groups in your account in full table format.
+			# List all service in your account in full table format.
 			$ kraft cloud service list -o full
 
-			# List all service groups in your account and watch for changes.
+			# List all service in your account and watch for changes.
 			$ kraft cloud service list -w
 		`),
 		Annotations: map[string]string{
@@ -82,8 +82,8 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 
 	resp, err := client.WithMetro(opts.metro).List(ctx)
 	if err != nil {
-		return fmt.Errorf("could not list service groups: %w", err)
+		return fmt.Errorf("could not list service: %w", err)
 	}
 
-	return utils.PrintServiceGroups(ctx, opts.Output, *resp)
+	return utils.PrintServices(ctx, opts.Output, *resp)
 }

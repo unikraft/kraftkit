@@ -39,19 +39,19 @@ func NewCmd() *cobra.Command {
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},
-		Long:    "Get an autoscale configuration or policy of a service group.",
+		Long:    "Get an autoscale configuration or policy of a service.",
 		Example: heredoc.Doc(`
-			# Get an autoscale configuration by UUID of a service group
+			# Get an autoscale configuration by UUID of a service
 			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Get an autoscale configuration by name of a service group
-			$ kraft cloud scale get my-service-group
+			# Get an autoscale configuration by name of a service
+			$ kraft cloud scale get my-service
 
-			# Get an autoscale policy by UUID of a service group
+			# Get an autoscale policy by UUID of a service
 			$ kraft cloud scale get fd1684ea-7970-4994-92d6-61dcc7905f2b --policy my-policy
 
-			# Get an autoscale policy by name of a service group
-			$ kraft cloud scale get my-service-group --policy my-policy
+			# Get an autoscale policy by name of a service
+			$ kraft cloud scale get my-service --policy my-policy
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
@@ -66,7 +66,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a service group NAME or UUID")
+		return fmt.Errorf("specify a service NAME or UUID")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)

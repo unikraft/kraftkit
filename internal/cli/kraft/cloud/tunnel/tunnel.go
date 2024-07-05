@@ -15,7 +15,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	"sdk.kraft.cloud"
+	kraftcloud "sdk.kraft.cloud"
 	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
@@ -30,11 +30,11 @@ type TunnelOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&TunnelOptions{}, cobra.Command{
-		Short: "Forward a local port to a service group through a TLS tunnel",
-		Use:   "tunnel [FLAGS] SERVICE_GROUP [LOCAL_PORT:]REMOTE_PORT",
+		Short: "Forward a local port to a service through a TLS tunnel",
+		Use:   "tunnel [FLAGS] SERVICE [LOCAL_PORT:]REMOTE_PORT",
 		Args:  cobra.ExactArgs(2),
 		Example: heredoc.Doc(`
-			# Forward the local port 8443 to the port 443 of the "my-service" service group.
+			# Forward the local port 8443 to the port 443 of the "my-service" service.
 			$ kraft cloud tunnel my-service 8443:443
 		`),
 		Annotations: map[string]string{
@@ -72,7 +72,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	).WithMetro(opts.metro)
 
-	fqdn, err := serviceGroupSanityCheck(ctx, cli, sgID, rport)
+	fqdn, err := serviceSanityCheck(ctx, cli, sgID, rport)
 	if err != nil {
 		return err
 	}
@@ -87,20 +87,20 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 	return r.Up(ctx)
 }
 
-// serviceGroupSanityCheck verifies that the given service group can be tunneled to.
-// In case of success, the (public) FQDN of service group is returned.
-func serviceGroupSanityCheck(ctx context.Context, cli kcservices.ServicesService, sgID string, rport uint16) (fqdn string, err error) {
+// serviceSanityCheck verifies that the given service can be tunneled to.
+// In case of success, the (public) FQDN of service is returned.
+func serviceSanityCheck(ctx context.Context, cli kcservices.ServicesService, sgID string, rport uint16) (fqdn string, err error) {
 	sgGetResp, err := cli.Get(ctx, sgID)
 	if err != nil {
-		return "", fmt.Errorf("getting service group '%s': %w", sgID, err)
+		return "", fmt.Errorf("getting service '%s': %w", sgID, err)
 	}
 	sg, err := sgGetResp.FirstOrErr()
 	if err != nil {
-		return "", fmt.Errorf("getting service group '%s': %w", sgID, err)
+		return "", fmt.Errorf("getting service '%s': %w", sgID, err)
 	}
 
 	if len(sg.Domains) == 0 {
-		return "", fmt.Errorf("service group '%s' has no public domain", sgID)
+		return "", fmt.Errorf("service '%s' has no public domain", sgID)
 	}
 
 	var hasPort bool
@@ -113,7 +113,7 @@ func serviceGroupSanityCheck(ctx context.Context, cli kcservices.ServicesService
 		exposedPorts = append(exposedPorts, svc.Port)
 	}
 	if !hasPort {
-		return "", fmt.Errorf("service group '%s' does not expose port %d. Ports exposed are %v", sgID, rport, exposedPorts)
+		return "", fmt.Errorf("service '%s' does not expose port %d. Ports exposed are %v", sgID, rport, exposedPorts)
 	}
 
 	return sg.Domains[0].FQDN, nil
