@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -297,7 +298,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		Architecture: manifest.config.Architecture,
 		OS:           manifest.config.OS,
 		OSVersion:    manifest.config.OSVersion,
-		OSFeatures:   manifest.config.OSFeatures,
+		OSFeatures:   slices.Compact(manifest.config.OSFeatures),
 	}
 
 	configBlob, err := NewBlob(
