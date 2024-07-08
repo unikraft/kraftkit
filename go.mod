@@ -26,7 +26,7 @@ require (
 	github.com/containers/image/v5 v5.31.1
 	github.com/cyphar/filepath-securejoin v0.2.5
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/docker/cli v27.0.2+incompatible
+	github.com/docker/cli v27.0.3+incompatible
 	github.com/docker/docker v26.1.4+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
