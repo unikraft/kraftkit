@@ -17,6 +17,7 @@ import (
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/fsnotify/fsnotify"
+	"github.com/klauspost/cpuid"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -84,6 +85,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	if machine.Spec.Emulation {
 		return machine, fmt.Errorf("cannot create firecracker instance with emulation")
+	}
+
+	if !cpuid.CPU.Rdrand() || !cpuid.CPU.Rdseed() {
+		log.G(ctx).Warn("RDRAND and RDSEED are not supported by the host CPU to be able to run Unikraft v0.17.0 and greater with hardware randomization")
 	}
 
 	if machine.ObjectMeta.UID == "" {
