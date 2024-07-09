@@ -25,6 +25,18 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 		flagToken = os.Getenv("KRAFTCLOUD_TOKEN")
 	}
 
+	if flagToken == "" {
+		flagToken = os.Getenv("KC_TOKEN")
+	}
+
+	if flagToken == "" {
+		flagToken = os.Getenv("UNIKRAFTCLOUD_TOKEN")
+	}
+
+	if flagToken == "" {
+		flagToken = os.Getenv("UKC_TOKEN")
+	}
+
 	// Prioritize environmental variables
 	if flagToken != "" {
 		data, err := base64.StdEncoding.DecodeString(flagToken)
@@ -52,7 +64,7 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 	} else if auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
 		return &auth, nil
 	} else {
-		return nil, fmt.Errorf("could not determine kraftcloud user token: try setting `KRAFTCLOUD_TOKEN`")
+		return nil, fmt.Errorf("could not determine unikraftcloud user token: try setting `UNIKRAFTCLOUD_TOKEN`")
 	}
 
 	return &auth, nil

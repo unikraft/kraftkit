@@ -60,12 +60,40 @@ var _ = Describe("kraft cloud instance create", func() {
 	)
 
 	BeforeEach(func() {
-		if os.Getenv("KRAFTCLOUD_TOKEN") == "" {
-			Skip("KRAFTCLOUD_TOKEN is not set")
+		token := os.Getenv("UNIKRAFTCLOUD_TOKEN")
+
+		if token == "" {
+			token = os.Getenv("KRAFTCLOUD_TOKEN")
 		}
 
-		if os.Getenv("KRAFTCLOUD_METRO") == "" {
-			Skip("KRAFTCLOUD_METRO is not set")
+		if token == "" {
+			token = os.Getenv("KC_TOKEN")
+		}
+
+		if token == "" {
+			token = os.Getenv("UKC_TOKEN")
+		}
+
+		if token == "" {
+			Skip("UNIKRAFTCLOUD_TOKEN is not set")
+		}
+
+		metro := os.Getenv("UNIKRAFTCLOUD_METRO")
+
+		if metro == "" {
+			metro = os.Getenv("KRAFTCLOUD_METRO")
+		}
+
+		if metro == "" {
+			metro = os.Getenv("KC_METRO")
+		}
+
+		if metro == "" {
+			metro = os.Getenv("UKC_METRO")
+		}
+
+		if metro == "" {
+			Skip("UNIKRAFTCLOUD_METRO is not set")
 		}
 
 		stdout = fcmd.NewIOStream()
