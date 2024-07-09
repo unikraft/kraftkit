@@ -22,10 +22,11 @@ import (
 )
 
 type AttachOptions struct {
-	At     string                   `long:"at" usage:"The path the volume should be mounted to"`
-	Auth   *config.AuthConfig       `noattribute:"true"`
-	Client kcvolumes.VolumesService `noattribute:"true"`
-	To     string                   `long:"to" usage:"The instance the volume should be attached to"`
+	At       string                   `long:"at" usage:"The path the volume should be mounted to"`
+	Auth     *config.AuthConfig       `noattribute:"true"`
+	Client   kcvolumes.VolumesService `noattribute:"true"`
+	ReadOnly bool                     `long:"read-only" short:"r" usage:"Mount the volume read-only"`
+	To       string                   `long:"to" usage:"The instance the volume should be attached to"`
 
 	metro string
 	token string
@@ -60,7 +61,7 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolume
 		)
 	}
 
-	attachResp, err := opts.Client.WithMetro(opts.metro).Attach(ctx, args[0], opts.To, opts.At, false)
+	attachResp, err := opts.Client.WithMetro(opts.metro).Attach(ctx, args[0], opts.To, opts.At, opts.ReadOnly)
 	if err != nil {
 		return nil, fmt.Errorf("attaching volume %s: %w", args[0], err)
 	}
@@ -83,8 +84,8 @@ func NewCmd() *cobra.Command {
 			# Attach the volume data to the instance nginx to the path /mnt/data
 			$ kraft cloud vol attach data --to nginx --at /mnt/data
 
-			# Attach a volume to the instance nginx to the path /mnt/data by UUID
-			$ kraft cloud volume at 77d0316a-fbbe-488d-8618-5bf7a612477a --to nginx --at /mnt/data
+			# Attach a volume to the instance nginx to the path /mnt/data by UUID in read-only mode
+			$ kraft cloud volume at 77d0316a-fbbe-488d-8618-5bf7a612477a --to nginx --at /mnt/data -r
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
