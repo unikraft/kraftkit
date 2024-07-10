@@ -18,10 +18,10 @@ import (
 )
 
 // DefaultKraftCloudTarget is the default target for KraftCloud.
-var DefaultKraftCloudTarget = NewTargetFromOptions(
+var DefaultKraftCloudTarget *TargetConfig = NewTargetFromOptions(
 	WithArchitecture(arch.NewArchitectureFromOptions(arch.WithName("x86_64"))),
 	WithPlatform(plat.NewPlatformFromOptions(plat.WithName("kraftcloud"))),
-)
+).(*TargetConfig)
 
 type Target interface {
 	component.Component

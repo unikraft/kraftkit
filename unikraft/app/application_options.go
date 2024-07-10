@@ -160,7 +160,7 @@ func WithLibraries(libraries map[string]*lib.LibraryConfig) ApplicationOption {
 }
 
 // WithTargets sets the application's target list
-func WithTargets(targets ...target.Target) ApplicationOption {
+func WithTargets(targets []*target.TargetConfig) ApplicationOption {
 	return func(ac *application) error {
 		ac.targets = targets
 		return nil
