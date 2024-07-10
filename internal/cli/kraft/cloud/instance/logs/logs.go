@@ -194,6 +194,19 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 				case line, ok := <-logChan:
 					if ok {
 						consumer.Consume(line)
+					} else {
+						if inst != nil && inst.State == kcinstances.InstanceStateStopped {
+							consumer.Consume(
+								"",
+								fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+								"",
+								"To see more details about why, run:",
+								"",
+								fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+								"",
+							)
+						}
+						return
 					}
 				case <-time.After(time.Second):
 					// If we have not received anything after 1 second through any of the
