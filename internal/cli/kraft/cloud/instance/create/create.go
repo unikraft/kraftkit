@@ -251,7 +251,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// preemptively look up information about it.  Based on whether there are
 	// active instances inside of this service, we can then decide how to
 	// proceed with the deployment (aka rollout strategies).
-	if len(opts.ServiceNameOrUUID) > 0 {
+	if opts.Start && len(opts.ServiceNameOrUUID) > 0 {
 		log.G(ctx).
 			WithField("service", opts.ServiceNameOrUUID).
 			Trace("finding")
@@ -529,7 +529,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// Handle the rollout only after the new instance has been created.
 	// KraftCloud's service load balancer will temporarily handle blue-green
 	// deployments.
-	if len(qualifiedInstancesToRolloutOver) > 0 {
+	if opts.Start && len(qualifiedInstancesToRolloutOver) > 0 {
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
