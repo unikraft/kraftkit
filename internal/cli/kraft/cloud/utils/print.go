@@ -367,6 +367,7 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 	table.AddField("CREATED AT", cs.Bold)
 	table.AddField("SIZE", cs.Bold)
 	table.AddField("ATTACHED TO", cs.Bold)
+	table.AddField("MOUNTED BY", cs.Bold)
 	table.AddField("STATE", cs.Bold)
 	table.AddField("PERSISTENT", cs.Bold)
 	table.EndRow()
@@ -401,8 +402,23 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 				attachedTo = append(attachedTo, attch.UUID)
 			}
 		}
-
 		table.AddField(strings.Join(attachedTo, ","), nil)
+
+		var mountedBy []string
+		for _, mnt := range volume.MountedBy {
+			mounted := ""
+			if mnt.Name != "" {
+				mounted = mnt.Name
+			} else {
+				mounted = mnt.UUID
+			}
+			if mnt.ReadOnly {
+				mounted = mounted + ":ro"
+			}
+			mountedBy = append(mountedBy, mounted)
+		}
+		table.AddField(strings.Join(mountedBy, ","), nil)
+
 		table.AddField(string(volume.State), nil)
 		table.AddField(fmt.Sprintf("%t", volume.Persistent), nil)
 
