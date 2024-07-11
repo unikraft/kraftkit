@@ -155,7 +155,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 	paramodel, err = processTree(ctx, "Spawning temporary volume data import instance",
 		func(ctx context.Context) error {
-			if authStr, err = genRandAuth(); err != nil {
+			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
 			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)

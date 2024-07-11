@@ -6,22 +6,30 @@
 package tunnel
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"kraftkit.sh/log"
 )
 
-// Relay relays TCP connections to a local listener to a remote host over TLS.
+// Relay relays connections from a local listener to a remote host over TLS.
 type Relay struct {
 	lAddr string
 	rAddr string
+	ctype string
+	auth  string
+	name  string
 }
+
+const Heartbeat = "\xf0\x9f\x91\x8b\xf0\x9f\x90\x92\x00"
 
 func (r *Relay) Up(ctx context.Context) error {
 	l, err := r.listenLocal(ctx)
@@ -31,7 +39,7 @@ func (r *Relay) Up(ctx context.Context) error {
 	defer func() { l.Close() }()
 	go func() { <-ctx.Done(); l.Close() }()
 
-	log.G(ctx).Info("Tunnelling ", l.Addr(), " to ", r.rAddr)
+	log.G(ctx).Info("tunnelling ", l.Addr(), " to ", r.rAddr)
 
 	for {
 		conn, err := l.Accept()
@@ -43,7 +51,32 @@ func (r *Relay) Up(ctx context.Context) error {
 		}
 
 		c := r.newConnection(conn)
-		go c.handle(ctx)
+		go c.handle(ctx, []byte(r.auth), r.name)
+	}
+}
+
+func (r *Relay) ControlUp(ctx context.Context, ready chan struct{}) error {
+	rc, err := r.dialRemote(ctx)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	go func() { <-ctx.Done(); rc.Close() }()
+
+	ready <- struct{}{}
+	close(ready)
+
+	// Heartbeat every minute to keep the connection alive
+	_, err = io.CopyN(rc, bytes.NewReader([]byte(r.auth+Heartbeat)), int64(len(r.auth)+9))
+	if err != nil {
+		return err
+	}
+	for {
+		time.Sleep(time.Minute)
+		_, err := io.CopyN(rc, bytes.NewReader([]byte(Heartbeat)), 9)
+		if err != nil {
+			return err
+		}
 	}
 }
 
@@ -62,7 +95,7 @@ func (r *Relay) dialRemote(ctx context.Context) (net.Conn, error) {
 
 func (r *Relay) listenLocal(ctx context.Context) (net.Listener, error) {
 	var lc net.ListenConfig
-	return lc.Listen(ctx, "tcp4", r.lAddr)
+	return lc.Listen(ctx, r.ctype+"4", r.lAddr)
 }
 
 // connection represents the server side of a connection to a local TCP socket.
@@ -75,19 +108,20 @@ type connection struct {
 
 // handle handles the client connection by relaying reads and writes from/to
 // the remote host.
-func (c *connection) handle(ctx context.Context) {
-	log.G(ctx).Info("Accepted client connection ", c.conn.RemoteAddr())
+func (c *connection) handle(ctx context.Context, auth []byte, instance string) {
 	defer func() {
 		c.conn.Close()
-		log.G(ctx).Info("Closed client connection ", c.conn.RemoteAddr())
+		log.G(ctx).Info("closed client connection ", c.conn.RemoteAddr())
 	}()
 
 	rc, err := c.relay.dialRemote(ctx)
 	if err != nil {
-		log.G(ctx).WithError(err).Error("Failed to connect to remote host")
+		log.G(ctx).WithError(err).Error("failed to connect to remote host")
 		return
 	}
 	defer rc.Close()
+
+	log.G(ctx).Info("accepted client connection ", c.conn.RemoteAddr(), " to ", rc.LocalAddr(), "->", rc.RemoteAddr())
 
 	// NOTE(antoineco): these calls are critical as they allow reads/writes to be
 	// later cancelled, because the deadline applies to all future and pending
@@ -99,7 +133,42 @@ func (c *connection) handle(ctx context.Context) {
 		_ = c.conn.SetDeadline(immediateNetCancel)
 	}()
 
-	const bufSize = 32 * 1024 // same as io.Copy
+	if len(auth) > 0 {
+		_, err = rc.Write(auth)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("failed to write auth to remote host")
+			return
+		}
+
+		var status []byte
+		statusRaw := bytes.NewBuffer(status)
+		n, err := io.CopyN(statusRaw, rc, 2)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("failed to read auth status from remote host")
+			return
+		}
+
+		if n != 2 {
+			log.G(ctx).Error("invalid auth status from remote host")
+			return
+		}
+
+		var statusParsed int16
+		err = binary.Read(statusRaw, binary.LittleEndian, &statusParsed)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("failed to parse auth status from remote host")
+			return
+		}
+
+		if statusParsed == 0 {
+			log.G(ctx).Error("no more available connections to remote host. Try again later")
+			return
+		} else if statusParsed < 0 {
+			log.G(ctx).Errorf("internal tunnel error (C=%d), to view logs run:", statusParsed)
+			fmt.Fprintf(log.G(ctx).Out, "\n    kraft cloud instance logs %s\n\n", instance)
+			return
+		}
+	}
 
 	writerDone := make(chan struct{})
 	go func() {
@@ -108,36 +177,25 @@ func (c *connection) handle(ctx context.Context) {
 			writerDone <- struct{}{}
 		}()
 
-		writeBuf := make([]byte, bufSize)
-		for {
-			n, err := c.conn.Read(writeBuf)
-			if err != nil {
-				if !errors.Is(err, io.EOF) {
-					log.G(ctx).WithError(err).Error("Failed to read from client")
-				}
+		_, err = io.Copy(rc, c.conn)
+		if err != nil {
+			if isNetClosedError(err) {
 				return
 			}
-			if _, err := rc.Write(writeBuf[:n]); err != nil {
-				log.G(ctx).WithError(err).Error("Failed to write to remote host")
-				return
+			if !isNetTimeoutError(err) {
+				log.G(ctx).WithError(err).Error("failed to copy data from client to remote host")
 			}
 		}
 	}()
 
-	readBuf := make([]byte, bufSize)
-	for {
-		n, err := rc.Read(readBuf)
-		if err != nil {
-			// expected when the connection gets aborted by a deadline
-			if !isNetTimeoutError(err) {
-				log.G(ctx).WithError(err).Error("Failed to read from remote host")
-			}
-			break
+	_, err = io.Copy(c.conn, rc)
+	if err != nil {
+		if !isNetTimeoutError(err) {
+			log.G(ctx).WithError(err).Error("failed to copy data from remote host to client")
 		}
-		if _, err := c.conn.Write(readBuf[:n]); err != nil {
-			log.G(ctx).WithError(err).Error("Failed to write to client")
-			break
-		}
+	} else {
+		// Connection was closed remote so we just return to close our side
+		return
 	}
 
 	<-writerDone
@@ -156,4 +214,14 @@ func isNetTimeoutError(err error) bool {
 		return neterr.Timeout()
 	}
 	return false
+}
+
+// isNetClosedError reports whether err is a network closed error.
+// - first error is for the case when the writer tries to write but the main
+// thread already closed the connection.
+// - second error is for when reader is still reading but the remote closed
+// the connection.
+func isNetClosedError(err error) bool {
+	return strings.Contains(err.Error(), "use of closed network connection") ||
+		strings.Contains(err.Error(), "connection reset by peer")
 }
