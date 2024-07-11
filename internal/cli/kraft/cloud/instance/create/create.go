@@ -35,31 +35,33 @@ import (
 )
 
 type CreateOptions struct {
-	Auth                *config.AuthConfig        `noattribute:"true"`
-	Client              kraftcloud.KraftCloud     `noattribute:"true"`
-	Env                 []string                  `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features            []string                  `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	Domain              []string                  `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
-	Image               string                    `noattribute:"true"`
-	Entrypoint          types.ShellCommand        `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
-	Memory              string                    `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
-	Metro               string                    `noattribute:"true"`
-	Name                string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output              string                    `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Ports               []string                  `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	RestartPolicy       kcinstances.RestartPolicy `noattribute:"true"`
-	Replicas            uint                      `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout             RolloutStrategy           `noattribute:"true"`
-	RolloutQualifier    RolloutQualifier          `noattribute:"true"`
-	RolloutWait         time.Duration             `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
-	ServiceNameOrUUID   string                    `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
-	Start               bool                      `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
-	ScaleToZero         bool                      `local:"true" long:"scale-to-zero" short:"0" usage:"Scale the instance to zero after deployment"`
-	SubDomain           []string                  `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Token               string                    `noattribute:"true"`
-	Volumes             []string                  `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage        bool                      `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration             `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+	Auth                *config.AuthConfig            `noattribute:"true"`
+	Client              kraftcloud.KraftCloud         `noattribute:"true"`
+	Env                 []string                      `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features            []string                      `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	Domain              []string                      `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
+	Image               string                        `noattribute:"true"`
+	Entrypoint          types.ShellCommand            `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
+	Memory              string                        `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
+	Metro               string                        `noattribute:"true"`
+	Name                string                        `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
+	Output              string                        `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Ports               []string                      `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	RestartPolicy       kcinstances.RestartPolicy     `noattribute:"true"`
+	Replicas            uint                          `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout             RolloutStrategy               `noattribute:"true"`
+	RolloutQualifier    RolloutQualifier              `noattribute:"true"`
+	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
+	ServiceNameOrUUID   string                        `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
+	Start               bool                          `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero         kcinstances.ScaleToZeroPolicy `noattribute:"true"`
+	ScaleToZeroStateful bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
+	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero"`
+	SubDomain           []string                      `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Token               string                        `noattribute:"true"`
+	Volumes             []string                      `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage        bool                          `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
@@ -163,10 +165,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	var features []kcinstances.Feature
 
-	if opts.ScaleToZero {
-		features = append(features, kcinstances.FeatureScaleToZero)
-	}
-
 	for _, feature := range opts.Features {
 		formattedFeature := kcinstances.Feature(feature)
 		if !slices.Contains(features, formattedFeature) {
@@ -218,6 +216,22 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 	if opts.Replicas > 0 {
 		req.Replicas = ptr(int(opts.Replicas))
+	}
+
+	if opts.ScaleToZeroCooldown != 0 || opts.ScaleToZeroStateful || opts.ScaleToZero != kcinstances.ScaleToZeroPolicyOff {
+		req.ScaleToZero = &kcinstances.ScaleToZero{}
+	}
+
+	if opts.ScaleToZeroCooldown != 0 {
+		req.ScaleToZero.CooldownTimeMs = ptr(int(opts.ScaleToZeroCooldown.Milliseconds()))
+	}
+
+	if opts.ScaleToZeroStateful {
+		req.ScaleToZero.Stateful = ptr(true)
+	}
+
+	if opts.ScaleToZero != kcinstances.ScaleToZeroPolicyOff {
+		req.ScaleToZero.Policy = &opts.ScaleToZero
 	}
 
 	for _, vol := range opts.Volumes {
@@ -671,6 +685,15 @@ func NewCmd() *cobra.Command {
 		),
 		"restart",
 		"Set the restart policy for the instance (never/always/on-failure)",
+	)
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[kcinstances.ScaleToZeroPolicy](
+			kcinstances.ScaleToZeroPolicies(),
+			kcinstances.ScaleToZeroPolicyOn,
+		),
+		"scale-to-zero",
+		"Scale to zero policy of the instance (on/off/idle)",
 	)
 
 	return cmd
