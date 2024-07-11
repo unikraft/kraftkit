@@ -204,11 +204,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 				if err != nil {
 					return fmt.Errorf("could not create runtime: %w", err)
 				}
-
 				project, err = app.NewApplicationFromOptions(
 					app.WithRuntime(runtime),
 					app.WithName(appName),
-					app.WithTargets(target.DefaultKraftCloudTarget),
+					app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
 					app.WithCommand(service.Command...),
 					app.WithWorkingDir(service.Build.Context),
 					app.WithRootfs(filepath.Join(service.Build.Context, service.Build.Dockerfile)),
@@ -265,7 +264,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			project, err = app.NewApplicationFromOptions(
 				app.WithRuntime(rt),
 				app.WithName(appName),
-				app.WithTargets(target.DefaultKraftCloudTarget),
+				app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
 				app.WithRootfs(service.Image),
 			)
 			if err != nil {
