@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cavaliergopher/cpio"
+	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
 )
 

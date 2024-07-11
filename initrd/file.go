@@ -9,7 +9,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/cavaliergopher/cpio"
+	"kraftkit.sh/cpio"
 )
 
 type file struct {
@@ -42,7 +42,7 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 
 	// Iterate through the files in the archive.
 	for {
-		_, err := reader.Next()
+		_, _, err := reader.Next()
 		if err == io.EOF {
 			// end of cpio archive
 			break

@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/cavaliergopher/cpio"
+	"kraftkit.sh/cpio"
 )
 
 func compressFiles(output string, writer *cpio.Writer, reader *os.File) error {
