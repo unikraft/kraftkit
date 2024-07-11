@@ -739,6 +739,7 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
 	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
+	opts.ScaleToZero = kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
 
 	if !utils.IsValidOutputFormat(opts.Output) {
 		return fmt.Errorf("invalid output format: %s", opts.Output)

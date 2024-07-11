@@ -157,6 +157,7 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Rollout = create.RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = create.RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+	opts.ScaleToZero = kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
 
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
