@@ -138,6 +138,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("ENV", cs.Bold)
 		table.AddField("VOLUMES", cs.Bold)
 		table.AddField("SERVICE", cs.Bold)
+		table.AddField("SNAPSHOT", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
 	if format != "table" {
@@ -183,6 +184,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil) // ENV
 				table.AddField("", nil) // VOLUMES
 				table.AddField("", nil) // SERVICE
+				table.AddField("", nil) // SNAPSHOT
 			}
 			table.AddField("", nil) // BOOT TIME
 			if format != "table" {
@@ -310,6 +312,12 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			table.AddField(strings.Join(vols, ", "), nil)
 			if instance.ServiceGroup != nil {
 				table.AddField(instance.ServiceGroup.UUID, nil)
+			} else {
+				table.AddField("", nil)
+			}
+
+			if instance.Snapshot != nil {
+				table.AddField("present", nil)
 			} else {
 				table.AddField("", nil)
 			}
