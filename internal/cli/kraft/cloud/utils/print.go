@@ -138,6 +138,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("ENV", cs.Bold)
 		table.AddField("VOLUMES", cs.Bold)
 		table.AddField("SERVICE", cs.Bold)
+		table.AddField("SNAPSHOT", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
 	if format != "table" {
@@ -183,6 +184,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil) // ENV
 				table.AddField("", nil) // VOLUMES
 				table.AddField("", nil) // SERVICE
+				table.AddField("", nil) // SNAPSHOT
 			}
 			table.AddField("", nil) // BOOT TIME
 			if format != "table" {
@@ -313,6 +315,12 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			} else {
 				table.AddField("", nil)
 			}
+
+			if instance.Snapshot != nil {
+				table.AddField("present", nil)
+			} else {
+				table.AddField("", nil)
+			}
 		}
 
 		table.AddField(fmt.Sprintf("%.2f ms", float64(instance.BootTimeUs)/1000), nil)
@@ -367,6 +375,7 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 	table.AddField("CREATED AT", cs.Bold)
 	table.AddField("SIZE", cs.Bold)
 	table.AddField("ATTACHED TO", cs.Bold)
+	table.AddField("MOUNTED BY", cs.Bold)
 	table.AddField("STATE", cs.Bold)
 	table.AddField("PERSISTENT", cs.Bold)
 	table.EndRow()
@@ -401,8 +410,23 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 				attachedTo = append(attachedTo, attch.UUID)
 			}
 		}
-
 		table.AddField(strings.Join(attachedTo, ","), nil)
+
+		var mountedBy []string
+		for _, mnt := range volume.MountedBy {
+			mounted := ""
+			if mnt.Name != "" {
+				mounted = mnt.Name
+			} else {
+				mounted = mnt.UUID
+			}
+			if mnt.ReadOnly {
+				mounted = mounted + ":ro"
+			}
+			mountedBy = append(mountedBy, mounted)
+		}
+		table.AddField(strings.Join(mountedBy, ","), nil)
+
 		table.AddField(string(volume.State), nil)
 		table.AddField(fmt.Sprintf("%t", volume.Persistent), nil)
 
