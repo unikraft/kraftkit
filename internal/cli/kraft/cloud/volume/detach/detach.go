@@ -24,6 +24,7 @@ import (
 type DetachOptions struct {
 	Auth   *config.AuthConfig       `noattribute:"true"`
 	Client kcvolumes.VolumesService `noattribute:"true"`
+	From   string                   `long:"from" usage:"The instance the volume should be detached from"`
 
 	metro string
 	token string
@@ -37,8 +38,11 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"det"},
 		Long:    "Detach a volume from an instance.",
 		Example: heredoc.Doc(`
-			# Detach a volume from an instance
+			# Detach a volume from all instances
 			$ kraft cloud volume detach 77d0316a-fbbe-488d-8618-5bf7a612477a
+
+			# Detach a volume from an instance with a name
+			$ kraft cloud volume detach --from my-instance 77d0316a-fbbe-488d-8618-5bf7a612477a
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
@@ -76,7 +80,7 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 		)
 	}
 
-	detachResp, err := opts.Client.WithMetro(opts.metro).Detach(ctx, args[0])
+	detachResp, err := opts.Client.WithMetro(opts.metro).Detach(ctx, args[0], opts.From)
 	if err != nil {
 		return fmt.Errorf("could not detach volume: %w", err)
 	}
