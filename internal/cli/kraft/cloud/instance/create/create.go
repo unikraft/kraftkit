@@ -743,6 +743,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
+	if opts.ScaleToZeroCooldown < time.Millisecond && opts.ScaleToZeroCooldown != 0 {
+		return fmt.Errorf("scale-to-zero-cooldown needs to be at least 1ms: %s", opts.ScaleToZeroCooldown)
+	}
+
 	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
 	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
