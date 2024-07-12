@@ -52,17 +52,17 @@ type CreateOptions struct {
 	Replicas            uint                          `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Rollout             RolloutStrategy               `noattribute:"true"`
 	RolloutQualifier    RolloutQualifier              `noattribute:"true"`
-	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
+	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	ServiceNameOrUUID   string                        `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
 	Start               bool                          `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero         kcinstances.ScaleToZeroPolicy `noattribute:"true"`
 	ScaleToZeroStateful bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
-	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero"`
+	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
 	SubDomain           []string                      `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token               string                        `noattribute:"true"`
 	Volumes             []string                      `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage        bool                          `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
