@@ -33,6 +33,7 @@ import (
 type DeployOptions struct {
 	Auth                *config.AuthConfig            `noattribute:"true"`
 	Client              kraftcloud.KraftCloud         `noattribute:"true"`
+	Certificate         []string                      `local:"true" long:"certificate" short:"C" usage:"Set the certificates to use for the service"`
 	Compress            bool                          `local:"true" long:"compress" short:"z" usage:"Compress the initrd package (experimental)"`
 	DeployAs            string                        `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
 	Domain              []string                      `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
