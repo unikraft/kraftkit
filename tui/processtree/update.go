@@ -48,6 +48,7 @@ func (pt *ProcessTree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pti.status = StatusFailed
 				if pt.failFast {
 					pt.quitting = true
+					pt.err = pti.err
 					cmd = tea.Quit
 				}
 			} else {
