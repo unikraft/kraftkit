@@ -121,6 +121,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 	}
 
 	return create.Create(ctx, &create.CreateOptions{
+		Certificate:         opts.Certificate,
 		Env:                 opts.Env,
 		Domain:              opts.Domain,
 		Image:               packs[0].ID(),
@@ -134,6 +135,8 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		RolloutQualifier:    opts.RolloutQualifier,
 		RolloutWait:         opts.RolloutWait,
 		ScaleToZero:         opts.ScaleToZero,
+		ScaleToZeroStateful: opts.ScaleToZeroStateful,
+		ScaleToZeroCooldown: opts.ScaleToZeroCooldown,
 		ServiceNameOrUUID:   opts.ServiceNameOrUUID,
 		Start:               !opts.NoStart,
 		SubDomain:           opts.SubDomain,
