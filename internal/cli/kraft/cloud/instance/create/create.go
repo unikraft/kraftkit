@@ -277,7 +277,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	// preemptively look up information about it.  Based on whether there are
 	// active instances inside of this service, we can then decide how to
 	// proceed with the deployment (aka rollout strategies).
-	if opts.Start && len(opts.ServiceNameOrUUID) > 0 {
+	if len(opts.ServiceNameOrUUID) > 0 {
 		log.G(ctx).
 			WithField("service", opts.ServiceNameOrUUID).
 			Trace("finding")
@@ -302,81 +302,83 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			UUID: &service.UUID,
 		}
 
-		// Find out if there are any existing instances in this service.
-		allInstanceUUIDs := make([]string, len(service.Instances))
-		for i, instance := range service.Instances {
-			allInstanceUUIDs[i] = instance.UUID
-		}
-
-		var instances []kcinstances.GetResponseItem
-		if len(allInstanceUUIDs) > 0 {
-			log.G(ctx).
-				WithField("service", opts.ServiceNameOrUUID).
-				Trace("getting instances in")
-
-			instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, allInstanceUUIDs...)
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
+		if opts.Start {
+			// Find out if there are any existing instances in this service.
+			allInstanceUUIDs := make([]string, len(service.Instances))
+			for i, instance := range service.Instances {
+				allInstanceUUIDs[i] = instance.UUID
 			}
 
-			instances, err = instancesResp.AllOrErr()
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
-			}
-		} else {
-			log.G(ctx).
-				WithField("service", opts.ServiceNameOrUUID).
-				Trace("no existing instances in service")
-		}
+			var instances []kcinstances.GetResponseItem
+			if len(allInstanceUUIDs) > 0 {
+				log.G(ctx).
+					WithField("service", opts.ServiceNameOrUUID).
+					Trace("getting instances in")
 
-		switch opts.RolloutQualifier {
-		case RolloutQualifierImageName:
-			imageBase := opts.Image
-			if strings.Contains(opts.Image, "@") {
-				imageBase, _, _ = strings.Cut(opts.Image, "@")
-			} else if strings.Contains(opts.Image, ":") {
-				imageBase, _, _ = strings.Cut(opts.Image, ":")
-			}
-
-			for _, instance := range instances {
-				instImageBase, _, _ := strings.Cut(instance.Image, "@")
-				if instImageBase == imageBase {
-					qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
+				instancesResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, allInstanceUUIDs...)
+				if err != nil {
+					return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
 				}
-			}
 
-		case RolloutQualifierInstanceName:
-			for _, instance := range instances {
-				if instance.Name == opts.Name {
-					qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
+				instances, err = instancesResp.AllOrErr()
+				if err != nil {
+					return nil, nil, fmt.Errorf("could not get instances of service '%s': %w", opts.ServiceNameOrUUID, err)
 				}
+			} else {
+				log.G(ctx).
+					WithField("service", opts.ServiceNameOrUUID).
+					Trace("no existing instances in service")
 			}
 
-		case RolloutQualifierAll:
-			qualifiedInstancesToRolloutOver = instances
+			switch opts.RolloutQualifier {
+			case RolloutQualifierImageName:
+				imageBase := opts.Image
+				if strings.Contains(opts.Image, "@") {
+					imageBase, _, _ = strings.Cut(opts.Image, "@")
+				} else if strings.Contains(opts.Image, ":") {
+					imageBase, _, _ = strings.Cut(opts.Image, ":")
+				}
 
-		default: // case RolloutQualifierNone:
-			// No-op
-		}
+				for _, instance := range instances {
+					instImageBase, _, _ := strings.Cut(instance.Image, "@")
+					if instImageBase == imageBase {
+						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
+					}
+				}
 
-		if len(qualifiedInstancesToRolloutOver) > 0 && opts.Rollout == StrategyPrompt {
-			strategy, err := selection.Select(
-				fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
-				RolloutStrategies()...,
-			)
-			if err != nil {
-				return nil, nil, err
+			case RolloutQualifierInstanceName:
+				for _, instance := range instances {
+					if instance.Name == opts.Name {
+						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
+					}
+				}
+
+			case RolloutQualifierAll:
+				qualifiedInstancesToRolloutOver = instances
+
+			default: // case RolloutQualifierNone:
+				// No-op
 			}
 
-			log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
+			if len(qualifiedInstancesToRolloutOver) > 0 && opts.Rollout == StrategyPrompt {
+				strategy, err := selection.Select(
+					fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
+					RolloutStrategies()...,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			opts.Rollout = *strategy
-		}
+				log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
 
-		// Return early if the rollout strategy is set to exit on conflict and there
-		// are existing instances in the service.
-		if opts.Rollout == RolloutStrategyExit {
-			return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
+				opts.Rollout = *strategy
+			}
+
+			// Return early if the rollout strategy is set to exit on conflict and there
+			// are existing instances in the service.
+			if opts.Rollout == RolloutStrategyExit {
+				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
+			}
 		}
 	}
 
