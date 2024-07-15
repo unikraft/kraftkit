@@ -28,7 +28,7 @@ import (
 
 type EventOptions struct {
 	platform     string
-	Granularity  time.Duration `long:"poll-granularity" short:"g" usage:"How often the machine store and state should polled"`
+	Granularity  time.Duration `long:"poll-granularity" short:"g" usage:"How often the machine store and state should polled (ms/s/m/h)"`
 	QuitTogether bool          `long:"quit-together" short:"q" usage:"Exit event loop when machine exits"`
 }
 

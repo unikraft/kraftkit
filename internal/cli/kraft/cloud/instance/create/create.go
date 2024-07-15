@@ -46,23 +46,23 @@ type CreateOptions struct {
 	Memory              string                        `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
 	Metro               string                        `noattribute:"true"`
 	Name                string                        `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output              string                        `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Output              string                        `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 	Ports               []string                      `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
 	RestartPolicy       kcinstances.RestartPolicy     `noattribute:"true"`
 	Replicas            uint                          `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Rollout             RolloutStrategy               `noattribute:"true"`
 	RolloutQualifier    RolloutQualifier              `noattribute:"true"`
-	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action" default:"10s"`
+	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	ServiceNameOrUUID   string                        `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
 	Start               bool                          `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero         kcinstances.ScaleToZeroPolicy `noattribute:"true"`
 	ScaleToZeroStateful bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
-	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero"`
+	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
 	SubDomain           []string                      `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token               string                        `noattribute:"true"`
 	Volumes             []string                      `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage        bool                          `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image" default:"60s"`
+	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
@@ -743,6 +743,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
+	if opts.ScaleToZeroCooldown < time.Millisecond && opts.ScaleToZeroCooldown != 0 {
+		return fmt.Errorf("scale-to-zero-cooldown needs to be at least 1ms: %s", opts.ScaleToZeroCooldown)
+	}
+
 	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
 	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
@@ -769,7 +773,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if len(insts) > 1 || opts.Output == "table" || opts.Output == "list" || opts.Output == "json" {
+	if len(insts) > 1 || opts.Output == "table" || opts.Output == "json" {
 		return utils.PrintInstances(ctx, opts.Output, *instResp)
 	}
 
