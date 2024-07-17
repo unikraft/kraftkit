@@ -24,7 +24,6 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
@@ -226,9 +225,7 @@ func processTree(ctx context.Context, txt string, fn processtree.SpinnerProcess)
 		ctx,
 		[]processtree.ProcessTreeOption{
 			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
+			processtree.WithRenderer(true),
 			processtree.WithFailFast(true),
 			processtree.WithHideOnSuccess(false),
 		},
