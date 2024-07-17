@@ -35,7 +35,7 @@ type ImportOptions struct {
 	Token string             `noattribute:"true"`
 	Metro string             `noattribute:"true"`
 
-	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"utils/volimport:latest"`
+	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"official/utils/volimport:latest"`
 	Force          bool   `local:"true" long:"force" short:"f" usage:"Force import, even if it might fail"`
 	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile, Docker link, cpio file)" default:"."`
 	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds"`
