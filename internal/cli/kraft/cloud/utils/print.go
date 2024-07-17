@@ -138,7 +138,9 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		table.AddField("ENV", cs.Bold)
 		table.AddField("VOLUMES", cs.Bold)
 		table.AddField("SERVICE", cs.Bold)
-		table.AddField("SNAPSHOT", cs.Bold)
+		table.AddField("SCALE TO ZERO", cs.Bold)
+		table.AddField("SCALE TO ZERO COOLDOWN", cs.Bold)
+		table.AddField("SCALE TO ZERO STATEFUL", cs.Bold)
 	}
 	table.AddField("BOOT TIME", cs.Bold)
 	if format != "table" {
@@ -184,7 +186,9 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil) // ENV
 				table.AddField("", nil) // VOLUMES
 				table.AddField("", nil) // SERVICE
-				table.AddField("", nil) // SNAPSHOT
+				table.AddField("", nil) // SCALE TO ZERO
+				table.AddField("", nil) // SCALE TO ZERO COOLDOWN
+				table.AddField("", nil) // SCALE TO ZERO STATEFUL
 			}
 			table.AddField("", nil) // BOOT TIME
 			if format != "table" {
@@ -316,9 +320,13 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil)
 			}
 
-			if instance.Snapshot != nil {
-				table.AddField("present", nil)
+			if instance.ScaleToZero != nil {
+				table.AddField(instance.ScaleToZero.Policy.String(), nil)
+				table.AddField(fmt.Sprintf("%d", *instance.ScaleToZero.CooldownTimeMs), nil)
+				table.AddField(fmt.Sprintf("%t", *instance.ScaleToZero.Stateful), nil)
 			} else {
+				table.AddField("", nil)
+				table.AddField("", nil)
 				table.AddField("", nil)
 			}
 		}
