@@ -58,22 +58,22 @@ func NewCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		Example: heredoc.Doc(`
 			# Forward the local port 8080 to the tcp port 8080 of the private instance 'my-instance'
-			$ kraft cloud my-instance:8080
+			$ kraft cloud tunnel my-instance:8080
 
 			# Forward the local port 8443 to the tcp port 8080 of the private instance 'my-instance'
-			$ kraft cloud 8443:my-instance:8080/tcp
+			$ kraft cloud tunnel 8443:my-instance:8080/tcp
 
 			# Forward multiple ports to multiple instances
-			$ kraft cloud 8080:my-instance1:8080/tcp 8443:my-instance2:8080/tcp
+			$ kraft cloud tunnel 8080:my-instance1:8080/tcp 8443:my-instance2:8080/tcp
 
 			# Forward the local port 8080 to the tcp port 8080 of the private instance 'my-instance' and use port 5500 for the tunnel
-			$ kraft cloud -p 5500 my-instance:8080
+			$ kraft cloud tunnel -p 5500 my-instance:8080
 
 			# Forward the local ports 8080,8081 to the tcp ports 8080,8081 of the private instance 'my-instance' and use ports 5500,5505 for the tunnel
-			$ kraft cloud -p 5500 -p 5505 my-instance:8080 my-instance2:8081
+			$ kraft cloud tunnel -p 5500 -p 5505 my-instance:8080 my-instance2:8081
 
 			# Forward the local ports 8080,8081 to the tcp ports 8080,8081 of the private instance 'my-instance' and use ports 5500,5501 for the tunnel
-			$ kraft cloud my-instance:8080 my-instance2:8081
+			$ kraft cloud tunnel my-instance:8080 my-instance2:8081
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
