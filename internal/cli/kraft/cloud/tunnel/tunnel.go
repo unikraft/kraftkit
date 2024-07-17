@@ -54,11 +54,17 @@ type TunnelOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&TunnelOptions{}, cobra.Command{
 		Short: "Forward a local port to an instance through a TLS tunnel",
-		Use:   "tunnel [FLAGS] [LOCAL_PORT:]INSTANCE:DEST_PORT[/TYPE] [[LOCAL_PORT:]INSTANCE:DEST_PORT[/TYPE]]...",
+		Use:   "tunnel [FLAGS] [LOCAL_PORT:](INSTANCE|PRIVATE IP|PRIVATE FQDN):DEST_PORT[/TYPE] [[LOCAL_PORT:](INSTANCE|PRIVATE IP|PRIVATE FQDN):DEST_PORT[/TYPE]]...",
 		Args:  cobra.MinimumNArgs(1),
 		Example: heredoc.Doc(`
 			# Forward the local port 8080 to the tcp port 8080 of the private instance 'my-instance'
 			$ kraft cloud tunnel my-instance:8080
+
+			# Forward the local port 8080 to the tcp port 8080 of the private fqdn 'my-instance.internal'
+			$ kraft cloud tunnel my-instance.internal:8080
+
+			# Forward the local port 8080 to the tcp port 8080 of the private instance ip '172.16.28.8'
+			$ kraft cloud tunnel 172.16.28.8:8080
 
 			# Forward the local port 8443 to the tcp port 8080 of the private instance 'my-instance'
 			$ kraft cloud tunnel 8443:my-instance:8080/tcp
