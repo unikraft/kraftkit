@@ -150,7 +150,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	}
 
 	var authStr string
-	var instID string
 	var instFQDN string
 
 	paramodel, err = processTree(ctx, "Spawning temporary volume data import instance",
@@ -158,7 +157,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
+			_, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
 			return err
 		},
 	)
@@ -168,13 +167,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	if err = paramodel.Start(); err != nil {
 		return NotLoggable(err) // already logged by runner
 	}
-
-	defer func() {
-		noInterrupt := context.Background()
-		retErr = errors.Join(retErr,
-			terminateVolimport(noInterrupt, icli, instID),
-		)
-	}()
 
 	// FIXME(antoineco): due to a bug in KraftKit, paraprogress.Start() returns a
 	// nil error upon context cancellation. We temporarily handle potential copy

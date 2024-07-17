@@ -14,8 +14,6 @@ import (
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 	kcvolumes "sdk.kraft.cloud/volumes"
-
-	"kraftkit.sh/internal/retrytimeout"
 )
 
 // volumeSanityCheck verifies that the given volume is suitable for import.
@@ -89,42 +87,6 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, 
 	}
 
 	return inst.UUID, inst.ServiceGroup.Domains[0].FQDN, nil
-}
-
-// terminateVolimport deletes the volume data import instance once it has
-// reached the "stopped" state.
-func terminateVolimport(ctx context.Context, icli kcinstances.InstancesService, instID string) error {
-	err := retrytimeout.RetryTimeout(3*time.Second, func() (retErr error) {
-		defer func() {
-			if retErr != nil {
-				time.Sleep(time.Millisecond * 100)
-			}
-		}()
-		getinstResp, err := icli.Get(ctx, instID)
-		if err != nil {
-			return fmt.Errorf("getting instance status: %w", err)
-		}
-		inst, err := getinstResp.FirstOrErr()
-		if err != nil {
-			return fmt.Errorf("getting instance status: %w", err)
-		}
-		if inst.State != "stopped" {
-			return fmt.Errorf("instance has not yet stopped (state: %s)", inst.State)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("waiting for volume data import instance '%s' to stop: %w", instID, err)
-	}
-
-	delinstResp, err := icli.Delete(ctx, instID)
-	if err != nil {
-		return fmt.Errorf("deleting volume data import instance '%s': %w", instID, err)
-	}
-	if _, err = delinstResp.FirstOrErr(); err != nil {
-		return fmt.Errorf("deleting volume data import instance '%s': %w", instID, err)
-	}
-	return nil
 }
 
 func ptr[T comparable](v T) *T { return &v }
