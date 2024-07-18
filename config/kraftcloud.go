@@ -64,7 +64,7 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 	} else if auth, ok := G[KraftKit](ctx).Auth["index.unikraft.io"]; ok {
 		return &auth, nil
 	} else {
-		return nil, fmt.Errorf("could not determine unikraftcloud user token: try setting `UNIKRAFTCLOUD_TOKEN`")
+		return nil, fmt.Errorf("could not determine unikraft cloud user token: try setting `UKC_TOKEN`")
 	}
 
 	return &auth, nil

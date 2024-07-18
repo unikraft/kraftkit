@@ -75,7 +75,7 @@ var _ = Describe("kraft cloud instance create", func() {
 		}
 
 		if token == "" {
-			Skip("UNIKRAFTCLOUD_TOKEN is not set")
+			Skip("UKC_TOKEN is not set")
 		}
 
 		metro := os.Getenv("UNIKRAFTCLOUD_METRO")
@@ -93,7 +93,7 @@ var _ = Describe("kraft cloud instance create", func() {
 		}
 
 		if metro == "" {
-			Skip("UNIKRAFTCLOUD_METRO is not set")
+			Skip("UKC_METRO is not set")
 		}
 
 		stdout = fcmd.NewIOStream()
