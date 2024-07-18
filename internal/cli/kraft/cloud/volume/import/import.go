@@ -24,7 +24,6 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
@@ -35,7 +34,7 @@ type ImportOptions struct {
 	Token string             `noattribute:"true"`
 	Metro string             `noattribute:"true"`
 
-	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"utils/volimport:latest"`
+	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"official/utils/volimport:latest"`
 	Force          bool   `local:"true" long:"force" short:"f" usage:"Force import, even if it might fail"`
 	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile, Docker link, cpio file)" default:"."`
 	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds"`
@@ -150,7 +149,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	}
 
 	var authStr string
-	var instID string
 	var instFQDN string
 
 	paramodel, err = processTree(ctx, "Spawning temporary volume data import instance",
@@ -158,7 +156,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
+			_, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
 			return err
 		},
 	)
@@ -168,13 +166,6 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	if err = paramodel.Start(); err != nil {
 		return NotLoggable(err) // already logged by runner
 	}
-
-	defer func() {
-		noInterrupt := context.Background()
-		retErr = errors.Join(retErr,
-			terminateVolimport(noInterrupt, icli, instID),
-		)
-	}()
 
 	// FIXME(antoineco): due to a bug in KraftKit, paraprogress.Start() returns a
 	// nil error upon context cancellation. We temporarily handle potential copy
@@ -234,9 +225,7 @@ func processTree(ctx context.Context, txt string, fn processtree.SpinnerProcess)
 		ctx,
 		[]processtree.ProcessTreeOption{
 			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
+			processtree.WithRenderer(true),
 			processtree.WithFailFast(true),
 			processtree.WithHideOnSuccess(false),
 		},

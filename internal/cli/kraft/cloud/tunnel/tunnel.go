@@ -29,7 +29,7 @@ import (
 type TunnelOptions struct {
 	ProxyPorts         []string `local:"true" long:"proxy-ports" short:"p" usage:"Ports to use for the proxies. Default start port is 4444"`
 	ProxyControlPort   uint     `local:"true" long:"proxy-control-port" short:"P" usage:"Port to use for the proxy control" default:"4443"`
-	TunnelServiceImage string   `local:"true" long:"tunnel-service-image" usage:"Tunnel service image to use" default:"utils/tunnel:latest"`
+	TunnelServiceImage string   `local:"true" long:"tunnel-service-image" usage:"Tunnel service image to use" default:"official/utils/tunnel:latest"`
 	Token              string   `noattribute:"true"`
 	Metro              string   `noattribute:"true"`
 
