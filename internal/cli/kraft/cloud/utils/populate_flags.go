@@ -26,7 +26,7 @@ func PopulateMetroToken(cmd *cobra.Command, metro, token *string) error {
 		}
 
 		if *metro == "" {
-			return fmt.Errorf("kraftcloud metro is unset, try setting `UNIKRAFTCLOUD_METRO`, or use the `--metro` flag")
+			return fmt.Errorf("unikraft cloud metro is unset, try setting `UKC_METRO`, or use the `--metro` flag")
 		}
 	}
 

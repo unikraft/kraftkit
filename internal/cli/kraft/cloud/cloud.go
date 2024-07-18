@@ -28,8 +28,8 @@ import (
 )
 
 type CloudOptions struct {
-	Metro string `long:"metro" env:"UNIKRAFTCLOUD_METRO" usage:"Set the UnikraftCloud metro"`
-	Token string `long:"token" env:"UNIKRAFTCLOUD_TOKEN" usage:"Set the UnikraftCloud token"`
+	Metro string `long:"metro" env:"UKC_METRO" usage:"Set the UnikraftCloud metro"`
+	Token string `long:"token" env:"UKC_TOKEN" usage:"Set the UnikraftCloud token"`
 }
 
 func NewCmd() *cobra.Command {
@@ -45,10 +45,10 @@ func NewCmd() *cobra.Command {
 			Learn more & sign up for the beta at https://kraft.cloud
 
 			Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
-			%[1]sUNIKRAFTCLOUD_METRO%[1]s environmental variable.
+			%[1]sUKC_METRO%[1]s environmental variable.
 
 			Set authentication by using %[1]skraft login%[1]s or set
-			%[1]sUNIKRAFTCLOUD_TOKEN%[1]s environmental variable.
+			%[1]sUKC_TOKEN%[1]s environmental variable.
 		`, "`"),
 		Example: heredoc.Doc(`
 			# List all images in your account
