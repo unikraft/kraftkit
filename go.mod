@@ -76,8 +76,8 @@ require (
 	golang.org/x/term v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.30.2
-	k8s.io/apimachinery v0.30.2
+	k8s.io/api v0.30.3
+	k8s.io/apimachinery v0.30.3
 	k8s.io/apiserver v0.30.2
 	oras.land/oras-go/v2 v2.5.0
 	sdk.kraft.cloud v0.5.10-0.20240717125252-dfd4b0840418
