@@ -35,34 +35,34 @@ import (
 )
 
 type CreateOptions struct {
-	Auth                *config.AuthConfig            `noattribute:"true"`
-	Client              kraftcloud.KraftCloud         `noattribute:"true"`
-	Certificate         []string                      `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
-	Env                 []string                      `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features            []string                      `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	Domain              []string                      `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
-	Image               string                        `noattribute:"true"`
-	Entrypoint          types.ShellCommand            `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
-	Memory              string                        `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
-	Metro               string                        `noattribute:"true"`
-	Name                string                        `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output              string                        `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
-	Ports               []string                      `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	RestartPolicy       kcinstances.RestartPolicy     `noattribute:"true"`
-	Replicas            uint                          `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout             RolloutStrategy               `noattribute:"true"`
-	RolloutQualifier    RolloutQualifier              `noattribute:"true"`
-	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
-	ServiceNameOrUUID   string                        `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
-	Start               bool                          `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
-	ScaleToZero         kcinstances.ScaleToZeroPolicy `noattribute:"true"`
-	ScaleToZeroStateful bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
-	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
-	SubDomain           []string                      `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Token               string                        `noattribute:"true"`
-	Volumes             []string                      `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage        bool                          `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration                 `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
+	Auth                *config.AuthConfig             `noattribute:"true"`
+	Client              kraftcloud.KraftCloud          `noattribute:"true"`
+	Certificate         []string                       `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
+	Env                 []string                       `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features            []string                       `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	Domain              []string                       `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
+	Image               string                         `noattribute:"true"`
+	Entrypoint          types.ShellCommand             `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
+	Memory              string                         `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
+	Metro               string                         `noattribute:"true"`
+	Name                string                         `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
+	Output              string                         `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
+	Ports               []string                       `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	RestartPolicy       kcinstances.RestartPolicy      `noattribute:"true"`
+	Replicas            uint                           `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout             RolloutStrategy                `noattribute:"true"`
+	RolloutQualifier    RolloutQualifier               `noattribute:"true"`
+	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	ServiceNameOrUUID   string                         `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
+	Start               bool                           `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
+	ScaleToZeroStateful *bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
+	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
+	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Token               string                         `noattribute:"true"`
+	Volumes             []string                       `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout time.Duration                  `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
@@ -226,11 +226,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.ServiceNameOrUUID == "" && len(opts.Ports) == 0 {
 		log.G(ctx).Info("no ports or service specified, disabling scale to zero")
 		opts.ScaleToZeroCooldown = 0
-		opts.ScaleToZeroStateful = false
-		opts.ScaleToZero = kcinstances.ScaleToZeroPolicyOff
+		opts.ScaleToZeroStateful = nil
+		off := kcinstances.ScaleToZeroPolicyOff
+		opts.ScaleToZero = &off
 	}
 
-	if opts.ScaleToZeroCooldown != 0 || opts.ScaleToZeroStateful || opts.ScaleToZero != kcinstances.ScaleToZeroPolicyOff {
+	if opts.ScaleToZeroCooldown != 0 || opts.ScaleToZeroStateful != nil || opts.ScaleToZero != nil {
 		req.ScaleToZero = &kcinstances.ScaleToZero{}
 	}
 
@@ -238,12 +239,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		req.ScaleToZero.CooldownTimeMs = ptr(int(opts.ScaleToZeroCooldown.Milliseconds()))
 	}
 
-	if opts.ScaleToZeroStateful {
-		req.ScaleToZero.Stateful = ptr(true)
+	if opts.ScaleToZeroStateful != nil {
+		req.ScaleToZero.Stateful = opts.ScaleToZeroStateful
 	}
 
-	if opts.ScaleToZero != kcinstances.ScaleToZeroPolicyOff {
-		req.ScaleToZero.Policy = &opts.ScaleToZero
+	if opts.ScaleToZero != nil {
+		req.ScaleToZero.Policy = opts.ScaleToZero
 	}
 
 	for _, vol := range opts.Volumes {
@@ -745,14 +746,27 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
-	if opts.ScaleToZeroCooldown < time.Millisecond && opts.ScaleToZeroCooldown != 0 {
+	if opts.ScaleToZeroCooldown != 0 && opts.ScaleToZeroCooldown < time.Millisecond {
 		return fmt.Errorf("scale-to-zero-cooldown needs to be at least 1ms: %s", opts.ScaleToZeroCooldown)
 	}
 
 	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
 	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
-	opts.ScaleToZero = kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
+
+	if cmd.Flag("scale-to-zero").Changed {
+		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
+		opts.ScaleToZero = &s20v
+	}
+
+	if cmd.Flag("scale-to-zero-stateful").Changed {
+		statefulFlag, err := strconv.ParseBool(cmd.Flag("scale-to-zero-stateful").Value.String())
+		if err != nil {
+			return fmt.Errorf("could not parse scale-to-zero-stateful: %w", err)
+		}
+
+		opts.ScaleToZeroStateful = &statefulFlag
+	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
 		return fmt.Errorf("invalid output format: %s", opts.Output)

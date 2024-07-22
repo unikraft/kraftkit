@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -31,51 +32,51 @@ import (
 )
 
 type DeployOptions struct {
-	Auth                *config.AuthConfig            `noattribute:"true"`
-	Client              kraftcloud.KraftCloud         `noattribute:"true"`
-	Certificate         []string                      `local:"true" long:"certificate" short:"C" usage:"Set the certificates to use for the service"`
-	Compress            bool                          `local:"true" long:"compress" short:"z" usage:"Compress the initrd package (experimental)"`
-	DeployAs            string                        `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
-	Domain              []string                      `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
-	DotConfig           string                        `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
-	Env                 []string                      `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features            []string                      `local:"true" long:"feature" usage:"Specify the special features to enable"`
-	Follow              bool                          `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance"`
-	ForcePull           bool                          `long:"force-pull" usage:"Force pulling packages before building"`
-	Image               string                        `long:"image" short:"i" usage:"Set the image name to use"`
-	Jobs                int                           `long:"jobs" short:"j" usage:"Allow N jobs at once"`
-	KernelDbg           bool                          `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
-	Kraftfile           string                        `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
-	Memory              string                        `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
-	Metro               string                        `noattribute:"true"`
-	Name                string                        `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
-	NoCache             bool                          `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
-	NoConfigure         bool                          `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
-	NoFast              bool                          `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
-	NoFetch             bool                          `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
-	NoStart             bool                          `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
-	NoUpdate            bool                          `long:"no-update" usage:"Do not update package index before running the build"`
-	Output              string                        `local:"true" long:"output" short:"o" usage:"Set output format"`
-	Ports               []string                      `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	Project             app.Application               `noattribute:"true"`
-	Replicas            uint                          `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	RestartPolicy       kcinstances.RestartPolicy     `noattribute:"true"`
-	Rollout             create.RolloutStrategy        `noattribute:"true"`
-	RolloutQualifier    create.RolloutQualifier       `noattribute:"true"`
-	RolloutWait         time.Duration                 `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
-	Rootfs              string                        `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
-	Runtime             string                        `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
-	SaveBuildLog        string                        `long:"build-log" usage:"Use the specified file to save the output from the build"`
-	ScaleToZero         kcinstances.ScaleToZeroPolicy `noattribute:"true"`
-	ScaleToZeroStateful bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
-	ScaleToZeroCooldown time.Duration                 `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
-	ServiceNameOrUUID   string                        `long:"service" short:"g" usage:"Attach the new deployment to an existing service"`
-	Strategy            packmanager.MergeStrategy     `noattribute:"true"`
-	SubDomain           []string                      `local:"true" long:"subdomain" short:"s" usage:"Set the names to use when provisioning subdomains"`
-	Timeout             time.Duration                 `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls (ms/s/m/h)" default:"60s"`
-	Token               string                        `noattribute:"true"`
-	Volumes             []string                      `long:"volume" short:"v" usage:"Specify the volume mapping(s) in the form NAME:DEST or NAME:DEST:OPTIONS"`
-	Workdir             string                        `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
+	Auth                *config.AuthConfig             `noattribute:"true"`
+	Client              kraftcloud.KraftCloud          `noattribute:"true"`
+	Certificate         []string                       `local:"true" long:"certificate" short:"C" usage:"Set the certificates to use for the service"`
+	Compress            bool                           `local:"true" long:"compress" short:"z" usage:"Compress the initrd package (experimental)"`
+	DeployAs            string                         `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
+	Domain              []string                       `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
+	DotConfig           string                         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Env                 []string                       `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features            []string                       `local:"true" long:"feature" usage:"Specify the special features to enable"`
+	Follow              bool                           `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance"`
+	ForcePull           bool                           `long:"force-pull" usage:"Force pulling packages before building"`
+	Image               string                         `long:"image" short:"i" usage:"Set the image name to use"`
+	Jobs                int                            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KernelDbg           bool                           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
+	Kraftfile           string                         `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
+	Memory              string                         `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
+	Metro               string                         `noattribute:"true"`
+	Name                string                         `local:"true" long:"name" short:"n" usage:"Name of the deployment"`
+	NoCache             bool                           `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
+	NoConfigure         bool                           `long:"no-configure" usage:"Do not run Unikraft's configure step before building"`
+	NoFast              bool                           `long:"no-fast" usage:"Do not use maximum parallelization when performing the build"`
+	NoFetch             bool                           `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
+	NoStart             bool                           `local:"true" long:"no-start" short:"S" usage:"Do not start the instance after creation"`
+	NoUpdate            bool                           `long:"no-update" usage:"Do not update package index before running the build"`
+	Output              string                         `local:"true" long:"output" short:"o" usage:"Set output format"`
+	Ports               []string                       `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	Project             app.Application                `noattribute:"true"`
+	Replicas            uint                           `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	RestartPolicy       kcinstances.RestartPolicy      `noattribute:"true"`
+	Rollout             create.RolloutStrategy         `noattribute:"true"`
+	RolloutQualifier    create.RolloutQualifier        `noattribute:"true"`
+	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	Rootfs              string                         `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
+	Runtime             string                         `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
+	SaveBuildLog        string                         `long:"build-log" usage:"Use the specified file to save the output from the build"`
+	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
+	ScaleToZeroStateful *bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
+	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
+	ServiceNameOrUUID   string                         `long:"service" short:"g" usage:"Attach the new deployment to an existing service"`
+	Strategy            packmanager.MergeStrategy      `noattribute:"true"`
+	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the names to use when provisioning subdomains"`
+	Timeout             time.Duration                  `local:"true" long:"timeout" usage:"Set the timeout for remote procedure calls (ms/s/m/h)" default:"60s"`
+	Token               string                         `noattribute:"true"`
+	Volumes             []string                       `long:"volume" short:"v" usage:"Specify the volume mapping(s) in the form NAME:DEST or NAME:DEST:OPTIONS"`
+	Workdir             string                         `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -158,7 +159,20 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Rollout = create.RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = create.RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
-	opts.ScaleToZero = kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
+
+	if cmd.Flag("scale-to-zero").Changed {
+		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
+		opts.ScaleToZero = &s20v
+	}
+
+	if cmd.Flag("scale-to-zero-stateful").Changed {
+		statefulFlag, err := strconv.ParseBool(cmd.Flag("scale-to-zero-stateful").Value.String())
+		if err != nil {
+			return fmt.Errorf("could not parse scale-to-zero-stateful: %w", err)
+		}
+
+		opts.ScaleToZeroStateful = &statefulFlag
+	}
 
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
