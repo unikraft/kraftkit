@@ -78,6 +78,11 @@ func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (In
 }
 
 // Build implements Initrd.
+func (initrd *ociimage) Name() string {
+	return "OCI image"
+}
+
+// Build implements Initrd.
 func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 	sysCtx := &types.SystemContext{
 		OSChoice: "linux",

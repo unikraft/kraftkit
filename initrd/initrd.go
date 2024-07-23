@@ -19,6 +19,9 @@ const (
 // Initrd is an interface that is used to allow for different underlying
 // implementations to construct a CPIO archive.
 type Initrd interface {
+	// Name of the initramfs builder.
+	Name() string
+
 	// Build the rootfs and return the location of the result or error.
 	Build(context.Context) (string, error)
 

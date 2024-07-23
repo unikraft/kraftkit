@@ -54,6 +54,11 @@ func NewFromDirectory(_ context.Context, dir string, opts ...InitrdOption) (Init
 }
 
 // Build implements Initrd.
+func (initrd *directory) Name() string {
+	return "directory"
+}
+
+// Build implements Initrd.
 func (initrd *directory) Build(ctx context.Context) (string, error) {
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")
