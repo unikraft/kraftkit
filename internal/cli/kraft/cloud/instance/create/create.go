@@ -129,8 +129,8 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				processtree.WithTimeout(opts.WaitForImageTimeout),
 			},
 			processtree.NewProcessTreeItem(
-				"waiting for the image to be available",
-				opts.Image,
+				"propagating",
+				"",
 				func(ctx context.Context) error {
 					for {
 						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
