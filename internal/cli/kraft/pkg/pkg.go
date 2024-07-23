@@ -52,6 +52,7 @@ type PkgOptions struct {
 	Project      app.Application           `noattribute:"true"`
 	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	Runtime      string                    `local:"true" long:"runtime" short:"r" usage:"Set the runtime to use for the package"`
 	Strategy     packmanager.MergeStrategy `noattribute:"true"`
 	Target       string                    `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
 	Workdir      string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
