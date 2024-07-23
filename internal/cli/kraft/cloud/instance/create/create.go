@@ -166,6 +166,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get image: %w", err)
 		}
+
+		if image == nil {
+			return nil, nil, fmt.Errorf("no image with name: %s", opts.Image)
+		}
 	}
 
 	var features []kcinstances.Feature
