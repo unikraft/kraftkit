@@ -15,9 +15,9 @@ import "fmt"
 type MergeStrategy string
 
 const (
-	// The 'exit' strategy is used to error-out and indicate that no strategy was
+	// The 'abort' strategy is used to error-out and indicate that no strategy was
 	// provided and that further operations cannot be completed.
-	StrategyExit = MergeStrategy("exit")
+	StrategyAbort = MergeStrategy("abort")
 
 	// The 'overwrite' strategy removes the existing package with the same
 	// canonical name and replaces it with a new package entirely.
@@ -49,7 +49,7 @@ func (strategy MergeStrategy) String() string {
 // MergeStrategies returns the list of possible package merge strategies.
 func MergeStrategies() []MergeStrategy {
 	return []MergeStrategy{
-		StrategyExit,
+		StrategyAbort,
 		StrategyOverwrite,
 		StrategyMerge,
 	}

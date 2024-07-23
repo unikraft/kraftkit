@@ -27,7 +27,7 @@ type PackOptions struct {
 // configuration options values.
 func NewPackOptions() *PackOptions {
 	return &PackOptions{
-		mergeStrategy: StrategyExit,
+		mergeStrategy: StrategyAbort,
 	}
 }
 

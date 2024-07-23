@@ -151,7 +151,7 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 		}
 
 		switch opts.Strategy {
-		case packmanager.StrategyExit:
+		case packmanager.StrategyAbort:
 			return nil, fmt.Errorf("package already exists and merge strategy set to exit on conflict")
 
 		// Set the merge strategy as an option that is then passed to the
