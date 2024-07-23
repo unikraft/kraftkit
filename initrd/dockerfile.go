@@ -140,6 +140,11 @@ func NewFromDockerfile(ctx context.Context, path string, opts ...InitrdOption) (
 }
 
 // Build implements Initrd.
+func (initrd *dockerfile) Name() string {
+	return "Dockerfile"
+}
+
+// Build implements Initrd.
 func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")

@@ -56,6 +56,11 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 }
 
 // Build implements Initrd.
+func (initrd *file) Name() string {
+	return "CPIO file"
+}
+
+// Build implements Initrd.
 func (initrd *file) Build(_ context.Context) (string, error) {
 	return initrd.path, nil
 }

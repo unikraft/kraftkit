@@ -392,7 +392,7 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 			processtree.WithFailFast(true),
 		},
 		processtree.NewProcessTreeItem(
-			"building rootfs",
+			fmt.Sprintf("building rootfs via %s", ramfs.Name()),
 			machine.Spec.Architecture,
 			func(ctx context.Context) error {
 				if _, err = ramfs.Build(ctx); err != nil {
