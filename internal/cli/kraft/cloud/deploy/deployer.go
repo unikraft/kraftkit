@@ -42,5 +42,6 @@ func deployers() []deployer {
 		&deployerImageName{},
 		&deployerKraftfileRuntime{},
 		&deployerKraftfileUnikraft{},
+		&deployerRootfs{},
 	}
 }
