@@ -267,9 +267,19 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	if len(ocipack.Command()) > 0 {
-		ocipack.manifest.SetCmd(ctx, ocipack.Command())
+		cmd := ocipack.Command()
+		log.G(ctx).
+			WithField("args", cmd).
+			Debug("cmd")
+
+		ocipack.manifest.SetCmd(ctx, cmd)
 	} else if ocipack.original != nil {
-		ocipack.manifest.SetCmd(ctx, ocipack.original.manifest.config.Config.Cmd)
+		cmd := ocipack.original.manifest.config.Config.Cmd
+		log.G(ctx).
+			WithField("args", cmd).
+			Debug("cmd")
+
+		ocipack.manifest.SetCmd(ctx, cmd)
 	}
 
 	ocipack.manifest.SetOS(ctx, ocipack.Platform().Name())
