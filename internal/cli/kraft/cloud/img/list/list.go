@@ -133,6 +133,7 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 	if opts.Output != "table" {
 		table.AddField("APP ARGS", cs.Bold)
 		table.AddField("KERNEL ARGS", cs.Bold)
+		table.AddField("LABELS", cs.Bold)
 	}
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
@@ -168,6 +169,15 @@ imgloop:
 		if opts.Output != "table" {
 			table.AddField(image.Args, nil)
 			table.AddField(image.KernelArgs, nil)
+			if len(image.Labels) != 0 {
+				var labels []string
+				for k, v := range image.Labels {
+					labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+				}
+				table.AddField(strings.Join(labels, ","), nil)
+			} else {
+				table.AddField("", nil)
+			}
 		}
 
 		table.AddField(humanize.Bytes(uint64(image.SizeInBytes)), nil)

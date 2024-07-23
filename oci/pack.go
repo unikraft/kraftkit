@@ -291,14 +291,14 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 	}
 
 	switch popts.MergeStrategy() {
-	case packmanager.StrategyMerge, packmanager.StrategyExit:
+	case packmanager.StrategyMerge, packmanager.StrategyAbort:
 		ocipack.index, err = NewIndexFromRef(ctx, ocipack.handle, ocipack.ref.Name())
 		if err != nil {
 			ocipack.index, err = NewIndex(ctx, ocipack.handle)
 			if err != nil {
 				return nil, fmt.Errorf("could not instantiate new image structure: %w", err)
 			}
-		} else if popts.MergeStrategy() == packmanager.StrategyExit {
+		} else if popts.MergeStrategy() == packmanager.StrategyAbort {
 			return nil, fmt.Errorf("cannot overwrite existing manifest as merge strategy is set to exit on conflict")
 		}
 
@@ -315,7 +315,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, fmt.Errorf("package merge strategy unset")
 	}
 
-	if popts.MergeStrategy() == packmanager.StrategyExit && len(ocipack.index.manifests) > 0 {
+	if popts.MergeStrategy() == packmanager.StrategyAbort && len(ocipack.index.manifests) > 0 {
 		return nil, fmt.Errorf("cannot continue: reference already exists and merge strategy set to none")
 	}
 
@@ -359,7 +359,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			}
 			if existingManifestChecksum == newManifestChecksum {
 				switch popts.MergeStrategy() {
-				case packmanager.StrategyExit:
+				case packmanager.StrategyAbort:
 					return nil, fmt.Errorf("cannot overwrite existing manifest as merge strategy is set to exit on conflict")
 
 				// A manifest with the same configuration has been detected, in

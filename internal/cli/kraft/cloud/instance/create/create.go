@@ -377,7 +377,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 			// Return early if the rollout strategy is set to exit on conflict and there
 			// are existing instances in the service.
-			if opts.Rollout == RolloutStrategyExit {
+			if opts.Rollout == RolloutStrategyAbort {
 				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
 			}
 		}

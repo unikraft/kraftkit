@@ -33,7 +33,7 @@ type DetachOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DetachOptions{}, cobra.Command{
 		Short:   "Detach a volume from an instance",
-		Use:     "detach [FLAGS] UUID",
+		Use:     "detach [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"det"},
 		Long:    "Detach a volume from an instance.",

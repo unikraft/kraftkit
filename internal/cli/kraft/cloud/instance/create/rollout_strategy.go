@@ -12,9 +12,9 @@ import "fmt"
 type RolloutStrategy string
 
 const (
-	// The 'exit' strategy is used to error-out and indicate that no strategy was
+	// The 'abort' strategy is used to error-out and indicate that no strategy was
 	// provided and that further operations cannot be completed.
-	RolloutStrategyExit = RolloutStrategy("exit")
+	RolloutStrategyAbort = RolloutStrategy("abort")
 
 	// The 'stop' strategy stops the qualified existing instance(s) within the
 	// same service and starts the new instance(s).
@@ -45,7 +45,7 @@ func (strategy RolloutStrategy) String() string {
 // RolloutStrategies returns the list of possible rollout strategies.
 func RolloutStrategies() []RolloutStrategy {
 	return []RolloutStrategy{
-		RolloutStrategyExit,
+		RolloutStrategyAbort,
 		RolloutStrategyStop,
 		RolloutStrategyRemove,
 		RolloutStrategyKeep,

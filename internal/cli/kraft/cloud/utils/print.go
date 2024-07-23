@@ -587,6 +587,10 @@ func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResp
 	table.AddField("INSTANCES", cs.Bold)
 	table.AddField("CREATED AT", cs.Bold)
 	table.AddField("PERSISTENT", cs.Bold)
+	if format != "table" {
+		table.AddField("SOFT LIMIT", cs.Bold)
+		table.AddField("HARD LIMIT", cs.Bold)
+	}
 	table.EndRow()
 
 	for _, sg := range services {
@@ -639,6 +643,10 @@ func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResp
 
 		table.AddField(createdAt, nil)
 		table.AddField(fmt.Sprintf("%v", sg.Persistent), nil)
+		if format != "table" {
+			table.AddField(fmt.Sprintf("%v", sg.SoftLimit), nil)
+			table.AddField(fmt.Sprintf("%v", sg.HardLimit), nil)
+		}
 
 		table.EndRow()
 	}
