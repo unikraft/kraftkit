@@ -29,6 +29,8 @@ type CreateOptions struct {
 	Certificate []string                   `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
 	Domain      []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
 	SubDomain   []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	SoftLimit   uint                       `local:"true" long:"soft-limit" short:"l" usage:"Set the soft limit for the service"`
+	HardLimit   uint                       `local:"true" long:"hard-limit" short:"L" usage:"Set the hard limit for the service"`
 	Metro       string                     `noattribute:"true"`
 	Name        string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
 	Output      string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
@@ -158,6 +160,14 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
+	if opts.SoftLimit > 0 {
+		sl := int(opts.SoftLimit)
+		req.SoftLimit = &sl
+	}
+	if opts.HardLimit > 0 {
+		hl := int(opts.HardLimit)
+		req.HardLimit = &hl
+	}
 
 	for i, fqdn := range opts.Domain {
 		if !strings.HasSuffix(".", fqdn) {
@@ -232,6 +242,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	if !utils.IsValidOutputFormat(opts.Output) {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
+	}
+
+	if opts.SoftLimit != 0 && opts.HardLimit != 0 && opts.SoftLimit > opts.HardLimit {
+		return fmt.Errorf("soft limit must be less than or equal to the hard limit")
 	}
 
 	return nil
