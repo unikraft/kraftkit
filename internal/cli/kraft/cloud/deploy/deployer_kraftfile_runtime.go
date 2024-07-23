@@ -108,6 +108,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Project:      opts.Project,
 		Push:         true,
 		Rootfs:       opts.Rootfs,
+		Runtime:      opts.Runtime,
 		Strategy:     opts.Strategy,
 		Workdir:      opts.Workdir,
 	})
