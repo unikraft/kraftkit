@@ -302,21 +302,18 @@ func AttributeFlags(c *cobra.Command, obj any, args ...string) error {
 			case reflect.Int, reflect.Int64:
 				optInt[name] = v
 				flags.IntP(name, alias, defInt, usage)
-				if err := flags.Set(name, strValue); err != nil {
-					return err
-				}
 			case reflect.String:
 				optString[name] = v
 				flags.StringP(name, alias, defValue, usage)
-				if err := flags.Set(name, strValue); err != nil {
-					return err
-				}
 			case reflect.Bool:
 				optBool[name] = v
 				flags.BoolP(name, alias, false, usage)
-				if err := flags.Set(name, strValue); err != nil {
-					return err
-				}
+			}
+			if strValue == "<nil>" && fieldType.Type.Elem().Kind() != reflect.String {
+				continue
+			}
+			if err := flags.Set(name, strValue); err != nil {
+				return err
 			}
 		case reflect.Struct:
 			if !v.CanAddr() {
