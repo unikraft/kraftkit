@@ -49,7 +49,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress bool, arc
 
 	processes = append(processes,
 		processtree.NewProcessTreeItem(
-			"building rootfs",
+			fmt.Sprintf("building rootfs via %s", ramfs.Name()),
 			arch,
 			func(ctx context.Context) error {
 				rootfs, err = ramfs.Build(ctx)
