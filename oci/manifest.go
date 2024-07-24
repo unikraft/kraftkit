@@ -145,7 +145,7 @@ func (manifest *Manifest) AddLayer(ctx context.Context, layer *Layer) (ocispec.D
 }
 
 // AddBlob adds a blog to the manifest and returns the resulting descriptor.
-func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Descriptor, error) {
+func (manifest *Manifest) AddBlob(ctx context.Context, ref string, blob *Blob) (ocispec.Descriptor, error) {
 	if info, err := manifest.handle.DigestInfo(ctx, blob.desc.Digest); err == nil && info != nil {
 		log.G(ctx).
 			WithField("mediaType", blob.desc.MediaType).
@@ -167,7 +167,7 @@ func (manifest *Manifest) AddBlob(ctx context.Context, blob *Blob) (ocispec.Desc
 		}
 	}()
 
-	if err := manifest.handle.SaveDescriptor(ctx, "", blob.desc, fp, nil); err != nil {
+	if err := manifest.handle.SaveDescriptor(ctx, ref, blob.desc, fp, nil); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -379,7 +379,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 	// collector from removing it before the manifest has been written (which
 	// references this blob).
 	if info, _ := manifest.handle.DigestInfo(ctx, configBlob.desc.Digest); info == nil {
-		if _, err := manifest.AddBlob(ctx, configBlob); err != nil {
+		if _, err := manifest.AddBlob(ctx, ref.Name(), configBlob); err != nil {
 			return nil, err
 		}
 	}
@@ -407,7 +407,7 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 					return nil
 				}
 
-				if _, err := manifest.AddBlob(egCtx, manifest.layers[i].blob); err != nil {
+				if _, err := manifest.AddBlob(egCtx, ref.Name(), manifest.layers[i].blob); err != nil {
 					return fmt.Errorf("failed to push layer: %d: %v", i, err)
 				}
 
