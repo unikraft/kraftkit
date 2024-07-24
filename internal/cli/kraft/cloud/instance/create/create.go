@@ -186,7 +186,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
-	if opts.Entrypoint.IsZero() {
+	if opts.Entrypoint.IsZero() && image != nil {
 		req.Args = []string{image.Args}
 	} else {
 		req.Args = opts.Entrypoint
