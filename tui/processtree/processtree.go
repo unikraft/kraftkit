@@ -320,7 +320,12 @@ func (pt *ProcessTree) waitForProcessCmd(item *ProcessTreeItem) tea.Cmd {
 		item := item // golang closures
 
 		if pt.norender {
-			log.G(item.ctx).Info(item.textLeft)
+			txt := item.textLeft
+			if len(item.textRight) > 0 {
+				txt += " (" + item.textRight + ")"
+			}
+
+			log.G(item.ctx).Info(txt)
 		}
 
 		// Set the process to running
