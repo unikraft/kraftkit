@@ -235,7 +235,7 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", path).
 				WithField("link", info.LinkDestination).
-				Debug("symlinking")
+				Trace("symlinking")
 
 			cpioHeader.Mode |= cpio.TypeSymlink
 			cpioHeader.Linkname = info.LinkDestination
@@ -253,7 +253,7 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", path).
 				WithField("link", info.LinkDestination).
-				Debug("hardlinking")
+				Trace("hardlinking")
 
 			cpioHeader.Mode |= cpio.TypeReg
 			cpioHeader.Linkname = info.LinkDestination
@@ -267,7 +267,7 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", path).
 				WithField("dst", internal).
-				Debug("copying")
+				Trace("copying")
 
 			cpioHeader.Mode |= cpio.TypeReg
 			cpioHeader.Linkname = info.LinkDestination
@@ -294,7 +294,7 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		case scfile.TypeDirectory:
 			log.G(ctx).
 				WithField("dst", internal).
-				Debug("mkdir")
+				Trace("mkdir")
 
 			cpioHeader.Mode |= cpio.TypeDir
 

@@ -430,7 +430,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", tarHeader.Name).
 				WithField("link", tarHeader.Linkname).
-				Debug("symlinking")
+				Trace("symlinking")
 
 			cpioHeader.Mode |= cpio.TypeSymlink
 			cpioHeader.Linkname = tarHeader.Linkname
@@ -448,7 +448,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", tarHeader.Name).
 				WithField("link", tarHeader.Linkname).
-				Debug("hardlinking")
+				Trace("hardlinking")
 
 			cpioHeader.Mode |= cpio.TypeReg
 			cpioHeader.Linkname = tarHeader.Linkname
@@ -461,7 +461,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			log.G(ctx).
 				WithField("src", tarHeader.Name).
 				WithField("dst", internal).
-				Debug("copying")
+				Trace("copying")
 
 			cpioHeader.Mode |= cpio.TypeReg
 			cpioHeader.Linkname = tarHeader.Linkname
@@ -483,7 +483,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		case tar.TypeDir:
 			log.G(ctx).
 				WithField("dst", internal).
-				Debug("mkdir")
+				Trace("mkdir")
 
 			cpioHeader.Mode |= cpio.TypeDir
 
