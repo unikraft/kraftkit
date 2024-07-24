@@ -27,60 +27,97 @@ import (
 )
 
 type TunnelOptions struct {
-	ProxyPorts         []string `local:"true" long:"proxy-ports" short:"p" usage:"Ports to use for the proxies. Default start port is 4444"`
-	ProxyControlPort   uint     `local:"true" long:"proxy-control-port" short:"P" usage:"Port to use for the proxy control" default:"4443"`
-	TunnelServiceImage string   `local:"true" long:"tunnel-service-image" usage:"Tunnel service image to use" default:"official/utils/tunnel:latest"`
+	TunnelProxyPorts   []string `local:"true" long:"tunnel-proxy-port" short:"p" usage:"Remote port exposed by the tunnelling service(s). (default start port is 4444)"`
+	ProxyControlPort   uint     `local:"true" long:"tunnel-control-port" short:"P" usage:"Command-and-control port used by the tunneling service(s)." default:"4443"`
+	TunnelServiceImage string   `local:"true" long:"tunnel-image" usage:"Tunnel service image" default:"official/utils/tunnel:latest"`
 	Token              string   `noattribute:"true"`
 	Metro              string   `noattribute:"true"`
 
-	// Parsed arguments
-	// ProxyPorts converted from string to uint16
+	// parsedProxyPorts contains the parsed ProxyPorts converted from string to uint16
 	parsedProxyPorts []uint16
-	// instance name/uuid/private-ip - gets turned into private-ip after fetching
+	// instances (name/uuid/private-ip) gets turned into private-ip after fetching
 	instances []string
-	// port to forward on the local machine
+	// localPorts to forward on the local machine
 	localPorts []uint16
-	// type of the port to forward (tcp/udp)
+	// ctype is the connection type of the port to forward (tcp/udp)
 	ctypes []string
-	// port to forward of the instance
+	// instanceProxyPorts is the port to forward of the instance
 	instanceProxyPorts []uint16
-	// port to expose the proxy on
+	// exposedProxyPorts is the port to expose the proxy on
 	exposedProxyPorts []uint16
-
-	// port iterator for when a single proxy port is provided
+	// portIterator for when a single proxy port is provided
 	portIterator uint16
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&TunnelOptions{}, cobra.Command{
-		Short: "Forward a local port to an instance through a TLS tunnel",
-		Use:   "tunnel [FLAGS] [LOCAL_PORT:](INSTANCE|PRIVATE IP|PRIVATE FQDN):DEST_PORT[/TYPE] [[LOCAL_PORT:](INSTANCE|PRIVATE IP|PRIVATE FQDN):DEST_PORT[/TYPE]]...",
-		Args:  cobra.MinimumNArgs(1),
-		Example: heredoc.Doc(`
-			# Forward the local port 8080 to the tcp port 8080 of the private instance 'my-instance'
-			$ kraft cloud tunnel my-instance:8080
+		Short: "Forward a local port to an unexposed instance through an intermediate TLS tunnel service",
+		Long: heredoc.Docf(`
+			Forward a local port to an unexposed instance through an intermediate TLS
+			tunnel service.
 
-			# Forward the local port 8080 to the tcp port 8080 of the private fqdn 'my-instance.internal'
-			$ kraft cloud tunnel my-instance.internal:8080
+			When you need to access an instance on Unikraft Cloud which is not
+			publicly exposed to the internet, you can use the
+			%[1]skraft cloud tunnel%[1]s subcommand to forward from a local port to a
+			port which the instance listens on.
 
-			# Forward the local port 8080 to the tcp port 8080 of the private instance ip '172.16.28.8'
+			The %[1]skraft cloud tunnel%[1]s subcommand creates a secure tunnel
+			between your local machine and the private instance(s).  The tunnel is
+			created using an intermediate TLS tunnel service which is another instance
+			running as a sidecar along with the target instance in the same private
+			network.  The tunnel service listens on a publicly exposed port on the
+			cloud and forwards the traffic to the private instance.
+
+			When you run the %[1]skraft cloud tunnel%[1]s subcommand, you specify the
+			local port to forward, the private instance to connect to, and the port on
+			the private instance to connect to.
+
+			It is also possible to customize the remote port which the tunnel service
+			exposes and the command-and-control port used by the tunnel service.  By
+			default, the remote port is %[1]s4444%[1]s and the command-and-control
+			port is %[1]s4443%[1]s.
+		`, "`"),
+		Use:  "tunnel [FLAGS] [LOCAL_PORT:]<INSTANCE|PRIVATE_IP|PRIVATE_FQDN>:DEST_PORT[/TYPE] ...",
+		Args: cobra.MinimumNArgs(1),
+		Example: heredoc.Docf(`
+			# Forward to the TCP port of %[1]s8080%[1]s of the unexposed instance
+			# identified by its name "nginx" which then becomes locally accessible
+			# also at %[1]s8080%[1]s:
+			$ kraft cloud tunnel nginx:8080
+
+			# Forward to the TCP port of 8080 of the unexposed instance based on its
+			# private FQDN %[1]snginx.internal%[1]s which then becomes locally
+			# accessible also at %[1]s8080%[1]s:
+			$ kraft cloud tunnel nginx.internal:8080
+
+			# Forward to the TCP port of %[1]s8080%[1]s of the unexposed instance
+			# based on its private IP %[1]s172.16.28.8%[1]s which then becomes locally
+			# accessible also at %[1]s8080%[1]s:
 			$ kraft cloud tunnel 172.16.28.8:8080
 
-			# Forward the local port 8443 to the tcp port 8080 of the private instance 'my-instance'
-			$ kraft cloud tunnel 8443:my-instance:8080/tcp
+			# Forward to the UDP port of %[1]s8123%[1]s of the unexposed instance
+			# based on its private IP %[1]s172.16.22.2%[1]s which then becomes locally
+			# accessible also at %[1]s8123%[1]s:
+			$ kraft cloud tunnel 172.16.22.2:8123/udp
 
-			# Forward multiple ports to multiple instances
+			# Forward to the TCP port of %[1]s8080%[1]s of the unexposed instance by
+			# its name "nginx" which then becomes locally accessible at
+			# %[1]s8333%[1]s:
+			$ kraft cloud tunnel 8333:nginx:8080
+
+			# Forward multiple ports from multiple instances
 			$ kraft cloud tunnel 8080:my-instance1:8080/tcp 8443:my-instance2:8080/tcp
 
-			# Forward the local port 8080 to the tcp port 8080 of the private instance 'my-instance' and use port 5500 for the tunnel
+			# In the circumstance where the port you wish to connect to of the
+			# instance is the same as the remote port exposed by the tunnelling
+			# service (or the the command-and-control port of the tunneling service),
+			# you can use the -p and -P flag to set alternative relay and command-
+			# and-control ports.
+			#
+			# Tunnel to the instance 'my-instance' on port 8080 via the intermediate
+			# 5500 port
 			$ kraft cloud tunnel -p 5500 my-instance:8080
-
-			# Forward the local ports 8080,8081 to the tcp ports 8080,8081 of the private instance 'my-instance' and use ports 5500,5505 for the tunnel
-			$ kraft cloud tunnel -p 5500 -p 5505 my-instance:8080 my-instance2:8081
-
-			# Forward the local ports 8080,8081 to the tcp ports 8080,8081 of the private instance 'my-instance' and use ports 5500,5501 for the tunnel
-			$ kraft cloud tunnel my-instance:8080 my-instance2:8081
-		`),
+		`, "`"),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
@@ -104,11 +141,11 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	// If no proxy ports are provided, default to 4444
-	if len(opts.ProxyPorts) == 0 {
-		opts.ProxyPorts = []string{"4444"}
+	if len(opts.TunnelProxyPorts) == 0 {
+		opts.TunnelProxyPorts = []string{"4444"}
 	}
 
-	for _, port := range opts.ProxyPorts {
+	for _, port := range opts.TunnelProxyPorts {
 		if parsed, err := strconv.ParseUint(port, 10, 16); err != nil {
 			return fmt.Errorf("%q is not a valid port number", port)
 		} else {
@@ -116,7 +153,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	if len(opts.ProxyPorts) > 1 && len(opts.ProxyPorts) != len(args) {
+	if len(opts.TunnelProxyPorts) > 1 && len(opts.TunnelProxyPorts) != len(args) {
 		return fmt.Errorf("supplied number of proxy ports must match the number of ports to forward")
 	}
 
@@ -150,6 +187,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("could not run proxy: %w", err)
 	}
+
 	defer func() {
 		err := terminateProxy(context.TODO(), cliInstance, instID)
 		if err != nil {
@@ -233,7 +271,7 @@ func (opts *TunnelOptions) parseArgs(ctx context.Context, args []string) error {
 		opts.instanceProxyPorts = append(opts.instanceProxyPorts, rport)
 		opts.ctypes = append(opts.ctypes, ctype)
 
-		if len(opts.ProxyPorts) == 1 {
+		if len(opts.TunnelProxyPorts) == 1 {
 			opts.exposedProxyPorts = append(opts.exposedProxyPorts, opts.generatePort(opts.parsedProxyPorts[0]))
 		} else {
 			opts.exposedProxyPorts = append(opts.exposedProxyPorts, opts.parsedProxyPorts[i])
