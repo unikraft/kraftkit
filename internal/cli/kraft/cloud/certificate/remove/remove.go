@@ -21,11 +21,12 @@ import (
 )
 
 type RemoveOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	All    bool   `long:"all" usage:"Remove all certificates"`
-
-	metro string
-	token string
+	Output string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	All    bool                  `long:"all" usage:"Remove all certificates"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
 }
 
 // Remove a KraftCloud certificate.
@@ -75,7 +76,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify a certificate name or UUID, or use the --all flag")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -88,17 +89,23 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+	var err error
+
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
 	}
 
-	client := kraftcloud.NewCertificatesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
 
 	if opts.All {
-		certListResp, err := client.WithMetro(opts.metro).List(ctx)
+		certListResp, err := opts.Client.Certificates().WithMetro(opts.Metro).List(ctx)
 		if err != nil {
 			return fmt.Errorf("could not list certificates: %w", err)
 		}
@@ -107,6 +114,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not list certificates: %w", err)
 		}
 		if len(certList) == 0 {
+			log.G(ctx).Info("no certificates found")
 			return nil
 		}
 
@@ -117,7 +125,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			uuids = append(uuids, certItem.UUID)
 		}
 
-		delResp, err := client.WithMetro(opts.metro).Delete(ctx, uuids...)
+		delResp, err := opts.Client.Certificates().WithMetro(opts.Metro).Delete(ctx, uuids...)
 		if err != nil {
 			return fmt.Errorf("removing %d certificate(s): %w", len(uuids), err)
 		}
@@ -129,7 +137,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	log.G(ctx).Infof("removing %d certificate(s)", len(args))
 
-	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
+	delResp, err := opts.Client.Certificates().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("removing %d certificate(s): %w", len(args), err)
 	}
