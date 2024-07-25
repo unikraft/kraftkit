@@ -90,6 +90,11 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		return nil
 	}
 
+	instances, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
 	if err := iostreams.G(ctx).StartPager(); err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -152,7 +157,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		instanceStateColor = instanceStateColorNil
 	}
 
-	for _, instance := range resp.Data.Entries {
+	for _, instance := range instances {
 		if instance.Message != "" {
 			// Header row
 			if format != "table" {
