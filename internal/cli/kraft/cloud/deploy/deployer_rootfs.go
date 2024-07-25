@@ -16,20 +16,14 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
-type deployerRootfs struct {
-	args []string
-}
+type deployerRootfs struct{}
 
 func (deployer *deployerRootfs) Name() string {
 	return "rootfs"
 }
 
 func (deployer *deployerRootfs) String() string {
-	if len(deployer.args) == 0 {
-		return "run the cwd with Dockerfile"
-	}
-
-	return fmt.Sprintf("run the detected Dockerfile in the cwd and use '%s' as arg(s)", strings.Join(deployer.args, " "))
+	return ""
 }
 
 func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOptions, args ...string) (bool, error) {
