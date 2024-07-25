@@ -39,13 +39,7 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, 
 	args := []string{
 		"-p", strconv.FormatUint(uint64(volimportPort), 10),
 		"-a", authStr,
-	}
-
-	if timeoutS > 0 {
-		// Note(craciunoiuc): Add a 10-second buffer to the timeout.
-		// This is to allow the client to close the connection first.
-		// Otherwise there is a chance that the volume becomes corrupted.
-		args = append(args, "-t", strconv.FormatUint(timeoutS+10, 10))
+		"-t", strconv.FormatUint(timeoutS, 10),
 	}
 
 	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{

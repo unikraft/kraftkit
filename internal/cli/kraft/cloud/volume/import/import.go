@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
@@ -37,7 +38,7 @@ type ImportOptions struct {
 	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"official/utils/volimport:latest"`
 	Force          bool   `local:"true" long:"force" short:"f" usage:"Force import, even if it might fail"`
 	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile, Docker link, cpio file)" default:"."`
-	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds"`
+	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds when unresponsive" default:"10"`
 	VolID          string `local:"true" long:"volume" short:"v" usage:"Identifier of an existing volume (name or UUID)"`
 }
 
@@ -77,8 +78,8 @@ func (opts *ImportOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("must specify a value for the --volume flag")
 	}
 
-	if finfo, err := os.Stat(opts.Source); err == nil && !finfo.IsDir() {
-		return fmt.Errorf("local source path must be a directory")
+	if finfo, err := os.Stat(opts.Source); err == nil && (!finfo.IsDir() && !strings.HasSuffix(opts.Source, "Dockerfile")) {
+		return fmt.Errorf("local source path must be a directory or a Dockerfile")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
@@ -185,7 +186,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
-			freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, opts.Timeout, uint64(cpioSize), callback)
+			freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), callback)
 			copyCPIOErr = err
 			return err
 		},

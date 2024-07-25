@@ -264,20 +264,15 @@ func buildCPIO(ctx context.Context, source string) (path string, size int64, err
 }
 
 // copyCPIO copies the CPIO archive at the given path over the provided tls.Conn.
-func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, force bool, timeoutS, size uint64, callback progressCallbackFunc) (free uint64, total uint64, err error) {
+func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, force bool, size uint64, callback progressCallbackFunc) (free uint64, total uint64, err error) {
 	var resp okResponse
 	var currentSize uint64
 
 	// NOTE(antoineco): this call is critical as it allows writes to be later
 	// cancelled, because the deadline applies to all future and pending I/O and
 	// can be dynamically extended or reduced.
-	if timeoutS > 0 {
-		_ = conn.SetWriteDeadline(time.Now().Add(time.Duration(timeoutS) * time.Second))
-		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(timeoutS) * time.Second))
-	} else {
-		_ = conn.SetWriteDeadline(noNetTimeout)
-		_ = conn.SetReadDeadline(noNetTimeout)
-	}
+	_ = conn.SetWriteDeadline(noNetTimeout)
+	_ = conn.SetReadDeadline(noNetTimeout)
 	go func() {
 		<-ctx.Done()
 		_ = conn.SetWriteDeadline(immediateNetCancel)
