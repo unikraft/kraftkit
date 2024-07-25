@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
@@ -77,8 +78,8 @@ func (opts *ImportOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("must specify a value for the --volume flag")
 	}
 
-	if finfo, err := os.Stat(opts.Source); err == nil && !finfo.IsDir() {
-		return fmt.Errorf("local source path must be a directory")
+	if finfo, err := os.Stat(opts.Source); err == nil && (!finfo.IsDir() && !strings.HasSuffix(opts.Source, "Dockerfile")) {
+		return fmt.Errorf("local source path must be a directory or a Dockerfile")
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
