@@ -54,8 +54,14 @@ func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOpti
 func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
 	var targ target.Target
+	var runtimeName string
 
-	runtimeName := opts.Project.Runtime().Name()
+	if len(opts.Runtime) > 0 {
+		runtimeName = opts.Runtime
+	} else {
+		runtimeName = opts.Project.Runtime().Name()
+	}
+
 	if opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
 		runtimeName = utils.RewrapAsKraftCloudPackage(runtimeName)
 	}
