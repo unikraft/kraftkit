@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/config"
@@ -210,8 +211,8 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 			p := p
 
 			processes = append(processes, processtree.NewProcessTreeItem(
-				fmt.Sprintf("pushing %s", p.String()),
-				"",
+				"pushing",
+				humanize.Bytes(uint64(p.Size())),
 				func(ctx context.Context) error {
 					return p.Push(ctx)
 				},

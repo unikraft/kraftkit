@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
@@ -147,8 +148,8 @@ func Push(ctx context.Context, opts *PushOptions, args ...string) error {
 			p := p
 
 			processes = append(processes, processtree.NewProcessTreeItem(
-				fmt.Sprintf("pushing %s", p.String()),
-				"",
+				"pushing",
+				humanize.Bytes(uint64(p.Size())),
 				func(ctx context.Context) error {
 					return p.Push(ctx)
 				},
