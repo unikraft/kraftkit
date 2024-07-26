@@ -22,12 +22,9 @@ type ImgOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ImgOptions{}, cobra.Command{
-		Short:   "Manage images on KraftCloud",
-		Use:     "image",
-		Aliases: []string{"img"},
-		Long: heredoc.Doc(`
-			Mange images on KraftCloud.
-		`),
+		Short:   "Manage images",
+		Use:     "img SUBCOMMAND",
+		Aliases: []string{"image"},
 		Example: heredoc.Doc(`
 			# List images in your account.
 			$ kraft cloud image list

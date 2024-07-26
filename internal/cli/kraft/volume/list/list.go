@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"list"},
 		Args:    cobra.NoArgs,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "volume",
+			cmdfactory.AnnotationHelpGroup: "vol",
 		},
 	})
 	if err != nil {

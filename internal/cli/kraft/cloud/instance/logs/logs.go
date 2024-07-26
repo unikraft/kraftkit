@@ -49,24 +49,24 @@ func Log(ctx context.Context, opts *LogOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogOptions{}, cobra.Command{
-		Short:   "Get console output of an instance",
+		Short:   "Get console output of instances",
 		Use:     "logs [FLAG] UUID|NAME",
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"log"},
 		Example: heredoc.Doc(`
-			# Get all console output of a kraftcloud instance by UUID
+			# Get all console output of a instance by UUID
 			$ kraft cloud instance logs 77d0316a-fbbe-488d-8618-5bf7a612477a
 
-			# Get all console output of a kraftcloud instance by name
+			# Get all console output of a instance by name
 			$ kraft cloud instance logs my-instance-431342
 
-			# Get the last 20 lines of a kraftcloud instance by name
+			# Get the last 20 lines of a instance by name
 			$ kraft cloud instance logs my-instance-431342 --tail 20
 
-			# Get the last lines of a kraftcloud instance by name continuously
+			# Get the last lines of a instance by name continuously
 			$ kraft cloud instance logs my-instance-431342 --follow
 
-			# Get the last 10 lines of a kraftcloud instance by name continuously
+			# Get the last 10 lines of a instance by name continuously
 			$ kraft cloud instance logs my-instance-431342 --follow --tail 10
 		`),
 		Long: heredoc.Doc(`

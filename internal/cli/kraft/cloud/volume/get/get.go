@@ -37,13 +37,10 @@ func Status(ctx context.Context, opts *GetOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
-		Short:   "Retrieve the state of an volume",
+		Short:   "Retrieve the state of persistent volumes",
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},
-		Long: heredoc.Doc(`
-			Retrieve the state of an volume.
-		`),
 		Example: heredoc.Doc(`
 			# Retrieve information about a kraftcloud volume by UUID
 			$ kraft cloud volume get fd1684ea-7970-4994-92d6-61dcc7905f2b

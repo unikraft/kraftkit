@@ -26,10 +26,10 @@ type InstanceOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&InstanceOptions{}, cobra.Command{
-		Short:   "Manage KraftCloud instances",
+		Short:   "Manage instances",
 		Use:     "instance SUBCOMMAND",
 		Aliases: []string{"inst", "instances", "vm", "vms"},
-		Long:    "Manage KraftCloud instances.",
+		Long:    "Manage instances on Unikraft Cloud.",
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-instance",
 			cmdfactory.AnnotationHelpHidden: "true",

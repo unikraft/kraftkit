@@ -32,11 +32,10 @@ type DetachOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DetachOptions{}, cobra.Command{
-		Short:   "Detach a volume from an instance",
+		Short:   "Detach a persistent volume from an instance",
 		Use:     "detach [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"det"},
-		Long:    "Detach a volume from an instance.",
 		Example: heredoc.Doc(`
 			# Detach a volume from all instances
 			$ kraft cloud volume detach 77d0316a-fbbe-488d-8618-5bf7a612477a

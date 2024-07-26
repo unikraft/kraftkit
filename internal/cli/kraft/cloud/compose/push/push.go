@@ -38,15 +38,12 @@ type PushOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PushOptions{}, cobra.Command{
-		Short:   "Push a KraftCloud deployment service",
+		Short:   "Push the images services to Unikraft Cloud from a Compose project",
 		Use:     "push [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"p"},
-		Long: heredoc.Doc(`
-			Push a KraftCloud deployment service.
-		`),
 		Example: heredoc.Doc(`
-			# Push a KraftCloud deployment service.
+			# Push the nginx service image to Unikraft Cloud
 			$ kraft cloud compose push nginx
 		`),
 		Annotations: map[string]string{

@@ -23,7 +23,7 @@ func NewCmd() *cobra.Command {
 		Use:    "x [SUBCOMMAND]",
 		Hidden: true,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "experimental",
+			cmdfactory.AnnotationHelpGroup:  "misc",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

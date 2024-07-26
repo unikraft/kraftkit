@@ -211,6 +211,13 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 	}
 
 	for _, c := range ungrouped {
+		// Add built-in subcommands `help` and `completion` into the `misc` group
+		// if it exists
+		if _, ok := mapping["misc"]; ok && c.Name() == "help" || c.Name() == "completion" {
+			mapping["misc"] = append(mapping["misc"], c)
+			continue
+		}
+
 		usages = append(usages, rpad(fullname(cmd, c), maxPad+2)+c.Short)
 	}
 

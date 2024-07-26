@@ -37,7 +37,7 @@ func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
-		Short:   "Retrieve the state of a service",
+		Short:   "Retrieve the state of services",
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},

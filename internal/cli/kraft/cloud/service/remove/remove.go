@@ -33,11 +33,10 @@ type RemoveOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Delete a service",
+		Short:   "Delete services",
 		Use:     "remove [FLAGS] [NAME|UUID [NAME|UUID]...]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"delete", "del", "rm"},
-		Long:    "Delete a service.",
 		Example: heredoc.Doc(`
 			# Remove a service from your account by UUID.
 			$ kraft cloud service remove fd1684ea-7970-4994-92d6-61dcc7905f2b

@@ -28,7 +28,7 @@ func NewCmd() *cobra.Command {
 		Use:   "create VOLUME",
 		Args:  cobra.MaximumNArgs(1),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "volume",
+			cmdfactory.AnnotationHelpGroup: "vol",
 		},
 		Example: heredoc.Doc(`
 			# Create a volume with a randomly generated name

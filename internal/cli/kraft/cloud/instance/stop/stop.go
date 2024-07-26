@@ -34,28 +34,25 @@ type StopOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short:   "Stop an instance",
+		Short:   "Stop instances",
 		Use:     "stop [FLAGS] [UUID|NAME [UUID|NAME]...]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"st"},
 		Example: heredoc.Doc(`
-			# Stop a KraftCloud instance by UUID
+			# Stop an instance by UUID
 			$ kraft cloud instance stop 77d0316a-fbbe-488d-8618-5bf7a612477a
 
-			# Stop a KraftCloud instance by name
+			# Stop an instance by name
 			$ kraft cloud instance stop my-instance-431342
 
-			# Stop multiple KraftCloud instances
+			# Stop multiple instances
 			$ kraft cloud instance stop my-instance-431342 my-instance-other-2313
 
-			# Stop all KraftCloud instances
+			# Stop all instances
 			$ kraft cloud instance stop --all
 
-			# Stop a KraftCloud instanace by name and wait for connections to drain for 5s
+			# Stop an instanace by name and wait for connections to drain for 5s
 			$ kraft cloud instance stop --wait 5s my-instance-431342
-		`),
-		Long: heredoc.Doc(`
-			Stop a KraftCloud instance.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

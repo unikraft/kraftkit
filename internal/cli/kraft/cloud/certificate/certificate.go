@@ -23,10 +23,9 @@ type CertificateOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CertificateOptions{}, cobra.Command{
-		Short:   "Manage KraftCloud TLS certificates",
-		Use:     "certificate SUBCOMMAND",
-		Aliases: []string{"certificates", "cert", "certs", "crt", "crts"},
-		Long:    "Manage KraftCloud TLS certificates.",
+		Short:   "Manage TLS certificates",
+		Use:     "cert SUBCOMMAND",
+		Aliases: []string{"certificate", "certificates", "certs", "crt", "crts"},
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup:  "kraftcloud-certificate",
 			cmdfactory.AnnotationHelpHidden: "true",

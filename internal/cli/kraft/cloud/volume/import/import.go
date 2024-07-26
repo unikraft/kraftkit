@@ -46,7 +46,7 @@ const volimportPort uint16 = 42069
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ImportOptions{}, cobra.Command{
-		Short: "Import local data to a volume",
+		Short: "Import local data to a persistent volume",
 		Use:   "import [FLAGS]",
 		Args:  cobra.NoArgs,
 		Example: heredoc.Doc(`

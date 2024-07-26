@@ -215,13 +215,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a service",
-		Use:     "create [FLAGS] EXTERNAL:INTERNAL[/HANDLER[+HANDLER...]]",
-		Args:    cobra.MinimumNArgs(1),
+		Use:     "create [FLAGS] NAME",
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"new"},
 		Long:    "Create a service.",
 		Example: heredoc.Doc(`
 			# Create a service with a single service listening on port 443 named "my-service"
-			$ kraft cloud service create --name my-service 443:8080/http+tls
+			$ kraft cloud service create -p 443:8080/http+tls my-service
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

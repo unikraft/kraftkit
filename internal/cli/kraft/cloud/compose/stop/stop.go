@@ -39,19 +39,16 @@ type StopOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StopOptions{}, cobra.Command{
-		Short:   "Stop a KraftCloud deployment",
+		Short:   "Stop services in a Unikraft Cloud Compose project deployment",
 		Use:     "stop [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"s"},
-		Long: heredoc.Doc(`
-			Stop a KraftCloud deployment.
-		`),
 		Example: heredoc.Doc(`
-			# Stop a KraftCloud deployment fully.
+			# Stop all services in a Unikraft Cloud Compose project.
 			$ kraft cloud compose stop
 
-			# Stop a KraftCloud deployment with two specific components.
-			$ kraft cloud compose stop nginx component2
+			# Stop the nginx service
+			$ kraft cloud compose stop nginx
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",

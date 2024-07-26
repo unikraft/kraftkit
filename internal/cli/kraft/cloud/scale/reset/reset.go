@@ -33,7 +33,6 @@ func NewCmd() *cobra.Command {
 		Use:     "reset [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"rs", "delconfig", "deinit", "rmconfig"},
-		Long:    "Reset autoscale configuration of a service.",
 		Example: heredoc.Doc(`
 			# Reset an autoscale configuration by UUID
 			$ kraft cloud scale reset fd1684ea-7970-4994-92d6-61dcc7905f2b

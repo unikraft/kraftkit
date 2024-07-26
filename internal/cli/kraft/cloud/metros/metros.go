@@ -21,12 +21,9 @@ type MetrosOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&MetrosOptions{}, cobra.Command{
-		Short:   "Inspect metros on KraftCloud",
+		Short:   "Inspect Unikraft Cloud metros and regions",
 		Use:     "metro",
 		Aliases: []string{"metros", "m"},
-		Long: heredoc.Doc(`
-			Inspect metros on KraftCloud.
-		`),
 		Example: heredoc.Doc(`
 			# List metros available.
 			$ kraft cloud metro list

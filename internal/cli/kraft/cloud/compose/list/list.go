@@ -29,18 +29,15 @@ type ListOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List KraftCloud deployments at a given path",
+		Short:   "List service deployments at a given path",
 		Use:     "ls [FLAGS] [PATH]",
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"l", "ls"},
-		Long: heredoc.Doc(`
-			List KraftCloud deployments at a given path.
-		`),
 		Example: heredoc.Doc(`
-			# List KraftCloud deployments at a given path.
+			# List service deployments at a given path.
 			$ kraft cloud compose ls /path/to/deployment
 
-			# List KraftCloud deployments in the current directory.
+			# List service deployments in the current directory.
 			$ kraft cloud compose ls
 		`),
 		Annotations: map[string]string{

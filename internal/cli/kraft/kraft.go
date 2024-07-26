@@ -19,8 +19,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/internal/cli"
-	"kraftkit.sh/internal/cli/kraft/lib"
-	"kraftkit.sh/internal/cli/kraft/pause"
 	kitupdate "kraftkit.sh/internal/update"
 	kitversion "kraftkit.sh/internal/version"
 	"kraftkit.sh/iostreams"
@@ -32,10 +30,12 @@ import (
 	"kraftkit.sh/internal/cli/kraft/compose"
 	"kraftkit.sh/internal/cli/kraft/events"
 	"kraftkit.sh/internal/cli/kraft/fetch"
+	"kraftkit.sh/internal/cli/kraft/lib"
 	"kraftkit.sh/internal/cli/kraft/login"
 	"kraftkit.sh/internal/cli/kraft/logs"
 	"kraftkit.sh/internal/cli/kraft/menu"
 	"kraftkit.sh/internal/cli/kraft/net"
+	"kraftkit.sh/internal/cli/kraft/pause"
 	"kraftkit.sh/internal/cli/kraft/pkg"
 	"kraftkit.sh/internal/cli/kraft/ps"
 	"kraftkit.sh/internal/cli/kraft/remove"
@@ -64,9 +64,9 @@ func NewCmd() *cobra.Command {
        /^\     Build and use highly customized and ultra-lightweight unikernels.
       :[ ]:
       | = |    Version:          %s
-     /|/=\|\   Documentation:    https://kraftkit.sh/
+     /|/=\|\   Documentation:    https://unikraft.org/docs/cli
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-       v v     Platform:         https://kraft.cloud/ (Join the beta!)
+       v v     Platform:         https://unikraft.cloud
        ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
@@ -103,21 +103,24 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
 	cmd.AddCommand(net.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "KRAFT CLOUD COMMANDS"})
-	cmd.AddCommand(cloud.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "KRAFT CLOUD IMAGE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "KRAFT CLOUD INSTANCE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "KRAFT CLOUD VOLUME COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "KRAFT CLOUD SERVICE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "KRAFT CLOUD AUTOSCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "vol", Title: "LOCAL VOLUME COMMANDS"})
+	cmd.AddCommand(volume.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "vol", Title: "LOCAL VOLUME COMMANDS"})
-	cmd.AddCommand(volume.NewCmd())
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "UNIKRAFT CLOUD COMMANDS"})
+	cmd.AddCommand(cloud.NewCmd())
 
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "UNIKRAFT CLOUD IMAGE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "UNIKRAFT CLOUD INSTANCE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "UNIKRAFT CLOUD VOLUME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "UNIKRAFT CLOUD SERVICE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "UNIKRAFT CLOUD AUTOSCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "UNIKRAFT CLOUD CERTIFICATE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "UNIKRAFT CLOUD COMPOSE COMMANDS"})
+
+	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
 	cmd.AddCommand(x.NewCmd())

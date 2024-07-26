@@ -35,18 +35,15 @@ type DownOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DownOptions{}, cobra.Command{
-		Short:   "Stop and remove the services in a KraftCloud compose project deployment",
+		Short:   "Stop and remove the services in a Unikraft Cloud Compose project deployment",
 		Use:     "down [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"d"},
-		Long: heredoc.Doc(`
-			Stop a KraftCloud deployment.
-		`),
 		Example: heredoc.Doc(`
-			# Stop a KraftCloud deployment fully.
+			# Stop a deployment and remove all instances, services and volumes.
 			$ kraft cloud compose down
 
-			# Stop a KraftCloud deployment with two specific components.
+			# Stop and remove two specific instances.
 			$ kraft cloud compose down nginx component2
 		`),
 		Annotations: map[string]string{

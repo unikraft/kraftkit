@@ -35,14 +35,11 @@ type PsOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&PsOptions{}, cobra.Command{
-		Short: "List the services of compose project deployed to KraftCloud",
+		Short: "List the active services of Unikraft Cloud Compose project",
 		Use:   "ps [FLAGS]",
 		Args:  cobra.NoArgs,
-		Long: heredoc.Doc(`
-		List the services of compose project deployed to KraftCloud.
-		`),
 		Example: heredoc.Doc(`
-			# List the services in a KraftCloud deployment.
+			# List all active services
 			$ kraft cloud compose ps
 		`),
 		Annotations: map[string]string{

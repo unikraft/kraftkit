@@ -37,15 +37,15 @@ func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
-		Short:   "Retrieve the state of an instance",
+		Short:   "Retrieve the state of instances",
 		Use:     "get [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"status", "info"},
 		Example: heredoc.Doc(`
-			# Retrieve information about a kraftcloud instance by UUID
+			# Retrieve information about a instance by UUID
 			$ kraft cloud instance get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Retrieve information about a kraftcloud instance by name
+			# Retrieve information about a instance by name
 			$ kraft cloud instance get my-instance-431342
 		`),
 		Long: heredoc.Doc(`

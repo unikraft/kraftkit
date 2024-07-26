@@ -44,20 +44,17 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"del", "delete", "rm"},
 		Args:    cobra.ArbitraryArgs,
 		Example: heredoc.Doc(`
-			# Remove a KraftCloud certificate by UUID
+			# Remove a certificate by UUID
 			$ kraft cloud certificate remove fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Remove a KraftCloud certificate by name
+			# Remove a certificate by name
 			$ kraft cloud certificate remove my-certificate-431342
 
-			# Remove multiple KraftCloud certificates
+			# Remove multiple certificates
 			$ kraft cloud certificate remove my-certificate-431342 my-certificate-other-2313
 
-			# Remove all KraftCloud certificates
+			# Remove all certificates
 			$ kraft cloud certificate remove --all
-		`),
-		Long: heredoc.Doc(`
-			Remove a KraftCloud certificate.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
