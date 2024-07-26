@@ -12,6 +12,26 @@ jobs:
         os: [ubuntu-24.04, ubuntu-22.04, macos-12, macos-13, macos-14, mac-m2-14]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Generate Suffix
+        shell: bash
+        id: suffix
+        run: echo "suffix=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up BuildKit
+        shell: bash
+        run: |
+          docker run \
+            --rm \
+            -itd \
+            --privileged \
+            --name "buildkitd_${GITHUB_RUN_ID}_${SUFFIX}" \
+            -v /run/buildkit:/run/buildkit:rw \
+            moby/buildkit:v0.14.1;
+          timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done'
+          sudo chmod 666 /run/buildkit/buildkitd.sock;
+        env:
+          SUFFIX: ${{ steps.suffix.outputs.suffix }}
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -42,6 +62,11 @@ jobs:
 
       - name: Run tests
         run: make test-unit
+
+      - name: Stop BuildKit
+        if: always()
+        shell: bash
+        run: docker stop "buildkitd_${GITHUB_RUN_ID}_${{ steps.suffix.outputs.suffix }}" || true
 
   e2e-cli:
     strategy:
