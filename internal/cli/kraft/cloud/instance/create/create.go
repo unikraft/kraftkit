@@ -414,7 +414,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
-			return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+			return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER]")
 		}
 
 		destPort, err := strconv.Atoi(split[1])
@@ -449,7 +449,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
 				if len(split) != 2 {
-					return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+					return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER]")
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
