@@ -43,9 +43,6 @@ func NewCmd() *cobra.Command {
 		Use:     "list",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
-		Long: heredoc.Doc(`
-			List all images at a metro for your account.
-		`),
 		Example: heredoc.Doc(`
 			# List images in your account.
 			$ kraft cloud image list

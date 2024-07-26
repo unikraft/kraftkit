@@ -44,15 +44,15 @@ type BuildOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&BuildOptions{}, cobra.Command{
-		Short:   "Build a compose project for KraftCloud",
+		Short:   "Build a compose project",
 		Use:     "build [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"b"},
 		Long: heredoc.Doc(`
-		Build a compose project for KraftCloud
+		Build a compose project
 		`),
 		Example: heredoc.Doc(`
-			# Build a compose project for KraftCloud
+			# Build a compose project
 			$ kraft cloud compose build
 
 			# (If applicable) Set or override a runtime for a particular service

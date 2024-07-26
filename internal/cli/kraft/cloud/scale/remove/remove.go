@@ -33,7 +33,6 @@ func NewCmd() *cobra.Command {
 		Use:     "remove [FLAGS] UUID NAME",
 		Args:    cobra.ExactArgs(2),
 		Aliases: []string{"delete", "del", "rm"},
-		Long:    "Delete an autoscale configuration policy.",
 		Example: heredoc.Doc(`
 			# Delete an autoscale configuration policy by UUID
 			$ kraft cloud scale remove fd1684ea-7970-4994-92d6-61dcc7905f2b my-policy

@@ -32,18 +32,18 @@ type StartOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
-		Short:   "Start an instance",
+		Short:   "Start instances",
 		Use:     "start [FLAGS] [UUID|NAME [UUID|NAME]...]",
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"str"},
 		Example: heredoc.Doc(`
-			# Start a KraftCloud instance by UUID
+			# Start an instance by UUID
 			$ kraft cloud instance start 77d0316a-fbbe-488d-8618-5bf7a612477a
 
-			# Start a KraftCloud instance by name
+			# Start an instance by name
 			$ kraft cloud instance start my-instance-431342
 
-			# Start multiple KraftCloud instances
+			# Start multiple instances
 			$ kraft cloud instance start my-instance-431342 my-instance-other-2313
 		`),
 		Long: heredoc.Doc(`

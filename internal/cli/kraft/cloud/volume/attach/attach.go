@@ -79,7 +79,6 @@ func NewCmd() *cobra.Command {
 		Use:     "attach [FLAGS] UUID|NAME",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"at"},
-		Long:    "Attach a persistent volume to an instance.",
 		Example: heredoc.Doc(`
 			# Attach the volume data to the instance nginx to the path /mnt/data
 			$ kraft cloud vol attach data --to nginx --at /mnt/data

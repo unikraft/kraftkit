@@ -42,10 +42,9 @@ func NewCmd() *cobra.Command {
 		Use:     "init [FLAGS] NAME|UUID",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"init", "initialise", "initialize", "i"},
-		Long:    "Initialize autoscale configuration for a service.",
 		Example: heredoc.Doc(`
 			# Initialize an autoscale configuration
-			kraft cloud scale init my-service \
+			$ kraft cloud scale init my-service \
 				--master my-instance-name \
 				--min-size 1 \
 				--max-size 10 \

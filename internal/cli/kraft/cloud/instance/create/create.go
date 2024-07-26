@@ -695,7 +695,7 @@ func NewCmd() *cobra.Command {
 				nginx:latest
 		`),
 		Long: heredoc.Doc(`
-			Create an instance on KraftCloud from an image.
+			Create an instance on Unikraft Cloud from an image.
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",

@@ -35,19 +35,16 @@ type StartOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
-		Short:   "Start a KraftCloud deployment",
+		Short:   "Start services in a Unikraft Cloud Compose project deployment",
 		Use:     "start [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"str"},
-		Long: heredoc.Doc(`
-			Start an existing KraftCloud deployment.
-		`),
 		Example: heredoc.Doc(`
-			# Stop an existing KraftCloud deployment fully.
+			# Start all services in a Unikraft Cloud Compose project.
 			$ kraft cloud compose start
 
-			# Stop an existing KraftCloud deployment with two specific components.
-			$ kraft cloud compose start nginx component2
+			# Start the nginx service
+			$ kraft cloud compose start nginx
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",

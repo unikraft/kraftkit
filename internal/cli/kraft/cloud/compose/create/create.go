@@ -26,15 +26,12 @@ type CreateOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
-		Short:   "Create a KraftCloud deployment",
+		Short:   "Create a deployment from a Compose project on Unikraft Cloud",
 		Use:     "create [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"cr"},
-		Long: heredoc.Doc(`
-			Create a service image from a KraftCloud deployment.
-		`),
 		Example: heredoc.Doc(`
-			# Create a service image from a KraftCloud deployment.
+			# Create a deployment
 			$ kraft cloud compose create
 		`),
 		Annotations: map[string]string{

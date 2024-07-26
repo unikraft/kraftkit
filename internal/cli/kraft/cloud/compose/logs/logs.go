@@ -37,19 +37,17 @@ type LogsOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&LogsOptions{}, cobra.Command{
-		Short:   "Log the services in a KraftCloud compose project deployment",
+		Short:   "View logs of services in a Unikraft Cloud Compose project deployment",
 		Use:     "log [FLAGS]",
 		Args:    cobra.ArbitraryArgs,
-		Aliases: []string{"logs", "l"},
-		Long: heredoc.Doc(`
-		Log the services in a KraftCloud deployment.
-		`),
+		Aliases: []string{"log", "l"},
 		Example: heredoc.Doc(`
-			# Log the services in a KraftCloud deployment.
-			$ kraft cloud compose log
+			# Follow the logs of all service services in a Unikraft Cloud Compose
+			# project deployment.
+			$ kraft cloud compose logs -f
 
-			# Log a service in a KraftCloud deployment.
-			$ kraft cloud compose log nginx
+			# Follow the logs of a specific service
+			$ kraft cloud compose logs -f nginx
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",

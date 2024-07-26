@@ -32,24 +32,24 @@ type RemoveOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Remove an instance",
+		Short:   "Remove instances",
 		Use:     "remove [FLAGS] [UUID|NAME [UUID|NAME]...]",
 		Aliases: []string{"del", "delete", "rm"},
 		Args:    cobra.ArbitraryArgs,
 		Example: heredoc.Doc(`
-			# Remove a KraftCloud instance by UUID
+			# Remove an instance by UUID
 			$ kraft cloud instance remove fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Remove a KraftCloud instance by name
+			# Remove an instance by name
 			$ kraft cloud instance remove my-instance-431342
 
-			# Remove multiple KraftCloud instances
+			# Remove multiple instances
 			$ kraft cloud instance remove my-instance-431342 my-instance-other-2313
 
-			# Remove all KraftCloud instances
+			# Remove all instances
 			$ kraft cloud instance remove --all
 
-			# Remove all stopped KraftCloud instances
+			# Remove all stopped instances
 			$ kraft cloud instance remove --stopped
 		`),
 		Long: heredoc.Doc(`

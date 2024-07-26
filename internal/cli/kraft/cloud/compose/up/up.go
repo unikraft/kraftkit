@@ -51,24 +51,25 @@ type UpOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&UpOptions{}, cobra.Command{
-		Short:   "Deploy services in a compose project to KraftCloud",
+		Short:   "Deploy services in a compose project to Unikraft Cloud",
 		Use:     "up [FLAGS] [COMPONENT]",
 		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"u"},
 		Long: heredoc.Docf(`
-			Deploy services in a compose project to KraftCloud
+			Deploy services in a compose project to Unikraft Cloud
 
 			Use an existing %[1]sComposefile%[1]s or %[1]sdocker-compose.yaml%[1]s file to start a
-			number of services as instances on KraftCloud.
+			number of services as instances on Unikraft Cloud.
 
 			Note that this is an experimental command and not all attributes of the
 			%[1]sComposefile%[1]s are supported nor are all flags identical.
 		`, "`"),
 		Example: heredoc.Doc(`
-			# Start a KraftCloud deployment fully.
+			# Build and deploy a Compose project on Unikraft Cloud.
 			$ kraft cloud compose up
 
-			# Start a KraftCloud deployment with two specific components.
+			# Build and deploy the nginx service from a Compose project on
+			# Unikraft Cloud.
 			$ kraft cloud compose up nginx component
 
 			# (If applicable) Set or override a runtime for a particular service

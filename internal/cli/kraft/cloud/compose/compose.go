@@ -32,32 +32,32 @@ type ComposeOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ComposeOptions{}, cobra.Command{
-		Short:   "Manage deployments on KraftCloud",
+		Short:   "Manage Compose deployments on Unikraft Cloud",
 		Use:     "compose",
 		Aliases: []string{"comp"},
 		Long: heredoc.Doc(`
-			Mange deployments KraftCloud.
+			Manage Compose deployments on Unikraft Cloud
 		`),
 		Example: heredoc.Doc(`
-			# Start the current KraftCloud deployment.
+			# Deploy the Compose project on Unikraft Cloud
 			$ kraft cloud compose up
 
-			# Stop the current KraftCloud deployment.
+			# Stop the deployment
 			$ kraft cloud compose down
 
-			# List the services in a KraftCloud deployment.
+			# List the Compose services for this project Unikraft Cloud
 			$ kraft cloud compose ps
 
-			# Build a KraftCloud deployment service.
+			# Build a specific service image of a Compose project
 			$ kraft cloud compose build nginx
 
-			# Create a service image from a KraftCloud deployment.
+			# Create a service image of a Compose project
 			$ kraft cloud compose create
 
-			# Push a KraftCloud deployment service.
+			# Push a service image of Compose project
 			$ kraft cloud compose push nginx
 
-			# Log a KraftCloud deployment service.
+			# View logs of a service deployment
 			$ kraft cloud compose log nginx
 		`),
 		Annotations: map[string]string{

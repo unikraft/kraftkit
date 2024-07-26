@@ -42,10 +42,10 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"status", "info"},
 		Example: heredoc.Doc(`
-			# Retrieve information about a kraftcloud certificate by UUID
+			# Retrieve information about a certificate by UUID
 			$ kraft cloud certificate get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Retrieve information about a kraftcloud certificate by name
+			# Retrieve information about a certificate by name
 			$ kraft cloud certificate get my-certificate-431342
 		`),
 		Long: heredoc.Doc(`

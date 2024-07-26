@@ -83,7 +83,7 @@ type DeployOptions struct {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&DeployOptions{}, cobra.Command{
 		Short:   "Deploy your application",
-		Use:     "deploy",
+		Use:     "deploy [ARGS] [CONTEXT] [-- [APP ARGS]]",
 		Aliases: []string{"launch", "run"},
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
@@ -94,8 +94,20 @@ func NewCmd() *cobra.Command {
 			with a single command.
 		`),
 		Example: heredoc.Docf(`
-			# Run an image from KraftCloud's catalog:
+			# Deploy a working directory with a Kraftfile or Dockerfile:
+			$ kraft cloud --metro fra0 deploy -p 443:8080
+
+			# Run an image from Unikraft Cloud's image catalog:
 			$ kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest
+
+			# Supply arguments to the instance of the existing image
+			$ kraft cloud --metro fra0 deploy -p 443:8080 caddy:latest -- /bin/server --debug
+
+			# Supply arguments to the instance of the project (overriding the cmd):
+			$ kraft cloud --metro fra0 deploy -p 443:8080 . -- /bin/server --debug
+
+			# Immediately start following the log tail
+			$ kraft cloud --metro fra0 deploy -p 443:8080 -f caddy:latest
 		`),
 	})
 	if err != nil {

@@ -30,21 +30,18 @@ type QuotasOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&QuotasOptions{}, cobra.Command{
-		Short:   "View your resource quota on KraftCloud",
+		Short:   "View your resource quota on Unikraft Cloud",
 		Use:     "quotas",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"q", "quota"},
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
-		Long: heredoc.Doc(`
-			View your resource quota on KraftCloud.
-		`),
 		Example: heredoc.Doc(`
-			# View your resource quota on KraftCloud
+			# View your resource quota on Unikraft Cloud
 			$ kraft cloud quota
 
-			# View your resource quota on KraftCloud in JSON format
+			# View your resource quota on Unikraft Cloud in JSON format
 			$ kraft cloud quota -o json
 		`),
 	})

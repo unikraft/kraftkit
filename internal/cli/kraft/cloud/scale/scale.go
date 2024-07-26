@@ -25,10 +25,9 @@ type ScaleOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ScaleOptions{}, cobra.Command{
-		Short:   "Manage instance autoscale on KraftCloud",
+		Short:   "Manage instance autoscale policies",
 		Use:     "scale SUBCOMMAND",
 		Aliases: []string{"autoscale", "scl"},
-		Long:    "Manage instance autoscale on KraftCloud.",
 		Example: heredoc.Doc(`
 			# Add an autoscale configuration to a service
 			$ kraft cloud scale add my-service my-policy

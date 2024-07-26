@@ -29,13 +29,10 @@ type ListOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List all service at a metro for your account",
+		Short:   "List services",
 		Use:     "list [FLAGS]",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
-		Long: heredoc.Doc(`
-			List all service in your account.
-		`),
 		Example: heredoc.Doc(`
 			# List all service in your account.
 			$ kraft cloud service list

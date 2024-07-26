@@ -29,7 +29,7 @@ type ListOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List all volumes at a metro for your account",
+		Short:   "List persistent volumes",
 		Use:     "list",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},

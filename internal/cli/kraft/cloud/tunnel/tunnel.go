@@ -51,7 +51,7 @@ type TunnelOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&TunnelOptions{}, cobra.Command{
-		Short: "Forward a local port to an unexposed instance through an intermediate TLS tunnel service",
+		Short: "Forward a local port to an unexposed instance",
 		Long: heredoc.Docf(`
 			Forward a local port to an unexposed instance through an intermediate TLS
 			tunnel service.
