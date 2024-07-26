@@ -735,7 +735,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[kcinstances.ScaleToZeroPolicy](
 			kcinstances.ScaleToZeroPolicies(),
-			kcinstances.ScaleToZeroPolicyOn,
+			kcinstances.ScaleToZeroPolicyOff,
 		),
 		"scale-to-zero",
 		"Scale to zero policy of the instance (on/off/idle)",
