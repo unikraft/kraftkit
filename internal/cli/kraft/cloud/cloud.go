@@ -28,21 +28,19 @@ import (
 )
 
 type CloudOptions struct {
-	Metro string `long:"metro" env:"UKC_METRO" usage:"Set the UnikraftCloud metro"`
-	Token string `long:"token" env:"UKC_TOKEN" usage:"Set the UnikraftCloud token"`
+	Metro string `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location"`
+	Token string `long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token"`
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
-		Short:   "Manage resources on the KraftCloud platform",
+		Short:   "Manage resources on Unikraft Cloud",
 		Use:     "cloud [FLAGS] [SUBCOMMAND|DIR]",
 		Aliases: []string{"cl"},
 		Long: heredoc.Docf(`
-			▄▀▄▀ kraft.cloud
+			Manage resources on Unikraft Cloud.
 
-			Manage resources on The Millisecond Platform.
-
-			Learn more & sign up for the beta at https://kraft.cloud
+			Learn more & sign up at https://unikraft.cloud
 
 			Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
 			%[1]sUKC_METRO%[1]s environmental variable.
