@@ -64,9 +64,9 @@ func NewCmd() *cobra.Command {
        /^\     Build and use highly customized and ultra-lightweight unikernels.
       :[ ]:
       | = |    Version:          %s
-     /|/=\|\   Documentation:    https://kraftkit.sh/
+     /|/=\|\   Documentation:    https://unikraft.org/docs/cli
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-       v v     Platform:         https://kraft.cloud/ (Join the beta!)
+       v v     Platform:         https://unikraft.cloud
        ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
