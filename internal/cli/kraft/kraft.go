@@ -103,21 +103,24 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "net", Title: "LOCAL NETWORKING COMMANDS"})
 	cmd.AddCommand(net.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "KRAFT CLOUD COMMANDS"})
-	cmd.AddCommand(cloud.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "KRAFT CLOUD IMAGE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "KRAFT CLOUD INSTANCE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "KRAFT CLOUD VOLUME COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "KRAFT CLOUD SERVICE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "KRAFT CLOUD AUTOSCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "vol", Title: "LOCAL VOLUME COMMANDS"})
+	cmd.AddCommand(volume.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "vol", Title: "LOCAL VOLUME COMMANDS"})
-	cmd.AddCommand(volume.NewCmd())
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "UNIKRAFT CLOUD COMMANDS"})
+	cmd.AddCommand(cloud.NewCmd())
 
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "UNIKRAFT CLOUD IMAGE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "UNIKRAFT CLOUD INSTANCE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "UNIKRAFT CLOUD VOLUME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "UNIKRAFT CLOUD SERVICE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "UNIKRAFT CLOUD AUTOSCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "UNIKRAFT CLOUD CERTIFICATE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "UNIKRAFT CLOUD COMPOSE COMMANDS"})
+
+	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
 	cmd.AddCommand(x.NewCmd())
