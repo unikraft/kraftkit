@@ -171,6 +171,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	).WithMetro(opts.Metro)
 
+	rawInstances := opts.instances
 	opts.instances, err = populatePrivateIPs(ctx, cliInstance, opts.instances)
 	if err != nil {
 		return fmt.Errorf("could not populate private IPs: %w", err)
@@ -220,9 +221,10 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		// NOTE(craciunoiuc): Only TCP is supported at the moment. This refers to the
 		// local listener, as the remote listener is always assumed to be TCP because
 		// of TLS.
-		ctype: opts.ctypes[0],
-		auth:  authStr,
-		name:  instID,
+		ctype:    opts.ctypes[0],
+		auth:     authStr,
+		name:     instID,
+		nameAddr: fmt.Sprintf("%s:%d", rawInstances[0], opts.instanceProxyPorts[0]),
 	}
 
 	for i := range opts.localPorts {
@@ -231,11 +233,12 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		pr := Relay{
-			lAddr: net.JoinHostPort("127.0.0.1", strconv.FormatUint(uint64(opts.localPorts[i]), 10)),
-			rAddr: net.JoinHostPort(sgFQDN, strconv.FormatUint(uint64(opts.exposedProxyPorts[i]), 10)),
-			ctype: opts.ctypes[i],
-			auth:  authStr,
-			name:  instID,
+			lAddr:    net.JoinHostPort("127.0.0.1", strconv.FormatUint(uint64(opts.localPorts[i]), 10)),
+			rAddr:    net.JoinHostPort(sgFQDN, strconv.FormatUint(uint64(opts.exposedProxyPorts[i]), 10)),
+			ctype:    opts.ctypes[i],
+			auth:     authStr,
+			name:     instID,
+			nameAddr: fmt.Sprintf("%s:%d", rawInstances[i], opts.instanceProxyPorts[i]),
 		}
 
 		go func() {
@@ -401,14 +404,15 @@ func (opts *TunnelOptions) formatProxyArgs(authStr string) []string {
 }
 
 // populatePrivateIPs fetches the private IPs of the instances and replaces the instance names/uuids with the Private IPs.
-func populatePrivateIPs(ctx context.Context, cli kcinstances.InstancesService, ips []string) ([]string, error) {
+func populatePrivateIPs(ctx context.Context, cli kcinstances.InstancesService, targets []string) (ips []string, err error) {
 	var instancesToGet []string
 	var indexesToGet []int
-	for i := range ips {
+	for i := range targets {
+		ips = append(ips, targets[i])
 		// If instance is not an IP (PrivateIP) or PrivateFQDN
 		// assume it is a name/UUID and fetch the IP
-		if net.ParseIP(ips[i]) == nil && !strings.HasSuffix(ips[i], ".internal") {
-			instancesToGet = append(instancesToGet, ips[i])
+		if net.ParseIP(targets[i]) == nil && !strings.HasSuffix(targets[i], ".internal") {
+			instancesToGet = append(instancesToGet, targets[i])
 			indexesToGet = append(indexesToGet, i)
 		}
 	}
@@ -418,7 +422,12 @@ func populatePrivateIPs(ctx context.Context, cli kcinstances.InstancesService, i
 			return nil, fmt.Errorf("getting instances: %w", err)
 		}
 
-		for i, inst := range instGetResp.Data.Entries {
+		instances, err := instGetResp.AllOrErr()
+		if err != nil {
+			return nil, fmt.Errorf("getting instances: %w", err)
+		}
+
+		for i, inst := range instances {
 			if inst.PrivateIP == "" {
 				return nil, fmt.Errorf("instance '%s' not found", instancesToGet[i])
 			}

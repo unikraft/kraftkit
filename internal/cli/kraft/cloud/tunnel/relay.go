@@ -22,11 +22,12 @@ import (
 
 // Relay relays connections from a local listener to a remote host over TLS.
 type Relay struct {
-	lAddr string
-	rAddr string
-	ctype string
-	auth  string
-	name  string
+	lAddr    string
+	rAddr    string
+	ctype    string
+	auth     string
+	name     string
+	nameAddr string
 }
 
 const Heartbeat = "\xf0\x9f\x91\x8b\xf0\x9f\x90\x92\x00"
@@ -39,7 +40,13 @@ func (r *Relay) Up(ctx context.Context) error {
 	defer func() { l.Close() }()
 	go func() { <-ctx.Done(); l.Close() }()
 
-	log.G(ctx).Info("tunnelling ", l.Addr(), " to ", r.rAddr)
+	log.G(ctx).
+		WithField("from", l.Addr()).
+		WithField("to", r.nameAddr).
+		Info("tunnelling")
+	log.G(ctx).
+		WithField("via", r.rAddr).
+		Debug("tunnelling")
 
 	for {
 		conn, err := l.Accept()
@@ -51,7 +58,7 @@ func (r *Relay) Up(ctx context.Context) error {
 		}
 
 		c := r.newConnection(conn)
-		go c.handle(ctx, []byte(r.auth), r.name)
+		go c.handle(ctx, []byte(r.auth), r.name, r.nameAddr)
 	}
 }
 
@@ -108,10 +115,12 @@ type connection struct {
 
 // handle handles the client connection by relaying reads and writes from/to
 // the remote host.
-func (c *connection) handle(ctx context.Context, auth []byte, instance string) {
+func (c *connection) handle(ctx context.Context, auth []byte, instance, instanceRaw string) {
 	defer func() {
 		c.conn.Close()
-		log.G(ctx).Info("closed client connection ", c.conn.RemoteAddr())
+		log.G(ctx).
+			WithField("for", instanceRaw).
+			Info("closed connection")
 	}()
 
 	rc, err := c.relay.dialRemote(ctx)
@@ -121,7 +130,14 @@ func (c *connection) handle(ctx context.Context, auth []byte, instance string) {
 	}
 	defer rc.Close()
 
-	log.G(ctx).Info("accepted client connection ", c.conn.RemoteAddr(), " to ", rc.LocalAddr(), "->", rc.RemoteAddr())
+	log.G(ctx).
+		WithField("for", c.conn.RemoteAddr()).
+		WithField("from", rc.LocalAddr()).
+		WithField("to", rc.RemoteAddr()).
+		Debug("opened connection")
+	log.G(ctx).
+		WithField("to", instanceRaw).
+		Info("accepted connection")
 
 	// NOTE(antoineco): these calls are critical as they allow reads/writes to be
 	// later cancelled, because the deadline applies to all future and pending
