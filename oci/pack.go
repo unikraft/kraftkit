@@ -713,18 +713,27 @@ func (ocipack *ociPackage) Metadata() interface{} {
 	return ocipack.manifest.config
 }
 
+// Size in bytes of the package.
+func (ocipack *ociPackage) Size() int64 {
+	if len(ocipack.manifest.manifest.Layers) == 0 {
+		return -1
+	}
+
+	var total int64 = 0
+
+	for _, layer := range ocipack.manifest.manifest.Layers {
+		total += layer.Size
+	}
+
+	return total
+}
+
 // Columns implements pack.Package
 func (ocipack *ociPackage) Columns() []tableprinter.Column {
 	size := "n/a"
 
-	if len(ocipack.manifest.manifest.Layers) > 0 {
-		var total int64 = 0
-
-		for _, layer := range ocipack.manifest.manifest.Layers {
-			total += layer.Size
-		}
-
-		size = humanize.Bytes(uint64(total))
+	if sizeb := ocipack.Size(); sizeb > 0 {
+		size = humanize.Bytes(uint64(sizeb))
 	}
 
 	return []tableprinter.Column{

@@ -30,6 +30,9 @@ type Package interface {
 	// Metadata returns any additional metadata associated with this package.
 	Metadata() interface{}
 
+	// Size in bytes of the package.
+	Size() int64
+
 	// Columns is a subset of Metadata that is displayed to the user and can be
 	// also collated or parsed to made easier-to-read.
 	Columns() []tableprinter.Column
