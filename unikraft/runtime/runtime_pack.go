@@ -117,6 +117,11 @@ func (runtime *Runtime) Metadata() interface{} {
 	return runtime.pack.Metadata()
 }
 
+// Size implements kraftkit.sh/pack.Package
+func (runtime *Runtime) Size() int64 {
+	return runtime.pack.Size()
+}
+
 // Push implements kraftkit.sh/pack.Package
 func (runtime *Runtime) Push(ctx context.Context, opts ...pack.PushOption) error {
 	panic("not implemented: kraftkit.sh/unikraft/runtime.Runtime.Push")

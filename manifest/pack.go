@@ -93,6 +93,10 @@ func (mp mpack) Metadata() interface{} {
 	return mp.manifest
 }
 
+func (mp mpack) Size() int64 {
+	return -1 // not implemented
+}
+
 func (mp mpack) Columns() []tableprinter.Column {
 	channels := []string{}
 	for _, channel := range mp.manifest.Channels {
