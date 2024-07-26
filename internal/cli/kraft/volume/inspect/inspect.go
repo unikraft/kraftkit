@@ -30,7 +30,7 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"get"},
 		Args:    cobra.ExactArgs(1),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "volume",
+			cmdfactory.AnnotationHelpGroup: "vol",
 		},
 		Example: heredoc.Doc(`
 			# Inspect a volume

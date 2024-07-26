@@ -29,9 +29,9 @@ func NewCmd() *cobra.Command {
 		Short:   "Manage machine volumes",
 		Use:     "vol SUBCOMMAND",
 		Aliases: []string{"volume", "vols", "volumes"},
-		Hidden:  true,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "volume",
+			cmdfactory.AnnotationHelpGroup:  "vol",
+			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
 	if err != nil {

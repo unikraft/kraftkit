@@ -43,7 +43,7 @@ func NewCmd() *cobra.Command {
 			$ kraft volume remove my-volume
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "volume",
+			cmdfactory.AnnotationHelpGroup: "vol",
 		},
 	})
 	if err != nil {
