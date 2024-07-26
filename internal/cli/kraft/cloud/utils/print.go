@@ -326,7 +326,11 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			}
 			table.AddField(strings.Join(vols, ", "), nil)
 			if instance.ServiceGroup != nil {
-				table.AddField(instance.ServiceGroup.UUID, nil)
+				if instance.ServiceGroup.Name != "" {
+					table.AddField(instance.ServiceGroup.Name, nil)
+				} else {
+					table.AddField(instance.ServiceGroup.UUID, nil)
+				}
 			} else {
 				table.AddField("", nil)
 			}
