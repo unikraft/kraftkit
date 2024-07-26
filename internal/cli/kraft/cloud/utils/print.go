@@ -236,11 +236,17 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 
 		table.AddField(instance.Name, nil)
 
-		var fqdn string
-		if instance.ServiceGroup != nil && len(instance.ServiceGroup.Domains) > 0 {
-			fqdn = instance.ServiceGroup.Domains[0].FQDN
+		if instance.ServiceGroup != nil {
+			var fqdns []string
+			for _, domain := range instance.ServiceGroup.Domains {
+				if domain.FQDN != "" {
+					fqdns = append(fqdns, domain.FQDN)
+				}
+			}
+			table.AddField(strings.Join(fqdns, ","), nil)
+		} else {
+			table.AddField("", nil)
 		}
-		table.AddField(fqdn, nil)
 
 		if format != "table" {
 			table.AddField(instance.PrivateFQDN, nil)
@@ -320,7 +326,11 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			}
 			table.AddField(strings.Join(vols, ", "), nil)
 			if instance.ServiceGroup != nil {
-				table.AddField(instance.ServiceGroup.UUID, nil)
+				if instance.ServiceGroup.Name != "" {
+					table.AddField(instance.ServiceGroup.Name, nil)
+				} else {
+					table.AddField(instance.ServiceGroup.UUID, nil)
+				}
 			} else {
 				table.AddField("", nil)
 			}
@@ -605,11 +615,13 @@ func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResp
 
 		table.AddField(sg.Name, nil)
 
-		var fqdn string
-		if len(sg.Domains) > 0 {
-			fqdn = sg.Domains[0].FQDN
+		var fqdns []string
+		for _, domain := range sg.Domains {
+			if domain.FQDN != "" {
+				fqdns = append(fqdns, domain.FQDN)
+			}
 		}
-		table.AddField(fqdn, nil)
+		table.AddField(strings.Join(fqdns, ","), nil)
 
 		var services []string
 		for _, service := range sg.Services {
