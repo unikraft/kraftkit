@@ -22,7 +22,7 @@ import (
 )
 
 type StartOptions struct {
-	All    bool                  `long:"all" usage:"Start all instances"`
+	All    bool                  `long:"all" short:"a" usage:"Start all instances"`
 	Auth   *config.AuthConfig    `noattribute:"true"`
 	Client kraftcloud.KraftCloud `noattribute:"true"`
 	Metro  string                `noattribute:"true"`
