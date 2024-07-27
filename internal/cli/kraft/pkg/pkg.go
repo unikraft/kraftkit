@@ -35,7 +35,7 @@ import (
 )
 
 type PkgOptions struct {
-	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets (x86_64/arm64/arm)"`
 	Args         []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Compress     bool                      `local:"true" long:"compress" short:"c" usage:"Compress the initrd package (experimental)"`
 	Dbg          bool                      `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
@@ -49,7 +49,7 @@ type PkgOptions struct {
 	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	NoPull       bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`
 	Output       string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets (fc/qemu/xen/kraftcloud)"`
 	Project      app.Application           `noattribute:"true"`
 	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
