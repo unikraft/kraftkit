@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -34,7 +36,7 @@ var ErrContextNotBuildable = fmt.Errorf("could not determine what or how to buil
 
 type BuildOptions struct {
 	All          bool            `long:"all" usage:"Build all targets"`
-	Architecture string          `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets"`
+	Architecture string          `long:"arch" short:"m" usage:"Filter the creation of the build by architecture of known targets (x86_64/arm64/arm)"`
 	DotConfig    string          `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
 	Env          []string        `long:"env" short:"e" usage:"Set environment variables to be built in the unikernel"`
 	ForcePull    bool            `long:"force-pull" usage:"Force pulling packages before building"`
@@ -47,7 +49,7 @@ type BuildOptions struct {
 	NoFetch      bool            `long:"no-fetch" usage:"Do not run Unikraft's fetch step before building"`
 	NoRootfs     bool            `long:"no-rootfs" usage:"Do not build the root file system (initramfs)"`
 	NoUpdate     bool            `long:"no-update" usage:"Do not update package index before running the build"`
-	Platform     string          `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets"`
+	Platform     string          `long:"plat" short:"p" usage:"Filter the creation of the build by platform of known targets (fc/qemu/xen)"`
 	PrintStats   bool            `long:"print-stats" usage:"Print build statistics"`
 	Project      app.Application `noattribute:"true"`
 	Rootfs       string          `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
@@ -57,6 +59,15 @@ type BuildOptions struct {
 	Workdir      string          `noattribute:"true"`
 
 	statistics map[string]string
+}
+
+// toStringSlice converts a slice of fmt.Stringer to a slice of strings.
+func toStringSlice[T fmt.Stringer](slice []T) []string {
+	strSlice := make([]string, len(slice))
+	for i, v := range slice {
+		strSlice[i] = v.String()
+	}
+	return strSlice
 }
 
 // Build a Unikraft unikernel.
@@ -76,6 +87,22 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		} else {
 			opts.Workdir = args[0]
 		}
+	}
+
+	platforms := platform.Platforms()
+	platformsSlice := toStringSlice(platforms)
+
+	if !slices.Contains(platformsSlice, opts.Platform) {
+		platformsString := strings.Join(platformsSlice, ", ")
+		return fmt.Errorf("unsupported platform: %s\nsupported platforms are: %s", opts.Platform, platformsString)
+	}
+
+	architectures := arch.Architectures()
+	architecturesSlice := toStringSlice(architectures)
+
+	if !slices.Contains(architecturesSlice, opts.Architecture) {
+		architecturesString := strings.Join(architecturesSlice, ", ")
+		return fmt.Errorf("unsupported architecture: %s\nsupported architectures are: %s", opts.Architecture, architecturesString)
 	}
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
