@@ -70,7 +70,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 	if len(args) == 1 && strings.HasPrefix(args[0], "443:") && strings.Count(args[0], "/") == 0 {
 		split := strings.Split(args[0], ":")
 		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed port expeted format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+			return nil, fmt.Errorf("malformed port expeted format EXTERNAL:INTERNAL[/HANDLER]")
 		}
 
 		destPort, err := strconv.Atoi(split[1])
@@ -108,7 +108,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
 				if len(split) != 2 {
-					return nil, fmt.Errorf("malformed port, expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+					return nil, fmt.Errorf("malformed port, expected format EXTERNAL:INTERNAL[/HANDLER]")
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
@@ -215,13 +215,13 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a service",
-		Use:     "create [FLAGS] NAME",
+		Use:     "create [FLAGS] EXTERNAL:INTERNAL[/HANDLER]",
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"new"},
 		Long:    "Create a service.",
 		Example: heredoc.Doc(`
 			# Create a service with a single service listening on port 443 named "my-service"
-			$ kraft cloud service create -p 443:8080/http+tls my-service
+			$ kraft cloud service create -n my-service 443:8080/http+tls
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

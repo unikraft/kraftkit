@@ -23,7 +23,7 @@ import (
 )
 
 type RemoveOptions struct {
-	All       bool                  `long:"all" usage:"Remove all services"`
+	All       bool                  `long:"all" short:"a" usage:"Remove all services"`
 	Auth      *config.AuthConfig    `noattribute:"true"`
 	Client    kraftcloud.KraftCloud `noattribute:"true"`
 	Metro     string                `noattribute:"true"`

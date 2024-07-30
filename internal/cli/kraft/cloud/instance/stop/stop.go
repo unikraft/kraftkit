@@ -26,7 +26,7 @@ type StopOptions struct {
 	Client       kraftcloud.KraftCloud `noattribute:"true"`
 	Wait         time.Duration         `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
 	DrainTimeout time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	All          bool                  `long:"all" usage:"Stop all instances"`
+	All          bool                  `long:"all" short:"a" usage:"Stop all instances"`
 	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
 	Metro        string                `noattribute:"true"`
 	Token        string                `noattribute:"true"`

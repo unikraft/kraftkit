@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
@@ -20,6 +22,7 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/arch"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
@@ -34,8 +37,12 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
 )
 
+const (
+	PlatformKraftcloud = "kraftcloud"
+)
+
 type PkgOptions struct {
-	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets"`
+	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets (x86_64/arm64/arm)"`
 	Args         []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Compress     bool                      `local:"true" long:"compress" short:"c" usage:"Compress the initrd package (experimental)"`
 	Dbg          bool                      `local:"true" long:"dbg" usage:"Package the debuggable (symbolic) kernel image instead of the stripped image"`
@@ -49,7 +56,7 @@ type PkgOptions struct {
 	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	NoPull       bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`
 	Output       string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets"`
+	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets (fc/qemu/xen/kraftcloud)"`
 	Project      app.Application           `noattribute:"true"`
 	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
@@ -60,6 +67,15 @@ type PkgOptions struct {
 
 	packopts []packmanager.PackOption
 	pm       packmanager.PackageManager
+}
+
+// toStringSlice converts a slice of fmt.Stringer to a slice of strings.
+func toStringSlice[T fmt.Stringer](slice []T) []string {
+	strSlice := make([]string, len(slice))
+	for i, v := range slice {
+		strSlice[i] = v.String()
+	}
+	return strSlice
 }
 
 // Pkg a Unikraft project.
@@ -89,6 +105,23 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return nil, fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
+	}
+
+	platforms := platform.Platforms()
+	platforms = append(platforms, PlatformKraftcloud)
+	platformsSlice := toStringSlice(platforms)
+
+	if !slices.Contains(platformsSlice, opts.Platform) {
+		platformsString := strings.Join(platformsSlice, ", ")
+		return nil, fmt.Errorf("unsupported platform: %s\nsupported platforms are: %s", opts.Platform, platformsString)
+	}
+
+	architectures := arch.Architectures()
+	architecturesSlice := toStringSlice(architectures)
+
+	if !slices.Contains(architecturesSlice, opts.Architecture) {
+		architecturesString := strings.Join(architecturesSlice, ", ")
+		return nil, fmt.Errorf("unsupported architecture: %s\nsupported architectures are: %s", opts.Architecture, architecturesString)
 	}
 
 	if config.G[config.KraftKit](ctx).NoPrompt && opts.Strategy == packmanager.StrategyPrompt {

@@ -60,7 +60,7 @@ type CreateOptions struct {
 	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
 	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token               string                         `noattribute:"true"`
-	Volumes             []string                       `local:"true" long:"volumes" short:"v" usage:"List of volumes to attach instance to"`
+	Volumes             []string                       `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
 	WaitForImageTimeout time.Duration                  `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
@@ -414,7 +414,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if len(opts.Ports) == 1 && strings.HasPrefix(opts.Ports[0], "443:") && strings.Count(opts.Ports[0], "/") == 0 {
 		split := strings.Split(opts.Ports[0], ":")
 		if len(split) != 2 {
-			return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+			return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER]")
 		}
 
 		destPort, err := strconv.Atoi(split[1])
@@ -449,7 +449,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
 				if len(split) != 2 {
-					return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER[,HANDLER...]]")
+					return nil, nil, fmt.Errorf("malformed port expected format EXTERNAL:INTERNAL[/HANDLER]")
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
@@ -735,7 +735,7 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().Var(
 		cmdfactory.NewEnumFlag[kcinstances.ScaleToZeroPolicy](
 			kcinstances.ScaleToZeroPolicies(),
-			kcinstances.ScaleToZeroPolicyOn,
+			kcinstances.ScaleToZeroPolicyOff,
 		),
 		"scale-to-zero",
 		"Scale to zero policy of the instance (on/off/idle)",
