@@ -1806,3 +1806,5 @@ sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 sigs.k8s.io/yaml v1.4.0 h1:Mk1wCc2gy/F0THH0TAp1QYyJNzRm2KCLy3o5ASXVI5E=
 sigs.k8s.io/yaml v1.4.0/go.mod h1:Ejl7/uTz7PSA4eKMyQCUTnhZYNmLIl+5c2lQPGR2BPY=
+xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240402142354-17cf285d87e2 h1:f3OAMM0NgzlqWqZnuTIz6B6HPK1pGGfgKH6S94kYEWY=
+xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240402142354-17cf285d87e2/go.mod h1:tbZ4iMnk8RWkXPxTiCGdAw3hCOa3feShlf3sBh50uIc=
