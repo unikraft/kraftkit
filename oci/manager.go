@@ -95,10 +95,7 @@ func (manager *ociManager) update(ctx context.Context, auths map[string]config.A
 	}
 
 	if auths == nil {
-		auths, err = defaultAuths(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("accessing credentials: %w", err)
-		}
+		auths = config.G[config.KraftKit](ctx).Auth
 	}
 
 	packs := make(map[string]pack.Package)
@@ -420,10 +417,7 @@ func (manager *ociManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 	var auths map[string]config.AuthConfig
 	if query.Auths() == nil {
-		auths, err = defaultAuths(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not access credentials: %w", err)
-		}
+		auths = config.G[config.KraftKit](ctx).Auth
 	} else {
 		auths = query.Auths()
 	}

@@ -15,12 +15,9 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 
-	cliconfig "github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
 	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/mitchellh/go-homedir"
 )
 
 type OCIManagerOption func(context.Context, *ociManager) error
@@ -139,108 +136,6 @@ func WithDefaultRegistries() OCIManagerOption {
 			if _, err := transport.Ping(ctx, regName, http.DefaultTransport.(*http.Transport).Clone()); err == nil {
 				manager.registries = append(manager.registries, manifest)
 			}
-		}
-
-		return nil
-	}
-}
-
-// fileExists returns true if the given path exists and is not a directory.
-func fileExists(path string) bool {
-	fi, err := os.Stat(path)
-	return err == nil && !fi.IsDir()
-}
-
-// defaultAuths uses the provided context to locate possible authentication
-// values which can be used when speaking with remote registries.
-func defaultAuths(ctx context.Context) (map[string]config.AuthConfig, error) {
-	auths := make(map[string]config.AuthConfig)
-
-	// Podman users may have their container registry auth configured in a
-	// different location, that Docker packages aren't aware of.
-	// If the Docker config file isn't found, we'll fallback to look where
-	// Podman configures it, and parse that as a Docker auth config instead.
-
-	// First, check $HOME/.docker/
-	var home string
-	var err error
-	var configPath string
-	foundDockerConfig := false
-
-	// If this is run in the context of GitHub actions, use an alternative path
-	// for the $HOME.
-	if os.Getenv("GITUB_ACTION") == "yes" {
-		home = "/github/home"
-	} else {
-		home, err = homedir.Dir()
-	}
-	if err == nil {
-		foundDockerConfig = fileExists(filepath.Join(home, ".docker", "config.json"))
-
-		if foundDockerConfig {
-			configPath = filepath.Join(home, ".docker")
-		}
-	}
-
-	// If $HOME/.docker/config.json isn't found, check $DOCKER_CONFIG (if set)
-	if !foundDockerConfig && os.Getenv("DOCKER_CONFIG") != "" {
-		foundDockerConfig = fileExists(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json"))
-
-		if foundDockerConfig {
-			configPath = os.Getenv("DOCKER_CONFIG")
-		}
-	}
-
-	// If either of those locations are found, load it using Docker's
-	// config.Load, which may fail if the config can't be parsed.
-	//
-	// If neither was found, look for Podman's auth at
-	// $XDG_RUNTIME_DIR/containers/auth.json and attempt to load it as a
-	// Docker config.
-	var cf *configfile.ConfigFile
-	if foundDockerConfig {
-		cf, err = cliconfig.Load(configPath)
-		if err != nil {
-			return nil, err
-		}
-	} else if f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers", "auth.json")); err == nil {
-		defer f.Close()
-
-		cf, err = cliconfig.LoadFromReader(f)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if cf != nil {
-		for domain, cfg := range cf.AuthConfigs {
-			if cfg.Username == "" && cfg.Password == "" {
-				continue
-			}
-			auths[domain] = config.AuthConfig{
-				Endpoint: cfg.ServerAddress,
-				User:     cfg.Username,
-				Token:    cfg.Password,
-			}
-		}
-	}
-
-	for domain, auth := range config.G[config.KraftKit](ctx).Auth {
-		auths[domain] = auth
-	}
-
-	return auths, nil
-}
-
-// WithDefaultAuth uses the KraftKit-set configuration for authentication
-// against remote registries.
-func WithDefaultAuth() OCIManagerOption {
-	return func(ctx context.Context, manager *ociManager) error {
-		var err error
-
-		manager.auths, err = defaultAuths(ctx)
-		if err != nil {
-			return err
 		}
 
 		return nil

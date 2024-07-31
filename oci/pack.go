@@ -126,11 +126,6 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 		return nil, fmt.Errorf("could not parse image reference: %w", err)
 	}
 
-	auths, err := defaultAuths(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	if contAddr := config.G[config.KraftKit](ctx).ContainerdAddr; len(contAddr) > 0 {
 		namespace := DefaultNamespace
 		if n := os.Getenv("CONTAINERD_NAMESPACE"); n != "" {
@@ -142,7 +137,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			WithField("namespace", namespace).
 			Debug("packaging via containerd")
 
-		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, auths)
+		ctx, ocipack.handle, err = handler.NewContainerdHandler(ctx, contAddr, namespace, config.G[config.KraftKit](ctx).Auth)
 	} else {
 		if gerr := os.MkdirAll(config.G[config.KraftKit](ctx).RuntimeDir, fs.ModeSetgid|0o775); gerr != nil {
 			return nil, fmt.Errorf("could not create local oci cache directory: %w", gerr)
@@ -154,7 +149,7 @@ func NewPackageFromTarget(ctx context.Context, targ target.Target, opts ...packm
 			WithField("path", ociDir).
 			Trace("directory handler")
 
-		ocipack.handle, err = handler.NewDirectoryHandler(ociDir, auths)
+		ocipack.handle, err = handler.NewDirectoryHandler(ociDir, config.G[config.KraftKit](ctx).Auth)
 	}
 	if err != nil {
 		return nil, err
@@ -443,10 +438,7 @@ func newIndexAndManifestFromRemoteDigest(ctx context.Context, handle handler.Han
 	}
 
 	if auths == nil {
-		auths, err = defaultAuths(ctx)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not gather authentication details")
-		}
+		auths = config.G[config.KraftKit](ctx).Auth
 	}
 
 	var retManifest *Manifest
@@ -761,13 +753,9 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 
 		authConfig := &authn.AuthConfig{}
 		transport := http.DefaultTransport.(*http.Transport).Clone()
-		auths, err := defaultAuths(ctx)
-		if err != nil {
-			return err
-		}
 
 		// Annoyingly convert between regtypes and authn.
-		if auth, ok := auths[ocipack.ref.Context().RegistryStr()]; ok {
+		if auth, ok := config.G[config.KraftKit](ctx).Auth[ocipack.ref.Context().RegistryStr()]; ok {
 			authConfig.Username = auth.User
 			authConfig.Password = auth.Token
 
