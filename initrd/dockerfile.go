@@ -15,6 +15,9 @@ import (
 	"strings"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"kraftkit.sh/config"
 	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
@@ -23,6 +26,8 @@ import (
 	soci "github.com/anchore/stereoscope/pkg/image/oci"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
+	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/session/filesync"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/testcontainers/testcontainers-go"
@@ -279,6 +284,11 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 	solveOpt := &client.SolveOpt{
 		Ref: identity.NewID(),
+		Session: []session.Attachable{
+			&buildkitAuthProvider{
+				config.G[config.KraftKit](ctx).Auth,
+			},
+		},
 		Exports: []client.ExportEntry{
 			{
 				Type:   client.ExporterTar,
@@ -521,4 +531,35 @@ func (initrd *dockerfile) Env() []string {
 // Args implements Initrd.
 func (initrd *dockerfile) Args() []string {
 	return initrd.args
+}
+
+type buildkitAuthProvider struct {
+	auths map[string]config.AuthConfig
+}
+
+func (ap *buildkitAuthProvider) Register(server *grpc.Server) {
+	auth.RegisterAuthServer(server, ap)
+}
+
+func (ap *buildkitAuthProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
+	res := &auth.CredentialsResponse{}
+
+	if a, ok := ap.auths[req.Host]; ok {
+		res.Username = a.User
+		res.Secret = a.Token
+	}
+
+	return res, nil
+}
+
+func (ap *buildkitAuthProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequest) (*auth.FetchTokenResponse, error) {
+	return nil, status.Errorf(codes.Unavailable, "client side tokens disabled")
+}
+
+func (ap *buildkitAuthProvider) GetTokenAuthority(ctx context.Context, req *auth.GetTokenAuthorityRequest) (*auth.GetTokenAuthorityResponse, error) {
+	return nil, status.Errorf(codes.Unavailable, "client side tokens disabled")
+}
+
+func (ap *buildkitAuthProvider) VerifyTokenAuthority(ctx context.Context, req *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
+	return nil, status.Errorf(codes.Unavailable, "client side tokens disabled")
 }
