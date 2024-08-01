@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
@@ -22,13 +21,11 @@ import (
 	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/tui"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -61,15 +58,6 @@ type BuildOptions struct {
 	statistics map[string]string
 }
 
-// toStringSlice converts a slice of fmt.Stringer to a slice of strings.
-func toStringSlice[T fmt.Stringer](slice []T) []string {
-	strSlice := make([]string, len(slice))
-	for i, v := range slice {
-		strSlice[i] = v.String()
-	}
-	return strSlice
-}
-
 // Build a Unikraft unikernel.
 func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	var err error
@@ -89,23 +77,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 	}
 
-	platforms := platform.Platforms()
-	platformsSlice := toStringSlice(platforms)
-
-	if !slices.Contains(platformsSlice, opts.Platform) {
-		platformsString := strings.Join(platformsSlice, ", ")
-		return fmt.Errorf("unsupported platform: %s\nsupported platforms are: %s", opts.Platform, platformsString)
-	}
-
-	architectures := arch.Architectures()
-	architecturesSlice := toStringSlice(architectures)
-
-	if !slices.Contains(architecturesSlice, opts.Architecture) {
-		architecturesString := strings.Join(architecturesSlice, ", ")
-		return fmt.Errorf("unsupported architecture: %s\nsupported architectures are: %s", opts.Architecture, architecturesString)
-	}
-
-	opts.Platform = platform.PlatformByName(opts.Platform).String()
 	opts.statistics = map[string]string{}
 
 	var build builder

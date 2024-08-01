@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
-	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
@@ -22,7 +20,6 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
-	"kraftkit.sh/unikraft/arch"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/packmanager"
@@ -35,10 +32,6 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg/source"
 	"kraftkit.sh/internal/cli/kraft/pkg/unsource"
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
-)
-
-const (
-	PlatformKraftcloud = "kraftcloud"
 )
 
 type PkgOptions struct {
@@ -69,15 +62,6 @@ type PkgOptions struct {
 	pm       packmanager.PackageManager
 }
 
-// toStringSlice converts a slice of fmt.Stringer to a slice of strings.
-func toStringSlice[T fmt.Stringer](slice []T) []string {
-	strSlice := make([]string, len(slice))
-	for i, v := range slice {
-		strSlice[i] = v.String()
-	}
-	return strSlice
-}
-
 // Pkg a Unikraft project.
 func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
@@ -105,23 +89,6 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 
 	if (len(opts.Architecture) > 0 || len(opts.Platform) > 0) && len(opts.Target) > 0 {
 		return nil, fmt.Errorf("the `--arch` and `--plat` options are not supported in addition to `--target`")
-	}
-
-	platforms := platform.Platforms()
-	platforms = append(platforms, PlatformKraftcloud)
-	platformsSlice := toStringSlice(platforms)
-
-	if !slices.Contains(platformsSlice, opts.Platform) {
-		platformsString := strings.Join(platformsSlice, ", ")
-		return nil, fmt.Errorf("unsupported platform: %s\nsupported platforms are: %s", opts.Platform, platformsString)
-	}
-
-	architectures := arch.Architectures()
-	architecturesSlice := toStringSlice(architectures)
-
-	if !slices.Contains(architecturesSlice, opts.Architecture) {
-		architecturesString := strings.Join(architecturesSlice, ", ")
-		return nil, fmt.Errorf("unsupported architecture: %s\nsupported architectures are: %s", opts.Architecture, architecturesString)
 	}
 
 	if config.G[config.KraftKit](ctx).NoPrompt && opts.Strategy == packmanager.StrategyPrompt {
@@ -336,7 +303,7 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *PkgOptions) Run(ctx context.Context, args []string) error {
 	if _, err := Pkg(ctx, opts, args...); err != nil {
-		return fmt.Errorf("could not package: %w", err)
+		return err
 	}
 
 	return nil
