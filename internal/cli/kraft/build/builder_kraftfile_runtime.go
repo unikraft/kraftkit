@@ -115,11 +115,35 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 	}
 
 	if len(packs) == 0 {
-		return fmt.Errorf(
-			"could not find runtime '%s:%s'",
-			opts.Project.Runtime().Name(),
-			opts.Project.Runtime().Version(),
-		)
+		if len(opts.Platform) > 0 && len(opts.Architecture) > 0 {
+			return fmt.Errorf(
+				"could not find runtime '%s:%s' (%s/%s)",
+				opts.Project.Runtime().Name(),
+				opts.Project.Runtime().Version(),
+				opts.Platform,
+				opts.Architecture,
+			)
+		} else if len(opts.Architecture) > 0 {
+			return fmt.Errorf(
+				"could not find runtime '%s:%s' with '%s' architecture",
+				opts.Project.Runtime().Name(),
+				opts.Project.Runtime().Version(),
+				opts.Architecture,
+			)
+		} else if len(opts.Platform) > 0 {
+			return fmt.Errorf(
+				"could not find runtime '%s:%s' with '%s' platform",
+				opts.Project.Runtime().Name(),
+				opts.Project.Runtime().Version(),
+				opts.Platform,
+			)
+		} else {
+			return fmt.Errorf(
+				"could not find runtime %s:%s",
+				opts.Project.Runtime().Name(),
+				opts.Project.Runtime().Version(),
+			)
+		}
 	} else if len(packs) == 1 {
 		selected = &packs[0]
 	} else if len(packs) > 1 {
