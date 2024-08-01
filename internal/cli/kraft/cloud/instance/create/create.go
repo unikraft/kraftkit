@@ -48,10 +48,10 @@ type CreateOptions struct {
 	Name                string                         `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
 	Output              string                         `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 	Ports               []string                       `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	RestartPolicy       kcinstances.RestartPolicy      `noattribute:"true"`
+	RestartPolicy       *kcinstances.RestartPolicy     `noattribute:"true"`
 	Replicas            uint                           `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout             RolloutStrategy                `noattribute:"true"`
-	RolloutQualifier    RolloutQualifier               `noattribute:"true"`
+	Rollout             *RolloutStrategy               `noattribute:"true"`
+	RolloutQualifier    *RolloutQualifier              `noattribute:"true"`
 	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	ServiceNameOrUUID   string                         `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
 	Start               bool                           `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
@@ -91,11 +91,23 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		)
 	}
 
+	if opts.RestartPolicy == nil {
+		opts.RestartPolicy = ptr(kcinstances.RestartPolicyNever)
+	}
+
+	if opts.Rollout == nil {
+		opts.Rollout = ptr(StrategyPrompt)
+	}
+
+	if opts.RolloutQualifier == nil {
+		opts.RolloutQualifier = ptr(RolloutQualifierImageName)
+	}
+
 	// Check if the user tries to use a service and a rollout strategy is
 	// set to prompt so that we can use this information later.  We do this very
 	// early on such that we can fail-fast in case prompting is not possible (e.g.
 	// in non-TTY environments).
-	if opts.ServiceNameOrUUID != "" && opts.Rollout == StrategyPrompt {
+	if opts.ServiceNameOrUUID != "" && *opts.Rollout == StrategyPrompt {
 		if config.G[config.KraftKit](ctx).NoPrompt {
 			return nil, nil, fmt.Errorf("prompting disabled")
 		}
@@ -185,7 +197,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		Autostart:     &opts.Start,
 		Features:      features,
 		Image:         opts.Image,
-		RestartPolicy: &opts.RestartPolicy,
+		RestartPolicy: opts.RestartPolicy,
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name
@@ -335,7 +347,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 					Trace("no existing instances in service")
 			}
 
-			switch opts.RolloutQualifier {
+			switch *opts.RolloutQualifier {
 			case RolloutQualifierImageName:
 				imageBase := opts.Image
 				if strings.Contains(opts.Image, "@") {
@@ -365,7 +377,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				// No-op
 			}
 
-			if len(qualifiedInstancesToRolloutOver) > 0 && opts.Rollout == StrategyPrompt {
+			if len(qualifiedInstancesToRolloutOver) > 0 && *opts.Rollout == StrategyPrompt {
 				strategy, err := selection.Select(
 					fmt.Sprintf("deployment already exists: what would you like to do with the %d existing instance(s)?", len(qualifiedInstancesToRolloutOver)),
 					RolloutStrategies()...,
@@ -376,12 +388,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 				log.G(ctx).Infof("use --rollout=%s to skip this prompt in the future", strategy.String())
 
-				opts.Rollout = *strategy
+				opts.Rollout = strategy
 			}
 
 			// Return early if the rollout strategy is set to exit on conflict and there
 			// are existing instances in the service.
-			if opts.Rollout == RolloutStrategyAbort {
+			if *opts.Rollout == RolloutStrategyAbort {
 				return nil, nil, fmt.Errorf("deployment already exists and merge strategy set to exit on conflict")
 			}
 		}
@@ -625,7 +637,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				batch = append(batch, instance.UUID)
 			}
 
-			switch opts.Rollout {
+			switch *opts.Rollout {
 			case RolloutStrategyStop:
 				log.G(ctx).Infof("stopping %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, 60, false, batch...); err != nil {
@@ -754,9 +766,9 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("scale-to-zero-cooldown needs to be at least 1ms: %s", opts.ScaleToZeroCooldown)
 	}
 
-	opts.RestartPolicy = kcinstances.RestartPolicy(cmd.Flag("restart").Value.String())
-	opts.Rollout = RolloutStrategy(cmd.Flag("rollout").Value.String())
-	opts.RolloutQualifier = RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
+	opts.RestartPolicy = ptr(kcinstances.RestartPolicy(cmd.Flag("restart").Value.String()))
+	opts.Rollout = ptr(RolloutStrategy(cmd.Flag("rollout").Value.String()))
+	opts.RolloutQualifier = ptr(RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String()))
 
 	if cmd.Flag("scale-to-zero").Changed {
 		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
