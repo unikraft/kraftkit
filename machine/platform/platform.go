@@ -12,6 +12,7 @@ const (
 	PlatformQEMU        = Platform("qemu")
 	PlatformKVM         = PlatformQEMU
 	PlatformXen         = Platform("xen")
+	PlatformKraftcloud  = Platform("kraftcloud")
 )
 
 // String implements fmt.Stringer

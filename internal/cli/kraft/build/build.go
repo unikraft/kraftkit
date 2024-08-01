@@ -90,6 +90,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	platforms := platform.Platforms()
+	platforms = append(platforms, platform.PlatformKraftcloud)
 	platformsSlice := toStringSlice(platforms)
 
 	if !slices.Contains(platformsSlice, opts.Platform) {

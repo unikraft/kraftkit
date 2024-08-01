@@ -37,10 +37,6 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
 )
 
-const (
-	PlatformKraftcloud = "kraftcloud"
-)
-
 type PkgOptions struct {
 	Architecture string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets (x86_64/arm64/arm)"`
 	Args         []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
@@ -108,7 +104,7 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 	}
 
 	platforms := platform.Platforms()
-	platforms = append(platforms, PlatformKraftcloud)
+	platforms = append(platforms, platform.PlatformKraftcloud)
 	platformsSlice := toStringSlice(platforms)
 
 	if !slices.Contains(platformsSlice, opts.Platform) {
