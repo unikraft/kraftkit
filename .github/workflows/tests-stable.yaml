@@ -12,6 +12,16 @@ jobs:
         os: [ubuntu-24.04, ubuntu-22.04, macos-12, macos-13, macos-14, mac-m2-14]
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Generate Suffix
         shell: bash
         id: suffix
@@ -31,16 +41,6 @@ jobs:
           sudo chmod 666 /run/buildkit/buildkitd.sock;
         env:
           SUFFIX: ${{ steps.suffix.outputs.suffix }}
-
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - uses: actions/setup-go@v5
         with:
