@@ -35,8 +35,8 @@ func urlParser(stdout *fcmd.IOStream) string {
 }
 
 func serviceParser(stdout *fcmd.IOStream) string {
-	if strings.Contains(stdout.String(), "service_group\":") {
-		services := strings.SplitN(stdout.String(), "service_group\":\"", 2)[1]
+	if strings.Contains(stdout.String(), "service\":") {
+		services := strings.SplitN(stdout.String(), "service\":\"", 2)[1]
 		services = strings.SplitN(services, "\"", 2)[0]
 		return services
 	}
@@ -209,7 +209,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Create an instance on KraftCloud from an image.\n`))
+			Expect(stdout.String()).To(MatchRegexp(`Create an instance on Unikraft Cloud from an image.\n`))
 		})
 	})
 
@@ -388,7 +388,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`flag: strconv.ParseUint: parsing`))
+			Expect(stdout.String()).To(MatchRegexp(`memory must be at least 1Mi`))
 		})
 	})
 
@@ -446,7 +446,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`strconv\.ParseUint: parsing \\"16\.56\\": invalid syntax`))
+			Expect(stdout.String()).To(MatchRegexp(`memory must be at least 1Mi`))
 		})
 	})
 
@@ -475,7 +475,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).To(HaveOccurred())
 
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"seventeen\\": invalid syntax`))
+			Expect(stdout.String()).To(MatchRegexp(`could not parse memory quantity: quantities must match the regular expression`))
 		})
 	})
 
@@ -756,14 +756,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 		})
 
-		It("should error out with an API error", func() {
+		It("should not error out with an API error", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
-			Expect(err).To(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -1684,7 +1683,7 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--domain", "smth-"+instanceNameFull,
+				"--domain", "smth-"+instanceNameFull+".xyz",
 				"--start",
 				imageName,
 			)
@@ -1873,7 +1872,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			cmd.Args = append(cmd.Args,
 				"--port", instancePortMap,
 				"--name", instanceNameFull,
-				"--scale-to-zero",
+				"--scale-to-zero", "on",
 				imageName,
 			)
 		})
@@ -2418,7 +2417,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`No service with name 'smth`))
+			Expect(stdout.String()).To(MatchRegexp(`No service group with name 'smth`))
 		})
 	})
 
