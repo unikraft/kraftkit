@@ -19,7 +19,7 @@ import (
 	"golang.org/x/term"
 )
 
-const defaultTimestampFormat = time.RFC3339
+const defaultTimestampFormat = time.RFC3339Nano
 
 var (
 	baseTimestamp      time.Time    = time.Now()
@@ -265,7 +265,7 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 		if !f.FullTimestamp {
 			timestamp = fmt.Sprintf("[%04d]", miniTS())
 		} else {
-			timestamp = entry.Time.Format(timestampFormat)
+			timestamp = fmt.Sprintf("%-32s", entry.Time.Format(timestampFormat))
 		}
 		fmt.Fprintf(b, "%s %s%s "+messageFormat, level, colorScheme.Timestamp(timestamp), prefix, message)
 	}
