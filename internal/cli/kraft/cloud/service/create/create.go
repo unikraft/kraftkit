@@ -216,7 +216,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create a service",
 		Use:     "create [FLAGS] EXTERNAL:INTERNAL[/HANDLER]",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
 		Long:    "Create a service.",
 		Example: heredoc.Doc(`
