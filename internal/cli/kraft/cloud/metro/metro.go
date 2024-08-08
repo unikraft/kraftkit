@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package metros
+package metro
 
 import (
 	"context"
@@ -12,15 +12,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"kraftkit.sh/internal/cli/kraft/cloud/metros/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/metro/list"
 
 	"kraftkit.sh/cmdfactory"
 )
 
-type MetrosOptions struct{}
+type MetroOptions struct{}
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&MetrosOptions{}, cobra.Command{
+	cmd, err := cmdfactory.New(&MetroOptions{}, cobra.Command{
 		Short:   "Inspect Unikraft Cloud metros and regions",
 		Use:     "metro",
 		Aliases: []string{"metros", "m"},
@@ -48,6 +48,6 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *MetrosOptions) Run(_ context.Context, _ []string) error {
+func (opts *MetroOptions) Run(_ context.Context, _ []string) error {
 	return pflag.ErrHelp
 }
