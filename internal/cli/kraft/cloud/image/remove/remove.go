@@ -59,7 +59,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image remove --all
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup: "kraftcloud-image",
 		},
 	})
 	if err != nil {

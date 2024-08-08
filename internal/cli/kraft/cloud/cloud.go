@@ -15,7 +15,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose"
 	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
-	"kraftkit.sh/internal/cli/kraft/cloud/img"
+	"kraftkit.sh/internal/cli/kraft/cloud/image"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance"
 	"kraftkit.sh/internal/cli/kraft/cloud/metros"
 	"kraftkit.sh/internal/cli/kraft/cloud/quotas"
@@ -89,8 +89,8 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(quotas.NewCmd())
 	cmd.AddCommand(tunnel.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "IMAGE COMMANDS"})
-	cmd.AddCommand(img.NewCmd())
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-image", Title: "IMAGE COMMANDS"})
+	cmd.AddCommand(image.NewCmd())
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "INSTANCE COMMANDS"})
 	cmd.AddCommand(instance.NewCmd())

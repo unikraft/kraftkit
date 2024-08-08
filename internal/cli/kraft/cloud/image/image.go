@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package img
+package image
 
 import (
 	"context"
@@ -12,19 +12,19 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"kraftkit.sh/internal/cli/kraft/cloud/img/list"
-	"kraftkit.sh/internal/cli/kraft/cloud/img/remove"
+	"kraftkit.sh/internal/cli/kraft/cloud/image/list"
+	"kraftkit.sh/internal/cli/kraft/cloud/image/remove"
 
 	"kraftkit.sh/cmdfactory"
 )
 
-type ImgOptions struct{}
+type ImageOptions struct{}
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&ImgOptions{}, cobra.Command{
+	cmd, err := cmdfactory.New(&ImageOptions{}, cobra.Command{
 		Short:   "Manage images",
-		Use:     "img SUBCOMMAND",
-		Aliases: []string{"image"},
+		Use:     "image SUBCOMMAND",
+		Aliases: []string{"img, images"},
 		Example: heredoc.Doc(`
 			# List images in your account.
 			$ kraft cloud image list
@@ -33,7 +33,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image remove caddy@sha256:2ba5324141...
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup:  "kraftcloud-image",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
@@ -47,6 +47,6 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *ImgOptions) Run(_ context.Context, _ []string) error {
+func (opts *ImageOptions) Run(_ context.Context, _ []string) error {
 	return pflag.ErrHelp
 }
