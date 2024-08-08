@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package quotas
+package quota
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	kraftcloud "sdk.kraft.cloud"
 )
 
-type QuotasOptions struct {
+type QuotaOptions struct {
 	Output string `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 
 	metro string
@@ -29,11 +29,11 @@ type QuotasOptions struct {
 }
 
 func NewCmd() *cobra.Command {
-	cmd, err := cmdfactory.New(&QuotasOptions{}, cobra.Command{
+	cmd, err := cmdfactory.New(&QuotaOptions{}, cobra.Command{
 		Short:   "View your resource quota on Unikraft Cloud",
-		Use:     "quotas",
+		Use:     "quota",
 		Args:    cobra.NoArgs,
-		Aliases: []string{"q", "quota"},
+		Aliases: []string{"q", "quotas"},
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud",
 		},
@@ -52,7 +52,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
+func (opts *QuotaOptions) Pre(cmd *cobra.Command, _ []string) error {
 	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
@@ -65,7 +65,7 @@ func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
+func (opts *QuotaOptions) Run(ctx context.Context, _ []string) error {
 	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
