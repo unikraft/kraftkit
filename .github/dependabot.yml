@@ -4,7 +4,7 @@ updates:
 
   - package-ecosystem: gomod
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: sunday
@@ -19,7 +19,7 @@ updates:
       - nderjung
   - package-ecosystem: gomod
     directory: /tools/go-generate-qemu-devices
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: sunday
@@ -34,7 +34,7 @@ updates:
       - nderjung
   - package-ecosystem: gomod
     directory: /tools/protoc-gen-go-netconn
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: sunday

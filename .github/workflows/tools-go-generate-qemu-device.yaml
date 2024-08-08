@@ -1,11 +1,11 @@
 name: tools/go-generate-qemu-device
 
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [released]
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [staging]
+    branches: [main]
     paths:
       - 'tools/go-generate-qemu-devices/**'
       - '.github/workflows/gobuild-qemu-devices.yaml'

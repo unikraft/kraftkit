@@ -1,8 +1,8 @@
-name: tests/stable
+name: tests/main
 
 on:
   push:
-    branches: [stable]
+    branches: [main]
 
 jobs:
   unit:

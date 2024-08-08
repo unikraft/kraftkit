@@ -1,11 +1,11 @@
 name: tools/dockerfile-llb-frontend
 
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [released]
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [staging]
+    branches: [main]
     paths:
       - 'tools/dockerfile-llb-frontend/**'
       - '.github/workflows/dockerfile-llb-frontend.yaml'

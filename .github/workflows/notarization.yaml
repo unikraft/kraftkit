@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: unikraft/homebrew-cli
-          ref: staging
+          ref: main
           path: homebrew-kraftkit
 
       - name: Update Brew Formula

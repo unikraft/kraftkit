@@ -44,7 +44,7 @@ release:
   header: |
     ## KraftKit {{ .Tag }} ({{ .Date }})
 
-    This is a stable release of kraftkit.
+    Release of kraftkit.
   name_template: 'v{{ .Version }}'
 
 signs:

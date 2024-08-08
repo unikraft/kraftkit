@@ -1,11 +1,11 @@
 name: check/static
 
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [released]
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [staging]
+    branches: [main]
     paths:
       - '**'
       - '!.github/**'

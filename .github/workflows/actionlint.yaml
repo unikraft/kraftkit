@@ -3,7 +3,7 @@ name: actionlint
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [staging]
+    branches: [main]
     paths:
       - '.github/workflows/**'
 

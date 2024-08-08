@@ -1,13 +1,13 @@
-name: tests
+name: tests/pr
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [staging]
+    branches: [main]
     paths:
       - '**'
       - '!.github/**'
-      - '.github/workflows/tests.yaml'
+      - '.github/workflows/tests-pr.yaml'
 
 jobs:
   unit:

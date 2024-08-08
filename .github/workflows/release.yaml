@@ -1,4 +1,4 @@
-name: release/stable
+name: release
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
 
       - name: Generate GoReleaser configuration
         run: |
-          ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
+          ytt -f .goreleaser-release.yaml > goreleaser-release.yaml
 
       - name: Write cosign key to file
         run: |
@@ -49,7 +49,7 @@ jobs:
           export GORELEASER_CURRENT_TAG="${{  github.ref_name }}"
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
           goreleaser release \
-            --config goreleaser-stable.yaml \
+            --config goreleaser-release.yaml \
             --clean \
             --skip-validate
           fury push "$(ls ./dist/kraftkit_*_linux_amd64.deb)" --quiet --account "$FURY_USER" --api-token "$FURY_TOKEN"

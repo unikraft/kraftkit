@@ -9,7 +9,7 @@ body:
 
         Please only use this form to submit problems with building Kraftkit or it's interaction with Unikraft unikernels.  This includes unexpected or undefined behavior, stacktraces, critical messages, and things just breaking or exploding.
         
-        **Ensure you have tested against the latest changes on `staging` branch before submitting this form.**
+        **Ensure you have tested against the latest changes on `main` branch before submitting this form.**
 
         For questions, concerns or help with running Kraftkit, please check out our additional resources:
 
