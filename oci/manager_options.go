@@ -171,3 +171,22 @@ func WithDockerConfig(auth regtypes.AuthConfig) OCIManagerOption {
 		return nil
 	}
 }
+
+// WithAuth sets the authentication configuration to use when making calls to
+// authenticated registries.
+func WithAuth(auths map[string]config.AuthConfig) OCIManagerOption {
+	return func(ctx context.Context, manager *ociManager) error {
+		manager.auths = auths
+		return nil
+	}
+}
+
+// WithDefaultAuth uses the KraftKit-set configuration for authentication
+// against remote registries.
+func WithDefaultAuth() OCIManagerOption {
+	return func(ctx context.Context, manager *ociManager) error {
+		manager.auths = config.G[config.KraftKit](ctx).Auth
+
+		return nil
+	}
+}
