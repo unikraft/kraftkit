@@ -23,6 +23,7 @@ fi
 # The following variables can be set to override the defaults:
 PREFIX=${PREFIX:-/usr/local/bin}
 INSTALL_TLS_CIPHERSUITES=${INSTALL_TLS_CIPHERSUITES:-}
+MANPATH=${MANPATH:-/usr/local/man/man1}
 INSTALL_CPUTYPE=${INSTALL_CPUTYPE:-}
 INSTALL_SERVER=${INSTALL_SERVER:-https://get.kraftkit.sh}
 INSTALL_TLS=${INSTALL_TLS:-y}
@@ -1054,6 +1055,23 @@ downloader() {
     fi
 }
 
+# install_man_page installs a man page for unix systems
+install_man_page(){
+	need_cmd "$WGET"
+
+	_imp_url="https://raw.githubusercontent.com/unikraft/kraftkit/staging/docs/kraft.1"
+	_imp_manpage="kraft.1"
+	_imp_arch=""
+
+	download_using_wget "$_imp_url" "$_imp_manpage" "$_imp_arch"
+	_CLEANUP_SCRIPT="$_imp_manpage"
+	
+	do_cmd "$INSTALL $_imp_manpage $MANPATH"
+
+	cleanup
+	_CLEANUP_SCRIPT=""
+}
+
 # install_linux_gnu installs the kraftkit package for standard linux
 # distributions that use glibc.
 # Returns:
@@ -1081,6 +1099,10 @@ install_linux_gnu() {
         do_cmd "$_ilg_yum_cmd"
         do_cmd "$YUM makecache"
         do_cmd "$YUM install -y kraftkit"
+		
+		if prompt_yes_no "Install manpage for KraftKit CLI [y/N]: " "n"; then                                                                              
+			install_man_page
+    	fi
     elif check_os_release "debian"; then
         need_cmd "$APT"
         _ilg_deb_path="deb [trusted=yes] https://deb.pkg.kraftkit.sh /"
@@ -1102,6 +1124,10 @@ install_linux_gnu() {
         do_cmd "$_ilg_deb_cmd"
         do_cmd "$APT --allow-unauthenticated update"
         do_cmd "$APT install -y $_idd_recommended kraftkit"
+
+		if prompt_yes_no "Install manpage for KraftKit CLI [y/N]: " "n"; then                                                                              
+			install_man_page
+    	fi
     elif check_os_release "arch"; then
         need_cmd "$GIT"
         need_cmd "$MAKEPKG"
@@ -1111,6 +1137,10 @@ install_linux_gnu() {
         do_cmd "$MAKEPKG -si"
         cd - 1> /dev/null || exit
         $RM -rf /tmp/kraftkit-bin
+		
+		if prompt_yes_no "Install manpage for KraftKit CLI [y/N]: " "n"; then                                                                              
+			install_man_page
+    	fi
     else
         _ilg_msg=$(printf "%s%s%s"                                          \
             "Unsupported Linux distribution. "                              \
@@ -1241,15 +1271,18 @@ install_linux_manual() {
     do_cmd "$TAR -xzf $_ill_archive"
     _CLEANUP_BINARY="$_ill_binary"
     _CLEANUP_SCRIPT="$_ill_script"
-
+   
     do_cmd "$INSTALL $_ill_binary $PREFIX"
     do_cmd "$INSTALL $_ill_script $PREFIX"
-
     cleanup
     _CLEANUP_ARCHIVE=""
     _CLEANUP_BINARY=""
     _CLEANUP_SCRIPT=""
     _CLEANUP_VERSION=""
+
+	if prompt_yes_no "Install manpage for KraftKit CLI [y/N]: " "n"; then                                                                              
+		install_man_page
+    fi
 }
 
 # install_darwin_manual installs the kraftkit package for other Darwin
