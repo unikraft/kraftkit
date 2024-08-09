@@ -20,10 +20,11 @@ import (
 )
 
 type GetOptions struct {
-	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
-
-	metro string
-	token string
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
+	Output string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 }
 
 // Status of a KraftCloud instance.
@@ -38,8 +39,8 @@ func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
 		Short:   "Retrieve the state of instances",
-		Use:     "get [FLAGS] UUID|NAME",
-		Args:    cobra.ExactArgs(1),
+		Use:     "get [FLAGS] [UUID|NAME]",
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"status", "info"},
 		Example: heredoc.Doc(`
 			# Retrieve information about a instance by UUID
@@ -63,7 +64,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -76,7 +77,7 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *GetOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
@@ -85,9 +86,9 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	resp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
+	resp, err := client.WithMetro(opts.Metro).Get(ctx, args...)
 	if err != nil {
-		return fmt.Errorf("could not get instance %s: %w", args[0], err)
+		return fmt.Errorf("could not get instance %s: %w", args, err)
 	}
 
 	return utils.PrintInstances(ctx, opts.Output, *resp)
