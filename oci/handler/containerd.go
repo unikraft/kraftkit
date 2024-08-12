@@ -16,11 +16,11 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/labels"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/remotes"
+	"github.com/containerd/errdefs"
 	clog "github.com/containerd/log"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	"github.com/containerd/platforms"
