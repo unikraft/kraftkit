@@ -28,6 +28,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/build"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/get"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/start"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
@@ -360,7 +361,17 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 	}
 
 	if opts.Detach {
-		return utils.PrintInstances(ctx, "table", instResps)
+		if !opts.NoStart {
+			return get.Get(ctx, &get.GetOptions{
+				Auth:   opts.Auth,
+				Client: opts.Client,
+				Metro:  opts.Metro,
+				Token:  opts.Token,
+				Output: "table",
+			}, instances...)
+		} else {
+			return utils.PrintInstances(ctx, "table", instResps)
+		}
 	}
 
 	return logs.Logs(ctx, &logs.LogOptions{
