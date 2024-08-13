@@ -21,8 +21,11 @@ import (
 )
 
 type RemoveOptions struct {
-	metro string
-	token string
+	Auth   *config.AuthConfig    `noattribute:"true"`
+	Client kraftcloud.KraftCloud `noattribute:"true"`
+	All    bool                  `long:"all" short:"a" usage:"Remove all volumes that are not attached"`
+	Metro  string                `noattribute:"true"`
+	Token  string                `noattribute:"true"`
 }
 
 // Remove a KraftCloud persistent volume.
@@ -36,16 +39,22 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&RemoveOptions{}, cobra.Command{
-		Short:   "Permanently delete a persistent volume",
-		Use:     "remove UUID [UUID [...]]",
-		Args:    cobra.MinimumNArgs(1),
-		Aliases: []string{"rm"},
-		Long: heredoc.Doc(`
-			Permanently delete a persistent volume.
-		`),
+		Short:   "Permanently delete persistent volume(s)",
+		Use:     "remove [FLAGS] [UUID|NAME [UUID|NAME]...]",
+		Args:    cobra.MinimumNArgs(0),
+		Aliases: []string{"rm", "delete"},
 		Example: heredoc.Doc(`
-			# Delete three persistent volumes
-			$ kraft cloud volume rm UUID1 UUID2 UUID3
+			# Remove a volume by UUID
+			$ kraft cloud volume remove fd1684ea-7970-4994-92d6-61dcc7905f2b
+
+			# Remove a volume by name
+			$ kraft cloud volume remove my-vol-431342
+
+			# Remove multiple volumes
+			$ kraft cloud volume remove my-vol-431342 my-vol-other-2313
+
+			# Remove all volumes
+			$ kraft cloud volume remove --all
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
@@ -59,7 +68,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -68,18 +77,58 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
-	if err != nil {
-		return fmt.Errorf("could not retrieve credentials: %w", err)
+	var err error
+
+	if opts.All && len(args) > 0 {
+		return fmt.Errorf("cannot specify volumes and use '--all' flag")
 	}
 
-	client := kraftcloud.NewVolumesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	if opts.Auth == nil {
+		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		if err != nil {
+			return fmt.Errorf("could not retrieve credentials: %w", err)
+		}
+	}
 
-	log.G(ctx).Infof("Deleting %d volume(s)", len(args))
+	if opts.Client == nil {
+		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		)
+	}
 
-	delResp, err := client.WithMetro(opts.metro).Delete(ctx, args...)
+	if opts.All {
+		volListResp, err := opts.Client.Volumes().WithMetro(opts.Metro).List(ctx)
+		if err != nil {
+			return fmt.Errorf("could not list volumes: %w", err)
+		}
+
+		vols, err := volListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list volumes: %w", err)
+		}
+
+		if len(vols) == 0 {
+			log.G(ctx).Info("no volumes found")
+			return nil
+		}
+
+		uuids := make([]string, 0, len(vols))
+		for _, vol := range vols {
+			uuids = append(uuids, vol.UUID)
+		}
+
+		log.G(ctx).Infof("removing %d volumes(s)", len(uuids))
+
+		if _, err := opts.Client.Volumes().WithMetro(opts.Metro).Delete(ctx, uuids...); err != nil {
+			return fmt.Errorf("removing %d volumes(s): %w", len(uuids), err)
+		}
+
+		return nil
+	}
+
+	log.G(ctx).Infof("removing %d volume(s)", len(args))
+
+	delResp, err := opts.Client.Volumes().WithMetro(opts.Metro).Delete(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("deleting %d volume(s): %w", len(args), err)
 	}
