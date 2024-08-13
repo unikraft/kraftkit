@@ -37,7 +37,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/gobwas/glob v0.2.3
-	github.com/google/go-containerregistry v0.20.1
+	github.com/google/go-containerregistry v0.20.2
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
@@ -72,7 +72,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.21.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.24.0
 	golang.org/x/term v0.23.0
 	google.golang.org/grpc v1.64.1
@@ -82,7 +82,7 @@ require (
 	k8s.io/apimachinery v0.30.3
 	k8s.io/apiserver v0.30.3
 	oras.land/oras-go/v2 v2.5.0
-	sdk.kraft.cloud v0.5.10-0.20240723104228-555a014860c8
+	sdk.kraft.cloud v0.5.10-0.20240813111748-eabe84d65f02
 	sigs.k8s.io/kustomize/kyaml v0.17.2
 )
 
@@ -266,10 +266,10 @@ require (
 	go.opentelemetry.io/otel/sdk v1.27.0 // indirect
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.2.0 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/genproto v0.0.0-20240311173647-c811ad7063a7 // indirect
