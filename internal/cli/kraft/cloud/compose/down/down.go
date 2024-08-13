@@ -128,9 +128,14 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("getting instances: %w", err)
 	}
 
+	insts, err := instResp.AllOrErr()
+	if err != nil {
+		return fmt.Errorf("getting instances: %w", err)
+	}
+
 	instances = []string{}
 
-	for _, instance := range instResp.Data.Entries {
+	for _, instance := range insts {
 		if instance.Message != "" {
 			log.G(ctx).Error(instance.Message)
 			continue

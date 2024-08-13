@@ -100,13 +100,18 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 			return fmt.Errorf("listing service: %w", err)
 		}
 
-		if len(sgListResp.Data.Entries) == 0 {
+		sgList, err := sgListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("listing service: %w", err)
+		}
+
+		if len(sgList) == 0 {
 			log.G(ctx).Info("no service found")
 			return nil
 		}
 
 		args = []string{}
-		for _, sgItem := range sgListResp.Data.Entries {
+		for _, sgItem := range sgList {
 			args = append(args, sgItem.Name)
 		}
 	}
