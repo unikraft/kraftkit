@@ -175,7 +175,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		return err
 	}
 
-	instResps := kcclient.ServiceResponse[kcinstances.GetResponseItem]{}
+	insts := []kcinstances.GetResponseItem{}
 
 	for _, serviceName := range args {
 		service, ok := opts.Project.Services[serviceName]
@@ -223,10 +223,13 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		}
 
 		instResp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, service.Name)
-		if err == nil && len(instResp.Data.Entries) == 1 && instResp.Data.Entries[0].Error == nil {
-			instResps.Data.Entries = append(instResps.Data.Entries, instResp.Data.Entries...)
-			log.G(ctx).WithField("name", service.Name).Info("service already exists")
-			continue
+		if err == nil {
+			inst, err := instResp.FirstOrErr()
+			if err == nil && inst != nil {
+				insts = append(insts, *inst)
+				log.G(ctx).WithField("name", service.Name).Info("service already exists")
+				continue
+			}
 		}
 
 		// Handle environmental variables.
@@ -256,12 +259,17 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 
 		var volumes []string
 		for _, volume := range service.Volumes {
-			vol, ok := volResps[volume.Source]
+			volResp, ok := volResps[volume.Source]
 			if !ok {
 				continue
 			}
 
-			volumes = append(volumes, fmt.Sprintf("%s:%s", vol.Data.Entries[0].UUID, volume.Target))
+			vol, err := volResp.FirstOrErr()
+			if err != nil {
+				continue
+			}
+
+			volumes = append(volumes, fmt.Sprintf("%s:%s", vol.UUID, volume.Target))
 		}
 
 		name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
@@ -335,14 +343,19 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Volumes:      volumes,
 		}, service.Command...)
 		if err != nil {
-			return err
+			return fmt.Errorf("creating instance: %w", err)
 		}
 
-		instResps.Data.Entries = append(instResps.Data.Entries, instResp.Data.Entries...)
+		inst, err := instResp.FirstOrErr()
+		if err != nil || inst == nil {
+			return fmt.Errorf("creating instance: %w", err)
+		}
+
+		insts = append(insts, *inst)
 	}
 
 	var instances []string
-	for _, inst := range instResps.Data.Entries {
+	for _, inst := range insts {
 		instances = append(instances, inst.Name)
 	}
 
@@ -370,6 +383,8 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 				Output: "table",
 			}, instances...)
 		} else {
+			instResps := kcclient.ServiceResponse[kcinstances.GetResponseItem]{}
+			instResps.Data.Entries = insts
 			return utils.PrintInstances(ctx, "table", instResps)
 		}
 	}

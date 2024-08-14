@@ -27,8 +27,8 @@ type CreateOptions struct {
 	Auth   *config.AuthConfig       `noattribute:"true"`
 	Client kcvolumes.VolumesService `noattribute:"true"`
 	Metro  string                   `noattribute:"true"`
-	Name   string                   `local:"true" size:"name" short:"n"`
-	Size   string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments)"`
+	Name   string                   `local:"true" size:"name" short:"n" usage:"Name of the volume"`
+	Size   string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments or suffixes like Mi, Gi, etc.)"`
 	Token  string                   `noattribute:"true"`
 }
 
@@ -93,6 +93,9 @@ func NewCmd() *cobra.Command {
 		Example: heredoc.Doc(`
 			# Create a new persistent 100MiB volume named "my-volume"
 			$ kraft cloud volume create --size 100 --name my-volume
+
+			# Create a new persistent 10MiB volume with a random name
+			$ kraft cloud volume create --size 10Mi
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",

@@ -115,13 +115,18 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 			return fmt.Errorf("could not list instances: %w", err)
 		}
 
-		if len(instListResp.Data.Entries) == 0 {
+		instList, err := instListResp.AllOrErr()
+		if err != nil {
+			return fmt.Errorf("could not list instances: %w", err)
+		}
+
+		if len(instList) == 0 {
 			log.G(ctx).Info("no instances found")
 			return nil
 		}
 
-		uuids := make([]string, 0, len(instListResp.Data.Entries))
-		for _, instItem := range instListResp.Data.Entries {
+		uuids := make([]string, 0, len(instList))
+		for _, instItem := range instList {
 			uuids = append(uuids, instItem.UUID)
 		}
 
@@ -131,8 +136,13 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 				return fmt.Errorf("could not get instances: %w", err)
 			}
 
+			instInfos, err := instInfosResp.AllOrErr()
+			if err != nil {
+				return fmt.Errorf("could not get instances: %w", err)
+			}
+
 			var stoppedUuids []string
-			for _, instInfo := range instInfosResp.Data.Entries {
+			for _, instInfo := range instInfos {
 				if kcinstances.State(instInfo.State) == kcinstances.StateStopped {
 					stoppedUuids = append(stoppedUuids, instInfo.UUID)
 				}
