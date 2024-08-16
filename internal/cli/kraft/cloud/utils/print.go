@@ -1070,6 +1070,148 @@ func PrintCertificates(ctx context.Context, format string, resp kcclient.Service
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// PrintMetrics pretty-prints the provided set of instances metrics or returns
+// an error if unable to send to stdout via the provided context.
+func PrintMetrics(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.MetricsResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
+	}
+
+	metrics, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	if err := iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("STATE", cs.Bold)
+	table.AddField("RSS", cs.Bold)
+	table.AddField("CPU TIME", cs.Bold)
+	table.AddField("STARTS", cs.Bold)
+	if format != "table" {
+		table.AddField("RX SIZE", cs.Bold)
+		table.AddField("RX PACKETS", cs.Bold)
+		table.AddField("TX SIZE", cs.Bold)
+		table.AddField("TX PACKETS", cs.Bold)
+		table.AddField("CONNECTIONS", cs.Bold)
+		table.AddField("REQUESTS", cs.Bold)
+		table.AddField("QUEUED", cs.Bold)
+		table.AddField("RESTARTS", cs.Bold)
+		table.AddField("STARTED", cs.Bold)
+		table.AddField("STOPPED", cs.Bold)
+		table.AddField("UPTIME", cs.Bold)
+		table.AddField("BOOT TIME", cs.Bold)
+		table.AddField("NET TIME", cs.Bold)
+	}
+	table.AddField("TOTAL", cs.Bold)
+	table.EndRow()
+
+	if config.G[config.KraftKit](ctx).NoColor {
+		instanceStateColor = instanceStateColorNil
+	}
+
+	for _, metric := range metrics {
+		if metric.Message != "" {
+			// Header row
+			if format != "table" {
+				table.AddField(metric.UUID, nil)
+			}
+			table.AddField(metric.Name, nil)
+			table.AddField("", nil) // STATE
+			table.AddField("", nil) // RSS
+			table.AddField("", nil) // CPU TIME
+			table.AddField("", nil) // STARTS
+			if format != "table" {
+				table.AddField("", nil)     // RX SIZE
+				table.AddField("", nil)     // RX PACKETS
+				table.AddField("", nil)     // TX SIZE
+				table.AddField("", nil)     // TX PACKETS
+				table.AddField("", nil)     // CONNECTIONS
+				table.AddField("", nil)     // REQUESTS
+				table.AddField("", cs.Bold) // QUEUED
+				table.AddField("", nil)     // RESTARTS
+				table.AddField("", nil)     // STARTED
+				table.AddField("", nil)     // STOPPED
+				table.AddField("", nil)     // UPTIME
+				table.AddField("", nil)     // BOOT TIME
+				table.AddField("", nil)     // NET TIME
+			}
+			table.AddField("", cs.Bold) // TOTAL
+			table.EndRow()
+
+			continue
+		}
+		if format != "table" {
+			table.AddField(metric.UUID, nil)
+		}
+
+		table.AddField(metric.Name, nil)
+		table.AddField(string(metric.State), instanceStateColor[metric.State])
+		table.AddField(humanize.IBytes(metric.RSS), nil)
+
+		duration, err := time.ParseDuration(fmt.Sprintf("%dms", metric.CPUTimeMs))
+		if err != nil {
+			return fmt.Errorf("could not parse CPU time for '%s': %w", metric.UUID, err)
+		}
+		table.AddField(duration.String(), nil)
+
+		table.AddField(fmt.Sprintf("%d", metric.StartCount), nil)
+
+		if format != "table" {
+			table.AddField(humanize.IBytes(metric.RxBytes), nil)
+			table.AddField(fmt.Sprintf("%d", metric.RxPackets), nil)
+			table.AddField(humanize.IBytes(metric.TxBytes), nil)
+			table.AddField(fmt.Sprintf("%d", metric.TxPackets), nil)
+			table.AddField(fmt.Sprintf("%d", metric.Connections), nil)
+			table.AddField(fmt.Sprintf("%d", metric.Requests), nil)
+			table.AddField(fmt.Sprintf("%d", metric.Queued), nil)
+			table.AddField(fmt.Sprintf("%d", metric.RestartCount), nil)
+
+			startedAt, err := parseTime(metric.StartedAt, format, metric.UUID)
+			if err != nil {
+				return err
+			}
+			stoppedAt, err := parseTime(metric.StoppedAt, format, metric.UUID)
+			if err != nil {
+				return err
+			}
+			table.AddField(startedAt, nil)
+			table.AddField(stoppedAt, nil)
+
+			duration, err := time.ParseDuration(fmt.Sprintf("%dms", metric.UptimeMs))
+			if err != nil {
+				return fmt.Errorf("could not parse uptime for '%s': %w", metric.UUID, err)
+			}
+			table.AddField(duration.String(), nil)
+			table.AddField(fmt.Sprintf("%.2f ms", float64(metric.BootTimeUs)/1000), nil)
+			table.AddField(fmt.Sprintf("%.2f ms", float64(metric.NetTimeUs)/1000), nil)
+		}
+		table.AddField(fmt.Sprintf("%d", metric.Total), nil)
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
 // PrettyPrintInstance outputs a single instance and information about it.
 func PrettyPrintInstance(ctx context.Context, instance kcinstances.GetResponseItem, service *kcservices.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
