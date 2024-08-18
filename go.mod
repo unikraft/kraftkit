@@ -78,7 +78,7 @@ require (
 	google.golang.org/grpc v1.65.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.30.3
+	k8s.io/api v0.31.0
 	k8s.io/apimachinery v0.31.0
 	k8s.io/apiserver v0.30.3
 	oras.land/oras-go/v2 v2.5.0
