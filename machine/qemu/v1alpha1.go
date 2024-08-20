@@ -456,7 +456,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				Type: QemuMachineTypeVirt,
 			}),
 			WithCPU(QemuCPU{
-				CPU: QemuCPUArmCortexA53,
+				CPU: QemuCPUArmMax,
 			}),
 		)
 
