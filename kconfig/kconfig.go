@@ -26,6 +26,34 @@ type KConfigFile struct {
 	Configs map[string]*KConfigMenu `json:"configs,omitempty"`
 }
 
+// recursiveWalk accepts an input menu and uses the provided callback against
+// all visited nodes.
+func recursiveWalk(menu *KConfigMenu, cb func(*KConfigMenu) error) error {
+	if err := cb(menu); err != nil {
+		return err
+	}
+
+	for _, child := range menu.Children {
+		if err := recursiveWalk(child, cb); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Walk iterates through each node expressed in the KConfig DAG and executes
+// the provided callback.
+func (file *KConfigFile) Walk(cb func(*KConfigMenu) error) error {
+	for _, menu := range file.Configs {
+		if err := recursiveWalk(menu, cb); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // KConfigMenu represents a single hierarchical menu or config.
 type KConfigMenu struct {
 	// Kind represents the structure type, e.g. config/menu/choice/etc
@@ -48,6 +76,9 @@ type KConfigMenu struct {
 
 	// Default value of the entry.
 	Default DefaultValue `json:"default,omitempty"`
+
+	// Source of the KConfig file that enabled this menu.
+	Source string `json:"source,omitempty"`
 
 	// Parent menu, non-nil for everythign except for mainmenu
 	parent      *KConfigMenu
@@ -74,10 +105,12 @@ type (
 )
 
 const (
-	MenuConfig  = MenuKind("config")
-	MenuGroup   = MenuKind("group")
-	MenuChoice  = MenuKind("choice")
-	MenuComment = MenuKind("comment")
+	MenuMain       = MenuKind("main")
+	MenuMenuConfig = MenuKind("menuconfig")
+	MenuConfig     = MenuKind("config")
+	MenuGroup      = MenuKind("group")
+	MenuChoice     = MenuKind("choice")
+	MenuComment    = MenuKind("comment")
 )
 
 const (
@@ -167,7 +200,7 @@ func (kconf *KConfigFile) walk(m *KConfigMenu, dependsOn, visibleIf expr) {
 	m.dependsOn = exprAnd(dependsOn, m.dependsOn)
 	m.visibleIf = exprAnd(visibleIf, m.visibleIf)
 
-	if m.Kind == MenuConfig {
+	if m.Kind == MenuConfig || m.Kind == MenuMenuConfig {
 		kconf.Configs[m.Name] = m
 	}
 
@@ -229,40 +262,53 @@ func (kp *kconfigParser) parseMenu(cmd string) {
 
 	case "mainmenu":
 		kp.pushCurrent(&KConfigMenu{
-			Kind:   MenuConfig,
+			Kind:   MenuMain,
 			Prompt: KConfigPrompt{Text: kp.QuotedString()},
+			Source: filepath.Clean(kp.file),
 		})
 
 	case "comment":
 		kp.newCurrent(&KConfigMenu{
 			Kind:   MenuComment,
 			Prompt: KConfigPrompt{Text: kp.QuotedString()},
+			Source: filepath.Clean(kp.file),
 		})
 
 	case "menu":
 		kp.pushCurrent(&KConfigMenu{
 			Kind:   MenuGroup,
 			Prompt: KConfigPrompt{Text: kp.QuotedString()},
+			Source: filepath.Clean(kp.file),
 		})
 
 	case "if":
 		kp.pushCurrent(&KConfigMenu{
 			Kind:      MenuGroup,
 			visibleIf: kp.parseExpr(),
+			Source:    filepath.Clean(kp.file),
 		})
 
 	case "choice":
 		kp.pushCurrent(&KConfigMenu{
-			Kind: MenuChoice,
+			Kind:   MenuChoice,
+			Source: filepath.Clean(kp.file),
 		})
 
 	case "endmenu", "endif", "endchoice":
 		kp.popCurrent()
 
-	case "config", "menuconfig":
+	case "config":
 		kp.newCurrent(&KConfigMenu{
-			Kind: MenuConfig,
-			Name: kp.Ident(),
+			Kind:   MenuConfig,
+			Name:   kp.Ident(),
+			Source: filepath.Clean(kp.file),
+		})
+
+	case "menuconfig":
+		kp.newCurrent(&KConfigMenu{
+			Kind:   MenuMenuConfig,
+			Name:   kp.Ident(),
+			Source: filepath.Clean(kp.file),
 		})
 
 	default:
