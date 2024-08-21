@@ -238,6 +238,12 @@ func (kp *kconfigParser) parseLine() {
 		return
 	}
 
+	// To make this package compatible with Linux, ignore error-if statements
+	if kp.TryConsume("$(error-if") {
+		_ = kp.ConsumeLine()
+		return
+	}
+
 	ident := kp.Ident()
 	if kp.TryConsume("=") || kp.TryConsume(":=") {
 		// Macro definition, see:
