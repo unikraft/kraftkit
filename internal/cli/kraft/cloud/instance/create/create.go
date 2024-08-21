@@ -60,6 +60,7 @@ type CreateOptions struct {
 	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
 	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token               string                         `noattribute:"true"`
+	Vcpus               uint                           `local:"true" long:"vcpus" short:"V" usage:"Specify the number of vCPUs to allocate"`
 	Volumes             []string                       `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
 	WaitForImageTimeout time.Duration                  `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
@@ -198,6 +199,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		Features:      features,
 		Image:         opts.Image,
 		RestartPolicy: opts.RestartPolicy,
+	}
+	if opts.Vcpus > 0 {
+		req.Vcpus = ptr(int(opts.Vcpus))
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name

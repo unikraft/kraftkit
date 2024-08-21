@@ -114,6 +114,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 					Start:               !opts.NoStart,
 					SubDomain:           opts.SubDomain,
 					Token:               opts.Token,
+					Vcpus:               opts.Vcpus,
 				}, deployer.args...)
 				if err != nil {
 					return fmt.Errorf("could not create instance: %w", err)
