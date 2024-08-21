@@ -23,13 +23,15 @@ type parser struct {
 	line    int
 	err     error
 	env     KeyValueMap
+	baseDir string
 }
 
-func newParser(data []byte, file string, env KeyValueMap) *parser {
+func newParser(data []byte, baseDir, file string, env KeyValueMap) *parser {
 	return &parser{
-		data: data,
-		file: file,
-		env:  env,
+		data:    data,
+		file:    file,
+		env:     env,
+		baseDir: baseDir,
 	}
 }
 
@@ -211,6 +213,7 @@ func (p *parser) interpolate(b []byte) string {
 
 		var buf bytes.Buffer
 		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = p.baseDir
 		cmd.Stdout = bufio.NewWriter(&buf)
 		if err := cmd.Run(); err != nil {
 			p.failf("could not execute shell: %s", err.Error())

@@ -172,7 +172,7 @@ func ParseData(data []byte, file string, extra ...*KeyValue) (*KConfigFile, erro
 		env[kcv.Key] = kcv
 	}
 	kp := &kconfigParser{
-		parser:  newParser(data, file, env),
+		parser:  newParser(data, filepath.Dir(file), file, env),
 		baseDir: filepath.Dir(file),
 	}
 
@@ -426,7 +426,7 @@ func (kp *kconfigParser) includeSource(file string) {
 	}
 
 	kp.includes = append(kp.includes, kp.parser)
-	kp.parser = newParser(data, file, kp.env)
+	kp.parser = newParser(data, kp.baseDir, file, kp.env)
 	kp.parseFile()
 	err = kp.err
 	kp.parser = kp.includes[len(kp.includes)-1]
