@@ -138,6 +138,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 	}
 	table.AddField("IMAGE", cs.Bold)
 	table.AddField("MEMORY", cs.Bold)
+	table.AddField("VCPUS", cs.Bold)
 	table.AddField("ARGS", cs.Bold)
 	if format != "table" {
 		table.AddField("ENV", cs.Bold)
@@ -186,6 +187,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			}
 			table.AddField("", nil) // IMAGE
 			table.AddField("", nil) // MEMORY
+			table.AddField("", nil) // VCPUS
 			table.AddField("", nil) // ARGS
 			if format != "table" {
 				table.AddField("", nil) // ENV
@@ -308,6 +310,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 		}
 		table.AddField(instance.Image, nil)
 		table.AddField(humanize.IBytes(uint64(instance.MemoryMB)*humanize.MiByte), nil)
+		table.AddField(fmt.Sprintf("%d", instance.Vcpus), nil)
 		table.AddField(strings.Join(instance.Args, " "), nil)
 
 		if format != "table" {
@@ -737,6 +740,8 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 
 	table.AddField("ACTIVE INSTANCES", cs.Bold)
 	table.AddField("TOTAL INSTANCES", cs.Bold)
+	table.AddField("ACTIVE VCPUS", cs.Bold)
+	table.AddField("VCPU LIMIT", cs.Bold)
 
 	// Blank line on list view
 	if format == "list" {
@@ -813,9 +818,9 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	// ACTIVE INSTANCES
 	var activeInstances string
 	if format == "list" {
-		activeInstances = printBar(cs, quota.Used.LiveInstances, quota.Hard.LiveInstances) + " "
+		activeInstances = printBar(cs, quota.Used.LiveInstances, quota.Hard.Instances) + " "
 	}
-	activeInstances += fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.LiveInstances)
+	activeInstances += fmt.Sprintf("%d/%d", quota.Used.LiveInstances, quota.Hard.Instances)
 	table.AddField(activeInstances, nil)
 
 	// TOTAL INSTANCES
@@ -825,6 +830,20 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 	}
 	totalInstances += fmt.Sprintf("%d/%d", quota.Used.Instances, quota.Hard.Instances)
 	table.AddField(totalInstances, nil)
+
+	// ACTIVE VCPUS
+	var activeVcpus string
+	if format == "list" {
+		activeVcpus = printBar(cs, quota.Used.LiveVcpus, quota.Hard.LiveVcpus) + " "
+	}
+	activeVcpus += fmt.Sprintf("%d/%d", quota.Used.LiveVcpus, quota.Hard.LiveVcpus)
+	table.AddField(activeVcpus, nil)
+
+	// VCPU LIMIT
+	table.AddField(fmt.Sprintf("%d-%d",
+		quota.Limits.MinVcpus,
+		quota.Limits.MaxVcpus,
+	), nil)
 
 	// Blank line on list view
 	if format == "list" {
