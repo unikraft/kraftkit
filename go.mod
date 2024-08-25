@@ -29,7 +29,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.1
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v27.1.2+incompatible
-	github.com/docker/docker v26.1.5+incompatible
+	github.com/docker/docker v27.1.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
@@ -206,6 +206,7 @@ require (
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
