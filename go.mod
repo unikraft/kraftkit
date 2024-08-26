@@ -9,7 +9,7 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/acorn-io/baaah v0.0.0-20230522221318-afcc93619e30
-	github.com/anchore/stereoscope v0.0.2
+	github.com/anchore/stereoscope v0.0.3
 	github.com/briandowns/spinner v1.23.1
 	github.com/cavaliergopher/cpio v1.0.1
 	github.com/charmbracelet/bubbles v0.19.0
@@ -29,7 +29,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.1
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v27.1.2+incompatible
-	github.com/docker/docker v26.1.5+incompatible
+	github.com/docker/docker v27.1.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
@@ -67,7 +67,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/testcontainers/testcontainers-go v0.31.0
+	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231127184239-0ced8385386a
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
@@ -97,14 +97,14 @@ require (
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
-	github.com/adrg/xdg v0.4.0 // indirect
+	github.com/adrg/xdg v0.5.0 // indirect
 	github.com/anchore/go-collections v0.0.0-20240216171411-9321230ce537 // indirect
 	github.com/anchore/go-logger v0.0.0-20220728155337-03b66a5207d8 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/becheran/wildmatch-go v1.0.0 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.0.2 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -210,6 +210,7 @@ require (
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -220,7 +221,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/ostreedev/ostree-go v0.0.0-20210805093236-719684c64e4f // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pierrec/lz4/v4 v4.1.17 // indirect
+	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
@@ -238,8 +239,8 @@ require (
 	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
-	github.com/sylabs/sif/v2 v2.16.0 // indirect
-	github.com/sylabs/squashfs v0.6.1 // indirect
+	github.com/sylabs/sif/v2 v2.17.1 // indirect
+	github.com/sylabs/squashfs v1.0.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
