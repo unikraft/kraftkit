@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime/pprof"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/rancher/wrangler/pkg/signals"
@@ -136,6 +137,27 @@ func Main(args []string) int {
 	cmd := NewCmd()
 	ctx := signals.SetupSignalContext()
 	copts := &cli.CliOptions{}
+
+	// Start CPU profile when environmental variable is set.
+	if cpuProfile := os.Getenv("KRAFTKIT_CPU_PROFILE"); len(cpuProfile) > 0 {
+		pprofFile, err := os.OpenFile(cpuProfile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+		if err != nil {
+			fmt.Println("could not create cpu profile file")
+			os.Exit(1)
+		}
+
+		// Start profiling
+		if err = pprof.StartCPUProfile(pprofFile); err != nil {
+			fmt.Println("could not start cpu profiling")
+			os.Exit(1)
+		}
+
+		// Stop profiling on exit
+		defer func() {
+			pprof.StopCPUProfile()
+			_ = pprofFile.Close()
+		}()
+	}
 
 	for _, o := range []cli.CliOption{
 		cli.WithDefaultConfigManager(cmd),
