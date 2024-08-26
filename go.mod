@@ -13,7 +13,7 @@ require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/cavaliergopher/cpio v1.0.1
 	github.com/charmbracelet/bubbles v0.19.0
-	github.com/charmbracelet/bubbletea v0.27.0
+	github.com/charmbracelet/bubbletea v0.27.1
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/cli/cli/v2 v2.54.0
 	github.com/cli/go-gh v1.2.1
