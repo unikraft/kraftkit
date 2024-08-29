@@ -7,6 +7,7 @@ package initrd
 import (
 	"archive/tar"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"net"
@@ -18,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
@@ -29,6 +31,8 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/session/filesync"
+	"github.com/moby/buildkit/session/secrets/secretsprovider"
+	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -39,6 +43,52 @@ import (
 	_ "github.com/moby/buildkit/client/connhelper/podmancontainer"
 	_ "github.com/moby/buildkit/client/connhelper/ssh"
 )
+
+var (
+	buildArgs    = []string{}
+	buildSecrets = []string{}
+	buildTarget  string
+)
+
+func init() {
+	for _, cmd := range []string{
+		"kraft build",
+		"kraft cloud compose build",
+		"kraft cloud compose up",
+		"kraft cloud deploy",
+		"kraft compose build",
+		"kraft compose up",
+		"kraft pkg",
+	} {
+		cmdfactory.RegisterFlag(
+			cmd,
+			cmdfactory.StringArrayVar(
+				&buildArgs,
+				"build-arg",
+				[]string{},
+				"Supply build arguments when building a Dockerfile",
+			),
+		)
+		cmdfactory.RegisterFlag(
+			cmd,
+			cmdfactory.StringVar(
+				&buildTarget,
+				"build-target",
+				"",
+				"Supply multi-stage target when building Dockerfile",
+			),
+		)
+		cmdfactory.RegisterFlag(
+			cmd,
+			cmdfactory.StringArrayVar(
+				&buildSecrets,
+				"build-secret",
+				[]string{},
+				"Supply secrets when building Dockerfile",
+			),
+		)
+	}
+}
 
 var testcontainersLoggingHook = func(logger testcontainers.Logging) testcontainers.ContainerLifecycleHooks {
 	shortContainerID := func(c testcontainers.Container) string {
@@ -282,13 +332,85 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		}
 	}
 
-	solveOpt := &client.SolveOpt{
-		Ref: identity.NewID(),
-		Session: []session.Attachable{
-			&buildkitAuthProvider{
-				config.G[config.KraftKit](ctx).Auth,
-			},
+	attrs := map[string]string{
+		"filename": filepath.Base(initrd.dockerfile),
+	}
+
+	if len(buildTarget) > 0 {
+		attrs["target"] = buildTarget
+	}
+
+	for _, arg := range buildArgs {
+		k, v, ok := strings.Cut(arg, "=")
+		if !ok {
+			v, ok = os.LookupEnv(k)
+			if !ok {
+				log.G(ctx).
+					WithField("arg", k).
+					Warn("could not find build-arg in environment")
+				continue
+			}
+		}
+
+		attrs["build-arg:"+k] = v
+	}
+
+	session := []session.Attachable{
+		&buildkitAuthProvider{
+			config.G[config.KraftKit](ctx).Auth,
 		},
+	}
+
+	fs := make([]secretsprovider.Source, 0, len(buildSecrets))
+	for _, v := range buildSecrets {
+		s, err := parseSecret(v)
+		if err != nil {
+			return "", err
+		}
+		fs = append(fs, *s)
+	}
+
+	secretStore, err := secretsprovider.NewStore(fs)
+	if err != nil {
+		return "", err
+	}
+
+	session = append(session,
+		secretsprovider.NewSecretProvider(secretStore),
+	)
+
+	sshAgentPath := ""
+
+	// Only a single socket path is supported, prioritize ones targeting kraftkit.
+	if p, ok := os.LookupEnv("KRAFTKIT_BUILDKIT_SSH_AGENT"); ok {
+		p, err := filepath.Abs(p)
+		if err != nil {
+			return "", err
+		}
+		sshAgentPath = p
+	} else if p, ok := os.LookupEnv("SSH_AUTH_SOCK"); ok {
+		p, err := filepath.Abs(p)
+		if err != nil {
+			return "", err
+		}
+		sshAgentPath = p
+	}
+	if len(sshAgentPath) > 0 {
+		sshSession, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{
+			Paths: []string{sshAgentPath},
+		}})
+		if err != nil {
+			return "", err
+		}
+
+		session = append(session,
+			sshSession,
+		)
+	}
+
+	solveOpt := &client.SolveOpt{
+		Ref:     identity.NewID(),
+		Session: session,
 		Exports: []client.ExportEntry{
 			{
 				Type:   client.ExporterTar,
@@ -304,10 +426,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			"context":    initrd.opts.workdir,
 			"dockerfile": initrd.opts.workdir,
 		},
-		Frontend: "dockerfile.v0",
-		FrontendAttrs: map[string]string{
-			"filename": filepath.Base(initrd.dockerfile),
-		},
+		Frontend:      "dockerfile.v0",
+		FrontendAttrs: attrs,
 	}
 
 	if initrd.opts.arch != "" {
@@ -562,4 +682,52 @@ func (ap *buildkitAuthProvider) GetTokenAuthority(ctx context.Context, req *auth
 
 func (ap *buildkitAuthProvider) VerifyTokenAuthority(ctx context.Context, req *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unavailable, "client side tokens disabled")
+}
+
+// parseSecret is derived from [0]
+// [0]: https://github.com/moby/buildkit/blob/6737deb443f66e5da79a8ab9a9af36b64b5035cc/cmd/buildctl/build/secret.go#L29-L65
+func parseSecret(val string) (*secretsprovider.Source, error) {
+	csvReader := csv.NewReader(strings.NewReader(val))
+	fields, err := csvReader.Read()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse csv secret: %w", err)
+	}
+
+	fs := secretsprovider.Source{}
+
+	var typ string
+	for _, field := range fields {
+		key, value, ok := strings.Cut(field, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid field '%s' must be a key=value pair", field)
+		}
+
+		key = strings.ToLower(key)
+		switch key {
+		case "type":
+			if value != "file" && value != "env" {
+				return nil, fmt.Errorf("unsupported secret type %q", value)
+			}
+			typ = value
+		case "id":
+			fs.ID = value
+		case "source", "src":
+			value, err = filepath.Abs(value)
+			if err != nil {
+				return nil, fmt.Errorf("secret path '%s' must be absolute: %w", value, err)
+			}
+			fs.FilePath = value
+		case "env":
+			fs.Env = value
+		default:
+			return nil, fmt.Errorf("unexpected key '%s' in '%s'", key, field)
+		}
+	}
+
+	if typ == "env" && fs.Env == "" {
+		fs.Env = fs.FilePath
+		fs.FilePath = ""
+	}
+
+	return &fs, nil
 }
