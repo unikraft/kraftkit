@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
@@ -40,6 +41,7 @@ type DeployOptions struct {
 	DeployAs            string                         `local:"true" long:"as" short:"D" usage:"Set the deployment type"`
 	Domain              []string                       `local:"true" long:"domain" short:"d" usage:"Set the domain names for the service"`
 	DotConfig           string                         `long:"config" short:"c" usage:"Override the path to the KConfig .config file"`
+	Entrypoint          types.ShellCommand             `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
 	Env                 []string                       `local:"true" long:"env" short:"e" usage:"Environmental variables"`
 	Features            []string                       `local:"true" long:"feature" usage:"Specify the special features to enable"`
 	Follow              bool                           `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance"`
