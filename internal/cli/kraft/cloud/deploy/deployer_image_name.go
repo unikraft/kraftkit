@@ -94,6 +94,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			func(ctx context.Context) error {
 				insts, groups, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
 					Certificate:         opts.Certificate,
+					Entrypoint:          opts.Entrypoint,
 					Env:                 opts.Env,
 					Features:            opts.Features,
 					Domain:              opts.Domain,

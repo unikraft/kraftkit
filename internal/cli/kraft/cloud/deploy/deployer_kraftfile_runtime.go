@@ -125,6 +125,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Certificate:         opts.Certificate,
 		Env:                 opts.Env,
 		Domain:              opts.Domain,
+		Entrypoint:          opts.Entrypoint,
 		Image:               packs[0].ID(),
 		Memory:              opts.Memory,
 		Metro:               opts.Metro,
