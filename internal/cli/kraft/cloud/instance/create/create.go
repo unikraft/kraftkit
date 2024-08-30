@@ -243,7 +243,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		req.Replicas = ptr(int(opts.Replicas))
 	}
 
-	if opts.ServiceNameOrUUID == "" && len(opts.Ports) == 0 {
+	if len(opts.Services) == 0 && opts.ServiceNameOrUUID == "" && len(opts.Ports) == 0 {
 		log.G(ctx).Info("no ports or service specified, disabling scale to zero")
 		opts.ScaleToZeroCooldown = 0
 		opts.ScaleToZeroStateful = nil
