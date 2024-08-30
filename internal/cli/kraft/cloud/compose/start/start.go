@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -117,7 +118,12 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("service '%s' not found", serviceName)
 		}
 
-		instances = append(instances, service.Name)
+		name := strings.ReplaceAll(fmt.Sprintf("%s-%s", opts.Project.Name, service.Name), "_", "-")
+		if cname := service.ContainerName; len(cname) > 0 {
+			name = cname
+		}
+
+		instances = append(instances, name)
 	}
 
 	return start.Start(ctx, &start.StartOptions{
