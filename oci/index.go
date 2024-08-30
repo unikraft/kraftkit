@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/errdefs"
@@ -183,7 +182,6 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 
 	// General annotations
 	index.annotations[ocispec.AnnotationRefName] = ref.Context().String()
-	index.annotations[ocispec.AnnotationCreated] = time.Now().UTC().Format(time.RFC3339)
 	index.annotations[AnnotationKraftKitVersion] = version.Version()
 
 	// containerd compatibility annotations
