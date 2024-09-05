@@ -34,7 +34,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&StartOptions{}, cobra.Command{
 		Short:   "Start instances",
 		Use:     "start [FLAGS] [UUID|NAME [UUID|NAME]...]",
-		Args:    cobra.MinimumNArgs(1),
+		Args:    cobra.ArbitraryArgs,
 		Aliases: []string{"str"},
 		Example: heredoc.Doc(`
 			# Start an instance by UUID
