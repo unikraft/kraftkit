@@ -75,7 +75,7 @@ func (opts *MetricsOptions) printTop(ctx context.Context) error {
 			{Title: "STATE"},
 			{Title: "UPTIME"},
 			{Title: "CPU"},
-			{Title: "MEM"},
+			{Title: "MEMORY"},
 			{Title: "NET RX / TX"},
 		},
 		func(ctx context.Context) ([]pstable.Row, error) {
@@ -153,16 +153,16 @@ func (opts *MetricsOptions) printTop(ctx context.Context) error {
 
 				rows[metric.UUID][3] = pstable.GuageCell{
 					Cs:      iostreams.G(ctx).ColorScheme(),
-					Current: float64(metric.CPUTimeMs - previousMetrics[metric.UUID].CPUTimeMs),
+					Current: int(metric.CPUTimeMs - previousMetrics[metric.UUID].CPUTimeMs),
 					Max:     1000,
-					Width:   10,
+					Width:   5,
 				}
 
 				rows[metric.UUID][4] = pstable.GuageCell{
 					Cs:      iostreams.G(ctx).ColorScheme(),
-					Current: float64(metric.RSS),
-					Max:     float64(instancesMap[metric.UUID].MemoryMB) * 1024 * 1024,
-					Width:   10,
+					Current: int(metric.RSS),
+					Max:     int(instancesMap[metric.UUID].MemoryMB) * 1024 * 1024,
+					Width:   5,
 				}
 				rows[metric.UUID][5] = pstable.StringCell(iostreams.Bold(fmt.Sprintf("%s / %s", humanize.Bytes(metric.RxBytes), humanize.Bytes(metric.TxBytes))))
 

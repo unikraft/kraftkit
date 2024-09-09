@@ -677,23 +677,30 @@ func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResp
 // An internal utility method for printing a bar based on the provided progress
 // and max values and the width of the bar.
 func printBar(cs *iostreams.ColorScheme, progress, max int) string {
-	width := 36
+	builder := ProgressBarBuilder(cs, progress, max, 36)
 
+	return builder.String()
+}
+
+func ProgressBarBuilder(cs *iostreams.ColorScheme, progress, max, width int) *strings.Builder {
 	var ret strings.Builder
 
 	percent := math.Floor(float64(progress) / float64(max) * float64(width))
+	if percent >= float64(width) {
+		percent = 0
+	}
 
 	color := "green"
-	if percent > 30 { // ~83%
+	if percent*100/float64(width) > 83 {
 		color = "red"
-	} else if percent > 20 { // ~56%
+	} else if percent*100/float64(width) > 56 {
 		color = "yellow"
 	}
 
 	ret.WriteString(cs.ColorFromString(color)(strings.Repeat("█", int(percent))))
 	ret.WriteString(cs.ColorFromString(":243")(strings.Repeat(" ", width-int(percent))))
 
-	return ret.String()
+	return &ret
 }
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
