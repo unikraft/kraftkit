@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/text"
 	"kraftkit.sh/iostreams"
 )
@@ -31,33 +32,25 @@ func (cell StringCell) String() string {
 
 type GuageCell struct {
 	Cs           *iostreams.ColorScheme
-	Current, Max float64
+	Current, Max int
 	Width        int
 }
 
 func (cell GuageCell) String() string {
-	if cell.Width == 0 {
-		return "    " // This is enough to cover "100%"
+	var ret *strings.Builder
+
+	if cell.Width != 0 {
+		ret = utils.ProgressBarBuilder(cell.Cs, cell.Current, cell.Max, cell.Width)
+		ret.WriteString(" ")
+	} else {
+		ret = &strings.Builder{}
 	}
 
-	var ret strings.Builder
-
-	percent := math.Floor(cell.Current / cell.Max * 100)
+	percent := math.Floor(float64(cell.Current) / float64(cell.Max) * 100)
 	if percent > 100 {
-		percent = 100
+		percent = 0
 	}
 
-	color := "green"
-	if percent > 85 {
-		color = "red"
-	} else if percent > 65 {
-		color = "yellow"
-	}
-
-	ret.WriteString(cell.Cs.ColorFromString(color)(strings.Repeat("█", int(percent)/cell.Width)))
-	ret.WriteString(strings.Repeat(" ", cell.Width-(int(percent)/cell.Width)))
-
-	ret.WriteString(" ")
 	ret.WriteString(fmt.Sprintf("%.0f%%", percent))
 
 	return ret.String()
@@ -100,20 +93,21 @@ func (pstable *PsTable) Start(ctx context.Context) error {
 	pstable.table = table.New(
 		table.WithColumns(cols),
 		table.WithFocused(true),
+		table.WithWidth(256),
 	)
 
 	s := table.DefaultStyles()
 
 	s.Header = lipgloss.NewStyle().Bold(true)
-	s.Cell = lipgloss.NewStyle()
+	s.Cell = lipgloss.NewStyle().Padding(0)
 	s.Selected = s.Selected.
 		Background(lipgloss.AdaptiveColor{
 			Light: "0",
 			Dark:  "0",
 		}).
 		Foreground(lipgloss.AdaptiveColor{
-			Light: "0",
-			Dark:  "#AFAFAF",
+			Light: "#DFDFDF",
+			Dark:  "#CFCFCF",
 		})
 	pstable.table.SetStyles(s)
 
@@ -137,9 +131,9 @@ func (pstable *PsTable) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		pstable.width = msg.Width
+		pstable.width = 256
 		pstable.height = msg.Height
-		pstable.table.SetWidth(msg.Width)
+		pstable.table.SetWidth(256)
 
 	case []Row:
 		if len(msg) > 0 {
@@ -197,7 +191,6 @@ func (pstable *PsTable) tick() tea.Cmd {
 }
 
 func (pstable *PsTable) calculateColumnWidths(rows []Row) []int {
-	delimSize := 2
 	numCols := len(rows[0])
 	allColWidths := make([][]int, numCols)
 
@@ -215,80 +208,23 @@ func (pstable *PsTable) calculateColumnWidths(rows []Row) []int {
 		maxColWidths[col] = widths[len(widths)-1]
 	}
 
-	colWidths := make([]int, numCols)
-
-	// Never truncate the first column
-	colWidths[0] = maxColWidths[0]
-
 	availWidth := func() int {
 		setWidths := 0
 		for col := 0; col < numCols; col++ {
-			setWidths += colWidths[col]
+			setWidths += maxColWidths[col]
 		}
-
-		return pstable.width - delimSize*(numCols-1) - setWidths
-	}
-
-	numFixedCols := func() int {
-		fixedCols := 0
-
-		for col := 0; col < numCols; col++ {
-			if colWidths[col] > 0 {
-				fixedCols++
-			}
-		}
-
-		return fixedCols
-	}
-
-	// Set the widths of short columns
-	if w := availWidth(); w > 0 {
-		if numFlexColumns := numCols - numFixedCols(); numFlexColumns > 0 {
-			perColumn := w / numFlexColumns
-			for col := 0; col < numCols; col++ {
-				if max := maxColWidths[col]; max < perColumn {
-					colWidths[col] = max
-				}
-			}
-		}
-	}
-
-	firstFlexCol := -1
-
-	// truncate long columns to the remaining available width
-	if numFlexColumns := numCols - numFixedCols(); numFlexColumns > 0 {
-		perColumn := availWidth() / numFlexColumns
-		for col := 0; col < numCols; col++ {
-			if colWidths[col] == 0 {
-				if firstFlexCol == -1 {
-					firstFlexCol = col
-				}
-				if max := maxColWidths[col]; max < perColumn {
-					colWidths[col] = max
-				} else {
-					colWidths[col] = perColumn
-				}
-			}
-		}
-	}
-
-	// Add remainder to the first flex column
-	if w := availWidth(); w > 0 && firstFlexCol > -1 {
-		colWidths[firstFlexCol] += w
-		if max := maxColWidths[firstFlexCol]; max < colWidths[firstFlexCol] {
-			colWidths[firstFlexCol] = max
-		}
+		return pstable.width - 2*numCols - setWidths
 	}
 
 	// Pad all the columns if there is still space left
 	if w := availWidth(); w > 0 {
 		padding := w / numCols
 		for col := 0; col < numCols; col++ {
-			colWidths[col] += padding
+			maxColWidths[col] += padding
 		}
 	}
 
-	return colWidths
+	return maxColWidths
 }
 
 func (pstable *PsTable) renderTitle() string {
@@ -298,8 +234,8 @@ func (pstable *PsTable) renderTitle() string {
 			Dark:  "0",
 		}).
 		Foreground(lipgloss.AdaptiveColor{
-			Light: "15",
-			Dark:  "0",
+			Light: "#DFDFDF",
+			Dark:  "#CFCFCF",
 		}).
 		Width(pstable.width).
 		Render(pstable.title)
