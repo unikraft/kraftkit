@@ -12,7 +12,7 @@ require (
 	github.com/anchore/stereoscope v0.0.3
 	github.com/briandowns/spinner v1.23.1
 	github.com/cavaliergopher/cpio v1.0.1
-	github.com/charmbracelet/bubbles v0.18.0
+	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/cli/cli/v2 v2.55.0
