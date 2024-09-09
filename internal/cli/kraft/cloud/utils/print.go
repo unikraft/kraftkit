@@ -35,7 +35,7 @@ import (
 type colorFunc func(string) string
 
 var (
-	instanceStateColor = map[kcinstances.InstanceState]colorFunc{
+	InstanceStateColor = map[kcinstances.InstanceState]colorFunc{
 		kcinstances.InstanceStateDraining: iostreams.Yellow,
 		kcinstances.InstanceStateRunning:  iostreams.Green,
 		kcinstances.InstanceStateStandby:  iostreams.Cyan,
@@ -43,7 +43,7 @@ var (
 		kcinstances.InstanceStateStopped:  iostreams.Red,
 		kcinstances.InstanceStateStopping: iostreams.Yellow,
 	}
-	instanceStateColorNil = map[kcinstances.InstanceState]colorFunc{
+	InstanceStateColorNil = map[kcinstances.InstanceState]colorFunc{
 		kcinstances.InstanceStateDraining: nil,
 		kcinstances.InstanceStateRunning:  nil,
 		kcinstances.InstanceStateStandby:  nil,
@@ -155,7 +155,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
-		instanceStateColor = instanceStateColorNil
+		InstanceStateColor = InstanceStateColorNil
 	}
 
 	for _, instance := range instances {
@@ -255,7 +255,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 			table.AddField(instance.PrivateIP, nil)
 		}
 
-		table.AddField(string(instance.State), instanceStateColor[instance.State])
+		table.AddField(string(instance.State), InstanceStateColor[instance.State])
 		if format == "table" {
 			table.AddField(instance.DescribeStatus(), nil)
 		} else {
@@ -1126,7 +1126,7 @@ func PrintMetrics(ctx context.Context, format string, resp kcclient.ServiceRespo
 	table.EndRow()
 
 	if config.G[config.KraftKit](ctx).NoColor {
-		instanceStateColor = instanceStateColorNil
+		InstanceStateColor = InstanceStateColorNil
 	}
 
 	for _, metric := range metrics {
@@ -1165,7 +1165,7 @@ func PrintMetrics(ctx context.Context, format string, resp kcclient.ServiceRespo
 		}
 
 		table.AddField(metric.Name, nil)
-		table.AddField(string(metric.State), instanceStateColor[metric.State])
+		table.AddField(string(metric.State), InstanceStateColor[metric.State])
 		table.AddField(humanize.IBytes(metric.RSS), nil)
 
 		duration, err := time.ParseDuration(fmt.Sprintf("%dms", metric.CPUTimeMs))
@@ -1350,5 +1350,6 @@ func IsValidOutputFormat(format string) bool {
 		format == "yaml" ||
 		format == "list" ||
 		format == "raw" ||
+		format == "top" ||
 		format == ""
 }
