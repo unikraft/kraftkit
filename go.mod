@@ -12,7 +12,7 @@ require (
 	github.com/anchore/stereoscope v0.0.3
 	github.com/briandowns/spinner v1.23.1
 	github.com/cavaliergopher/cpio v1.0.1
-	github.com/charmbracelet/bubbles v0.18.0
+	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/cli/cli/v2 v2.55.0
@@ -82,7 +82,7 @@ require (
 	k8s.io/apimachinery v0.31.0
 	k8s.io/apiserver v0.30.3
 	oras.land/oras-go/v2 v2.5.0
-	sdk.kraft.cloud v0.5.10-0.20240821072613-b850da091d2d
+	sdk.kraft.cloud v0.5.10-0.20240830150932-eb1532db227c
 	sigs.k8s.io/kustomize/kyaml v0.17.2
 )
 
