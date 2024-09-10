@@ -33,7 +33,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image remove caddy@sha256:2ba5324141...
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup:  "cloud-img",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

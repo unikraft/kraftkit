@@ -13,8 +13,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcautoscale "sdk.kraft.cloud/services/autoscale"
+	cloud "sdk.kraft.cloud"
+	ukcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,14 +22,14 @@ import (
 )
 
 type AddOptions struct {
-	Adjustment string                `long:"adjustment" short:"a" usage:"The adjustment of the policy. Valid options: 'percent', 'absolute', 'change'" default:"change"`
-	Auth       *config.AuthConfig    `noattribute:"true"`
-	Client     kraftcloud.KraftCloud `noattribute:"true"`
-	Metric     string                `long:"metric" short:"m" usage:"The metric of the policy. Valid options: 'cpu'" default:"cpu"`
-	Metro      string                `noattribute:"true"`
-	Name       string                `long:"name" short:"n" usage:"The name of the policy"`
-	Step       []string              `long:"step" short:"s" usage:"The step of the policy in the format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'"`
-	Token      string                `noattribute:"true"`
+	Adjustment string             `long:"adjustment" short:"a" usage:"The adjustment of the policy. Valid options: 'percent', 'absolute', 'change'" default:"change"`
+	Auth       *config.AuthConfig `noattribute:"true"`
+	Client     cloud.KraftCloud   `noattribute:"true"`
+	Metric     string             `long:"metric" short:"m" usage:"The metric of the policy. Valid options: 'cpu'" default:"cpu"`
+	Metro      string             `noattribute:"true"`
+	Name       string             `long:"name" short:"n" usage:"The name of the policy"`
+	Step       []string           `long:"step" short:"s" usage:"The step of the policy in the format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'"`
+	Token      string             `noattribute:"true"`
 }
 
 // stepFormat holds the step format of the policy for parsing.
@@ -56,7 +56,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale add my-service --name my-policy --step 0:10/1 --step 10:20/2
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup: "cloud-scale",
 		},
 	})
 	if err != nil {
@@ -91,15 +91,15 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -171,13 +171,13 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	stepPol := kcautoscale.StepPolicy{
+	stepPol := ukcautoscale.StepPolicy{
 		Name:           opts.Name,
-		Metric:         kcautoscale.PolicyMetric(opts.Metric),
-		AdjustmentType: kcautoscale.AdjustmentType(opts.Adjustment),
+		Metric:         ukcautoscale.PolicyMetric(opts.Metric),
+		AdjustmentType: ukcautoscale.AdjustmentType(opts.Adjustment),
 	}
 	for _, step := range steps {
-		s := kcautoscale.Step{
+		s := ukcautoscale.Step{
 			Adjustment: step.Adjustment,
 		}
 		if !step.LowerEmpty {

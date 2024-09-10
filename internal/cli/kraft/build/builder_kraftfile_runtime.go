@@ -57,8 +57,8 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 	)
 
 	name := opts.Project.Runtime().Name()
-	if opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
-		name = utils.RewrapAsKraftCloudPackage(name)
+	if opts.Platform == "cloud" || opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && (opts.Project.Runtime().Platform().Name() == "cloud" || opts.Project.Runtime().Platform().Name() == "kraftcloud")) {
+		name = utils.RewrapAsUnikraftCloudPackage(name)
 	}
 
 	qopts := []packmanager.QueryOption{

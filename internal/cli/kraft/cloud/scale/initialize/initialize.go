@@ -14,9 +14,9 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcautoscale "sdk.kraft.cloud/services/autoscale"
+	cloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -25,15 +25,15 @@ import (
 )
 
 type InitOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)" default:"1000000000"`
-	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
-	MaxSize      int                   `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
-	Metro        string                `noattribute:"true"`
-	MinSize      string                `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
-	Token        string                `noattribute:"true"`
-	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
+	Auth         *config.AuthConfig `noattribute:"true"`
+	Client       cloud.KraftCloud   `noattribute:"true"`
+	CooldownTime time.Duration      `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)" default:"1000000000"`
+	Master       string             `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
+	MaxSize      int                `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
+	Metro        string             `noattribute:"true"`
+	MinSize      string             `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	Token        string             `noattribute:"true"`
+	WarmupTime   time.Duration      `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
 }
 
 func NewCmd() *cobra.Command {
@@ -52,7 +52,7 @@ func NewCmd() *cobra.Command {
 				--warmup-time 1s
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup: "cloud-scale",
 		},
 	})
 	if err != nil {
@@ -79,15 +79,15 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -115,7 +115,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("cooldown time must be at least 10ms")
 	}
 
-	var master kcautoscale.CreateRequestMaster
+	var master ukcautoscale.CreateRequestMaster
 
 	if opts.Master == "" {
 		if config.G[config.KraftKit](ctx).NoPrompt {
@@ -182,7 +182,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	req := kcautoscale.CreateRequest{
+	req := ukcautoscale.CreateRequest{
 		UUID:   &id,
 		Master: master,
 	}
@@ -219,7 +219,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 }
 
 type stringerInstance struct {
-	*kcinstances.GetResponseItem
+	*ukcinstances.GetResponseItem
 }
 
 var _ fmt.Stringer = (*stringerInstance)(nil)

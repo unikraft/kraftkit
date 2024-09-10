@@ -16,9 +16,9 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	cloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -119,7 +119,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud tunnel -p 5500 my-instance:8080
 		`, "`"),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud",
+			cmdfactory.AnnotationHelpGroup: "cloud",
 		},
 	})
 	if err != nil {
@@ -157,7 +157,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("supplied number of proxy ports must match the number of ports to forward")
 	}
 
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
@@ -167,8 +167,8 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	var authStr string
-	cliInstance := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	cliInstance := cloud.NewInstancesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	).WithMetro(opts.Metro)
 
 	rawInstances := opts.instances
@@ -286,35 +286,35 @@ func (opts *TunnelOptions) parseArgs(ctx context.Context, args []string) error {
 
 // runProxy runs a proxy instance with the given arguments.
 // Information related to the proxy instance is hardcoded, but the UUID is returned.
-func (opts *TunnelOptions) runProxy(ctx context.Context, cli kcinstances.InstancesService, args []string) (string, string, error) {
-	var parsedPorts []kcservices.CreateRequestService
+func (opts *TunnelOptions) runProxy(ctx context.Context, cli ukcinstances.InstancesService, args []string) (string, string, error) {
+	var parsedPorts []ukcservices.CreateRequestService
 	for i := range opts.exposedProxyPorts {
-		parsedPorts = append(parsedPorts, kcservices.CreateRequestService{
+		parsedPorts = append(parsedPorts, ukcservices.CreateRequestService{
 			Port:            int(opts.exposedProxyPorts[i]),
 			DestinationPort: ptr(int(opts.exposedProxyPorts[i])),
-			Handlers: []kcservices.Handler{
-				kcservices.HandlerTLS,
+			Handlers: []ukcservices.Handler{
+				ukcservices.HandlerTLS,
 			},
 		})
 	}
-	parsedPorts = append(parsedPorts, kcservices.CreateRequestService{
+	parsedPorts = append(parsedPorts, ukcservices.CreateRequestService{
 		Port:            int(opts.ProxyControlPort),
 		DestinationPort: ptr(int(opts.ProxyControlPort)),
-		Handlers: []kcservices.Handler{
-			kcservices.HandlerTLS,
+		Handlers: []ukcservices.Handler{
+			ukcservices.HandlerTLS,
 		},
 	})
 
-	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
+	crinstResp, err := cli.Create(ctx, ukcinstances.CreateRequest{
 		Image:    opts.TunnelServiceImage,
 		MemoryMB: ptr(64),
 		Args:     args,
-		ServiceGroup: &kcinstances.CreateRequestServiceGroup{
+		ServiceGroup: &ukcinstances.CreateRequestServiceGroup{
 			Services: parsedPorts,
 		},
 		Autostart:     ptr(true),
 		WaitTimeoutMs: ptr(int((3 * time.Second).Milliseconds())),
-		Features:      []kcinstances.Feature{kcinstances.FeatureDeleteOnStop},
+		Features:      []ukcinstances.Feature{ukcinstances.FeatureDeleteOnStop},
 	})
 	if err != nil {
 		return "", "", fmt.Errorf("creating proxy instance: %w", err)
@@ -404,7 +404,7 @@ func (opts *TunnelOptions) formatProxyArgs(authStr string) []string {
 }
 
 // populatePrivateIPs fetches the private IPs of the instances and replaces the instance names/uuids with the Private IPs.
-func populatePrivateIPs(ctx context.Context, cli kcinstances.InstancesService, targets []string) (ips []string, err error) {
+func populatePrivateIPs(ctx context.Context, cli ukcinstances.InstancesService, targets []string) (ips []string, err error) {
 	var instancesToGet []string
 	var indexesToGet []int
 	for i := range targets {
@@ -439,7 +439,7 @@ func populatePrivateIPs(ctx context.Context, cli kcinstances.InstancesService, t
 }
 
 // terminateProxy terminates the proxy instance with the given UUID.
-func terminateProxy(ctx context.Context, icli kcinstances.InstancesService, instID string) error {
+func terminateProxy(ctx context.Context, icli ukcinstances.InstancesService, instID string) error {
 	delinstResp, err := icli.Delete(ctx, instID)
 	if err != nil {
 		return fmt.Errorf("deleting proxy instance '%s': %w", instID, err)

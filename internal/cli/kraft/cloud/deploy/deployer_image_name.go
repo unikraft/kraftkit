@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"strings"
 
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/config"
 	instancecreate "kraftkit.sh/internal/cli/kraft/cloud/instance/create"
@@ -71,11 +71,11 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 	return true, nil
 }
 
-func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error) {
 	var err error
 
-	var insts *kcclient.ServiceResponse[kcinstances.GetResponseItem]
-	var groups *kcclient.ServiceResponse[kcservices.GetResponseItem]
+	var insts *ukcclient.ServiceResponse[ukcinstances.GetResponseItem]
+	var groups *ukcclient.ServiceResponse[ukcservices.GetResponseItem]
 
 	paramodel, err := processtree.NewProcessTree(
 		ctx,

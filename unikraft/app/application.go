@@ -565,8 +565,8 @@ func (app *application) Configure(ctx context.Context, tc target.Target, extra k
 		values.OverrideBy(tc.Platform().KConfig())
 		values.OverrideBy(tc.KConfig())
 
-		// This is a special exception used for KraftCloud-centric platform targets.
-		if tc.Platform().Name() == "kraftcloud" {
+		// This is a special exception used for Unikraft Cloud-centric platform targets.
+		if tc.Platform().Name() == "cloud" || tc.Platform().Name() == "kraftcloud" {
 			values.Set("CONFIG_KVM_DEBUG_VGA_CONSOLE", kconfig.No)
 			values.Set("CONFIG_KVM_KERNEL_VGA_CONSOLE", kconfig.No)
 		}
@@ -766,14 +766,14 @@ func (app *application) Build(ctx context.Context, tc target.Target, opts ...Bui
 		make.WithProgressFunc(bopts.onProgress),
 	}
 
-	// This is a special exception used for KraftCloud-centric platform targets.
+	// This is a special exception used for UnikraftCloud-centric platform targets.
 	// This includes using the ability to rename the kernal image to represent
 	// this as a platform (see [0] for additional details) and setting specific
 	// KConfig options.
 	//
 	// [0]: https://github.com/unikraft/unikraft/pull/1169
-	if tc.Platform().Name() == "kraftcloud" {
-		mopts = append(mopts, make.WithVar("UK_IMAGE_NAME_OVERWRITE", fmt.Sprintf("%s_kraftcloud-%s", tc.Name(), tc.Architecture().Name())))
+	if tc.Platform().Name() == "cloud" || tc.Platform().Name() == "kraftcloud" {
+		mopts = append(mopts, make.WithVar("UK_IMAGE_NAME_OVERWRITE", fmt.Sprintf("%s_cloud-%s", tc.Name(), tc.Architecture().Name())))
 	}
 
 	bopts.mopts = append(bopts.mopts, mopts...)
@@ -846,10 +846,10 @@ func (app *application) Components(ctx context.Context, targets ...target.Target
 		components = append(components, library)
 	}
 
-	// Add KraftCloud-specific libraries when a target with this name is provided.
+	// Add UnikraftCloud-specific libraries when a target with this name is provided.
 	var ukp *lib.LibraryConfig
 	for _, targ := range targets {
-		if targ.Platform().String() != "kraftcloud" {
+		if targ.Platform().String() != "cloud" || targ.Platform().String() != "kraftcloud" {
 			continue
 		}
 
@@ -874,7 +874,7 @@ func (app *application) Components(ctx context.Context, targets ...target.Target
 				"version": "stable",
 			})
 			if err != nil {
-				return nil, fmt.Errorf("could not add kraftcloud internal libraries: %w", err)
+				return nil, fmt.Errorf("could not add cloud internal libraries: %w", err)
 			}
 			ukp = &lukp
 

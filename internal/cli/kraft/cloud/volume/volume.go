@@ -27,16 +27,16 @@ type VolumeOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&VolumeOptions{}, cobra.Command{
-		Short:   "Manage persistent volumes on KraftCloud",
+		Short:   "Manage persistent volumes on UnikraftCloud",
 		Use:     "volume SUBCOMMAND",
 		Aliases: []string{"volumes", "vol"},
-		Long:    "Manage persistent volumes on KraftCloud.",
+		Long:    "Manage persistent volumes on cloud.",
 		Example: heredoc.Doc(`
 			# List all volumes in your account.
 			$ kraft cloud volume list
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup:  "cloud-vol",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

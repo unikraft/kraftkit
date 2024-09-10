@@ -61,7 +61,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose log nginx
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup:  "cloud-compose",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

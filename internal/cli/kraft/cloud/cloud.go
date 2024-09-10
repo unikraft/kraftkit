@@ -77,7 +77,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance remove UUID
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud",
+			cmdfactory.AnnotationHelpGroup:  "cloud",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
@@ -89,28 +89,28 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(quotas.NewCmd())
 	cmd.AddCommand(tunnel.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "IMAGE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-img", Title: "IMAGE COMMANDS"})
 	cmd.AddCommand(img.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "INSTANCE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-instance", Title: "INSTANCE COMMANDS"})
 	cmd.AddCommand(instance.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "VOLUME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-vol", Title: "VOLUME COMMANDS"})
 	cmd.AddCommand(volume.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "SCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-scale", Title: "SCALE COMMANDS"})
 	cmd.AddCommand(scale.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "SERVICE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-svc", Title: "SERVICE COMMANDS"})
 	cmd.AddCommand(service.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "CERTIFICATE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-certificate", Title: "CERTIFICATE COMMANDS"})
 	cmd.AddCommand(certificate.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-metro", Title: "METRO COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-metro", Title: "METRO COMMANDS"})
 	cmd.AddCommand(metros.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "COMPOSE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
 	return cmd

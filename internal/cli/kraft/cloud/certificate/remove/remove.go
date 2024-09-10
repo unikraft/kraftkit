@@ -12,7 +12,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -28,7 +28,7 @@ type RemoveOptions struct {
 	token string
 }
 
-// Remove a KraftCloud certificate.
+// Remove a UnikraftCloud certificate.
 func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	if opts == nil {
 		opts = &RemoveOptions{}
@@ -57,7 +57,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud certificate remove --all
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
+			cmdfactory.AnnotationHelpGroup: "cloud-certificate",
 		},
 	})
 	if err != nil {
@@ -85,13 +85,13 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 }
 
 func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewCertificatesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewCertificatesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	if opts.All {

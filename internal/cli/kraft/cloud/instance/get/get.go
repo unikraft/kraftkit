@@ -12,7 +12,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -20,14 +20,14 @@ import (
 )
 
 type GetOptions struct {
-	Auth   *config.AuthConfig    `noattribute:"true"`
-	Client kraftcloud.KraftCloud `noattribute:"true"`
-	Metro  string                `noattribute:"true"`
-	Token  string                `noattribute:"true"`
-	Output string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
+	Auth   *config.AuthConfig `noattribute:"true"`
+	Client cloud.KraftCloud   `noattribute:"true"`
+	Metro  string             `noattribute:"true"`
+	Token  string             `noattribute:"true"`
+	Output string             `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
 }
 
-// Status of a KraftCloud instance.
+// Status of a UnikraftCloud instance.
 func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 	if opts == nil {
 		opts = &GetOptions{}
@@ -53,7 +53,7 @@ func NewCmd() *cobra.Command {
 			Retrieve the state of an instance.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -77,13 +77,13 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *GetOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.Token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewInstancesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewInstancesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	resp, err := client.WithMetro(opts.Metro).Get(ctx, args...)

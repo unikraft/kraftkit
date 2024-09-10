@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/internal/cli/kraft/build"
 )
@@ -48,7 +48,7 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 	return true, nil
 }
 
-func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error) {
 	if err := build.Build(ctx, &build.BuildOptions{
 		Architecture: "x86_64",
 		DotConfig:    opts.DotConfig,
@@ -60,7 +60,7 @@ func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *Dep
 		NoFast:       opts.NoFast,
 		NoFetch:      opts.NoFetch,
 		NoUpdate:     opts.NoUpdate,
-		Platform:     "kraftcloud",
+		Platform:     "cloud",
 		Rootfs:       opts.Rootfs,
 		SaveBuildLog: opts.SaveBuildLog,
 		Workdir:      opts.Workdir,

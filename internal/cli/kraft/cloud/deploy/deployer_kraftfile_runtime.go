@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/pkg"
@@ -67,7 +67,7 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 	return true, nil
 }
 
-func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error) {
 	var pkgName string
 
 	if opts.Image != "" {
@@ -104,7 +104,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Kraftfile:    opts.Kraftfile,
 		Name:         pkgName,
 		NoPull:       true,
-		Platform:     "kraftcloud",
+		Platform:     "cloud",
 		Project:      opts.Project,
 		Push:         true,
 		Rootfs:       opts.Rootfs,

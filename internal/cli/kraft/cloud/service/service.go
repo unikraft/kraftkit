@@ -24,16 +24,16 @@ type ServiceOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ServiceOptions{}, cobra.Command{
-		Short:   "Manage services on KraftCloud",
+		Short:   "Manage services on UnikraftCloud",
 		Use:     "service SUBCOMMAND",
 		Aliases: []string{"services", "svc"},
-		Long:    "Manage services on KraftCloud.",
+		Long:    "Manage services on cloud.",
 		Example: heredoc.Doc(`
 			# List services in your account.
 			$ kraft cloud service list
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-svc",
+			cmdfactory.AnnotationHelpGroup:  "cloud-svc",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

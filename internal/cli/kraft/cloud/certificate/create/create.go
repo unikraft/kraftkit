@@ -13,8 +13,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kccertificates "sdk.kraft.cloud/certificates"
+	cloud "sdk.kraft.cloud"
+	ukccertificates "sdk.kraft.cloud/certificates"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -24,18 +24,18 @@ import (
 )
 
 type CreateOptions struct {
-	Auth   *config.AuthConfig                 `noattribute:"true"`
-	Client kccertificates.CertificatesService `noattribute:"true"`
-	Metro  string                             `noattribute:"true"`
-	Chain  string                             `local:"true" long:"chain" short:"C" usage:"The chain of the certificate"`
-	CN     string                             `local:"true" long:"cn" short:"c" usage:"The common name of the certificate"`
-	Name   string                             `local:"true" size:"name" short:"n" usage:"The name of the certificate"`
-	PKey   string                             `local:"true" long:"pkey" short:"p" usage:"The private key of the certificate in PEM format"`
-	Token  string                             `noattribute:"true"`
+	Auth   *config.AuthConfig                  `noattribute:"true"`
+	Client ukccertificates.CertificatesService `noattribute:"true"`
+	Metro  string                              `noattribute:"true"`
+	Chain  string                              `local:"true" long:"chain" short:"C" usage:"The chain of the certificate"`
+	CN     string                              `local:"true" long:"cn" short:"c" usage:"The common name of the certificate"`
+	Name   string                              `local:"true" size:"name" short:"n" usage:"The name of the certificate"`
+	PKey   string                              `local:"true" long:"pkey" short:"p" usage:"The private key of the certificate in PEM format"`
+	Token  string                              `noattribute:"true"`
 }
 
-// Create a KraftCloud certificate.
-func Create(ctx context.Context, opts *CreateOptions) (*kccertificates.CreateResponseItem, error) {
+// Create a UnikraftCloud certificate.
+func Create(ctx context.Context, opts *CreateOptions) (*ukccertificates.CreateResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -43,15 +43,15 @@ func Create(ctx context.Context, opts *CreateOptions) (*kccertificates.CreateRes
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewCertificatesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewCertificatesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -85,7 +85,7 @@ func Create(ctx context.Context, opts *CreateOptions) (*kccertificates.CreateRes
 		opts.Chain = string(b)
 	}
 
-	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, &kccertificates.CreateRequest{
+	createResp, err := opts.Client.WithMetro(opts.Metro).Create(ctx, &ukccertificates.CreateRequest{
 		Chain: opts.Chain,
 		CN:    opts.CN,
 		Name:  opts.Name,
@@ -116,7 +116,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud certificate create --name my-cert --cn '*.example.com' --pkey 'private-key.pem' --chain 'chain.pem'
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
+			cmdfactory.AnnotationHelpGroup: "cloud-certificate",
 		},
 	})
 	if err != nil {

@@ -15,8 +15,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
+	cloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -28,17 +28,17 @@ import (
 )
 
 type LogOptions struct {
-	Auth     *config.AuthConfig    `noattribute:"true"`
-	Client   kraftcloud.KraftCloud `noattribute:"true"`
-	Follow   bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
-	Metro    string                `noattribute:"true"`
-	NoPrefix bool                  `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
-	Prefix   string                `local:"true" long:"prefix" short:"p" usage:"Prefix the logs with a given string"`
-	Tail     int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
-	Token    string                `noattribute:"true"`
+	Auth     *config.AuthConfig `noattribute:"true"`
+	Client   cloud.KraftCloud   `noattribute:"true"`
+	Follow   bool               `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
+	Metro    string             `noattribute:"true"`
+	NoPrefix bool               `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
+	Prefix   string             `local:"true" long:"prefix" short:"p" usage:"Prefix the logs with a given string"`
+	Tail     int                `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
+	Token    string             `noattribute:"true"`
 }
 
-// Log retrieves the console output from a KraftCloud instance.
+// Log retrieves the console output from a UnikraftCloud instance.
 func Log(ctx context.Context, opts *LogOptions, args ...string) error {
 	if opts == nil {
 		opts = &LogOptions{}
@@ -73,7 +73,7 @@ func NewCmd() *cobra.Command {
 			Get console output of an instance.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -104,15 +104,15 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -150,7 +150,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 
 		observations.Add(instance)
 
-		var inst *kcinstances.GetResponseItem
+		var inst *ukcinstances.GetResponseItem
 
 		// Continuously check the state in a separate thread every 1 second.
 		go func() {
@@ -195,7 +195,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 					if ok {
 						consumer.Consume(line)
 					} else {
-						if inst != nil && inst.State == kcinstances.InstanceStateStopped {
+						if inst != nil && inst.State == ukcinstances.InstanceStateStopped {
 							consumer.Consume(
 								"",
 								fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
@@ -212,7 +212,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 					// If we have not received anything after 1 second through any of the
 					// other channels, check if the instance has stopped and exit if it
 					// has.
-					if inst != nil && inst.State == kcinstances.InstanceStateStopped {
+					if inst != nil && inst.State == ukcinstances.InstanceStateStopped {
 						consumer.Consume(
 							"",
 							fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),

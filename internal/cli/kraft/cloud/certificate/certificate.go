@@ -27,7 +27,7 @@ func NewCmd() *cobra.Command {
 		Use:     "cert SUBCOMMAND",
 		Aliases: []string{"certificate", "certificates", "certs", "crt", "crts"},
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-certificate",
+			cmdfactory.AnnotationHelpGroup:  "cloud-certificate",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

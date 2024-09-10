@@ -13,7 +13,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,14 +22,14 @@ import (
 )
 
 type StopOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	Wait         time.Duration         `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
-	DrainTimeout time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	All          bool                  `long:"all" short:"a" usage:"Stop all instances"`
-	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
-	Metro        string                `noattribute:"true"`
-	Token        string                `noattribute:"true"`
+	Auth         *config.AuthConfig `noattribute:"true"`
+	Client       cloud.KraftCloud   `noattribute:"true"`
+	Wait         time.Duration      `local:"true" long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
+	DrainTimeout time.Duration      `local:"true" long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	All          bool               `long:"all" short:"a" usage:"Stop all instances"`
+	Force        bool               `long:"force" short:"f" usage:"Force stop the instance(s)"`
+	Metro        string             `noattribute:"true"`
+	Token        string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -55,7 +55,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance stop --wait 5s my-instance-431342
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	return Stop(ctx, opts, args...)
 }
 
-// Stop KraftCloud instance(s).
+// Stop UnikraftCloud instance(s).
 func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 	var err error
 
@@ -100,15 +100,15 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

@@ -18,7 +18,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -63,7 +63,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud volume import --source path/to/file --volume my-volume
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "cloud-vol",
 		},
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func (opts *ImportOptions) Run(ctx context.Context, _ []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		if opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token); err != nil {
+		if opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token); err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
@@ -110,8 +110,8 @@ func (opts *ImportOptions) Run(ctx context.Context, _ []string) error {
 
 // importVolumeData imports local data to a volume.
 func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
-	cli := kraftcloud.NewClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+	cli := cloud.NewClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 	)
 	icli := cli.Instances().WithMetro(opts.Metro)
 	vcli := cli.Volumes().WithMetro(opts.Metro)

@@ -20,11 +20,11 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcimages "sdk.kraft.cloud/images"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	cloud "sdk.kraft.cloud"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcimages "sdk.kraft.cloud/images"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -35,41 +35,41 @@ import (
 )
 
 type CreateOptions struct {
-	Auth                *config.AuthConfig             `noattribute:"true"`
-	Client              kraftcloud.KraftCloud          `noattribute:"true"`
-	Certificate         []string                       `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
-	Env                 []string                       `local:"true" long:"env" short:"e" usage:"Environmental variables"`
-	Features            []string                       `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
-	Domain              []string                       `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
-	Image               string                         `noattribute:"true"`
-	Entrypoint          types.ShellCommand             `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
-	Memory              string                         `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
-	Metro               string                         `noattribute:"true"`
-	Name                string                         `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
-	Output              string                         `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
-	Ports               []string                       `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
-	RestartPolicy       *kcinstances.RestartPolicy     `noattribute:"true"`
-	Replicas            uint                           `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
-	Rollout             *RolloutStrategy               `noattribute:"true"`
-	RolloutQualifier    *RolloutQualifier              `noattribute:"true"`
-	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
-	ServiceNameOrUUID   string                         `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
-	Start               bool                           `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
-	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
-	ScaleToZeroStateful *bool                          `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
-	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
-	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	Token               string                         `noattribute:"true"`
-	Vcpus               uint                           `local:"true" long:"vcpus" short:"V" usage:"Specify the number of vCPUs to allocate"`
-	Volumes             []string                       `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration                  `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
+	Auth                *config.AuthConfig              `noattribute:"true"`
+	Client              cloud.KraftCloud                `noattribute:"true"`
+	Certificate         []string                        `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
+	Env                 []string                        `local:"true" long:"env" short:"e" usage:"Environmental variables"`
+	Features            []string                        `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	Domain              []string                        `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
+	Image               string                          `noattribute:"true"`
+	Entrypoint          types.ShellCommand              `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
+	Memory              string                          `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
+	Metro               string                          `noattribute:"true"`
+	Name                string                          `local:"true" long:"name" short:"n" usage:"Specify the name of the instance"`
+	Output              string                          `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"list"`
+	Ports               []string                        `local:"true" long:"port" short:"p" usage:"Specify the port mapping between external to internal"`
+	RestartPolicy       *ukcinstances.RestartPolicy     `noattribute:"true"`
+	Replicas            uint                            `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
+	Rollout             *RolloutStrategy                `noattribute:"true"`
+	RolloutQualifier    *RolloutQualifier               `noattribute:"true"`
+	RolloutWait         time.Duration                   `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	ServiceNameOrUUID   string                          `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
+	Start               bool                            `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
+	ScaleToZero         *ukcinstances.ScaleToZeroPolicy `noattribute:"true"`
+	ScaleToZeroStateful *bool                           `local:"true" long:"scale-to-zero-stateful" usage:"Save state when scaling to zero"`
+	ScaleToZeroCooldown time.Duration                   `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
+	SubDomain           []string                        `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	Token               string                          `noattribute:"true"`
+	Vcpus               uint                            `local:"true" long:"vcpus" short:"V" usage:"Specify the number of vCPUs to allocate"`
+	Volumes             []string                        `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
+	WaitForImage        bool                            `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
+	WaitForImageTimeout time.Duration                   `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
-	Services []kcservices.CreateRequestService `noattribute:"true"`
+	Services []ukcservices.CreateRequestService `noattribute:"true"`
 }
 
-// Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+// Create a UnikraftCloud instance.
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error) {
 	var err error
 
 	if opts == nil {
@@ -81,19 +81,19 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
 	if opts.RestartPolicy == nil {
-		opts.RestartPolicy = ptr(kcinstances.RestartPolicyNever)
+		opts.RestartPolicy = ptr(ukcinstances.RestartPolicyNever)
 	}
 
 	if opts.Rollout == nil {
@@ -126,7 +126,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
 
 	// Keep a reference of the image that we are going to use for the instance.
-	var image *kcimages.GetResponseItem
+	var image *ukcimages.GetResponseItem
 
 	// Check if the image exists before creating the instance
 	if opts.WaitForImage {
@@ -185,16 +185,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
-	var features []kcinstances.Feature
+	var features []ukcinstances.Feature
 
 	for _, feature := range opts.Features {
-		formattedFeature := kcinstances.Feature(feature)
+		formattedFeature := ukcinstances.Feature(feature)
 		if !slices.Contains(features, formattedFeature) {
 			features = append(features, formattedFeature)
 		}
 	}
 
-	req := kcinstances.CreateRequest{
+	req := ukcinstances.CreateRequest{
 		Autostart:     &opts.Start,
 		Features:      features,
 		Image:         opts.Image,
@@ -247,12 +247,12 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		log.G(ctx).Info("no ports or service specified, disabling scale to zero")
 		opts.ScaleToZeroCooldown = 0
 		opts.ScaleToZeroStateful = nil
-		off := kcinstances.ScaleToZeroPolicyOff
+		off := ukcinstances.ScaleToZeroPolicyOff
 		opts.ScaleToZero = &off
 	}
 
 	if opts.ScaleToZeroCooldown != 0 || opts.ScaleToZeroStateful != nil || opts.ScaleToZero != nil {
-		req.ScaleToZero = &kcinstances.ScaleToZero{}
+		req.ScaleToZero = &ukcinstances.ScaleToZero{}
 	}
 
 	if opts.ScaleToZeroCooldown != 0 {
@@ -272,7 +272,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		if len(split) < 2 || len(split) > 3 {
 			return nil, nil, fmt.Errorf("invalid syntax for -v|--volume: expected VOLUME:PATH[:ro]")
 		}
-		volume := kcinstances.CreateRequestVolume{
+		volume := ukcinstances.CreateRequestVolume{
 			At: &split[1],
 		}
 		if utils.IsUUID(split[0]) {
@@ -291,8 +291,8 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		req.Volumes = append(req.Volumes, volume)
 	}
 
-	var service *kcservices.GetResponseItem
-	var qualifiedInstancesToRolloutOver []kcinstances.GetResponseItem
+	var service *ukcservices.GetResponseItem
+	var qualifiedInstancesToRolloutOver []ukcinstances.GetResponseItem
 
 	// Since an existing service has been provided, we should now
 	// preemptively look up information about it.  Based on whether there are
@@ -319,7 +319,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 		// Save the UUID of the service to be used in the create request
 		// later.
-		req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+		req.ServiceGroup = &ukcinstances.CreateRequestServiceGroup{
 			UUID: &service.UUID,
 		}
 
@@ -330,7 +330,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				allInstanceUUIDs[i] = instance.UUID
 			}
 
-			var instances []kcinstances.GetResponseItem
+			var instances []ukcinstances.GetResponseItem
 			if len(allInstanceUUIDs) > 0 {
 				log.G(ctx).
 					WithField("service", opts.ServiceNameOrUUID).
@@ -403,25 +403,25 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
-	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// TODO(nderjung): This should eventually be possible, when the UnikraftCloud API
 	// supports updating service.
 	if opts.ServiceNameOrUUID != "" && len(opts.Ports) > 0 {
 		return nil, nil, fmt.Errorf("cannot use existing --service|-g and define new --port|-p")
 	}
 
-	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// TODO(nderjung): This should eventually be possible, when the UnikraftCloud API
 	// supports updating service.
 	if opts.ServiceNameOrUUID != "" && len(opts.Domain) > 0 {
 		return nil, nil, fmt.Errorf("cannot use existing --service|-g and define new --domain|-d")
 	}
 
-	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// TODO(nderjung): This should eventually be possible, when the UnikraftCloud API
 	// supports updating service groups.
 	if opts.ServiceNameOrUUID != "" && len(opts.Certificate) > 0 {
 		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --certificate|-c")
 	}
 
-	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
+	// TODO(nderjung): This should eventually be possible, when the UnikraftCloud API
 	// supports updating service groups.
 	if opts.ServiceNameOrUUID != "" && len(opts.SubDomain) > 0 {
 		return nil, nil, fmt.Errorf("cannot use existing --service-group|-g and define new --subdomain|-s")
@@ -439,28 +439,28 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 
 		port443 := 443
-		opts.Services = []kcservices.CreateRequestService{
+		opts.Services = []ukcservices.CreateRequestService{
 			{
 				Port:            443,
 				DestinationPort: &destPort,
-				Handlers: []kcservices.Handler{
-					kcservices.HandlerHTTP,
-					kcservices.HandlerTLS,
+				Handlers: []ukcservices.Handler{
+					ukcservices.HandlerHTTP,
+					ukcservices.HandlerTLS,
 				},
 			},
 			{
 				Port:            80,
 				DestinationPort: &port443,
-				Handlers: []kcservices.Handler{
-					kcservices.HandlerHTTP,
-					kcservices.HandlerRedirect,
+				Handlers: []ukcservices.Handler{
+					ukcservices.HandlerHTTP,
+					ukcservices.HandlerRedirect,
 				},
 			},
 		}
 
 	} else {
 		for _, port := range opts.Ports {
-			var service kcservices.CreateRequestService
+			var service ukcservices.CreateRequestService
 
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
@@ -469,9 +469,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
-					h := kcservices.Handler(handler)
-					if !slices.Contains(kcservices.Handlers(), h) {
-						return nil, nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, kcservices.Handlers())
+					h := ukcservices.Handler(handler)
+					if !slices.Contains(ukcservices.Handlers(), h) {
+						return nil, nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, ukcservices.Handlers())
 					}
 
 					service.Handlers = append(service.Handlers, h)
@@ -512,19 +512,19 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	if len(opts.ServiceNameOrUUID) == 0 {
 		if len(opts.Services) > 0 {
-			req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
+			req.ServiceGroup = &ukcinstances.CreateRequestServiceGroup{
 				Services: opts.Services,
 			}
 		}
 		if len(opts.SubDomain) > 0 {
 			if req.ServiceGroup == nil {
-				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					Domains:  []kcservices.CreateRequestDomain{},
+				req.ServiceGroup = &ukcinstances.CreateRequestServiceGroup{
+					Domains:  []ukcservices.CreateRequestDomain{},
 					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {
-					req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{}
+					req.ServiceGroup.Domains = []ukcservices.CreateRequestDomain{}
 				}
 			}
 			for _, subDomain := range opts.SubDomain {
@@ -534,19 +534,19 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 				dnsName := strings.TrimSuffix(subDomain, ".")
 
-				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, kcservices.CreateRequestDomain{
+				req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, ukcservices.CreateRequestDomain{
 					Name: dnsName,
 				})
 			}
 		} else if len(opts.Domain) > 0 {
 			if req.ServiceGroup == nil {
-				req.ServiceGroup = &kcinstances.CreateRequestServiceGroup{
-					Domains:  []kcservices.CreateRequestDomain{},
+				req.ServiceGroup = &ukcinstances.CreateRequestServiceGroup{
+					Domains:  []ukcservices.CreateRequestDomain{},
 					Services: opts.Services,
 				}
 			} else {
 				if req.ServiceGroup.Domains == nil {
-					req.ServiceGroup.Domains = []kcservices.CreateRequestDomain{}
+					req.ServiceGroup.Domains = []ukcservices.CreateRequestDomain{}
 				}
 			}
 
@@ -559,17 +559,17 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 					fqdn += "."
 				}
 
-				domainCreate := kcservices.CreateRequestDomain{
+				domainCreate := ukcservices.CreateRequestDomain{
 					Name: fqdn,
 				}
 
 				if len(opts.Certificate) > i {
 					if utils.IsUUID(opts.Certificate[i]) {
-						domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+						domainCreate.Certificate = &ukcservices.CreateRequestDomainCertificate{
 							UUID: opts.Certificate[i],
 						}
 					} else {
-						domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+						domainCreate.Certificate = &ukcservices.CreateRequestDomainCertificate{
 							Name: opts.Certificate[i],
 						}
 					}
@@ -602,7 +602,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 
 	// Handle the rollout only after the new instance has been created.
-	// KraftCloud's service load balancer will temporarily handle blue-green
+	// UnikraftCloud's service load balancer will temporarily handle blue-green
 	// deployments.
 	if opts.Start && len(qualifiedInstancesToRolloutOver) > 0 {
 		paramodel, err := processtree.NewProcessTree(
@@ -619,7 +619,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				"waiting for new instance to start before performing rollout action",
 				"",
 				func(ctx context.Context) error {
-					_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
+					_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, ukcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
 					return err
 				},
 			),
@@ -666,7 +666,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		return nil, nil, fmt.Errorf("getting details of instance %s: %w", newInstance.UUID, err)
 	}
 
-	var serviceResp *kcclient.ServiceResponse[kcservices.GetResponseItem]
+	var serviceResp *ukcclient.ServiceResponse[ukcservices.GetResponseItem]
 
 	if sg := instance.ServiceGroup; sg != nil && sg.UUID != "" {
 		serviceResp, err = opts.Client.Services().WithMetro(opts.Metro).Get(ctx, sg.UUID)
@@ -714,7 +714,7 @@ func NewCmd() *cobra.Command {
 			Create an instance on Unikraft Cloud from an image.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -740,18 +740,18 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[kcinstances.RestartPolicy](
-			kcinstances.RestartPolicies(),
-			kcinstances.RestartPolicyNever,
+		cmdfactory.NewEnumFlag[ukcinstances.RestartPolicy](
+			ukcinstances.RestartPolicies(),
+			ukcinstances.RestartPolicyNever,
 		),
 		"restart",
 		"Set the restart policy for the instance (never/always/on-failure)",
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[kcinstances.ScaleToZeroPolicy](
-			kcinstances.ScaleToZeroPolicies(),
-			kcinstances.ScaleToZeroPolicyOff,
+		cmdfactory.NewEnumFlag[ukcinstances.ScaleToZeroPolicy](
+			ukcinstances.ScaleToZeroPolicies(),
+			ukcinstances.ScaleToZeroPolicyOff,
 		),
 		"scale-to-zero",
 		"Scale to zero policy of the instance (on/off/idle)",
@@ -770,12 +770,12 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("scale-to-zero-cooldown needs to be at least 1ms: %s", opts.ScaleToZeroCooldown)
 	}
 
-	opts.RestartPolicy = ptr(kcinstances.RestartPolicy(cmd.Flag("restart").Value.String()))
+	opts.RestartPolicy = ptr(ukcinstances.RestartPolicy(cmd.Flag("restart").Value.String()))
 	opts.Rollout = ptr(RolloutStrategy(cmd.Flag("rollout").Value.String()))
 	opts.RolloutQualifier = ptr(RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String()))
 
 	if cmd.Flag("scale-to-zero").Changed {
-		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
+		s20v := ukcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
 		opts.ScaleToZero = &s20v
 	}
 

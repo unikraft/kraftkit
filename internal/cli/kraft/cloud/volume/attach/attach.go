@@ -12,8 +12,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	cloud "sdk.kraft.cloud"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,18 +22,18 @@ import (
 )
 
 type AttachOptions struct {
-	At       string                   `long:"at" usage:"The path the volume should be mounted to"`
-	Auth     *config.AuthConfig       `noattribute:"true"`
-	Client   kcvolumes.VolumesService `noattribute:"true"`
-	ReadOnly bool                     `long:"read-only" short:"r" usage:"Mount the volume read-only"`
-	To       string                   `long:"to" usage:"The instance the volume should be attached to"`
+	At       string                    `long:"at" usage:"The path the volume should be mounted to"`
+	Auth     *config.AuthConfig        `noattribute:"true"`
+	Client   ukcvolumes.VolumesService `noattribute:"true"`
+	ReadOnly bool                      `long:"read-only" short:"r" usage:"Mount the volume read-only"`
+	To       string                    `long:"to" usage:"The instance the volume should be attached to"`
 
 	metro string
 	token string
 }
 
-// Attach a KraftCloud persistent volume to an instance.
-func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolumes.AttachResponseItem, error) {
+// Attach a UnikraftCloud persistent volume to an instance.
+func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*ukcvolumes.AttachResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -49,15 +49,15 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolume
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewVolumesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewVolumesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -87,7 +87,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud volume at 77d0316a-fbbe-488d-8618-5bf7a612477a --to nginx --at /mnt/data -r
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "cloud-vol",
 		},
 	})
 	if err != nil {
