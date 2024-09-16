@@ -20,7 +20,7 @@ require (
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/compose-spec/compose-go/v2 v2.1.6
-	github.com/containerd/containerd v1.7.20
+	github.com/containerd/containerd v1.7.22
 	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl v1.7.6
@@ -206,7 +206,7 @@ require (
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
-	github.com/moby/sys/user v0.2.0 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
