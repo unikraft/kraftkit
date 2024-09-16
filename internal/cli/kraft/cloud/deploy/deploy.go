@@ -295,7 +295,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		if len(insts) == 1 && opts.Output == "" {
 			// No need to check for error, we check if-nil inside PrettyPrintInstance.
 			svc, _ := svcResp.FirstOrErr()
-			utils.PrettyPrintInstance(ctx, insts[0], svc, !opts.NoStart)
+			utils.PrettyPrintInstance(ctx, opts.Metro, insts[0], svc, !opts.NoStart)
 			return nil
 		}
 

@@ -792,7 +792,6 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
-	log.G(cmd.Context()).WithField("metro", opts.Metro).Debug("using")
 	return nil
 }
 
@@ -815,7 +814,7 @@ func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 
 	// No need to check for error, we check if-nil inside PrettyPrintInstance.
 	svc, _ := svcResp.FirstOrErr()
-	utils.PrettyPrintInstance(ctx, insts[0], svc, opts.Start)
+	utils.PrettyPrintInstance(ctx, opts.Metro, insts[0], svc, opts.Start)
 
 	return nil
 }
