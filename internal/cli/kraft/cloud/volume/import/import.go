@@ -25,6 +25,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
@@ -175,46 +176,69 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	var freeSpace uint64
 	var totalSpace uint64
 
-	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
-		func(ctx context.Context, callback func(float64)) (retErr error) {
-			instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
-			conn, err := tls.Dial("tcp4", instAddr, nil)
-			if err != nil {
-				return fmt.Errorf("connecting to volume data import instance send port: %w", err)
-			}
-			defer conn.Close()
+	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+		paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
+			func(ctx context.Context, callback func(float64)) (retErr error) {
+				instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+				conn, err := tls.Dial("tcp4", instAddr, nil)
+				if err != nil {
+					return fmt.Errorf("connecting to volume data import instance send port: %w", err)
+				}
+				defer conn.Close()
 
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), callback)
-			copyCPIOErr = err
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), callback)
+				copyCPIOErr = err
+				return err
+			},
+		)
+		if err != nil {
 			return err
-		},
-	)
-	if err != nil {
-		return err
-	}
-	if err = paraprogress.Start(); err != nil {
+		}
+		if err = paraprogress.Start(); err != nil {
+			return err
+		}
+	} else {
+		instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+		conn, err := tls.Dial("tcp4", instAddr, nil)
+		if err != nil {
+			return fmt.Errorf("connecting to volume data import instance send port: %w", err)
+		}
+		defer conn.Close()
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), func(progress float64) {})
+		copyCPIOErr = err
 		return err
 	}
 	if copyCPIOErr != nil {
 		return copyCPIOErr
 	}
 
-	fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
-		fancymap.FancyMapEntry{
-			Key:   "volume",
-			Value: opts.VolID,
-		},
-		fancymap.FancyMapEntry{
-			Key:   "free",
-			Value: humanize.IBytes(freeSpace),
-		},
-		fancymap.FancyMapEntry{
-			Key:   "total",
-			Value: humanize.IBytes(totalSpace),
-		},
-	)
+	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+		fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
+			fancymap.FancyMapEntry{
+				Key:   "volume",
+				Value: opts.VolID,
+			},
+			fancymap.FancyMapEntry{
+				Key:   "free",
+				Value: humanize.IBytes(freeSpace),
+			},
+			fancymap.FancyMapEntry{
+				Key:   "total",
+				Value: humanize.IBytes(totalSpace),
+			},
+		)
+	} else {
+		log.G(ctx).
+			WithField("volume", opts.VolID).
+			WithField("free", humanize.IBytes(freeSpace)).
+			WithField("total", humanize.IBytes(totalSpace)).
+			Info("Import complete")
+	}
 
 	return nil
 }
