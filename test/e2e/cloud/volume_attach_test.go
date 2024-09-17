@@ -96,7 +96,7 @@ var _ = Describe("kraft cloud volume attach", func() {
 
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
-			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "1", "--name", volumeNameFull)
+			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull)
 			err = createCmd1.Run()
 			if err != nil {
 				fmt.Print(createCmd1.DumpError(stdout, stderr, err))
@@ -197,7 +197,7 @@ var _ = Describe("kraft cloud volume attach", func() {
 
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
-			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "1", "--name", volumeNameFull)
+			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull)
 			err = createCmd1.Run()
 			if err != nil {
 				fmt.Print(createCmd1.DumpError(stdout, stderr, err))

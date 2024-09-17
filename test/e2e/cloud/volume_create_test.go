@@ -90,11 +90,11 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 	})
 
-	When("invoked with the size flag of unit 1", func() {
+	When("invoked with the size flag of unit 8", func() {
 		var volumeUUID string
 
 		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "--size", "1")
+			cmd.Args = append(cmd.Args, "--size", "8")
 		})
 
 		AfterEach(func() {
@@ -111,7 +111,7 @@ var _ = Describe("kraft cloud volume create", func() {
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
-		It("should create a volume of size 1Mi", func() {
+		It("should create a volume of size 8Mi", func() {
 			err := cmd.Run()
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
@@ -125,11 +125,11 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 	})
 
-	When("invoked with the size flag of unit 1Mi", func() {
+	When("invoked with the size flag of unit 8Mi", func() {
 		var volumeUUID string
 
 		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "--size", "1Mi")
+			cmd.Args = append(cmd.Args, "--size", "8Mi")
 		})
 
 		AfterEach(func() {
@@ -146,7 +146,7 @@ var _ = Describe("kraft cloud volume create", func() {
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
-		It("should create a volume of size 1Mi", func() {
+		It("should create a volume of size 8Mi", func() {
 			err := cmd.Run()
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
@@ -160,11 +160,11 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 	})
 
-	When("invoked with the size flag of unit 2M", func() {
+	When("invoked with the size flag of unit 9M", func() {
 		var volumeUUID string
 
 		BeforeEach(func() {
-			cmd.Args = append(cmd.Args, "--size", "2M")
+			cmd.Args = append(cmd.Args, "--size", "9M")
 		})
 
 		AfterEach(func() {
@@ -181,7 +181,7 @@ var _ = Describe("kraft cloud volume create", func() {
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
-		It("should create a volume of size 2M", func() {
+		It("should create a volume of size 9M", func() {
 			err := cmd.Run()
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
@@ -205,7 +205,7 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			volumeNameFull := fmt.Sprintf("%s-%d", volumeName, id)
 
-			cmd.Args = append(cmd.Args, "--size", "1Mi", "--name", volumeNameFull)
+			cmd.Args = append(cmd.Args, "--size", "8Mi", "--name", volumeNameFull)
 		})
 
 		AfterEach(func() {
