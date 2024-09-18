@@ -13,12 +13,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -152,13 +154,14 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 	var authStr string
 	var instFQDN string
+	var instID string
 
 	paramodel, err = processTree(ctx, "Spawning temporary volume data import instance",
 		func(ctx context.Context) error {
 			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			_, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
+			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
 			return err
 		},
 	)
@@ -240,7 +243,30 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			Info("Import complete")
 	}
 
-	return nil
+	// Stopping time can be anywhere between 1-1000ms, so we set a 1100ms timeout
+	waitResp, err := cli.Instances().WithMetro(opts.Metro).Wait(ctx, ukcinstances.StateStopped, 1100, instID)
+	if err != nil {
+		return fmt.Errorf("waiting for volume data import instance to stop: %w", err)
+	}
+
+	if w, err := waitResp.FirstOrErr(); err == nil {
+		if ukcinstances.State(w.State) == ukcinstances.StateRunning {
+			return fmt.Errorf("volume data import instance did not stop yet: %s", w.State)
+		} else {
+			// Wait a bit for the instance to be deleted
+			// NOTE(craciunoiuc): this should never be reached, but it's a safety net
+			time.Sleep(100 * time.Millisecond)
+			return nil
+		}
+	} else {
+		if strings.Contains(err.Error(), "No instance") {
+			return nil
+		} else if strings.Contains(err.Error(), "Operation timed out") {
+			return fmt.Errorf("timed out waiting for volume data import instance to stop: %w", err)
+		} else {
+			return fmt.Errorf("waiting for volume data import instance to stop: %w", err)
+		}
+	}
 }
 
 // processTree returns a TUI ProcessTree configured to run the given function
