@@ -257,16 +257,16 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
+	// Remove any candidates that do not have String prompts.
+	candidates = slices.DeleteFunc(candidates, func(d deployer) bool {
+		return d.String() == ""
+	})
+
 	if len(candidates) == 0 {
 		return fmt.Errorf("could not determine how to run provided input: %w", errors.Join(errs...))
 	} else if len(candidates) == 1 {
 		d = candidates[0]
 	} else if !config.G[config.KraftKit](ctx).NoPrompt {
-		// Remove any candidates that do not have String prompts.
-		candidates = slices.DeleteFunc(candidates, func(d deployer) bool {
-			return d.String() == ""
-		})
-
 		candidate, err := selection.Select[deployer]("multiple deployable contexts discovered: how would you like to proceed?", candidates...)
 		if err != nil {
 			return err
