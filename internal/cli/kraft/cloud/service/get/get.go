@@ -39,7 +39,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
 		Short:   "Retrieve the state of services",
 		Use:     "get [FLAGS] UUID|NAME",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"gt"},
 		Example: heredoc.Doc(`
 			# Retrieve information about a kraftcloud service
@@ -47,6 +47,9 @@ func NewCmd() *cobra.Command {
 
 			# Retrieve information about a kraftcloud service
 			$ kraft cloud service get my-service
+
+			# Retrieve information about two unikraft cloud services
+			$ kraft cloud service get my-service-1 my-service-2
 	`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
@@ -82,9 +85,9 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	resp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
+	resp, err := client.WithMetro(opts.metro).Get(ctx, args...)
 	if err != nil {
-		return fmt.Errorf("could not get service %s: %w", args[0], err)
+		return fmt.Errorf("could not get services: %w", err)
 	}
 
 	return utils.PrintServices(ctx, opts.Output, *resp)
