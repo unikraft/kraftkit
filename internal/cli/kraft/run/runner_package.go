@@ -26,8 +26,10 @@ import (
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft"
+	"kraftkit.sh/unikraft/export/v0/ukrandom"
 	"kraftkit.sh/unikraft/target"
 
+	"github.com/klauspost/cpuid"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -337,6 +339,16 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 			},
 		})
 	}
+
+	var kernelArgs []string
+	if !targ.KConfig().AllNoOrUnset(
+		"CONFIG_LIBUKRANDOM",
+		"CONFIG_LIBUKRANDOM_CMDLINE_INIT",
+	) && !(cpuid.CPU.Rdrand() && cpuid.CPU.Rdseed()) {
+		kernelArgs = append(kernelArgs, ukrandom.ParamRandomSeed.WithValue(ukrandom.NewRandomSeed()).String())
+	}
+
+	machine.Spec.KernelArgs = kernelArgs
 
 	switch v := selected.Metadata().(type) {
 	case *ocispec.Image:

@@ -11,12 +11,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/klauspost/cpuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	volumeapi "kraftkit.sh/api/volume/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/export/v0/ukrandom"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -151,6 +153,11 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
 	)
 
+	noRandom := t.KConfig().AllNoOrUnset(
+		"CONFIG_LIBUKRANDOM",
+		"CONFIG_LIBUKRANDOM_CMDLINE_INIT",
+	) && !(cpuid.CPU.Rdrand() && cpuid.CPU.Rdseed())
+
 	if runner.project.Rootfs() != "" && opts.Rootfs == "" && noEmbedded {
 		opts.Rootfs = runner.project.Rootfs()
 	}
@@ -182,6 +189,10 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 			continue
 		}
 		appArgs = append(appArgs, arg)
+	}
+
+	if !noRandom {
+		kernelArgs = append(kernelArgs, ukrandom.ParamRandomSeed.WithValue(ukrandom.NewRandomSeed()).String())
 	}
 
 	machine.Spec.KernelArgs = kernelArgs
