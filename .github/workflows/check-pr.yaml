@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: format
         if: always()
-        uses: taskmedia/action-conventional-commits@v1.1.17
+        uses: taskmedia/action-conventional-commits@v1.1.18
         with:
           types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
 
