@@ -67,6 +67,8 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	// First try locally
 	results, err := runtime.registry.Catalog(ctx,
 		packmanager.WithName(runtime.name),
+		packmanager.WithPlatform(runtime.platform),
+		packmanager.WithArchitecture(runtime.architecture),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 	)
 	if err != nil {
@@ -76,6 +78,8 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	if len(results) == 0 {
 		results, err = runtime.registry.Catalog(ctx,
 			packmanager.WithName(runtime.name),
+			packmanager.WithPlatform(runtime.platform),
+			packmanager.WithArchitecture(runtime.architecture),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithRemote(true),
 		)

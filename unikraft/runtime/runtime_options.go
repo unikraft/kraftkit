@@ -39,3 +39,19 @@ func WithKernel(kernel string) RuntimeOption {
 		return nil
 	}
 }
+
+// WithPlatform sets the platform of the runtime.
+func WithPlatform(platform string) RuntimeOption {
+	return func(runtime *Runtime) error {
+		runtime.platform = platform
+		return nil
+	}
+}
+
+// WithArchitecture sets the architecture of the runtime.
+func WithArchitecture(architecture string) RuntimeOption {
+	return func(runtime *Runtime) error {
+		runtime.architecture = architecture
+		return nil
+	}
+}
