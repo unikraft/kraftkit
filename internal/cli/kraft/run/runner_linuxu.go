@@ -121,7 +121,14 @@ func (runner *runnerLinuxu) Runnable(ctx context.Context, opts *RunOptions, args
 
 // Prepare implements Runner.
 func (runner *runnerLinuxu) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
-	loader, err := runtime.NewRuntime(ctx, opts.Runtime)
+	if opts.Platform == "" {
+		opts.Platform = "qemu"
+	}
+
+	loader, err := runtime.NewRuntime(ctx, opts.Runtime,
+		runtime.WithPlatform(opts.Platform),
+		runtime.WithArchitecture(opts.Architecture),
+	)
 	if err != nil {
 		return err
 	}
