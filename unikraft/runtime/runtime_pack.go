@@ -89,7 +89,7 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	} else if len(results) > 1 {
 		options := make([]string, len(results))
 		for i, result := range results {
-			options[i] = result.Name()
+			options[i] = result.String()
 		}
 		return nil, fmt.Errorf("too many options: %v", options)
 	}
