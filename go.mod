@@ -26,7 +26,7 @@ require (
 	github.com/containerd/nerdctl v1.7.6
 	github.com/containerd/platforms v0.2.1
 	github.com/containers/image/v5 v5.32.2
-	github.com/cyphar/filepath-securejoin v0.3.1
+	github.com/cyphar/filepath-securejoin v0.3.2
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v27.2.1+incompatible
 	github.com/docker/docker v27.1.2+incompatible
