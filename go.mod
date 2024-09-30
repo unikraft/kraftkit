@@ -23,7 +23,7 @@ require (
 	github.com/containerd/containerd v1.7.22
 	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/log v0.1.0
-	github.com/containerd/nerdctl v1.7.6
+	github.com/containerd/nerdctl v1.7.7
 	github.com/containerd/platforms v0.2.1
 	github.com/containers/image/v5 v5.32.2
 	github.com/cyphar/filepath-securejoin v0.3.2
