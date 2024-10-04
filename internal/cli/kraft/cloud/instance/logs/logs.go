@@ -150,11 +150,27 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 
 		observations.Add(instance)
 
-		var inst *kcinstances.GetResponseItem
+		resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
+		if err != nil {
+			// Likely there was an issue performing the request; so we'll just
+			// skip and attempt to retrieve more logs.
+			if !errors.Is(err, io.EOF) {
+				log.G(ctx).Error(err)
+			}
+
+			continue
+		}
+
+		inst, err := resp.FirstOrErr()
+		if err != nil {
+			errGroup = append(errGroup, err)
+		}
 
 		// Continuously check the state in a separate thread every 1 second.
 		go func() {
 			for {
+				time.Sleep(time.Second)
+
 				resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
 				if err != nil {
 					// Likely there was an issue performing the request; so we'll just
@@ -174,8 +190,6 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 				if len(observations.Items()) == 0 {
 					return
 				}
-
-				time.Sleep(time.Second)
 			}
 		}()
 
