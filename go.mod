@@ -1,6 +1,7 @@
 module kraftkit.sh
 
 go 1.22.0
+toolchain go1.22.8
 
 require (
 	api.zip v0.1.5
@@ -83,7 +84,7 @@ require (
 	k8s.io/apiserver v0.30.3
 	oras.land/oras-go/v2 v2.5.0
 	sdk.kraft.cloud v0.5.10-0.20240821072613-b850da091d2d
-	sigs.k8s.io/kustomize/kyaml v0.17.2
+	sigs.k8s.io/kustomize/kyaml v0.18.0
 )
 
 require (
