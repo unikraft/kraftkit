@@ -68,7 +68,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.33.0
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231127184239-0ced8385386a
+	github.com/vishvananda/netlink v1.3.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/oauth2 v0.23.0
