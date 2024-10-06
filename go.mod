@@ -41,7 +41,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
-	github.com/henvic/httpretty v0.1.3
+	github.com/henvic/httpretty v0.1.4
 	github.com/klauspost/cpuid v1.3.1
 	github.com/kubescape/go-git-url v0.0.30
 	github.com/mattn/go-colorable v0.1.13
