@@ -29,7 +29,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.2
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v27.3.1+incompatible
-	github.com/docker/docker v27.1.2+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
