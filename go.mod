@@ -21,7 +21,7 @@ require (
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/compose-spec/compose-go/v2 v2.3.0
 	github.com/containerd/containerd v1.7.22
-	github.com/containerd/errdefs v0.1.0
+	github.com/containerd/errdefs v0.3.0
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl v1.7.7
 	github.com/containerd/platforms v0.2.1
