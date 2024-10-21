@@ -206,13 +206,16 @@ func pullArchive(ctx context.Context, manifest *Manifest, opts ...pack.PullOptio
 
 	local := cache
 	if len(popts.Workdir()) > 0 {
-		local, err = unikraft.PlaceComponent(
-			popts.Workdir(),
-			manifest.Type,
-			manifest.Name,
-		)
-		if err != nil {
-			return fmt.Errorf("could not place component package: %s", err)
+		local = manifest.Name
+		if !popts.Unstructured() {
+			local, err = unikraft.PlaceComponent(
+				popts.Workdir(),
+				manifest.Type,
+				manifest.Name,
+			)
+			if err != nil {
+				return fmt.Errorf("could not place component package: %s", err)
+			}
 		}
 	}
 

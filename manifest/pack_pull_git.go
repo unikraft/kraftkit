@@ -184,13 +184,16 @@ func pullGit(ctx context.Context, manifest *Manifest, opts ...pack.PullOption) e
 		copts.ReferenceName = gitplumbing.NewBranchReferenceName(version)
 	}
 
-	local, err := unikraft.PlaceComponent(
-		popts.Workdir(),
-		manifest.Type,
-		manifest.Name,
-	)
-	if err != nil {
-		return fmt.Errorf("could not place component package: %w", err)
+	local := manifest.Name
+	if !popts.Unstructured() {
+		local, err = unikraft.PlaceComponent(
+			popts.Workdir(),
+			manifest.Type,
+			manifest.Name,
+		)
+		if err != nil {
+			return fmt.Errorf("could not place component package: %w", err)
+		}
 	}
 
 	entry := log.G(ctx).

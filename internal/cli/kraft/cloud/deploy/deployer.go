@@ -40,6 +40,7 @@ type deployer interface {
 func deployers() []deployer {
 	return []deployer{
 		&deployerImageName{},
+		&deployerKraftfileRepo{},
 		&deployerKraftfileRuntime{},
 		&deployerKraftfileUnikraft{},
 		&deployerRootfs{},
