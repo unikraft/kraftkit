@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image list -o json
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup: "kraftcloud-image",
 		},
 	})
 	if err != nil {
