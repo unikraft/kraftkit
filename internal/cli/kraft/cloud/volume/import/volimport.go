@@ -37,6 +37,7 @@ func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID 
 // runVolimport spawns a volume data import instance with the given volume attached.
 func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64) (instID, fqdn string, err error) {
 	args := []string{
+		"volimport",
 		"-p", strconv.FormatUint(uint64(volimportPort), 10),
 		"-a", authStr,
 		"-t", strconv.FormatUint(timeoutS, 10),
@@ -55,7 +56,7 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, 
 		},
 		Volumes: []kcinstances.CreateRequestVolume{{
 			UUID: &volUUID,
-			At:   ptr("/"),
+			At:   ptr("/mnt"),
 		}},
 		Autostart:     ptr(true),
 		WaitTimeoutMs: ptr(int((3 * time.Second).Milliseconds())),
