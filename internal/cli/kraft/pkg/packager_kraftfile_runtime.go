@@ -110,8 +110,12 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			kconfigs = append(kconfigs, kc.String())
 		}
 
-		opts.Platform = targ.Platform().Name()
-		opts.Architecture = targ.Architecture().Name()
+		if opts.Platform == "" {
+			opts.Platform = targ.Platform().Name()
+		}
+		if opts.Architecture == "" {
+			opts.Architecture = targ.Architecture().Name()
+		}
 	}
 
 	treemodel, err := processtree.NewProcessTree(
