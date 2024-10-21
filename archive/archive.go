@@ -21,6 +21,11 @@ import (
 	"kraftkit.sh/log"
 )
 
+var (
+    ErrTarFileNoDest = fmt.Errorf("cannot tar file with no specified destination")
+    ErrTarFileWriteDir = fmt.Errorf("attempting to use TarFileWriter with directory")
+)
+
 // bufPool is a pool of byte buffers that can be reused for copying content
 // between files.
 var bufPool = sync.Pool{
@@ -38,12 +43,12 @@ func TarFileWriter(ctx context.Context, src, dst string, tw *tar.Writer, opts ..
 	dst = filepath.ToSlash(dst)
 
 	if dst == "" {
-		return fmt.Errorf("cannot tar file with no specified destination")
-	} else if dst[0] == filepath.Separator {
+	    return ErrTarFileNoDest
+    } else if dst[0] == filepath.Separator {
 		dst = dst[1:]
 	}
 	if strings.HasSuffix(dst, string(filepath.Separator)) {
-		return fmt.Errorf("attempting to use TarFileWriter with directory")
+		return ErrTarFileWriteDir
 	}
 
 	aopts := ArchiveOptions{}
