@@ -21,7 +21,6 @@ import (
 
 type ListOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Watch  bool   `long:"watch" short:"w" usage:"After listing watch for changes."`
 
 	metro string
 	token string
@@ -39,9 +38,6 @@ func NewCmd() *cobra.Command {
 
 			# List all service in your account in full table format.
 			$ kraft cloud service list -o full
-
-			# List all service in your account and watch for changes.
-			$ kraft cloud service list -w
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",

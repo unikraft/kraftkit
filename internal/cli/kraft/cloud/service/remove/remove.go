@@ -111,8 +111,17 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 		}
 
 		args = []string{}
+		attachedInstances := []string{}
 		for _, sgItem := range sgList {
-			args = append(args, sgItem.Name)
+			if sgItem.Instances != nil && len(sgItem.Instances) > 0 {
+				attachedInstances = append(attachedInstances, sgItem.Name)
+			} else {
+				args = append(args, sgItem.Name)
+			}
+		}
+
+		if len(attachedInstances) > 0 {
+			log.G(ctx).Warnf("ignoring %d service(s) as instances are attached: %v", len(attachedInstances), attachedInstances)
 		}
 	}
 

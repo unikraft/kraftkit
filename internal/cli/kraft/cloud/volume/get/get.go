@@ -39,7 +39,7 @@ func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&GetOptions{}, cobra.Command{
 		Short:   "Retrieve the state of persistent volumes",
 		Use:     "get [FLAGS] UUID|NAME",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"gt"},
 		Example: heredoc.Doc(`
 			# Retrieve information about a kraftcloud volume by UUID
@@ -82,9 +82,9 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 
-	resp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
+	resp, err := client.WithMetro(opts.metro).Get(ctx, args...)
 	if err != nil {
-		return fmt.Errorf("could not get volume %s: %w", args[0], err)
+		return fmt.Errorf("could not get volume %v: %w", args, err)
 	}
 
 	return utils.PrintVolumes(ctx, opts.Output, *resp)

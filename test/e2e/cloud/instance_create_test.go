@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package cli_test
+package cloud_test
 
 import (
 	"crypto/rand"
@@ -754,6 +754,28 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--start",
 				imageName,
 			)
+		})
+
+		AfterEach(func() {
+			// Remove the instance after the test
+			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd.Args = append(cleanCmd.Args,
+				"cloud", "instance", "delete",
+				"--log-level", "info",
+				"--log-type", "json",
+				instanceNameFull,
+			)
+
+			err := cleanCmd.Run()
+			time.Sleep(2 * time.Second)
+			if err != nil {
+				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+			}
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stderr.String()).To(BeEmpty())
+			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance\(s\)`))
 		})
 
 		It("should not error out with an API error", func() {

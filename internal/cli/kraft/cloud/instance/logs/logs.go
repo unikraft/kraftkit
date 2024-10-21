@@ -33,7 +33,6 @@ type LogOptions struct {
 	Follow   bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
 	Metro    string                `noattribute:"true"`
 	NoPrefix bool                  `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
-	Prefix   string                `local:"true" long:"prefix" short:"p" usage:"Prefix the logs with a given string"`
 	Tail     int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
 	Token    string                `noattribute:"true"`
 }

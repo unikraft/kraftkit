@@ -13,18 +13,21 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
+	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
@@ -151,13 +154,14 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 
 	var authStr string
 	var instFQDN string
+	var instID string
 
 	paramodel, err = processTree(ctx, "Spawning temporary volume data import instance",
 		func(ctx context.Context) error {
 			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			_, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
+			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
 			return err
 		},
 	)
@@ -175,48 +179,94 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	var freeSpace uint64
 	var totalSpace uint64
 
-	paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
-		func(ctx context.Context, callback func(float64)) (retErr error) {
-			instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
-			conn, err := tls.Dial("tcp4", instAddr, nil)
-			if err != nil {
-				return fmt.Errorf("connecting to volume data import instance send port: %w", err)
-			}
-			defer conn.Close()
+	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+		paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
+			func(ctx context.Context, callback func(float64)) (retErr error) {
+				instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+				conn, err := tls.Dial("tcp4", instAddr, nil)
+				if err != nil {
+					return fmt.Errorf("connecting to volume data import instance send port: %w", err)
+				}
+				defer conn.Close()
 
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), callback)
-			copyCPIOErr = err
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), callback)
+				copyCPIOErr = err
+				return err
+			},
+		)
+		if err != nil {
 			return err
-		},
-	)
-	if err != nil {
-		return err
-	}
-	if err = paraprogress.Start(); err != nil {
+		}
+		if err = paraprogress.Start(); err != nil {
+			return err
+		}
+	} else {
+		instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+		conn, err := tls.Dial("tcp4", instAddr, nil)
+		if err != nil {
+			return fmt.Errorf("connecting to volume data import instance send port: %w", err)
+		}
+		defer conn.Close()
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		freeSpace, totalSpace, err = copyCPIO(ctx, conn, authStr, cpioPath, opts.Force, uint64(cpioSize), func(progress float64) {})
+		copyCPIOErr = err
 		return err
 	}
 	if copyCPIOErr != nil {
 		return copyCPIOErr
 	}
 
-	fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
-		fancymap.FancyMapEntry{
-			Key:   "volume",
-			Value: opts.VolID,
-		},
-		fancymap.FancyMapEntry{
-			Key:   "free",
-			Value: humanize.IBytes(freeSpace),
-		},
-		fancymap.FancyMapEntry{
-			Key:   "total",
-			Value: humanize.IBytes(totalSpace),
-		},
-	)
+	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
+		fancymap.PrintFancyMap(iostreams.G(ctx).Out, tui.TextGreen, "Import complete",
+			fancymap.FancyMapEntry{
+				Key:   "volume",
+				Value: opts.VolID,
+			},
+			fancymap.FancyMapEntry{
+				Key:   "free",
+				Value: humanize.IBytes(freeSpace),
+			},
+			fancymap.FancyMapEntry{
+				Key:   "total",
+				Value: humanize.IBytes(totalSpace),
+			},
+		)
+	} else {
+		log.G(ctx).
+			WithField("volume", opts.VolID).
+			WithField("free", humanize.IBytes(freeSpace)).
+			WithField("total", humanize.IBytes(totalSpace)).
+			Info("Import complete")
+	}
 
-	return nil
+	// Stopping time can be anywhere between 1-1000ms, so we set a 1100ms timeout
+	waitResp, err := cli.Instances().WithMetro(opts.Metro).Wait(ctx, ukcinstances.StateStopped, 1100, instID)
+	if err != nil {
+		return fmt.Errorf("waiting for volume data import instance to stop: %w", err)
+	}
+
+	if w, err := waitResp.FirstOrErr(); err == nil {
+		if ukcinstances.State(w.State) == ukcinstances.StateRunning {
+			return fmt.Errorf("volume data import instance did not stop yet: %s", w.State)
+		} else {
+			// Wait a bit for the instance to be deleted
+			// NOTE(craciunoiuc): this should never be reached, but it's a safety net
+			time.Sleep(100 * time.Millisecond)
+			return nil
+		}
+	} else {
+		if strings.Contains(err.Error(), "No instance") {
+			return nil
+		} else if strings.Contains(err.Error(), "Operation timed out") {
+			return fmt.Errorf("timed out waiting for volume data import instance to stop: %w", err)
+		} else {
+			return fmt.Errorf("waiting for volume data import instance to stop: %w", err)
+		}
+	}
 }
 
 // processTree returns a TUI ProcessTree configured to run the given function
