@@ -30,16 +30,21 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             fury-cli
+          curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"
+          mv cosign-linux-amd64 /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
 
       - name: Generate GoReleaser configuration
         run: |
           ytt -f .goreleaser-stable.yaml > goreleaser-stable.yaml
 
-      - name: Write cosign key to file
+      - name: Write cosign key and pubkey to file
         run: |
           echo "$COSIGN_KEY" > cosign.key
           chmod 600 cosign.key
+          echo "$COSIGN_PASSWORD" | cosign public-key --key cosign.key > public.key
         env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
 
       - name: Run GoReleaser
