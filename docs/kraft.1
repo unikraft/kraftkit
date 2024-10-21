@@ -1,0 +1,164 @@
+.nh
+.TH "KRAFT" "1" "Aug 2024" ""
+
+.SH NAME
+.PP
+kraft - Build and use highly customized and ultra-lightweight unikernels.
+
+
+.SH SYNOPSIS
+.PP
+\fBkraft [FLAGS] SUBCOMMAND\fP
+.SH DESCRIPTION
+\fBBUILD COMMANDS\fP
+  build                   Configure and build Unikraft unikernels
+  clean                   Remove the build object files of a Unikraft project
+  menu                    Open's Unikraft configuration editor TUI
+.PP
+\fBPROJECT LIBRARY COMMANDS\fP
+  lib add                 Add unikraft library to the project directory
+  lib create              Initialize a library from a template
+  lib remove              Removes a library dependency from the project directory
+.PP
+\fBPACKAGING COMMANDS\fP
+  pkg                     Package and distribute Unikraft unikernels and their dependencies
+  pkg info                Show information about a package
+  pkg list                List installed Unikraft component packages
+  pkg pull                Pull a Unikraft unikernel and/or its dependencies
+  pkg push                Push a Unikraft unikernel package to registry
+  pkg remove              Removes selected local packages
+  pkg source              Add Unikraft component manifests
+  pkg unsource            Remove Unikraft component manifests
+  pkg update              Retrieve new lists of Unikraft components, libraries and packages
+.PP
+\fBLOCAL RUNTIME COMMANDS\fP
+  logs                    Fetch the logs of a unikernel
+  pause                   Pause one or more running unikernels
+  ps                      List running unikernels
+  remove                  Remove one or more running unikernels
+  run                     Run a unikernel
+  start                   Start one or more machines
+  stop                    Stop one or more running unikernels
+.PP
+\fBLOCAL NETWORKING COMMANDS\fP
+  net create              Create a new machine network
+  net down                Bring a network offline
+  net inspect             Inspect a machine network
+  net list                List machine networks
+  net remove              Remove a network
+  net up                  Bring a network online
+.PP
+\fBLOCAL VOLUME COMMANDS\fP
+  vol create              Create a machine volume
+  vol inspect             Inspect a machine volume
+  vol ls                  List machine volumes
+  vol remove              Remove a volume
+.PP
+\fBCOMPOSE COMMANDS\fP
+  compose build           Build or rebuild services
+  compose create          Create a compose project
+  compose down            Stop and remove a compose project
+  compose logs            Print the logs of services in a project
+  compose ls              List compose projects
+  compose pause           Pause a compose project
+  compose ps              List running services of current project
+  compose pull            Pull images of services of current project
+  compose push            Push images of services of current project
+  compose start           Start a compose project
+  compose stop            Stop a compose project
+  compose unpause         Unpause a compose project
+  compose up              Run a compose project
+.PP
+\fBUNIKRAFT CLOUD COMMANDS\fP
+  cloud deploy            Deploy your application
+  cloud quotas            View your resource quota on Unikraft Cloud
+  cloud tunnel            Forward a local port to an unexposed instance
+.PP
+\fBUNIKRAFT CLOUD IMAGE COMMANDS\fP
+  cloud img list          List all images at a metro for your account
+  cloud img remove        Remove an images
+.PP
+\fBUNIKRAFT CLOUD INSTANCE COMMANDS\fP
+  cloud instance create   Create an instance
+  cloud instance get      Retrieve the state of instances
+  cloud instance list     List instances
+  cloud instance logs     Get console output of instances
+  cloud instance remove   Remove instances
+  cloud instance start    Start instances
+  cloud instance stop     Stop instances
+.PP
+\fBUNIKRAFT CLOUD VOLUME COMMANDS\fP
+  cloud volume attach     Attach a persistent volume to an instance
+  cloud volume create     Create a persistent volume
+  cloud volume detach     Detach a persistent volume from an instance
+  cloud volume get        Retrieve the state of persistent volumes
+  cloud volume import     Import local data to a persistent volume
+  cloud volume list       List persistent volumes
+  cloud volume remove     Permanently delete a persistent volume
+.PP
+\fBUNIKRAFT CLOUD SERVICE COMMANDS\fP
+  cloud service create    Create a service
+  cloud service get       Retrieve the state of services
+  cloud service list      List services
+  cloud service remove    Delete services
+.PP
+\fBUNIKRAFT CLOUD AUTOSCALE COMMANDS\fP
+  cloud scale add         Add an autoscale configuration policy
+  cloud scale get         Get an autoscale configuration or policy
+  cloud scale init        Initialize autoscale configuration for a service
+  cloud scale remove      Delete an autoscale configuration policy
+  cloud scale reset       Reset autoscale configuration of a service
+.PP
+\fBUNIKRAFT CLOUD CERTIFICATE COMMANDS\fP
+  cloud cert create       Create a certificate
+  cloud cert get          Retrieve the status of a certificate
+  cloud cert list         List certificates
+  cloud cert remove       Remove a certificate
+.PP
+\fBUNIKRAFT CLOUD COMPOSE COMMANDS\fP
+  cloud compose build     Build a compose project
+  cloud compose create    Create a deployment from a Compose project on Unikraft Cloud
+  cloud compose down      Stop and remove the services in a Unikraft Cloud Compose project deployment
+  cloud compose log       View logs of services in a Unikraft Cloud Compose project deployment
+  cloud compose ls        List service deployments at a given path
+  cloud compose ps        List the active services of Unikraft Cloud Compose project
+  cloud compose push      Push the images services to Unikraft Cloud from a Compose project
+  cloud compose start     Start services in a Unikraft Cloud Compose project deployment
+  cloud compose stop      Stop services in a Unikraft Cloud Compose project deployment
+  cloud compose up        Deploy services in a compose project to Unikraft Cloud
+.PP
+\fBMISCELLANEOUS COMMANDS\fP
+  login                   Provide authorization details for a remote service
+  version                 Show kraft version information
+  completion              Generate the autocompletion script for the specified shell
+  help                    Help about any command
+.PP
+
+
+.SH FLAGS 
+.PP
+      --buildkit-host string     Path to the buildkit host
+      --config-dir string        Path to KraftKit config directory
+      --containerd-addr string   Address of containerd daemon socket
+      --editor string            Set the text editor to open when prompt to edit a file
+      --events-pid-file string   Events process ID used when running multiple unikernels
+      --git-protocol string      Preferred Git protocol to use (default "https")
+  -h, --help                     help for kraft
+      --http-unix-sock string    When making HTTP(S) connections, pipe requests via this shared socket
+      --log-level string         Log level verbosity. Choice of: [panic, fatal, error, warn, info, debug, trace] (default "info")
+      --log-timestamps           Enable log timestamps
+      --log-type string          Log type. Choice of: [fancy, basic, json] (default "fancy")
+      --manifests-dir string     Path to Unikraft manifest cache
+      --no-check-updates         Do not check for updates
+      --no-color                 Disable color output
+      --no-emojis                Do not use emojis in any console output
+      --no-parallel              Do not run internal tasks in parallel
+      --no-prompt                Do not prompt for user interaction
+      --no-warn-sudo             Do not warn on running via sudo
+      --pager string             System pager to pipe output to (default "cat")
+      --plugins-dir string       Path to KraftKit plugin directory
+      --qemu string              Path to QEMU executable
+      --runtime-dir string       Directory for placing runtime files (e.g. pidfiles)
+      --sources-dir string       Path to Unikraft component cache
+      --with-manifest strings    Paths to package or component manifests (default [https://manifests.kraftkit.sh/index.yaml])
+      --with-mirror strings      Paths to mirrors of Unikraft component artifacts
