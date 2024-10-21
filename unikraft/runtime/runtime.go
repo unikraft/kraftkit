@@ -22,6 +22,12 @@ type Runtime struct {
 	// The package representing the ELF Loader.
 	pack pack.Package
 
+	// Platform specifies the platform of the loader.
+	platform string
+
+	// Architecture specifies the architecture of the loader.
+	architecture string
+
 	// The name of the elfloader.
 	name string
 

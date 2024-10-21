@@ -67,6 +67,8 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	// First try locally
 	results, err := runtime.registry.Catalog(ctx,
 		packmanager.WithName(runtime.name),
+		packmanager.WithPlatform(runtime.platform),
+		packmanager.WithArchitecture(runtime.architecture),
 		packmanager.WithTypes(unikraft.ComponentTypeApp),
 	)
 	if err != nil {
@@ -76,6 +78,8 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	if len(results) == 0 {
 		results, err = runtime.registry.Catalog(ctx,
 			packmanager.WithName(runtime.name),
+			packmanager.WithPlatform(runtime.platform),
+			packmanager.WithArchitecture(runtime.architecture),
 			packmanager.WithTypes(unikraft.ComponentTypeApp),
 			packmanager.WithRemote(true),
 		)
@@ -89,7 +93,7 @@ func NewRuntime(ctx context.Context, name string, pbopts ...RuntimeOption) (*Run
 	} else if len(results) > 1 {
 		options := make([]string, len(results))
 		for i, result := range results {
-			options[i] = result.Name()
+			options[i] = result.String()
 		}
 		return nil, fmt.Errorf("too many options: %v", options)
 	}

@@ -12,6 +12,8 @@ import (
 	kcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 )
@@ -57,8 +59,13 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 	if opts.Project == nil {
 		rt := runtime.DefaultKraftCloudRuntime
 
+		// NOTE(craciunoiuc): If we do not set values the default case will fail
+		// When we add platform/architecture options we will replace this
+		platform := plat.NewPlatformFromOptions(plat.WithName("kraftcloud"))
+
 		if len(opts.Runtime) > 0 {
 			rt = opts.Runtime
+			platform = plat.NewPlatformFromOptions()
 
 			// Sanitize the runtime for Unikraft Cloud.
 
@@ -75,7 +82,10 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 			}
 		}
 
-		runtime, err := runtime.NewRuntime(ctx, rt)
+		runtime, err := runtime.NewRuntime(ctx, rt,
+			runtime.WithPlatform(platform.String()),
+			runtime.WithArchitecture(arch.ArchitectureX86_64.String()),
+		)
 		if err != nil {
 			return false, fmt.Errorf("could not create runtime: %w", err)
 		}

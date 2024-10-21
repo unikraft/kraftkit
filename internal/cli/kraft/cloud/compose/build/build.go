@@ -200,7 +200,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 				app.WithProjectDefaultKraftfiles(),
 			)
 			if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime)
+				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime,
+					runtime.WithPlatform(project.Targets()[0].Platform().String()),
+					runtime.WithArchitecture(project.Targets()[0].Architecture().String()),
+				)
 				if err != nil {
 					return fmt.Errorf("could not create runtime: %w", err)
 				}
@@ -256,7 +259,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 				WithField("service", serviceName).
 				Debug("using")
 
-			rt, err := runtime.NewRuntime(ctx, runtimeName)
+			rt, err := runtime.NewRuntime(ctx, runtimeName,
+				runtime.WithPlatform(project.Targets()[0].Platform().String()),
+				runtime.WithArchitecture(project.Targets()[0].Architecture().String()),
+			)
 			if err != nil {
 				return fmt.Errorf("could not create runtime: %w", err)
 			}
