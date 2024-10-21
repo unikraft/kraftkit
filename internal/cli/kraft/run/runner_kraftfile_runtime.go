@@ -352,7 +352,9 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		}
 	}
 
-	if len(runner.project.Command()) > 0 {
+	if len(runner.args) > 0 {
+		machine.Spec.ApplicationArgs = runner.args
+	} else if len(runner.project.Command()) > 0 {
 		machine.Spec.ApplicationArgs = runner.project.Command()
 	} else if len(runtime.Command()) > 0 {
 		machine.Spec.ApplicationArgs = runtime.Command()
