@@ -59,6 +59,9 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	if len(opts.Runtime) > 0 {
 		runtimeName = opts.Runtime
 	} else {
+		if opts.Project == nil || opts.Project.Runtime() == nil {
+			return nil, fmt.Errorf("cannot use runtime packager without a project runtime")
+		}
 		runtimeName = opts.Project.Runtime().Name()
 	}
 
