@@ -31,6 +31,7 @@ COPY --from=qemu  /share/qemu/   /share/qemu
 COPY --from=qemu  /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu
 COPY --from=build /github-action /usr/local/bin/github-action
 COPY --from=kraftkit /kraft       /usr/local/bin/kraft
+COPY --from=hairyhenderson/gomplate:stable /gomplate /bin/gomplate
 
 # Install unikraft dependencies
 RUN set -xe; \
