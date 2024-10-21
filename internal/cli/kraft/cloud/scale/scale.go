@@ -33,7 +33,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale add my-service my-policy
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup:  "cloud-scale",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

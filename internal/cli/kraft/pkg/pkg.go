@@ -49,7 +49,7 @@ type PkgOptions struct {
 	NoKConfig    bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	NoPull       bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`
 	Output       string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
-	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets (fc/qemu/xen/kraftcloud)"`
+	Platform     string                    `local:"true" long:"plat" short:"p" usage:"Filter the creation of the package by platform of known targets (fc/qemu/xen/cloud)"`
 	Project      app.Application           `noattribute:"true"`
 	Push         bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs       string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`

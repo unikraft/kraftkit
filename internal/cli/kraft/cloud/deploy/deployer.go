@@ -9,9 +9,9 @@ import (
 	"context"
 	"fmt"
 
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 )
 
 // deployer is an interface for defining different mechanisms to perform a the
@@ -31,7 +31,7 @@ type deployer interface {
 	Deployable(context.Context, *DeployOptions, ...string) (bool, error)
 
 	// Deploy performs the deployment based on the determined implementation.
-	Deploy(context.Context, *DeployOptions, ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error)
+	Deploy(context.Context, *DeployOptions, ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error)
 }
 
 // deployers is the list of built-in deployers which are checked

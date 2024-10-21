@@ -12,8 +12,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
+	cloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,12 +22,12 @@ import (
 )
 
 type RemoveOptions struct {
-	Auth    *config.AuthConfig    `noattribute:"true"`
-	Client  kraftcloud.KraftCloud `noattribute:"true"`
-	All     bool                  `long:"all" short:"a" usage:"Remove all instances"`
-	Stopped bool                  `long:"stopped" short:"s" usage:"Remove all stopped instances"`
-	Metro   string                `noattribute:"true"`
-	Token   string                `noattribute:"true"`
+	Auth    *config.AuthConfig `noattribute:"true"`
+	Client  cloud.KraftCloud   `noattribute:"true"`
+	All     bool               `long:"all" short:"a" usage:"Remove all instances"`
+	Stopped bool               `long:"stopped" short:"s" usage:"Remove all stopped instances"`
+	Metro   string             `noattribute:"true"`
+	Token   string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -53,10 +53,10 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance remove --stopped
 		`),
 		Long: heredoc.Doc(`
-			Remove a KraftCloud instance.
+			Remove a UnikraftCloud instance.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -79,7 +79,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	return Remove(ctx, opts, args...)
 }
 
-// Remove KraftCloud instance(s).
+// Remove UnikraftCloud instance(s).
 func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	var err error
 
@@ -97,15 +97,15 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -143,7 +143,7 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 
 			var stoppedUuids []string
 			for _, instInfo := range instInfos {
-				if kcinstances.State(instInfo.State) == kcinstances.StateStopped {
+				if ukcinstances.State(instInfo.State) == ukcinstances.StateStopped {
 					stoppedUuids = append(stoppedUuids, instInfo.UUID)
 				}
 			}

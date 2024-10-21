@@ -13,7 +13,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,12 +22,12 @@ import (
 )
 
 type StartOptions struct {
-	All    bool                  `long:"all" short:"a" usage:"Start all instances"`
-	Auth   *config.AuthConfig    `noattribute:"true"`
-	Client kraftcloud.KraftCloud `noattribute:"true"`
-	Metro  string                `noattribute:"true"`
-	Token  string                `noattribute:"true"`
-	Wait   time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	All    bool               `long:"all" short:"a" usage:"Start all instances"`
+	Auth   *config.AuthConfig `noattribute:"true"`
+	Client cloud.KraftCloud   `noattribute:"true"`
+	Metro  string             `noattribute:"true"`
+	Token  string             `noattribute:"true"`
+	Wait   time.Duration      `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -47,10 +47,10 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud instance start my-instance-431342 my-instance-other-2313
 		`),
 		Long: heredoc.Doc(`
-			Start an instance on KraftCloud from a stopped instance.
+			Start an instance on UnikraftCloud from a stopped instance.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup: "cloud-instance",
 		},
 	})
 	if err != nil {
@@ -73,20 +73,20 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 	return Start(ctx, opts, args...)
 }
 
-// Start KraftCloud instance(s).
+// Start UnikraftCloud instance(s).
 func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

@@ -12,8 +12,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
+	cloud "sdk.kraft.cloud"
+	ukcclient "sdk.kraft.cloud/client"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -23,12 +23,12 @@ import (
 )
 
 type RemoveOptions struct {
-	All       bool                  `long:"all" short:"a" usage:"Remove all services"`
-	Auth      *config.AuthConfig    `noattribute:"true"`
-	Client    kraftcloud.KraftCloud `noattribute:"true"`
-	Metro     string                `noattribute:"true"`
-	Token     string                `noattribute:"true"`
-	WaitEmpty bool                  `long:"wait-empty" usage:"Wait for the service to be empty before removing it"`
+	All       bool               `long:"all" short:"a" usage:"Remove all services"`
+	Auth      *config.AuthConfig `noattribute:"true"`
+	Client    cloud.KraftCloud   `noattribute:"true"`
+	Metro     string             `noattribute:"true"`
+	Token     string             `noattribute:"true"`
+	WaitEmpty bool               `long:"wait-empty" usage:"Wait for the service to be empty before removing it"`
 }
 
 func NewCmd() *cobra.Command {
@@ -51,7 +51,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud service remove --all
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
+			cmdfactory.AnnotationHelpGroup: "cloud-svc",
 		},
 	})
 	if err != nil {
@@ -82,15 +82,15 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -135,7 +135,7 @@ func Remove(ctx context.Context, opts *RemoveOptions, args ...string) error {
 							}
 
 							sg, err := serviceResp.FirstOrErr()
-							if err != nil && *sg.Error == kcclient.APIHTTPErrorNotFound {
+							if err != nil && *sg.Error == ukcclient.APIHTTPErrorNotFound {
 								return nil
 							} else if err != nil {
 								return err

@@ -12,8 +12,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	cloud "sdk.kraft.cloud"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -22,9 +22,9 @@ import (
 )
 
 type DetachOptions struct {
-	Auth   *config.AuthConfig       `noattribute:"true"`
-	Client kcvolumes.VolumesService `noattribute:"true"`
-	From   string                   `long:"from" usage:"The instance the volume should be detached from"`
+	Auth   *config.AuthConfig        `noattribute:"true"`
+	Client ukcvolumes.VolumesService `noattribute:"true"`
+	From   string                    `long:"from" usage:"The instance the volume should be detached from"`
 
 	metro string
 	token string
@@ -44,7 +44,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud volume detach --from my-instance 77d0316a-fbbe-488d-8618-5bf7a612477a
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "cloud-vol",
 		},
 	})
 	if err != nil {
@@ -67,15 +67,15 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewVolumesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewVolumesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

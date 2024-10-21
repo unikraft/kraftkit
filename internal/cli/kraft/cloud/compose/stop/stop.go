@@ -15,7 +15,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -26,15 +26,15 @@ import (
 )
 
 type StopOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile  string                `noattribute:"true"`
-	DrainTimeout time.Duration         `long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
-	Metro        string                `noattribute:"true"`
-	Project      *compose.Project      `noattribute:"true"`
-	Token        string                `noattribute:"true"`
-	Wait         time.Duration         `long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
+	Auth         *config.AuthConfig `noattribute:"true"`
+	Client       cloud.KraftCloud   `noattribute:"true"`
+	Composefile  string             `noattribute:"true"`
+	DrainTimeout time.Duration      `long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	Force        bool               `long:"force" short:"f" usage:"Force stop the instance(s)"`
+	Metro        string             `noattribute:"true"`
+	Project      *compose.Project   `noattribute:"true"`
+	Token        string             `noattribute:"true"`
+	Wait         time.Duration      `long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -51,7 +51,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose stop nginx
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -85,15 +85,15 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

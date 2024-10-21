@@ -88,7 +88,7 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		workspace = "/github/workspace"
 	}
 
-	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
+	if newCtx, err := config.HydrateUnikraftCloudAuthInContext(ctx); err == nil {
 		ctx = newCtx
 	}
 

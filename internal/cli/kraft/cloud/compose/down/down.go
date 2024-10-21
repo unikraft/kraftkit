@@ -15,7 +15,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -25,12 +25,12 @@ import (
 )
 
 type DownOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Project     *compose.Project      `noattribute:"true"`
-	Token       string                `noattribute:"true"`
+	Auth        *config.AuthConfig `noattribute:"true"`
+	Client      cloud.KraftCloud   `noattribute:"true"`
+	Composefile string             `noattribute:"true"`
+	Metro       string             `noattribute:"true"`
+	Project     *compose.Project   `noattribute:"true"`
+	Token       string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose down nginx component2
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -70,15 +70,15 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

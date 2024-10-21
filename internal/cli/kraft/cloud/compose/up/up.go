@@ -17,11 +17,11 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	cloud "sdk.kraft.cloud"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -37,17 +37,17 @@ import (
 )
 
 type UpOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	Detach      bool                  `local:"true" long:"detach" short:"d" usage:"Run the services in the background"`
-	Metro       string                `noattribute:"true"`
-	NoStart     bool                  `noattribute:"true"`
-	NoBuild     bool                  `local:"true" long:"no-build" usage:"Do not build the services before starting them"`
-	Project     *compose.Project      `noattribute:"true"`
-	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	Token       string                `noattribute:"true"`
-	Wait        time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	Auth        *config.AuthConfig `noattribute:"true"`
+	Client      cloud.KraftCloud   `noattribute:"true"`
+	Composefile string             `noattribute:"true"`
+	Detach      bool               `local:"true" long:"detach" short:"d" usage:"Run the services in the background"`
+	Metro       string             `noattribute:"true"`
+	NoStart     bool               `noattribute:"true"`
+	NoBuild     bool               `local:"true" long:"no-build" usage:"Do not build the services before starting them"`
+	Project     *compose.Project   `noattribute:"true"`
+	Runtimes    []string           `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	Token       string             `noattribute:"true"`
+	Wait        time.Duration      `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -77,7 +77,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose up --runtime app=base:latest
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -115,15 +115,15 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -175,7 +175,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		return err
 	}
 
-	insts := []kcinstances.GetResponseItem{}
+	insts := []ukcinstances.GetResponseItem{}
 
 	for _, serviceName := range args {
 		service, ok := opts.Project.Services[serviceName]
@@ -243,7 +243,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 		}
 
 		// Handle the memory limit and reservation.  Since these two concepts do not
-		// currently exist via the KraftCloud API, pick the limit if it is set as it
+		// currently exist via the UnikraftCloud API, pick the limit if it is set as it
 		// represents the maximum value, otherwise check if the reservation has been
 		// set.
 		var memory string
@@ -277,7 +277,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			name = cname
 		}
 
-		var services []kcservices.CreateRequestService
+		var services []ukcservices.CreateRequestService
 
 		for _, port := range service.Ports {
 			if port.Protocol != "" && port.Protocol != "tls" && port.Protocol != "tcp" {
@@ -286,20 +286,20 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 
 			if port.Published == "443" {
 				services = append(services,
-					kcservices.CreateRequestService{
+					ukcservices.CreateRequestService{
 						Port:            443,
 						DestinationPort: ptr(int(port.Target)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerHTTP,
-							kcservices.HandlerTLS,
+						Handlers: []ukcservices.Handler{
+							ukcservices.HandlerHTTP,
+							ukcservices.HandlerTLS,
 						},
 					},
-					kcservices.CreateRequestService{
+					ukcservices.CreateRequestService{
 						Port:            80,
 						DestinationPort: ptr(int(443)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerHTTP,
-							kcservices.HandlerRedirect,
+						Handlers: []ukcservices.Handler{
+							ukcservices.HandlerHTTP,
+							ukcservices.HandlerRedirect,
 						},
 					},
 				)
@@ -310,11 +310,11 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 				}
 
 				services = append(services,
-					kcservices.CreateRequestService{
+					ukcservices.CreateRequestService{
 						Port:            published,
 						DestinationPort: ptr(int(port.Target)),
-						Handlers: []kcservices.Handler{
-							kcservices.HandlerTLS,
+						Handlers: []ukcservices.Handler{
+							ukcservices.HandlerTLS,
 						},
 					},
 				)
@@ -383,7 +383,7 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 				Output: "table",
 			}, instances...)
 		} else {
-			instResps := kcclient.ServiceResponse[kcinstances.GetResponseItem]{}
+			instResps := ukcclient.ServiceResponse[ukcinstances.GetResponseItem]{}
 			instResps.Data.Entries = insts
 			return utils.PrintInstances(ctx, "table", instResps)
 		}
@@ -400,8 +400,8 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 
 // createVolumes is used to create volumes for each service in the compose
 // project.  These volumes are used to persist data across instances.
-func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.ServiceResponse[kcvolumes.GetResponseItem], error) {
-	volResps := make(map[string]*kcclient.ServiceResponse[kcvolumes.GetResponseItem])
+func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*ukcclient.ServiceResponse[ukcvolumes.GetResponseItem], error) {
+	volResps := make(map[string]*ukcclient.ServiceResponse[ukcvolumes.GetResponseItem])
 
 	for alias, volume := range opts.Project.Volumes {
 		name := strings.ReplaceAll(volume.Name, "_", "-")
@@ -412,7 +412,7 @@ func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.S
 		}
 
 		vol, err := volResp.FirstOrErr()
-		if err != nil && vol != nil && *vol.Error == kcclient.APIHTTPErrorNotFound {
+		if err != nil && vol != nil && *vol.Error == ukcclient.APIHTTPErrorNotFound {
 
 			log.G(ctx).WithField("name", name).Info("creating volume")
 
@@ -455,7 +455,7 @@ func createVolumes(ctx context.Context, opts *UpOptions) (map[string]*kcclient.S
 
 func ptr[T comparable](v T) *T { return &v }
 
-// imageExists checks if an image exists in the KraftCloud registry.
+// imageExists checks if an image exists in the UnikraftCloud registry.
 func (opts *UpOptions) imageExists(ctx context.Context, name string) (exists bool, err error) {
 	if name == "" {
 		return false, fmt.Errorf("image name is empty")

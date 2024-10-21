@@ -11,13 +11,13 @@ import (
 	"strconv"
 	"time"
 
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 )
 
 // volumeSanityCheck verifies that the given volume is suitable for import.
-func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID string, dataSize int64) (volUUID string, volSize int64, err error) {
+func volumeSanityCheck(ctx context.Context, cli ukcvolumes.VolumesService, volID string, dataSize int64) (volUUID string, volSize int64, err error) {
 	getvolResp, err := cli.Get(ctx, volID)
 	if err != nil {
 		return "", -1, fmt.Errorf("getting volume details: %w", err)
@@ -35,31 +35,31 @@ func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID 
 }
 
 // runVolimport spawns a volume data import instance with the given volume attached.
-func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64) (instID, fqdn string, err error) {
+func runVolimport(ctx context.Context, cli ukcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64) (instID, fqdn string, err error) {
 	args := []string{
 		"-p", strconv.FormatUint(uint64(volimportPort), 10),
 		"-a", authStr,
 		"-t", strconv.FormatUint(timeoutS, 10),
 	}
 
-	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
+	crinstResp, err := cli.Create(ctx, ukcinstances.CreateRequest{
 		Image:    image,
 		MemoryMB: ptr(128),
 		Args:     args,
-		ServiceGroup: &kcinstances.CreateRequestServiceGroup{
-			Services: []kcservices.CreateRequestService{{
+		ServiceGroup: &ukcinstances.CreateRequestServiceGroup{
+			Services: []ukcservices.CreateRequestService{{
 				Port:            int(volimportPort),
 				DestinationPort: ptr(int(volimportPort)),
-				Handlers:        []kcservices.Handler{kcservices.HandlerTLS},
+				Handlers:        []ukcservices.Handler{ukcservices.HandlerTLS},
 			}},
 		},
-		Volumes: []kcinstances.CreateRequestVolume{{
+		Volumes: []ukcinstances.CreateRequestVolume{{
 			UUID: &volUUID,
 			At:   ptr("/"),
 		}},
 		Autostart:     ptr(true),
 		WaitTimeoutMs: ptr(int((3 * time.Second).Milliseconds())),
-		Features:      []kcinstances.Feature{kcinstances.FeatureDeleteOnStop},
+		Features:      []ukcinstances.Feature{ukcinstances.FeatureDeleteOnStop},
 	})
 	if err != nil {
 		return "", "", fmt.Errorf("creating volume data import instance: %w", err)

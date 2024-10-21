@@ -13,7 +13,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
@@ -29,12 +29,12 @@ type ListOptions struct {
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List metros on KraftCloud",
+		Short:   "List metros on UnikraftCloud",
 		Use:     "list",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
 		Long: heredoc.Doc(`
-			List metros on KraftCloud.
+			List metros on cloud.
 		`),
 		Example: heredoc.Doc(`
 		# List metros available.
@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 		$ kraft cloud metro list --status
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-metro",
+			cmdfactory.AnnotationHelpGroup: "cloud-metro",
 		},
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	client := kraftcloud.NewMetrosClient()
+	client := cloud.NewMetrosClient()
 
 	metros, err := client.List(ctx, opts.Status)
 	if err != nil {

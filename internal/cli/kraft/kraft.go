@@ -110,16 +110,16 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "UNIKRAFT CLOUD COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud", Title: "UNIKRAFT CLOUD COMMANDS"})
 	cmd.AddCommand(cloud.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-img", Title: "UNIKRAFT CLOUD IMAGE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "UNIKRAFT CLOUD INSTANCE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-vol", Title: "UNIKRAFT CLOUD VOLUME COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-svc", Title: "UNIKRAFT CLOUD SERVICE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "UNIKRAFT CLOUD AUTOSCALE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "UNIKRAFT CLOUD CERTIFICATE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "UNIKRAFT CLOUD COMPOSE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-img", Title: "UNIKRAFT CLOUD IMAGE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-instance", Title: "UNIKRAFT CLOUD INSTANCE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-vol", Title: "UNIKRAFT CLOUD VOLUME COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-svc", Title: "UNIKRAFT CLOUD SERVICE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-scale", Title: "UNIKRAFT CLOUD AUTOSCALE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-certificate", Title: "UNIKRAFT CLOUD CERTIFICATE COMMANDS"})
+	cmd.AddGroup(&cobra.Group{ID: "cloud-compose", Title: "UNIKRAFT CLOUD COMPOSE COMMANDS"})
 
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
 	cmd.AddCommand(login.NewCmd())
@@ -177,8 +177,8 @@ func Main(args []string) int {
 		ctx = config.WithConfigManager(ctx, copts.ConfigManager)
 	}
 
-	// Hydrate KraftCloud configuration
-	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
+	// Hydrate UnikraftCloud configuration
+	if newCtx, err := config.HydrateUnikraftCloudAuthInContext(ctx); err == nil {
 		ctx = newCtx
 	}
 

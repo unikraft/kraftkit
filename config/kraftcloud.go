@@ -13,9 +13,9 @@ import (
 	"strings"
 )
 
-// GetKraftCloudLogin is a utility method which retrieves credentials of a
-// KraftCloud user from the given context returning it in AuthConfig format.
-func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig, error) {
+// GetUnikraftCloudLogin is a utility method which retrieves credentials of a
+// UnikraftCloud user from the given context returning it in AuthConfig format.
+func GetUnikraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig, error) {
 	auth := AuthConfig{
 		Endpoint:  "index.unikraft.io",
 		VerifySSL: true,
@@ -70,16 +70,16 @@ func GetKraftCloudAuthConfig(ctx context.Context, flagToken string) (*AuthConfig
 	return &auth, nil
 }
 
-// GetKraftCloudTokenAuthConfig is a utility method which returns the
-// token of the KraftCloud user based on an AuthConfig.
-func GetKraftCloudTokenAuthConfig(auth AuthConfig) string {
+// GetUnikraftCloudTokenAuthConfig is a utility method which returns the
+// token of the UnikraftCloud user based on an AuthConfig.
+func GetUnikraftCloudTokenAuthConfig(auth AuthConfig) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth.User + ":" + auth.Token))
 }
 
-// HydrateKraftCloudAuthInContext saturates the context with an additional
-// KraftCloud-specific information.
-func HydrateKraftCloudAuthInContext(ctx context.Context) (context.Context, error) {
-	auth, err := GetKraftCloudAuthConfig(ctx, "")
+// HydrateUnikraftCloudAuthInContext saturates the context with an additional
+// cloud-specific information.
+func HydrateUnikraftCloudAuthInContext(ctx context.Context) (context.Context, error) {
+	auth, err := GetUnikraftCloudAuthConfig(ctx, "")
 	if err != nil {
 		return nil, err
 	}

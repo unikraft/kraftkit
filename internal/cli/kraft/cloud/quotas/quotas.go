@@ -18,7 +18,7 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 )
 
 type QuotasOptions struct {
@@ -35,7 +35,7 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.NoArgs,
 		Aliases: []string{"q", "quota"},
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud",
+			cmdfactory.AnnotationHelpGroup: "cloud",
 		},
 		Example: heredoc.Doc(`
 			# View your resource quota on Unikraft Cloud
@@ -66,13 +66,13 @@ func (opts *QuotasOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *QuotasOptions) Run(ctx context.Context, _ []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	resp, err := client.Users().WithMetro(opts.metro).Quotas(ctx)

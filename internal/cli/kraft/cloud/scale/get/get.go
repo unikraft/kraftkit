@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -25,12 +25,12 @@ import (
 )
 
 type GetOptions struct {
-	Auth   *config.AuthConfig    `noattribute:"true"`
-	Client kraftcloud.KraftCloud `noattribute:"true"`
-	Metro  string                `noattribute:"true"`
-	Output string                `long:"output" short:"o" usage:"Output format" default:"list"`
-	Policy string                `long:"policy" short:"p" usage:"Get a policy instead of a configuration"`
-	Token  string                `noattribute:"true"`
+	Auth   *config.AuthConfig `noattribute:"true"`
+	Client cloud.KraftCloud   `noattribute:"true"`
+	Metro  string             `noattribute:"true"`
+	Output string             `long:"output" short:"o" usage:"Output format" default:"list"`
+	Policy string             `long:"policy" short:"p" usage:"Get a policy instead of a configuration"`
+	Token  string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale get my-service --policy my-policy
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup: "cloud-scale",
 		},
 	})
 	if err != nil {
@@ -81,15 +81,15 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

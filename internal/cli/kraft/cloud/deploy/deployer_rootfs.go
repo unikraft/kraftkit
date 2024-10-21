@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	kcclient "sdk.kraft.cloud/client"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/runtime"
@@ -55,7 +55,7 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 	opts.Rootfs = rootfs
 
 	if opts.Project == nil {
-		rt := runtime.DefaultKraftCloudRuntime
+		rt := runtime.DefaultUnikraftCloudRuntime
 
 		if len(opts.Runtime) > 0 {
 			rt = opts.Runtime
@@ -83,7 +83,7 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 		opts.Project, err = app.NewApplicationFromOptions(
 			app.WithRuntime(runtime),
 			app.WithName(opts.Name),
-			app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
+			app.WithTargets([]*target.TargetConfig{target.DefaultUnikraftCloudTarget}),
 			app.WithCommand(args...),
 			app.WithWorkingDir(opts.Workdir),
 			app.WithRootfs(opts.Rootfs),
@@ -96,6 +96,6 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 	return true, nil
 }
 
-func (deployer *deployerRootfs) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
+func (deployer *deployerRootfs) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*ukcclient.ServiceResponse[ukcinstances.GetResponseItem], *ukcclient.ServiceResponse[ukcservices.GetResponseItem], error) {
 	return (&deployerKraftfileRuntime{}).Deploy(ctx, opts, args...)
 }

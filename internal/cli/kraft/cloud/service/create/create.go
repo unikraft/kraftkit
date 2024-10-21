@@ -15,8 +15,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcservices "sdk.kraft.cloud/services"
+	cloud "sdk.kraft.cloud"
+	ukcservices "sdk.kraft.cloud/services"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -24,21 +24,21 @@ import (
 )
 
 type CreateOptions struct {
-	Auth        *config.AuthConfig         `noattribute:"true"`
-	Client      kcservices.ServicesService `noattribute:"true"`
-	Certificate []string                   `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
-	Domain      []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
-	SubDomain   []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	SoftLimit   uint                       `local:"true" long:"soft-limit" short:"l" usage:"Set the soft limit for the service"`
-	HardLimit   uint                       `local:"true" long:"hard-limit" short:"L" usage:"Set the hard limit for the service"`
-	Metro       string                     `noattribute:"true"`
-	Name        string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
-	Output      string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Token       string                     `noattribute:"true"`
+	Auth        *config.AuthConfig          `noattribute:"true"`
+	Client      ukcservices.ServicesService `noattribute:"true"`
+	Certificate []string                    `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
+	Domain      []string                    `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
+	SubDomain   []string                    `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	SoftLimit   uint                        `local:"true" long:"soft-limit" short:"l" usage:"Set the soft limit for the service"`
+	HardLimit   uint                        `local:"true" long:"hard-limit" short:"L" usage:"Set the hard limit for the service"`
+	Metro       string                      `noattribute:"true"`
+	Name        string                      `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
+	Output      string                      `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Token       string                      `noattribute:"true"`
 }
 
-// Create a KraftCloud instance.
-func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservices.CreateResponseItem, error) {
+// Create a UnikraftCloud instance.
+func Create(ctx context.Context, opts *CreateOptions, args ...string) (*ukcservices.CreateResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -54,18 +54,18 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewServicesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewServicesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
-	var services []kcservices.CreateRequestService
+	var services []ukcservices.CreateRequestService
 
 	if len(args) == 1 && strings.HasPrefix(args[0], "443:") && strings.Count(args[0], "/") == 0 {
 		split := strings.Split(args[0], ":")
@@ -78,32 +78,32 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 			return nil, fmt.Errorf("invalid external port: %w", err)
 		}
 
-		services = make([]kcservices.CreateRequestService, 0, 2)
+		services = make([]ukcservices.CreateRequestService, 0, 2)
 
 		port443 := 443
 		services = append(services,
-			kcservices.CreateRequestService{
+			ukcservices.CreateRequestService{
 				Port:            443,
 				DestinationPort: &destPort,
-				Handlers: []kcservices.Handler{
-					kcservices.HandlerHTTP,
-					kcservices.HandlerTLS,
+				Handlers: []ukcservices.Handler{
+					ukcservices.HandlerHTTP,
+					ukcservices.HandlerTLS,
 				},
 			},
-			kcservices.CreateRequestService{
+			ukcservices.CreateRequestService{
 				Port:            80,
 				DestinationPort: &port443,
-				Handlers: []kcservices.Handler{
-					kcservices.HandlerHTTP,
-					kcservices.HandlerRedirect,
+				Handlers: []ukcservices.Handler{
+					ukcservices.HandlerHTTP,
+					ukcservices.HandlerRedirect,
 				},
 			},
 		)
 	} else {
-		services = make([]kcservices.CreateRequestService, 0, len(args))
+		services = make([]ukcservices.CreateRequestService, 0, len(args))
 
 		for _, port := range args {
-			var service kcservices.CreateRequestService
+			var service ukcservices.CreateRequestService
 
 			if strings.ContainsRune(port, '/') {
 				split := strings.Split(port, "/")
@@ -112,9 +112,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 				}
 
 				for _, handler := range strings.Split(split[1], "+") {
-					h := kcservices.Handler(handler)
-					if !slices.Contains(kcservices.Handlers(), h) {
-						return nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, kcservices.Handlers())
+					h := ukcservices.Handler(handler)
+					if !slices.Contains(ukcservices.Handlers(), h) {
+						return nil, fmt.Errorf("unknown handler: %s (choice of %v)", handler, ukcservices.Handlers())
 					}
 
 					service.Handlers = append(service.Handlers, h)
@@ -153,9 +153,9 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 		}
 	}
 
-	req := kcservices.CreateRequest{
+	req := ukcservices.CreateRequest{
 		Services: services,
-		Domains:  []kcservices.CreateRequestDomain{},
+		Domains:  []ukcservices.CreateRequestDomain{},
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name
@@ -174,17 +174,17 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 			fqdn += "."
 		}
 
-		domainCreate := kcservices.CreateRequestDomain{
+		domainCreate := ukcservices.CreateRequestDomain{
 			Name: fqdn,
 		}
 
 		if len(opts.Certificate) > i {
 			if utils.IsUUID(opts.Certificate[i]) {
-				domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+				domainCreate.Certificate = &ukcservices.CreateRequestDomainCertificate{
 					UUID: opts.Certificate[i],
 				}
 			} else {
-				domainCreate.Certificate = &kcservices.CreateRequestDomainCertificate{
+				domainCreate.Certificate = &ukcservices.CreateRequestDomainCertificate{
 					Name: opts.Certificate[i],
 				}
 			}
@@ -195,7 +195,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 
 	for _, subdomain := range opts.SubDomain {
 		dnsName := strings.TrimSuffix(subdomain, ".")
-		req.Domains = append(req.Domains, kcservices.CreateRequestDomain{
+		req.Domains = append(req.Domains, ukcservices.CreateRequestDomain{
 			Name: dnsName,
 		})
 	}
@@ -224,7 +224,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud service create -n my-service 443:8080/http+tls
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
+			cmdfactory.AnnotationHelpGroup: "cloud-svc",
 		},
 	})
 	if err != nil {

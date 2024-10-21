@@ -16,7 +16,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -32,14 +32,14 @@ import (
 )
 
 type BuildOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Project     *compose.Project      `noattribute:"true"`
-	Push        bool                  `long:"push" usage:"Push the built service images"`
-	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	Token       string                `noattribute:"true"`
+	Auth        *config.AuthConfig `noattribute:"true"`
+	Composefile string             `noattribute:"true"`
+	Client      cloud.KraftCloud   `noattribute:"true"`
+	Metro       string             `noattribute:"true"`
+	Project     *compose.Project   `noattribute:"true"`
+	Push        bool               `long:"push" usage:"Push the built service images"`
+	Runtimes    []string           `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	Token       string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -62,7 +62,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose build --push
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -80,15 +80,15 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -172,7 +172,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 		var project app.Application
 		bopts := &build.BuildOptions{
-			Platform:     "kraftcloud",
+			Platform:     "cloud",
 			Architecture: "x86_64",
 			NoRootfs:     true,
 		}
@@ -183,7 +183,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			Format:       "oci",
 			Name:         pkgName,
 			NoPull:       true,
-			Platform:     "kraftcloud",
+			Platform:     "cloud",
 			Push:         opts.Push,
 			Project:      project,
 			Strategy:     packmanager.StrategyOverwrite,
@@ -193,21 +193,21 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		// runtime.
 		if service.Build != nil {
 			// First determine whether the context has a Kraftfile as this determines
-			// whether we supply an artificial project defined with KraftCloud
+			// whether we supply an artificial project defined with UnikraftCloud
 			// defaults.
 			project, err := app.NewProjectFromOptions(ctx,
 				app.WithProjectWorkdir(service.Build.Context),
 				app.WithProjectDefaultKraftfiles(),
 			)
 			if err != nil && errors.Is(err, app.ErrNoKraftfile) {
-				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime)
+				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultUnikraftCloudRuntime)
 				if err != nil {
 					return fmt.Errorf("could not create runtime: %w", err)
 				}
 				project, err = app.NewApplicationFromOptions(
 					app.WithRuntime(runtime),
 					app.WithName(appName),
-					app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
+					app.WithTargets([]*target.TargetConfig{target.DefaultUnikraftCloudTarget}),
 					app.WithCommand(service.Command...),
 					app.WithWorkingDir(service.Build.Context),
 					app.WithRootfs(filepath.Join(service.Build.Context, service.Build.Dockerfile)),
@@ -248,7 +248,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 				}
 				runtimeName = found
 			} else {
-				runtimeName = runtime.DefaultKraftCloudRuntime
+				runtimeName = runtime.DefaultUnikraftCloudRuntime
 			}
 
 			log.G(ctx).
@@ -264,7 +264,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			project, err = app.NewApplicationFromOptions(
 				app.WithRuntime(rt),
 				app.WithName(appName),
-				app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
+				app.WithTargets([]*target.TargetConfig{target.DefaultUnikraftCloudTarget}),
 				app.WithRootfs(service.Image),
 			)
 			if err != nil {
@@ -332,7 +332,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	return Build(ctx, opts, args...)
 }
 
-// imageExists checks if an image exists in the KraftCloud registry.
+// imageExists checks if an image exists in the UnikraftCloud registry.
 func (opts *BuildOptions) imageExists(ctx context.Context, name string) (exists bool, err error) {
 	if name == "" {
 		return false, fmt.Errorf("image name is empty")

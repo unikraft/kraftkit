@@ -12,7 +12,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -44,7 +44,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud volume list -o json
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "cloud-vol",
 		},
 	})
 	if err != nil {
@@ -68,13 +68,13 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewVolumesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewVolumesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	resp, err := client.WithMetro(opts.metro).List(ctx)

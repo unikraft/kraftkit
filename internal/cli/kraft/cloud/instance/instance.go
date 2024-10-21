@@ -31,7 +31,7 @@ func NewCmd() *cobra.Command {
 		Aliases: []string{"inst", "instances", "vm", "vms"},
 		Long:    "Manage instances on Unikraft Cloud.",
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-instance",
+			cmdfactory.AnnotationHelpGroup:  "cloud-instance",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

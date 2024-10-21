@@ -15,8 +15,8 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcinstances "sdk.kraft.cloud/instances"
+	cloud "sdk.kraft.cloud"
+	ukcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -28,12 +28,12 @@ import (
 )
 
 type PushOptions struct {
-	Auth        *config.AuthConfig           `noattribute:"true"`
-	Client      kcinstances.InstancesService `noattribute:"true"`
-	Composefile string                       `noattribute:"true"`
-	Metro       string                       `noattribute:"true"`
-	Project     *compose.Project             `noattribute:"true"`
-	Token       string                       `noattribute:"true"`
+	Auth        *config.AuthConfig            `noattribute:"true"`
+	Client      ukcinstances.InstancesService `noattribute:"true"`
+	Composefile string                        `noattribute:"true"`
+	Metro       string                        `noattribute:"true"`
+	Project     *compose.Project              `noattribute:"true"`
+	Token       string                        `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose push nginx
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -61,15 +61,15 @@ func Push(ctx context.Context, opts *PushOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewInstancesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewInstancesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

@@ -62,8 +62,8 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		runtimeName = opts.Project.Runtime().Name()
 	}
 
-	if opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
-		runtimeName = utils.RewrapAsKraftCloudPackage(runtimeName)
+	if opts.Platform == "cloud" || opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && (opts.Project.Runtime().Platform().Name() == "cloud" || opts.Project.Runtime().Platform().Name() == "kraftcloud")) {
+		runtimeName = utils.RewrapAsUnikraftCloudPackage(runtimeName)
 	}
 
 	targets := opts.Project.Targets()

@@ -13,8 +13,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcimages "sdk.kraft.cloud/images"
+	cloud "sdk.kraft.cloud"
+	ukcimages "sdk.kraft.cloud/images"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -23,11 +23,11 @@ import (
 )
 
 type RemoveOptions struct {
-	All    bool                   `long:"all" usage:"Remove all images"`
-	Auth   *config.AuthConfig     `noattribute:"true"`
-	Client kcimages.ImagesService `noattribute:"true"`
-	Metro  string                 `noattribute:"true"`
-	Token  string                 `noattribute:"true"`
+	All    bool                    `long:"all" usage:"Remove all images"`
+	Auth   *config.AuthConfig      `noattribute:"true"`
+	Client ukcimages.ImagesService `noattribute:"true"`
+	Metro  string                  `noattribute:"true"`
+	Token  string                  `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -59,7 +59,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud image remove --all
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-img",
+			cmdfactory.AnnotationHelpGroup: "cloud-img",
 		},
 	})
 	if err != nil {
@@ -86,15 +86,15 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewImagesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewImagesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

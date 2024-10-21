@@ -35,7 +35,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud metro list --status
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud-metro",
+			cmdfactory.AnnotationHelpGroup:  "cloud-metro",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})

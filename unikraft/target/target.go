@@ -17,10 +17,10 @@ import (
 	"kraftkit.sh/unikraft/plat"
 )
 
-// DefaultKraftCloudTarget is the default target for KraftCloud.
-var DefaultKraftCloudTarget *TargetConfig = NewTargetFromOptions(
+// DefaultUnikraftCloudTarget is the default target for UnikraftCloud.
+var DefaultUnikraftCloudTarget *TargetConfig = NewTargetFromOptions(
 	WithArchitecture(arch.NewArchitectureFromOptions(arch.WithName("x86_64"))),
-	WithPlatform(plat.NewPlatformFromOptions(plat.WithName("kraftcloud"))),
+	WithPlatform(plat.NewPlatformFromOptions(plat.WithName("cloud"))),
 ).(*TargetConfig)
 
 type Target interface {

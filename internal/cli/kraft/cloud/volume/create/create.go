@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	cloud "sdk.kraft.cloud"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -24,16 +24,16 @@ import (
 )
 
 type CreateOptions struct {
-	Auth   *config.AuthConfig       `noattribute:"true"`
-	Client kcvolumes.VolumesService `noattribute:"true"`
-	Metro  string                   `noattribute:"true"`
-	Name   string                   `local:"true" size:"name" short:"n" usage:"Name of the volume"`
-	Size   string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments or suffixes like Mi, Gi, etc.)"`
-	Token  string                   `noattribute:"true"`
+	Auth   *config.AuthConfig        `noattribute:"true"`
+	Client ukcvolumes.VolumesService `noattribute:"true"`
+	Metro  string                    `noattribute:"true"`
+	Name   string                    `local:"true" size:"name" short:"n" usage:"Name of the volume"`
+	Size   string                    `local:"true" long:"size" short:"s" usage:"Size (MiB increments or suffixes like Mi, Gi, etc.)"`
+	Token  string                    `noattribute:"true"`
 }
 
-// Create a KraftCloud persistent volume.
-func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponseItem, error) {
+// Create a UnikraftCloud persistent volume.
+func Create(ctx context.Context, opts *CreateOptions) (*ukcvolumes.CreateResponseItem, error) {
 	var err error
 
 	if opts == nil {
@@ -41,15 +41,15 @@ func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponse
 	}
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewVolumesClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewVolumesClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 
@@ -98,7 +98,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud volume create --size 10Mi
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-vol",
+			cmdfactory.AnnotationHelpGroup: "cloud-vol",
 		},
 	})
 	if err != nil {

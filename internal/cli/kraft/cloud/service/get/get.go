@@ -12,7 +12,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -26,7 +26,7 @@ type GetOptions struct {
 	token string
 }
 
-// State of a KraftCloud instance.
+// State of a UnikraftCloud instance.
 func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 	if opts == nil {
 		opts = &GetOptions{}
@@ -42,14 +42,14 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"gt"},
 		Example: heredoc.Doc(`
-			# Retrieve information about a kraftcloud service
+			# Retrieve information about a cloud service
 			$ kraft cloud service get fd1684ea-7970-4994-92d6-61dcc7905f2b
 
-			# Retrieve information about a kraftcloud service
+			# Retrieve information about a cloud service
 			$ kraft cloud service get my-service
 	`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-svc",
+			cmdfactory.AnnotationHelpGroup: "cloud-svc",
 		},
 	})
 	if err != nil {
@@ -73,13 +73,13 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *GetOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewServicesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewServicesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	resp, err := client.WithMetro(opts.metro).Get(ctx, args[0])

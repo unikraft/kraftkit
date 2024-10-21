@@ -12,8 +12,8 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcautoscale "sdk.kraft.cloud/services/autoscale"
+	cloud "sdk.kraft.cloud"
+	ukcautoscale "sdk.kraft.cloud/services/autoscale"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -21,10 +21,10 @@ import (
 )
 
 type ResetOptions struct {
-	Auth   *config.AuthConfig           `noattribute:"true"`
-	Client kcautoscale.AutoscaleService `noattribute:"true"`
-	Metro  string                       `noattribute:"true"`
-	Token  string                       `noattribute:"true"`
+	Auth   *config.AuthConfig            `noattribute:"true"`
+	Client ukcautoscale.AutoscaleService `noattribute:"true"`
+	Metro  string                        `noattribute:"true"`
+	Token  string                        `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -41,7 +41,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud scale reset my-service
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-scale",
+			cmdfactory.AnnotationHelpGroup: "cloud-scale",
 		},
 	})
 	if err != nil {
@@ -68,15 +68,15 @@ func (opts *ResetOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewAutoscaleClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewAutoscaleClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

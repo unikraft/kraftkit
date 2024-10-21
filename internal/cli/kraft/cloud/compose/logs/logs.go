@@ -14,7 +14,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
@@ -24,15 +24,15 @@ import (
 )
 
 type LogsOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	Follow      bool                  `long:"follow" short:"f" usage:"Follow log output"`
-	Metro       string                `noattribute:"true"`
-	Output      string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Project     *compose.Project      `noattribute:"true"`
-	Tail        int                   `long:"tail" short:"t" usage:"Number of lines to show from the end of the logs" default:"-1"`
-	Token       string                `noattribute:"true"`
+	Auth        *config.AuthConfig `noattribute:"true"`
+	Client      cloud.KraftCloud   `noattribute:"true"`
+	Composefile string             `noattribute:"true"`
+	Follow      bool               `long:"follow" short:"f" usage:"Follow log output"`
+	Metro       string             `noattribute:"true"`
+	Output      string             `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Project     *compose.Project   `noattribute:"true"`
+	Tail        int                `long:"tail" short:"t" usage:"Number of lines to show from the end of the logs" default:"-1"`
+	Token       string             `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -50,7 +50,7 @@ func NewCmd() *cobra.Command {
 			$ kraft cloud compose logs -f nginx
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-compose",
+			cmdfactory.AnnotationHelpGroup: "cloud-compose",
 		},
 	})
 	if err != nil {
@@ -81,15 +81,15 @@ func Logs(ctx context.Context, opts *LogsOptions, args ...string) error {
 	var err error
 
 	if opts.Auth == nil {
-		opts.Auth, err = config.GetKraftCloudAuthConfig(ctx, opts.Token)
+		opts.Auth, err = config.GetUnikraftCloudAuthConfig(ctx, opts.Token)
 		if err != nil {
 			return fmt.Errorf("could not retrieve credentials: %w", err)
 		}
 	}
 
 	if opts.Client == nil {
-		opts.Client = kraftcloud.NewClient(
-			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
+		opts.Client = cloud.NewClient(
+			cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
 

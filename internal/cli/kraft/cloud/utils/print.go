@@ -22,34 +22,34 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui"
 
-	kccerts "sdk.kraft.cloud/certificates"
-	kcclient "sdk.kraft.cloud/client"
-	kcimages "sdk.kraft.cloud/images"
-	kcinstances "sdk.kraft.cloud/instances"
-	kcservices "sdk.kraft.cloud/services"
-	kcautoscale "sdk.kraft.cloud/services/autoscale"
-	kcusers "sdk.kraft.cloud/users"
-	kcvolumes "sdk.kraft.cloud/volumes"
+	ukccerts "sdk.kraft.cloud/certificates"
+	ukcclient "sdk.kraft.cloud/client"
+	ukcimages "sdk.kraft.cloud/images"
+	ukcinstances "sdk.kraft.cloud/instances"
+	ukcservices "sdk.kraft.cloud/services"
+	ukcautoscale "sdk.kraft.cloud/services/autoscale"
+	ukcusers "sdk.kraft.cloud/users"
+	ukcvolumes "sdk.kraft.cloud/volumes"
 )
 
 type colorFunc func(string) string
 
 var (
-	instanceStateColor = map[kcinstances.InstanceState]colorFunc{
-		kcinstances.InstanceStateDraining: iostreams.Yellow,
-		kcinstances.InstanceStateRunning:  iostreams.Green,
-		kcinstances.InstanceStateStandby:  iostreams.Cyan,
-		kcinstances.InstanceStateStarting: iostreams.Green,
-		kcinstances.InstanceStateStopped:  iostreams.Red,
-		kcinstances.InstanceStateStopping: iostreams.Yellow,
+	instanceStateColor = map[ukcinstances.InstanceState]colorFunc{
+		ukcinstances.InstanceStateDraining: iostreams.Yellow,
+		ukcinstances.InstanceStateRunning:  iostreams.Green,
+		ukcinstances.InstanceStateStandby:  iostreams.Cyan,
+		ukcinstances.InstanceStateStarting: iostreams.Green,
+		ukcinstances.InstanceStateStopped:  iostreams.Red,
+		ukcinstances.InstanceStateStopping: iostreams.Yellow,
 	}
-	instanceStateColorNil = map[kcinstances.InstanceState]colorFunc{
-		kcinstances.InstanceStateDraining: nil,
-		kcinstances.InstanceStateRunning:  nil,
-		kcinstances.InstanceStateStandby:  nil,
-		kcinstances.InstanceStateStarting: nil,
-		kcinstances.InstanceStateStopped:  nil,
-		kcinstances.InstanceStateStopping: nil,
+	instanceStateColorNil = map[ukcinstances.InstanceState]colorFunc{
+		ukcinstances.InstanceStateDraining: nil,
+		ukcinstances.InstanceStateRunning:  nil,
+		ukcinstances.InstanceStateStandby:  nil,
+		ukcinstances.InstanceStateStarting: nil,
+		ukcinstances.InstanceStateStopped:  nil,
+		ukcinstances.InstanceStateStopping: nil,
 	}
 )
 
@@ -84,7 +84,7 @@ func parseTime(dateTime, format, uuid string) (string, error) {
 
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
-func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
+func PrintInstances(ctx context.Context, format string, resp ukcclient.ServiceResponse[ukcinstances.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -272,7 +272,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 				table.AddField("", nil)
 			}
 			table.AddField(string(instance.RestartPolicy), nil)
-			if instance.State == kcinstances.InstanceStateStopped {
+			if instance.State == ukcinstances.InstanceStateStopped {
 				table.AddField(fmt.Sprintf("%s (%s)", instance.DescribeStopOrigin(), instance.StopOriginCode()), nil)
 				stopReason := instance.DescribeStopReason()
 				switch stopReason {
@@ -367,7 +367,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
-func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceResponse[kcvolumes.GetResponseItem]) error {
+func PrintVolumes(ctx context.Context, format string, resp ukcclient.ServiceResponse[ukcvolumes.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -464,7 +464,7 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
-func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
+func PrintAutoscaleConfiguration(ctx context.Context, format string, resp ukcclient.ServiceResponse[ukcautoscale.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -554,8 +554,8 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 	for _, policy := range aconf.Policies {
 		name := "<unknown>"
 		switch policy.Type() {
-		case kcautoscale.PolicyTypeStep:
-			name = policy.(*kcautoscale.StepPolicy).Name
+		case ukcautoscale.PolicyTypeStep:
+			name = policy.(*ukcautoscale.StepPolicy).Name
 		}
 		policies = append(policies, name)
 	}
@@ -569,7 +569,7 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 
 // PrintServices pretty-prints the provided set of service or returns
 // an error if unable to send to stdout via the provided context.
-func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
+func PrintServices(ctx context.Context, format string, resp ukcclient.ServiceResponse[ukcservices.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -698,7 +698,7 @@ func printBar(cs *iostreams.ColorScheme, progress, max int) string {
 
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
-func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem], imageResp *kcimages.QuotasResponseItem) error {
+func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp ukcclient.ServiceResponse[ukcusers.QuotasResponseItem], imageResp *ukcimages.QuotasResponseItem) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -957,7 +957,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 
 // PrintCertificates pretty-prints the provided set of certificates or returns
 // an error if unable to send to stdout via the provided context.
-func PrintCertificates(ctx context.Context, format string, resp kcclient.ServiceResponse[kccerts.GetResponseItem]) error {
+func PrintCertificates(ctx context.Context, format string, resp ukcclient.ServiceResponse[ukccerts.GetResponseItem]) error {
 	if format == "raw" {
 		printRaw(ctx, resp)
 		return nil
@@ -1071,7 +1071,7 @@ func PrintCertificates(ctx context.Context, format string, resp kcclient.Service
 }
 
 // PrettyPrintInstance outputs a single instance and information about it.
-func PrettyPrintInstance(ctx context.Context, metro string, instance kcinstances.GetResponseItem, service *kcservices.GetResponseItem, autoStart bool) {
+func PrettyPrintInstance(ctx context.Context, metro string, instance ukcinstances.GetResponseItem, service *ukcservices.GetResponseItem, autoStart bool) {
 	out := iostreams.G(ctx).Out
 
 	var title string
@@ -1200,7 +1200,7 @@ func PrettyPrintInstance(ctx context.Context, metro string, instance kcinstances
 	}
 }
 
-func printRaw[T kcclient.APIResponseDataEntry](ctx context.Context, resps ...kcclient.ServiceResponse[T]) {
+func printRaw[T ukcclient.APIResponseDataEntry](ctx context.Context, resps ...ukcclient.ServiceResponse[T]) {
 	for _, resp := range resps {
 		fmt.Fprint(iostreams.G(ctx).Out, string(resp.RawBody()))
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
+	cloud "sdk.kraft.cloud"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -26,7 +26,7 @@ type GetOptions struct {
 	token string
 }
 
-// Status of a KraftCloud certificate.
+// Status of a UnikraftCloud certificate.
 func Get(ctx context.Context, opts *GetOptions, args ...string) error {
 	if opts == nil {
 		opts = &GetOptions{}
@@ -52,7 +52,7 @@ func NewCmd() *cobra.Command {
 			Retrieve the status of a certificate.
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup: "kraftcloud-certificate",
+			cmdfactory.AnnotationHelpGroup: "cloud-certificate",
 		},
 	})
 	if err != nil {
@@ -76,13 +76,13 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *GetOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	auth, err := config.GetUnikraftCloudAuthConfig(ctx, opts.token)
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewCertificatesClient(
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	client := cloud.NewCertificatesClient(
+		cloud.WithToken(config.GetUnikraftCloudTokenAuthConfig(*auth)),
 	)
 
 	certResp, err := client.WithMetro(opts.metro).Get(ctx, args[0])
