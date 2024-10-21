@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/klauspost/cpuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -24,6 +25,7 @@ import (
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 	ukarch "kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/export/v0/ukrandom"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -357,6 +359,16 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	} else if len(runtime.Command()) > 0 {
 		machine.Spec.ApplicationArgs = runtime.Command()
 	}
+
+	var kernelArgs []string
+	if !runtime.KConfig().AllNoOrUnset(
+		"CONFIG_LIBUKRANDOM",
+		"CONFIG_LIBUKRANDOM_CMDLINE_INIT",
+	) && !(cpuid.CPU.Rdrand() && cpuid.CPU.Rdseed()) {
+		kernelArgs = append(kernelArgs, ukrandom.ParamRandomSeed.WithValue(ukrandom.NewRandomSeed()).String())
+	}
+
+	machine.Spec.KernelArgs = kernelArgs
 
 	// If automounting is enabled, and an initramfs is provided, set it as a
 	// volume if a initram has been provided.
