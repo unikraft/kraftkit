@@ -1,8 +1,8 @@
 name: chore/expire-action-caches
 
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [released]
 
 jobs:
 
@@ -34,7 +34,7 @@ jobs:
               })
               .then(caches => {
                 for (const cache of caches) {
-                  if (cache.ref == 'refs/heads/staging') {
+                  if (cache.ref == 'refs/heads/main') {
                     const cachePrefix = cache.key.slice(0, -cacheSuffixLen)
                     if (cachePrefixes.has(cachePrefix)) {
                       const seen = cachePrefixes.get(cachePrefix)

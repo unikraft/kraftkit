@@ -1,8 +1,8 @@
-name: release/staging
+name: prerelease
 
 on:
   push:
-    branches: [staging]
+    branches: [main]
 
 permissions:
   contents: write
@@ -23,10 +23,10 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kraftkit/kraftkit
           git fetch --force --tags
-      
+
       - name: Generate GoReleaser configuration
         run: |
-          ytt -f .goreleaser-staging.yaml > goreleaser-staging.yaml
+          ytt -f .goreleaser-prerelease.yaml > goreleaser-prerelease.yaml
 
       - name: Run GoReleaser
         run: |
@@ -36,10 +36,10 @@ jobs:
           git tag -a "$(git describe)" -m "Pre-release: $(git describe)"
           echo "$GOOGLE_APPLICATION_JSON" > /tmp/gs.json
           goreleaser build \
-            --config goreleaser-staging.yaml \
+            --config goreleaser-prerelease.yaml \
             --skip-validate
           goreleaser release \
-            --config goreleaser-staging.yaml \
+            --config goreleaser-prerelease.yaml \
             --rm-dist \
             --skip-validate
         env:

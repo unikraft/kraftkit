@@ -87,7 +87,7 @@ Find [more examples and applications in our community catalog](https://github.co
 
 ## Use in GitHub Actions
 
-KraftKit can be used to automatically build your application into a unikernel in a GitHub Actions workflow, simply `use` `unikraft/kraftkit@staging`.
+KraftKit can be used to automatically build your application into a unikernel in a GitHub Actions workflow, simply `use` `unikraft/kraftkit@main`.
 
 In the following example, a repository that has been initialized with a top-level `Kraftfile` that contains a target for qemu/x86_64 will be built every time a PR is opened, synchronized or re-opened:
 
@@ -103,7 +103,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: unikraft/kraftkit@staging
+    - uses: unikraft/kraftkit@main
       with:
         workdir: .
         kraftfile: Kraftfile

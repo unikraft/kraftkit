@@ -126,12 +126,12 @@ endif
 all: help
 
 .PHONY: build
-build: CHANNEL ?= staging
+build: CHANNEL ?= prerelease
 build: $(WORKDIR)/goreleaser-$(CHANNEL).yaml
 build: ## Build all KraftKit binary artifacts.
 	$(GORELEASER) build --config $(WORKDIR)/goreleaser-$(CHANNEL).yaml --clean --skip-validate
 
-$(WORKDIR)/goreleaser-$(CHANNEL).yaml: CHANNEL ?= staging
+$(WORKDIR)/goreleaser-$(CHANNEL).yaml: CHANNEL ?= prerelease
 $(WORKDIR)/goreleaser-$(CHANNEL).yaml:
 	$(YTT) -f .goreleaser-$(CHANNEL).yaml > goreleaser-$(CHANNEL).yaml
 
