@@ -636,6 +636,8 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		ocipack.kconfig.Override(kval)
 	}
 
+	ocipack.command = ocipack.manifest.config.Config.Cmd
+
 	return &ocipack, nil
 }
 
