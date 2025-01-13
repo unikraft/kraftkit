@@ -46,7 +46,7 @@ type ManifestLister interface {
 }
 
 type ManifestResolver interface {
-	ResolveManifest(context.Context, string, digest.Digest) (*ocispec.Manifest, error)
+	ResolveManifest(context.Context, string, digest.Digest) (*ocispec.Manifest, *ocispec.Image, error)
 }
 
 type ManifestDeleter interface {

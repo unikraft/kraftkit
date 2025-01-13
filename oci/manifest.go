@@ -82,7 +82,7 @@ func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest d
 		return nil, err
 	}
 
-	spec, err := handle.ResolveManifest(ctx, "", digest)
+	manifestSpec, imageSpec, err := handle.ResolveManifest(ctx, "", digest)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve manifest from digest: %w", err)
 	}
@@ -92,21 +92,22 @@ func NewManifestFromDigest(ctx context.Context, handle handler.Handler, digest d
 		MediaType:   ocispec.MediaTypeImageManifest,
 		Digest:      digest,
 		Size:        int64(digest.Algorithm().Size()),
-		Annotations: spec.Annotations,
-		Platform:    spec.Config.Platform,
+		Annotations: manifestSpec.Annotations,
+		Platform:    manifestSpec.Config.Platform,
 	}
 
-	manifest.manifest = spec
+	manifest.manifest = manifestSpec
+	manifest.config = imageSpec
 
-	if spec.Config.Platform != nil {
-		manifest.config.Architecture = spec.Config.Platform.Architecture
-		manifest.config.OS = spec.Config.Platform.OS
-		manifest.config.OSVersion = spec.Config.Platform.OSVersion
-		manifest.config.OSFeatures = spec.Config.Platform.OSFeatures
+	if manifestSpec.Config.Platform != nil {
+		manifest.config.Architecture = manifestSpec.Config.Platform.Architecture
+		manifest.config.OS = manifestSpec.Config.Platform.OS
+		manifest.config.OSVersion = manifestSpec.Config.Platform.OSVersion
+		manifest.config.OSFeatures = manifestSpec.Config.Platform.OSFeatures
 	}
-	manifest.annotations = spec.Annotations
+	manifest.annotations = manifestSpec.Annotations
 
-	for _, desc := range spec.Layers {
+	for _, desc := range manifestSpec.Layers {
 		manifest.layers = append(manifest.layers, &Layer{
 			blob: &Blob{
 				desc: desc,

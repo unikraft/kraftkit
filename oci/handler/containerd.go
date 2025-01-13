@@ -396,8 +396,18 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 }
 
 // ResolveManifest implements ManifestResolver.
-func (handle *ContainerdHandler) ResolveManifest(ctx context.Context, _ string, digest digest.Digest) (*ocispec.Manifest, error) {
-	return ResolveContainerdObjectFromDigest[ocispec.Manifest](ctx, handle, digest)
+func (handle *ContainerdHandler) ResolveManifest(ctx context.Context, _ string, digest digest.Digest) (*ocispec.Manifest, *ocispec.Image, error) {
+	manifest, err := ResolveContainerdObjectFromDigest[ocispec.Manifest](ctx, handle, digest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	image, err := ResolveContainerdObjectFromDigest[ocispec.Image](ctx, handle, manifest.Config.Digest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return manifest, image, nil
 }
 
 // ListManifests implements DigestResolver.
@@ -406,7 +416,7 @@ func (handle *ContainerdHandler) ListManifests(ctx context.Context) (manifests m
 }
 
 func (handle *ContainerdHandler) DeleteManifest(ctx context.Context, fullref string, dgst digest.Digest) error {
-	manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
+	manifest, _, err := handle.ResolveManifest(ctx, fullref, dgst)
 	if err != nil {
 		return fmt.Errorf("could not resolve manifest: %w", err)
 	}

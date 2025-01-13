@@ -320,16 +320,7 @@ func (di *DirectoryIndex) RawManifest() ([]byte, error) {
 func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
 	dgst := digest.NewDigestFromHex(manifestDigest.Algorithm, manifestDigest.Hex)
 
-	image, err := di.handle.resolveImage(
-		di.ctx,
-		di.fullref,
-		dgst,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("resolving image: %w", err)
-	}
-
-	manifest, err := di.handle.ResolveManifest(
+	manifest, image, err := di.handle.ResolveManifest(
 		di.ctx,
 		di.fullref,
 		dgst,

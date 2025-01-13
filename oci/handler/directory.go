@@ -51,7 +51,7 @@ type DirectoryHandler struct {
 
 func NewDirectoryHandler(path string, auths map[string]config.AuthConfig) (*DirectoryHandler, error) {
 	if err := os.MkdirAll(path, 0o775); err != nil {
-		return nil, fmt.Errorf("could not create local oci cache directory: %w", err)
+		return nil, fmt.Errorf("could not create local oci cache directory '%s': %w", path, err)
 	}
 
 	return &DirectoryHandler{
@@ -359,7 +359,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 		// Only pull the manifest if does not exist locally.
-		manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
+		manifest, _, err := handle.ResolveManifest(ctx, fullref, dgst)
 		if err != nil {
 			manifestPath := filepath.Join(
 				handle.path,
@@ -410,61 +410,61 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				}
 				return fmt.Errorf("could not write manifest: %w", err)
 			}
-		}
 
-		configPath := filepath.Join(
-			handle.path,
-			DirectoryHandlerDigestsDir,
-			manifest.Config.Digest.Algorithm().String(),
-			manifest.Config.Digest.Hex(),
-		)
+			configPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerDigestsDir,
+				manifest.Config.Digest.Algorithm().String(),
+				manifest.Config.Digest.Hex(),
+			)
 
-		// Only pull the config if does not exist locally.
-		if _, err := os.Stat(configPath); err != nil {
-			// NOTE(nderjung): Unfortunately, the `remote` package does not support
-			// simply `Get`ting the config, so we must traverse backwards to the image
-			// (and therefore make a remote request to an image manifest, even if we
-			// may have a copy of it locally, adding 1 additional external request to
-			// the registry).
+			// Only pull the config if does not exist locally.
+			if _, err := os.Stat(configPath); err != nil {
+				// NOTE(nderjung): Unfortunately, the `remote` package does not support
+				// simply `Get`ting the config, so we must traverse backwards to the image
+				// (and therefore make a remote request to an image manifest, even if we
+				// may have a copy of it locally, adding 1 additional external request to
+				// the registry).
 
-			log.G(ctx).
-				WithField("digest", manifest.Config.Digest.String()).
-				Debugf("pulling config")
+				log.G(ctx).
+					WithField("digest", manifest.Config.Digest.String()).
+					Debugf("pulling config")
 
-			image, err := remote.Image(ref, ropts...)
-			if err != nil {
-				return fmt.Errorf("could not retrieve remote manifest: %w", err)
-			}
-
-			configRaw, err := image.RawConfigFile()
-			if err != nil {
-				return fmt.Errorf("could not get raw config: %w", err)
-			}
-
-			config := ocispec.Image{}
-			if err = json.Unmarshal(configRaw, &config); err != nil {
-				return fmt.Errorf("could not unmarshal raw config: %w", err)
-			}
-
-			if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
-				return fmt.Errorf("could not create config parent directories: %w", err)
-			}
-
-			configWriter, err := os.Create(configPath)
-			if err != nil {
-				return fmt.Errorf("could not get config file descriptor: %w", err)
-			}
-
-			defer configWriter.Close()
-
-			if _, err = configWriter.Write(configRaw); err != nil {
-				if err2 := configWriter.Close(); err2 != nil {
-					return fmt.Errorf("%w: could not close raw config writer: %w", err, err2)
+				image, err := remote.Image(ref, ropts...)
+				if err != nil {
+					return fmt.Errorf("could not retrieve remote manifest: %w", err)
 				}
-				if err2 := os.RemoveAll(configPath); err2 != nil {
-					return fmt.Errorf("%w: could not remove raw config: %w", err, err2)
+
+				configRaw, err := image.RawConfigFile()
+				if err != nil {
+					return fmt.Errorf("could not get raw config: %w", err)
 				}
-				return fmt.Errorf("could not write raw config: %w", err)
+
+				config := ocispec.Image{}
+				if err = json.Unmarshal(configRaw, &config); err != nil {
+					return fmt.Errorf("could not unmarshal raw config: %w", err)
+				}
+
+				if err = os.MkdirAll(filepath.Dir(configPath), 0o775); err != nil {
+					return fmt.Errorf("could not create config parent directories: %w", err)
+				}
+
+				configWriter, err := os.Create(configPath)
+				if err != nil {
+					return fmt.Errorf("could not get config file descriptor: %w", err)
+				}
+
+				defer configWriter.Close()
+
+				if _, err = configWriter.Write(configRaw); err != nil {
+					if err2 := configWriter.Close(); err2 != nil {
+						return fmt.Errorf("%w: could not close raw config writer: %w", err, err2)
+					}
+					if err2 := os.RemoveAll(configPath); err2 != nil {
+						return fmt.Errorf("%w: could not remove raw config: %w", err, err2)
+					}
+					return fmt.Errorf("could not write raw config: %w", err)
+				}
 			}
 		}
 
@@ -735,7 +735,7 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 }
 
 // ResolveManifest implements ManifestResolver.
-func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Manifest, error) {
+func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Manifest, *ocispec.Image, error) {
 	manifestPath := filepath.Join(
 		handle.path,
 		DirectoryHandlerDigestsDir,
@@ -745,29 +745,60 @@ func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref str
 
 	// Check whether the manifest exists
 	if _, err := os.Stat(manifestPath); err != nil {
-		return nil, fmt.Errorf("manifest for '%s' does not exist: %s", dgst.String(), manifestPath)
+		return nil, nil, fmt.Errorf("manifest for '%s' does not exist: %s", dgst.String(), manifestPath)
 	}
 
 	// Read the manifest
-	reader, err := os.Open(manifestPath)
+	manifestReader, err := os.Open(manifestPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	defer reader.Close()
+	defer manifestReader.Close()
 
-	manifestRaw, err := io.ReadAll(reader)
+	manifestRaw, err := io.ReadAll(manifestReader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Unmarshal the manifest
 	manifest := ocispec.Manifest{}
 	if err = json.Unmarshal(manifestRaw, &manifest); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &manifest, nil
+	imagePath := filepath.Join(
+		handle.path,
+		DirectoryHandlerDigestsDir,
+		manifest.Config.Digest.Algorithm().String(),
+		manifest.Config.Digest.Hex(),
+	)
+
+	// Check whether the manifest exists
+	if _, err := os.Stat(imagePath); err != nil {
+		return nil, nil, fmt.Errorf("manifest for '%s' does not exist: %s", dgst.String(), manifestPath)
+	}
+
+	// Read the manifest
+	imageReader, err := os.Open(imagePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer imageReader.Close()
+
+	imageRaw, err := io.ReadAll(imageReader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Unmarshal the image
+	image := ocispec.Image{}
+	if err = json.Unmarshal(imageRaw, &image); err != nil {
+		return nil, nil, err
+	}
+
+	return &manifest, &image, nil
 }
 
 // ListManifests implements DigestResolver.
@@ -1162,57 +1193,13 @@ func (pt *progressWriter) Read(p []byte) (int, error) {
 }
 
 func (handle *DirectoryHandler) resolveImage(ctx context.Context, fullref string, dgst digest.Digest) (*ocispec.Image, error) {
-	// Find the manifest of this image
-	ref, err := name.ParseReference(fullref)
-	if err != nil {
-		return nil, fmt.Errorf("parsing reference: %w", err)
-	}
-
-	manifest, err := handle.ResolveManifest(ctx, fullref, dgst)
+	_, config, err := handle.ResolveManifest(ctx, fullref, dgst)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve image via manifest: %w", err)
 	}
 
-	// Split the digest into algorithm and hex
-	configHash := v1.Hash{
-		Algorithm: manifest.Config.Digest.Algorithm().String(),
-		Hex:       manifest.Config.Digest.Encoded(),
-	}
-
-	// Find the config file at the specified directory
-	configDir := filepath.Join(
-		handle.path,
-		DirectoryHandlerDigestsDir,
-		configHash.Algorithm,
-		configHash.Hex,
-	)
-
-	// Check whether the config exists
-	if _, err := os.Stat(configDir); err != nil {
-		return nil, fmt.Errorf("could not access config file for %s: %w", ref.Name(), err)
-	}
-
-	// Read the config
-	reader, err := os.Open(configDir)
-	if err != nil {
-		return nil, fmt.Errorf("opening config: %w", err)
-	}
-
-	defer reader.Close()
-
-	configRaw, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("reading config: %w", err)
-	}
-
-	// Unmarshal the config
-	config := ocispec.Image{}
-	if err = json.Unmarshal(configRaw, &config); err != nil {
-		return nil, fmt.Errorf("parsing config; %w", err)
-	}
-
 	// Return the image
-	return &config, nil
+	return config, nil
 }
 
 // UnpackImage implements ImageUnpacker.
