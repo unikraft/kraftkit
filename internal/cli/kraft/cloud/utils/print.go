@@ -601,13 +601,13 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 		table.AddField("COOLDOWN (MS)", cs.Bold)
 		cooldownStr = strconv.Itoa(*aconf.CooldownTimeMs)
 	}
-	var masterStr string
-	if aconf.Master != nil {
-		table.AddField("MASTER", cs.Bold)
-		if aconf.Master.UUID != "" {
-			masterStr = aconf.Master.UUID
-		} else if aconf.Master.Name != "" {
-			masterStr = aconf.Master.Name
+	var templateStr string
+	if aconf.Template != nil {
+		table.AddField("TEMPLATE", cs.Bold)
+		if aconf.Template.UUID != "" {
+			templateStr = aconf.Template.UUID
+		} else if aconf.Template.Name != "" {
+			templateStr = aconf.Template.Name
 		}
 	}
 	table.AddField("POLICIES", cs.Bold)
@@ -631,8 +631,8 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 	if aconf.CooldownTimeMs != nil {
 		table.AddField(fmt.Sprint(cooldownStr), nil)
 	}
-	if aconf.Master != nil {
-		table.AddField(fmt.Sprint(masterStr), nil)
+	if aconf.Template != nil {
+		table.AddField(fmt.Sprint(templateStr), nil)
 	}
 
 	var policies []string
