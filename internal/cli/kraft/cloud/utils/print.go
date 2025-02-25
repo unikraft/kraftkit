@@ -547,6 +547,105 @@ func PrintVolumesTemplates(ctx context.Context, format string, resp kcclient.Ser
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// PrintInstancesTemplates pretty-prints the provided set of instance templates
+// or returns an error if unable to send to stdout via the provided context.
+func PrintInstancesTemplates(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.TemplateGetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
+	}
+
+	templates, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("CREATED AT", cs.Bold)
+	table.AddField("STATE", cs.Bold)
+	table.AddField("IMAGE", cs.Bold)
+	table.AddField("MEMORY MB", cs.Bold)
+	table.AddField("VCPUS", cs.Bold)
+	table.AddField("ARGS", cs.Bold)
+	if format != "table" {
+		table.AddField("ENV", cs.Bold)
+		table.AddField("RESTART POLICY", cs.Bold)
+		table.AddField("SNAPSHOT", cs.Bold)
+	}
+	table.AddField("VOLUMES", cs.Bold)
+	table.EndRow()
+
+	for _, template := range templates {
+		var createdAt string
+		if len(template.CreatedAt) > 0 {
+			createdTime, err := time.Parse(time.RFC3339, template.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("could not parse time for '%s': %w", template.UUID, err)
+			}
+			if format != "table" {
+				createdAt = template.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
+		}
+
+		if format != "table" {
+			table.AddField(template.UUID, nil)
+		}
+
+		table.AddField(template.Name, nil)
+		table.AddField(createdAt, nil)
+		table.AddField(string(template.State), nil)
+		table.AddField(template.Image, nil)
+		table.AddField(humanize.IBytes(uint64(template.MemoryMB)*humanize.MiByte), nil)
+		table.AddField(string(template.Vcpus), nil)
+		table.AddField(strings.Join(template.Args, " "), nil)
+
+		if format != "table" {
+			envs := []string{}
+			for k, v := range template.Env {
+				envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+			}
+			table.AddField(strings.Join(envs, ", "), nil)
+
+			table.AddField(string(template.RestartPolicy), nil)
+			table.AddField(template.Snapshot.UUID, nil)
+		}
+
+		vols := make([]string, len(template.Volumes))
+		for i, vol := range template.Volumes {
+			vols[i] = fmt.Sprintf("%s:%s", vol.Name, vol.At)
+			if vol.ReadOnly {
+				vols[i] += ":ro"
+			}
+		}
+		table.AddField(strings.Join(vols, ", "), nil)
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
 func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {

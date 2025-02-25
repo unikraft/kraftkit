@@ -20,6 +20,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/remove"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/start"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/stop"
+	"kraftkit.sh/internal/cli/kraft/cloud/instance/template"
 )
 
 type InstanceOptions struct{}
@@ -46,6 +47,9 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(start.NewCmd())
 	cmd.AddCommand(get.NewCmd())
 	cmd.AddCommand(stop.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance-template", Title: "TEMPLATE COMMANDS"})
+	cmd.AddCommand(template.NewCmd())
 
 	return cmd
 }
