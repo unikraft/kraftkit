@@ -40,6 +40,8 @@ type CreateOptions struct {
 	Certificate         []string                       `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
 	Env                 []string                       `local:"true" long:"env" short:"e" usage:"Environmental variables" split:"false"`
 	Features            []string                       `local:"true" long:"feature" short:"f" usage:"List of features to enable"`
+	FromImage           bool                           `local:"true" long:"from-image" usage:"Specify that the provided argument is an image"`
+	FromTemplate        bool                           `local:"true" long:"from-template" usage:"Specify that the provided argument is a template"`
 	Domain              []string                       `local:"true" long:"domain" short:"d" usage:"The domain names to use for the service"`
 	Image               string                         `noattribute:"true"`
 	Entrypoint          types.ShellCommand             `local:"true" long:"entrypoint" usage:"Set the entrypoint for the instance"`
@@ -60,6 +62,7 @@ type CreateOptions struct {
 	ScaleToZeroCooldown time.Duration                  `local:"true" long:"scale-to-zero-cooldown" usage:"Cooldown period before scaling to zero (ms/s/m/h)"`
 	SubDomain           []string                       `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
 	Token               string                         `noattribute:"true"`
+	Template            string                         `noattribute:"true"`
 	Vcpus               uint                           `local:"true" long:"vcpus" short:"V" usage:"Specify the number of vCPUs to allocate"`
 	Volumes             []string                       `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
 	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
@@ -114,13 +117,15 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
-	if !strings.Contains(opts.Image, ":") {
-		opts.Image += ":latest"
-	}
+	if opts.Image != "" {
+		if !strings.Contains(opts.Image, ":") {
+			opts.Image += ":latest"
+		}
 
-	// Sanitize image name
-	opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
-	opts.Image = strings.TrimPrefix(opts.Image, "official/")
+		// Sanitize image name
+		opts.Image = strings.TrimPrefix(opts.Image, "index.unikraft.io/")
+		opts.Image = strings.TrimPrefix(opts.Image, "official/")
+	}
 
 	// Replace all slashes in the name with dashes.
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
@@ -129,7 +134,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	var image *kcimages.GetResponseItem
 
 	// Check if the image exists before creating the instance
-	if opts.WaitForImage {
+	if opts.WaitForImage && opts.Image != "" {
 		paramodel, err := processtree.NewProcessTree(
 			ctx,
 			[]processtree.ProcessTreeOption{
@@ -169,7 +174,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not wait for image to be available: %w", err)
 		}
-	} else {
+	} else if opts.Image != "" {
 		imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get image: %w", err)
@@ -197,18 +202,30 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	req := kcinstances.CreateRequest{
 		Autostart:     &opts.Start,
 		Features:      features,
-		Image:         opts.Image,
 		RestartPolicy: opts.RestartPolicy,
 	}
+	if opts.Image != "" {
+		req.Image = &opts.Image
+	} else if opts.Template != "" {
+		req.Template = &kcinstances.CreateRequestTemplate{}
+		if utils.IsUUID(opts.Template) {
+			req.Template.UUID = &opts.Template
+		} else {
+			req.Template.Name = &opts.Template
+		}
+	} else {
+		return nil, nil, fmt.Errorf("no image or template specified")
+	}
+
 	if opts.Vcpus > 0 {
 		req.Vcpus = ptr(int(opts.Vcpus))
 	}
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
-	if opts.Entrypoint.IsZero() {
+	if opts.Entrypoint.IsZero() && image != nil {
 		req.Args = []string{image.Args}
-	} else {
+	} else if !opts.Entrypoint.IsZero() {
 		req.Args = opts.Entrypoint
 	}
 	if len(args) > 0 {
@@ -230,7 +247,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 		// Convert to MiB
 		req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
-	} else {
+	} else if image != nil {
 		// Set the default memory to the size of the image rounded to the nearest
 		// power of 2 with an arbitrary 10% buffer.  Only set the value if it is
 		// greater than 128 MiB.
@@ -681,7 +698,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CreateOptions{}, cobra.Command{
 		Short:   "Create an instance",
-		Use:     "create [FLAGS] IMAGE [-- ARGS]",
+		Use:     "create [FLAGS] IMAGE|TEMPLATE [-- ARGS]",
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
@@ -792,11 +809,28 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
 	}
 
+	if opts.Memory != "" && opts.FromTemplate {
+		return fmt.Errorf("cannot specify memory when creating from a template")
+	}
+
+	if opts.Vcpus > 0 && opts.FromTemplate {
+		return fmt.Errorf("cannot specify vCPUs when creating from a template")
+	}
+
 	return nil
 }
 
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
-	opts.Image = args[0]
+	switch {
+	case opts.FromImage && !opts.FromTemplate:
+		opts.Image = args[0]
+	case !opts.FromImage && opts.FromTemplate:
+		opts.Template = args[0]
+	case !opts.FromImage && !opts.FromTemplate:
+		opts.Image = args[0]
+	case opts.FromImage && opts.FromTemplate:
+		return fmt.Errorf("cannot use both --from-image and --from-template")
+	}
 
 	instResp, svcResp, err := Create(ctx, opts, args[1:]...)
 	if err != nil {

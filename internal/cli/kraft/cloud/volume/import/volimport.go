@@ -44,7 +44,7 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, 
 	}
 
 	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
-		Image:    image,
+		Image:    &image,
 		MemoryMB: ptr(128),
 		Args:     args,
 		ServiceGroup: &kcinstances.CreateRequestServiceGroup{
