@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/logtail"
@@ -295,16 +296,22 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 						Downscript: "no", // Disable execution
 					}),
 				)
+				networkAttr := networkapi.NetworkAttr{
+					CIDR:     iface.Spec.CIDR,
+					Gateway:  network.Gateway,
+					DNS0:     iface.Spec.DNS0,
+					DNS1:     iface.Spec.DNS1,
+					Hostname: iface.Spec.Hostname,
+					Domain:   iface.Spec.Domain,
+				}
+
+				netdevIp, err := networkapi.ParseNetwork(&networkAttr)
+				if err != nil {
+					return machine, err
+				}
 
 				kernelArgs = append(kernelArgs,
-					uknetdev.NewParamIp().WithValue(uknetdev.NetdevIp{
-						CIDR:     iface.Spec.CIDR,
-						Gateway:  network.Gateway,
-						DNS0:     iface.Spec.DNS0,
-						DNS1:     iface.Spec.DNS1,
-						Hostname: iface.Spec.Hostname,
-						Domain:   iface.Spec.Domain,
-					}),
+					uknetdev.NewParamIp().WithValue(netdevIp),
 				)
 			}
 		}

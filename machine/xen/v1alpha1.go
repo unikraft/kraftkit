@@ -36,6 +36,8 @@ import (
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
 	"kraftkit.sh/unikraft/export/v0/vfscore"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
+
 
 	"xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight"
 )
@@ -172,15 +174,20 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				nic.Mac = xenlight.Mac([]byte(mac))
 
 				cfg.Nics = append(cfg.Nics, *nic)
+				networkAttr := networkapi.NetworkAttr{
+					CIDR:     iface.Spec.CIDR,
+					Gateway:  network.Gateway,
+					DNS0:     iface.Spec.DNS0,
+					DNS1:     iface.Spec.DNS1,
+					Hostname: iface.Spec.Hostname,
+					Domain:   iface.Spec.Domain,
+				}
+				netdevIp, err := networkapi.ParseNetwork(&networkAttr)
+				if err != nil {
+					return machine, err 
+				}
 				kernelArgs = append(kernelArgs,
-					uknetdev.NewParamIp().WithValue(uknetdev.NetdevIp{
-						CIDR:     iface.Spec.CIDR,
-						Gateway:  network.Gateway,
-						DNS0:     iface.Spec.DNS0,
-						DNS1:     iface.Spec.DNS1,
-						Hostname: iface.Spec.Hostname,
-						Domain:   iface.Spec.Domain,
-					}),
+					uknetdev.NewParamIp().WithValue(netdevIp),
 				)
 				i++
 			}

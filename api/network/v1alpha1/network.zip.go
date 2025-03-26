@@ -19,6 +19,27 @@ type (
 	NetworkList = zip.ObjectList[NetworkSpec, NetworkStatus]
 )
 
+// NetworkAttr abstracts the uknetdev.NetdevIp fields 
+type NetworkAttr struct {
+	// IPv4 address in CIDR notation, which includes the subnet.
+	CIDR string
+
+	// Gateway IPv4 address.
+	Gateway string
+
+	// IPv4 address of the primary DNS server.
+	DNS0 string
+
+	// IPv4 address of the secondary DNS server.
+	DNS1 string
+
+	// Hostname of the IPv4 address.
+	Hostname string
+
+	// Domain/Search suffix for IPv4 address.
+	Domain string
+}
+
 // NetworkSpec contains the desired behavior of the network.
 type NetworkSpec struct {
 	// Driver is the name of the implementing strategy.

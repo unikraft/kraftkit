@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
+	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
 	"kraftkit.sh/internal/logtail"
@@ -295,16 +296,21 @@ watch:
 				}); err != nil {
 					return machine, err
 				}
+				networkAttr := networkapi.NetworkAttr{
+					CIDR:     iface.Spec.CIDR,
+					Gateway:  iface.Spec.Gateway,
+					DNS0:     iface.Spec.DNS0,
+					DNS1:     iface.Spec.DNS1,
+					Hostname: iface.Spec.Hostname,
+					Domain:   iface.Spec.Domain,
+				}
+				netdevIp, err := networkapi.ParseNetwork(&networkAttr)
+				if err != nil {
+					return machine, err
+				}
 
 				kernelArgs = append(kernelArgs,
-					uknetdev.NewParamIp().WithValue(uknetdev.NetdevIp{
-						CIDR:     iface.Spec.CIDR,
-						Gateway:  iface.Spec.Gateway,
-						DNS0:     iface.Spec.DNS0,
-						DNS1:     iface.Spec.DNS1,
-						Hostname: iface.Spec.Hostname,
-						Domain:   iface.Spec.Domain,
-					}),
+					uknetdev.NewParamIp().WithValue(netdevIp),
 				)
 
 				// Increment the host network ID for additional interfaces.
