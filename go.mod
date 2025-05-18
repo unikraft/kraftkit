@@ -81,7 +81,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.0
-	k8s.io/apimachinery v0.33.0
+	k8s.io/apimachinery v0.33.1
 	k8s.io/apiserver v0.32.3
 	oras.land/oras-go/v2 v2.6.0
 	sdk.kraft.cloud v0.5.10-0.20250214121939-e86baba28c84
