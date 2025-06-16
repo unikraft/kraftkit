@@ -25,6 +25,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/cpio"
 	"kraftkit.sh/log"
+	"kraftkit.sh/unikraft"
 
 	sfile "github.com/anchore/stereoscope/pkg/file"
 	soci "github.com/anchore/stereoscope/pkg/image/oci"
@@ -215,7 +216,20 @@ func (initrd *dockerfile) Name() string {
 	return "Dockerfile"
 }
 
-func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf *testcontainersPrintf) (testcontainers.Container, error) {
+func startBuildkit(ctx context.Context, buildkitVersion, workdir string, port int, printf *testcontainersPrintf) (testcontainers.Container, error) {
+	cachePath := filepath.Join(workdir, unikraft.VendorDir, "buildkit-cache")
+	if !filepath.IsAbs(cachePath) {
+		var err error
+		cachePath, err = filepath.Abs(cachePath)
+		if err != nil {
+			return nil, fmt.Errorf("could not get absolute path for buildkit cache: %w", err)
+		}
+	}
+
+	if err := os.MkdirAll(cachePath, 0o755); err != nil {
+		return nil, fmt.Errorf("could not create buildkit cache directory: %w", err)
+	}
+
 	// Trap any panics that occur when instantiating BuildKit through the
 	// testcontainers library. This is known happen if Docker is not installed.
 	// For more information see:
@@ -242,8 +256,8 @@ func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf
 			Cmd:             []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
 			Mounts: testcontainers.ContainerMounts{
 				{
-					Source: testcontainers.GenericVolumeMountSource{
-						Name: "kraftkit-buildkit-cache",
+					Source: testcontainers.GenericBindMountSource{
+						HostPath: cachePath,
 					},
 					Target: "/var/lib/buildkit",
 				},
@@ -342,7 +356,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		port := l.Addr().(*net.TCPAddr).Port
 		_ = l.Close()
 
-		buildkitd, err := startBuildkit(ctx, buildkitVersion, port, printf)
+		buildkitd, err := startBuildkit(ctx, buildkitVersion, initrd.opts.workdir, port, printf)
 		if err != nil {
 			return "", fmt.Errorf("creating buildkit container: %w", err)
 		}
