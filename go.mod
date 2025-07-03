@@ -84,7 +84,7 @@ require (
 	k8s.io/apimachinery v0.33.2
 	k8s.io/apiserver v0.32.3
 	oras.land/oras-go/v2 v2.6.0
-	sdk.kraft.cloud v0.5.10-0.20250527160422-e9848f665bb3
+	sdk.kraft.cloud v0.5.10-0.20250702145917-f1b1170f3c01
 	sigs.k8s.io/kustomize/kyaml v0.20.0
 	xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240729172045-026c9fa29716
 )
@@ -172,7 +172,7 @@ require (
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/goharbor/go-client v0.210.0 // indirect
