@@ -113,6 +113,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -128,7 +130,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
@@ -145,6 +147,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd.Env = os.Environ()
 			instanceRemoveCmd.Args = append(instanceRemoveCmd.Args, "cloud", "instance", "remove", instanceNameFull)
@@ -155,8 +159,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -171,6 +175,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort)
 
@@ -203,6 +209,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -218,7 +226,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
@@ -235,6 +243,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd.Env = os.Environ()
 			instanceRemoveCmd.Args = append(instanceRemoveCmd.Args, "cloud", "instance", "remove", instanceNameFull)
@@ -245,8 +255,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -261,6 +271,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort)
 
@@ -293,6 +305,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -308,7 +322,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
@@ -325,6 +339,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd.Env = os.Environ()
 			instanceRemoveCmd.Args = append(instanceRemoveCmd.Args, "cloud", "instance", "remove", instanceNameFull)
@@ -335,8 +351,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -351,6 +367,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort)
 
@@ -384,6 +402,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -399,7 +419,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 
 			instancePrivateIP = parsePrivateIP(stdout)
@@ -419,6 +439,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd.Env = os.Environ()
 			instanceRemoveCmd.Args = append(instanceRemoveCmd.Args, "cloud", "instance", "remove", instanceNameFull)
@@ -429,8 +451,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -445,6 +467,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort)
 
@@ -486,6 +510,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort2 = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd1.Env = os.Environ()
 			instanceCreateCmd1.Args = append(instanceCreateCmd1.Args, "cloud", "instance", "create",
@@ -501,9 +527,11 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd2.Env = os.Environ()
 			instanceCreateCmd2.Args = append(instanceCreateCmd2.Args, "cloud", "instance", "create",
@@ -519,7 +547,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
@@ -536,6 +564,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd1.Env = os.Environ()
 			instanceRemoveCmd1.Args = append(instanceRemoveCmd1.Args, "cloud", "instance", "remove", instanceNameFull1)
@@ -546,9 +576,11 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceRemoveCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd2.Env = os.Environ()
 			instanceRemoveCmd2.Args = append(instanceRemoveCmd2.Args, "cloud", "instance", "remove", instanceNameFull2)
@@ -559,8 +591,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -577,6 +609,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort1)
 
@@ -591,6 +625,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
 
 			// Run the "curl" command to test the url
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd = fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort2)
 
@@ -623,6 +659,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			localPort = fmt.Sprintf("%d", localPortStart+int(randPort.Int64()))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -638,7 +676,7 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`no ports or service specified, disabling scale to zero`))
 			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
@@ -655,6 +693,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRemoveCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRemoveCmd.Env = os.Environ()
 			instanceRemoveCmd.Args = append(instanceRemoveCmd.Args, "cloud", "instance", "remove", instanceNameFull)
@@ -665,8 +705,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should allow connection to the instance", func() {
@@ -684,6 +724,8 @@ var _ = Describe("kraft cloud tunnel", func() {
 			time.Sleep(time.Second)
 
 			// Run the "curl" command to test the url
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, "http://localhost:"+localPort)
 

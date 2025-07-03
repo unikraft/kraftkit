@@ -77,7 +77,7 @@ var _ = Describe("kraft cloud vm get", func() {
 
 		createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 		createCmd.Env = os.Environ()
-		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 		id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 		if err != nil {
@@ -221,8 +221,8 @@ var _ = Describe("kraft cloud vm get", func() {
 			err := cmd.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`invalid output format: ` + format))
+			Expect(stderr.String()).To(MatchRegexp(`invalid output format: ` + format))
+			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 	})
 
@@ -232,7 +232,7 @@ var _ = Describe("kraft cloud vm get", func() {
 		BeforeEach(func() {
 			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {

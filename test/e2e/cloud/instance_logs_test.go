@@ -77,7 +77,7 @@ var _ = Describe("kraft cloud vm logs", func() {
 
 		createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 		createCmd.Env = os.Environ()
-		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 		id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 		if err != nil {
@@ -193,7 +193,7 @@ var _ = Describe("kraft cloud vm logs", func() {
 		BeforeEach(func() {
 			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {
@@ -231,7 +231,7 @@ var _ = Describe("kraft cloud vm logs", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing`))
 		})
 
 		It("should show all log lines and a prefix for each instance", func() {
@@ -255,7 +255,7 @@ var _ = Describe("kraft cloud vm logs", func() {
 		BeforeEach(func() {
 			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {
@@ -293,7 +293,7 @@ var _ = Describe("kraft cloud vm logs", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing`))
 		})
 
 		It("should show all log lines and and no prefix", func() {

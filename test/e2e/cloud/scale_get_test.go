@@ -97,114 +97,148 @@ var _ = Describe("kraft cloud scale get", func() {
 			serviceNameFull = fmt.Sprintf("%s-%d", serviceName, id)
 			policyNameFull1 = fmt.Sprintf("%s-%d-1", policyName, id)
 
-			serviceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			serviceCreateStdout := fcmd.NewIOStream()
+			serviceCreateStderr := fcmd.NewIOStream()
+			serviceCreateCmd := fcmd.NewKraft(serviceCreateStdout, serviceCreateStderr, cfg.Path())
 			serviceCreateCmd.Args = append(serviceCreateCmd.Args, "cloud", "service", "create",
 				"--log-level", "info", "--log-type", "json", "-o", "json",
 				"--name", serviceNameFull, "443:8080/tls+http")
 			err = serviceCreateCmd.Run()
 			if err != nil {
-				fmt.Print(serviceCreateCmd.DumpError(stdout, stderr, err))
+				fmt.Print(serviceCreateCmd.DumpError(serviceCreateStdout, serviceCreateStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(serviceCreateStderr.String()).To(BeEmpty())
+			Expect(serviceCreateStdout.String()).To(MatchRegexp(serviceNameFull))
 
 			// Extract the service UUID
-			serviceUUID = serviceUUIDParser(stdout)
+			serviceUUID = serviceUUIDParser(serviceCreateStdout)
 			Expect(serviceUUID).ToNot(BeEmpty())
 
-			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			instanceCreateStdout := fcmd.NewIOStream()
+			instanceCreateStderr := fcmd.NewIOStream()
+			instanceCreateCmd := fcmd.NewKraft(instanceCreateStdout, instanceCreateStderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
 				"-o", "json", "--log-level", "info", "--log-type", "json",
 				"--name", instanceNameFull,
 				"--memory", instanceMemory,
-				"--start",
 				"--service", serviceNameFull,
 				imageName)
 			err = instanceCreateCmd.Run()
+			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(instanceCreateCmd.DumpError(stdout, stderr, err))
+				fmt.Print(instanceCreateCmd.DumpError(instanceCreateStdout, instanceCreateStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(instanceCreateStderr.String()).To(BeEmpty())
+			Expect(instanceCreateStdout.String()).ToNot(BeEmpty())
 
-			scaleInitCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			instanceTemplateCreateStdout := fcmd.NewIOStream()
+			instanceTemplateCreateStderr := fcmd.NewIOStream()
+			instanceTemplateCreateCmd := fcmd.NewKraft(instanceTemplateCreateStdout, instanceTemplateCreateStderr, cfg.Path())
+			instanceTemplateCreateCmd.Env = os.Environ()
+			instanceTemplateCreateCmd.Args = append(instanceTemplateCreateCmd.Args, "cloud", "instance", "template", "create",
+				"--log-level", "info", "--log-type", "json",
+				instanceNameFull)
+			err = instanceTemplateCreateCmd.Run()
+			time.Sleep(2 * time.Second)
+			if err != nil {
+				fmt.Print(instanceTemplateCreateCmd.DumpError(instanceTemplateCreateStdout, instanceTemplateCreateStderr, err))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(instanceTemplateCreateStderr.String()).To(BeEmpty())
+			Expect(instanceTemplateCreateStdout.String()).ToNot(BeEmpty())
+
+			scaleInitStdout := fcmd.NewIOStream()
+			scaleInitStderr := fcmd.NewIOStream()
+			scaleInitCmd := fcmd.NewKraft(scaleInitStdout, scaleInitStderr, cfg.Path())
 			scaleInitCmd.Args = append(scaleInitCmd.Args, "cloud", "scale", "init",
-				"--master", instanceNameFull,
+				"--template", instanceNameFull,
 				"--min-size", "2",
 				"--max-size", "10",
 				"--cooldown-time", "13s",
 				"--warmup-time", "26s",
 				serviceNameFull)
 			err = scaleInitCmd.Run()
+			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(scaleInitCmd.DumpError(stdout, stderr, err))
+				fmt.Print(scaleInitCmd.DumpError(scaleInitStdout, scaleInitStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(scaleInitStderr.String()).To(BeEmpty())
+			Expect(scaleInitStdout.String()).To(BeEmpty())
 
-			scaleAddCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			scaleAddStdout := fcmd.NewIOStream()
+			scaleAddStderr := fcmd.NewIOStream()
+			scaleAddCmd := fcmd.NewKraft(scaleAddStdout, scaleAddStderr, cfg.Path())
 			scaleAddCmd.Env = os.Environ()
 			scaleAddCmd.Args = append(scaleAddCmd.Args, "cloud", "scale", "add", serviceNameFull, "--name", policyNameFull1, "--step", "0:10/1", "--step", "10:20/2")
 			err = scaleAddCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cmd.DumpError(stdout, stderr, err))
+				fmt.Print(cmd.DumpError(scaleAddStdout, scaleAddStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(scaleAddStderr.String()).To(BeEmpty())
+			Expect(scaleAddStdout.String()).To(BeEmpty())
 		})
 
 		AfterEach(func() {
-			scaleRemoveCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			scaleRemoveStdout := fcmd.NewIOStream()
+			scaleRemoveStderr := fcmd.NewIOStream()
+			scaleRemoveCmd1 := fcmd.NewKraft(scaleRemoveStdout, scaleRemoveStderr, cfg.Path())
 			scaleRemoveCmd1.Env = os.Environ()
 			scaleRemoveCmd1.Args = append(scaleRemoveCmd1.Args, "cloud", "scale", "remove", serviceUUID, policyNameFull1)
 			err := scaleRemoveCmd1.Run()
 			if err != nil {
-				fmt.Print(scaleRemoveCmd1.DumpError(stdout, stderr, err))
+				fmt.Print(scaleRemoveCmd1.DumpError(scaleRemoveStdout, scaleRemoveStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			scaleResetCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			scaleResetStdout := fcmd.NewIOStream()
+			scaleResetStderr := fcmd.NewIOStream()
+			scaleResetCmd := fcmd.NewKraft(scaleResetStdout, scaleResetStderr, cfg.Path())
 			scaleResetCmd.Env = os.Environ()
 			scaleResetCmd.Args = append(scaleResetCmd.Args, "cloud", "scale", "reset", serviceNameFull)
 			err = scaleResetCmd.Run()
 			if err != nil {
-				fmt.Print(scaleResetCmd.DumpError(stdout, stderr, err))
+				fmt.Print(scaleResetCmd.DumpError(scaleResetStdout, scaleResetStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
-			instanceDeleteCmd.Env = os.Environ()
-			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
-			err = instanceDeleteCmd.Run()
+			instanceTemplateDeleteStdout := fcmd.NewIOStream()
+			instanceTemplateDeleteStderr := fcmd.NewIOStream()
+			instanceTemplateDeleteCmd := fcmd.NewKraft(instanceTemplateDeleteStdout, instanceTemplateDeleteStderr, cfg.Path())
+			instanceTemplateDeleteCmd.Env = os.Environ()
+			instanceTemplateDeleteCmd.Args = append(instanceTemplateDeleteCmd.Args, "cloud", "instance", "template", "delete", instanceNameFull)
+			err = instanceTemplateDeleteCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(instanceDeleteCmd.DumpError(stdout, stderr, err))
+				fmt.Print(instanceTemplateDeleteCmd.DumpError(instanceTemplateDeleteStdout, instanceTemplateDeleteStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			serviceDeleteStdout := fcmd.NewIOStream()
+			serviceDeleteStderr := fcmd.NewIOStream()
+			serviceDeleteCmd := fcmd.NewKraft(serviceDeleteStdout, serviceDeleteStderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
 			err = serviceDeleteCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(serviceDeleteCmd.DumpError(stdout, stderr, err))
+				fmt.Print(serviceDeleteCmd.DumpError(serviceDeleteStdout, serviceDeleteStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should print the configuration in list format", func() {
-			cmd.Args = append(cmd.Args, serviceNameFull, "-o", "list")
+			cmd.Args = append(cmd.Args, serviceNameFull, "-p", policyNameFull1, "-o", "json")
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -213,13 +247,15 @@ var _ = Describe("kraft cloud scale get", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`name: ` + serviceNameFull))
-			Expect(stdout.String()).To(MatchRegexp(`enabled: true`))
-			Expect(stdout.String()).To(MatchRegexp(`min size: 2`))
-			Expect(stdout.String()).To(MatchRegexp(`max size: 10`))
-			Expect(stdout.String()).To(MatchRegexp(`26000`))
-			Expect(stdout.String()).To(MatchRegexp(`26000`))
-			Expect(stdout.String()).To(MatchRegexp(policyNameFull1))
+			Expect(stdout.String()).To(MatchRegexp(`"name":"` + policyNameFull1))
+			Expect(stdout.String()).To(MatchRegexp(`"metric":"cpu"`))
+			Expect(stdout.String()).To(MatchRegexp(`"adjustment_type":"change"`))
+			Expect(stdout.String()).To(MatchRegexp(`"adjustment":1`))
+			Expect(stdout.String()).To(MatchRegexp(`"adjustment":2`))
+			Expect(stdout.String()).To(MatchRegexp(`"lower_bound":0`))
+			Expect(stdout.String()).To(MatchRegexp(`"lower_bound":10`))
+			Expect(stdout.String()).To(MatchRegexp(`"upper_bound":10`))
+			Expect(stdout.String()).To(MatchRegexp(`"upper_bound":20`))
 		})
 	})
 

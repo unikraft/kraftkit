@@ -116,9 +116,11 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "service", "get", "-o", "json", serviceNameFull)
@@ -126,8 +128,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			err = getCmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -143,6 +145,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			serviceNameFull1 = fmt.Sprintf("%s-%d-1", serviceName, id)
 			serviceNameFull2 = fmt.Sprintf("%s-%d-2", serviceName, id)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			serviceCreateCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd1.Env = os.Environ()
 			serviceCreateCmd1.Args = append(serviceCreateCmd1.Args, "cloud", "service", "create",
@@ -159,6 +163,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceCreateCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd2.Env = os.Environ()
 			serviceCreateCmd2.Args = append(serviceCreateCmd2.Args, "cloud", "service", "create",
@@ -184,9 +190,11 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "service", "get", "-o", "json", serviceNameFull1, serviceNameFull2)
@@ -194,8 +202,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			err = getCmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -211,6 +219,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
 			serviceNameFull = fmt.Sprintf("%s-%d", serviceName, id)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			serviceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd.Env = os.Environ()
 			serviceCreateCmd.Args = append(serviceCreateCmd.Args, "cloud", "service", "create",
@@ -227,6 +237,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -247,6 +259,8 @@ var _ = Describe("kraft cloud service remove", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -257,6 +271,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -273,9 +289,11 @@ var _ = Describe("kraft cloud service remove", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "service", "get", "-o", "json", serviceNameFull)
@@ -305,6 +323,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			serviceNameFull1 = fmt.Sprintf("%s-%d-1", serviceName, id)
 			serviceNameFull2 = fmt.Sprintf("%s-%d-2", serviceName, id)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			serviceCreateCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd1.Env = os.Environ()
 			serviceCreateCmd1.Args = append(serviceCreateCmd1.Args, "cloud", "service", "create",
@@ -321,6 +341,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceCreateCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd2.Env = os.Environ()
 			serviceCreateCmd2.Args = append(serviceCreateCmd2.Args, "cloud", "service", "create",
@@ -337,6 +359,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -357,6 +381,8 @@ var _ = Describe("kraft cloud service remove", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -367,6 +393,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull1)
@@ -386,9 +414,12 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`ignoring 1 service`))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			lsCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			lsCmd.Env = os.Environ()
 			lsCmd.Args = append(lsCmd.Args, "cloud", "service", "list", "-o", "json")
@@ -399,9 +430,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(`"name":"` + serviceNameFull1 + `"`))
-			Expect(stdout.String()).To(MatchRegexp(`ignoring 1 service`))
 		})
 	})
 
@@ -417,6 +447,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
 			serviceNameFull = fmt.Sprintf("%s-%d", serviceName, id)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			serviceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceCreateCmd.Env = os.Environ()
 			serviceCreateCmd.Args = append(serviceCreateCmd.Args, "cloud", "service", "create",
@@ -433,6 +465,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -451,6 +485,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -469,9 +505,11 @@ var _ = Describe("kraft cloud service remove", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "service", "get", "-o", "json", serviceNameFull)
@@ -479,8 +517,8 @@ var _ = Describe("kraft cloud service remove", func() {
 			err = getCmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 

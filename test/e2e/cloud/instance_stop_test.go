@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:stylecheck
 	. "github.com/onsi/gomega"    //nolint:stylecheck
@@ -75,7 +76,9 @@ var _ = Describe("kraft cloud vm stop", func() {
 
 		cfg = fcfg.NewTempConfig()
 
-		createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+		createStdout := fcmd.NewIOStream()
+		createStderr := fcmd.NewIOStream()
+		createCmd := fcmd.NewKraft(createStdout, createStderr, cfg.Path())
 		createCmd.Env = os.Environ()
 		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
 
@@ -88,18 +91,19 @@ var _ = Describe("kraft cloud vm stop", func() {
 		createCmd.Args = append(createCmd.Args,
 			"--memory", instanceMemory,
 			"--name", instanceNameFull,
+			"-p", "443:8080",
 			"--start",
 			imageName,
 		)
 
 		err = createCmd.Run()
 		if err != nil {
-			fmt.Print(createCmd.DumpError(stdout, stderr, err))
+			fmt.Print(createCmd.DumpError(createStdout, createStderr, err))
 		}
 
 		Expect(err).ToNot(HaveOccurred())
-		Expect(stderr.String()).To(BeEmpty())
-		Expect(stdout.String()).To(MatchRegexp(`running`))
+		Expect(createStderr.String()).To(BeEmpty())
+		Expect(createStdout.String()).To(MatchRegexp(`running`))
 
 		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 		cmd.Env = os.Environ()
@@ -107,13 +111,15 @@ var _ = Describe("kraft cloud vm stop", func() {
 	})
 
 	AfterEach(func() {
-		rmCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+		rmStdout := fcmd.NewIOStream()
+		rmStderr := fcmd.NewIOStream()
+		rmCmd := fcmd.NewKraft(rmStdout, rmStderr, cfg.Path())
 		rmCmd.Env = os.Environ()
 		rmCmd.Args = append(rmCmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json", instanceNameFull)
 
 		err := rmCmd.Run()
 		if err != nil {
-			fmt.Print(rmCmd.DumpError(stdout, stderr, err))
+			fmt.Print(rmCmd.DumpError(rmStdout, rmStderr, err))
 		}
 
 		Expect(err).ToNot(HaveOccurred())
@@ -131,22 +137,24 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 
@@ -162,22 +170,24 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 
@@ -193,22 +203,24 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 
@@ -224,22 +236,24 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 
@@ -255,22 +269,24 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 
@@ -278,7 +294,9 @@ var _ = Describe("kraft cloud vm stop", func() {
 		var instanceNameFull2 string
 
 		BeforeEach(func() {
-			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			createStdout := fcmd.NewIOStream()
+			createStderr := fcmd.NewIOStream()
+			createCmd := fcmd.NewKraft(createStdout, createStderr, cfg.Path())
 			createCmd.Env = os.Environ()
 			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
 
@@ -291,34 +309,38 @@ var _ = Describe("kraft cloud vm stop", func() {
 			createCmd.Args = append(createCmd.Args,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull2,
+				"-p", "443:8080",
 				"--start",
 				imageName,
 			)
 
+			time.Sleep(2 * time.Second)
 			err = createCmd.Run()
 			if err != nil {
-				fmt.Print(createCmd.DumpError(stdout, stderr, err))
+				fmt.Print(createCmd.DumpError(createStdout, createStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`running`))
+			Expect(createStderr.String()).To(BeEmpty())
+			Expect(createStdout.String()).To(MatchRegexp(`running`))
 
 			cmd.Args = append(cmd.Args, instanceNameFull, instanceNameFull2)
 		})
 
 		AfterEach(func() {
-			rmCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			rmStdout := fcmd.NewIOStream()
+			rmStderr := fcmd.NewIOStream()
+			rmCmd := fcmd.NewKraft(rmStdout, rmStderr, cfg.Path())
 			rmCmd.Env = os.Environ()
 			rmCmd.Args = append(rmCmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json", instanceNameFull2)
 
 			err := rmCmd.Run()
 			if err != nil {
-				fmt.Print(rmCmd.DumpError(stdout, stderr, err))
+				fmt.Print(rmCmd.DumpError(rmStdout, rmStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(rmStderr.String()).To(MatchRegexp(`removing 1 instance`))
 		})
 
 		It("should stop the instances", func() {
@@ -328,36 +350,40 @@ var _ = Describe("kraft cloud vm stop", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopping 2 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`stopping 2 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is stopped
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`stopped`))
 
 			// Check if the instance is stopped
-			getCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout2 := fcmd.NewIOStream()
+			getStderr2 := fcmd.NewIOStream()
+			getCmd2 := fcmd.NewKraft(getStdout2, getStderr2, cfg.Path())
 			getCmd2.Env = os.Environ()
 			getCmd2.Args = append(getCmd2.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull2)
 
 			err = getCmd2.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout2, getStderr2, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(getStderr2.String()).To(BeEmpty())
+			Expect(getStdout2.String()).To(MatchRegexp(`stopped`))
 		})
 	})
 

@@ -77,7 +77,7 @@ var _ = Describe("kraft cloud vm start", func() {
 
 		createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 		createCmd.Env = os.Environ()
-		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 		id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 		if err != nil {
@@ -99,6 +99,9 @@ var _ = Describe("kraft cloud vm start", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(stderr.String()).To(BeEmpty())
 		Expect(stdout.String()).To(MatchRegexp(`stopped`))
+
+		stdout = fcmd.NewIOStream()
+		stderr = fcmd.NewIOStream()
 
 		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 		cmd.Env = os.Environ()
@@ -134,18 +137,21 @@ var _ = Describe("kraft cloud vm start", func() {
 			Expect(stdout.String()).To(MatchRegexp(`starting 1 instance`))
 
 			// Check if the instance is running
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`running`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`running`))
 		})
 	})
 
@@ -161,22 +167,25 @@ var _ = Describe("kraft cloud vm start", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`starting 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`starting 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance is running
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`running`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`running`))
 		})
 	})
 
@@ -215,9 +224,12 @@ var _ = Describe("kraft cloud vm start", func() {
 		var instanceNameFull2 string
 
 		BeforeEach(func() {
-			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			createStdout := fcmd.NewIOStream()
+			createStderr := fcmd.NewIOStream()
+
+			createCmd := fcmd.NewKraft(createStdout, createStderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {
@@ -233,28 +245,31 @@ var _ = Describe("kraft cloud vm start", func() {
 
 			err = createCmd.Run()
 			if err != nil {
-				fmt.Print(createCmd.DumpError(stdout, stderr, err))
+				fmt.Print(createCmd.DumpError(createStdout, createStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(createStderr.String()).To(BeEmpty())
+			Expect(createStdout.String()).To(MatchRegexp(`stopped`))
 
 			cmd.Args = append(cmd.Args, instanceNameFull, instanceNameFull2)
 		})
 
 		AfterEach(func() {
-			rmCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			rmStderr := fcmd.NewIOStream()
+			rmStdout := fcmd.NewIOStream()
+
+			rmCmd := fcmd.NewKraft(rmStderr, rmStdout, cfg.Path())
 			rmCmd.Env = os.Environ()
 			rmCmd.Args = append(rmCmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json", instanceNameFull2)
 
 			err := rmCmd.Run()
 			if err != nil {
-				fmt.Print(rmCmd.DumpError(stdout, stderr, err))
+				fmt.Print(rmCmd.DumpError(rmStderr, rmStdout, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(rmStderr.String()).To(BeEmpty())
 		})
 
 		It("should start the instances", func() {
@@ -268,32 +283,38 @@ var _ = Describe("kraft cloud vm start", func() {
 			Expect(stdout.String()).To(MatchRegexp(`starting 2 instance`))
 
 			// Check if the instance is running
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStderr := fcmd.NewIOStream()
+			getStdout := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`running`))
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).To(MatchRegexp(`running`))
 
 			// Check if the instance is running
-			getCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStderr2 := fcmd.NewIOStream()
+			getStdout2 := fcmd.NewIOStream()
+
+			getCmd2 := fcmd.NewKraft(getStdout2, getStderr2, cfg.Path())
 			getCmd2.Env = os.Environ()
 			getCmd2.Args = append(getCmd2.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull2)
 
 			err = getCmd2.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout2, getStderr2, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`running`))
+			Expect(getStderr2.String()).To(BeEmpty())
+			Expect(getStdout2.String()).To(MatchRegexp(`running`))
 		})
 	})
 

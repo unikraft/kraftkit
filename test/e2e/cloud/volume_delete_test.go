@@ -81,6 +81,8 @@ var _ = Describe("kraft cloud volume create", func() {
 		var volumeUUID string
 
 		BeforeEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd.Env = os.Environ()
 			createCmd.Args = append(createCmd.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8")
@@ -105,8 +107,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -120,6 +122,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd.Env = os.Environ()
 			createCmd.Args = append(createCmd.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull)
@@ -141,8 +145,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -163,6 +167,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			volumeNameFull2 = fmt.Sprintf("%s-%d", volumeName, id2)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull1)
@@ -175,6 +181,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd2.Env = os.Environ()
 			createCmd2.Args = append(createCmd2.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull2)
@@ -196,8 +204,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 2 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -218,6 +226,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			volumeNameFull2 = fmt.Sprintf("%s-%d", volumeName, id2)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull1)
@@ -230,6 +240,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd2.Env = os.Environ()
 			createCmd2.Args = append(createCmd2.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull2)
@@ -251,8 +263,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 2 volume`))
+			Expect(stderr.String()).To(MatchRegexp(`removing 2 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 

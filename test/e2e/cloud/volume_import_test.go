@@ -87,6 +87,7 @@ var _ = Describe("kraft cloud volume import", func() {
 	When("invoked with a volume name and a Dockerfile source", func() {
 		var volumeNameFull string
 		var instanceNameFull string
+		var url string
 
 		BeforeEach(func() {
 			id1, err := rand.Int(rand.Reader, big.NewInt(100000000000))
@@ -96,6 +97,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create",
@@ -110,6 +113,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createInstanceCmd1.Env = os.Environ()
 			createInstanceCmd1.Args = append(createInstanceCmd1.Args, "cloud", "instance", "create",
@@ -125,9 +130,14 @@ var _ = Describe("kraft cloud volume import", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
+
+			url = urlParser(stdout)
+			Expect(url).ToNot(BeEmpty())
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			stopCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			stopCmd1.Env = os.Environ()
 			stopCmd1.Args = append(stopCmd1.Args, "cloud", "instance", "stop",
@@ -139,9 +149,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			detachCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			detachCmd1.Env = os.Environ()
 			detachCmd1.Args = append(detachCmd1.Args, "cloud", "volume", "detach",
@@ -156,6 +168,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			getCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd1.Env = os.Environ()
 			getCmd1.Args = append(getCmd1.Args, "cloud", "volume", "get",
@@ -170,6 +184,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(MatchRegexp(`"attached_to":"` + instanceNameFull + "\""))
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceRmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRmCmd1.Env = os.Environ()
 			instanceRmCmd1.Args = append(instanceRmCmd1.Args, "cloud", "instance", "delete",
@@ -181,9 +197,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete",
@@ -195,8 +213,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should import files to the volume from the Dockerfile", func() {
@@ -208,9 +226,10 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			attachInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			attachInstanceCmd1.Env = os.Environ()
 			attachInstanceCmd1.Args = append(attachInstanceCmd1.Args, "cloud", "volume", "attach",
@@ -225,6 +244,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			startCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			startCmd1.Env = os.Environ()
 			startCmd1.Args = append(startCmd1.Args, "cloud", "instance", "start",
@@ -236,12 +257,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
-			url := urlParser(stdout)
-			Expect(url).ToNot(BeEmpty())
-
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -261,6 +281,7 @@ var _ = Describe("kraft cloud volume import", func() {
 	When("invoked with a volume name and a directory source", func() {
 		var volumeNameFull string
 		var instanceNameFull string
+		var url string
 
 		BeforeEach(func() {
 			id1, err := rand.Int(rand.Reader, big.NewInt(100000000000))
@@ -270,6 +291,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create",
@@ -284,6 +307,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createInstanceCmd1.Env = os.Environ()
 			createInstanceCmd1.Args = append(createInstanceCmd1.Args, "cloud", "instance", "create",
@@ -299,9 +324,14 @@ var _ = Describe("kraft cloud volume import", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
+
+			url = urlParser(stdout)
+			Expect(url).ToNot(BeEmpty())
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			stopCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			stopCmd1.Env = os.Environ()
 			stopCmd1.Args = append(stopCmd1.Args, "cloud", "instance", "stop",
@@ -313,9 +343,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			detachCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			detachCmd1.Env = os.Environ()
 			detachCmd1.Args = append(detachCmd1.Args, "cloud", "volume", "detach",
@@ -330,11 +362,13 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			getCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd1.Env = os.Environ()
 			getCmd1.Args = append(getCmd1.Args, "cloud", "volume", "get",
 				"--log-level", "info", "--log-type", "json",
-				"-o", "raw", volumeNameFull)
+				"-o", "json", volumeNameFull)
 			err = getCmd1.Run()
 			if err != nil {
 				fmt.Print(getCmd1.DumpError(stdout, stderr, err))
@@ -344,6 +378,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(MatchRegexp(`"attached_to":"` + instanceNameFull + "\""))
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceRmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRmCmd1.Env = os.Environ()
 			instanceRmCmd1.Args = append(instanceRmCmd1.Args, "cloud", "instance", "delete",
@@ -355,9 +391,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete",
@@ -369,8 +407,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should import files to the volume from the cpio file", func() {
@@ -382,9 +420,10 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			attachInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			attachInstanceCmd1.Env = os.Environ()
 			attachInstanceCmd1.Args = append(attachInstanceCmd1.Args, "cloud", "volume", "attach",
@@ -399,6 +438,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			startCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			startCmd1.Env = os.Environ()
 			startCmd1.Args = append(startCmd1.Args, "cloud", "instance", "start",
@@ -410,12 +451,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
-			url := urlParser(stdout)
-			Expect(url).ToNot(BeEmpty())
-
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -443,6 +483,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create",
@@ -483,9 +525,8 @@ var _ = Describe("kraft cloud volume import", func() {
 		})
 
 		AfterEach(func() {
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete",
@@ -497,8 +538,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
 			file, err := os.OpenFile("fixtures/import/cpio-large/index.html", os.O_WRONLY, 0o644)
 			if err != nil {
@@ -530,8 +571,7 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 		})
 	})
 
@@ -545,6 +585,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create",
@@ -557,13 +599,11 @@ var _ = Describe("kraft cloud volume import", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
 		})
 
 		AfterEach(func() {
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete",
@@ -575,8 +615,8 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should import files to the volume from the docker link", func() {
@@ -588,8 +628,7 @@ var _ = Describe("kraft cloud volume import", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 		})
 	})
 

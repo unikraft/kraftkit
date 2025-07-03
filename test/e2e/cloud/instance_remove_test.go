@@ -77,7 +77,7 @@ var _ = Describe("kraft cloud vm rm", func() {
 
 		createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 		createCmd.Env = os.Environ()
-		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+		createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 		id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 		if err != nil {
@@ -101,6 +101,9 @@ var _ = Describe("kraft cloud vm rm", func() {
 		Expect(stderr.String()).To(BeEmpty())
 		Expect(stdout.String()).To(MatchRegexp(`running`))
 
+		stdout = fcmd.NewIOStream()
+		stderr = fcmd.NewIOStream()
+
 		cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 		cmd.Env = os.Environ()
 		cmd.Args = append(cmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json")
@@ -118,19 +121,22 @@ var _ = Describe("kraft cloud vm rm", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance still exists
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(getStderr.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(getStdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -146,8 +152,8 @@ var _ = Describe("kraft cloud vm rm", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance still exists
 			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
@@ -157,8 +163,8 @@ var _ = Describe("kraft cloud vm rm", func() {
 			err = getCmd.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(stderr.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -166,9 +172,12 @@ var _ = Describe("kraft cloud vm rm", func() {
 		var instanceNameFull2 string
 
 		BeforeEach(func() {
-			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			createStdout := fcmd.NewIOStream()
+			createStderr := fcmd.NewIOStream()
+
+			createCmd := fcmd.NewKraft(createStdout, createStderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {
@@ -184,12 +193,12 @@ var _ = Describe("kraft cloud vm rm", func() {
 
 			err = createCmd.Run()
 			if err != nil {
-				fmt.Print(createCmd.DumpError(stdout, stderr, err))
+				fmt.Print(createCmd.DumpError(createStdout, createStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(createStderr.String()).To(BeEmpty())
+			Expect(createStdout.String()).To(MatchRegexp(`stopped`))
 
 			cmd.Args = append(cmd.Args, instanceNameFull, instanceNameFull2)
 		})
@@ -201,30 +210,36 @@ var _ = Describe("kraft cloud vm rm", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 2 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`removing 2 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance still exists
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(getStderr.String()).To(MatchRegexp("No instance with name '" + instanceNameFull + "'"))
+			Expect(getStdout.String()).To(BeEmpty())
 
 			// Check if the instance still exists
-			getCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout2 := fcmd.NewIOStream()
+			getStderr2 := fcmd.NewIOStream()
+
+			getCmd2 := fcmd.NewKraft(getStdout2, getStderr2, cfg.Path())
 			getCmd2.Env = os.Environ()
 			getCmd2.Args = append(getCmd2.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull2)
 
 			err = getCmd2.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("No instance with name '" + instanceNameFull2 + "'"))
+			Expect(getStderr2.String()).To(MatchRegexp("No instance with name '" + instanceNameFull2 + "'"))
+			Expect(getStdout2.String()).To(BeEmpty())
 		})
 	})
 
@@ -232,9 +247,12 @@ var _ = Describe("kraft cloud vm rm", func() {
 		var instanceNameFull2 string
 
 		BeforeEach(func() {
-			createCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			createStdout := fcmd.NewIOStream()
+			createStderr := fcmd.NewIOStream()
+
+			createCmd := fcmd.NewKraft(createStdout, createStderr, cfg.Path())
 			createCmd.Env = os.Environ()
-			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "-o", "json")
+			createCmd.Args = append(createCmd.Args, "cloud", "instance", "create", "-p", "11111:8080/tls", "--log-level", "info", "--log-type", "json", "-o", "json")
 
 			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
 			if err != nil {
@@ -250,29 +268,32 @@ var _ = Describe("kraft cloud vm rm", func() {
 
 			err = createCmd.Run()
 			if err != nil {
-				fmt.Print(createCmd.DumpError(stdout, stderr, err))
+				fmt.Print(createCmd.DumpError(createStdout, createStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`stopped`))
+			Expect(createStderr.String()).To(BeEmpty())
+			Expect(createStdout.String()).To(MatchRegexp(`stopped`))
 
 			cmd.Args = append(cmd.Args, "--stopped")
 		})
 
 		AfterEach(func() {
-			rmCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			rmStdout := fcmd.NewIOStream()
+			rmStderr := fcmd.NewIOStream()
+
+			rmCmd := fcmd.NewKraft(rmStdout, rmStderr, cfg.Path())
 			rmCmd.Env = os.Environ()
 			rmCmd.Args = append(rmCmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json", instanceNameFull)
 
 			err := rmCmd.Run()
 			if err != nil {
-				fmt.Print(rmCmd.DumpError(stdout, stderr, err))
+				fmt.Print(rmCmd.DumpError(rmStdout, rmStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(rmStderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(rmStdout.String()).To(BeEmpty())
 		})
 
 		It("should remove only the stopped instances", func() {
@@ -282,33 +303,38 @@ var _ = Describe("kraft cloud vm rm", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
 			// Check if the instance still exists
-			getCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout := fcmd.NewIOStream()
+			getStderr := fcmd.NewIOStream()
+
+			getCmd := fcmd.NewKraft(getStdout, getStderr, cfg.Path())
 			getCmd.Env = os.Environ()
 			getCmd.Args = append(getCmd.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull)
 
 			err = getCmd.Run()
 			if err != nil {
-				fmt.Print(getCmd.DumpError(stdout, stderr, err))
+				fmt.Print(getCmd.DumpError(getStdout, getStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(getStderr.String()).To(BeEmpty())
+			Expect(getStdout.String()).ToNot(BeEmpty())
 
 			// Check if the instance still exists
-			getCmd2 := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			getStdout2 := fcmd.NewIOStream()
+			getStderr2 := fcmd.NewIOStream()
+			getCmd2 := fcmd.NewKraft(getStdout2, getStderr2, cfg.Path())
 			getCmd2.Env = os.Environ()
 			getCmd2.Args = append(getCmd2.Args, "cloud", "vm", "get", "--log-level", "info", "--log-type", "json", "-o", "json", instanceNameFull2)
 
 			err = getCmd2.Run()
 
 			Expect(err).To(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("No instance with name '" + instanceNameFull2 + "'"))
+			Expect(getStderr2.String()).To(MatchRegexp("No instance with name '" + instanceNameFull2 + "'"))
+			Expect(getStdout2.String()).To(BeEmpty())
 		})
 	})
 
@@ -318,18 +344,20 @@ var _ = Describe("kraft cloud vm rm", func() {
 		})
 
 		AfterEach(func() {
-			rmCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			rmStdout := fcmd.NewIOStream()
+			rmStderr := fcmd.NewIOStream()
+			rmCmd := fcmd.NewKraft(rmStdout, rmStderr, cfg.Path())
 			rmCmd.Env = os.Environ()
 			rmCmd.Args = append(rmCmd.Args, "cloud", "vm", "rm", "--log-level", "info", "--log-type", "json", instanceNameFull)
 
 			err := rmCmd.Run()
 			if err != nil {
-				fmt.Print(rmCmd.DumpError(stdout, stderr, err))
+				fmt.Print(rmCmd.DumpError(rmStdout, rmStderr, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(rmStderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(rmStdout.String()).To(BeEmpty())
 		})
 
 		It("should print the command's help", func() {

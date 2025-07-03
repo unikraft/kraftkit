@@ -93,41 +93,63 @@ var _ = Describe("kraft cloud scale reset", func() {
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
 			serviceNameFull = fmt.Sprintf("%s-%d", serviceName, id)
 
-			serviceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			serviceCreateStdout := fcmd.NewIOStream()
+			serviceCreateStderr := fcmd.NewIOStream()
+			serviceCreateCmd := fcmd.NewKraft(serviceCreateStdout, serviceCreateStderr, cfg.Path())
 			serviceCreateCmd.Args = append(serviceCreateCmd.Args, "cloud", "service", "create",
 				"--log-level", "info", "--log-type", "json",
 				"--name", serviceNameFull, "443:8080/tls+http")
 			err = serviceCreateCmd.Run()
 			if err != nil {
-				fmt.Print(serviceCreateCmd.DumpError(stdout, stderr, err))
+				fmt.Print(serviceCreateCmd.DumpError(serviceCreateStdout, serviceCreateStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(serviceCreateStderr.String()).To(BeEmpty())
+			Expect(serviceCreateStdout.String()).To(MatchRegexp(serviceNameFull))
 
-			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			instanceCreateStdout := fcmd.NewIOStream()
+			instanceCreateStderr := fcmd.NewIOStream()
+			instanceCreateCmd := fcmd.NewKraft(instanceCreateStdout, instanceCreateStderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
 				"-o", "json", "--log-level", "info", "--log-type", "json",
 				"--name", instanceNameFull,
 				"--memory", instanceMemory,
-				"--start",
 				"--service", serviceNameFull,
 				imageName)
 			err = instanceCreateCmd.Run()
 			if err != nil {
-				fmt.Print(instanceCreateCmd.DumpError(stdout, stderr, err))
+				fmt.Print(instanceCreateCmd.DumpError(instanceCreateStdout, instanceCreateStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(instanceCreateStderr.String()).To(BeEmpty())
+			Expect(instanceCreateStdout.String()).ToNot(BeEmpty())
 
-			scaleInitCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			instanceTemplateCreateStdout := fcmd.NewIOStream()
+			instanceTemplateCreateStderr := fcmd.NewIOStream()
+			instanceTemplateCreateCmd := fcmd.NewKraft(instanceTemplateCreateStdout, instanceTemplateCreateStderr, cfg.Path())
+			instanceTemplateCreateCmd.Env = os.Environ()
+			instanceTemplateCreateCmd.Args = append(instanceTemplateCreateCmd.Args, "cloud", "instance", "template", "create",
+				"--log-level", "info", "--log-type", "json",
+				instanceNameFull)
+			err = instanceTemplateCreateCmd.Run()
+			time.Sleep(2 * time.Second)
+			if err != nil {
+				fmt.Print(instanceTemplateCreateCmd.DumpError(instanceTemplateCreateStdout, instanceTemplateCreateStderr, err))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(instanceTemplateCreateStderr.String()).To(BeEmpty())
+			Expect(instanceTemplateCreateStdout.String()).ToNot(BeEmpty())
+
+			scaleInitStdout := fcmd.NewIOStream()
+			scaleInitStderr := fcmd.NewIOStream()
+			scaleInitCmd := fcmd.NewKraft(scaleInitStdout, scaleInitStderr, cfg.Path())
 			scaleInitCmd.Env = os.Environ()
 			scaleInitCmd.Args = append(scaleInitCmd.Args, "cloud", "scale", "init",
-				"--master", instanceNameFull,
+				"--template", instanceNameFull,
 				"--min-size", "2",
 				"--max-size", "10",
 				"--cooldown-time", "13s",
@@ -136,34 +158,38 @@ var _ = Describe("kraft cloud scale reset", func() {
 			err = scaleInitCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(scaleInitCmd.DumpError(stdout, stderr, err))
+				fmt.Print(scaleInitCmd.DumpError(scaleInitStdout, scaleInitStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
-			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
-			instanceDeleteCmd.Env = os.Environ()
-			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
-			err := instanceDeleteCmd.Run()
+			instanceTemplateDeleteStdout := fcmd.NewIOStream()
+			instanceTemplateDeleteStderr := fcmd.NewIOStream()
+			instanceTemplateDeleteCmd := fcmd.NewKraft(instanceTemplateDeleteStdout, instanceTemplateDeleteStderr, cfg.Path())
+			instanceTemplateDeleteCmd.Env = os.Environ()
+			instanceTemplateDeleteCmd.Args = append(instanceTemplateDeleteCmd.Args, "cloud", "instance", "template", "delete", instanceNameFull)
+			err := instanceTemplateDeleteCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(instanceDeleteCmd.DumpError(stdout, stderr, err))
+				fmt.Print(instanceTemplateDeleteCmd.DumpError(instanceTemplateDeleteStdout, instanceTemplateDeleteStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			serviceDeleteStdout := fcmd.NewIOStream()
+			serviceDeleteStderr := fcmd.NewIOStream()
+			serviceDeleteCmd := fcmd.NewKraft(serviceDeleteStdout, serviceDeleteStderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
 			err = serviceDeleteCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(serviceDeleteCmd.DumpError(stdout, stderr, err))
+				fmt.Print(serviceDeleteCmd.DumpError(serviceDeleteStdout, serviceDeleteStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should initialize an autoscale configuration", func() {
+		It("should reset an autoscale configuration", func() {
 			cmd.Args = append(cmd.Args, serviceNameFull)
 			err := cmd.Run()
 			if err != nil {
@@ -172,21 +198,23 @@ var _ = Describe("kraft cloud scale reset", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
-			scaleGetCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			scaleGetStdout := fcmd.NewIOStream()
+			scaleGetStderr := fcmd.NewIOStream()
+			scaleGetCmd := fcmd.NewKraft(scaleGetStdout, scaleGetStderr, cfg.Path())
 			scaleGetCmd.Env = os.Environ()
 			scaleGetCmd.Args = append(scaleGetCmd.Args, "cloud", "scale", "get", serviceNameFull, "-o", "list")
 			err = scaleGetCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(scaleGetCmd.DumpError(stdout, stderr, err))
+				fmt.Print(scaleGetCmd.DumpError(scaleGetStdout, scaleGetStderr, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`name: ` + serviceNameFull))
-			Expect(stdout.String()).To(MatchRegexp(`enabled: false`))
+			Expect(scaleGetStderr.String()).To(BeEmpty())
+			Expect(scaleGetStdout.String()).To(MatchRegexp(`name: ` + serviceNameFull))
+			Expect(scaleGetStdout.String()).To(MatchRegexp(`enabled: false`))
 		})
 	})
 

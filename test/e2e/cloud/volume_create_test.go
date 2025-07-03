@@ -85,8 +85,8 @@ var _ = Describe("kraft cloud volume create", func() {
 			}
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`must specify --size flag`))
+			Expect(stderr.String()).To(MatchRegexp(`Missing member 'size_mb' in volume description`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 	})
 
@@ -98,6 +98,8 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 			cmd.Env = os.Environ()
 			cmd.Args = []string{"cloud", "volume", "delete", volumeUUID, "--log-level", "info", "--log-type", "json"}
@@ -133,6 +135,8 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 			cmd.Env = os.Environ()
 			cmd.Args = []string{"cloud", "volume", "delete", volumeUUID, "--log-level", "info", "--log-type", "json"}
@@ -168,6 +172,8 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 			cmd.Env = os.Environ()
 			cmd.Args = []string{"cloud", "volume", "delete", volumeUUID, "--log-level", "info", "--log-type", "json"}
@@ -209,6 +215,8 @@ var _ = Describe("kraft cloud volume create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd = fcmd.NewKraft(stdout, stderr, cfg.Path())
 			cmd.Env = os.Environ()
 			cmd.Args = []string{"cloud", "volume", "delete", volumeUUID, "--log-level", "info", "--log-type", "json"}

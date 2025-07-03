@@ -94,6 +94,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull)
@@ -106,6 +108,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createInstanceCmd1.Env = os.Environ()
 			createInstanceCmd1.Args = append(createInstanceCmd1.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "--port", instancePortMap, "--memory", "64", "--name", instanceNameFull, imageName)
@@ -119,6 +123,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			attachInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			attachInstanceCmd1.Env = os.Environ()
 			attachInstanceCmd1.Args = append(attachInstanceCmd1.Args, "cloud", "volume", "attach", "--log-level", "info", "--log-type", "json", "--at", "/mnt/test/volume")
@@ -135,6 +141,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRmCmd1.Env = os.Environ()
 			instanceRmCmd1.Args = append(instanceRmCmd1.Args, "cloud", "instance", "delete", "--log-level", "info", "--log-type", "json", instanceNameFull)
@@ -144,9 +152,11 @@ var _ = Describe("kraft cloud volume detach", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete", "--log-level", "info", "--log-type", "json", volumeNameFull)
@@ -156,8 +166,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should detach the volume from the instance", func() {
@@ -171,6 +181,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd1.Env = os.Environ()
 			getCmd1.Args = append(getCmd1.Args, "cloud", "volume", "get", "--log-level", "info", "--log-type", "json", "-o", "raw", volumeNameFull)
@@ -197,6 +209,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			volumeNameFull = fmt.Sprintf("%s-%d", volumeName, id1)
 			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id1)
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			createCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createCmd1.Env = os.Environ()
 			createCmd1.Args = append(createCmd1.Args, "cloud", "volume", "create", "--log-level", "info", "--log-type", "json", "--size", "8", "--name", volumeNameFull)
@@ -209,6 +223,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			createInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			createInstanceCmd1.Env = os.Environ()
 			createInstanceCmd1.Args = append(createInstanceCmd1.Args, "cloud", "instance", "create", "--log-level", "info", "--log-type", "json", "--port", instancePortMap, "--memory", "64", "--name", instanceNameFull, imageName)
@@ -222,6 +238,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			attachInstanceCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			attachInstanceCmd1.Env = os.Environ()
 			attachInstanceCmd1.Args = append(attachInstanceCmd1.Args, "cloud", "volume", "attach", "--log-level", "info", "--log-type", "json", "--at", "/mnt/test/volume")
@@ -238,6 +256,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceRmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceRmCmd1.Env = os.Environ()
 			instanceRmCmd1.Args = append(instanceRmCmd1.Args, "cloud", "instance", "delete", "--log-level", "info", "--log-type", "json", instanceNameFull)
@@ -247,9 +267,11 @@ var _ = Describe("kraft cloud volume detach", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance`))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			rmCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			rmCmd1.Env = os.Environ()
 			rmCmd1.Args = append(rmCmd1.Args, "cloud", "volume", "delete", "--log-level", "info", "--log-type", "json", volumeNameFull)
@@ -259,8 +281,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 volume`))
+			Expect(stdout.String()).To(BeEmpty())
 		})
 
 		It("should detach the volume from the instance", func() {
@@ -274,6 +296,8 @@ var _ = Describe("kraft cloud volume detach", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			getCmd1 := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			getCmd1.Env = os.Environ()
 			getCmd1.Args = append(getCmd1.Args, "cloud", "volume", "get", "--log-level", "info", "--log-type", "json", "-o", "raw", volumeNameFull)

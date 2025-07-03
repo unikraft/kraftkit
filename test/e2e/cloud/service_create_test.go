@@ -96,6 +96,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -106,6 +108,8 @@ var _ = Describe("kraft cloud service create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -118,6 +122,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		It("should attach the instance to the service and work", func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd.Args = append(cmd.Args, "--name", serviceNameFull, "443:8080/tls+http")
 			err := cmd.Run()
 			if err != nil {
@@ -126,8 +132,10 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -150,6 +158,8 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -180,6 +190,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -190,6 +202,8 @@ var _ = Describe("kraft cloud service create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -202,6 +216,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		It("should attach the instance to the service and work", func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd.Args = append(cmd.Args,
 				"--name", serviceNameFull,
 				"--subdomain", "test-"+serviceNameFull,
@@ -213,8 +229,10 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -238,6 +256,8 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(url).To(MatchRegexp(`https://test-` + serviceNameFull + `.`))
 
 			// Run the "curl" command to test the url
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -268,6 +288,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -278,6 +300,8 @@ var _ = Describe("kraft cloud service create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -290,6 +314,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		It("should attach the instance to the service and work", func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd.Args = append(cmd.Args,
 				"--name", serviceNameFull,
 				"--subdomain", "test-1-"+serviceNameFull,
@@ -302,8 +328,10 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -331,6 +359,8 @@ var _ = Describe("kraft cloud service create", func() {
 
 			// Run the "curl" command to test the url on the first subdomain
 			url = urls[0]
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -375,6 +405,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -385,6 +417,8 @@ var _ = Describe("kraft cloud service create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -397,6 +431,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		It("should attach the instance to the service and work", func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			cmd.Args = append(cmd.Args,
 				"--name", serviceNameFull,
 				"--soft-limit", "1",
@@ -409,8 +445,10 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
+			Expect(stdout.String()).To(BeEmpty())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -433,6 +471,8 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -463,6 +503,8 @@ var _ = Describe("kraft cloud service create", func() {
 		})
 
 		AfterEach(func() {
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceDeleteCmd.Env = os.Environ()
 			instanceDeleteCmd.Args = append(instanceDeleteCmd.Args, "cloud", "instance", "delete", instanceNameFull)
@@ -473,6 +515,8 @@ var _ = Describe("kraft cloud service create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			serviceDeleteCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			serviceDeleteCmd.Env = os.Environ()
 			serviceDeleteCmd.Args = append(serviceDeleteCmd.Args, "cloud", "service", "delete", serviceNameFull)
@@ -498,6 +542,8 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).To(MatchRegexp(serviceNameFull))
 
+			stdout := fcmd.NewIOStream()
+			stderr := fcmd.NewIOStream()
 			instanceCreateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			instanceCreateCmd.Env = os.Environ()
 			instanceCreateCmd.Args = append(instanceCreateCmd.Args, "cloud", "instance", "create",
@@ -520,6 +566,8 @@ var _ = Describe("kraft cloud service create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			curlCmd := fcmd.NewCurl(stdout, stderr)
 			curlCmd.Args = append(curlCmd.Args, url)
 

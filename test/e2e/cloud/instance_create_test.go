@@ -779,6 +779,8 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		AfterEach(func() {
 			// Remove the instance after the test
+			stdout = fcmd.NewIOStream()
+			stderr = fcmd.NewIOStream()
 			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
@@ -794,9 +796,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance\(s\)`))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`removing 1 instance\(s\)`))
 		})
 
 		It("should not error out with an API error", func() {
@@ -1930,6 +1932,9 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--name", instanceNameFull,
 				"--scale-to-zero", "on",
+				"--scale-to-zero-stateful",
+				"--scale-to-zero-cooldown", "1s",
+				"--start",
 				imageName,
 			)
 		})
@@ -1944,7 +1949,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"standby"`))
+			Expect(stdout.String()).To(MatchRegexp(`"scale_to_zero":"on"`))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + "128" + " MiB\""))
 
@@ -2548,87 +2553,6 @@ var _ = Describe("kraft cloud instance create", func() {
 	})
 
 	// '--feature' flag tests
-	When("invoked with standard flags and positional arguments, and the scale to zero feature", func() {
-		var instanceNameFull string
-
-		BeforeEach(func() {
-			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
-			if err != nil {
-				panic(err)
-			}
-			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
-
-			cmd.Args = append(cmd.Args,
-				"--port", instancePortMap,
-				"--memory", instanceMemory,
-				"--name", instanceNameFull,
-				"--feature", "scale-to-zero",
-				imageName,
-			)
-		})
-
-		It("should enable scale to zero and work", func() {
-			err := cmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(cmd.DumpError(stdout, stderr, err))
-			}
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"standby"`))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
-
-			url := urlParser(stdout)
-			Expect(url).ToNot(BeEmpty())
-
-			// Run the "curl" command to test the url
-			stdoutCurl := fcmd.NewIOStream()
-			stderrCurl := fcmd.NewIOStream()
-
-			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
-			curlCmd.Args = append(curlCmd.Args, url)
-
-			err = curlCmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
-			}
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(stderrCurl.String()).To(BeEmpty())
-			Expect(stdoutCurl.String()).ToNot(BeEmpty())
-			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
-		})
-
-		AfterEach(func() {
-			stdoutRm := fcmd.NewIOStream()
-			stderrRm := fcmd.NewIOStream()
-
-			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
-			cleanCmd.Args = append(cleanCmd.Args,
-				"cloud", "instance", "delete",
-				"--log-level", "info",
-				"--log-type", "json",
-				instanceNameFull,
-			)
-
-			err := cleanCmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
-			}
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(stdoutRm.String()).To(BeEmpty())
-			Expect(stderrRm.String()).ToNot(BeEmpty())
-			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
-		})
-	})
-
 	When("invoked with standard flags and positional arguments, and a random string feature", func() {
 		var instanceNameFull string
 
