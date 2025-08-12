@@ -243,7 +243,7 @@ runs:
         -e "INPUT_TARGET=${{ inputs.target }}" \
         -e "INPUT_TIMEOUT=${{ inputs.timeout }}" \
         -e "INPUT_WORKDIR=${{ inputs.workdir }}" \
-        -v "${HOME}/.docker/":"/home/runner/.docker":ro \
+        -v "${HOME}/.docker/":"/home/runner/.docker":ro,z \
         -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
         -v "${ACTION_WORKSPACE}/_temp/_github_home":"/github/home" \
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
