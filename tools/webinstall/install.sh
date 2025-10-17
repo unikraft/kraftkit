@@ -392,6 +392,26 @@ check_os_release() {
     return $?
 }
 
+# get_os_codename returns the codename of the current debian OS.
+# Returns:
+# _RETVAL: codename or empty string if not found
+get_os_codename() {
+    _goc_codename=""
+
+    if [ -f "/etc/os-release" ]; then
+        # False positive - it does not interpret it as awk code because of the macro
+        # shellcheck disable=SC2016
+        _goc_codename=$("$AWK" -F= '/^VERSION_CODENAME/{print $2}' /etc/os-release | "$TR" -d '"')
+        if [ -z "$_goc_codename" ]; then
+            # False positive - it does not interpret it as awk code because of the macro
+            # shellcheck disable=SC2016
+            _goc_codename=$("$AWK" -F= '/^VERSION=/{print $2}' /etc/os-release | "$TR" -d '"' | "$AWK" '{print $NF}')
+        fi
+    fi
+
+    _RETVAL="$_goc_codename"
+}
+
 # is_host_amd64_elf returns true if the current platform is amd64.
 # Returns 0 if true, 1 if false.
 is_host_amd64_elf() {
