@@ -1086,12 +1086,12 @@ install_linux_gnu() {
 
     if check_os_release "rhel" || check_os_release "fedora"; then
         need_cmd "$YUM"
-        _ilg_rpm_path=$(printf "%s%s%s%s%s"             \
-            "[kraftkit]\n"                              \
-            "name=Kraftkit Repo\n"                      \
-            "baseurl=https://rpm.pkg.kraftkit.sh\n"     \
-            "enabled=1\n"                               \
-            "gpgcheck=0\n"                              \
+        _ilg_rpm_path=$(printf "%s%s%s%s%s"                     \
+            "[unikraft-cli]\n"                                  \
+            "name=unikraft-cli\n"                               \
+            "baseurl=https://pkg.unikraft.com/rpm/cli-rpm\n"    \
+            "enabled=1\n"                                       \
+            "gpgcheck=0\n"                                      \
         )
 
         say_ok "Adding kraftkit package for RHEL/Fedora"
@@ -1109,22 +1109,44 @@ install_linux_gnu() {
         need_cmd "$DPKG"
         need_cmd "$CURL"
         need_cmd "$MKDIR"
+        need_cmd "$RM"
         _ilg_deb_key_path_cmd="$MKDIR -p /etc/apt/keyrings"
 
-        _ilg_deb_key_cmd=$(printf "%s%s"                            \
-            "$CURL -fsSL https://deb.pkg.kraftkit.sh/gpg.key | "    \
-            "$GPG --dearmor -o /etc/apt/keyrings/unikraft.gpg"      \
+        get_os_codename
+        _ilg_deb_distro="$_RETVAL"
+        if [ -z "$_ilg_deb_distro" ]; then
+            err "Could not detect Debian-based distribution codename"
+        fi
+
+        _ilg_deb_key_cmd=$(printf "%s%s%s"                                  \
+            "$CURL -fsSL "                                                  \
+            "https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.asc | "   \
+            "$GPG --dearmor -o /etc/apt/keyrings/unikraft.gpg"              \
         )
 
-        _ilg_deb_path=$(printf "%s %s %s"               \
-            "deb [arch=$($DPKG --print-architecture)"   \
-            "signed-by=/etc/apt/keyrings/unikraft.gpg]" \
-            "https://deb.pkg.kraftkit.sh /"
+        _ilg_deb_path_part=$(printf "%s%s%s%s"                      \
+            "Types: deb\n"                                          \
+            "URIs: https://pkg.unikraft.com/debian/cli-apt/\n"      \
+            "Suites: ${_ilg_deb_distro}\n"                          \
+            "Components: stable\n"                                  \
         )
 
-        _ilg_deb_cmd=$(printf "%s%s"                    \
-            "echo '${_ilg_deb_path}' | "                \
-            "tee /etc/apt/sources.list.d/kraftkit.list" \
+        if [ "$_ilg_deb_distro" = "trixie" ]; then
+            _ilg_deb_path=$(printf "%s%s%s"     \
+                "${_ilg_deb_path_part}"         \
+                "Trusted: yes\n"                \
+                "Check-Valid-Until: no\n"       \
+            )
+        else
+            _ilg_deb_path=$(printf "%s%s"                       \
+                "${_ilg_deb_path_part}"                         \
+                "Signed-By: /etc/apt/keyrings/unikraft.gpg\n"   \
+            )
+        fi
+
+        _ilg_deb_cmd=$(printf "%s%s"                                \
+            "echo '${_ilg_deb_path}' | "                            \
+            "tee /etc/apt/sources.list.d/kraftkit.sources"          \
         )
 
 
@@ -1139,6 +1161,7 @@ install_linux_gnu() {
         do_cmd "$_ilg_deb_key_path_cmd"
         do_cmd "$_ilg_deb_key_cmd"
         do_cmd "$_ilg_deb_cmd"
+        do_cmd "$RM -f /etc/apt/sources.list.d/kraftkit.list"
         do_cmd "$APT --allow-unauthenticated update"
         do_cmd "$APT install -y $_idd_recommended kraftkit"
     elif check_os_release "arch"; then
@@ -1169,11 +1192,22 @@ install_linux_musl() {
     need_cmd "$GREP"
     if check_os_release "alpine"; then
         need_cmd "$APK"
-        _ilm_cmd=$(printf "%s%s"                    \
-            "$APK add --no-cache --repository "     \
-            "https://apk.pkg.kraftkit.sh kraftkit"  \
+        need_cmd "$CURL"
+        _ilm_apk_key_cmd=$(printf "%s%s%s"                  \
+            "$CURL -fsSL https://pkg.unikraft.com"          \
+            "/apk/cli-apk/keys/cli-apk%40proget.rsa.pub | " \
+            "tee /etc/apk/keys/cli-apk@proget.rsa.pub"
         )
-        do_cmd "$_ilm_cmd"
+
+        _ilm_apk_repo_cmd=$(printf "%s%s"                       \
+            "echo 'https://pkg.unikraft.com/apk/cli-apk/' | "   \
+            "tee /etc/apk/repositories"
+        )
+
+        do_cmd "$_ilm_apk_key_cmd"
+        do_cmd "$_ilm_apk_repo_cmd"
+        do_cmd "$APK update"
+        do_cmd "$APK add kraftkit"
     else
         _ilm_msg=$(printf "error: %s%s%s"                                   \
             "Unsupported Linux distribution. "                              \
