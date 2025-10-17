@@ -74,3 +74,40 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Publish to APT repository
+        shell: bash
+        run: |
+          DISTROS=()
+          # Debian
+          DISTROS+=("bullseye")
+          DISTROS+=("bookworm")
+          DISTROS+=("trixie")
+          # Ubuntu
+          DISTROS+=("jammy")
+          DISTROS+=("lunar")
+          DISTROS+=("noble")
+          DISTROS+=("puffin")
+          DISTROS+=("quokka")
+
+          for DISTRO in "${DISTROS[@]}"; do
+            for DEB in dist/*.deb; do
+              curl "https://pkg.unikraft.com/debian/cli/upload/${DISTRO}/stable" \
+                --user "api:$PKG_TOKEN" \
+                --upload-file "${DEB}"
+            done
+          done
+
+          for RPM in dist/*.rpm; do
+            curl "https://pkg.unikraft.com/rpm/cli-rpm" \
+              --user "api:$PKG_TOKEN" \
+              --upload-file "${RPM}"
+          done
+
+          for APK in dist/*.apk; do
+            curl "https://pkg.unikraft.com/apk/cli-apk" \
+              --user "api:$PKG_TOKEN" \
+              --upload-file "${APK}"
+          done
+        env:
+          PKG_TOKEN: ${{ secrets.PKG_TOKEN }}
