@@ -38,7 +38,7 @@ func (handle *ContainerdHandler) ListDigests(ctx context.Context) ([]digest.Dige
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor, onProgress func(float64)) error {
 	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.PushDescriptor")
 }
 

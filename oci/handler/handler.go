@@ -43,8 +43,9 @@ type DescriptorSaver interface {
 type DescriptorPusher interface {
 	// PushDescriptor accepts an input descriptor and an optional canonical name
 	// for the descriptor (such as a tag) and uses the handler to push this to a
-	// remote registry.
-	PushDescriptor(context.Context, string, *ocispec.Descriptor) error
+	// remote registry. An optional progress method callback can be provided which
+	// is used to deliver the progress of pushing the descriptor.
+	PushDescriptor(context.Context, string, *ocispec.Descriptor, func(float64)) error
 }
 
 type ManifestLister interface {

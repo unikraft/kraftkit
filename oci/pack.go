@@ -936,7 +936,7 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 		return err
 	}
 
-	if err := ocipack.handle.PushDescriptor(ctx, ocipack.imageRef(), desc); err != nil {
+	if err := ocipack.handle.PushDescriptor(ctx, ocipack.imageRef(), desc, nil); err != nil {
 		return err
 	}
 

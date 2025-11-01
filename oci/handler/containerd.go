@@ -818,7 +818,7 @@ outer:
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor, onProgress func(float64)) error {
 	resolver, err := dockerconfigresolver.New(
 		ctx,
 		strings.Split(ref, "/")[0],
@@ -835,6 +835,11 @@ func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string,
 	if err != nil {
 		return err
 	}
+
+	// TODO(nderjung): Add progress tracking support for containerd push operations.
+	// This would require wrapping the push operation with progress monitoring similar
+	// to how PullDigest uses reportProgress.
+	_ = onProgress
 
 	return handle.client.Push(
 		namespaces.WithNamespace(ctx, handle.namespace),

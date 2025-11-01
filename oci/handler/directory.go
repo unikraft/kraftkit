@@ -740,7 +740,7 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref string, desc *ocispec.Descriptor) error {
+func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref string, desc *ocispec.Descriptor, onProgress func(float64)) error {
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
 		return err
@@ -749,6 +749,30 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 	ropts := []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
+	}
+
+	// Set up progress tracking if a callback is provided
+	if onProgress != nil {
+		updates := make(chan v1.Update)
+		ropts = append(ropts, remote.WithProgress(updates))
+
+		// Start a goroutine to process progress updates
+		go func() {
+			var totalSize int64
+			var completedSize int64
+
+			for update := range updates {
+				if update.Total > 0 {
+					totalSize = update.Total
+				}
+				completedSize = update.Complete
+
+				if totalSize > 0 {
+					progress := float64(completedSize) / float64(totalSize)
+					onProgress(progress)
+				}
+			}
+		}()
 	}
 
 	authConfig := &authn.AuthConfig{}
