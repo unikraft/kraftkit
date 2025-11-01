@@ -27,6 +27,12 @@ func NewPushOptions(opts ...PushOption) (*PushOptions, error) {
 	return options, nil
 }
 
+// OnProgress returns the embedded progress function which can be used to
+// update an external progress bar.
+func (ppo *PushOptions) OnProgress() func(float64) {
+	return ppo.onProgress
+}
+
 // WithPushProgressFunc set an optional progress function which is used as a
 // callback during the transmission of the package and the host.
 func WithPushProgressFunc(onProgress func(progress float64)) PushOption {
