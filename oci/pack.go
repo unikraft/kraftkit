@@ -880,6 +880,11 @@ func (ocipack *ociPackage) Columns() []tableprinter.Column {
 
 // Push implements pack.Package
 func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) error {
+	popts, err := pack.NewPushOptions(opts...)
+	if err != nil {
+		return err
+	}
+
 	// In the circumstance where the original package is available, we use
 	// google/go-containerregistry to re-tag (which is achieved via `pusher.Push`
 	// which ultimately checks if the manifest, its layers, config and ultimately
@@ -936,7 +941,12 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 		return err
 	}
 
-	if err := ocipack.handle.PushDescriptor(ctx, ocipack.imageRef(), desc, nil); err != nil {
+	var onProgress func(float64)
+	if popts != nil {
+		onProgress = popts.OnProgress()
+	}
+
+	if err := ocipack.handle.PushDescriptor(ctx, ocipack.imageRef(), desc, onProgress); err != nil {
 		return err
 	}
 
