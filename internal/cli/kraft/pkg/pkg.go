@@ -19,6 +19,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
+	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
@@ -212,7 +213,7 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 	}
 
 	if opts.Push {
-		var processes []*processtree.ProcessTreeItem
+		var processes []*paraprogress.Process
 
 		for _, p := range packs {
 			p := p
@@ -224,22 +225,22 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 				continue
 			}
 
-			processes = append(processes, processtree.NewProcessTreeItem(
-				"pushing",
-				humanize.Bytes(uint64(p.Size())),
-				func(ctx context.Context) error {
-					return p.Push(ctx)
+			processes = append(processes, paraprogress.NewProcess(
+				fmt.Sprintf(
+					"pushing (%s)",
+					humanize.Bytes(uint64(p.Size())),
+				),
+				func(ctx context.Context, w func(progress float64)) error {
+					return p.Push(ctx, pack.WithPushProgressFunc(w))
 				},
 			))
 		}
-		model, err := processtree.NewProcessTree(
+		model, err := paraprogress.NewParaProgress(
 			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
-				processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
-				processtree.WithFailFast(true),
-			},
-			processes...,
+			processes,
+			paraprogress.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+			paraprogress.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+			paraprogress.WithFailFast(true),
 		)
 		if err != nil {
 			return packs, err

@@ -20,7 +20,7 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
-	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/tui/paraprogress"
 	"kraftkit.sh/unikraft/app"
 )
 
@@ -156,28 +156,28 @@ func (opts *PushOptions) Run(ctx context.Context, args []string) error {
 		return errors.New("no packages found")
 	}
 
-	var processes []*processtree.ProcessTreeItem
+	var processes []*paraprogress.Process
 
 	for _, p := range packages {
 		p := p
 
-		processes = append(processes, processtree.NewProcessTreeItem(
-			"pushing",
-			humanize.Bytes(uint64(p.Size())),
-			func(ctx context.Context) error {
-				return p.Push(ctx)
+		processes = append(processes, paraprogress.NewProcess(
+			fmt.Sprintf(
+				"pushing (%s)",
+				humanize.Bytes(uint64(p.Size())),
+			),
+			func(ctx context.Context, w func(progress float64)) error {
+				return p.Push(ctx, pack.WithPushProgressFunc(w))
 			},
 		))
 	}
 
-	model, err := processtree.NewProcessTree(
+	model, err := paraprogress.NewParaProgress(
 		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
-			processtree.WithRenderer(norender),
-			processtree.WithFailFast(true),
-		},
-		processes...,
+		processes,
+		paraprogress.IsParallel(!config.G[config.KraftKit](ctx).NoParallel),
+		paraprogress.WithRenderer(norender),
+		paraprogress.WithFailFast(true),
 	)
 	if err != nil {
 		return err
