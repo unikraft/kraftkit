@@ -27,7 +27,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1
 	github.com/containers/image/v5 v5.36.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
-	github.com/cyphar/filepath-securejoin v0.5.0
+	github.com/cyphar/filepath-securejoin v0.5.1
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v28.5.1+incompatible
 	github.com/docker/docker v28.5.1+incompatible
