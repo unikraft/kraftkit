@@ -68,6 +68,12 @@ type Application interface {
 	// mounted at runtime.
 	Roms() []string
 
+	// InitrdFsType returns the type of root filesystem to be used during runtime.
+	InitrdFsType() initrd.FsType
+
+	// SetInitrdFsType sets the type of root filesystem to be used during runtime.
+	SetInitrdFsType(initrd.FsType)
+
 	// SetRootfs sets the root filesystem path for the application to the given
 	// value path.
 	SetRootfs(string)
@@ -170,6 +176,7 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
+	fsType        initrd.FsType
 	template      *template.TemplateConfig
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
@@ -266,6 +273,14 @@ func (app *application) Roms() []string {
 
 func (app *application) SetRootfs(rootfs string) {
 	app.rootfs = rootfs
+}
+
+func (app *application) SetInitrdFsType(fsType initrd.FsType) {
+	app.fsType = fsType
+}
+
+func (app *application) InitrdFsType() initrd.FsType {
+	return app.fsType
 }
 
 func (app *application) Command() []string {
@@ -602,7 +617,7 @@ func (app *application) Configure(ctx context.Context, tc target.Target, extra k
 			"CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD_PATH",
 			filepath.Join(
 				app.outDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String(), initrd.FsTypeCpio.String()),
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String(), app.InitrdFsType()),
 			),
 		)
 	}
