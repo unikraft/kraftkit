@@ -35,7 +35,17 @@
       "additionalProperties": true
     },
 
-    "/^rootfs$/": { "type": ["string", "array"] },
+    "/^rootfs$/": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/rootfs"
+          }
+        }
+      ]
+    },
 
     "/^roms$/": {
       "type": "array",
@@ -152,6 +162,15 @@
         "source": { "type": "string" },
         "version": { "type": [ "string", "number" ] },
         "kconfig": { "$ref": "#/definitions/list_or_dict" }
+      }
+    },
+
+    "rootfs": {
+      "id": "#/definitions/rootfs",
+      "type": [ "object" ],
+      "properties": {
+        "source": { "type": "string" },
+        "type": { "type": "string" }
       }
     },
 

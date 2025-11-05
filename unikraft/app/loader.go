@@ -26,6 +26,7 @@ import (
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/unikraft"
 )
 
@@ -63,9 +64,37 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 	}
 
 	if n, ok := iface["rootfs"]; ok {
-		app.rootfs, ok = n.(string)
-		if !ok {
-			return nil, errors.New("rootfs must be a string")
+		switch n.(type) {
+		case string:
+			app.rootfs = n.(string)
+			app.fsType = initrd.FsTypeCpio
+		case interface{}:
+			rootfsMap := getSectionMap(iface, "rootfs")
+			if rootfsMap == nil {
+				return nil, errors.New("rootfs must be a mapping or a string")
+			}
+
+			if t, ok := rootfsMap["type"]; ok {
+				fsTypeStr, ok := t.(string)
+				if !ok {
+					return nil, errors.New("rootfs type must be a string")
+				}
+				app.fsType = initrd.FsType(strings.ToLower(fsTypeStr))
+			} else {
+				app.fsType = initrd.FsTypeCpio
+			}
+
+			if s, ok := rootfsMap["source"]; ok {
+				sourceStr, ok := s.(string)
+				if !ok {
+					return nil, errors.New("rootfs source must be a string")
+				}
+				app.rootfs = sourceStr
+			} else {
+				return nil, errors.New("rootfs source must be specified")
+			}
+		default:
+			return nil, errors.New("rootfs must be a mapping or a string")
 		}
 	}
 
