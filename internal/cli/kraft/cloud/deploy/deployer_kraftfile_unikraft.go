@@ -9,7 +9,6 @@ import (
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/build"
 )
 
@@ -42,10 +41,6 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 
 	if opts.Project.Unikraft(ctx) == nil {
 		return false, fmt.Errorf("cannot package without unikraft attribute")
-	}
-
-	if opts.RootfsType == initrd.FsTypeErofs {
-		return false, fmt.Errorf("Unikraft does not currently have support for erofs initrds (contributions welcome!)")
 	}
 
 	deployer.args = args
