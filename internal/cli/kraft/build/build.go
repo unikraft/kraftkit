@@ -128,6 +128,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	// and the packaging step may perform a build of the rootfs again.  Ultimately
 	// this prevents re-builds.
 	opts.Project.SetRootfs(opts.Rootfs)
+	opts.Project.SetInitrdFsType(opts.RootfsType)
 
 	err = build.Build(ctx, opts, args...)
 	if err != nil {
