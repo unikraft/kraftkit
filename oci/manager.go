@@ -773,6 +773,7 @@ searchLocalIndexes:
 
 returnPacks:
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 	wg.Add(len(descriptors))
 	for oref, descs := range descriptors {
 		go func(total *int, packs map[string]pack.Package) {
@@ -786,7 +787,9 @@ returnPacks:
 				log.G(ctx).
 					WithField("ref", pack.ID()).
 					Trace("found")
+				mu.Lock()
 				packs[checksum] = pack
+				mu.Unlock()
 				*total++
 			}
 		}(&total, packs)
