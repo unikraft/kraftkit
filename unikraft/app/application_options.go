@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app/volume"
@@ -123,6 +124,14 @@ func WithRuntime(rt *runtime.Runtime) ApplicationOption {
 func WithRootfs(rootfs string) ApplicationOption {
 	return func(ac *application) error {
 		ac.rootfs = rootfs
+		return nil
+	}
+}
+
+// WithFsType sets the application's rootfs filesystem type
+func WithFsType(fsType initrd.FsType) ApplicationOption {
+	return func(ac *application) error {
+		ac.fsType = fsType
 		return nil
 	}
 }

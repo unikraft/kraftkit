@@ -53,8 +53,12 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
 
-	if opts.Rootfs == "" {
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = opts.Project.Rootfs()
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
 	}
 
 	return true, nil

@@ -194,8 +194,6 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
-	} else {
-		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	if cmd.Flag("scale-to-zero").Changed {

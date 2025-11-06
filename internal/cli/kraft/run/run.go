@@ -163,8 +163,6 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.hostMode = mplatform.SystemUnknown
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
-	} else {
-		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {

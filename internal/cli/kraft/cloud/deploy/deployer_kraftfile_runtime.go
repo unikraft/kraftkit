@@ -62,6 +62,14 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 		opts.Project.Runtime().SetName("index.unikraft.io/official/" + opts.Project.Runtime().Name())
 	}
 
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = opts.Project.Rootfs()
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	deployer.args = args
 
 	return true, nil

@@ -43,6 +43,14 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 		return false, fmt.Errorf("cannot package without unikraft attribute")
 	}
 
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = opts.Project.Rootfs()
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	deployer.args = args
 
 	return true, nil

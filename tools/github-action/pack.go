@@ -83,8 +83,8 @@ func (opts *GithubAction) aggregateEnvs() []string {
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func (opts *GithubAction) buildRootfs(ctx context.Context, workdir, rootfs string, compress bool, arch string) (initrd.Initrd, []string, []string, error) {
-	if rootfs == "" {
+func (opts *GithubAction) buildRootfs(ctx context.Context, workdir, rootfs string, compress bool, arch string, fsType initrd.FsType) (initrd.Initrd, []string, []string, error) {
+	if rootfs == "" || fsType == "" {
 		return nil, nil, nil, nil
 	}
 
@@ -97,7 +97,7 @@ func (opts *GithubAction) buildRootfs(ctx context.Context, workdir, rootfs strin
 		initrd.WithOutput(filepath.Join(
 			workdir,
 			unikraft.BuildDir,
-			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch, initrd.FsTypeCpio.String()),
+			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch, fsType),
 		)),
 		initrd.WithCacheDir(filepath.Join(
 			workdir,
@@ -105,6 +105,7 @@ func (opts *GithubAction) buildRootfs(ctx context.Context, workdir, rootfs strin
 			"rootfs-cache",
 		)),
 		initrd.WithArchitecture(arch),
+		initrd.WithOutputType(fsType),
 		initrd.WithCompression(compress),
 	)
 	if err != nil {
@@ -139,6 +140,10 @@ func (opts *GithubAction) packagableUnikraft(ctx context.Context) (bool, error) 
 		opts.Rootfs = opts.project.Rootfs()
 	}
 
+	if opts.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.project.InitrdFsType().String()
+	}
+
 	return true, nil
 }
 
@@ -157,6 +162,10 @@ func (opts *GithubAction) packagableRuntime(ctx context.Context) (bool, error) {
 		opts.Rootfs = opts.project.Rootfs()
 	}
 
+	if opts.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.project.InitrdFsType().String()
+	}
+
 	return true, nil
 }
 
@@ -169,6 +178,10 @@ func (opts *GithubAction) packagableDockerfile(ctx context.Context) (bool, error
 
 	if opts.project != nil && opts.project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = opts.project.Rootfs()
+	}
+
+	if opts.project != nil && opts.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.project.InitrdFsType().String()
 	}
 
 	// TODO(nderjung): This is a very naiive check and should be improved,
@@ -454,7 +467,7 @@ func (opts *GithubAction) packRuntime(ctx context.Context, output string, format
 	var cmds []string
 	var rootfsEnvs []string
 	var rootfs initrd.Initrd
-	if rootfs, cmds, rootfsEnvs, err = opts.buildRootfs(ctx, opts.Workdir, opts.Rootfs, false, targ.Architecture().String()); err != nil {
+	if rootfs, cmds, rootfsEnvs, err = opts.buildRootfs(ctx, opts.Workdir, opts.Rootfs, false, targ.Architecture().String(), initrd.FsType(opts.RootfsType)); err != nil {
 		return fmt.Errorf("could not build rootfs: %w", err)
 	}
 

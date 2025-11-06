@@ -87,6 +87,14 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOp
 		return false, fmt.Errorf("cannot run project build without unikraft")
 	}
 
+	if runner.project != nil && runner.project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = runner.project.Rootfs()
+	}
+
+	if runner.project != nil && runner.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = runner.project.InitrdFsType()
+	}
+
 	return true, nil
 }
 

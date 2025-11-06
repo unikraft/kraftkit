@@ -354,14 +354,14 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 	// If the user has supplied an initram path, set this now, this overrides any
 	// preparation and is considered higher priority compared to what has been set
 	// prior to this point.
-	if opts.Rootfs == "" || machine.Status.InitrdPath != "" {
+	if opts.Rootfs == "" || machine.Status.InitrdPath != "" || opts.RootfsType == "" {
 		return nil
 	}
 
 	machine.Status.InitrdPath = filepath.Join(
 		opts.workdir,
 		unikraft.BuildDir,
-		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture, opts.RootfsType.String()),
+		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture, opts.RootfsType),
 	)
 
 	ramfs, err := initrd.New(ctx,

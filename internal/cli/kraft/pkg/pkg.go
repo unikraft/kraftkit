@@ -324,8 +324,6 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
-	} else {
-		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	return nil

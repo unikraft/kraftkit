@@ -48,6 +48,10 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOpt
 		opts.Rootfs = opts.Project.Rootfs()
 	}
 
+	if opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	return true, nil
 }
 

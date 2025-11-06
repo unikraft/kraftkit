@@ -20,7 +20,7 @@ import (
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
 func BuildRootfs(ctx context.Context, workdir, rootfs string, compress, keepOwners bool, arch string, fsType initrd.FsType) (initrd.Initrd, []string, []string, error) {
-	if rootfs == "" {
+	if rootfs == "" || fsType == "" {
 		return nil, nil, nil, nil
 	}
 
@@ -34,7 +34,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress, keepOwne
 		initrd.WithOutput(filepath.Join(
 			workdir,
 			unikraft.BuildDir,
-			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch, fsType.String()),
+			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, arch, fsType),
 		)),
 		initrd.WithCacheDir(filepath.Join(
 			workdir,

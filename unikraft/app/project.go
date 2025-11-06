@@ -175,6 +175,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithUnikraft(app.unikraft),
 		WithRuntime(app.runtime),
 		WithRootfs(app.rootfs),
+		WithFsType(app.fsType),
 		WithRoms(app.roms...),
 		WithTemplate(app.template),
 		WithCommand(app.command...),

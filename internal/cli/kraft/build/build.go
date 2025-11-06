@@ -81,6 +81,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 	}
 
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	opts.statistics = map[string]string{}
 
 	var build builder
@@ -204,8 +208,6 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
-	} else {
-		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	return nil

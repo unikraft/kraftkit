@@ -39,6 +39,10 @@ func (build *builderDockerfile) Buildable(ctx context.Context, opts *BuildOption
 		opts.Rootfs = opts.Project.Rootfs()
 	}
 
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	// TODO(nderjung): This is a very naiive check and should be improved,
 	// potentially using an external library which parses the Dockerfile syntax.
 	// In most cases, however, the Dockerfile is usually named `Dockerfile`.

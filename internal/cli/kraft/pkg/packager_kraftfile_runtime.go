@@ -65,6 +65,10 @@ func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOpti
 		opts.Rootfs = opts.Project.Rootfs()
 	}
 
+	if opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
+
 	return true, nil
 }
 

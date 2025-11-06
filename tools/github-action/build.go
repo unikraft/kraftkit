@@ -31,7 +31,7 @@ func (opts *GithubAction) build(ctx context.Context) error {
 			initrd.WithOutput(filepath.Join(
 				opts.Workdir,
 				unikraft.BuildDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, opts.target.Architecture().String(), opts.RootfsType.String()),
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, opts.target.Architecture().String(), opts.RootfsType),
 			)),
 			initrd.WithCacheDir(filepath.Join(
 				opts.Workdir,
@@ -39,7 +39,7 @@ func (opts *GithubAction) build(ctx context.Context) error {
 				"rootfs-cache",
 			)),
 			initrd.WithArchitecture(opts.target.Architecture().String()),
-			initrd.WithOutputType(opts.RootfsType),
+			initrd.WithOutputType(initrd.FsType(opts.RootfsType)),
 		)
 		if err != nil {
 			return fmt.Errorf("could not prepare initramfs: %w", err)
