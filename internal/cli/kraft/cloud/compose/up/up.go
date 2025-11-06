@@ -27,6 +27,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose/build"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/get"
@@ -52,6 +53,8 @@ type UpOptions struct {
 	RolloutQualifier *create.RolloutQualifier `noattribute:"true"`
 	RolloutWait      time.Duration            `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	Runtimes         []string                 `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	RootfsType       initrd.FsType            `noattribute:"true"`
+	KeepFileOwners   bool                     `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	Token            string                   `noattribute:"true"`
 	Wait             time.Duration            `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
@@ -90,6 +93,15 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[initrd.FsType](
+			initrd.FsTypes(),
+			initrd.FsTypeCpio,
+		),
+		"rootfs-type",
+		"Set the type of the format of the rootfs (cpio/erofs)",
+	)
+
 	return cmd
 }
 
@@ -112,6 +124,12 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flag("env-file").Changed {
 		opts.EnvFile = cmd.Flag("env-file").Value.String()
+	}
+
+	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
+		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+	} else {
+		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	return nil
@@ -178,14 +196,16 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 	if !opts.NoBuild {
 		// Build all services if the build flag is set.
 		if err := build.Build(ctx, &build.BuildOptions{
-			Auth:        opts.Auth,
-			Client:      opts.Client,
-			Composefile: opts.Composefile,
-			Metro:       opts.Metro,
-			Project:     opts.Project,
-			Runtimes:    opts.Runtimes,
-			Token:       opts.Token,
-			Push:        true,
+			Auth:           opts.Auth,
+			Client:         opts.Client,
+			Composefile:    opts.Composefile,
+			Metro:          opts.Metro,
+			Project:        opts.Project,
+			Runtimes:       opts.Runtimes,
+			RootfsType:     opts.RootfsType,
+			KeepFileOwners: opts.KeepFileOwners,
+			Token:          opts.Token,
+			Push:           true,
 		}, args...); err != nil {
 			return err
 		}

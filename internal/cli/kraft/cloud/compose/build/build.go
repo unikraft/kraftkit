@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/cli/kraft/pkg"
@@ -33,16 +34,18 @@ import (
 )
 
 type BuildOptions struct {
-	AllowInsecure bool                  `noattribute:"true"`
-	Auth          *config.AuthConfig    `noattribute:"true"`
-	Client        kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile   string                `noattribute:"true"`
-	EnvFile       string                `noattribute:"true"`
-	Metro         string                `noattribute:"true"`
-	Project       *compose.Project      `noattribute:"true"`
-	Push          bool                  `long:"push" usage:"Push the built service images"`
-	Runtimes      []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	Token         string                `noattribute:"true"`
+	AllowInsecure  bool                  `noattribute:"true"`
+	Auth           *config.AuthConfig    `noattribute:"true"`
+	Client         kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile    string                `noattribute:"true"`
+	EnvFile        string                `noattribute:"true"`
+	Metro          string                `noattribute:"true"`
+	Project        *compose.Project      `noattribute:"true"`
+	Push           bool                  `long:"push" usage:"Push the built service images"`
+	Runtimes       []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	RootfsType     initrd.FsType         `noattribute:"true"`
+	KeepFileOwners bool                  `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
+	Token          string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -71,6 +74,15 @@ func NewCmd() *cobra.Command {
 	if err != nil {
 		panic(err)
 	}
+
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[initrd.FsType](
+			initrd.FsTypes(),
+			initrd.FsTypeCpio,
+		),
+		"rootfs-type",
+		"Set the type of the format of the rootfs (cpio/erofs)",
+	)
 
 	return cmd
 }
@@ -192,15 +204,17 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 
 		popts := &pkg.PkgOptions{
-			Architecture: "x86_64",
-			Compress:     false,
-			Format:       "oci",
-			Name:         pkgName,
-			NoPull:       false,
-			Platform:     "kraftcloud",
-			Push:         opts.Push,
-			Project:      project,
-			Strategy:     packmanager.StrategyOverwrite,
+			Architecture:   "x86_64",
+			Compress:       false,
+			Format:         "oci",
+			Name:           pkgName,
+			NoPull:         false,
+			Platform:       "kraftcloud",
+			Push:           opts.Push,
+			Project:        project,
+			Strategy:       packmanager.StrategyOverwrite,
+			RootfsType:     opts.RootfsType,
+			KeepFileOwners: opts.KeepFileOwners,
 		}
 
 		// If no build context can be determined, assume a build via a unikernel
@@ -358,6 +372,12 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flag("env-file").Changed {
 		opts.EnvFile = cmd.Flag("env-file").Value.String()
+	}
+
+	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
+		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+	} else {
+		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	return nil

@@ -93,7 +93,11 @@ func WithOutput(output string) InitrdOption {
 // WithOutputType sets the output type of the resulting root filesystem.
 func WithOutputType(fsType FsType) InitrdOption {
 	return func(opts *InitrdOptions) error {
-		opts.fsType = fsType
+		if fsType == FsType("") {
+			opts.fsType = FsTypeCpio
+		} else {
+			opts.fsType = fsType
+		}
 		return nil
 	}
 }
