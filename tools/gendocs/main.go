@@ -113,9 +113,6 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 	}
 
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "/")
-	if cmd.HasSubCommands() {
-		basename += "/index"
-	}
 	basename += ".mdx"
 	filename := filepath.Join(dir, basename)
 
