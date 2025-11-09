@@ -59,14 +59,14 @@ jobs:
 
       - name: gofumpt
         if: success() || failure()  # run this step even if the previous one failed
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.4.0
           args: --timeout=30m --default none --output.text.path --output.text.print-linter-name --output.text.print-issued-lines --output.text.colors --build-tags "containers_image_storage_stub,containers_image_openpgp"
           skip-cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.4.0
           args: --timeout=30m --output.text.path --output.text.print-linter-name --output.text.print-issued-lines --output.text.colors --build-tags "containers_image_storage_stub,containers_image_openpgp"
