@@ -27,7 +27,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/containers/image/v5 v5.36.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
-	github.com/cyphar/filepath-securejoin v0.5.1
+	github.com/cyphar/filepath-securejoin v0.6.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/docker/cli v28.5.1+incompatible
 	github.com/docker/docker v28.5.2+incompatible
@@ -61,7 +61,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runc v1.3.3
 	github.com/opencontainers/runtime-spec v1.2.1
-	github.com/opencontainers/selinux v1.12.0
+	github.com/opencontainers/selinux v1.13.0
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.1.2
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -91,6 +91,7 @@ require (
 )
 
 require (
+	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
