@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -176,17 +177,19 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 									errGroup = append(errGroup, err)
 								}
 
-								consumer.Consume(
-									"",
-									fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
-									"",
-									"To see more details about why, run:",
-									"",
-									fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
-									"",
-								)
+								if inst.State == kcinstances.InstanceStateStopped {
+									consumer.Consume(
+										"",
+										fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+										"",
+										"To see more details about why, run:",
+										"",
+										fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+										"",
+									)
 
-								return
+									return
+								}
 							} else {
 								continue
 							}
@@ -214,15 +217,17 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 								errGroup = append(errGroup, err)
 							}
 
-							consumer.Consume(
-								"",
-								fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
-								"",
-								"To see more details about why, run:",
-								"",
-								fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
-								"",
-							)
+							if inst.State == kcinstances.InstanceStateStopped {
+								consumer.Consume(
+									"",
+									fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+									"",
+									"To see more details about why, run:",
+									"",
+									fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+									"",
+								)
+							}
 						}
 						return
 					}
