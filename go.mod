@@ -29,7 +29,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/cyphar/filepath-securejoin v0.6.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/docker/cli v28.5.1+incompatible
+	github.com/docker/cli v29.0.1+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
