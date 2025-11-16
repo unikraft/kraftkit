@@ -117,8 +117,8 @@ github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092 h1:aM1
 github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092/go.mod h1:rYqSE9HbjzpHTI74vwPvae4ZVYZd1lue2ta6xHPdblA=
 github.com/anchore/go-testutils v0.0.0-20200925183923-d5f45b0d3c04 h1:VzprUTpc0vW0nnNKJfJieyH/TZ9UYAnTZs5/gHTdAe8=
 github.com/anchore/go-testutils v0.0.0-20200925183923-d5f45b0d3c04/go.mod h1:6dK64g27Qi1qGQZ67gFmBFvEHScy0/C8qhQhNe5B5pQ=
-github.com/anchore/stereoscope v0.1.11 h1:YP/XUNcJyMbOOPAWPkeZNCVlKKTRO2cnBTEeUW6I40Y=
-github.com/anchore/stereoscope v0.1.11/go.mod h1:G3PZlzPbxFhylj9pQwtqfVPaahuWmy/UCtv5FTIIMvg=
+github.com/anchore/stereoscope v0.1.12 h1:4T/10G7Nb98UoJBKVvAIhsAtrR63lZXxMJb/Qfw5inw=
+github.com/anchore/stereoscope v0.1.12/go.mod h1:G3PZlzPbxFhylj9pQwtqfVPaahuWmy/UCtv5FTIIMvg=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuWl6zY27l47sB3qLNK6tF2fkHG55UZxx8oIVo4=
