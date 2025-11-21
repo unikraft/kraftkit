@@ -105,6 +105,14 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		)
 	}
 
+	if opts.Project != nil && opts.Project.Env() != nil {
+		var projectEnv []string
+		for k, v := range opts.Project.Env() {
+			projectEnv = append(projectEnv, fmt.Sprintf("%s=%s", k, v))
+		}
+		opts.Env = append(projectEnv, opts.Env...)
+	}
+
 	packs, err := pkg.Pkg(ctx, &pkg.PkgOptions{
 		Architecture:   "x86_64",
 		Compress:       opts.Compress,
