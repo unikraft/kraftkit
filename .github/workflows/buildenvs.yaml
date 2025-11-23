@@ -199,13 +199,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Fetch all tags
@@ -308,13 +308,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Set up QEMU
@@ -515,13 +515,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Fetch all tags
@@ -582,7 +582,7 @@ jobs:
 
       - name: Fetch helloworld
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: unikraft/app-helloworld
           fetch-depth: 1

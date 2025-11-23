@@ -114,7 +114,7 @@ jobs:
           ARCH_NOTARIZATION: ${{ matrix.arch }}
 
       - name: Checkout Brew Formula
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: unikraft/homebrew-cli
           ref: staging
