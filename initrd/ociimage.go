@@ -18,13 +18,13 @@ import (
 	"kraftkit.sh/fs/erofs"
 	"kraftkit.sh/log"
 
-	"github.com/containers/image/v5/copy"
-	ociarchive "github.com/containers/image/v5/oci/archive"
-	"github.com/containers/image/v5/signature"
-	"github.com/containers/image/v5/transports/alltransports"
-	"github.com/containers/image/v5/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"go.podman.io/image/v5/copy"
+	ociarchive "go.podman.io/image/v5/oci/archive"
+	"go.podman.io/image/v5/signature"
+	"go.podman.io/image/v5/transports/alltransports"
+	"go.podman.io/image/v5/types"
 )
 
 type ociimage struct {
