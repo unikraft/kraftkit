@@ -9,7 +9,6 @@ package cpio
 
 import (
 	"io/fs"
-
 )
 
 func FileInfoToCPIOHeader(info fs.FileInfo, header *Header) {}
