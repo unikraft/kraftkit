@@ -70,8 +70,8 @@ CMAKE       ?= cmake
 # Go tools
 GOFUMPT_VERSION    ?= v0.7.0
 GOFUMPT            ?= $(GO) run mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
-GOCILINT_VERSION   ?= v2.0.2
-GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOCILINT_VERSION)
+GOCILINT_VERSION   ?= v2.4.0
+GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 YTT_VERSION        ?= v0.51.0
 YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 GORELEASER_VERSION ?= v2.7.0
