@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2025, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 package buildkit
 
 import (
@@ -11,6 +15,7 @@ import (
 	"kraftkit.sh/log"
 
 	"github.com/moby/buildkit/client"
+	dockerclient "github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	tlog "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -28,7 +33,8 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 	// Check if there is a buildkit host configured
 	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
 	if buildkitAddr != "" {
-		c, err := client.New(ctx, buildkitAddr)
+		var err error
+		c, err = client.New(ctx, buildkitAddr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating buildkit client: %w", err)
 		}
@@ -38,6 +44,42 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 		}
 
 		log.G(ctx).Info("using configured buildkit", "addr", buildkitAddr)
+	}
+
+	// Check if the docker buildkit host can be used
+	// see logic from https://github.com/docker/buildx/blob/master/driver/docker/driver.go
+	if c == nil {
+		opt, ok := dockerBuildkit(ctx, nil)
+		if ok {
+			var err error
+			c, err = client.New(ctx, "", opt...)
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating docker buildkit client: %w", err)
+			}
+			buildkitInfo, err = c.Info(ctx)
+			if err != nil {
+				return nil, nil, fmt.Errorf("connecting to docker buildkit client: %w", err)
+			}
+
+			// we need features that are *only* supported when the containerd
+			// snapshotter is enabled :(
+			var hasCtrdSnapshotter bool
+			workers, _ := c.ListWorkers(ctx)
+			for _, w := range workers {
+				if _, ok := w.Labels["org.mobyproject.buildkit.worker.snapshotter"]; ok {
+					hasCtrdSnapshotter = true
+				}
+			}
+			if !hasCtrdSnapshotter {
+				err = c.Close()
+				c = nil
+				log.G(ctx).Debug("closing docker buildkit client due to incompatible snapshotter", "error", err)
+			}
+
+			if c != nil {
+				log.G(ctx).Info("using docker buildkit")
+			}
+		}
 	}
 
 	// If no other buildkits found, create an ephemeral container
@@ -129,6 +171,27 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 		WithField("version", buildkitInfo.BuildkitVersion.Version).
 		Debug("using buildkit")
 	return c, cleanup, nil
+}
+
+func dockerBuildkit(ctx context.Context, d dockerclient.APIClient) ([]client.ClientOpt, bool) {
+	d, err := dockerclient.New(dockerclient.FromEnv)
+	if err != nil {
+		return nil, false
+	}
+
+	_, err = d.ServerVersion(ctx, dockerclient.ServerVersionOptions{})
+	if err != nil {
+		return nil, false
+	}
+
+	opts := []client.ClientOpt{
+		client.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return d.DialHijack(ctx, "/grpc", "h2c", nil)
+		}), client.WithSessionDialer(func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
+			return d.DialHijack(ctx, "/session", proto, meta)
+		}),
+	}
+	return opts, true
 }
 
 func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf *testcontainersPrintf) (testcontainers.Container, error) {
