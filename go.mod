@@ -77,7 +77,7 @@ require (
 	golang.org/x/mod v0.30.0
 	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.37.0
+	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.36.0
 	google.golang.org/grpc v1.77.0
 	gopkg.in/yaml.v2 v2.4.0
