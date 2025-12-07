@@ -82,8 +82,8 @@ require (
 	google.golang.org/grpc v1.77.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.33.4
-	k8s.io/apimachinery v0.34.1
+	k8s.io/api v0.34.2
+	k8s.io/apimachinery v0.34.2
 	k8s.io/apiserver v0.32.3
 	oras.land/oras-go/v2 v2.6.0
 	sdk.kraft.cloud v0.5.10-0.20251010085803-9d579e3ec270
