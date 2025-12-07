@@ -88,7 +88,7 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-kraftkit.sh v0.12.3 h1:o2QQLfiltCkfLJ8fdaOjP0CkICJFl+Wf4YHhtAdfVU4=
-kraftkit.sh v0.12.3/go.mod h1:QQRpuUu3xI3goj5RbDQOgeiY/6+Q0qt79khE7c2ku0c=
+kraftkit.sh v0.12.4 h1:KBbJbSJFuBH6UxQ02AvAUTDj0Y2M6JcK3W5+8d45Ke4=
+kraftkit.sh v0.12.4/go.mod h1:lQ0j9/8dKa2wCWmF1RpSW7OaPQ+e0kYQunyhPWvruAc=
 mvdan.cc/gofumpt v0.9.2 h1:zsEMWL8SVKGHNztrx6uZrXdp7AX8r421Vvp23sz7ik4=
 mvdan.cc/gofumpt v0.9.2/go.mod h1:iB7Hn+ai8lPvofHd9ZFGVg2GOr8sBUw1QUWjNbmIL/s=
