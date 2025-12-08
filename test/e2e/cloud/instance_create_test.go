@@ -2526,7 +2526,7 @@ var _ = Describe("kraft cloud instance create", func() {
 	})
 
 	// '--feature' flag tests
-	When("invoked with standard flags and positional arguments, and the scale to zero feature", func() {
+	When("invoked with standard flags and positional arguments, and the delete-on-stop feature", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2540,12 +2540,13 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--feature", "scale-to-zero",
+				"--feature", "delete-on-stop",
+				"--start",
 				imageName,
 			)
 		})
 
-		It("should enable scale to zero and work", func() {
+		It("should enable delete-on-stop and work", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -2555,7 +2556,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"standby"`))
+			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
