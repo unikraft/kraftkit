@@ -30,7 +30,7 @@ import (
 	"kraftkit.sh/oci/simpleauth"
 	ociutils "kraftkit.sh/oci/utils"
 
-	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/v2/core/content"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"

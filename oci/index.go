@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/errdefs"
 	"github.com/google/go-containerregistry/pkg/name"
 	specs "github.com/opencontainers/image-spec/specs-go"

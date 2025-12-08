@@ -9,62 +9,45 @@ package initrd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"slices"
 
 	"kraftkit.sh/fs/cpio"
 	"kraftkit.sh/fs/erofs"
 	"kraftkit.sh/log"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"go.podman.io/image/v5/copy"
-	ociarchive "go.podman.io/image/v5/oci/archive"
-	"go.podman.io/image/v5/signature"
-	"go.podman.io/image/v5/transports/alltransports"
-	"go.podman.io/image/v5/types"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/containerd/v2/core/images/archive"
+	"github.com/containerd/platforms"
+	"github.com/moby/buildkit/util/contentutil"
+	"github.com/opencontainers/go-digest"
+	ocispecs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type ociimage struct {
 	imageName string
 	opts      InitrdOptions
 	args      []string
-	ref       types.ImageReference
+	desc      ocispecs.Descriptor
+	provider  content.InfoReaderProvider
 	env       []string
 }
 
 // NewFromOCIImage creates a new initrd from a remote container image.
 func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (Initrd, error) {
-	var transport string
-	if strings.Contains(path, "://") {
-		transport, path, _ = strings.Cut(path, "://")
-	}
-
-	nref, err := name.ParseReference(path)
+	desc, provider, err := contentutil.ProviderFromRef(path)
 	if err != nil {
-		return nil, err
-	}
-
-	if desc, err := remote.Head(nref); err != nil || desc == nil {
 		return nil, fmt.Errorf("could not find image: %w", err)
-	}
-
-	if !strings.Contains("://", path) {
-		path = fmt.Sprintf("docker://%s", path)
-	} else {
-		path = fmt.Sprintf("%s://%s", transport, path)
-	}
-
-	ref, err := alltransports.ParseImageName(path)
-	if err != nil {
-		return nil, err
 	}
 
 	initrd := ociimage{
 		imageName: path,
-		ref:       ref,
+		desc:      desc,
+		provider:  noopInfoReaderProvider{provider},
 		opts: InitrdOptions{
 			fsType: FsTypeCpio,
 		},
@@ -86,49 +69,35 @@ func (initrd *ociimage) Name() string {
 
 // Build implements Initrd.
 func (initrd *ociimage) Build(ctx context.Context) (string, error) {
-	sysCtx := &types.SystemContext{
-		OSChoice: "linux",
-	}
-
+	var sys ocispecs.Platform
 	if initrd.opts.arch == "x86_64" {
-		sysCtx.ArchitectureChoice = "amd64"
+		sys = ocispecs.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		}
 	} else if initrd.opts.arch != "" {
-		sysCtx.ArchitectureChoice = initrd.opts.arch
+		sys = ocispecs.Platform{
+			OS:           "linux",
+			Architecture: initrd.opts.arch,
+		}
 	}
 
-	policy := &signature.Policy{
-		Default: []signature.PolicyRequirement{
-			signature.NewPRInsecureAcceptAnything(),
-		},
-	}
-
-	policyCtx, err := signature.NewPolicyContext(policy)
+	configDesc, err := images.Config(ctx, initrd.provider, initrd.desc, platforms.Only(sys))
 	if err != nil {
-		return "", fmt.Errorf("failed to generate default policy context: %w", err)
+		return "", fmt.Errorf("could not get image config: %w", err)
 	}
-
-	defer func() {
-		_ = policyCtx.Destroy()
-	}()
-
-	img, err := initrd.ref.NewImage(ctx, sysCtx)
+	config, err := content.ReadBlob(ctx, initrd.provider, configDesc)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not read image config: %w", err)
 	}
-
-	defer func() {
-		_ = img.Close()
-	}()
-
-	ociImage, err := img.OCIConfig(ctx)
+	var cfg ocispecs.Image
+	err = json.Unmarshal(config, &cfg)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not unmarshal image config: %w", err)
 	}
 
-	initrd.args = append(ociImage.Config.Entrypoint,
-		ociImage.Config.Cmd...,
-	)
-	initrd.env = ociImage.Config.Env
+	initrd.args = slices.Concat(cfg.Config.Entrypoint, cfg.Config.Cmd)
+	initrd.env = cfg.Config.Env
 
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")
@@ -144,30 +113,25 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not make temporary directory: %w", err)
 	}
-
 	defer func() {
 		_ = os.RemoveAll(outputDir)
 	}()
 
-	ociTarballFile := filepath.Join(outputDir, "oci.tar.gz")
-
-	dest, err := ociarchive.NewReference(ociTarballFile, "")
+	ociTarballFile, err := os.Create(filepath.Join(outputDir, "oci.tar.gz"))
 	if err != nil {
-		return "", fmt.Errorf("invalid destination name %s: %v", dest, err)
-	}
-
-	opts := copy.Options{
-		ReportWriter:   log.G(ctx).Writer(),
-		DestinationCtx: sysCtx,
-		SourceCtx:      sysCtx,
+		return "", fmt.Errorf("could not create OCI tarball file: %w", err)
 	}
 
 	log.G(ctx).
-		WithField("image", initrd.ref.StringWithinTransport()).
+		WithField("image", initrd.imageName).
 		Debug("pulling")
 
-	if _, err = copy.Image(ctx, policyCtx, dest, initrd.ref, &opts); err != nil {
-		return "", fmt.Errorf("failed to copy image: %w", err)
+	err = archive.Export(ctx, initrd.provider, ociTarballFile, archive.WithManifest(initrd.desc), archive.WithPlatform(platforms.Only(sys)))
+	if err != nil {
+		return "", fmt.Errorf("could not export image to OCI tarball: %w", err)
+	}
+	if err := ociTarballFile.Close(); err != nil {
+		return "", fmt.Errorf("could not close OCI tarball file: %w", err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(initrd.opts.output), 0o755); err != nil {
@@ -176,11 +140,11 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 
 	switch initrd.opts.fsType {
 	case FsTypeErofs:
-		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, ociTarballFile,
+		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, ociTarballFile.Name(),
 			erofs.WithAllRoot(!initrd.opts.keepOwners),
 		)
 	case FsTypeCpio:
-		err := cpio.CreateFS(ctx, initrd.opts.output, ociTarballFile,
+		err := cpio.CreateFS(ctx, initrd.opts.output, ociTarballFile.Name(),
 			cpio.WithAllRoot(!initrd.opts.keepOwners),
 		)
 		if err != nil {
@@ -211,4 +175,14 @@ func (initrd *ociimage) Env() []string {
 // Args implements Initrd.
 func (initrd *ociimage) Args() []string {
 	return initrd.args
+}
+
+type noopInfoReaderProvider struct {
+	content.Provider
+}
+
+func (n noopInfoReaderProvider) Info(ctx context.Context, dgst digest.Digest) (content.Info, error) {
+	return content.Info{
+		Digest: dgst,
+	}, nil
 }

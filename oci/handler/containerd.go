@@ -18,15 +18,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/labels"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/remotes"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/containerd/v2/core/remotes"
+	"github.com/containerd/containerd/v2/defaults"
+	"github.com/containerd/containerd/v2/pkg/labels"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/errdefs"
 	clog "github.com/containerd/log"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"github.com/containerd/platforms"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/opencontainers/go-digest"
@@ -45,15 +46,15 @@ const (
 )
 
 type ContainerdHandler struct {
-	client    *containerd.Client
+	client    *client.Client
 	namespace string
 	auths     map[string]config.AuthConfig
 }
 
 // NewContainerdHandler creates a Resolver-compatible interface given the
 // containerd address and namespace.
-func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]config.AuthConfig, opts ...containerd.ClientOpt) (context.Context, *ContainerdHandler, error) {
-	client, err := containerd.New(address, opts...)
+func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]config.AuthConfig, opts ...client.Opt) (context.Context, *ContainerdHandler, error) {
+	client, err := client.New(address, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,7 +78,7 @@ func NewContainerdHandler(ctx context.Context, address, namespace string, auths 
 
 // NewContainerdWithClient create a containerd Resolver-compatible with an
 // existing containerd client connection.
-func NewContainerdWithClient(ctx context.Context, client *containerd.Client) (context.Context, *ContainerdHandler, error) {
+func NewContainerdWithClient(ctx context.Context, client *client.Client) (context.Context, *ContainerdHandler, error) {
 	if client == nil {
 		return nil, nil, fmt.Errorf("no containerd client provided")
 	}
@@ -156,9 +157,9 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 
 	if _, err := handle.client.Pull(ctx,
 		fullref,
-		containerd.WithPlatform(fmt.Sprintf("%s/%s", plat.OS, plat.Architecture)),
-		containerd.WithResolver(resolver),
-		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		client.WithPlatform(fmt.Sprintf("%s/%s", plat.OS, plat.Architecture)),
+		client.WithResolver(resolver),
+		client.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
 				ongoing.Add(desc)
 			}
@@ -845,7 +846,7 @@ func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string,
 		namespaces.WithNamespace(ctx, handle.namespace),
 		ref,
 		*target,
-		containerd.WithResolver(resolver),
+		client.WithResolver(resolver),
 	)
 }
 
@@ -870,17 +871,17 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dg
 		return nil, err
 	}
 
-	i := containerd.NewImageWithPlatform(
+	i := client.NewImageWithPlatform(
 		handle.client,
 		img,
 		platforms.Only(*manifest.Config.Platform),
 	)
 
-	if err = i.Unpack(ctx, containerd.DefaultSnapshotter); err != nil {
+	if err = i.Unpack(ctx, defaults.DefaultSnapshotter); err != nil {
 		return nil, err
 	}
 
-	isUnpacked, err := i.IsUnpacked(ctx, containerd.DefaultSnapshotter)
+	isUnpacked, err := i.IsUnpacked(ctx, defaults.DefaultSnapshotter)
 	if err != nil {
 		return nil, err
 	}
