@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/log"
 
 	"github.com/moby/buildkit/client"
+	bkappdefaults "github.com/moby/buildkit/util/appdefaults"
 	dockerclient "github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	tlog "github.com/testcontainers/testcontainers-go/log"
@@ -42,43 +43,35 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 		if err != nil {
 			return nil, nil, fmt.Errorf("connecting to buildkit client: %w", err)
 		}
-
 		log.G(ctx).Info("using configured buildkit", "addr", buildkitAddr)
 	}
 
-	// Check if the docker buildkit host can be used
-	// see logic from https://github.com/docker/buildx/blob/master/driver/docker/driver.go
+	// Check if the default buildkit socket is available
 	if c == nil {
-		opt, ok := dockerBuildkit(ctx, nil)
-		if ok {
-			var err error
-			c, err = client.New(ctx, "", opt...)
-			if err != nil {
-				return nil, nil, fmt.Errorf("creating docker buildkit client: %w", err)
-			}
-			buildkitInfo, err = c.Info(ctx)
-			if err != nil {
-				return nil, nil, fmt.Errorf("connecting to docker buildkit client: %w", err)
-			}
+		var err error
+		c, err = client.New(ctx, bkappdefaults.Address)
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating default buildkit client: %w", err)
+		}
+		buildkitInfo, err = c.Info(ctx)
+		if err != nil {
+			c.Close()
+			c = nil
+		}
+		if c != nil {
+			log.G(ctx).Info("using default buildkit socket")
+		}
+	}
 
-			// we need features that are *only* supported when the containerd
-			// snapshotter is enabled :(
-			var hasCtrdSnapshotter bool
-			workers, _ := c.ListWorkers(ctx)
-			for _, w := range workers {
-				if _, ok := w.Labels["org.mobyproject.buildkit.worker.snapshotter"]; ok {
-					hasCtrdSnapshotter = true
-				}
-			}
-			if !hasCtrdSnapshotter {
-				err = c.Close()
-				c = nil
-				log.G(ctx).Debug("closing docker buildkit client due to incompatible snapshotter", "error", err)
-			}
-
-			if c != nil {
-				log.G(ctx).Info("using docker buildkit")
-			}
+	// Check if the docker buildkit host can be used
+	if c == nil {
+		var err error
+		c, buildkitInfo, err = dockerBuildkit(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if c != nil {
+			log.G(ctx).Info("using docker buildkit")
 		}
 	}
 
@@ -162,7 +155,7 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 		}
 		buildkitInfo, connerr = c.Info(ctx)
 		if connerr != nil {
-			return nil, nil, fmt.Errorf("connecting to container buildkit client: %w", err)
+			return nil, nil, fmt.Errorf("connecting to buildkit client: %w", connerr)
 		}
 	}
 
@@ -173,15 +166,16 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 	return c, cleanup, nil
 }
 
-func dockerBuildkit(ctx context.Context, d dockerclient.APIClient) ([]client.ClientOpt, bool) {
+// see logic from https://github.com/docker/buildx/blob/master/driver/docker/driver.go
+func dockerBuildkit(ctx context.Context) (*client.Client, *client.Info, error) {
 	d, err := dockerclient.New(dockerclient.FromEnv)
 	if err != nil {
-		return nil, false
+		return nil, nil, nil
 	}
 
 	_, err = d.ServerVersion(ctx, dockerclient.ServerVersionOptions{})
 	if err != nil {
-		return nil, false
+		return nil, nil, nil
 	}
 
 	opts := []client.ClientOpt{
@@ -191,7 +185,33 @@ func dockerBuildkit(ctx context.Context, d dockerclient.APIClient) ([]client.Cli
 			return d.DialHijack(ctx, "/session", proto, meta)
 		}),
 	}
-	return opts, true
+
+	c, err := client.New(ctx, "", opts...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating docker buildkit client: %w", err)
+	}
+
+	// we need features that are *only* supported when the containerd
+	// snapshotter is enabled :(
+	var hasCtrdSnapshotter bool
+	workers, err := c.ListWorkers(ctx)
+	if err != nil {
+		return nil, nil, c.Close()
+	}
+	for _, w := range workers {
+		if _, ok := w.Labels["org.mobyproject.buildkit.worker.snapshotter"]; ok {
+			hasCtrdSnapshotter = true
+		}
+	}
+	if !hasCtrdSnapshotter {
+		return nil, nil, c.Close()
+	}
+
+	info, err := c.Info(ctx)
+	if err != nil {
+		return nil, nil, c.Close()
+	}
+	return c, info, nil
 }
 
 func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf *testcontainersPrintf) (testcontainers.Container, error) {
