@@ -13,7 +13,7 @@ jobs:
         if: always()
         uses: taskmedia/action-conventional-commits@v1.1.23
         with:
-          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod"
+          types: "build|ci|docs|feat|fix|perf|refactor|style|test|revert|gomod|chore"
 
       - name: length
         if: ${{ github.actor != 'dependabot' && github.actor != 'dependabot[bot]' }}
