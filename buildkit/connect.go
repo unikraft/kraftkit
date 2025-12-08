@@ -253,17 +253,15 @@ func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf
 }
 
 func getBuildkitVersion(ctx context.Context) string {
-	buildkitVersion := "latest"
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		for _, dep := range bi.Deps {
 			if dep.Path == "github.com/moby/buildkit" {
-				buildkitVersion = dep.Version
-				break
+				return dep.Version
 			}
 		}
-		log.G(ctx).Debug("could not determine BuildKit version from module list")
 	}
-	return buildkitVersion
+	log.G(ctx).Debug("could not determine BuildKit version from module list")
+	return "latest"
 }
 
 var testcontainersLoggingHook = func(logger tlog.Logger) testcontainers.ContainerLifecycleHooks {
