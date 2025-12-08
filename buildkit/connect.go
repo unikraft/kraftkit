@@ -43,7 +43,7 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 		if err != nil {
 			return nil, nil, fmt.Errorf("connecting to buildkit client: %w", err)
 		}
-		log.G(ctx).Info("using configured buildkit", "addr", buildkitAddr)
+		log.G(ctx).WithField("addr", buildkitAddr).Info("using configured buildkit")
 	}
 
 	// Check if the default buildkit socket is available
@@ -77,9 +77,10 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 
 	// If no other buildkits found, create an ephemeral container
 	if c == nil {
-		log.G(ctx).Info("creating ephemeral buildkit container")
-
 		buildkitVersion := getBuildkitVersion(ctx)
+		log.G(ctx).
+			WithField("version", buildkitVersion).
+			Info("creating ephemeral buildkit container")
 
 		testcontainers.DefaultLoggingHook = testcontainersLoggingHook
 		printf := &testcontainersPrintf{ctx}
