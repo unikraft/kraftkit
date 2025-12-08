@@ -3,7 +3,10 @@ version: 2
 updates:
 
   - package-ecosystem: gomod
-    directory: /
+    directories:
+      - /
+      - /tools/protoc-gen-go-netconn
+      - /tools/go-generate-qemu-devices
     target-branch: staging
     schedule:
       interval: weekly
@@ -12,26 +15,11 @@ updates:
     commit-message:
       prefix: gomod # Prefix messages with
       include: scope # List all updated dependencies
-  - package-ecosystem: gomod
-    directory: /tools/go-generate-qemu-devices
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: sunday
-      time: '09:00'
-    commit-message:
-      prefix: gomod # Prefix messages with
-      include: scope # List all updated dependencies
-  - package-ecosystem: gomod
-    directory: /tools/protoc-gen-go-netconn
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: sunday
-      time: '09:00'
-    commit-message:
-      prefix: gomod # Prefix messages with
-      include: scope # List all updated dependencies
+    groups:
+      go-deps:
+        applies-to: version-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /
