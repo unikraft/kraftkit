@@ -15,6 +15,13 @@ updates:
     commit-message:
       prefix: gomod # Prefix messages with
       include: scope # List all updated dependencies
+    ignore:
+      # We've not been taking these, and they require a lot of code changes to resolve.
+      - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "k8s.io/apiserver"
+      # HACK: pending resolution of https://github.com/containerd/containerd/issues/12493
+      - dependency-name: "github.com/opencontainers/runc"
+      - dependency-name: "github.com/opencontainers/runtime-spec"
     groups:
       go-deps:
         applies-to: version-updates
