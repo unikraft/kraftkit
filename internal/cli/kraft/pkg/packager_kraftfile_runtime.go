@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/utils"
@@ -417,14 +416,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			p.args = rootfsArgs
 		} else if p.target != nil && len(p.target.Command()) > 0 {
 			p.args = p.target.Command()
-		}
-	}
-
-	// Only parse arguments if they have been provided.
-	if len(p.args) > 0 {
-		p.args, err = shellwords.Parse(fmt.Sprintf("'%s'", strings.Join(p.args, "' '")))
-		if err != nil {
-			return nil, err
 		}
 	}
 
