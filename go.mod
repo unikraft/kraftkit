@@ -75,14 +75,14 @@ require (
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/mod v0.31.0
 	golang.org/x/oauth2 v0.34.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.39.0
-	golang.org/x/term v0.37.0
+	golang.org/x/term v0.38.0
 	google.golang.org/grpc v1.77.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.34.1
-	k8s.io/apimachinery v0.34.1
+	k8s.io/api v0.34.2
+	k8s.io/apimachinery v0.34.2
 	k8s.io/apiserver v0.32.3
 	oras.land/oras-go/v2 v2.6.0
 	sdk.kraft.cloud v0.5.10-0.20251010085803-9d579e3ec270
