@@ -70,11 +70,17 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
+      - name: Go env
+        run: |
+          unset GOROOT
+          go env
+
       - name: Build protoc-gen-go-netconn
         run: |
           set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
           cd tools/protoc-gen-go-netconn
+          unset GOROOT
           go build -o ../../dist/
 
       - name: Run Help Message

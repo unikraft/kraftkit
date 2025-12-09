@@ -70,11 +70,17 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
+      - name: Go env
+        run: |
+          unset GOROOT
+          go env
+
       - name: Build go-generate-qemu-devices
         run: |
           set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
           cd tools/go-generate-qemu-devices
+          unset GOROOT
           go build -o ../../dist/
 
       - name: Run Help Message
