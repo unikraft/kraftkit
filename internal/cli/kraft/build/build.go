@@ -246,7 +246,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rootfs != "" {
-		initrdStat, err := os.Stat(opts.Rootfs)
+		initrdStat, err := os.Stat(workdir + opts.Rootfs)
 		if err != nil {
 			return fmt.Errorf("getting initramfs size: %w", err)
 		}

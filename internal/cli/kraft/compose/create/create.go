@@ -55,7 +55,7 @@ func NewCmd() *cobra.Command {
 		Long:    "Create the services and networks for a project.",
 		Example: heredoc.Doc(`
 			# Create the networks and services without running them
-			$ kraft compose create 
+			$ kraft compose create
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "compose",
