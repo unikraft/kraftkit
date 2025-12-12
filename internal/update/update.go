@@ -61,7 +61,7 @@ func Check(ctx context.Context) error {
 		}
 
 		if currentVer.LessThan(latestVer) {
-			fmt.Fprint(iostreams.G(ctx).Out, heredoc.Docf(`A new version of KraftKit is now available (v%s)!
+			fmt.Fprint(iostreams.G(ctx).ErrOut, heredoc.Docf(`A new version of KraftKit is now available (v%s)!
 
 Please update KraftKit through your local package manager or run:
 
