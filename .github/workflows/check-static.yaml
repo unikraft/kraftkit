@@ -57,19 +57,30 @@ jobs:
             fi
             git diff --exit-code -- go.sum go.mod
 
-      - name: gofumpt
+      - name: Format
         if: success() || failure()  # run this step even if the previous one failed
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.4.0
-          args: --timeout=30m --default none --output.text.path --output.text.print-linter-name --output.text.print-issued-lines --output.text.colors --build-tags "containers_image_storage_stub,containers_image_openpgp"
+          args: |
+            --default none \
+            --timeout=30m \
+            --output.text.path \
+            --output.text.print-linter-name \
+            --output.text.print-issued-lines \
+            --output.text.colors
           skip-cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.4.0
-          args: --timeout=30m --output.text.path --output.text.print-linter-name --output.text.print-issued-lines --output.text.colors --build-tags "containers_image_storage_stub,containers_image_openpgp"
+          args: |
+            --timeout=30m \
+            --output.text.path \
+            --output.text.print-linter-name \
+            --output.text.print-issued-lines \
+            --output.text.colors
           skip-cache: true
 
       - name: go generate
