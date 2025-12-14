@@ -10,12 +10,12 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/acorn-io/baaah v0.0.0-20230522221318-afcc93619e30
-	github.com/anchore/stereoscope v0.1.13
+	github.com/anchore/stereoscope v0.1.16
 	github.com/briandowns/spinner v1.23.2
-	github.com/charmbracelet/bubbles v0.21.0
+	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
-	github.com/cli/cli/v2 v2.83.1
+	github.com/cli/cli/v2 v2.83.2
 	github.com/cli/go-gh/v2 v2.13.0
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.20.2
@@ -28,7 +28,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/cyphar/filepath-securejoin v0.6.1
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/docker/cli v29.1.2+incompatible
+	github.com/docker/cli v29.1.3+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.9.0
@@ -45,7 +45,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/henvic/httpretty v0.1.4
 	github.com/klauspost/cpuid/v2 v2.3.0
-	github.com/kubescape/go-git-url v0.0.30
+	github.com/kubescape/go-git-url v0.0.31
 	github.com/mattn/go-colorable v0.1.14
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-shellwords v1.0.12
@@ -81,8 +81,8 @@ require (
 	google.golang.org/grpc v1.77.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.34.2
-	k8s.io/apimachinery v0.34.2
+	k8s.io/api v0.34.3
+	k8s.io/apimachinery v0.34.3
 	k8s.io/apiserver v0.32.3
 	oras.land/oras-go/v2 v2.6.0
 	sdk.kraft.cloud v0.5.10-0.20251010085803-9d579e3ec270
@@ -202,7 +202,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.18.1 // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20230110061619-bbe2e5e100de // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
@@ -289,15 +289,15 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/crypto v0.44.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	k8s.io/component-base v0.32.3 // indirect
