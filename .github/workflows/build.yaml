@@ -61,7 +61,7 @@ jobs:
           VERSION=pr-${{ github.event.number }} XEN=${{ matrix.XEN }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make kraft
 
       - name: Upload build artifacts to GitHub
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: kraft-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
           path: ./dist/kraft
