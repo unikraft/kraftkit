@@ -69,7 +69,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -118,7 +118,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -173,7 +173,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
