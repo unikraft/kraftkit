@@ -231,14 +231,14 @@ jobs:
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: xen-oci-image
           path: /tmp
@@ -335,21 +335,21 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: xen-oci-image
           path: /tmp
@@ -433,21 +433,21 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: base-oci-image
           path: /tmp
@@ -541,14 +541,14 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: qemu-oci-image
           path: /tmp
