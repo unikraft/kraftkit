@@ -419,12 +419,18 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
+	var rawRoms []string
 	if opts.Project != nil {
-		p.roms = opts.Project.Roms()
+		rawRoms = opts.Project.Roms()
 	} else if len(opts.Roms) > 0 {
-		p.roms = opts.Roms
+		rawRoms = opts.Roms
 	} else if p.target != nil && len(p.target.Roms()) > 0 {
-		p.roms = p.target.Roms()
+		rawRoms = p.target.Roms()
+	}
+
+	// Build ROMs with the specified filesystem type (if provided)
+	if p.roms, err = utils.BuildRoms(ctx, opts.Workdir, rawRoms, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType); err != nil {
+		return nil, fmt.Errorf("could not build ROMs: %w", err)
 	}
 
 	var labels map[string]string
