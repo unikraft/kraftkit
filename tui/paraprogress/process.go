@@ -147,7 +147,7 @@ func (p *Process) Start() tea.Cmd {
 		return nil
 	})
 
-	return tea.Batch(cmds...)
+	return tea.Sequence(cmds...)
 }
 
 // onProgress is called to dynamically inject ProgressMsg into the bubbletea

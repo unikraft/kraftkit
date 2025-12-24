@@ -241,8 +241,6 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/cli/kraft.sentryDsn={{ .Env.SENTRY_DSN }}
       #@ end
     tags:
-      - containers_image_storage_stub
-      - containers_image_openpgp
       - netgo
       - osusergo
       #@ if bin == "kraft" and os == "linux" and arch == "amd64":

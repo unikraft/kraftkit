@@ -68,8 +68,6 @@ CURL        ?= curl
 CMAKE       ?= cmake
 
 # Go tools
-GOFUMPT_VERSION    ?= v0.7.0
-GOFUMPT            ?= $(GO) run mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
 GOCILINT_VERSION   ?= v2.4.0
 GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 YTT_VERSION        ?= v0.51.0
@@ -252,11 +250,14 @@ tidy: ## Tidy import Go modules.
 
 .PHONY: fmt
 fmt: ## Format all files according to linting preferences.
-	$(GOFUMPT) -e -l -w $(WORKDIR)
+	$(GOCILINT) format
+
+.PHONY: lint
+fmt: ## Lint all files according to linting preferences.
+	$(GOCILINT) run --build-tags "osusergo,netgo"
 
 .PHONY: cicheck
-cicheck: ## Run CI checks.
-	$(GOCILINT) run --build-tags "osusergo,netgo"
+cicheck: lint ## Run CI checks.
 
 .PHONY: test
 test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
