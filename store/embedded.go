@@ -269,3 +269,23 @@ func (store *embedded[_, _]) Count(key string) (int64, error) {
 func (store *embedded[_, _]) ReadinessCheck() error {
 	panic("not implemented: kraftkit.sh/machine/store.embedded.ReadinessCheck")
 }
+
+// CompactRevision implements storage.Interface
+func (store *embedded[_, _]) CompactRevision() int64 {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.CompactRevision")
+}
+
+// EnableResourceSizeEstimation implements storage.Interface
+func (store *embedded[_, _]) EnableResourceSizeEstimation(_ storage.KeysFunc) error {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.EnableResourceSizeEstimation")
+}
+
+// GetCurrentResourceVersion implements storage.Interface
+func (store *embedded[_, _]) GetCurrentResourceVersion(_ context.Context) (uint64, error) {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.GetCurrentResourceVersion")
+}
+
+// Stats implements storage.Interface
+func (store *embedded[_, _]) Stats(_ context.Context) (storage.Stats, error) {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.Stats")
+}
