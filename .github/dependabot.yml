@@ -19,6 +19,7 @@ updates:
       # We've not been taking these, and they require a lot of code changes to resolve.
       - dependency-name: "k8s.io/apimachinery"
       - dependency-name: "k8s.io/apiserver"
+      - dependency-name: "k8s.io/api"
       # HACK: pending resolution of https://github.com/containerd/containerd/issues/12493
       - dependency-name: "github.com/opencontainers/runc"
       - dependency-name: "github.com/opencontainers/runtime-spec"
