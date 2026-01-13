@@ -39,9 +39,21 @@ func (opts *PkgOptions) initProject(ctx context.Context) error {
 
 // aggregateEnvs aggregates the environment variables from the project and
 // the cli options, filling in missing values with the host environment.
-func (opts *PkgOptions) aggregateEnvs() []string {
+func (opts *PkgOptions) aggregateEnvs(penvs []string) []string {
 	envs := make(map[string]string)
 
+	// Add the packager environment (Dockerfile, etc)
+	for _, env := range penvs {
+		if strings.ContainsRune(env, '=') {
+			parts := strings.SplitN(env, "=", 2)
+			envs[parts[0]] = parts[1]
+			continue
+		}
+
+		envs[env] = os.Getenv(env)
+	}
+
+	// Add the project environment
 	if opts.Project != nil && opts.Project.Env() != nil {
 		envs = opts.Project.Env()
 	}

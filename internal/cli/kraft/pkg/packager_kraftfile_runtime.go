@@ -404,7 +404,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	if p.env != nil {
 		p.env = append(opts.Env, p.env...)
 	} else {
-		opts.Env = opts.Env
+		p.env = opts.Env
 	}
 
 	// If no arguments have been specified, use the ones which are default and
@@ -501,7 +501,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					}
 				}
 
-				envs := opts.aggregateEnvs()
+				envs := opts.aggregateEnvs(p.env)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
 				} else if len(opts.Env) > 0 {

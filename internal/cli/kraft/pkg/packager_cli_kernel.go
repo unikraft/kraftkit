@@ -64,18 +64,14 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 	)
 
 	var cmds []string
-	var envs []string
+	var penvs []string
 	var rootfs initrd.Initrd
-	if rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType); err != nil {
+	if rootfs, cmds, penvs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
 	if len(opts.Args) == 0 && cmds != nil {
 		opts.Args = cmds
-	}
-
-	if envs != nil {
-		opts.Env = append(opts.Env, envs...)
 	}
 
 	labels := make(map[string]string)
@@ -118,7 +114,7 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 					popts = append(popts, packmanager.PackKConfig(targ.KConfig()))
 				}
 
-				envs := opts.aggregateEnvs()
+				envs := opts.aggregateEnvs(penvs)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
 				} else if len(opts.Env) > 0 {

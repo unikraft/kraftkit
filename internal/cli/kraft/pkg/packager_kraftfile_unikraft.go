@@ -97,7 +97,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 
 	for _, targ := range selected {
 		var cmds []string
-		var envs []string
+		var penvs []string
 		var rootfs initrd.Initrd
 
 		// Reset the rootfs, such that it is not packaged as an initrd if it is
@@ -112,7 +112,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			"CONFIG_LIBPOSIX_VFS_FSTAB_BUILTIN_EINITRD",
 			"CONFIG_LIBPOSIX_VFS_FSTAB_FALLBACK_EINITRD",
 		) {
-			if rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType); err != nil {
+			if rootfs, cmds, penvs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType); err != nil {
 				return nil, fmt.Errorf("could not build rootfs: %w", err)
 			}
 		}
@@ -121,10 +121,6 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 		targ := targ
 		baseopts := opts.packopts
 		name := "packaging " + targ.Name() + " (" + opts.Format + ")"
-
-		if envs != nil {
-			opts.Env = append(opts.Env, envs...)
-		}
 
 		// If no arguments have been specified, use the ones which are default and
 		// that have been included in the package.
@@ -188,7 +184,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 					)
 				}
 
-				envs := opts.aggregateEnvs()
+				envs := opts.aggregateEnvs(penvs)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
 				} else if len(opts.Env) > 0 {
