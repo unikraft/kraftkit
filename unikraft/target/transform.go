@@ -94,6 +94,9 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 				if err != nil {
 					return nil, err
 				}
+
+			case "output":
+				t.kernel = prop.(string)
 			}
 		}
 	default:

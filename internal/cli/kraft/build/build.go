@@ -7,6 +7,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,6 +24,7 @@ import (
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/tui"
+	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -39,6 +41,7 @@ type BuildOptions struct {
 	Env            []string        `long:"env" short:"e" usage:"Set environment variables to be built in the unikernel" split:"false"`
 	ForcePull      bool            `long:"force-pull" usage:"Force pulling packages before building"`
 	Jobs           int             `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	Kernel         string          `long:"kernel" short:"k" usage:"Set the output path of the built kernel image"`
 	KernelDbg      bool            `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile      string          `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	NoCache        bool            `long:"no-cache" short:"F" usage:"Force a rebuild even if existing intermediate artifacts already exist"`
@@ -113,6 +116,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 	if err := build.Prepare(ctx, opts, args...); err != nil {
 		return fmt.Errorf("could not complete build: %w", err)
+	}
+
+	if opts.Kernel != "" {
+		(*opts.Target).SetKernelPath(opts.Kernel)
 	}
 
 	if _, _, _, err = utils.BuildRootfs(
@@ -228,6 +235,28 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	entries := []fancymap.FancyMapEntry{}
 
 	if opts.Project.Unikraft(ctx) != nil {
+		t := *opts.Target
+
+		// Calculate the standard Unikraft build output path.
+		// Unikraft's build system always outputs to [BuildDir]/[TargetName]_[Plat]-[Arch].
+		// We need to check if the desired kernel path (t.Kernel()) differs from this.
+		tc, ok := t.(*target.TargetConfig)
+		if ok {
+			standardName, err := target.KernelName(*tc)
+			if err == nil {
+				standardPath := filepath.Join(opts.Workdir, unikraft.BuildDir, standardName)
+				desiredPath := t.Kernel()
+
+				// If they are different, it means either --kernel was used or 'output'
+				// was set in the Kraftfile. In either case, we move the file.
+				if standardPath != desiredPath {
+					if err := moveFile(standardPath, desiredPath); err != nil {
+						return fmt.Errorf("moving kernel to %s: %w", desiredPath, err)
+					}
+				}
+			}
+		}
+
 		kernelStat, err := os.Stat((*opts.Target).Kernel())
 		if err != nil {
 			return fmt.Errorf("getting kernel image size: %w", err)
@@ -296,6 +325,47 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	)
 
 	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
+
+	return nil
+}
+
+func moveFile(src, dst string) error {
+	// Ensure the destination directory exists.
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("creating destination directory: %w", err)
+	}
+
+	// Try rename first (works within same filesystem/disk).
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+
+	// Fallback to copy + remove for cross-device moves.
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("opening source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	srcInfo, err := srcFile.Stat()
+	if err != nil {
+		return fmt.Errorf("getting source file info: %w", err)
+	}
+
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("creating destination file: %w", err)
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("copying file contents: %w", err)
+	}
+
+	// Remove the original file after successful copy.
+	if err := os.Remove(src); err != nil {
+		return fmt.Errorf("removing original file: %w", err)
+	}
 
 	return nil
 }

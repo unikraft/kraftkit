@@ -1428,6 +1428,11 @@ func (ocipack *ociPackage) Kernel() string {
 	return ocipack.kernel
 }
 
+// SetKernelPath implements unikraft.target.Target
+func (ocipack *ociPackage) SetKernelPath(kernelPath string) {
+	ocipack.kernel = kernelPath
+}
+
 // KernelDbg implements unikraft.target.Target
 func (ocipack *ociPackage) KernelDbg() string {
 	return ocipack.kernelDbg

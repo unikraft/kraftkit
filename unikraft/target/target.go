@@ -51,6 +51,9 @@ type Target interface {
 	// all the porclained KConfig key values which is formatted
 	// `.config.<TARGET-NAME>`
 	ConfigFilename() string
+
+	// SetKernelPath updates the path to the kernel for this target.
+	SetKernelPath(string)
 }
 
 type TargetConfig struct {
@@ -119,6 +122,10 @@ func (tc *TargetConfig) Platform() plat.Platform {
 
 func (tc *TargetConfig) Kernel() string {
 	return tc.kernel
+}
+
+func (tc *TargetConfig) SetKernelPath(path string) {
+	tc.kernel = path
 }
 
 func (tc *TargetConfig) KernelDbg() string {
@@ -227,6 +234,9 @@ func (tc TargetConfig) MarshalYAML() (interface{}, error) {
 	}
 	if len(tc.kconfig) > 0 {
 		ret["kconfig"] = tc.kconfig
+	}
+	if len(tc.kernel) > 0 {
+		ret["output"] = tc.kernel
 	}
 
 	return ret, nil
