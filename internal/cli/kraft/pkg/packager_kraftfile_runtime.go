@@ -504,8 +504,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				envs := opts.aggregateEnvs(p.env)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
-				} else if len(opts.Env) > 0 {
-					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
 				}
 
 				more, err := opts.pm.Pack(ctx, p.target, popts...)

@@ -117,8 +117,6 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 				envs := opts.aggregateEnvs(penvs)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
-				} else if len(opts.Env) > 0 {
-					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
 				}
 
 				more, err := opts.pm.Pack(ctx, targ, popts...)
