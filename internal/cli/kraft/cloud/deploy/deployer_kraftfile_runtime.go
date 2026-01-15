@@ -158,7 +158,5 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		Token:               opts.Token,
 		Vcpus:               opts.Vcpus,
 		Volumes:             opts.Volumes,
-		WaitForImage:        true,
-		WaitForImageTimeout: opts.Timeout,
 	}, deployer.args...)
 }

@@ -22,7 +22,6 @@ import (
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
-	kcimages "sdk.kraft.cloud/images"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -63,8 +62,6 @@ type CreateOptions struct {
 	Token               string                         `noattribute:"true"`
 	Vcpus               uint                           `local:"true" long:"vcpus" short:"V" usage:"Specify the number of vCPUs to allocate"`
 	Volumes             []string                       `local:"true" long:"volume" short:"v" usage:"List of volumes to attach instance to"`
-	WaitForImage        bool                           `local:"true" long:"wait-for-image" short:"w" usage:"Wait for the image to be available before creating the instance"`
-	WaitForImageTimeout time.Duration                  `local:"true" long:"wait-for-image-timeout" usage:"Time to wait before timing out when waiting for image (ms/s/m/h)" default:"60s"`
 
 	Services []kcservices.CreateRequestService `noattribute:"true"`
 }
@@ -106,6 +103,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		opts.RolloutQualifier = ptr(RolloutQualifierImageName)
 	}
 
+	if opts.Memory == "" {
+		return nil, nil, fmt.Errorf("memory must be specified")
+	}
+
 	// Check if the user tries to use a service and a rollout strategy is
 	// set to prompt so that we can use this information later.  We do this very
 	// early on such that we can fail-fast in case prompting is not possible (e.g.
@@ -126,70 +127,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	// Replace all slashes in the name with dashes.
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
-
-	// Keep a reference of the image that we are going to use for the instance.
-	var image *kcimages.GetResponseItem
-
-	// Check if the image exists before creating the instance
-	if opts.WaitForImage {
-		paramodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(false),
-				processtree.WithRenderer(
-					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-				),
-				processtree.WithFailFast(true),
-				processtree.WithHideOnSuccess(true),
-				processtree.WithTimeout(opts.WaitForImageTimeout),
-			},
-			processtree.NewProcessTreeItem(
-				"propagating",
-				"",
-				func(ctx context.Context) error {
-					for {
-						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
-						if err != nil {
-							return fmt.Errorf("could not get image: %w", err)
-						}
-
-						image, err = imageResp.FirstOrErr()
-						if err != nil {
-							return fmt.Errorf("could not get image: %w", err)
-						}
-
-						if image == nil {
-							continue
-						}
-
-						return nil
-					}
-				},
-			),
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not start the process tree: %w", err)
-		}
-
-		err = paramodel.Start()
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not wait for image to be available: %w", err)
-		}
-	} else {
-		imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get image: %w", err)
-		}
-
-		image, err = imageResp.FirstOrErr()
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not get image: %w", err)
-		}
-
-		if image == nil {
-			return nil, nil, fmt.Errorf("no image with name: %s", opts.Image)
-		}
-	}
 
 	var features []kcinstances.Feature
 
@@ -212,39 +149,29 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	if opts.Name != "" {
 		req.Name = &opts.Name
 	}
-	if opts.Entrypoint.IsZero() {
-		req.Args = []string{image.Args}
-	} else {
+	if !opts.Entrypoint.IsZero() {
 		req.Args = opts.Entrypoint
 	}
 	if len(args) > 0 {
 		req.Args = append(req.Args, args...)
 	}
-	if opts.Memory != "" {
-		if _, err := strconv.ParseUint(opts.Memory, 10, 64); err == nil {
-			opts.Memory = fmt.Sprintf("%sMi", opts.Memory)
-		}
 
-		qty, err := resource.ParseQuantity(opts.Memory)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not parse memory quantity: %w", err)
-		}
-
-		if qty.Value() < 1024*1024 {
-			return nil, nil, fmt.Errorf("memory must be at least 1Mi")
-		}
-
-		// Convert to MiB
-		req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
-	} else {
-		// Set the default memory to the size of the image rounded to the nearest
-		// power of 2 with an arbitrary 10% buffer.  Only set the value if it is
-		// greater than 128 MiB.
-		mem := int(math.Round(math.Pow(2, math.Log2(float64(image.SizeInBytes/1024/1024)*1.1))))
-		if mem > 128 {
-			req.MemoryMB = &mem
-		}
+	if _, err := strconv.ParseUint(opts.Memory, 10, 64); err == nil {
+		opts.Memory = fmt.Sprintf("%sMi", opts.Memory)
 	}
+
+	qty, err := resource.ParseQuantity(opts.Memory)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not parse memory quantity: %w", err)
+	}
+
+	if qty.Value() < 1024*1024 {
+		return nil, nil, fmt.Errorf("memory must be at least 1Mi")
+	}
+
+	// Convert to MiB
+	req.MemoryMB = ptr(int(qty.Value() / (1024 * 1024)))
+
 	if opts.Replicas > 0 {
 		req.Replicas = ptr(int(opts.Replicas))
 	}

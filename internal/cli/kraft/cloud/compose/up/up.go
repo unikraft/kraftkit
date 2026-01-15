@@ -389,7 +389,6 @@ func Up(ctx context.Context, opts *UpOptions, args ...string) error {
 			Services:         services,
 			Start:            false,
 			Token:            opts.Token,
-			WaitForImage:     !opts.NoBuild,
 			Volumes:          volumes,
 		}, service.Command...)
 		if err != nil {
