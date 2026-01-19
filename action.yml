@@ -155,7 +155,7 @@ runs:
         --security-opt label=disable \
         --name buildkitd_${GITHUB_RUN_ID}_${SUFFIX} \
         -v /run/buildkit:/run/buildkit:rw \
-        moby/buildkit:v0.25.2;
+        moby/buildkit:v0.26.2;
       timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done'
       sudo chmod 666 /run/buildkit/buildkitd.sock;
     env:
