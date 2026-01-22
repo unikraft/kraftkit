@@ -53,15 +53,24 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 		}
 
 		if source, ok := c["source"]; ok {
-			runtime.source = source.(string)
+			runtime.source, ok = source.(string)
+			if !ok {
+				return nil, fmt.Errorf("runtime 'source' must be a string, got %T", source)
+			}
 		}
 
 		if version, ok := c["version"]; ok {
-			runtime.version = version.(string)
+			runtime.version, ok = version.(string)
+			if !ok {
+				return nil, fmt.Errorf("runtime 'version' must be a string, got %T", version)
+			}
 		}
 
 		if kconf, ok := c["kconfig"]; ok {
-			runtime.kconfig = kconf.(kconfig.KeyValueMap)
+			runtime.kconfig, ok = kconf.(kconfig.KeyValueMap)
+			if !ok {
+				return nil, fmt.Errorf("runtime 'kconfig' must be a mapping, got %T", kconf)
+			}
 		}
 	}
 

@@ -6,6 +6,7 @@ package template
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"kraftkit.sh/kconfig"
@@ -34,7 +35,10 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 	}
 
 	if source, ok := c["source"]; ok {
-		template.source = source.(string)
+		template.source, ok = source.(string)
+		if !ok {
+			return nil, fmt.Errorf("template 'source' must be a string, got %T", source)
+		}
 
 		// If the provided source is a directory on the host, set the "path" to this
 		// value.  The "path" is the location on disk where the microlibrary will
@@ -51,15 +55,24 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 	}
 
 	if name, ok := c["name"]; ok {
-		template.name = name.(string)
+		template.name, ok = name.(string)
+		if !ok {
+			return nil, fmt.Errorf("template 'name' must be a string, got %T", name)
+		}
 	}
 
 	if version, ok := c["version"]; ok {
-		template.version = version.(string)
+		template.version, ok = version.(string)
+		if !ok {
+			return nil, fmt.Errorf("template 'version' must be a string, got %T", version)
+		}
 	}
 
 	if kconf, ok := c["kconfig"]; ok {
-		template.kconfig = kconf.(kconfig.KeyValueMap)
+		template.kconfig, ok = kconf.(kconfig.KeyValueMap)
+		if !ok {
+			return nil, fmt.Errorf("template 'kconfig' must be a mapping, got %T", kconf)
+		}
 	}
 
 	return template, nil

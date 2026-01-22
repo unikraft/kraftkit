@@ -74,7 +74,11 @@ func TranslateFromSchema(props interface{}) (map[string]interface{}, error) {
 				}
 
 			case "source":
-				for k, v := range parseStringProp(prop.(string)) {
+				sourceStr, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("component 'source' must be a string, got %T", prop)
+				}
+				for k, v := range parseStringProp(sourceStr) {
 					component[k] = v
 				}
 

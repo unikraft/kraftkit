@@ -149,7 +149,11 @@ func transformMappingOrList(mappingOrList interface{}, sep string, allowNil bool
 	case []interface{}:
 		result := make(map[string]interface{})
 		for _, value := range value {
-			key, val := transformValueToMapEntry(value.(string), sep, allowNil)
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, errors.Errorf("malformed Kraftfile: expected string in list, got %T", value)
+			}
+			key, val := transformValueToMapEntry(strValue, sep, allowNil)
 			result[key] = val
 		}
 		return result, nil

@@ -50,7 +50,11 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 		for key, prop := range value {
 			switch key {
 			case "name":
-				t.name = prop.(string)
+				name, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("target 'name' must be a string, got %T", prop)
+				}
+				t.name = name
 
 			case "architecture", "arch":
 				architecture, err := arch.TransformFromSchema(ctx, prop)
@@ -61,7 +65,10 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 				t.architecture = architecture.(arch.ArchitectureConfig)
 
 			case "platform", "plat":
-				p := prop.(string)
+				p, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("target 'platform' must be a string, got %T", prop)
+				}
 				if strings.Contains(p, "/") {
 					split := strings.SplitN(p, "/", 2)
 					p = split[0]
@@ -82,7 +89,11 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 				t.platform = platform.(plat.PlatformConfig)
 
 			case "kernel":
-				t.name = prop.(string)
+				kernel, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("target 'kernel' must be a string, got %T", prop)
+				}
+				t.name = kernel
 
 			case "kconfig":
 				switch tprop := prop.(type) {
@@ -96,7 +107,11 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 				}
 
 			case "output":
-				t.kernel = prop.(string)
+				output, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("target 'output' must be a string, got %T", prop)
+				}
+				t.kernel = output
 			}
 		}
 	default:

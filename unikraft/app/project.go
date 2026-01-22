@@ -104,11 +104,19 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	iface = groupXFieldsIntoExtensions(iface)
 	if n, ok := iface["name"]; ok {
-		name = n.(string)
+		nameStr, ok := n.(string)
+		if !ok {
+			return nil, fmt.Errorf("malformed Kraftfile: 'name' field must be a string, got %T", n)
+		}
+		name = nameStr
 	}
 
 	if n, ok := iface["outdir"]; ok {
-		name = n.(string)
+		outdirStr, ok := n.(string)
+		if !ok {
+			return nil, fmt.Errorf("malformed Kraftfile: 'outdir' field must be a string, got %T", n)
+		}
+		outdir = outdirStr
 	}
 
 	popts.kraftfile.config = iface
