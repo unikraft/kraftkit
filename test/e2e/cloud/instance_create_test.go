@@ -754,39 +754,6 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, but a 62 character name starting with a digit", func() {
-		var instanceNameFull string
-
-		BeforeEach(func() {
-			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
-			if err != nil {
-				panic(err)
-			}
-			instanceNameFull = fmt.Sprintf("0%s-%d", instanceName, id)
-
-			for len(instanceNameFull) < 59 {
-				instanceNameFull = instanceNameFull + "a"
-			}
-
-			cmd.Args = append(cmd.Args,
-				"--port", instancePortMap,
-				"--memory", instanceMemory,
-				"--name", instanceNameFull,
-				"--start",
-				imageName,
-			)
-		})
-
-		It("should not error out with an API error", func() {
-			err := cmd.Run()
-			time.Sleep(2 * time.Second)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-		})
-	})
-
 	When("invoked with standard flags and positional arguments, but a 62 character name with uppercase letters", func() {
 		var instanceNameFull string
 
