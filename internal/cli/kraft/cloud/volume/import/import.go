@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -100,6 +101,22 @@ func (opts *ImportOptions) Pre(cmd *cobra.Command, _ []string) error {
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
+	}
+
+	if opts.Source != "" && !filepath.IsAbs(opts.Source) {
+		abs, err := filepath.Abs(opts.Source)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of source: %w", err)
+		}
+		opts.Source = abs
+	}
+
+	if opts.Workdir != "" && !filepath.IsAbs(opts.Workdir) {
+		abs, err := filepath.Abs(opts.Workdir)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of workdir: %w", err)
+		}
+		opts.Workdir = abs
 	}
 
 	return nil

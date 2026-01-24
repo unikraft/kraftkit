@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -101,6 +102,13 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOp
 // Prepare implements Runner.
 func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	var err error
+
+	// Update potential relative paths for the targets
+	for _, targ := range runner.project.Targets() {
+		if !filepath.IsAbs(targ.Kernel()) {
+			targ.SetKernelPath(filepath.Join(runner.workdir, targ.Kernel()))
+		}
+	}
 
 	// Remove targets which do not have a compiled kernel.
 	targets := slices.DeleteFunc(runner.project.Targets(), func(targ target.Target) bool {

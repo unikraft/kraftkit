@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -58,6 +59,12 @@ func (p *packagerKraftfileUnikraft) Packagable(ctx context.Context, opts *PkgOpt
 // Build implements packager.
 func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
+
+	for _, targ := range opts.Project.Targets() {
+		if !filepath.IsAbs(targ.Kernel()) {
+			targ.SetKernelPath(filepath.Join(opts.Workdir, targ.Kernel()))
+		}
+	}
 
 	var tree []*processtree.ProcessTreeItem
 

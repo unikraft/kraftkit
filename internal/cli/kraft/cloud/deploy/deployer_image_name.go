@@ -65,13 +65,7 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 		return false, err
 	}
 
-	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
-		opts.Rootfs = opts.Project.Rootfs()
-	}
-
-	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
-		opts.RootfsType = opts.Project.InitrdFsType()
-	}
+	updateOptsFromProject(opts)
 
 	deployer.imageName = args[0]
 	deployer.args = args[1:]

@@ -40,13 +40,7 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 		}
 	}
 
-	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
-		opts.Rootfs = opts.Project.Rootfs()
-	}
-
-	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
-		opts.RootfsType = opts.Project.InitrdFsType()
-	}
+	updateOptsFromProject(opts)
 
 	// Maybe no `--rootfs` flag was provided, but there may be a local Dockerfile
 	// in the working directory.  If so, we can use that as the rootfs.

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/sirupsen/logrus"
@@ -202,6 +203,14 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 			log.G(ctx).Warn("for backwards-compatibility reasons the value of --initrd is set to --rootfs")
 			opts.Rootfs = opts.InitRd
 		}
+	}
+
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) {
+		abs, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of rootfs: %w", err)
+		}
+		opts.Rootfs = abs
 	}
 
 	if opts.Memory != "" {

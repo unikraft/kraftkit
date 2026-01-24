@@ -217,6 +217,14 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) {
+		abs, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of rootfs: %w", err)
+		}
+		opts.Rootfs = abs
+	}
+
 	return nil
 }
 
@@ -249,6 +257,14 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 
 				// If they are different, it means either --kernel was used or 'output'
 				// was set in the Kraftfile. In either case, we move the file.
+
+				// If the kernel path was not overridden by the user via flag, and it is relative,
+				// we must make it relative to the workdir.
+				if opts.Kernel == "" && !filepath.IsAbs(desiredPath) {
+					desiredPath = filepath.Join(opts.Workdir, desiredPath)
+					(*opts.Target).SetKernelPath(desiredPath)
+				}
+
 				if standardPath != desiredPath {
 					if err := moveFile(standardPath, desiredPath); err != nil {
 						return fmt.Errorf("moving kernel to %s: %w", desiredPath, err)
@@ -275,6 +291,10 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rootfs != "" {
+		if !filepath.IsAbs(opts.Rootfs) {
+			opts.Rootfs = filepath.Join(opts.Workdir, opts.Rootfs)
+		}
+
 		initrdStat, err := os.Stat(opts.Rootfs)
 		if err != nil {
 			return fmt.Errorf("getting initramfs size: %w", err)

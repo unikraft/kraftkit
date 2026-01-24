@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -82,6 +83,22 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	var library lib.LibraryConfig
 	isPackUndefindable := false
 	packageManager := packmanager.G(ctx)
+
+	// Set workdir from opts or fallback to CWD
+	workdir = opts.Workdir
+	if workdir == "" {
+		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+	// Convert to absolute path
+	if !filepath.IsAbs(workdir) {
+		workdir, err = filepath.Abs(workdir)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of workdir: %w", err)
+		}
+	}
 
 	if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
 		if err = packageManager.AddSource(ctx, args[0]); err != nil {

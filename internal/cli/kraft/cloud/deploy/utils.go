@@ -7,6 +7,7 @@ package deploy
 
 import (
 	"context"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -68,4 +69,18 @@ func (opts *DeployOptions) initProject(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func updateOptsFromProject(opts *DeployOptions) {
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		if filepath.IsAbs(opts.Project.Rootfs()) {
+			opts.Rootfs = opts.Project.Rootfs()
+		} else {
+			opts.Rootfs = filepath.Join(opts.Workdir, opts.Project.Rootfs())
+		}
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
 }

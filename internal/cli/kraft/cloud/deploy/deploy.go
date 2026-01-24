@@ -196,6 +196,14 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) {
+		abs, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of rootfs: %w", err)
+		}
+		opts.Rootfs = abs
+	}
+
 	if cmd.Flag("scale-to-zero").Changed {
 		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
 		opts.ScaleToZero = &s20v
