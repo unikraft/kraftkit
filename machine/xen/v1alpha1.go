@@ -89,6 +89,11 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, err
 	}
 
+	// Ensure the directory and its contents are owned by the original user when running under sudo
+	if err := config.ChownToUserRecursive(machine.Status.StateDir); err != nil {
+		return machine, err
+	}
+
 	if len(machine.Status.LogFile) == 0 {
 		machine.Status.LogFile = filepath.Join(machine.Status.StateDir, "machine.log")
 	}
