@@ -2,10 +2,16 @@ name: check/pr
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
     branches: [staging]
 
 jobs:
-  pr-check:
-    uses: unikraft-cloud/x/.github/workflows/check-pr.yaml@prod-staging
+  check-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
+    - name: Run check-pr
+      uses: unikraft-cloud/x/.github/actions/check-pr@prod-staging
