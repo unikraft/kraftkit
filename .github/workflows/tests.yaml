@@ -137,6 +137,8 @@ jobs:
           KRAFTKIT_NO_WARN_SUDO: true
           KRAFTKIT_NO_CHECK_UPDATES: true
           DOCKER: ''
+          KRAFTKIT_DATA_DIR: /tmp/kraftkit-data
+          KRAFTKIT_STATE_DIR: /tmp/kraftkit-state
         run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
 
   e2e-cloud-cli:
