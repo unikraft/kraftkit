@@ -328,6 +328,9 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not wait for err group: %w", err)
 	}
 
+	// Set the per-file read limit to 4GB to handle large image layers
+	sfile.SetPerFileReadLimit(4 * 1024 * 1024 * 1024)
+
 	// parse the output directory with stereoscope
 	tempgen := sfile.NewTempDirGenerator("kraftkit")
 	if tempgen == nil {
