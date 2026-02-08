@@ -126,10 +126,10 @@ type Application interface {
 	Fetch(context.Context, target.Target, ...make.MakeOption) error
 
 	// Set a configuration option for a specific target
-	Set(context.Context, target.Target, ...make.MakeOption) error
+	Set(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
 
 	// Unset a configuration option for a specific target
-	Unset(context.Context, target.Target, ...make.MakeOption) error
+	Unset(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
 
 	// Build offers an invocation of the Unikraft build system with the contextual
 	// information of the application
@@ -741,54 +741,15 @@ func (app *application) Fetch(ctx context.Context, tc target.Target, mopts ...ma
 	)
 }
 
-func (app *application) Set(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
-	// Write the configuration to a temporary file
-	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer tmpfile.Close()
-	// defer os.Remove(tmpfile.Name())
-
-	// // Save and sync the config file
-	// tmpfile.WriteString(app.Configuration.String())
-	// tmpfile.Sync()
-
-	// // Give the file to the make command to import
-	// mopts = append(mopts,
-	// 	make.WithExecOptions(
-	// 		exec.WithEnvKey(unikraft.UK_DEFCONFIG, tmpfile.Name()),
-	// 	),
-	// )
-
-	// return app.Configure(mopts...)
-
-	return nil
+func (app *application) Set(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+	// Pass the extra config values (from CLI) as 'extra' so they override component defaults
+	// AND override any project-level defaults (like UK_NAME set by WithName).
+	return app.Configure(ctx, tc, extra, mopts...)
 }
 
-func (app *application) Unset(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
-	// // Write the configuration to a temporary file
-	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer tmpfile.Close()
-	// defer os.Remove(tmpfile.Name())
-
-	// // Save and sync the config file
-	// tmpfile.WriteString(app.Configuration.String())
-	// tmpfile.Sync()
-
-	// // Give the file to the make command to import
-	// mopts = append(mopts,
-	// 	make.WithExecOptions(
-	// 		exec.WithEnvKey(unikraft.UK_DEFCONFIG, tmpfile.Name()),
-	// 	),
-	// )
-
-	// return app.Configure(mopts...)
-
-	return nil
+func (app *application) Unset(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+	// Pass the extra config values (from CLI) as 'extra' so they override defaults.
+	return app.Configure(ctx, tc, extra, mopts...)
 }
 
 // Build offers an invocation of the Unikraft build system with the contextual
