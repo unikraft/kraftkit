@@ -1,34 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//
-// Authors: Cezar Craciunoiu <cezar.craciunoiu@gmail.com>
-//
-// Copyright (c) 2022, Unikraft GmbH.  All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-
+// Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
 package set
 
 import (
@@ -41,14 +14,21 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
+	"kraftkit.sh/config"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+	"kraftkit.sh/tui/confirm"
 	"kraftkit.sh/unikraft/app"
+	"kraftkit.sh/unikraft/target"
 )
 
 type SetOptions struct {
-	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Workdir   string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
+	Architecture string `long:"arch" short:"m" usage:"Filter targets by architecture"`
+	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Platform     string `long:"plat" short:"p" usage:"Filter targets by platform"`
+	Target       string `long:"target" short:"t" usage:"Set config for a specific target"`
+	Workdir      string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
 
 // Set a KConfig variable in a Unikraft project.
@@ -63,11 +43,10 @@ func Set(ctx context.Context, opts *SetOptions, args ...string) error {
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&SetOptions{}, cobra.Command{
 		Short:   "Set a variable for a Unikraft project",
-		Hidden:  true,
 		Use:     "set [OPTIONS] [param=value ...]",
 		Aliases: []string{"s"},
 		Long: heredoc.Doc(`
-			set a variable for a Unikraft project
+			Set a variable for a Unikraft project.
 		`),
 		Example: heredoc.Doc(`
 			# Set variables in the cwd project
@@ -75,10 +54,12 @@ func NewCmd() *cobra.Command {
 
 			# Set variables in a project at a path
 			$ kraft set -w path/to/app LIBDEVFS_DEV_STDOUT=/dev/null LWIP_TCP_SND_BUF=4096
+
+			# Set variables for a specific target
+			$ kraft set --plat=qemu --arch=x86_64 CONFIG_LIBUKDEBUG=y
 		`),
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "build",
-			cmdfactory.AnnotationHelpHidden: "true",
+			cmdfactory.AnnotationHelpGroup: "build",
 		},
 	})
 	if err != nil {
@@ -102,17 +83,8 @@ func (*SetOptions) Pre(cmd *cobra.Command, _ []string) error {
 func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
-	log.G(ctx).Warnf("This command is DEPRECATED and should not be used")
-
 	workdir := ""
-	confOpts := []string{}
 
-	// Skip if nothing can be set
-	if len(args) == 0 {
-		return fmt.Errorf("no options to set")
-	}
-
-	// Set the working directory (remove the argument if it exists)
 	if opts.Workdir != "" {
 		workdir = opts.Workdir
 	} else {
@@ -122,7 +94,12 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	// Set the configuration options, skip the first one if needed
+	if len(args) == 0 {
+		return fmt.Errorf("no options to set")
+	}
+
+	confOpts := []string{}
+
 	for _, arg := range args {
 		if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
 			return fmt.Errorf("invalid or malformed argument: %s", arg)
@@ -131,15 +108,7 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 		confOpts = append(confOpts, arg)
 	}
 
-	// Check if dotconfig exists in workdir
-	dotconfig := fmt.Sprintf("%s/.config", workdir)
-
-	// Check if the file exists
-	// TODO: offer option to start in interactive mode
-	if _, err := os.Stat(dotconfig); os.IsNotExist(err) {
-		return fmt.Errorf("dotconfig file does not exist: %s", dotconfig)
-	}
-
+	// Load the project
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(workdir),
 		app.WithProjectConfig(confOpts),
@@ -151,11 +120,61 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 		popts = append(popts, app.WithProjectDefaultKraftfiles())
 	}
 
-	// Initialize at least the configuration options for a project
 	project, err := app.NewProjectFromOptions(ctx, popts...)
 	if err != nil {
 		return err
 	}
 
-	return project.Set(ctx, nil)
+	// Prepare the extra config map from user input
+	extraConfig := kconfig.KeyValueMap{}
+	for _, opt := range confOpts {
+		if split := strings.SplitN(opt, "=", 2); len(split) == 2 {
+			extraConfig.Set(split[0], split[1])
+		}
+	}
+
+	// Filter targets based on platform/arch/target flags
+	selected := target.Filter(
+		project.Targets(),
+		opts.Architecture,
+		opts.Platform,
+		opts.Target,
+	)
+
+	if len(selected) == 0 {
+		return fmt.Errorf("no targets match the specified criteria")
+	}
+
+	// If multiple targets and prompting is enabled, let user select
+	if len(selected) > 1 && !config.G[config.KraftKit](ctx).NoPrompt {
+		tc, err := target.Select(selected)
+		if err != nil {
+			return err
+		}
+		selected = []target.Target{tc}
+	}
+
+	for _, tc := range selected {
+		// If not configured, prompt user for confirmation before generating
+		if !project.IsConfigured(tc) {
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				generate, err := confirm.NewConfirm("No configuration found, generate default config?")
+				if err != nil {
+					return err
+				}
+				if !generate {
+					log.G(ctx).Infof("Skipping target: %s", tc.Name())
+					continue
+				}
+			}
+		}
+
+		// Apply the user's config values (this also generates config if needed)
+		if err := project.Set(ctx, tc, extraConfig); err != nil {
+			return fmt.Errorf("setting config for target %s: %w", tc.Name(), err)
+		}
+		log.G(ctx).Infof("Config applied to target: %s", tc.Name())
+	}
+
+	return nil
 }
