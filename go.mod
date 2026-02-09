@@ -71,11 +71,11 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
+	github.com/unikraft/go-archivefs v0.0.0-20260218131508-64011984668c
 	github.com/unikraft/go-cpio v0.0.0-20260209140144-8e02f12b23e0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0
-	golang.org/x/mod v0.33.0
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/sys v0.41.0
@@ -286,6 +286,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

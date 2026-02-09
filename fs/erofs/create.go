@@ -2,6 +2,7 @@
 // Copyright (c) 2025, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
+
 package erofs
 
 import (
@@ -9,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/unikraft/go-archivefs/erofs"
 
 	"kraftkit.sh/fsutils"
 	"kraftkit.sh/log"
@@ -73,7 +76,12 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *os.Fil
 // CreateFSFromDirectory creates an EroFS filesystem from a directory.
 func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *os.File, source string, opts ...ErofsCreateOption) error {
 	log.G(ctx).Info("creating EroFS archive")
-	return Create(io.WriterAt(writer), os.DirFS(source), opts...)
+	archivefsOpts, err := toArchivefsOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	return erofs.Create(io.WriterAt(writer), os.DirFS(source), archivefsOpts...)
 }
 
 // CreateFSFromTarFile creates an EroFS filesystem from a tar file.
@@ -110,4 +118,32 @@ func (c *createOptions) CreateFSFromErofs(ctx context.Context, writer *os.File, 
 	}
 
 	return nil
+}
+
+func toArchivefsOptions(opts []ErofsCreateOption) ([]erofs.ErofsCreateOption, error) {
+	var localOpts ErofsCreateOptions
+	for _, opt := range opts {
+		if err := opt(&localOpts); err != nil {
+			return nil, err
+		}
+	}
+
+	archivefsOpts := []erofs.ErofsCreateOption{
+		erofs.WithAllRoot(localOpts.allRoot),
+	}
+
+	if localOpts.fInfoMap != nil {
+		fInfoMap := make(map[string]erofs.FileInfo, len(localOpts.fInfoMap))
+		for path, info := range localOpts.fInfoMap {
+			fInfoMap[path] = erofs.FileInfo{
+				Uid:  info.Uid,
+				Gid:  info.Gid,
+				Mode: info.Mode,
+				Name: info.Name,
+			}
+		}
+		archivefsOpts = append(archivefsOpts, erofs.WithFileInfoMap(fInfoMap))
+	}
+
+	return archivefsOpts, nil
 }
