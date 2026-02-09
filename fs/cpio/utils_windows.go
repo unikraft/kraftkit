@@ -9,6 +9,8 @@ package cpio
 
 import (
 	"io/fs"
+
+	"github.com/unikraft/go-cpio"
 )
 
-func FileInfoToCPIOHeader(info fs.FileInfo, header *Header) {}
+func FileInfoToCPIOHeader(info fs.FileInfo, header *cpio.Header) {}

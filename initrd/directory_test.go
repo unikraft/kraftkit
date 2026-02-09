@@ -10,8 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/unikraft/go-cpio"
 	"kraftkit.sh/archive"
-	"kraftkit.sh/fs/cpio"
 	"kraftkit.sh/initrd"
 )
 
@@ -48,7 +48,7 @@ func TestNewFromDirectoryToCPIO(t *testing.T) {
 	r := cpio.NewReader(openFile(t, irdPath))
 
 	for {
-		hdr, _, err := r.Next()
+		hdr, err := r.Next()
 		if err == io.EOF {
 			break
 		}

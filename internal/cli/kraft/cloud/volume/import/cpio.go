@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"kraftkit.sh/fs/cpio"
+	"github.com/unikraft/go-cpio"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 )
@@ -343,7 +343,7 @@ func copyCPIO(ctx context.Context, conn *tls.Conn, auth, path string, force bool
 	// 2.  Copy the file content piece by piece | Link destination
 initrdLoop:
 	for {
-		hdr, raw, err := reader.Next()
+		hdr, raw, err := reader.NextRaw()
 		if err == io.EOF {
 			shouldStop = true
 		} else if err != nil {

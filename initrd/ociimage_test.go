@@ -13,7 +13,7 @@ import (
 	"os"
 	"testing"
 
-	"kraftkit.sh/fs/cpio"
+	"github.com/unikraft/go-cpio"
 	"kraftkit.sh/initrd"
 )
 
@@ -47,7 +47,7 @@ func TestNewFromOCIImageToCPIO(t *testing.T) {
 	var gotFiles []string
 
 	for {
-		hdr, _, err := r.Next()
+		hdr, err := r.Next()
 		if err == io.EOF {
 			break
 		}

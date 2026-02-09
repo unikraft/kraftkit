@@ -10,9 +10,11 @@ package cpio
 import (
 	"io/fs"
 	"syscall"
+
+	"github.com/unikraft/go-cpio"
 )
 
-func FileInfoToCPIOHeader(info fs.FileInfo, header *Header) {
+func FileInfoToCPIOHeader(info fs.FileInfo, header *cpio.Header) {
 	if sysInfo := info.Sys(); sysInfo != nil {
 		if stat, ok := sysInfo.(*syscall.Stat_t); ok {
 			header.Uid = int(stat.Uid)

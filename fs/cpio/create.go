@@ -20,6 +20,7 @@ import (
 	scfile "github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
 	"github.com/anchore/stereoscope/pkg/filetree/filenode"
+	"github.com/unikraft/go-cpio"
 
 	"kraftkit.sh/fsutils"
 	"kraftkit.sh/log"
@@ -59,7 +60,7 @@ func CreateFS(ctx context.Context, output string, source string, opts ...CpioCre
 	}
 	defer f.Close()
 
-	writer := NewWriter(f)
+	writer := cpio.NewWriter(f)
 	defer writer.Close()
 	defer func() {
 		if err := f.Sync(); err != nil {
@@ -93,7 +94,7 @@ func CreateFS(ctx context.Context, output string, source string, opts ...CpioCre
 }
 
 // CreateFSFromOCIImage creates a CPIO filesystem from an existing OCI image.
-func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer, source string) error {
+func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *cpio.Writer, source string) error {
 	image, err := stereoscope.GetImage(ctx, source)
 	if err != nil {
 		return fmt.Errorf("could not load image: %w", err)
@@ -118,9 +119,9 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 			internal = fmt.Sprintf(".%s", internal)
 		}
 
-		cpioHeader := &Header{
+		cpioHeader := &cpio.Header{
 			Name:    internal,
-			Mode:    FileMode(info.Mode().Perm()),
+			Mode:    cpio.FileMode(info.Mode().Perm()),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
 		}
@@ -153,7 +154,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 				WithField("link", info.LinkDestination).
 				Trace("symlinking")
 
-			cpioHeader.Mode |= TypeSymlink
+			cpioHeader.Mode |= cpio.TypeSymlink
 			cpioHeader.Linkname = info.LinkDestination
 			cpioHeader.Size = int64(len(info.LinkDestination))
 
@@ -171,7 +172,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 				WithField("link", info.LinkDestination).
 				Trace("hardlinking")
 
-			cpioHeader.Mode |= TypeReg
+			cpioHeader.Mode |= cpio.TypeRegular
 			cpioHeader.Linkname = info.LinkDestination
 			cpioHeader.Size = 0
 
@@ -185,7 +186,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 				WithField("dst", internal).
 				Trace("copying")
 
-			cpioHeader.Mode |= TypeReg
+			cpioHeader.Mode |= cpio.TypeRegular
 			cpioHeader.Linkname = info.LinkDestination
 			cpioHeader.Size = info.Size()
 
@@ -212,7 +213,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 				WithField("dst", internal).
 				Trace("mkdir")
 
-			cpioHeader.Mode |= TypeDir
+			cpioHeader.Mode |= cpio.TypeDir
 
 			return writer.WriteHeader(cpioHeader)
 
@@ -237,7 +238,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *Writer
 }
 
 // CreateFSFromTar creates a CPIO filesystem from an existing tar file.
-func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, source string) error {
+func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *cpio.Writer, source string) error {
 	tarArchive, err := os.Open(source)
 	if err != nil {
 		return fmt.Errorf("could not open output tarball: %w", err)
@@ -343,9 +344,9 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 			continue
 		}
 
-		cpioHeader := &Header{
+		cpioHeader := &cpio.Header{
 			Name:    internal,
-			Mode:    FileMode(tarHeader.FileInfo().Mode().Perm()),
+			Mode:    cpio.FileMode(tarHeader.FileInfo().Mode().Perm()),
 			ModTime: tarHeader.FileInfo().ModTime(),
 			Size:    tarHeader.FileInfo().Size(),
 		}
@@ -375,7 +376,7 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 				WithField("link", tarHeader.Linkname).
 				Trace("symlinking")
 
-			cpioHeader.Mode |= TypeSymlink
+			cpioHeader.Mode |= cpio.TypeSymlink
 			cpioHeader.Linkname = tarHeader.Linkname
 			cpioHeader.Size = int64(len(tarHeader.Linkname))
 
@@ -393,7 +394,7 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 				WithField("link", tarHeader.Linkname).
 				Trace("hardlinking")
 
-			cpioHeader.Mode |= TypeReg
+			cpioHeader.Mode |= cpio.TypeRegular
 			cpioHeader.Linkname = tarHeader.Linkname
 			cpioHeader.Size = 0
 			if _, ok := fileCount[tarHeader.Linkname]; ok {
@@ -410,7 +411,7 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 				WithField("dst", internal).
 				Trace("copying")
 
-			cpioHeader.Mode |= TypeReg
+			cpioHeader.Mode |= cpio.TypeRegular
 			cpioHeader.Linkname = tarHeader.Linkname
 			cpioHeader.Size = tarHeader.FileInfo().Size()
 			if _, ok := fileCount[tarHeader.Name]; ok {
@@ -436,7 +437,7 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 				WithField("dst", internal).
 				Trace("mkdir")
 
-			cpioHeader.Mode |= TypeDir
+			cpioHeader.Mode |= cpio.TypeDir
 
 			if err := writer.WriteHeader(cpioHeader); err != nil {
 				return fmt.Errorf("could not write CPIO header: %w", err)
@@ -454,7 +455,7 @@ func (c *createOptions) CreateFSFromTar(ctx context.Context, writer *Writer, sou
 }
 
 // CreateFSFromDirectory creates a CPIO filesystem from an existing directory.
-func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *Writer, source string) error {
+func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *cpio.Writer, source string) error {
 	// Recursively walk and serialize to the output
 	if err := filepath.WalkDir(source, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -473,9 +474,9 @@ func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *Write
 		}
 
 		if d.Type().IsDir() {
-			header := &Header{
+			header := &cpio.Header{
 				Name:    internal,
-				Mode:    FileMode(info.Mode().Perm()) | TypeDir,
+				Mode:    cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
 				ModTime: info.ModTime(),
 				Size:    0, // Directories have size 0 in cpio
 			}
@@ -508,9 +509,9 @@ func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *Write
 			return fmt.Errorf("could not read file: %w", err)
 		}
 
-		header := &Header{
+		header := &cpio.Header{
 			Name:    internal,
-			Mode:    FileMode(info.Mode().Perm()),
+			Mode:    cpio.FileMode(info.Mode().Perm()),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
 		}
@@ -525,10 +526,10 @@ func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *Write
 
 		switch {
 		case info.Mode().IsRegular():
-			header.Mode |= TypeReg
+			header.Mode |= cpio.TypeRegular
 
 		case info.Mode()&fs.ModeSymlink != 0:
-			header.Mode |= TypeSymlink
+			header.Mode |= cpio.TypeSymlink
 			header.Linkname = targetLink
 
 		case header.Links > 0:
@@ -552,7 +553,7 @@ func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *Write
 }
 
 // CreateFSFromCpio creates a CPIO filesystem from an existing CPIO file.
-func (c *createOptions) CreateFSFromCpio(ctx context.Context, writer *Writer, source string) error {
+func (c *createOptions) CreateFSFromCpio(ctx context.Context, writer *cpio.Writer, source string) error {
 	// Open and copy all contents from 'source' to the writer
 	f, err := os.Open(source)
 	if err != nil {

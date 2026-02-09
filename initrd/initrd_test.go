@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"kraftkit.sh/fs/cpio"
+	"github.com/unikraft/go-cpio"
 )
 
 var expectHeaders = map[string]cpio.Header{
@@ -24,7 +24,7 @@ var expectHeaders = map[string]cpio.Header{
 		Mode: cpio.TypeDir,
 	},
 	"./a/b/c/d": {
-		Mode: cpio.TypeReg,
+		Mode: cpio.TypeRegular,
 		Size: 13,
 	},
 	"./a/b/c/e-symlink": {
@@ -32,7 +32,7 @@ var expectHeaders = map[string]cpio.Header{
 		Linkname: "./d",
 	},
 	"./a/b/c/f-hardlink": {
-		Mode: cpio.TypeReg,
+		Mode: cpio.TypeRegular,
 		Size: 0,
 	},
 	"./a/b/c/g-recursive-symlink": {
