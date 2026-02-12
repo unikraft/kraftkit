@@ -425,7 +425,7 @@ func (opts *MenuOptions) Run(ctx context.Context, _ []string) error {
 			var err error
 			configure := true
 
-			if opts.project.IsConfigured(targ) {
+			if opts.project.IsConfigured(targ) && !config.G[config.KraftKit](ctx).NoPrompt {
 				configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
 				if err != nil {
 					return err

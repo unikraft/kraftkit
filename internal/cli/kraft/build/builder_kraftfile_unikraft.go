@@ -481,7 +481,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		var err error
 		configure := true
 
-		if opts.Project.IsConfigured(*opts.Target) {
+		if opts.Project.IsConfigured(*opts.Target) && !config.G[config.KraftKit](ctx).NoPrompt {
 			configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
 			if err != nil {
 				return err
