@@ -509,9 +509,20 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	defer fi.Close()
 
-	service.eopts = append(service.eopts,
-		exec.WithStdout(fi),
-	)
+	if isInteractive {
+		// Attach QEMU directly to terminal
+		service.eopts = append(service.eopts,
+			exec.WithStdin(os.Stdin),
+			exec.WithStdout(os.Stdout),
+			exec.WithStderr(os.Stderr),
+		)
+	} else {
+		// Redirect output to log file in daemon mode
+		service.eopts = append(service.eopts,
+			exec.WithStdout(fi),
+			exec.WithStderr(fi),
+		)
+	}
 
 	qcfg, err := NewQemuConfig(qopts...)
 	if err != nil {
