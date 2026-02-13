@@ -40,6 +40,7 @@ import (
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
 	"kraftkit.sh/unikraft/export/v0/vfscore"
+	"kraftkit.sh/utils"
 )
 
 // machineV1alpha1Service ...
@@ -193,8 +194,11 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		machine.Spec.Resources.Requests[corev1.ResourceCPU] = quantity
 	}
 
+	// Check if stdin is a TTY (interactive mode) to enable stdin input
+	isInteractive := utils.IsTerminal(os.Stdin)
+
 	qopts := []QemuOption{
-		WithDaemonize(true),
+		WithDaemonize(!isInteractive), // Don't daemonize when interactive to allow stdio
 		WithNoGraphic(true),
 		WithPidFile(filepath.Join(machine.Status.StateDir, "machine.pid")),
 		WithNoReboot(true),
@@ -221,10 +225,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 			NoWait:    true,
 			Server:    true,
 		}),
-		WithSerial(QemuHostCharDevFile{
-			Monitor:  false,
-			Filename: machine.Status.LogFile,
-		}),
 		WithMonitor(QemuHostCharDevUnix{
 			SocketDir: machine.Status.StateDir,
 			Name:      "mon",
@@ -242,6 +242,27 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		}),
 		WithDisplay(QemuDisplayNone{}),
 		WithParallel(QemuHostCharDevNone{}),
+	}
+
+	if isInteractive {
+		// Use stdio for serial device to enable interactive input
+		qopts = append(qopts,
+			WithSerial(QemuHostCharDevStdio{
+				Monitor: false,
+			}),
+		)
+		// Pass stdin through to QEMU process
+		service.eopts = append(service.eopts,
+			exec.WithStdin(os.Stdin),
+		)
+	} else {
+		// Use file for serial device when not interactive (e.g., detached mode)
+		qopts = append(qopts,
+			WithSerial(QemuHostCharDevFile{
+				Monitor:  false,
+				Filename: machine.Status.LogFile,
+			}),
+		)
 	}
 
 	// TODO: Parse Rootfs types
@@ -514,17 +535,35 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	machine.CreationTimestamp = metav1.Now()
 
-	// Start and also wait for the process to be released, this ensures the
-	// program is actively being executed.
-	if err := process.StartAndWait(ctx); err != nil {
-		machine.Status.State = machinev1alpha1.MachineStateFailed
+	// Start the QEMU process. When interactive (not daemonized), we use Start()
+	// instead of StartAndWait() because the process will stay running waiting for
+	// QMP commands and stdin input. When daemonized, StartAndWait() returns
+	// quickly after the parent process exits.
+	if isInteractive {
+		if err := process.Start(ctx); err != nil {
+			machine.Status.State = machinev1alpha1.MachineStateFailed
 
-		// Propagate the contents of the QEMU log file as an error
-		if errLog, err2 := os.ReadFile(qemuLogFile); err2 == nil {
-			err = errors.Join(fmt.Errorf("%s", strings.TrimSpace(string(errLog))), err)
+			// Propagate the contents of the QEMU log file as an error
+			if errLog, err2 := os.ReadFile(qemuLogFile); err2 == nil {
+				err = errors.Join(fmt.Errorf("%s", strings.TrimSpace(string(errLog))), err)
+			}
+
+			return machine, fmt.Errorf("could not start QEMU process: %v", err)
 		}
+	} else {
+		// Start and also wait for the process to be released, this ensures the
+		// program is actively being executed. When daemonized, the parent process
+		// exits quickly, so Wait() returns promptly.
+		if err := process.StartAndWait(ctx); err != nil {
+			machine.Status.State = machinev1alpha1.MachineStateFailed
 
-		return machine, fmt.Errorf("could not start and wait for QEMU process: %v", err)
+			// Propagate the contents of the QEMU log file as an error
+			if errLog, err2 := os.ReadFile(qemuLogFile); err2 == nil {
+				err = errors.Join(fmt.Errorf("%s", strings.TrimSpace(string(errLog))), err)
+			}
+
+			return machine, fmt.Errorf("could not start and wait for QEMU process: %v", err)
+		}
 	}
 
 	machine.Status.State = machinev1alpha1.MachineStateCreated
