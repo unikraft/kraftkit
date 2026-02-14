@@ -83,6 +83,13 @@ nfpms:
         dst: /usr/bin/kraftld
       - src: docs/man/
         dst: /usr/share/man/man1/
+      - src: scripts/cleanup-artifacts.sh
+        dst: /usr/libexec/kraftkit/cleanup-artifacts
+        file_info:
+          mode: 0755
+    scripts:
+      preremove: packaging/deb/prerm
+      postremove: packaging/deb/postrm
 
 brews:
   - name: kraftkit-staging
