@@ -36,7 +36,7 @@ func NewCmd() *cobra.Command {
 		`),
 		Example: heredoc.Doc(`
 			# Login to a remote service
-			$ kraft login https://github.com
+			$ kraft login -t $GH_TOKEN -u $GH_USER github.com
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",

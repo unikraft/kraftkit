@@ -36,7 +36,7 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 		// Do not capture the the project is not initialized, as we can still build
 		// the unikernel using the Dockerfile provided with the `--rootfs`.
 		if err := opts.initProject(ctx); err != nil {
-			log.G(ctx).WithError(err).Warn("could not initialize project")
+			log.G(ctx).WithError(err).Debug("could not initialize project")
 		}
 	}
 

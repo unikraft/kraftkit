@@ -141,9 +141,6 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 	}
 
 	app := appl.(*application)
-	if err != nil {
-		return nil, err
-	}
 
 	projectName, _ := popts.GetProjectName()
 	if app.name != "" {
