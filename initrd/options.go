@@ -6,14 +6,23 @@ package initrd
 
 import "fmt"
 
+type InitrdBuildSecret struct {
+	Name string
+	File string
+	Env  string
+}
+
 type InitrdOptions struct {
-	arch       string
-	cacheDir   string
-	compress   bool
-	keepOwners bool
-	output     string
-	fsType     FsType
-	workdir    string
+	arch         string
+	buildArgs    map[string]*string
+	buildTarget  string
+	buildSecrets map[string]InitrdBuildSecret
+	cacheDir     string
+	compress     bool
+	keepOwners   bool
+	output       string
+	fsType       FsType
+	workdir      string
 }
 
 // Whether the resulting archive file should be compressed. (CPIO only)
@@ -39,6 +48,21 @@ func (opts InitrdOptions) Architecture() string {
 // The working directory of the initramfs builder.
 func (opts InitrdOptions) Workdir() string {
 	return opts.workdir
+}
+
+// The build arguments that may be used by certain initrd builders.
+func (opts InitrdOptions) BuildArgs() map[string]*string {
+	return opts.buildArgs
+}
+
+// The build target that may be used by certain initrd builders.
+func (opts InitrdOptions) BuildTarget() string {
+	return opts.buildTarget
+}
+
+// The build secrets that may be used by certain initrd builders.
+func (opts InitrdOptions) BuildSecrets() map[string]InitrdBuildSecret {
+	return opts.buildSecrets
 }
 
 type InitrdOption func(*InitrdOptions) error
@@ -104,6 +128,33 @@ func WithOutputType(fsType FsType) InitrdOption {
 func WithWorkdir(dir string) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		opts.workdir = dir
+		return nil
+	}
+}
+
+// WithBuildArgs sets build arguments that may be used by certain initrd
+// builders, such as Dockerfile-based ones.
+func WithBuildArgs(args map[string]*string) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.buildArgs = args
+		return nil
+	}
+}
+
+// WithBuildTarget sets the build target that may be used by certain initrd
+// builders, such as Dockerfile-based ones.
+func WithBuildTarget(target string) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.buildTarget = target
+		return nil
+	}
+}
+
+// WithBuildSecrets sets build secrets that may be used by certain initrd
+// builders, such as Dockerfile-based ones.
+func WithBuildSecrets(secrets map[string]InitrdBuildSecret) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.buildSecrets = secrets
 		return nil
 	}
 }

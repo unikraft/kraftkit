@@ -195,10 +195,32 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		"filename": filepath.Base(initrd.dockerfile),
 	}
 
+	// Add the build target if specified (override from command line)
 	if len(buildTarget) > 0 {
 		attrs["target"] = buildTarget
+	} else if initrd.opts.buildTarget != "" {
+		attrs["target"] = initrd.opts.buildTarget
 	}
 
+	// Add build args from the build config
+	if initrd.opts.buildArgs != nil {
+		for k, v := range initrd.opts.buildArgs {
+			if v == nil {
+				v, ok := os.LookupEnv(k)
+				if !ok {
+					log.G(ctx).
+						WithField("arg", k).
+						Warn("could not find build-arg in environment")
+					continue
+				}
+				attrs["build-arg:"+k] = v
+			} else {
+				attrs["build-arg:"+k] = *v
+			}
+		}
+	}
+
+	// Override build args from the command line
 	for _, arg := range buildArgs {
 		k, v, ok := strings.Cut(arg, "=")
 		if !ok {
@@ -220,13 +242,31 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		},
 	}
 
-	fs := make([]secretsprovider.Source, 0, len(buildSecrets))
+	// Add build secrets from the build config
+	secretsMap := make(map[string]secretsprovider.Source)
+	if initrd.opts.buildSecrets != nil {
+		for _, v := range initrd.opts.buildSecrets {
+			secretsMap[v.Name] = secretsprovider.Source{
+				ID:       v.Name,
+				FilePath: v.File,
+				Env:      v.Env,
+			}
+		}
+	}
+
+	// Override build secrets from the command line
 	for _, v := range buildSecrets {
 		s, err := parseSecret(v)
 		if err != nil {
 			return "", err
 		}
-		fs = append(fs, *s)
+		secretsMap[s.ID] = *s
+	}
+
+	// Convert map to slice
+	fs := make([]secretsprovider.Source, 0, len(secretsMap))
+	for _, secret := range secretsMap {
+		fs = append(fs, secret)
 	}
 
 	secretStore, err := secretsprovider.NewStore(fs)
