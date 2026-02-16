@@ -46,6 +46,7 @@ type PkgOptions struct {
 	Env            []string                  `local:"true" long:"env" short:"e" usage:"Set environment variables to be packed into the package" split:"false"`
 	Force          bool                      `local:"true" long:"force-format" usage:"Force the use of a packaging handler format"`
 	Format         string                    `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"oci"`
+	InitrdOptions  []initrd.InitrdOption     `noattribute:"true"`
 	KeepFileOwners bool                      `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	Kernel         string                    `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile      string                    `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`

@@ -270,6 +270,26 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 				popts.Rootfs = rootfs
 			}
 
+			initrdOptions := []initrd.InitrdOption{
+				initrd.WithBuildArgs(service.Build.Args),
+				initrd.WithBuildTarget(service.Build.Target),
+			}
+			secrets := map[string]initrd.InitrdBuildSecret{}
+			for _, secretRef := range service.Build.Secrets {
+				if secret, ok := opts.Project.Secrets[secretRef.Source]; ok {
+					secrets[secretRef.Source] = initrd.InitrdBuildSecret{
+						Name: secret.Name,
+						File: secret.File,
+						Env:  secret.Environment,
+					}
+				}
+			}
+			if len(secrets) > 0 {
+				initrdOptions = append(initrdOptions, initrd.WithBuildSecrets(secrets))
+			}
+
+			bopts.InitrdOptions = initrdOptions
+			popts.InitrdOptions = initrdOptions
 			bopts.Workdir = service.Build.Context
 			popts.Workdir = service.Build.Context
 			bopts.Project = project

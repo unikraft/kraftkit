@@ -16,7 +16,6 @@ import (
 	"github.com/mattn/go-shellwords"
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
-	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -119,7 +118,7 @@ func (p *packagerKraftfileUnikraft) Pack(ctx context.Context, opts *PkgOptions, 
 			"CONFIG_LIBPOSIX_VFS_FSTAB_BUILTIN_EINITRD",
 			"CONFIG_LIBPOSIX_VFS_FSTAB_FALLBACK_EINITRD",
 		) {
-			if rootfs, cmds, penvs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType); err != nil {
+			if rootfs, cmds, penvs, err = initrd.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, targ.Architecture().String(), opts.RootfsType, opts.InitrdOptions); err != nil {
 				return nil, fmt.Errorf("could not build rootfs: %w", err)
 			}
 		}

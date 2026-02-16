@@ -397,7 +397,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	}()
 
 	var rootfsArgs []string
-	if p.rootfs, rootfsArgs, p.env, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType); err != nil {
+	if p.rootfs, rootfsArgs, p.env, err = initrd.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType, opts.InitrdOptions); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
