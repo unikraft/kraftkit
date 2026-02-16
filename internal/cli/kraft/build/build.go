@@ -23,10 +23,11 @@ import (
 	"kraftkit.sh/internal/fancymap"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/tui"
-	"kraftkit.sh/unikraft"
 
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
 )
@@ -118,19 +119,26 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if opts.Kernel != "" {
-		(*opts.Target).SetKernelPath(opts.Kernel)
-	}
-
 	if _, _, _, err = initrd.BuildRootfs(
 		ctx,
-		opts.Workdir,
-		opts.Rootfs,
-		false,
-		opts.KeepFileOwners,
-		(*opts.Target).Architecture().String(),
-		opts.RootfsType,
-		opts.InitrdOptions,
+		append(opts.InitrdOptions,
+			initrd.WithRootfsPath(opts.Rootfs),
+			initrd.WithWorkdir(opts.Workdir),
+			initrd.WithKeepOwners(opts.KeepFileOwners),
+			initrd.WithOutput(filepath.Join(
+				opts.Workdir,
+				unikraft.BuildDir,
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture().String()),
+			)),
+			initrd.WithOutputType(opts.RootfsType),
+			initrd.WithCacheDir(filepath.Join(
+				opts.Workdir,
+				unikraft.VendorDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture((*opts.Target).Architecture().String()),
+			initrd.WithCompression(false),
+		)...,
 	); err != nil {
 		return err
 	}

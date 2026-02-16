@@ -278,10 +278,12 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			for _, secretRef := range service.Build.Secrets {
 				if secret, ok := opts.Project.Secrets[secretRef.Source]; ok {
 					secrets[secretRef.Source] = initrd.InitrdBuildSecret{
-						Name: secret.Name,
+						Name: secretRef.Source,
 						File: secret.File,
 						Env:  secret.Environment,
 					}
+				} else {
+					log.G(ctx).Warnf("secret %s not found in project secrets", secretRef.Source)
 				}
 			}
 			if len(secrets) > 0 {

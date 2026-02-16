@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/unikraft"
@@ -20,8 +19,15 @@ import (
 
 // BuildRootfs generates a rootfs based on the provided working directory and
 // the rootfs entrypoint for the provided target(s).
-func BuildRootfs(ctx context.Context, workdir, rootfs string, compress, keepOwners bool, arch string, fsType initrd.FsType, initrdOptions []InitrdOption) (Initrd, []string, []string, error) {
-	if rootfs == "" || fsType == "" {
+func BuildRootfs(ctx context.Context, opts ...InitrdOption) (Initrd, []string, []string, error) {
+	var bopts InitrdOptions
+	for _, opt := range opts {
+		if err := opt(&bopts); err != nil {
+			return nil, nil, nil, fmt.Errorf("could not apply initrd option: %w", err)
+		}
+	}
+
+	if bopts.RootfsPath() == "" {
 		return nil, nil, nil, nil
 	}
 
@@ -29,33 +35,19 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress, keepOwne
 	var cmds []string
 	var envs []string
 
-	ramfs, err := New(ctx, rootfs, append(initrdOptions,
-		WithWorkdir(workdir),
-		WithOutput(filepath.Join(
-			workdir,
-			unikraft.BuildDir,
-			fmt.Sprintf(DefaultInitramfsArchFileName, arch, fsType),
-		)),
-		WithCacheDir(filepath.Join(
-			workdir,
-			unikraft.VendorDir,
-			"rootfs-cache",
-		)),
-		WithArchitecture(arch),
-		WithCompression(compress),
-		WithKeepOwners(keepOwners),
-		WithOutputType(fsType),
-	)...)
+	ramfs, err := New(ctx, bopts.RootfsPath(), opts...)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("could not initialize initramfs builder: %w", err)
 	}
 
+	ramfsOpts := ramfs.Options()
+
 	processes = append(processes,
 		processtree.NewProcessTreeItem(
 			fmt.Sprintf("building rootfs via %s", ramfs.Name()),
-			arch,
+			ramfsOpts.Architecture(),
 			func(ctx context.Context) error {
-				rootfs, err = ramfs.Build(ctx)
+				_, err := ramfs.Build(ctx)
 				if err != nil {
 					return err
 				}
@@ -90,7 +82,7 @@ func BuildRootfs(ctx context.Context, workdir, rootfs string, compress, keepOwne
 }
 
 // BuildRoms generates ROM filesystems based on the provided ROM paths.
-func BuildRoms(ctx context.Context, workdir string, roms []string, compress, keepOwners bool, arch string, fsType initrd.FsType) ([]string, error) {
+func BuildRoms(ctx context.Context, workdir string, roms []string, compress, keepOwners bool, arch string, fsType FsType) ([]string, error) {
 	if len(roms) == 0 || fsType == "" {
 		return roms, nil
 	}
@@ -120,23 +112,23 @@ func BuildRoms(ctx context.Context, workdir string, roms []string, compress, kee
 			continue
 		}
 
-		ramfs, err := initrd.New(ctx,
+		ramfs, err := New(ctx,
 			rom,
-			initrd.WithWorkdir(workdir),
-			initrd.WithOutput(filepath.Join(
+			WithWorkdir(workdir),
+			WithOutput(filepath.Join(
 				workdir,
 				unikraft.BuildDir,
 				fmt.Sprintf("rom%d-%s.%s", i+1, arch, fsType),
 			)),
-			initrd.WithCacheDir(filepath.Join(
+			WithCacheDir(filepath.Join(
 				workdir,
 				unikraft.VendorDir,
 				"rom-cache",
 			)),
-			initrd.WithArchitecture(arch),
-			initrd.WithCompression(compress),
-			initrd.WithKeepOwners(keepOwners),
-			initrd.WithOutputType(fsType),
+			WithArchitecture(arch),
+			WithCompression(compress),
+			WithKeepOwners(keepOwners),
+			WithOutputType(fsType),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize ROM builder for '%s': %w", rom, err)

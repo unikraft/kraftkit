@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/config"
@@ -397,7 +398,27 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	}()
 
 	var rootfsArgs []string
-	if p.rootfs, rootfsArgs, p.env, err = initrd.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType, opts.InitrdOptions); err != nil {
+	if p.rootfs, rootfsArgs, p.env, err = initrd.BuildRootfs(
+		ctx,
+		append(opts.InitrdOptions,
+			initrd.WithRootfsPath(opts.Rootfs),
+			initrd.WithWorkdir(opts.Workdir),
+			initrd.WithKeepOwners(opts.KeepFileOwners),
+			initrd.WithOutput(filepath.Join(
+				opts.Workdir,
+				unikraft.BuildDir,
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, p.architecture.String()),
+			)),
+			initrd.WithOutputType(opts.RootfsType),
+			initrd.WithCacheDir(filepath.Join(
+				opts.Workdir,
+				unikraft.VendorDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture(p.architecture.String()),
+			initrd.WithCompression(opts.Compress),
+		)...,
+	); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
@@ -429,7 +450,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	}
 
 	// Build ROMs with the specified filesystem type (if provided)
-	if p.roms, err = utils.BuildRoms(ctx, opts.Workdir, rawRoms, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType); err != nil {
+	if p.roms, err = initrd.BuildRoms(ctx, opts.Workdir, rawRoms, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType); err != nil {
 		return nil, fmt.Errorf("could not build ROMs: %w", err)
 	}
 

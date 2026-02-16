@@ -19,9 +19,10 @@ type InitrdOptions struct {
 	buildSecrets map[string]InitrdBuildSecret
 	cacheDir     string
 	compress     bool
+	fsType       FsType
 	keepOwners   bool
 	output       string
-	fsType       FsType
+	rootfsPath   string
 	workdir      string
 }
 
@@ -48,6 +49,11 @@ func (opts InitrdOptions) Architecture() string {
 // The working directory of the initramfs builder.
 func (opts InitrdOptions) Workdir() string {
 	return opts.workdir
+}
+
+// The rootfs path for the initramfs.
+func (opts InitrdOptions) RootfsPath() string {
+	return opts.rootfsPath
 }
 
 // The build arguments that may be used by certain initrd builders.
@@ -128,6 +134,14 @@ func WithOutputType(fsType FsType) InitrdOption {
 func WithWorkdir(dir string) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		opts.workdir = dir
+		return nil
+	}
+}
+
+// WithRootfsPath sets the rootfs path for the initramfs.
+func WithRootfsPath(path string) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.rootfsPath = path
 		return nil
 	}
 }
