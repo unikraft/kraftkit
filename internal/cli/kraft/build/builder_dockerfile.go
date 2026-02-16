@@ -7,8 +7,11 @@ package build
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"kraftkit.sh/log"
 )
 
@@ -43,14 +46,68 @@ func (build *builderDockerfile) Buildable(ctx context.Context, opts *BuildOption
 		opts.RootfsType = opts.Project.InitrdFsType()
 	}
 
-	// TODO(nderjung): This is a very naiive check and should be improved,
-	// potentially using an external library which parses the Dockerfile syntax.
-	// In most cases, however, the Dockerfile is usually named `Dockerfile`.
-	if !strings.Contains(strings.ToLower(opts.Rootfs), "dockerfile") {
+	// Dockerfile validation using buildkit parser
+	if !isDockerfile(ctx, opts.Rootfs) {
 		return false, fmt.Errorf("file is not a Dockerfile")
 	}
 
 	return true, nil
+}
+
+func isDockerfile(ctx context.Context, path string) bool {
+
+	base := strings.ToLower(filepath.Base(path))
+
+	looksLikeDockerfile := strings.Contains(base, "dockerfile") ||
+		strings.HasSuffix(base, ".docker")
+
+	valid, err := isValidDockerfile(path)
+
+	if err != nil {
+		// Log the error instead of silently discarding it
+		log.G(ctx).Debugf("error validating Dockerfile %s: %v", path, err)
+
+		return false
+	}
+
+	if looksLikeDockerfile && !valid {
+		log.G(ctx).Warnf("file %s looks like a Dockerfile but has invalid syntax", path)
+	}
+
+	return valid
+}
+
+// isValidDockerfile parses the file to check if it's a valid Dockerfile
+func isValidDockerfile(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	// Parse the Dockerfile using buildkit parser
+	result, err := parser.Parse(f)
+	if err != nil {
+		// Parsing failed then it's not a valid Dockerfile
+		return false, nil
+	}
+
+	// Check if it has valid AST with at least one instruction
+	if result == nil || result.AST == nil || len(result.AST.Children) == 0 {
+		return false, nil
+	}
+
+	// A valid Dockerfile MUST have a FROM instruction
+	// (or ARG before FROM, which is also valid)
+	hasFrom := false
+	for _, child := range result.AST.Children {
+		if child != nil && strings.ToUpper(child.Value) == "FROM" {
+			hasFrom = true
+			break
+		}
+	}
+
+	return hasFrom, nil
 }
 
 // Prepare implements builder.
