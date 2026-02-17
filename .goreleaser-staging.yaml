@@ -184,6 +184,11 @@ builds:
       #@ if bin == "kraft" and os == "linux" and arch == "amd64":
       - xen
       #@ end
+    ignore:
+      - goos: linux
+        goarch: 386
+      - goos: windows
+        goarch: 386
 #@ end
 #@ end
 #@ end
