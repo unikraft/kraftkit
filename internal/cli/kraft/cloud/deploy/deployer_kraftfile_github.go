@@ -42,6 +42,10 @@ func (d *deployerKraftfileRepo) String() string {
 }
 
 func (d *deployerKraftfileRepo) Deployable(ctx context.Context, opts *DeployOptions, args ...string) (bool, error) {
+	if len(args) == 0 {
+		return false, nil
+	}
+
 	url := args[0]
 	baseUrl := url
 	if strings.Contains(url, treeSeparator) {
