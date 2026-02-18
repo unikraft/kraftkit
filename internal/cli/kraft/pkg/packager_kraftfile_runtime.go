@@ -407,7 +407,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			initrd.WithOutput(filepath.Join(
 				opts.Workdir,
 				unikraft.BuildDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, p.architecture.String()),
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, p.architecture, opts.RootfsType),
 			)),
 			initrd.WithOutputType(opts.RootfsType),
 			initrd.WithCacheDir(filepath.Join(

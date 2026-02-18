@@ -128,7 +128,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			initrd.WithOutput(filepath.Join(
 				opts.Workdir,
 				unikraft.BuildDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture().String()),
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
 			)),
 			initrd.WithOutputType(opts.RootfsType),
 			initrd.WithCacheDir(filepath.Join(

@@ -76,7 +76,7 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 			initrd.WithOutput(filepath.Join(
 				opts.Workdir,
 				unikraft.BuildDir,
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture().String()),
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture(), opts.RootfsType),
 			)),
 			initrd.WithOutputType(opts.RootfsType),
 			initrd.WithCacheDir(filepath.Join(
