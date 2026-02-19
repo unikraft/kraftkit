@@ -6,20 +6,69 @@ package network
 
 import (
 	"context"
-	"errors"
+	"path/filepath"
+
+	zip "api.zip"
 
 	networkv1alpha1 "kraftkit.sh/api/network/v1alpha1"
+	"kraftkit.sh/config"
+	"kraftkit.sh/machine/network/vmnet"
+	"kraftkit.sh/store"
 )
 
-var defaultStrategyName = "bridge"
+var defaultStrategyName = "vmnet-shared"
 
 // hostSupportedStrategies returns the map of known supported drivers for the
 // given host.
 func hostSupportedStrategies() map[string]*Strategy {
 	return map[string]*Strategy{
+		"vmnet-shared": {
+			NewNetworkV1alpha1: func(ctx context.Context, opts ...any) (networkv1alpha1.NetworkService, error) {
+				service, err := vmnet.NewNetworkServiceV1alpha1(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+
+				embeddedStore, err := store.NewEmbeddedStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](
+					filepath.Join(
+						config.G[config.KraftKit](ctx).RuntimeDir,
+						"networkv1alpha1",
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				return networkv1alpha1.NewNetworkServiceHandler(
+					ctx,
+					service,
+					zip.WithStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](embeddedStore, zip.StoreRehydrationSpecNil),
+				)
+			},
+		},
+		// Keep bridge as an alias for backward compatibility
 		"bridge": {
 			NewNetworkV1alpha1: func(ctx context.Context, opts ...any) (networkv1alpha1.NetworkService, error) {
-				return nil, errors.New("network service is not supported on MacOS")
+				service, err := vmnet.NewNetworkServiceV1alpha1(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+
+				embeddedStore, err := store.NewEmbeddedStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](
+					filepath.Join(
+						config.G[config.KraftKit](ctx).RuntimeDir,
+						"networkv1alpha1",
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				return networkv1alpha1.NewNetworkServiceHandler(
+					ctx,
+					service,
+					zip.WithStore[networkv1alpha1.NetworkSpec, networkv1alpha1.NetworkStatus](embeddedStore, zip.StoreRehydrationSpecNil),
+				)
 			},
 		},
 	}
