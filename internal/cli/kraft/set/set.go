@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -15,6 +16,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/spellcheck"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
@@ -25,6 +27,7 @@ import (
 
 type SetOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter targets by architecture"`
+	Force        bool   `long:"force" short:"F" usage:"Skip KConfig validation"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter targets by platform"`
 	Target       string `long:"target" short:"t" usage:"Set config for a specific target"`
@@ -169,6 +172,21 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 			}
 		}
 
+		// Validate user-provided config metadata against known KConfig symbols
+		if !opts.Force {
+			configPath := filepath.Join(workdir, tc.ConfigFilename())
+			knownConfigs, err := spellcheck.AllKConfigSymbols(configPath)
+			if err == nil {
+				results := spellcheck.Validate(confOpts, knownConfigs)
+				if len(results) > 0 {
+					for _, r := range results {
+						log.G(ctx).Error(FormatSpellCheckWarning(r))
+					}
+					return fmt.Errorf("kconfig validation failed")
+				}
+			}
+		}
+
 		// Apply the user's config values (this also generates config if needed)
 		if err := project.Set(ctx, tc, extraConfig); err != nil {
 			return fmt.Errorf("setting config for target %s: %w", tc.Name(), err)
@@ -177,4 +195,19 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	return nil
+}
+
+// FormatSpellCheckWarning returns a human-readable warning string for a spellcheck Result.
+func FormatSpellCheckWarning(r spellcheck.Result) string {
+	if r.Suggestion != "" {
+		return fmt.Sprintf(
+			"unknown KConfig option %s: did you mean %s? Use kraft set --force %s to override",
+			r.Option, r.Suggestion, r.Option,
+		)
+	}
+
+	return fmt.Sprintf(
+		"unknown KConfig option %s: Use kraft set --force %s to override",
+		r.Option, r.Option,
+	)
 }

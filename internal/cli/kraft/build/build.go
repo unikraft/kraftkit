@@ -61,6 +61,7 @@ type BuildOptions struct {
 	SaveBuildLog   string                `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target         *target.Target        `noattribute:"true"`
 	TargetName     string                `long:"target" short:"t" usage:"Build a particular known target"`
+	Validate       bool                  `long:"validate" short:"C" usage:"Validate KConfig options against known symbols"`
 	Workdir        string                `noattribute:"true"`
 
 	statistics map[string]string
