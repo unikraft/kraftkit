@@ -53,13 +53,12 @@ func RecursiveMerge(from, into *yaml.Node) error {
 			}
 		}
 	case yaml.ScalarNode:
-		// SA4006 these variables represent pointers and are propagated outside of `recursiveMerge`
-		into = from //nolint:staticcheck
+		*into = *from
 	case yaml.SequenceNode:
 		for _, fromItem := range from.Content {
 			foundFrom := false
 			for _, intoItem := range into.Content {
-				if fromItem.Value == intoItem.Value {
+				if nodesDeepEqual(fromItem, intoItem) {
 					foundFrom = true
 				}
 			}
@@ -86,4 +85,26 @@ func nodesEqual(l, r *yaml.Node) bool {
 
 	// panic("equals on non-scalars not implemented!")
 	return false
+}
+
+func nodesDeepEqual(a, b *yaml.Node) bool {
+	if a.Kind != b.Kind {
+		return false
+	}
+
+	if a.Kind == yaml.ScalarNode {
+		return a.Value == b.Value
+	}
+
+	if len(a.Content) != len(b.Content) {
+		return false
+	}
+
+	for i := range a.Content {
+		if !nodesDeepEqual(a.Content[i], b.Content[i]) {
+			return false
+		}
+	}
+
+	return true
 }
