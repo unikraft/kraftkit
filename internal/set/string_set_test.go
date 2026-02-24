@@ -132,3 +132,75 @@ func TestContainsExactlyAnyOf(t *testing.T) {
 		})
 	}
 }
+
+func TestContains(t *testing.T) {
+	s := NewStringSet("one", "two", "three", "four")
+
+	tests := []struct {
+		name string
+		arg  string
+		want bool
+	}{
+		{
+			name: "full match",
+			arg:  "one",
+			want: true,
+		},
+		{
+			name: "partial match",
+			arg:  "tw",
+			want: true,
+		},
+		{
+			name: "incorrect match",
+			arg:  "ten",
+		},
+		{
+			name: "case sensitivity",
+			arg:  "One",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := s.Contains(tt.arg); got != tt.want {
+				t.Errorf("Contains() = %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
+func TestContainsExactly(t *testing.T) {
+	s := NewStringSet("one", "two", "three", "four")
+
+	tests := []struct {
+		name string
+		arg  string
+		want bool
+	}{
+		{
+			name: "full match",
+			arg:  "one",
+			want: true,
+		},
+		{
+			name: "partial match",
+			arg:  "tw",
+		},
+		{
+			name: "incorrect match",
+			arg:  "ten",
+		},
+		{
+			name: "case sensitivity",
+			arg:  "One",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := s.ContainsExactly(tt.arg); got != tt.want {
+				t.Errorf("Contains() = %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
