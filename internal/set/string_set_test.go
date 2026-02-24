@@ -6,6 +6,7 @@
 package set
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -71,6 +72,7 @@ func TestContainsAnyOf(t *testing.T) {
 		})
 	}
 }
+
 func TestContainsExactlyAnyOf(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -169,6 +171,7 @@ func TestContains(t *testing.T) {
 		})
 	}
 }
+
 func TestContainsExactly(t *testing.T) {
 	s := NewStringSet("one", "two", "three", "four")
 
@@ -202,5 +205,35 @@ func TestContainsExactly(t *testing.T) {
 				t.Errorf("Contains() = %t, want %t", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLen(t *testing.T) {
+	s := NewStringSet()
+
+	if s.Len() != 0 {
+		t.Errorf("Len() = %d, want 0", s.Len())
+	}
+
+	s.Add("one", "two")
+	if s.Len() != 2 {
+		t.Errorf("Len() = %d, want 2", s.Len())
+	}
+}
+
+func TestToSlice(t *testing.T) {
+	s := NewStringSet()
+
+	got := s.ToSlice()
+	want := []string{}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ToSlice() = %v, want %v", got, want)
+	}
+
+	s.Add("one", "two")
+	got = s.ToSlice()
+	want = []string{"one", "two"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ToSlice() = %v, want %v", got, want)
 	}
 }
