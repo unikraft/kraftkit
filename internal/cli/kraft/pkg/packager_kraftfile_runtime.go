@@ -256,7 +256,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			if len(found) == 0 {
 				if !config.G[config.KraftKit](ctx).NoPrompt {
 					log.G(ctx).Warnf("could not find package '%s:%s' based on %s/%s", p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
-					p, err := selection.Select[pack.Package]("select alternative package with same name to continue", packs...)
+					p, err := selection.Select("select alternative package with same name to continue", packs...)
 					if err != nil {
 						return nil, fmt.Errorf("could not select package: %w", err)
 					}
@@ -270,7 +270,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			} else { // > 1
 				if !config.G[config.KraftKit](ctx).NoPrompt {
 					log.G(ctx).Infof("found %d packages named '%s:%s' based on %s/%s", len(found), p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
-					p, err := selection.Select[pack.Package]("select package to continue", found...)
+					p, err := selection.Select("select package to continue", found...)
 					if err != nil {
 						return nil, fmt.Errorf("could not select package: %w", err)
 					}
@@ -281,7 +281,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				}
 			}
 		} else {
-			selected, err = selection.Select[pack.Package]("multiple runtimes available", packs...)
+			selected, err = selection.Select("multiple runtimes available", packs...)
 			if err != nil {
 				return nil, err
 			}
