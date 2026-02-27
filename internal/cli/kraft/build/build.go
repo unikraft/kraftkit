@@ -227,7 +227,7 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
-	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) {
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {
 		abs, err := filepath.Abs(opts.Rootfs)
 		if err != nil {
 			return fmt.Errorf("getting absolute path of rootfs: %w", err)

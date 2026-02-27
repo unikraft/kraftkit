@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/sirupsen/logrus"
@@ -205,7 +206,7 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) {
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {
 		abs, err := filepath.Abs(opts.Rootfs)
 		if err != nil {
 			return fmt.Errorf("getting absolute path of rootfs: %w", err)
