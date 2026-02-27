@@ -4,7 +4,11 @@
 // You may not use this file except in compliance with the License.
 package initrd
 
-import "fmt"
+import (
+	"fmt"
+
+	"kraftkit.sh/config"
+)
 
 type InitrdBuildSecret struct {
 	Name string
@@ -14,6 +18,7 @@ type InitrdBuildSecret struct {
 
 type InitrdOptions struct {
 	arch         string
+	auths        map[string]config.AuthConfig
 	buildArgs    map[string]*string
 	buildTarget  string
 	buildSecrets map[string]InitrdBuildSecret
@@ -169,6 +174,14 @@ func WithBuildTarget(target string) InitrdOption {
 func WithBuildSecrets(secrets map[string]InitrdBuildSecret) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		opts.buildSecrets = secrets
+		return nil
+	}
+}
+
+// WithAuths sets the authentication configurations for OCI registries.
+func WithAuths(auths map[string]config.AuthConfig) InitrdOption {
+	return func(opts *InitrdOptions) error {
+		opts.auths = auths
 		return nil
 	}
 }

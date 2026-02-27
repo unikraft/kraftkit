@@ -9,45 +9,50 @@ package initrd
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	v1tarball "github.com/google/go-containerregistry/pkg/v1/tarball"
+
+	"kraftkit.sh/config"
 	"kraftkit.sh/fs/cpio"
 	"kraftkit.sh/fs/erofs"
+	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
-
-	"github.com/containerd/containerd/v2/core/content"
-	"github.com/containerd/containerd/v2/core/images"
-	"github.com/containerd/containerd/v2/core/images/archive"
-	"github.com/containerd/platforms"
-	"github.com/moby/buildkit/util/contentutil"
-	"github.com/opencontainers/go-digest"
-	ocispecs "github.com/opencontainers/image-spec/specs-go/v1"
+	"kraftkit.sh/oci/cache"
+	"kraftkit.sh/oci/simpleauth"
 )
 
 type ociimage struct {
 	imageName string
 	opts      InitrdOptions
 	args      []string
-	desc      ocispecs.Descriptor
-	provider  content.InfoReaderProvider
 	env       []string
+	auths     map[string]config.AuthConfig
 }
 
 // NewFromOCIImage creates a new initrd from a remote container image.
 func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (Initrd, error) {
-	desc, provider, err := contentutil.ProviderFromRef(path)
+	// Strip protocol prefix if present (OCI references don't use http:// or https://)
+	path = stripProtocolPrefix(path)
+
+	// Parse the reference to validate it
+	_, err := name.ParseReference(path)
 	if err != nil {
-		return nil, fmt.Errorf("could not find image: %w", err)
+		return nil, fmt.Errorf("could not parse image reference: %w", err)
 	}
 
 	initrd := ociimage{
 		imageName: path,
-		desc:      desc,
-		provider:  noopInfoReaderProvider{provider},
 		opts: InitrdOptions{
 			fsType: FsTypeCpio,
 		},
@@ -57,6 +62,13 @@ func NewFromOCIImage(ctx context.Context, path string, opts ...InitrdOption) (In
 		if err := opt(&initrd.opts); err != nil {
 			return nil, err
 		}
+	}
+
+	// Get authentication config
+	if initrd.opts.auths == nil {
+		initrd.auths = config.G[config.KraftKit](ctx).Auth
+	} else {
+		initrd.auths = initrd.opts.auths
 	}
 
 	return &initrd, nil
@@ -69,43 +81,94 @@ func (initrd *ociimage) Name() string {
 
 // Build implements Initrd.
 func (initrd *ociimage) Build(ctx context.Context) (string, error) {
-	var sys ocispecs.Platform
-	if initrd.opts.arch == "x86_64" {
-		sys = ocispecs.Platform{
+	// Parse the image reference
+	ref, err := name.ParseReference(initrd.imageName)
+	if err != nil {
+		return "", fmt.Errorf("could not parse image reference: %w", err)
+	}
+
+	// Setup remote options
+	authConfig := &authn.AuthConfig{}
+	ropts := []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithUserAgent(version.UserAgent()),
+	}
+
+	// Configure platform
+	arch := initrd.opts.arch
+	if arch == "x86_64" {
+		arch = "amd64"
+	}
+	if arch != "" {
+		ropts = append(ropts, remote.WithPlatform(v1.Platform{
 			OS:           "linux",
-			Architecture: "amd64",
-		}
-	} else if initrd.opts.arch != "" {
-		sys = ocispecs.Platform{
-			OS:           "linux",
-			Architecture: initrd.opts.arch,
+			Architecture: arch,
+		}))
+	}
+
+	// Configure authentication
+	if auth, ok := initrd.auths[ref.Context().RegistryStr()]; ok {
+		authConfig.Username = auth.User
+		authConfig.Password = auth.Token
+
+		ropts = append(ropts,
+			remote.WithAuth(&simpleauth.SimpleAuthenticator{
+				Auth: authConfig,
+			}),
+		)
+
+		if !auth.VerifySSL {
+			var transport *http.Transport
+			if t, ok := remote.DefaultTransport.(*http.Transport); ok {
+				transport = t.Clone()
+			} else if t, ok := http.DefaultTransport.(*http.Transport); ok {
+				transport = t.Clone()
+			} else {
+				transport = &http.Transport{}
+			}
+			transport.TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+			ropts = append(ropts, remote.WithTransport(transport))
+
+			// Re-parse the reference with the Insecure option to allow fetching
+			// from registries with invalid TLS certificates.
+			ref, err = name.ParseReference(initrd.imageName, name.Insecure)
+			if err != nil {
+				return "", fmt.Errorf("could not parse image reference: %w", err)
+			}
 		}
 	}
 
-	configDesc, err := images.Config(ctx, initrd.provider, initrd.desc, platforms.Only(sys))
+	log.G(ctx).
+		WithField("image", initrd.imageName).
+		Debug("pulling")
+
+	// Pull the image
+	img, err := cache.RemoteImage(ref, ropts...)
+	if err != nil {
+		return "", fmt.Errorf("could not pull image: %w", err)
+	}
+
+	// Get the image config
+	configFile, err := img.ConfigFile()
 	if err != nil {
 		return "", fmt.Errorf("could not get image config: %w", err)
 	}
-	config, err := content.ReadBlob(ctx, initrd.provider, configDesc)
-	if err != nil {
-		return "", fmt.Errorf("could not read image config: %w", err)
-	}
-	var cfg ocispecs.Image
-	err = json.Unmarshal(config, &cfg)
-	if err != nil {
-		return "", fmt.Errorf("could not unmarshal image config: %w", err)
-	}
 
-	initrd.args = slices.Concat(cfg.Config.Entrypoint, cfg.Config.Cmd)
-	initrd.env = cfg.Config.Env
+	initrd.args = slices.Concat(configFile.Config.Entrypoint, configFile.Config.Cmd)
+	initrd.env = configFile.Config.Env
 
 	if initrd.opts.output == "" {
 		fi, err := os.CreateTemp("", "")
 		if err != nil {
 			return "", err
 		}
-
 		initrd.opts.output = fi.Name()
+
+		if err := fi.Close(); err != nil {
+			return "", err
+		}
 	}
 
 	// Create a temporary directory to output the image to
@@ -117,21 +180,15 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 		_ = os.RemoveAll(outputDir)
 	}()
 
-	ociTarballFile, err := os.Create(filepath.Join(outputDir, "oci.tar.gz"))
-	if err != nil {
-		return "", fmt.Errorf("could not create OCI tarball file: %w", err)
-	}
+	ociTarballPath := filepath.Join(outputDir, "oci.tar")
 
 	log.G(ctx).
 		WithField("image", initrd.imageName).
-		Debug("pulling")
+		Debug("exporting to tarball")
 
-	err = archive.Export(ctx, initrd.provider, ociTarballFile, archive.WithManifest(initrd.desc), archive.WithPlatform(platforms.Only(sys)))
-	if err != nil {
-		return "", fmt.Errorf("could not export image to OCI tarball: %w", err)
-	}
-	if err := ociTarballFile.Close(); err != nil {
-		return "", fmt.Errorf("could not close OCI tarball file: %w", err)
+	// Write the image to a tarball
+	if err := v1tarball.WriteToFile(ociTarballPath, ref, img); err != nil {
+		return "", fmt.Errorf("could not write image to tarball: %w", err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(initrd.opts.output), 0o755); err != nil {
@@ -140,11 +197,11 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 
 	switch initrd.opts.fsType {
 	case FsTypeErofs:
-		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, ociTarballFile.Name(),
+		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, ociTarballPath,
 			erofs.WithAllRoot(!initrd.opts.keepOwners),
 		)
 	case FsTypeCpio:
-		err := cpio.CreateFS(ctx, initrd.opts.output, ociTarballFile.Name(),
+		err := cpio.CreateFS(ctx, initrd.opts.output, ociTarballPath,
 			cpio.WithAllRoot(!initrd.opts.keepOwners),
 		)
 		if err != nil {
@@ -177,12 +234,17 @@ func (initrd *ociimage) Args() []string {
 	return initrd.args
 }
 
-type noopInfoReaderProvider struct {
-	content.Provider
-}
-
-func (n noopInfoReaderProvider) Info(ctx context.Context, dgst digest.Digest) (content.Info, error) {
-	return content.Info{
-		Digest: dgst,
-	}, nil
+// stripProtocolPrefix removes http:// https:// oci:// prefixes from an image reference.
+// OCI registry references should not include protocol prefixes.
+func stripProtocolPrefix(ref string) string {
+	if after, ok := strings.CutPrefix(ref, "https://"); ok {
+		return after
+	}
+	if after, ok := strings.CutPrefix(ref, "http://"); ok {
+		return after
+	}
+	if after, ok := strings.CutPrefix(ref, "oci://"); ok {
+		return after
+	}
+	return ref
 }
