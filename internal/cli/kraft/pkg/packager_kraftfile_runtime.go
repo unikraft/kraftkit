@@ -8,7 +8,6 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -340,19 +339,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			}
 		}
 
-		// Create a temporary directory we can use to store the artifacts from
-		// pulling and extracting the identified package.
-		tempDir, err := os.MkdirTemp("", "kraft-pkg-")
-		if err != nil {
-			return nil, fmt.Errorf("could not create temporary directory: %w", err)
-		}
-
-		defer func() {
-			if err := os.RemoveAll(tempDir); err != nil {
-				log.G(ctx).Debugf("could not delete temporary directory: %s", err.Error())
-			}
-		}()
-
 		// Crucially, the catalog should return an interface that also implements
 		// target.Target.  This demonstrates that the implementing package can
 		// resolve application kernels.
@@ -385,17 +371,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 		log.G(ctx).Warn("no kernel detected: packaging without - this may produce unexpected results")
 	}
-
-	// Create a temporary directory we can use to store the artifacts from
-	// pulling and extracting the identified package.
-	tempDir, err := os.MkdirTemp("", "kraft-pkg-")
-	if err != nil {
-		return nil, fmt.Errorf("could not create temporary directory: %w", err)
-	}
-
-	defer func() {
-		os.RemoveAll(tempDir)
-	}()
 
 	var rootfsArgs []string
 	if p.rootfs, rootfsArgs, p.env, err = initrd.BuildRootfs(
