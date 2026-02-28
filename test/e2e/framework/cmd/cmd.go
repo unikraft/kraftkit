@@ -152,6 +152,10 @@ func (s *IOStream) GomegaString() string {
 	return s.String()
 }
 
+func (s *IOStream) Reset() {
+	s.b.Reset()
+}
+
 // ExitError is a wrapper around exec.ExitError that can be pretty-printed
 // through a gomega matcher.
 type ExitError struct {
