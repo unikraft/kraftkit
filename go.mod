@@ -3,7 +3,7 @@ module kraftkit.sh
 go 1.25.7
 
 require (
-	api.zip v0.1.6-0.20241212232756-c2fd6fe01821
+	api.zip v0.1.8
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/LastPossum/kamino v0.0.2
 	github.com/MakeNowJust/heredoc v1.0.0
@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
-	github.com/cli/cli/v2 v2.87.2
+	github.com/cli/cli/v2 v2.87.3
 	github.com/cli/go-gh/v2 v2.13.0
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.20.2
@@ -35,11 +35,11 @@ require (
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/getsentry/sentry-go v0.42.0
-	github.com/go-git/go-git/v5 v5.16.5
+	github.com/getsentry/sentry-go v0.43.0
+	github.com/go-git/go-git/v5 v5.17.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/gobwas/glob v0.2.3
-	github.com/google/go-containerregistry v0.21.0
+	github.com/google/go-containerregistry v0.21.1
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
@@ -154,7 +154,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.2 // indirect
+	github.com/go-git/go-billy/v5 v5.8.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
