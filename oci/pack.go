@@ -902,7 +902,18 @@ func (ocipack *ociPackage) Push(ctx context.Context, opts ...pack.PushOption) er
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 
 		// Annoyingly convert between regtypes and authn.
-		if auth, ok := config.G[config.KraftKit](ctx).Auth[ocipack.ref.Context().RegistryStr()]; ok {
+		if popts.Auths() == nil {
+			if auth, ok := config.G[config.KraftKit](ctx).Auth[ocipack.ref.Context().RegistryStr()]; ok {
+				authConfig.Username = auth.User
+				authConfig.Password = auth.Token
+
+				if !auth.VerifySSL {
+					transport.TLSClientConfig = &tls.Config{
+						InsecureSkipVerify: true,
+					}
+				}
+			}
+		} else if auth, ok := popts.Auths()[ocipack.ref.Context().RegistryStr()]; ok {
 			authConfig.Username = auth.User
 			authConfig.Password = auth.Token
 
