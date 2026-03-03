@@ -68,7 +68,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/vishvananda/netlink v1.3.1-0.20240922070040-084abd93d350
 	github.com/xeipuuv/gojsonschema v1.2.0
