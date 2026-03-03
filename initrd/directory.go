@@ -79,6 +79,8 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 	}
 
 	switch initrd.opts.fsType {
+	case FsTypeUnknown:
+		return "", fmt.Errorf("cannot build initrd from directory with unknown filesystem type")
 	case FsTypeFile:
 		return "", fmt.Errorf("cannot build initrd from directory with file output type")
 	case FsTypeErofs:

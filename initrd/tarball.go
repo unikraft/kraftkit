@@ -70,6 +70,8 @@ func (initrd *tarball) Build(ctx context.Context) (string, error) {
 	}
 
 	switch initrd.opts.fsType {
+	case FsTypeUnknown:
+		return "", fmt.Errorf("cannot build initrd from tarball with unknown filesystem type")
 	case FsTypeFile:
 		return initrd.opts.output, copyFile(initrd.path, initrd.opts.output)
 	case FsTypeErofs:

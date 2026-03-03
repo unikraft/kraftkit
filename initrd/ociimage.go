@@ -196,6 +196,8 @@ func (initrd *ociimage) Build(ctx context.Context) (string, error) {
 	}
 
 	switch initrd.opts.fsType {
+	case FsTypeUnknown:
+		return "", fmt.Errorf("cannot build initrd from oci image with unknown filesystem type")
 	case FsTypeFile:
 		return "", fmt.Errorf("cannot build initrd from oci image with file output type")
 	case FsTypeErofs:

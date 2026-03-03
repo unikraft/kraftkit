@@ -12,6 +12,7 @@ import (
 
 	"kraftkit.sh/fs/cpio"
 	"kraftkit.sh/fs/erofs"
+	"kraftkit.sh/fsutils"
 )
 
 type file struct {
@@ -70,7 +71,14 @@ func (initrd *file) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("CPIO archive path is the same as the source path, this is not allowed as it creates corrupted archives")
 	}
 
+reevaluateFsType:
 	switch initrd.opts.fsType {
+	case FsTypeUnknown:
+		initrd.opts.fsType = detectFsType(initrd.path)
+		if initrd.opts.fsType == FsTypeUnknown {
+			return "", fmt.Errorf("could not detect filesystem type of input file, please specify it explicitly via the --fs-type flag")
+		}
+		goto reevaluateFsType
 	case FsTypeFile:
 		return initrd.opts.output, copyFile(initrd.path, initrd.opts.output)
 	case FsTypeErofs:
@@ -83,6 +91,23 @@ func (initrd *file) Build(ctx context.Context) (string, error) {
 		)
 	default:
 		return "", fmt.Errorf("unknown filesystem type %s", initrd.opts.fsType)
+	}
+}
+
+// detectFsType attempts to convert from the 'unknown' filesystem type to one
+// of the known types like 'cpio'/'erofs'/'file'.
+func detectFsType(source string) FsType {
+	switch {
+	case fsutils.IsErofsFile(source):
+		return FsTypeErofs
+	case fsutils.IsCpioFile(source):
+		return FsTypeCpio
+	case fsutils.IsTarFile(source),
+		fsutils.IsTarGzFile(source),
+		fsutils.IsRegularFile(source):
+		return FsTypeFile
+	default:
+		return FsTypeUnknown
 	}
 }
 
