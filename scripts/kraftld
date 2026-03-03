@@ -84,7 +84,7 @@ fi
 
 
 # Finally, build the Unikraft image
-kraft build --log-level debug --log-type basic --no-cache "${KRAFTKIT_ARG_TARG[@]}" "${KRAFTKIT_ARG_PLAT[@]}" "${KRAFTKIT_ARG_ARCH[@]}"
+kraft build --log-level debug --log-type basic --no-cache --no-prompt "${KRAFTKIT_ARG_TARG[@]}" "${KRAFTKIT_ARG_PLAT[@]}" "${KRAFTKIT_ARG_ARCH[@]}"
 
 
 # Find KraftKit output image

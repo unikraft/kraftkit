@@ -23,7 +23,7 @@ func (m Metro) String() string {
 	return fmt.Sprintf("%s (%s)", m.Code, m.Location)
 }
 
-func PopulateMetroToken(cmd *cobra.Command, metro, token *string) error {
+func PopulateMetroToken(cmd *cobra.Command, metro, token *string, allowInsecure *bool) error {
 	*metro = cmd.Flag("metro").Value.String()
 	if *metro == "" {
 		*metro = os.Getenv("UNIKRAFTCLOUD_METRO")
@@ -92,6 +92,13 @@ func PopulateMetroToken(cmd *cobra.Command, metro, token *string) error {
 		if *token != "" {
 			log.G(cmd.Context()).WithField("token", *token).Debug("using")
 		}
+	}
+
+	*allowInsecure = cmd.Flag("allow-insecure").Value.String() == "true"
+	if *allowInsecure {
+		log.G(cmd.Context()).WithField("allow-insecure", *allowInsecure).Debug("using")
+	} else {
+		*allowInsecure = os.Getenv("UKC_ALLOW_INSECURE") == "true"
 	}
 
 	return nil

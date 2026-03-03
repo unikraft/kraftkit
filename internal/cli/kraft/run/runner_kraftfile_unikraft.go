@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -87,12 +88,27 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOp
 		return false, fmt.Errorf("cannot run project build without unikraft")
 	}
 
+	if runner.project != nil && runner.project.Rootfs() != "" && opts.Rootfs == "" {
+		opts.Rootfs = runner.project.Rootfs()
+	}
+
+	if runner.project != nil && runner.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = runner.project.InitrdFsType()
+	}
+
 	return true, nil
 }
 
 // Prepare implements Runner.
 func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
 	var err error
+
+	// Update potential relative paths for the targets
+	for _, targ := range runner.project.Targets() {
+		if !filepath.IsAbs(targ.Kernel()) {
+			targ.SetKernelPath(filepath.Join(runner.workdir, targ.Kernel()))
+		}
+	}
 
 	// Remove targets which do not have a compiled kernel.
 	targets := slices.DeleteFunc(runner.project.Targets(), func(targ target.Target) bool {
@@ -163,6 +179,11 @@ func (runner *runnerKraftfileUnikraft) Prepare(ctx context.Context, opts *RunOpt
 	noEmbedded := t.KConfig().AllNoOrUnset(
 		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD",
 		"CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD",
+		"CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD_PATH",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_BUILTIN_EINITRD",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_FALLBACK_EINITRD",
 	)
 
 	hasUkRandom := !t.KConfig().AllNoOrUnset(

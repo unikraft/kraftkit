@@ -45,7 +45,7 @@ var _ = Describe("kraft pkg unsource", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -86,8 +86,8 @@ var _ = Describe("kraft pkg unsource", func() {
 				_, ok := cfgMap["unikraft"].(map[string]interface{})
 				Expect(ok).To(BeFalse())
 
-				// Check if stdout is empty
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
+				// Check if stderr contains a log message
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
 			})
 		})
 
@@ -115,7 +115,7 @@ var _ = Describe("kraft pkg unsource", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -163,8 +163,8 @@ var _ = Describe("kraft pkg unsource", func() {
 				// Check if the default manifests are removed
 				Expect(cfgMapUnikernelManifests).To(HaveLen(0))
 
-				// Check if stdout is empty
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
+				// Check if stderr to contain a log message
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
 			})
 		})
 
@@ -192,7 +192,7 @@ var _ = Describe("kraft pkg unsource", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -240,8 +240,8 @@ var _ = Describe("kraft pkg unsource", func() {
 				// Check if the default manifests are still there
 				Expect(cfgMapUnikernelManifests).To(HaveLen(0))
 
-				// Check if stdout contains the warning
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://example\.com"}\n$`))
+				// Check if stderr contains the warning
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://example\.com"}\n$`))
 			})
 		})
 	})
@@ -380,7 +380,7 @@ var _ = Describe("kraft pkg unsource", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -429,8 +429,8 @@ var _ = Describe("kraft pkg unsource", func() {
 				Expect(cfgMapUnikernelManifests).To(HaveLen(1))
 				Expect(cfgMapUnikernelManifests[0]).To(Equal("https://example3.com"))
 
-				// Check if stdout has a warning
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://example2\.com"}\n$`))
+				// Check if stderr has a warning
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest not found: https://example2\.com"}\n$`))
 			})
 		})
 	})

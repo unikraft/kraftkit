@@ -98,8 +98,11 @@ func (popts *ProjectOptions) RelativePath(path string) string {
 
 // LookupConfig provides a lookup function for config variables
 func (popts *ProjectOptions) LookupConfig(key string) (string, bool) {
-	v, ok := popts.kconfig[key]
-	return v.Value, ok
+	if v, ok := popts.kconfig[key]; ok {
+		return v.Value, true
+	}
+
+	return os.LookupEnv(key)
 }
 
 // SetProjectName sets the project name along with whether the name is set

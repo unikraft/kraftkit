@@ -18,13 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
           - ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -50,13 +49,13 @@ jobs:
             --privileged \
             --name "buildkitd_${GITHUB_RUN_ID}_${SUFFIX}" \
             -v /run/buildkit:/run/buildkit:rw \
-            moby/buildkit:v0.20.0;
+            moby/buildkit:v0.25.2;
           timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done';
           sudo chmod 666 /run/buildkit/buildkitd.sock;
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set Go variables
@@ -69,7 +68,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -91,21 +90,20 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
           - ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set Go variables
@@ -118,7 +116,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -139,6 +137,8 @@ jobs:
           KRAFTKIT_NO_WARN_SUDO: true
           KRAFTKIT_NO_CHECK_UPDATES: true
           DOCKER: ''
+          KRAFTKIT_DATA_DIR: /tmp/kraftkit-data
+          KRAFTKIT_STATE_DIR: /tmp/kraftkit-state
         run: make test-e2e DISTDIR="$(go env GOPATH)"/bin
 
   e2e-cloud-cli:
@@ -146,21 +146,20 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
           - ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set Go variables
@@ -173,7 +172,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}

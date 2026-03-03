@@ -20,11 +20,12 @@ import (
 )
 
 type GetOptions struct {
-	Auth   *config.AuthConfig    `noattribute:"true"`
-	Client kraftcloud.KraftCloud `noattribute:"true"`
-	Metro  string                `noattribute:"true"`
-	Token  string                `noattribute:"true"`
-	Output string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"list"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Metro         string                `noattribute:"true"`
+	Token         string                `noattribute:"true"`
+	Output        string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"list"`
 }
 
 // Status of a KraftCloud instance.
@@ -64,7 +65,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -83,6 +84,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	client := kraftcloud.NewInstancesClient(
+		kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 

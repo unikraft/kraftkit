@@ -9,24 +9,17 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"kraftkit.sh/cpio"
 )
 
-func compressFiles(output string, writer *cpio.Writer, reader *os.File) error {
-	err := writer.Close()
+func compressFiles(output string, path string) error {
+	reader, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("could not close CPIO writer: %w", err)
-	}
-
-	_, err = reader.Seek(0, io.SeekStart)
-	if err != nil {
-		return fmt.Errorf("could not seek to start of file: %w", err)
+		return fmt.Errorf("could not open initramfs file: %w", err)
 	}
 
 	fw, err := os.OpenFile(output+".gz", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not open initramfs file: %w", err)
+		return fmt.Errorf("could not open gzip output file: %w", err)
 	}
 
 	gw := gzip.NewWriter(fw)

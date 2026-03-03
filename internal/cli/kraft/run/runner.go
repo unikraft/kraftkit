@@ -66,7 +66,7 @@ func runnersByName() (map[string]runner, error) {
 	}
 	ret := make(map[string]runner, len(runners))
 	for _, runner := range runners {
-		ret[runner.String()] = runner
+		ret[runner.Name()] = runner
 	}
 	return ret, nil
 }

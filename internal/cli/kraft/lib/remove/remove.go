@@ -2,7 +2,9 @@ package remove
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
@@ -68,9 +70,17 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	if workdir == "." || workdir == "./" || workdir == "" {
 		workdir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
+
+	// Convert to absolute path
+	if !filepath.IsAbs(workdir) {
+		workdir, err = filepath.Abs(workdir)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of workdir: %w", err)
+		}
 	}
 
 	popts := []app.ProjectOption{}

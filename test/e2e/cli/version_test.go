@@ -73,8 +73,8 @@ var _ = Describe("kraft version", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("exit status 1"))
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(
 				`^{"level":"error","msg":"unknown command \\"some-arg\\" for \\"kraft version\\""}\n$`,
 			))
 		})

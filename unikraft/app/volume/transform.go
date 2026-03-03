@@ -38,16 +38,32 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 		for key, prop := range entry {
 			switch key {
 			case "driver":
-				volume.driver = prop.(string)
+				driverStr, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("malformed Kraftfile: 'volumes.driver' must be a string, got %T", prop)
+				}
+				volume.driver = driverStr
 
 			case "source":
-				volume.source = prop.(string)
+				sourceStr, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("malformed Kraftfile: 'volumes.source' must be a string, got %T", prop)
+				}
+				volume.source = sourceStr
 
 			case "destination":
-				volume.destination = prop.(string)
+				destStr, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("malformed Kraftfile: 'volumes.destination' must be a string, got %T", prop)
+				}
+				volume.destination = destStr
 
 			case "readonly":
-				volume.readOnly = prop.(bool)
+				readOnlyBool, ok := prop.(bool)
+				if !ok {
+					return nil, fmt.Errorf("malformed Kraftfile: 'volumes.readonly' must be a boolean, got %T", prop)
+				}
+				volume.readOnly = readOnlyBool
 
 			}
 		}

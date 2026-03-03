@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"kraftkit.sh/fs/cpio"
+	"kraftkit.sh/fs/erofs"
 )
 
 type file struct {
@@ -19,16 +22,10 @@ type file struct {
 // NewFromFile accepts an input file which already represents a CPIO archive and
 // is provided as a mechanism for satisfying the Initrd interface.
 func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, error) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	if stat.IsDir() {
-		return nil, fmt.Errorf("path %s is a directory, not a file", path)
-	}
-
 	initrd := file{
-		opts: InitrdOptions{},
+		opts: InitrdOptions{
+			fsType: FsTypeCpio,
+		},
 		path: path,
 	}
 
@@ -40,6 +37,14 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 
 	if !filepath.IsAbs(initrd.path) {
 		initrd.path = filepath.Join(initrd.opts.workdir, initrd.path)
+	}
+
+	stat, err := os.Stat(initrd.path)
+	if err != nil {
+		return nil, err
+	}
+	if stat.IsDir() {
+		return nil, fmt.Errorf("path %s is a directory, not a file", initrd.path)
 	}
 
 	absDest, err := filepath.Abs(filepath.Clean(initrd.opts.output))
@@ -60,8 +65,28 @@ func (initrd *file) Name() string {
 }
 
 // Build implements Initrd.
-func (initrd *file) Build(_ context.Context) (string, error) {
-	return initrd.path, nil
+func (initrd *file) Build(ctx context.Context) (string, error) {
+	if initrd.opts.output == initrd.path {
+		return "", fmt.Errorf("CPIO archive path is the same as the source path, this is not allowed as it creates corrupted archives")
+	}
+
+	switch initrd.opts.fsType {
+	case FsTypeErofs:
+		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, initrd.path,
+			erofs.WithAllRoot(!initrd.opts.keepOwners),
+		)
+	case FsTypeCpio:
+		return initrd.opts.output, cpio.CreateFS(ctx, initrd.opts.output, initrd.path,
+			cpio.WithAllRoot(!initrd.opts.keepOwners),
+		)
+	default:
+		return "", fmt.Errorf("unknown filesystem type %s", initrd.opts.fsType)
+	}
+}
+
+// Options implements Initrd.
+func (initrd *file) Options() InitrdOptions {
+	return initrd.opts
 }
 
 // Env implements Initrd.

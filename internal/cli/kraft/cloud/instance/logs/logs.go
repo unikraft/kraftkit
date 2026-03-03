@@ -28,13 +28,14 @@ import (
 )
 
 type LogOptions struct {
-	Auth     *config.AuthConfig    `noattribute:"true"`
-	Client   kraftcloud.KraftCloud `noattribute:"true"`
-	Follow   bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
-	Metro    string                `noattribute:"true"`
-	NoPrefix bool                  `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
-	Tail     int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
-	Token    string                `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Follow        bool                  `local:"true" long:"follow" short:"f" usage:"Follow the logs of the instance every half second" default:"false"`
+	Metro         string                `noattribute:"true"`
+	NoPrefix      bool                  `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
+	Tail          int                   `local:"true" long:"tail" short:"n" usage:"Show the last given lines from the logs" default:"-1"`
+	Token         string                `noattribute:"true"`
 }
 
 // Log retrieves the console output from a KraftCloud instance.
@@ -83,7 +84,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *LogOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -111,6 +112,7 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -133,23 +135,6 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 	for _, instance := range args {
 		instance := instance
 
-		// Start by fetching the instance.
-		resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
-		if err != nil {
-			// Likely there was an issue performing the request; so we'll just
-			// skip and attempt to retrieve more logs.
-			if !errors.Is(err, io.EOF) {
-				log.G(ctx).Error(err)
-			}
-
-			continue
-		}
-
-		inst, err := resp.FirstOrErr()
-		if err != nil {
-			errGroup = append(errGroup, err)
-		}
-
 		prefix := ""
 		if !opts.NoPrefix {
 			prefix = instance + strings.Repeat(" ", longestName-len(instance))
@@ -167,31 +152,6 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 
 		observations.Add(instance)
 
-		// Continuously check the state in a separate thread every 1 second.
-		go func() {
-			for {
-				resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
-				if err != nil {
-					// Likely there was an issue performing the request; so we'll just
-					// skip and attempt to retrieve more logs.
-					if !errors.Is(err, io.EOF) {
-						log.G(ctx).Error(err)
-					}
-
-					continue
-				}
-
-				inst, err = resp.FirstOrErr()
-				if err != nil {
-					errGroup = append(errGroup, err)
-				}
-
-				if len(observations.Items()) == 0 {
-					return
-				}
-			}
-		}()
-
 		go func() {
 			defer observations.Done(instance)
 
@@ -202,18 +162,34 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 				case err := <-errChan:
 					if err != nil {
 						if errors.Is(err, io.EOF) {
-							if inst != nil && inst.State == kcinstances.InstanceStateStopped {
-								consumer.Consume(
-									"",
-									fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
-									"",
-									"To see more details about why, run:",
-									"",
-									fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
-									"",
-								)
+							if opts.Tail < 1 {
+								resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
+								if err != nil {
+									if !errors.Is(err, io.EOF) {
+										log.G(ctx).Error(err)
+									}
 
-								return
+									continue
+								}
+
+								inst, err := resp.FirstOrErr()
+								if err != nil {
+									errGroup = append(errGroup, err)
+								}
+
+								if inst.State == kcinstances.InstanceStateStopped {
+									consumer.Consume(
+										"",
+										fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+										"",
+										"To see more details about why, run:",
+										"",
+										fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+										"",
+									)
+
+									return
+								}
 							} else {
 								continue
 							}
@@ -226,16 +202,32 @@ func Logs(ctx context.Context, opts *LogOptions, args ...string) error {
 					if ok {
 						consumer.Consume(line)
 					} else {
-						if inst != nil && inst.State == kcinstances.InstanceStateStopped {
-							consumer.Consume(
-								"",
-								fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
-								"",
-								"To see more details about why, run:",
-								"",
-								fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
-								"",
-							)
+						if opts.Tail < 1 {
+							resp, err := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, instance)
+							if err != nil {
+								if !errors.Is(err, io.EOF) {
+									log.G(ctx).Error(err)
+								}
+
+								continue
+							}
+
+							inst, err := resp.FirstOrErr()
+							if err != nil {
+								errGroup = append(errGroup, err)
+							}
+
+							if inst.State == kcinstances.InstanceStateStopped {
+								consumer.Consume(
+									"",
+									fmt.Sprintf("The instance has exited (%s).", inst.DescribeStopReason()),
+									"",
+									"To see more details about why, run:",
+									"",
+									fmt.Sprintf("\tkraft cloud instance get %s", inst.Name),
+									"",
+								)
+							}
 						}
 						return
 					}

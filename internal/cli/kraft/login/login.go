@@ -36,7 +36,7 @@ func NewCmd() *cobra.Command {
 		`),
 		Example: heredoc.Doc(`
 			# Login to a remote service
-			$ kraft login https://github.com
+			$ kraft login -t $GH_TOKEN -u $GH_USER github.com
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",
@@ -81,18 +81,18 @@ func (opts *LoginOptions) Run(ctx context.Context, args []string) error {
 		opts.Token = string(btoken)
 	}
 
-	// Check if the provided token is a base64 encoded string containing both the
-	// username and token
-	if decoded, err := base64.StdEncoding.DecodeString(opts.Token); err == nil && len(decoded) > 0 {
-		split := strings.SplitN(string(decoded), ":", 2)
+	// If only a token was provided, check if it is a base64 encoded string
+	// containing both the username and token.
+	if opts.User == "" && opts.Token != "" {
+		// Check if the provided token is a base64 encoded string containing both the
+		// username and token
+		if decoded, err := base64.StdEncoding.DecodeString(opts.Token); err == nil && len(decoded) > 0 {
+			split := strings.SplitN(string(decoded), ":", 2)
 
-		if len(split) == 2 {
-			if len(opts.User) > 0 {
-				return fmt.Errorf("cannot specify -u|--username with a -t|--token that contains a base64 encoding of a username and token")
+			if len(split) == 2 {
+				opts.User = split[0]
+				opts.Token = split[1]
 			}
-
-			opts.User = split[0]
-			opts.Token = split[1]
 		}
 	}
 

@@ -47,7 +47,7 @@ func NewStringSet(values ...string) *stringSet {
 
 func (s *stringSet) Add(values ...string) *stringSet {
 	for _, value := range values {
-		if s.Contains(value) {
+		if s.ContainsExactly(value) {
 			continue
 		}
 		s.m[value] = exists
@@ -59,7 +59,7 @@ func (s *stringSet) Add(values ...string) *stringSet {
 
 func (s *stringSet) Remove(values ...string) *stringSet {
 	for _, value := range values {
-		if !s.Contains(value) {
+		if !s.ContainsExactly(value) {
 			continue
 		}
 		delete(s.m, value)
@@ -125,7 +125,7 @@ func (s1 *stringSet) Equal(s2 *stringSet) bool {
 	}
 	isEqual := true
 	for _, v := range s1.v {
-		if !s2.Contains(v) {
+		if !s2.ContainsExactly(v) {
 			isEqual = false
 			break
 		}

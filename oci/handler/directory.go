@@ -6,6 +6,7 @@ package handler
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -29,7 +30,7 @@ import (
 	"kraftkit.sh/oci/simpleauth"
 	ociutils "kraftkit.sh/oci/utils"
 
-	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/v2/core/content"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -313,10 +314,11 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 		index.Manifests = newManifests
 
-		indexRaw, err = json.Marshal(&index)
+		indexRaw, err = json.MarshalIndent(&index, "", "  ")
 		if err != nil {
 			return fmt.Errorf("could not marshal raw index: %w", err)
 		}
+		indexRaw = append(indexRaw, '\n')
 
 		newIndexDigest := digest.FromBytes(indexRaw)
 		newIndexDigestPath := filepath.Join(
@@ -347,13 +349,21 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				return fmt.Errorf("could not make parent directory: %w", err)
 			}
 
+			// Remove any existing tag path if it already exists, as we are now
+			// pointing it to a new index.
+			if _, err := os.Stat(indexTagPath); err == nil {
+				if err := os.RemoveAll(indexTagPath); err != nil {
+					return fmt.Errorf("could not remove existing index tag path: %w", err)
+				}
+			}
+
 			if err := os.Symlink(newIndexDigestPath, indexTagPath); err != nil {
 				return err
 			}
 		}
 
 	case ocispec.MediaTypeImageManifest:
-		v1Index, err := cache.RemoteIndex(ref, ropts...)
+		v1Image, err := cache.RemoteImage(ref, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote manifest: %w", err)
 		}
@@ -368,14 +378,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 				dgst.Encoded(),
 			)
 
-			hash, err := v1.NewHash(dgst.String())
-			if err != nil {
-				return fmt.Errorf("could not calculate image digest: %w", err)
-			}
-			image, err := v1Index.Image(hash)
-			if err != nil {
-				return fmt.Errorf("could not retrieve image: %w", err)
-			}
+			image := v1Image
 
 			log.G(ctx).
 				WithField("digest", dgst.String()).
@@ -639,6 +642,27 @@ func (handle *DirectoryHandler) DeleteDigest(ctx context.Context, dgst digest.Di
 	return nil
 }
 
+// ReadDigest implements DigestReader.
+func (handle *DirectoryHandler) ReadDigest(ctx context.Context, dgst digest.Digest) (io.ReadCloser, error) {
+	digestPath := filepath.Join(
+		handle.path,
+		DirectoryHandlerDigestsDir,
+		dgst.Algorithm().String(),
+		dgst.Encoded(),
+	)
+
+	if _, err := os.Stat(digestPath); err != nil {
+		return nil, fmt.Errorf("could not find digest '%s': %w", dgst.String(), err)
+	}
+
+	file, err := os.Open(digestPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open digest '%s': %w", dgst.String(), err)
+	}
+
+	return file, nil
+}
+
 // SaveDescriptor implements DescriptorSaver.
 func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, desc ocispec.Descriptor, reader io.Reader, onProgress func(float64)) error {
 	blobPath := filepath.Join(
@@ -716,7 +740,7 @@ func (handle *DirectoryHandler) SaveDescriptor(ctx context.Context, ref string, 
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref string, desc *ocispec.Descriptor) error {
+func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref string, desc *ocispec.Descriptor, onProgress func(float64)) error {
 	ref, err := name.ParseReference(fullref)
 	if err != nil {
 		return err
@@ -725,6 +749,30 @@ func (handle *DirectoryHandler) PushDescriptor(ctx context.Context, fullref stri
 	ropts := []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
+	}
+
+	// Set up progress tracking if a callback is provided
+	if onProgress != nil {
+		updates := make(chan v1.Update)
+		ropts = append(ropts, remote.WithProgress(updates))
+
+		// Start a goroutine to process progress updates
+		go func() {
+			var totalSize int64
+			var completedSize int64
+
+			for update := range updates {
+				if update.Total > 0 {
+					totalSize = update.Total
+				}
+				completedSize = update.Complete
+
+				if totalSize > 0 {
+					progress := float64(completedSize) / float64(totalSize)
+					onProgress(progress)
+				}
+			}
+		}()
 	}
 
 	authConfig := &authn.AuthConfig{}
@@ -1047,7 +1095,7 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 
 	// Update the index manifest such that the specific manifests do not exit.  If
 	// there are no more manifests in the index, also remove the index.
-	index, err := handle.ResolveIndex(ctx, fullref)
+	index, _, err := handle.ResolveIndex(ctx, fullref)
 	if err != nil {
 		return fmt.Errorf("could not resolve index from manifest: %w", err)
 	}
@@ -1091,10 +1139,11 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 	} else {
 		index.Manifests = manifests
 
-		indexJson, err := json.Marshal(index)
+		indexJson, err := json.MarshalIndent(index, "", "  ")
 		if err != nil {
 			return fmt.Errorf("could not marshal new index: %w", err)
 		}
+		indexJson = append(indexJson, '\n')
 
 		indexFile, err := os.OpenFile(indexPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o664)
 		if err != nil {
@@ -1118,23 +1167,27 @@ func (handle *DirectoryHandler) DeleteManifest(ctx context.Context, fullref stri
 }
 
 // ResolveIndex implements IndexResolver.
-func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, error) {
+func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, digest.Digest, error) {
 	// Find the index of this image
 	ref, err := name.ParseReference(fullref,
 		name.WithDefaultRegistry(""),
 		name.WithDefaultTag("latest"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var indexPath string
-	if strings.Contains(fullref, "@") {
+	if _, dgst, ok := strings.Cut(fullref, "@"); ok {
+		algo, sum, ok := strings.Cut(dgst, ":")
+		if !ok {
+			return nil, "", fmt.Errorf("malformed digest in reference '%s'", fullref)
+		}
 		indexPath = filepath.Join(
 			handle.path,
-			DirectoryHandlerIndexesDir,
-			// TODO: Do not hardcode
-			strings.ReplaceAll(ref.Name(), "@"+digest.SHA256.String()+":", string(filepath.Separator)),
+			DirectoryHandlerDigestsDir,
+			algo,
+			sum,
 		)
 	} else {
 		indexPath = filepath.Join(
@@ -1146,29 +1199,38 @@ func (handle *DirectoryHandler) ResolveIndex(ctx context.Context, fullref string
 
 	// Check whether the index exists
 	if _, err := os.Stat(indexPath); err != nil {
-		return nil, fmt.Errorf("index '%s' not found", ref.Name())
+		return nil, "", fmt.Errorf("index '%s' not found", ref.Name())
 	}
 
 	// Read the index
 	reader, err := os.Open(indexPath)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	defer reader.Close()
 
 	indexRaw, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Unmarshal the index
 	index := ocispec.Index{}
 	if err = json.Unmarshal(indexRaw, &index); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &index, nil
+	if index.MediaType != ocispec.MediaTypeImageIndex {
+		return nil, "", fmt.Errorf("referenced index '%s' is not an index", ref.Name())
+	}
+
+	h, _, err := v1.SHA256(bytes.NewReader(indexRaw))
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &index, digest.Digest(h.String()), nil
 }
 
 // ListIndexes implements IndexLister.

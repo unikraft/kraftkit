@@ -7,7 +7,7 @@ before opening a new PR as this will cover the PR process:
 
   https://unikraft.org/docs/contributing/
 
-  Kraftkit follows the same guidelines as the Unikraft Open Source Project.
+Kraftkit follows the same guidelines as the Unikraft Open Source Project.
 
 -->
 
@@ -18,9 +18,7 @@ Please mark items appropriately:
 -->
 
   - [ ] Read the [contribution guidelines](https://unikraft.org/docs/contributing/) regarding submitting new changes to the project;
-  - [ ] Tested your changes against relevant architectures and platforms;
-  - [ ] Ran `make fmt` on your commit series before opening this PR;
-  - [ ] Updated relevant documentation.
+  - [ ] Tested your changes locally.
 
 ### Description of changes
 

@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=trixie-20250203
+ARG DEBIAN_VERSION=trixie
 ARG XEN_VERSION=4.19
 ARG REGISTRY=kraftkit.sh
 
@@ -32,7 +32,7 @@ RUN set -xe; \
     ; \
     apt-get clean;
 
-ARG GO_VERSION=1.24.0
+ARG GO_VERSION=1.25.7
 
 # Install Go
 RUN set -xe; \
@@ -67,7 +67,7 @@ COPY --from=xen /usr/lib/x86_64-linux-gnu/liblzma.a \
 
 WORKDIR /go/src/kraftkit.sh
 
-COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.24.0-v2.7.0 /usr/bin/goreleaser /usr/bin/
+COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.25.7-v2.13.3 /usr/bin/goreleaser /usr/bin/
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go

@@ -35,6 +35,7 @@ import (
 )
 
 type CreateOptions struct {
+	AllowInsecure       bool                           `noattribute:"true"`
 	Auth                *config.AuthConfig             `noattribute:"true"`
 	Client              kraftcloud.KraftCloud          `noattribute:"true"`
 	Certificate         []string                       `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
@@ -88,6 +89,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	}
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -148,11 +150,15 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 					for {
 						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
 						if err != nil {
-							continue
+							return fmt.Errorf("could not get image: %w", err)
 						}
 
 						image, err = imageResp.FirstOrErr()
-						if err != nil || image == nil {
+						if err != nil {
+							return fmt.Errorf("could not get image: %w", err)
+						}
+
+						if image == nil {
 							continue
 						}
 
@@ -197,7 +203,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 	req := kcinstances.CreateRequest{
 		Autostart:     &opts.Start,
 		Features:      features,
-		Image:         opts.Image,
+		Image:         &opts.Image,
 		RestartPolicy: opts.RestartPolicy,
 	}
 	if opts.Vcpus > 0 {
@@ -403,6 +409,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
+	if *opts.Rollout == RolloutStrategyRemoveSequential && !opts.Start {
+		return nil, nil, fmt.Errorf("cannot use sequential rollout strategy without --start")
+	}
+
 	// TODO(nderjung): This should eventually be possible, when the KraftCloud API
 	// supports updating service.
 	if opts.ServiceNameOrUUID != "" && len(opts.Ports) > 0 {
@@ -592,13 +602,16 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 		}
 	}
 
-	newInstanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
-	if err != nil {
-		return nil, nil, err
-	}
-	newInstance, err := newInstanceResp.FirstOrErr()
-	if err != nil {
-		return nil, nil, err
+	var newInstance *kcinstances.CreateResponseItem
+	if *opts.Rollout != RolloutStrategyRemoveSequential || len(qualifiedInstancesToRolloutOver) == 0 {
+		newInstanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+		if err != nil {
+			return nil, nil, err
+		}
+		newInstance, err = newInstanceResp.FirstOrErr()
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Handle the rollout only after the new instance has been created.
@@ -628,7 +641,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 			return nil, nil, fmt.Errorf("could not start wait process: %w", err)
 		}
 
-		if err = paramodel.Start(); err != nil {
+		if *opts.Rollout != RolloutStrategyRemoveSequential {
+			err = paramodel.Start()
+		}
+		if err != nil {
 			log.G(ctx).
 				WithError(err).
 				Error("aborting rollout: could not wait for new instance to start")
@@ -652,6 +668,93 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				log.G(ctx).Infof("removing %d existing instance(s)", len(qualifiedInstancesToRolloutOver))
 				if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, batch...); err != nil {
 					return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
+				}
+			case RolloutStrategyRemoveSequential:
+				backoffTimes := []time.Duration{
+					100 * time.Millisecond,
+					500 * time.Millisecond,
+					1 * time.Second,
+					2 * time.Second,
+				}
+				instancesToRolloutOver := len(qualifiedInstancesToRolloutOver)
+				instancesToCreate := 1
+				if req.Replicas != nil {
+					instancesToCreate += *req.Replicas
+					req.Replicas = nil
+				}
+				log.G(ctx).Infof("removing %d existing instance(s) and creating %d new one(s)", instancesToRolloutOver, instancesToCreate)
+
+				// For each new instance to create, remove one existing instance after creating it
+				for i := range int(math.Min(float64(instancesToRolloutOver), float64(instancesToCreate))) {
+					for timeToSleep := range backoffTimes {
+						newInstanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+						if err != nil {
+							return nil, nil, err
+						}
+						newInstance, err = newInstanceResp.FirstOrErr()
+						if err != nil {
+							if strings.Contains(err.Error(), "EBUSY") {
+								time.Sleep(backoffTimes[timeToSleep])
+								continue
+							}
+							return nil, nil, err
+						}
+						break
+					}
+
+					_, err = opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
+					if err != nil {
+						return nil, nil, fmt.Errorf("could not wait for new instance to start: %w", err)
+					}
+
+					if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, qualifiedInstancesToRolloutOver[i].UUID); err != nil {
+						return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
+					}
+				}
+
+				// Create the rest of the new instances
+				if instancesToCreate > instancesToRolloutOver {
+					quotaResp, err := opts.Client.Users().WithMetro(opts.Metro).Quotas(ctx)
+					if err != nil {
+						return nil, nil, fmt.Errorf("could not get quotas: %w", err)
+					}
+
+					quota, err := quotaResp.FirstOrErr()
+					if err != nil {
+						return nil, nil, fmt.Errorf("could not get quotas: %w", err)
+					}
+
+					// NOTE(craciunoiuc): Workaround for async cleans on the platform.
+					// Only happens when creating the exact number of instances in the quota.
+					if instancesToCreate == quota.Hard.Instances {
+						time.Sleep(time.Second)
+					}
+
+					req.Replicas = ptr(int(instancesToCreate - instancesToRolloutOver - 1))
+					for timeToSleep := range backoffTimes {
+						newInstanceResp, err := opts.Client.Instances().WithMetro(opts.Metro).Create(ctx, req)
+						if err != nil {
+							return nil, nil, err
+						}
+						newInstance, err = newInstanceResp.FirstOrErr()
+						if err != nil {
+							if strings.Contains(err.Error(), "EBUSY") {
+								time.Sleep(backoffTimes[timeToSleep])
+								continue
+							}
+							return nil, nil, err
+						}
+						break
+					}
+				}
+
+				// Remove the rest of the existing instances
+				if instancesToRolloutOver > instancesToCreate {
+					for i := instancesToCreate; i < instancesToRolloutOver; i++ {
+						if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, qualifiedInstancesToRolloutOver[i].UUID); err != nil {
+							return nil, nil, fmt.Errorf("could not delete instance(s): %w", err)
+						}
+					}
 				}
 			}
 		}
@@ -761,7 +864,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}

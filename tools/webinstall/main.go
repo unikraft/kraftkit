@@ -25,10 +25,14 @@ import (
 var installScript string
 
 const (
-	DefaultScriptPath = "/"
-	DefaultLatestPath = "/latest.txt"
-	DefaultPort       = 8080
-	DefaultFreq       = 24 * time.Hour
+	DefaultScriptPath       = "/"
+	DefaultLatestPath       = "/latest.txt"
+	DefaultLatestGitHubAPI  = "https://api.github.com/repos/unikraft/kraftkit/releases/latest"
+	DefaultStagingPath      = "/staging.txt"
+	DefaultStagingGitHubAPI = "https://api.github.com/repos/unikraft/kraftkit/tags?per_page=100"
+	DefaultChecksumURLFmt   = "https://github.com/unikraft/kraftkit/releases/download/v%s/kraftkit_%s_checksums.txt"
+	DefaultPort             = 8080
+	DefaultFreq             = 24 * time.Hour
 )
 
 type Webinstall struct {
@@ -50,11 +54,11 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) {
+func (opts *Webinstall) getKraftkitLatestVersion(ctx context.Context) (string, error) {
 	log.G(ctx).Debug("checking for latest kraftkit version")
 
 	// Create a request to github to get the latest release
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/unikraft/kraftkit/releases/latest", nil)
+	req, err := http.NewRequest("GET", DefaultLatestGitHubAPI, nil)
 	if err != nil {
 		return "", err
 	}
@@ -96,6 +100,101 @@ func (opts *Webinstall) getKraftkitVersion(ctx context.Context) (string, error) 
 	return strings.TrimPrefix(result["tag_name"].(string), "v"), nil
 }
 
+func (opts *Webinstall) getKraftkitStagingVersion(ctx context.Context) (string, error) {
+	log.G(ctx).Debug("checking for staging kraftkit version")
+
+	// Create a request to github to get the latest release
+	req, err := http.NewRequest("GET", DefaultStagingGitHubAPI, nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Set headers to ensure we get the correct response
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	if opts.Token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", opts.Token))
+	}
+
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+	// Send the request
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	// Read the response to a string
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert the json string to a map
+	var result []map[string]interface{}
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		return "", fmt.Errorf("could not parse GitHub API response: %w", err)
+	}
+
+	if len(result) == 0 {
+		return "", fmt.Errorf("malformed GitHub API response, could not determine staging KraftKit")
+	}
+
+	for _, release := range result {
+		v, ok := release["name"].(string)
+		if !ok {
+			log.G(ctx).
+				WithField("error", err).
+				Debug("malformed GitHub API response")
+			continue
+		}
+
+		if !strings.HasPrefix(v, "v") || !strings.Contains(v, "-") {
+			continue // Not a staging version, skip
+		}
+
+		version := strings.TrimPrefix(v, "v")
+
+		// Check if this version has actual artifacts.
+		// Create a request to github to get the release checksums.
+		req, err := http.NewRequest("GET", fmt.Sprintf(DefaultChecksumURLFmt, version, version), nil)
+		if err != nil {
+			log.G(ctx).
+				WithField("error", err).
+				Debug("could not create request")
+			continue
+		}
+
+		if opts.Token != "" {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", opts.Token))
+		}
+
+		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+		// Send the request
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.G(ctx).
+				WithField("error", err).
+				Debug("performing the request")
+			continue
+		}
+
+		if res.StatusCode != 200 {
+			log.G(ctx).
+				WithField("url", fmt.Sprintf(DefaultChecksumURLFmt, version, version)).
+				WithField("code", res.StatusCode).
+				Debug("tag does not have release")
+			time.Sleep(30 * time.Second) // Sleep a bit to prevent spamming GitHub.
+			continue
+		}
+
+		return version, nil
+	}
+
+	return "", fmt.Errorf("malformed GitHub API response, could not determine staging KraftKit version")
+}
+
 // doRootCmd starts the main system
 func (opts *Webinstall) Run(ctx context.Context, args []string) error {
 	// Set the defaults if empty
@@ -120,15 +219,14 @@ func (opts *Webinstall) Run(ctx context.Context, args []string) error {
 
 	ctx = log.WithLogger(ctx, logger)
 
-	// Create a reader for the installScript
-	scriptReader := strings.NewReader(installScript)
-
-	// Create a reader for the kraftkit version
-	version, err := opts.getKraftkitVersion(ctx)
+	latestVersion, err := opts.getKraftkitLatestVersion(ctx)
 	if err != nil {
 		return err
 	}
-	versionReader := strings.NewReader(version)
+	stagingVersion, err := opts.getKraftkitStagingVersion(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Get a time modified for the installScript
 	nowScript := time.Now()
@@ -145,24 +243,32 @@ func (opts *Webinstall) Run(ctx context.Context, args []string) error {
 			case <-time.After(opts.Freq):
 			}
 
-			version, err := opts.getKraftkitVersion(ctx)
+			latestVersion, err = opts.getKraftkitLatestVersion(ctx)
 			if err != nil {
 				log.G(ctx).Errorf("could not retrieve latest version: %v", err)
 				continue
 			}
-			versionReader = strings.NewReader(version)
+
+			stagingVersion, err = opts.getKraftkitStagingVersion(ctx)
+			if err != nil {
+				log.G(ctx).Errorf("could not retrieve latest version: %v", err)
+				continue
+			}
+
 			nowVersion = time.Now()
 		}
 	}()
 
-	// Serve the installScript
 	http.HandleFunc(DefaultScriptPath, func(w http.ResponseWriter, r *http.Request) {
-		http.ServeContent(w, r, "install.sh", nowScript, scriptReader)
+		http.ServeContent(w, r, DefaultScriptPath, nowScript, strings.NewReader(installScript))
 	})
 
-	// Serve the kraftkit version
 	http.HandleFunc(DefaultLatestPath, func(w http.ResponseWriter, r *http.Request) {
-		http.ServeContent(w, r, "latest.txt", nowVersion, versionReader)
+		http.ServeContent(w, r, DefaultLatestPath, nowVersion, strings.NewReader(latestVersion))
+	})
+
+	http.HandleFunc(DefaultStagingPath, func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, DefaultStagingPath, nowVersion, strings.NewReader(stagingVersion))
 	})
 
 	log.G(ctx).Infof("Listening on :%d...\n", opts.Port)

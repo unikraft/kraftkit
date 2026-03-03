@@ -112,7 +112,6 @@ func (p *Process) Init() tea.Cmd {
 }
 
 func (p *Process) Start() tea.Cmd {
-	//nolint:staticcheck
 	cmds := []tea.Cmd{
 		p.timer.Init(),
 		p.spinner.Tick,
@@ -148,7 +147,7 @@ func (p *Process) Start() tea.Cmd {
 		return nil
 	})
 
-	return tea.Batch(cmds...)
+	return tea.Sequence(cmds...)
 }
 
 // onProgress is called to dynamically inject ProgressMsg into the bubbletea
@@ -202,7 +201,6 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 
 		if msg.progress > 1.0 {
 			msg.progress = 1.0
-			cmds = append(cmds, d.timer.Stop())
 		}
 
 		d.percent = msg.progress
@@ -210,7 +208,7 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 	// TickMsg is sent when the spinner wants to animate itself
 	case spinner.TickMsg:
 		if d.timeout != 0 && d.timer.Elapsed() > d.timeout {
-			d.err = fmt.Errorf("process timedout after %s", d.timeout.String())
+			d.err = fmt.Errorf("process timed out after %s", d.timeout.String())
 			d.Status = StatusFailed
 			cmds = append(cmds, tea.Quit)
 		}
@@ -225,10 +223,11 @@ func (d *Process) Update(msg tea.Msg) (*Process, tea.Cmd) {
 		}
 
 		d.Status = msg.status
-		if d.Status == StatusFailed {
+		switch d.Status {
+		case StatusFailed:
 			d.err = msg.err
 			cmds = append(cmds, d.timer.Stop())
-		} else if d.Status == StatusSuccess {
+		case StatusSuccess:
 			d.percent = 1.0
 			cmds = append(cmds, d.timer.Stop())
 		}

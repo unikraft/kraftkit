@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"kraftkit.sh/internal/cli/kraft/cloud/service/create"
+	"kraftkit.sh/internal/cli/kraft/cloud/service/drain"
 	"kraftkit.sh/internal/cli/kraft/cloud/service/get"
 	"kraftkit.sh/internal/cli/kraft/cloud/service/list"
 	"kraftkit.sh/internal/cli/kraft/cloud/service/logs"
@@ -43,6 +44,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(create.NewCmd())
+	cmd.AddCommand(drain.NewCmd())
 	cmd.AddCommand(list.NewCmd())
 	cmd.AddCommand(get.NewCmd())
 	cmd.AddCommand(logs.NewCmd())

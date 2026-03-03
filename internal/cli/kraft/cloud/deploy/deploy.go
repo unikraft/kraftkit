@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -21,6 +22,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/create"
 	"kraftkit.sh/internal/cli/kraft/cloud/instance/logs"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
@@ -34,6 +36,7 @@ import (
 )
 
 type DeployOptions struct {
+	AllowInsecure       bool                           `noattribute:"true"`
 	Auth                *config.AuthConfig             `noattribute:"true"`
 	Client              kraftcloud.KraftCloud          `noattribute:"true"`
 	Certificate         []string                       `local:"true" long:"certificate" short:"C" usage:"Set the certificates to use for the service"`
@@ -48,6 +51,7 @@ type DeployOptions struct {
 	ForcePull           bool                           `long:"force-pull" usage:"Force pulling packages before building"`
 	Image               string                         `long:"image" short:"i" usage:"Set the image name to use"`
 	Jobs                int                            `long:"jobs" short:"j" usage:"Allow N jobs at once"`
+	KeepFileOwners      bool                           `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	KernelDbg           bool                           `long:"dbg" usage:"Build the debuggable (symbolic) kernel image instead of the stripped image"`
 	Kraftfile           string                         `local:"true" long:"kraftfile" short:"K" usage:"Set the Kraftfile to use"`
 	Memory              string                         `local:"true" long:"memory" short:"M" usage:"Specify the amount of memory to allocate (MiB increments)"`
@@ -68,6 +72,7 @@ type DeployOptions struct {
 	RolloutQualifier    create.RolloutQualifier        `noattribute:"true"`
 	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	Rootfs              string                         `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
+	RootfsType          initrd.FsType                  `noattribute:"true"`
 	Runtime             string                         `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog        string                         `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
@@ -165,11 +170,20 @@ func NewCmd() *cobra.Command {
 		"When a package of the same name exists, use this strategy when applying targets.",
 	)
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[initrd.FsType](
+			initrd.FsTypes(),
+			initrd.FsTypeCpio,
+		),
+		"rootfs-type",
+		"Set the type of the format of the rootfs (cpio/erofs)",
+	)
+
 	return cmd
 }
 
 func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -178,6 +192,18 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Rollout = create.RolloutStrategy(cmd.Flag("rollout").Value.String())
 	opts.RolloutQualifier = create.RolloutQualifier(cmd.Flag("rollout-qualifier").Value.String())
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
+
+	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
+		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+	}
+
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {
+		abs, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of rootfs: %w", err)
+		}
+		opts.Rootfs = abs
+	}
 
 	if cmd.Flag("scale-to-zero").Changed {
 		s20v := kcinstances.ScaleToZeroPolicy(cmd.Flag("scale-to-zero").Value.String())
@@ -212,6 +238,7 @@ func (opts *DeployOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	opts.Client = kraftcloud.NewClient(
+		kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 	)
 

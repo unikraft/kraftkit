@@ -23,11 +23,12 @@ import (
 )
 
 type RemoveOptions struct {
-	All    bool                   `long:"all" usage:"Remove all images"`
-	Auth   *config.AuthConfig     `noattribute:"true"`
-	Client kcimages.ImagesService `noattribute:"true"`
-	Metro  string                 `noattribute:"true"`
-	Token  string                 `noattribute:"true"`
+	AllowInsecure bool                   `noattribute:"true"`
+	All           bool                   `long:"all" usage:"Remove all images"`
+	Auth          *config.AuthConfig     `noattribute:"true"`
+	Client        kcimages.ImagesService `noattribute:"true"`
+	Metro         string                 `noattribute:"true"`
+	Token         string                 `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -74,7 +75,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify an image name, or use the --all flag")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -94,6 +95,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewImagesClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}

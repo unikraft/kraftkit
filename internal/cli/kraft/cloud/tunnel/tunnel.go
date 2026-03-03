@@ -27,6 +27,7 @@ import (
 )
 
 type TunnelOptions struct {
+	AllowInsecure      bool     `noattribute:"true"`
 	TunnelProxyPorts   []string `local:"true" long:"tunnel-proxy-port" short:"p" usage:"Remote port exposed by the tunnelling service(s). (default start port is 4444)"`
 	ProxyControlPort   uint     `local:"true" long:"tunnel-control-port" short:"P" usage:"Command-and-control port used by the tunneling service(s)." default:"4443"`
 	TunnelServiceImage string   `local:"true" long:"tunnel-image" usage:"Tunnel service image" default:"official/utils/tunnel:1.0"`
@@ -136,7 +137,7 @@ func (opts *TunnelOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("the image %q is deprecated, please use the default and update KraftKit to the latest version", tunnelImageOld)
 	}
 
-	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token); err != nil {
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
@@ -174,6 +175,7 @@ func (opts *TunnelOptions) Run(ctx context.Context, args []string) error {
 
 	var authStr string
 	cliInstance := kraftcloud.NewInstancesClient(
+		kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	).WithMetro(opts.Metro)
 
@@ -312,7 +314,7 @@ func (opts *TunnelOptions) runProxy(ctx context.Context, cli kcinstances.Instanc
 	})
 
 	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
-		Image:    opts.TunnelServiceImage,
+		Image:    &opts.TunnelServiceImage,
 		MemoryMB: ptr(64),
 		Args:     args,
 		ServiceGroup: &kcinstances.CreateRequestServiceGroup{

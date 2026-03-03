@@ -22,6 +22,7 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/compose"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/build"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/internal/cli/kraft/pkg"
@@ -33,15 +34,18 @@ import (
 )
 
 type BuildOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	EnvFile     string                `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Project     *compose.Project      `noattribute:"true"`
-	Push        bool                  `long:"push" usage:"Push the built service images"`
-	Runtimes    []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	Token       string                `noattribute:"true"`
+	AllowInsecure  bool                  `noattribute:"true"`
+	Auth           *config.AuthConfig    `noattribute:"true"`
+	Client         kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile    string                `noattribute:"true"`
+	EnvFile        string                `noattribute:"true"`
+	Metro          string                `noattribute:"true"`
+	Project        *compose.Project      `noattribute:"true"`
+	Push           bool                  `long:"push" usage:"Push the built service images"`
+	Runtimes       []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
+	RootfsType     initrd.FsType         `noattribute:"true"`
+	KeepFileOwners bool                  `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
+	Token          string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -71,6 +75,15 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[initrd.FsType](
+			initrd.FsTypes(),
+			initrd.FsTypeCpio,
+		),
+		"rootfs-type",
+		"Set the type of the format of the rootfs (cpio/erofs)",
+	)
+
 	return cmd
 }
 
@@ -90,6 +103,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -190,14 +204,17 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 
 		popts := &pkg.PkgOptions{
-			Architecture: "x86_64",
-			Compress:     false,
-			Format:       "oci",
-			Name:         pkgName,
-			Platform:     "kraftcloud",
-			Push:         opts.Push,
-			Project:      project,
-			Strategy:     packmanager.StrategyOverwrite,
+			Architecture:   "x86_64",
+			Compress:       false,
+			Format:         "oci",
+			Name:           pkgName,
+			NoPull:         false,
+			Platform:       "kraftcloud",
+			Push:           opts.Push,
+			Project:        project,
+			Strategy:       packmanager.StrategyOverwrite,
+			RootfsType:     opts.RootfsType,
+			KeepFileOwners: opts.KeepFileOwners,
 		}
 
 		// If no build context can be determined, assume a build via a unikernel
@@ -212,11 +229,17 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			)
 			if err != nil && errors.Is(err, app.ErrNoKraftfile) {
 				runtime, err := runtime.NewRuntime(ctx, runtime.DefaultKraftCloudRuntime,
-					runtime.WithPlatform(project.Targets()[0].Platform().String()),
-					runtime.WithArchitecture(project.Targets()[0].Architecture().String()),
+					runtime.WithPlatform(target.DefaultKraftCloudTarget.Platform().String()),
+					runtime.WithArchitecture(target.DefaultKraftCloudTarget.Architecture().String()),
 				)
 				if err != nil {
 					return fmt.Errorf("could not create runtime: %w", err)
+				}
+				var rootfs string
+				if filepath.IsAbs(service.Build.Dockerfile) {
+					rootfs = service.Build.Dockerfile
+				} else {
+					rootfs = filepath.Join(service.Build.Context, service.Build.Dockerfile)
 				}
 				project, err = app.NewApplicationFromOptions(
 					app.WithRuntime(runtime),
@@ -224,7 +247,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 					app.WithTargets([]*target.TargetConfig{target.DefaultKraftCloudTarget}),
 					app.WithCommand(service.Command...),
 					app.WithWorkingDir(service.Build.Context),
-					app.WithRootfs(filepath.Join(service.Build.Context, service.Build.Dockerfile)),
+					app.WithRootfs(rootfs),
 				)
 				if err != nil {
 					return fmt.Errorf("could not create unikernel application: %w", err)
@@ -236,12 +259,39 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			// Only set the supplied dockerfile as the rootfs if it exists, this is
 			// because the contents of `service.Build.Dockerfile` is supplied with a
 			// default value even if a Dockerfile does not actually exist.
-			rootfs := filepath.Join(service.Build.Context, service.Build.Dockerfile)
+			var rootfs string
+			if filepath.IsAbs(service.Build.Dockerfile) {
+				rootfs = service.Build.Dockerfile
+			} else {
+				rootfs = filepath.Join(service.Build.Context, service.Build.Dockerfile)
+			}
 			if _, err := os.Stat(rootfs); err == nil {
 				bopts.Rootfs = rootfs
 				popts.Rootfs = rootfs
 			}
 
+			initrdOptions := []initrd.InitrdOption{
+				initrd.WithBuildArgs(service.Build.Args),
+				initrd.WithBuildTarget(service.Build.Target),
+			}
+			secrets := map[string]initrd.InitrdBuildSecret{}
+			for _, secretRef := range service.Build.Secrets {
+				if secret, ok := opts.Project.Secrets[secretRef.Source]; ok {
+					secrets[secretRef.Source] = initrd.InitrdBuildSecret{
+						Name: secretRef.Source,
+						File: secret.File,
+						Env:  secret.Environment,
+					}
+				} else {
+					log.G(ctx).Warnf("secret %s not found in project secrets", secretRef.Source)
+				}
+			}
+			if len(secrets) > 0 {
+				initrdOptions = append(initrdOptions, initrd.WithBuildSecrets(secrets))
+			}
+
+			bopts.InitrdOptions = initrdOptions
+			popts.InitrdOptions = initrdOptions
 			bopts.Workdir = service.Build.Context
 			popts.Workdir = service.Build.Context
 			bopts.Project = project
@@ -327,7 +377,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 }
 
 func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
-	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token); err != nil {
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
 
@@ -344,6 +394,10 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flag("env-file").Changed {
 		opts.EnvFile = cmd.Flag("env-file").Value.String()
+	}
+
+	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
+		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
 	return nil

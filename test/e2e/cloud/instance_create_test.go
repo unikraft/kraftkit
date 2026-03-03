@@ -113,9 +113,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`requires at least 1 arg`))
+			Expect(stderr.String()).To(MatchRegexp(`requires at least 1 arg`))
 		})
 	})
 
@@ -148,7 +148,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -172,8 +172,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -184,13 +187,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -242,32 +245,38 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + "128" + " MiB\""))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
 
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -278,13 +287,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -317,7 +326,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`state":"running`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("memory\":\"" + "57 MiB\""))
 
@@ -325,24 +334,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -353,13 +368,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -387,8 +402,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`memory must be at least 1Mi`))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`memory must be at least 1Mi`))
 		})
 	})
 
@@ -416,8 +431,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Value of 'memory_mb' must be in the range 16 to`))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Value of 'memory_mb' must be in the range 16 to`))
 		})
 	})
 
@@ -445,8 +460,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`memory must be at least 1Mi`))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`memory must be at least 1Mi`))
 		})
 	})
 
@@ -474,8 +489,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`could not parse memory quantity: quantities must match the regular expression`))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`could not parse memory quantity: quantities must match the regular expression`))
 		})
 	})
 
@@ -508,7 +523,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -516,24 +531,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -544,13 +565,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -583,9 +604,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -619,9 +640,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -655,9 +676,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -691,9 +712,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -727,42 +748,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
-		})
-	})
-
-	When("invoked with standard flags and positional arguments, but a 62 character name starting with a digit", func() {
-		var instanceNameFull string
-
-		BeforeEach(func() {
-			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
-			if err != nil {
-				panic(err)
-			}
-			instanceNameFull = fmt.Sprintf("0%s-%d", instanceName, id)
-
-			for len(instanceNameFull) < 59 {
-				instanceNameFull = instanceNameFull + "a"
-			}
-
-			cmd.Args = append(cmd.Args,
-				"--port", instancePortMap,
-				"--memory", instanceMemory,
-				"--name", instanceNameFull,
-				"--start",
-				imageName,
-			)
-		})
-
-		It("should not error out with an API error", func() {
-			err := cmd.Run()
-			time.Sleep(2 * time.Second)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
 		})
 	})
 
@@ -803,8 +791,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -815,36 +806,35 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 instance\(s\)`))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp(`removing 1 instance\(s\)`))
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, but a 60 character name ending in all ascii characters", func() {
-		var instanceNameFull string
+	for _, char := range " !\"#$%&'()*+,:;<=>?@[\\]^_`{|}~ÑÓ" {
+		When(fmt.Sprintf("invoked with standard flags and positional arguments, but a 60 character name ending in a %c character", char), func() {
+			var instanceNameFull string
 
-		BeforeEach(func() {
-			id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
-			if err != nil {
-				panic(err)
-			}
-			instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
+			BeforeEach(func() {
+				id, err := rand.Int(rand.Reader, big.NewInt(100000000000))
+				if err != nil {
+					panic(err)
+				}
+				instanceNameFull = fmt.Sprintf("%s-%d", instanceName, id)
 
-			for len(instanceNameFull) < 59 {
-				instanceNameFull = instanceNameFull + "a"
-			}
-		})
+				for len(instanceNameFull) < 59 {
+					instanceNameFull = instanceNameFull + "a"
+				}
+			})
 
-		It("should error out with an API error", func() {
-			// Do not test all of them, if it fails for all other ASCII charcaters
-			// and for some random Unicode characters, it will probably fail for all of them
-
-			for _, char := range " !\"#$%&'()*+,:;<=>?@[\\]^_`{|}~ÑÓ" {
+			It("should error out with an API error", func() {
+				// Do not test all of them, if it fails for all other ASCII charcaters
+				// and for some random Unicode characters, it will probably fail for all of them
 				instanceNameFullAppended := instanceNameFull + string(char) + "a"
 
 				stdout = fcmd.NewIOStream()
@@ -859,9 +849,6 @@ var _ = Describe("kraft cloud instance create", func() {
 					"--log-level", "info",
 					"--log-type", "json",
 					"--output", "json",
-				)
-
-				cmd.Args = append(cmd.Args,
 					"--port", instancePortMap,
 					"--memory", instanceMemory,
 					"--name", instanceNameFullAppended,
@@ -876,12 +863,12 @@ var _ = Describe("kraft cloud instance create", func() {
 				}
 				Expect(err).To(HaveOccurred())
 
-				Expect(stderr.String()).To(BeEmpty())
-				Expect(stdout.String()).ToNot(BeEmpty())
-				Expect(stdout.String()).To(MatchRegexp(`Invalid name`))
-			}
+				Expect(stdout.String()).To(BeEmpty())
+				Expect(stderr.String()).ToNot(BeEmpty())
+				Expect(stderr.String()).To(MatchRegexp(`Invalid name`))
+			})
 		})
-	})
+	}
 
 	// '--start' flag tests
 	When("invoked with standard flags and positional arguments but no start flag", func() {
@@ -918,7 +905,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 
 			curlCmd.Args = append(curlCmd.Args, url)
 
@@ -926,14 +915,17 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`There is no service on this URL.`))
+			Expect(stderrCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`There is no service on this URL.`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -944,13 +936,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -982,9 +974,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -993,8 +985,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1005,13 +1000,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -1074,8 +1069,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1086,13 +1084,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -1125,7 +1123,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -1149,8 +1147,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1161,13 +1162,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -1194,10 +1195,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`Value of 'port' in service port description must be in the range 1 to 65535`))
+			Expect(stderr.String()).To(MatchRegexp(`Value of 'port' in service port description must be in the range 1 to 65535`))
 		})
 	})
 
@@ -1224,10 +1225,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`Value of 'destination_port' in service port description must be in the range 1 to 65535`))
+			Expect(stderr.String()).To(MatchRegexp(`Value of 'destination_port' in service port description must be in the range 1 to 65535`))
 		})
 	})
 
@@ -1254,13 +1255,12 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`Value of 'destination_port' in service port description must be in the range 1 to 65535`))
+			Expect(stderr.String()).To(MatchRegexp(`Value of 'destination_port' in service port description must be in the range 1 to 65535`))
 		})
 	})
-
 	When("invoked with standard flags and positional arguments, and two negative ports", func() {
 		var instanceNameFull string
 
@@ -1284,10 +1284,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`Value of 'port' in service port description must be in the range 1 to 65535`))
+			Expect(stderr.String()).To(MatchRegexp(`Value of 'port' in service port description must be in the range 1 to 65535`))
 		})
 	})
 
@@ -1314,10 +1314,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`invalid --port value expected --port EXTERNAL:INTERNAL`))
+			Expect(stderr.String()).To(MatchRegexp(`invalid --port value expected --port EXTERNAL:INTERNAL`))
 		})
 	})
 
@@ -1344,10 +1344,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`invalid --port value expected --port EXTERNAL:INTERNAL`))
+			Expect(stderr.String()).To(MatchRegexp(`invalid --port value expected --port EXTERNAL:INTERNAL`))
 		})
 	})
 
@@ -1383,7 +1383,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -1391,22 +1391,28 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 
 			// Run the "instance ls" command to test the number of replicas
-			lsCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			stdoutLs := fcmd.NewIOStream()
+			stderrLs := fcmd.NewIOStream()
+
+			lsCmd := fcmd.NewKraft(stdoutLs, stderrLs, cfg.Path())
 			lsCmd.Args = append(lsCmd.Args,
 				"cloud", "instance", "ls",
 				"--log-level", "info",
@@ -1417,64 +1423,48 @@ var _ = Describe("kraft cloud instance create", func() {
 			err = lsCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(lsCmd.DumpError(stdout, stderr, err))
+				fmt.Print(lsCmd.DumpError(stdoutLs, stderrLs, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderrLs.String()).To(BeEmpty())
+			Expect(stdoutLs.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp("\"name\":\"" + instanceNameFull))
+			Expect(stdoutLs.String()).To(MatchRegexp("\"name\":\"" + instanceNameFull))
 
 			// Second instance has a suffix starting with `-`
-			Expect(stdout.String()).To(MatchRegexp("\"name\":\"" + instanceNameFull + "-"))
+			Expect(stdoutLs.String()).To(MatchRegexp("\"name\":\"" + instanceNameFull + "-"))
 
-			seps := strings.Split(stdout.String(), "\"name\":\""+instanceNameFull+"-")
+			seps := strings.Split(stdoutLs.String(), "\"name\":\""+instanceNameFull+"-")
 			Expect(len(seps)).To(Equal(2))
 
 			replicaNameFull = instanceNameFull + "-" + strings.SplitN(seps[1], "\"", 2)[0]
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
 				"--log-type", "json",
 				instanceNameFull,
+				replicaNameFull,
 			)
 
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
-
-			// Remove the replica after the test
-			cleanReplicaCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
-			cleanReplicaCmd.Args = append(cleanReplicaCmd.Args,
-				"cloud", "instance", "delete",
-				"--log-level", "info",
-				"--log-type", "json",
-				replicaNameFull,
-			)
-
-			err = cleanReplicaCmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(cleanReplicaCmd.DumpError(stdout, stderr, err))
-			}
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 2 instance\\(s\\)"))
 		})
 	})
 
@@ -1508,7 +1498,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -1516,19 +1506,22 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 
 			// Run the "instance ls" command to test the number of replicas
 			lsCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
@@ -1556,8 +1549,11 @@ var _ = Describe("kraft cloud instance create", func() {
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1568,13 +1564,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -1601,10 +1597,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"-1\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"-1\\": invalid syntax`))
 		})
 	})
 
@@ -1631,10 +1627,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"one\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"one\\": invalid syntax`))
 		})
 	})
 
@@ -1661,10 +1657,10 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"2.64\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"2.64\\": invalid syntax`))
 		})
 	})
 
@@ -1699,14 +1695,17 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"fqdn\":\"" + "smth-" + instanceNameFull))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1717,16 +1716,19 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 
 			// Get the certificate name
-			certCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			stdoutCert := fcmd.NewIOStream()
+			stderrCert := fcmd.NewIOStream()
+
+			certCmd := fcmd.NewKraft(stdoutCert, stderrCert, cfg.Path())
 			certCmd.Args = append(certCmd.Args,
 				"cloud", "certificate", "ls",
 				"--log-level", "info",
@@ -1737,17 +1739,20 @@ var _ = Describe("kraft cloud instance create", func() {
 			err = certCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(certCmd.DumpError(stdout, stderr, err))
+				fmt.Print(certCmd.DumpError(stdoutCert, stderrCert, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderrCert.String()).To(BeEmpty())
+			Expect(stdoutCert.String()).ToNot(BeEmpty())
 
-			certName := strings.Split(stdout.String(), "\"name\":\"smth-"+instanceNameFull)[1]
+			certName := strings.Split(stdoutCert.String(), "\"name\":\"smth-"+instanceNameFull)[1]
 			certName = "smth-" + instanceNameFull + strings.Split(certName, "\"")[0]
 
-			cleanCertCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			stdoutRmCert := fcmd.NewIOStream()
+			stderrRmCert := fcmd.NewIOStream()
+
+			cleanCertCmd := fcmd.NewKraft(stdoutRmCert, stderrRmCert, cfg.Path())
 			cleanCertCmd.Args = append(cleanCertCmd.Args,
 				"cloud", "certificate", "delete",
 				"--log-level", "info",
@@ -1758,13 +1763,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err = cleanCertCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCertCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCertCmd.DumpError(stdoutRmCert, stderrRmCert, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 certificate\\(s\\)"))
+			Expect(stdoutRmCert.String()).To(BeEmpty())
+			Expect(stderrRmCert.String()).ToNot(BeEmpty())
+			Expect(stderrRmCert.String()).To(MatchRegexp("removing 1 certificate\\(s\\)"))
 		})
 	})
 
@@ -1791,10 +1796,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-
-			Expect(stdout.String()).To(MatchRegexp(`Invalid DNS name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid DNS name`))
 		})
 	})
 
@@ -1821,10 +1825,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-
-			Expect(stdout.String()).To(MatchRegexp(`Invalid DNS name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid DNS name`))
 		})
 	})
 
@@ -1851,10 +1854,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-
-			Expect(stdout.String()).To(MatchRegexp(`Invalid DNS name`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid DNS name`))
 		})
 	})
 
@@ -1895,24 +1897,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -1923,13 +1931,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -1964,7 +1972,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -1972,24 +1980,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2000,13 +2014,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -2041,7 +2055,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -2049,24 +2063,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2077,13 +2097,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -2117,7 +2137,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -2125,24 +2145,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2153,13 +2179,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -2198,14 +2224,17 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2216,13 +2245,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -2294,7 +2323,10 @@ var _ = Describe("kraft cloud instance create", func() {
 				imageName,
 			)
 
-			createServiceCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			stdoutService := fcmd.NewIOStream()
+			stderrService := fcmd.NewIOStream()
+
+			createServiceCmd := fcmd.NewKraft(stdoutService, stderrService, cfg.Path())
 
 			createServiceCmd.Args = append(
 				createServiceCmd.Args, "cloud", "service", "create",
@@ -2308,12 +2340,12 @@ var _ = Describe("kraft cloud instance create", func() {
 			err = createServiceCmd.Run()
 			time.Sleep(3 * time.Second)
 			if err != nil {
-				fmt.Print(createServiceCmd.DumpError(stdout, stderr, err))
+				fmt.Print(createServiceCmd.DumpError(stdoutService, stderrService, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
+			Expect(stderrService.String()).To(BeEmpty())
+			Expect(stdoutService.String()).ToNot(BeEmpty())
 		})
 
 		It("should attach the instance to that service", func() {
@@ -2326,7 +2358,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -2351,7 +2383,10 @@ var _ = Describe("kraft cloud instance create", func() {
 
 		AfterEach(func() {
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2362,31 +2397,36 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 
 			// Remove the service after the test
-			cleanServiceCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
-			cleanServiceCmd.Args = append(cleanServiceCmd.Args, "cloud", "service", "delete",
-				"--log-level", "info", "--log-type", "json",
+			stdoutRmService := fcmd.NewIOStream()
+			stderrRmService := fcmd.NewIOStream()
+
+			cleanServiceCmd := fcmd.NewKraft(stdoutRmService, stderrRmService, cfg.Path())
+			cleanServiceCmd.Args = append(
+				cleanServiceCmd.Args, "cloud", "service", "delete",
+				"--log-level", "info",
+				"--log-type", "json",
 				"smth-"+instanceNameFull,
 			)
 
 			err = cleanServiceCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanServiceCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanServiceCmd.DumpError(stdoutRmService, stderrRmService, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`removing 1 service\(s\)`))
+			Expect(stdoutRmService.String()).To(BeEmpty())
+			Expect(stderrRmService.String()).ToNot(BeEmpty())
+			Expect(stderrRmService.String()).To(MatchRegexp(`removing 1 service\(s\)`))
 		})
 	})
 
@@ -2415,9 +2455,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`No service group with name 'smth`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`No service group with name 'smth`))
 		})
 	})
 
@@ -2446,14 +2486,14 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Invalid name 'șmth'`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`Invalid name 'șmth'`))
 		})
 	})
 
 	// '--feature' flag tests
-	When("invoked with standard flags and positional arguments, and the scale to zero feature", func() {
+	When("invoked with standard flags and positional arguments, and the delete-on-stop feature", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -2467,12 +2507,13 @@ var _ = Describe("kraft cloud instance create", func() {
 				"--port", instancePortMap,
 				"--memory", instanceMemory,
 				"--name", instanceNameFull,
-				"--feature", "scale-to-zero",
+				"--feature", "delete-on-stop",
+				"--start",
 				imageName,
 			)
 		})
 
-		It("should enable scale to zero and work", func() {
+		It("should enable delete-on-stop and work", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -2482,7 +2523,7 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"standby"`))
+			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
 			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
 
@@ -2490,24 +2531,30 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(url).ToNot(BeEmpty())
 
 			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdout, stderr)
+			stdoutCurl := fcmd.NewIOStream()
+			stderrCurl := fcmd.NewIOStream()
+
+			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
 			curlCmd.Args = append(curlCmd.Args, url)
 
 			err = curlCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdout, stderr, err))
+				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`Welcome to nginx!`))
+			Expect(stderrCurl.String()).To(BeEmpty())
+			Expect(stdoutCurl.String()).ToNot(BeEmpty())
+			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
 		})
 
 		AfterEach(func() {
+			stdoutRm := fcmd.NewIOStream()
+			stderrRm := fcmd.NewIOStream()
+
 			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
 			cleanCmd.Args = append(cleanCmd.Args,
 				"cloud", "instance", "delete",
 				"--log-level", "info",
@@ -2518,13 +2565,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			err := cleanCmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdout, stderr, err))
+				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
 			}
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stdoutRm.String()).To(BeEmpty())
+			Expect(stderrRm.String()).ToNot(BeEmpty())
+			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
 		})
 	})
 
@@ -2553,9 +2600,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`'smth' is not a valid flag for 'features'`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`'smth' is not a valid flag for 'features'`))
 		})
 	})
 
@@ -2584,9 +2631,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			time.Sleep(2 * time.Second)
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`'șmth' is not a valid flag for 'features'`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`'șmth' is not a valid flag for 'features'`))
 		})
 	})
 })

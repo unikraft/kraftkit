@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"kraftkit.sh/log"
 )
 
 // builderDockerfile is a builder that only uses a `Dockerfile` to build a
@@ -28,11 +30,17 @@ func (build *builderDockerfile) Buildable(ctx context.Context, opts *BuildOption
 	if opts.Project == nil {
 		// Do not capture the the project is not initialized, as we can still build
 		// the unikernel using the Dockerfile provided with the `--rootfs`.
-		_ = opts.initProject(ctx)
+		if err := opts.initProject(ctx); err != nil {
+			log.G(ctx).WithError(err).Warn("could not initialize project")
+		}
 	}
 
 	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = opts.Project.Rootfs()
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
 	}
 
 	// TODO(nderjung): This is a very naiive check and should be improved,

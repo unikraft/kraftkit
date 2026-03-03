@@ -29,10 +29,7 @@ func NewLayerFromFile(ctx context.Context, mediaType, src, dst string, opts ...L
 	removeAfterSave := false
 
 	switch mediaType {
-	case ocispec.MediaTypeImageLayer,
-		MediaTypeImageKernelGzip,
-		MediaTypeImageKernel:
-
+	case ocispec.MediaTypeImageLayer:
 		tmp, err := os.CreateTemp("", "kraftkit-ociblob*")
 		if err != nil {
 			return nil, err
@@ -41,7 +38,7 @@ func NewLayerFromFile(ctx context.Context, mediaType, src, dst string, opts ...L
 		if err := archive.TarFileTo(ctx,
 			src, dst, tmp.Name(),
 			archive.WithStripTimes(true),
-			archive.WithGzip(mediaType == MediaTypeImageKernelGzip),
+			archive.WithGzip(false),
 		); err != nil {
 			return nil, err
 		}

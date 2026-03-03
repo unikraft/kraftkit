@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=trixie-20250203
+ARG DEBIAN_VERSION=trixie
 
 FROM debian:${DEBIAN_VERSION} AS qemu-build
 

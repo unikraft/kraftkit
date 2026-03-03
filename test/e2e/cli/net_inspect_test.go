@@ -44,8 +44,8 @@ var _ = Describe("kraft net inspect", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"accepts 1 arg\(s\), received 0"}\n`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`^{"level":"error","msg":"accepts 1 arg\(s\), received 0"}\n`))
 		})
 	})
 
@@ -60,8 +60,8 @@ var _ = Describe("kraft net inspect", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"no such network: t-in-0"}\n$`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`^{"level":"error","msg":"no such network: t-in-0"}\n$`))
 		})
 	})
 

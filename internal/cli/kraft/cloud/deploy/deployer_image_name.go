@@ -65,6 +65,8 @@ func (deployer *deployerImageName) Deployable(ctx context.Context, opts *DeployO
 		return false, err
 	}
 
+	updateOptsFromProject(opts)
+
 	deployer.imageName = args[0]
 	deployer.args = args[1:]
 
@@ -93,6 +95,7 @@ func (deployer *deployerImageName) Deploy(ctx context.Context, opts *DeployOptio
 			"",
 			func(ctx context.Context) error {
 				insts, groups, err = instancecreate.Create(ctx, &instancecreate.CreateOptions{
+					AllowInsecure:       opts.AllowInsecure,
 					Certificate:         opts.Certificate,
 					Entrypoint:          opts.Entrypoint,
 					Env:                 opts.Env,

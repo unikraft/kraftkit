@@ -54,6 +54,8 @@ type KraftKit struct {
 	Auth map[string]AuthConfig `yaml:"auth,omitempty" noattribute:"true"`
 
 	Aliases map[string]map[string]string `yaml:"aliases" noattribute:"true"`
+
+	Toolchain map[string]string `yaml:"toolchain,omitempty" noattribute:"true"`
 }
 
 type ConfigDetail struct {

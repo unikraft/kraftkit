@@ -53,13 +53,13 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag[mplatform.Platform](
+		cmdfactory.NewEnumFlag(
 			mplatform.Platforms(),
-			mplatform.Platform("auto"),
+			mplatform.Platform("all"),
 		),
 		"plat",
 		"p",
-		"Set the platform virtual machine monitor driver.  Set to 'auto' to detect the guest's platform and 'host' to use the host platform.",
+		"Set the platform virtual machine monitor driver. Set to 'all' to match all platforms (default).",
 	)
 
 	return cmd
@@ -84,20 +84,13 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
-	if opts.All || opts.Platform == "auto" {
+	if opts.All || opts.Platform == "all" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		if opts.Platform == "host" {
-			platform, _, err = mplatform.Detect(ctx)
-			if err != nil {
-				return err
-			}
-		} else {
-			var ok bool
-			platform, ok = mplatform.PlatformsByName()[opts.Platform]
-			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.Platform)
-			}
+		var ok bool
+		platform, ok = mplatform.PlatformsByName()[opts.Platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]

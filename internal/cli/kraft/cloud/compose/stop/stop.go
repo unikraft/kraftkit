@@ -27,16 +27,17 @@ import (
 )
 
 type StopOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile  string                `noattribute:"true"`
-	DrainTimeout time.Duration         `long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	EnvFile      string                `noattribute:"true"`
-	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
-	Metro        string                `noattribute:"true"`
-	Project      *compose.Project      `noattribute:"true"`
-	Token        string                `noattribute:"true"`
-	Wait         time.Duration         `long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile   string                `noattribute:"true"`
+	DrainTimeout  time.Duration         `long:"drain-timeout" short:"d" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	EnvFile       string                `noattribute:"true"`
+	Force         bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
+	Metro         string                `noattribute:"true"`
+	Project       *compose.Project      `noattribute:"true"`
+	Token         string                `noattribute:"true"`
+	Wait          time.Duration         `long:"wait" short:"w" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -64,7 +65,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -99,6 +100,7 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}

@@ -4,23 +4,31 @@
 // You may not use this file except in compliance with the License.
 package packmanager
 
+import (
+	"kraftkit.sh/initrd"
+	"kraftkit.sh/kconfig"
+	"kraftkit.sh/unikraft/arch"
+	"kraftkit.sh/unikraft/plat"
+)
+
 // PackOptions contains the list of options which can be set when packaging a
 // component.
 type PackOptions struct {
-	appSourceFiles                   bool
-	args                             []string
-	env                              []string
-	initrd                           string
-	kconfig                          bool
-	kernelDbg                        bool
-	kernelLibraryIntermediateObjects bool
-	kernelLibraryObjects             bool
-	kernelSourceFiles                bool
-	kernelVersion                    string
-	labels                           map[string]string
-	name                             string
-	output                           string
-	mergeStrategy                    MergeStrategy
+	appSourceFiles bool
+	architecture   arch.Architecture
+	platform       plat.Platform
+	args           []string
+	env            []string
+	initrd         initrd.Initrd
+	roms           []string
+	kconfig        kconfig.KeyValueMap
+	kernel         string
+	kernelDbg      string
+	kernelVersion  string
+	labels         map[string]string
+	name           string
+	output         string
+	mergeStrategy  MergeStrategy
 }
 
 // NewPackOptions returns an instantiated *NewPackOptions with default
@@ -37,6 +45,16 @@ func (popts *PackOptions) PackAppSourceFiles() bool {
 	return popts.appSourceFiles
 }
 
+// Architecture returns the architecture of the package.
+func (popts *PackOptions) Architecture() arch.Architecture {
+	return popts.architecture
+}
+
+// Platform returns the platform of the package.
+func (popts *PackOptions) Platform() plat.Platform {
+	return popts.platform
+}
+
 // Args returns the arguments to pass to the kernel.
 func (popts *PackOptions) Args() []string {
 	return popts.args
@@ -47,35 +65,29 @@ func (popts *PackOptions) Env() []string {
 	return popts.env
 }
 
+// Kernel returns the path of the kernel file that should be packaged.
+func (popts *PackOptions) Kernel() string {
+	return popts.kernel
+}
+
 // Initrd returns the path of the initrd file that should be packaged.
-func (popts *PackOptions) Initrd() string {
+func (popts *PackOptions) Initrd() initrd.Initrd {
 	return popts.initrd
 }
 
-// PackKConfig returns whether the .config file should be packaged.
-func (popts *PackOptions) PackKConfig() bool {
+// Auxiliary read-only memory blobs.
+func (popts *PackOptions) Roms() []string {
+	return popts.roms
+}
+
+// KConfig returns whether the .config file should be packaged.
+func (popts *PackOptions) KConfig() kconfig.KeyValueMap {
 	return popts.kconfig
 }
 
 // PackKernelDbg returns return whether to package the debug kernel.
-func (popts *PackOptions) KernelDbg() bool {
+func (popts *PackOptions) KernelDbg() string {
 	return popts.kernelDbg
-}
-
-// PackKernelLibraryIntermediateObjects returns whether to package intermediate
-// kernel library object files.
-func (popts *PackOptions) PackKernelLibraryIntermediateObjects() bool {
-	return popts.kernelLibraryIntermediateObjects
-}
-
-// PackKernelLibraryObjects returns whether to package kernel library objects.
-func (popts *PackOptions) PackKernelLibraryObjects() bool {
-	return popts.kernelLibraryObjects
-}
-
-// PackKernelSourceFiles returns the whether to package kernel source files.
-func (popts *PackOptions) PackKernelSourceFiles() bool {
-	return popts.kernelSourceFiles
 }
 
 // KernelVersion returns the version of the kernel
@@ -113,6 +125,20 @@ func PackAppSourceFiles(pack bool) PackOption {
 	}
 }
 
+// PackArchitecture sets the architecture of the package.
+func PackArchitecture(architecture arch.Architecture) PackOption {
+	return func(popts *PackOptions) {
+		popts.architecture = architecture
+	}
+}
+
+// PackPlatform sets the platform of the package.
+func PackPlatform(platform plat.Platform) PackOption {
+	return func(popts *PackOptions) {
+		popts.platform = platform
+	}
+}
+
 // PackArgs sets the arguments to be passed to the application.
 func PackArgs(args ...string) PackOption {
 	return func(popts *PackOptions) {
@@ -121,47 +147,37 @@ func PackArgs(args ...string) PackOption {
 }
 
 // PackKConfig marks to include the kconfig `.config` file into the package.
-func PackKConfig(kconfig bool) PackOption {
+func PackKConfig(kcfg kconfig.KeyValueMap) PackOption {
 	return func(popts *PackOptions) {
-		popts.kconfig = kconfig
+		popts.kconfig = kcfg
+	}
+}
+
+// PackKernel includes the kernel in the package.
+func PackKernel(kernel string) PackOption {
+	return func(popts *PackOptions) {
+		popts.kernel = kernel
 	}
 }
 
 // PackInitrd includes the provided path to an initrd file in the package.
-func PackInitrd(initrd string) PackOption {
+func PackInitrd(rootfs initrd.Initrd) PackOption {
 	return func(popts *PackOptions) {
-		popts.initrd = initrd
+		popts.initrd = rootfs
+	}
+}
+
+// PackRoms includes auxiliary read-only memory blobs in the package.
+func PackRoms(roms ...string) PackOption {
+	return func(popts *PackOptions) {
+		popts.roms = roms
 	}
 }
 
 // PackKernelDbg includes the debug kernel in the package.
-func PackKernelDbg(dbg bool) PackOption {
+func PackKernelDbg(kernelDbg string) PackOption {
 	return func(popts *PackOptions) {
-		popts.kernelDbg = dbg
-	}
-}
-
-// PackKernelLibraryIntermediateObjects marks to include intermediate library
-// object files, e.g. libnolibc/errno.o
-func PackKernelLibraryIntermediateObjects(pack bool) PackOption {
-	return func(popts *PackOptions) {
-		popts.kernelSourceFiles = pack
-	}
-}
-
-// PackKernelLibraryObjects marks to include library object files, e.g. nolibc.o
-func PackKernelLibraryObjects(pack bool) PackOption {
-	return func(popts *PackOptions) {
-		popts.kernelSourceFiles = pack
-	}
-}
-
-// PackKernelSourceFiles marks that all source files which make up the build
-// from the Unikraft build side are to be included.  Including these files will
-// enable a reproducible build.
-func PackKernelSourceFiles(pack bool) PackOption {
-	return func(popts *PackOptions) {
-		popts.kernelSourceFiles = pack
+		popts.kernelDbg = kernelDbg
 	}
 }
 

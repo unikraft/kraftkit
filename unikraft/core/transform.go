@@ -6,6 +6,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"kraftkit.sh/kconfig"
@@ -34,7 +35,10 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 	}
 
 	if source, ok := c["source"]; ok {
-		core.source = source.(string)
+		core.source, ok = source.(string)
+		if !ok {
+			return nil, fmt.Errorf("core 'source' must be a string, got %T", source)
+		}
 
 		// If the provided source is a directory on the host, set the "path" to this
 		// value.  The "path" is the location on disk where the microlibrary will
@@ -51,11 +55,17 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 	}
 
 	if version, ok := c["version"]; ok {
-		core.version = version.(string)
+		core.version, ok = version.(string)
+		if !ok {
+			return nil, fmt.Errorf("core 'version' must be a string, got %T", version)
+		}
 	}
 
 	if kconf, ok := c["kconfig"]; ok {
-		core.kconfig = kconf.(kconfig.KeyValueMap)
+		core.kconfig, ok = kconf.(kconfig.KeyValueMap)
+		if !ok {
+			return nil, fmt.Errorf("core 'kconfig' must be a mapping, got %T", kconf)
+		}
 	}
 
 	return core, nil

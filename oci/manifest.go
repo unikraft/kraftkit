@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/errdefs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -30,6 +30,7 @@ import (
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
+	"kraftkit.sh/utils"
 )
 
 type Manifest struct {
@@ -265,7 +266,7 @@ func (manifest *Manifest) SetKernel(ctx context.Context, path string) error {
 func (manifest *Manifest) SetKernelDbg(ctx context.Context, path string) error {
 	log.G(ctx).
 		WithField("src", path).
-		WithField("dest", WellKnownKernelPath).
+		WithField("dest", WellKnownKernelDbgPath).
 		Debug("including debug kernel")
 
 	layers := []*Layer{}
@@ -287,8 +288,30 @@ func (manifest *Manifest) SetKernelDbg(ctx context.Context, path string) error {
 	layer, err := NewLayerFromFile(ctx,
 		ocispec.MediaTypeImageLayer,
 		path,
-		WellKnownKernelPath,
+		WellKnownKernelDbgPath,
 		WithLayerAnnotation(AnnotationKernelDbgPath, WellKnownKernelDbgPath),
+	)
+	if err != nil {
+		return fmt.Errorf("could build layer from file: %w", err)
+	}
+
+	if _, err := manifest.AddLayer(ctx, layer); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddRom includes an auxiliary read-only memory blob into the manifest.
+func (manifest *Manifest) AddRom(ctx context.Context, path string) error {
+	log.G(ctx).
+		WithField("src", path).
+		Debug("including rom")
+
+	layer, err := NewLayerFromFile(ctx,
+		MediaTypeRom,
+		path,
+		"",
 	)
 	if err != nil {
 		return fmt.Errorf("could build layer from file: %w", err)
@@ -409,6 +432,8 @@ func (manifest *Manifest) Save(ctx context.Context, fullref string, onProgress f
 		// Compare letters normally
 		return manifest.config.OSFeatures[j] > manifest.config.OSFeatures[i]
 	})
+
+	manifest.config.OSFeatures = utils.RemoveDuplicates(manifest.config.OSFeatures)
 
 	configJson, err := json.Marshal(manifest.config)
 	if err != nil {

@@ -26,6 +26,7 @@ import (
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/unikraft"
 )
 
@@ -63,10 +64,47 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 	}
 
 	if n, ok := iface["rootfs"]; ok {
-		app.rootfs, ok = n.(string)
-		if !ok {
-			return nil, errors.New("rootfs must be a string")
+		switch n.(type) {
+		case string:
+			app.rootfs = n.(string)
+			app.fsType = initrd.FsTypeCpio
+		case interface{}:
+			rootfsMap := getSectionMap(iface, "rootfs")
+			if rootfsMap == nil {
+				return nil, errors.New("rootfs must be a mapping or a string")
+			}
+
+			if t, ok := rootfsMap["type"]; ok {
+				fsTypeStr, ok := t.(string)
+				if !ok {
+					return nil, errors.New("rootfs type must be a string")
+				}
+				app.fsType = initrd.FsType(strings.ToLower(fsTypeStr))
+			} else {
+				app.fsType = initrd.FsTypeCpio
+			}
+
+			if s, ok := rootfsMap["source"]; ok {
+				sourceStr, ok := s.(string)
+				if !ok {
+					return nil, errors.New("rootfs source must be a string")
+				}
+				app.rootfs = sourceStr
+			} else {
+				return nil, errors.New("rootfs source must be specified")
+			}
+		default:
+			return nil, errors.New("rootfs must be a mapping or a string")
 		}
+	}
+
+	romsSectionList := getSectionList(iface, "roms")
+	for _, rom := range romsSectionList {
+		romStr, ok := rom.(string)
+		if !ok {
+			return nil, errors.New("rom must be a string")
+		}
+		app.roms = append(app.roms, romStr)
 	}
 
 	if n, ok := iface["cmd"]; ok {
@@ -75,7 +113,11 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 			app.command = []string{v}
 		case []interface{}:
 			for _, cmd := range v {
-				app.command = append(app.command, cmd.(string))
+				cmdString, ok := cmd.(string)
+				if !ok {
+					return nil, errors.New("cmd must be a string or a list of strings")
+				}
+				app.command = append(app.command, cmdString)
 			}
 		}
 	}
@@ -107,10 +149,18 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		return nil, err
 	}
 
-	if err := Transform(ctx, getSectionMap(iface, "libraries"), &app.libraries); err != nil {
+	librariesSectionMap := getSectionMap(iface, "libraries")
+	if librariesSectionMap == nil {
+		return nil, errors.New("libraries section must be a mapping")
+	}
+	if err := Transform(ctx, librariesSectionMap, &app.libraries); err != nil {
 		return nil, err
 	}
 
+	targetsSectionList := getSectionList(iface, "targets")
+	if targetsSectionList == nil {
+		return nil, errors.New("targets section must be a list")
+	}
 	if err := Transform(ctx, getSectionList(iface, "targets"), &app.targets); err != nil {
 		return nil, err
 	}
@@ -142,12 +192,20 @@ func getSectionMap(config map[string]interface{}, key string) map[string]interfa
 		return make(map[string]interface{})
 	}
 
+	if _, ok := section.(map[string]interface{}); !ok {
+		return nil
+	}
+
 	return section.(map[string]interface{})
 }
 
 func getSectionList(config map[string]interface{}, key string) []interface{} {
 	section, ok := config[key]
 	if !ok {
+		return make([]interface{}, 0)
+	}
+
+	if _, ok := section.([]interface{}); !ok {
 		return nil
 	}
 

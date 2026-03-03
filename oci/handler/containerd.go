@@ -15,17 +15,19 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/content"
-	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/labels"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/remotes"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/content"
+	"github.com/containerd/containerd/v2/core/images"
+	"github.com/containerd/containerd/v2/core/remotes"
+	"github.com/containerd/containerd/v2/defaults"
+	"github.com/containerd/containerd/v2/pkg/labels"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/errdefs"
 	clog "github.com/containerd/log"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"github.com/containerd/platforms"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/opencontainers/go-digest"
@@ -44,15 +46,15 @@ const (
 )
 
 type ContainerdHandler struct {
-	client    *containerd.Client
+	client    *client.Client
 	namespace string
 	auths     map[string]config.AuthConfig
 }
 
 // NewContainerdHandler creates a Resolver-compatible interface given the
 // containerd address and namespace.
-func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]config.AuthConfig, opts ...containerd.ClientOpt) (context.Context, *ContainerdHandler, error) {
-	client, err := containerd.New(address, opts...)
+func NewContainerdHandler(ctx context.Context, address, namespace string, auths map[string]config.AuthConfig, opts ...client.Opt) (context.Context, *ContainerdHandler, error) {
+	client, err := client.New(address, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,7 +78,7 @@ func NewContainerdHandler(ctx context.Context, address, namespace string, auths 
 
 // NewContainerdWithClient create a containerd Resolver-compatible with an
 // existing containerd client connection.
-func NewContainerdWithClient(ctx context.Context, client *containerd.Client) (context.Context, *ContainerdHandler, error) {
+func NewContainerdWithClient(ctx context.Context, client *client.Client) (context.Context, *ContainerdHandler, error) {
 	if client == nil {
 		return nil, nil, fmt.Errorf("no containerd client provided")
 	}
@@ -155,9 +157,9 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 
 	if _, err := handle.client.Pull(ctx,
 		fullref,
-		containerd.WithPlatform(fmt.Sprintf("%s/%s", plat.OS, plat.Architecture)),
-		containerd.WithResolver(resolver),
-		containerd.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		client.WithPlatform(fmt.Sprintf("%s/%s", plat.OS, plat.Architecture)),
+		client.WithResolver(resolver),
+		client.WithImageHandler(images.HandlerFunc(func(_ context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			if desc.MediaType != images.MediaTypeDockerSchema1Manifest {
 				ongoing.Add(desc)
 			}
@@ -200,6 +202,48 @@ func (handle *ContainerdHandler) DeleteDigest(ctx context.Context, dgst digest.D
 	}()
 
 	return handle.client.ContentStore().Delete(ctx, dgst)
+}
+
+type readerAtWrapper struct {
+	r   content.ReaderAt
+	off int64
+	mu  sync.Mutex
+}
+
+func (w *readerAtWrapper) Read(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.off >= w.r.Size() {
+		return 0, io.EOF
+	}
+
+	n, err := w.r.ReadAt(p, w.off)
+	w.off += int64(n)
+	return n, err
+}
+
+func (w *readerAtWrapper) Close() error {
+	return w.r.Close()
+}
+
+// ReadDigest implements DigestReader.
+func (handle *ContainerdHandler) ReadDigest(ctx context.Context, dgst digest.Digest) (io.ReadCloser, error) {
+	ctx, done, err := handle.lease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = combineErrors(err, done(ctx))
+	}()
+
+	readerAt, err := handle.client.ContentStore().ReaderAt(ctx, ocispec.Descriptor{Digest: dgst})
+	if err != nil {
+		return nil, err
+	}
+
+	return &readerAtWrapper{r: readerAt}, nil
 }
 
 // SaveDescriptor implements DescriptorSaver.
@@ -276,7 +320,7 @@ func (handle *ContainerdHandler) SaveDescriptor(ctx context.Context, fullref str
 			return err
 		}
 
-		if existingIndex, err := handle.ResolveIndex(ctx, fullref); err == nil {
+		if existingIndex, _, err := handle.ResolveIndex(ctx, fullref); err == nil {
 			existingIndexJson, err := json.Marshal(existingIndex)
 			if err != nil {
 				return fmt.Errorf("could not marshal existing index: %w", err)
@@ -478,10 +522,10 @@ func (handle *ContainerdHandler) DeleteManifest(ctx context.Context, fullref str
 }
 
 // ResolveIndex implements IndexResolver.
-func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, error) {
+func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, digest.Digest, error) {
 	ctx, done, err := handle.lease(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	defer func() {
@@ -490,7 +534,7 @@ func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref strin
 
 	images, err := handle.client.ImageService().List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get list of images: %w", err)
+		return nil, "", fmt.Errorf("could not get list of images: %w", err)
 	}
 
 	var indexDigest *digest.Digest
@@ -504,7 +548,7 @@ func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref strin
 	}
 
 	if indexDigest == nil {
-		return nil, fmt.Errorf("index '%s' not found", fullref)
+		return nil, "", fmt.Errorf("index '%s' not found", fullref)
 	}
 
 	cs := handle.client.ContentStore()
@@ -536,10 +580,10 @@ func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref strin
 
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &index, nil
+	return &index, "", nil
 }
 
 // ListIndexes implements IndexLister.
@@ -775,7 +819,7 @@ outer:
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor, onProgress func(float64)) error {
 	resolver, err := dockerconfigresolver.New(
 		ctx,
 		strings.Split(ref, "/")[0],
@@ -793,11 +837,16 @@ func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string,
 		return err
 	}
 
+	// TODO(nderjung): Add progress tracking support for containerd push operations.
+	// This would require wrapping the push operation with progress monitoring similar
+	// to how PullDigest uses reportProgress.
+	_ = onProgress
+
 	return handle.client.Push(
 		namespaces.WithNamespace(ctx, handle.namespace),
 		ref,
 		*target,
-		containerd.WithResolver(resolver),
+		client.WithResolver(resolver),
 	)
 }
 
@@ -822,17 +871,17 @@ func (handle *ContainerdHandler) UnpackImage(ctx context.Context, ref string, dg
 		return nil, err
 	}
 
-	i := containerd.NewImageWithPlatform(
+	i := client.NewImageWithPlatform(
 		handle.client,
 		img,
 		platforms.Only(*manifest.Config.Platform),
 	)
 
-	if err = i.Unpack(ctx, containerd.DefaultSnapshotter); err != nil {
+	if err = i.Unpack(ctx, defaults.DefaultSnapshotter); err != nil {
 		return nil, err
 	}
 
-	isUnpacked, err := i.IsUnpacked(ctx, containerd.DefaultSnapshotter)
+	isUnpacked, err := i.IsUnpacked(ctx, defaults.DefaultSnapshotter)
 	if err != nil {
 		return nil, err
 	}

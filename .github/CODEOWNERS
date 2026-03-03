@@ -1,0 +1,15 @@
+# General maintainers if nothing else matches
+*                          @nderjung @craciunoiuc
+
+# Maintainers for specific file types
+*.yml                      @nderjung @craciunoiuc
+*.yaml                     @nderjung @craciunoiuc
+
+# Maintainers for tools and other non-core files
+tools/webinstall           @nderjung @craciunoiuc
+tools/gendocs              @nderjung @craciunoiuc
+tools/genman               @nderjung @craciunoiuc
+
+# Maintainers for specific file paths
+machine/xen                @nderjung @andreistan26 @craciunoiuc
+internal/cli/kraft/compose @LucaSeri @nderjung

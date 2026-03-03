@@ -55,14 +55,15 @@ type GithubAction struct {
 	Timeout uint64 `long:"timeout" env:"INPUT_TIMEOUT" usage:"Timeout for the unikernel"`
 
 	// Packaging flags
-	Args     string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
-	Rootfs   string `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
-	Memory   string `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
-	Name     string `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
-	Output   string `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
-	Push     bool   `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
-	Strategy string `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
-	Dbg      bool   `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
+	Args       string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
+	Rootfs     string `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
+	RootfsType string `long:"rootfs_type" env:"INPUT_ROOTFS_TYPE" usage:"Type of rootfs to build (cpio/erofs)" default:"cpio"`
+	Memory     string `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
+	Name       string `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
+	Output     string `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
+	Push       bool   `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
+	Strategy   string `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
+	Dbg        bool   `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
 
 	// Internal attributes
 	project    app.Application
@@ -85,6 +86,39 @@ func (opts *GithubAction) execScript(ctx context.Context, path string) error {
 }
 
 func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
+	if opts.RuntimeDir != "" {
+		config.G[config.KraftKit](ctx).RuntimeDir = opts.RuntimeDir
+	}
+
+	if opts.Auths != "" {
+		var auths map[string]config.AuthConfig
+		if err := yaml.Unmarshal([]byte(opts.Auths), &auths); err != nil {
+			return fmt.Errorf("could not parse auths: %w", err)
+		}
+
+		if config.G[config.KraftKit](ctx).Auth == nil {
+			config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
+		}
+
+		for domain, auth := range auths {
+			config.G[config.KraftKit](ctx).Auth[domain] = auth
+		}
+	}
+
+	if opts.Manifests != "" {
+		var manifests []string
+		if err := yaml.Unmarshal([]byte(opts.Manifests), &manifests); err != nil {
+			return fmt.Errorf("could not parse manifests: %w", err)
+		}
+		config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
+	}
+
+	// Save configuration to disk such that uses of `before`, `run` and `after`
+	// scripts can access the configuration via `kraft`.
+	if err := config.M[config.KraftKit](ctx).Write(true); err != nil {
+		return fmt.Errorf("could not write configuration: %w", err)
+	}
+
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
 	}
@@ -111,33 +145,6 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		log.G(ctx).SetLevel(logrus.DebugLevel)
 	case "trace":
 		log.G(ctx).SetLevel(logrus.TraceLevel)
-	}
-
-	if opts.RuntimeDir != "" {
-		config.G[config.KraftKit](ctx).RuntimeDir = opts.RuntimeDir
-	}
-
-	if opts.Auths != "" {
-		var auths map[string]config.AuthConfig
-		if err := yaml.Unmarshal([]byte(opts.Auths), &auths); err != nil {
-			return fmt.Errorf("could not parse auths: %w", err)
-		}
-
-		if config.G[config.KraftKit](ctx).Auth == nil {
-			config.G[config.KraftKit](ctx).Auth = make(map[string]config.AuthConfig)
-		}
-
-		for domain, auth := range auths {
-			config.G[config.KraftKit](ctx).Auth[domain] = auth
-		}
-	}
-
-	if opts.Manifests != "" {
-		var manifests []string
-		if err := yaml.Unmarshal([]byte(opts.Manifests), &manifests); err != nil {
-			return fmt.Errorf("could not parse manifests: %w", err)
-		}
-		config.G[config.KraftKit](ctx).Unikraft.Manifests = manifests
 	}
 
 	if len(opts.Workdir) == 0 {

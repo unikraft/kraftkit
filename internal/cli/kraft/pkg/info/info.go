@@ -40,7 +40,7 @@ func Info(ctx context.Context, opts *InfoOptions, args ...string) error {
 func New() *cobra.Command {
 	cmd, err := cmdfactory.New(&InfoOptions{}, cobra.Command{
 		Short:   "Show information about a package",
-		Use:     "info [FLAGS] [PACKAGE|DIR]",
+		Use:     "info [FLAGS] PACKAGE",
 		Aliases: []string{"show", "get", "i"},
 		Long: heredoc.Doc(`
 			Shows a Unikraft package like library, core, etc.

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/containerd/nerdctl/pkg/strutil"
+	"github.com/containerd/nerdctl/v2/pkg/strutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
@@ -354,14 +354,14 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 	// If the user has supplied an initram path, set this now, this overrides any
 	// preparation and is considered higher priority compared to what has been set
 	// prior to this point.
-	if opts.Rootfs == "" || machine.Status.InitrdPath != "" {
+	if opts.Rootfs == "" || machine.Status.InitrdPath != "" || opts.RootfsType == "" {
 		return nil
 	}
 
 	machine.Status.InitrdPath = filepath.Join(
 		opts.workdir,
 		unikraft.BuildDir,
-		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture),
+		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture, opts.RootfsType),
 	)
 
 	ramfs, err := initrd.New(ctx,
@@ -374,6 +374,7 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		)),
 		initrd.WithArchitecture(machine.Spec.Architecture),
 		initrd.WithWorkdir(opts.workdir),
+		initrd.WithOutputType(opts.RootfsType),
 	)
 	if err != nil {
 		return fmt.Errorf("could not prepare initramfs: %w", err)

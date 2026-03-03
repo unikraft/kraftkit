@@ -7,14 +7,13 @@ package initrd
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"kraftkit.sh/cpio"
-	"kraftkit.sh/log"
+	"kraftkit.sh/fs/cpio"
+	"kraftkit.sh/fs/erofs"
 )
 
 type directory struct {
@@ -27,7 +26,9 @@ type directory struct {
 func NewFromDirectory(_ context.Context, dir string, opts ...InitrdOption) (Initrd, error) {
 	dir = strings.TrimRight(dir, string(filepath.Separator))
 	rootfs := directory{
-		opts: InitrdOptions{},
+		opts: InitrdOptions{
+			fsType: FsTypeCpio,
+		},
 		path: dir,
 	}
 
@@ -77,117 +78,33 @@ func (initrd *directory) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not create output directory: %w", err)
 	}
 
-	f, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		return "", fmt.Errorf("could not open initramfs file: %w", err)
-	}
-
-	defer f.Close()
-
-	writer := cpio.NewWriter(f)
-	defer writer.Close()
-	defer func() {
-		if err := f.Sync(); err != nil {
-			log.G(ctx).Errorf("syncing cpio archive failed: %s", err)
-		}
-	}()
-
-	// Recursively walk the output directory on successful build and serialize to
-	// the output
-	if err := filepath.WalkDir(initrd.path, func(path string, d fs.DirEntry, err error) error {
+	switch initrd.opts.fsType {
+	case FsTypeErofs:
+		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, initrd.path,
+			erofs.WithAllRoot(!initrd.opts.keepOwners),
+		)
+	case FsTypeCpio:
+		err := cpio.CreateFS(ctx, initrd.opts.output, initrd.path,
+			cpio.WithAllRoot(!initrd.opts.keepOwners),
+		)
 		if err != nil {
-			return fmt.Errorf("received error before parsing path: %w", err)
+			return "", fmt.Errorf("could not create CPIO archive: %w", err)
 		}
-
-		internal := strings.TrimPrefix(path, filepath.Clean(initrd.path))
-		if internal == "" {
-			return nil // Do not archive empty paths
-		}
-		internal = "." + filepath.ToSlash(internal)
-
-		info, err := d.Info()
-		if err != nil {
-			return fmt.Errorf("could not get directory entry info: %w", err)
-		}
-
-		if d.Type().IsDir() {
-			header := &cpio.Header{
-				Name:    internal,
-				Mode:    cpio.FileMode(info.Mode().Perm()) | cpio.TypeDir,
-				ModTime: info.ModTime(),
-				Size:    0, // Directories have size 0 in cpio
+		if initrd.opts.compress {
+			if err := compressFiles(initrd.opts.output, initrd.opts.output); err != nil {
+				return "", fmt.Errorf("could not compress files: %w", err)
 			}
-
-			// Populate platform specific information
-			FileInfoToCPIOHeader(info, header)
-
-			if err := writer.WriteHeader(header); err != nil {
-				return fmt.Errorf("could not write CPIO header: %w", err)
-			}
-			return nil
 		}
 
-		log.G(ctx).
-			WithField("file", internal).
-			Trace("archiving")
-
-		var data []byte
-		targetLink := ""
-		if info.Mode()&os.ModeSymlink != 0 {
-			targetLink, err = os.Readlink(path)
-			data = []byte(targetLink)
-		} else if d.Type().IsRegular() {
-			data, err = os.ReadFile(path)
-		} else {
-			log.G(ctx).Warnf("unsupported file: %s", path)
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("could not read file: %w", err)
-		}
-
-		header := &cpio.Header{
-			Name:    internal,
-			Mode:    cpio.FileMode(info.Mode().Perm()),
-			ModTime: info.ModTime(),
-			Size:    info.Size(),
-		}
-
-		// Populate platform specific information
-		FileInfoToCPIOHeader(info, header)
-
-		switch {
-		case info.Mode().IsRegular():
-			header.Mode |= cpio.TypeReg
-
-		case info.Mode()&fs.ModeSymlink != 0:
-			header.Mode |= cpio.TypeSymlink
-			header.Linkname = targetLink
-
-		case header.Links > 0:
-			header.Size = 0
-		}
-
-		if err := writer.WriteHeader(header); err != nil {
-			return fmt.Errorf("writing cpio header for %q: %w", internal, err)
-		}
-
-		if _, err := writer.Write(data); err != nil {
-			return fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
-		}
-
-		return nil
-	}); err != nil {
-		return "", fmt.Errorf("could not walk output path: %w", err)
+		return initrd.opts.output, nil
+	default:
+		return "", fmt.Errorf("unknown filesystem type %s", initrd.opts.fsType)
 	}
+}
 
-	if initrd.opts.compress {
-		if err := compressFiles(initrd.opts.output, writer, f); err != nil {
-			return "", fmt.Errorf("could not compress files: %w", err)
-		}
-	}
-
-	return initrd.opts.output, nil
+// Options implements Initrd.
+func (initrd *directory) Options() InitrdOptions {
+	return initrd.opts
 }
 
 // Env implements Initrd.

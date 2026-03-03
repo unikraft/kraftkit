@@ -215,8 +215,7 @@ func (md *ParaProgress) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if md.processes[i].Status == StatusFailed ||
-			md.processes[i].Status == StatusSuccess ||
-			md.processes[i].percent == 1 {
+			md.processes[i].Status == StatusSuccess {
 			complete++
 		}
 	}

@@ -43,6 +43,8 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 		return false, fmt.Errorf("cannot package without unikraft attribute")
 	}
 
+	updateOptsFromProject(opts)
+
 	deployer.args = args
 
 	return true, nil
@@ -50,20 +52,22 @@ func (deployer *deployerKraftfileUnikraft) Deployable(ctx context.Context, opts 
 
 func (deployer *deployerKraftfileUnikraft) Deploy(ctx context.Context, opts *DeployOptions, args ...string) (*kcclient.ServiceResponse[kcinstances.GetResponseItem], *kcclient.ServiceResponse[kcservices.GetResponseItem], error) {
 	if err := build.Build(ctx, &build.BuildOptions{
-		Architecture: "x86_64",
-		DotConfig:    opts.DotConfig,
-		ForcePull:    opts.ForcePull,
-		Jobs:         opts.Jobs,
-		KernelDbg:    opts.KernelDbg,
-		NoCache:      opts.NoCache,
-		NoConfigure:  opts.NoConfigure,
-		NoFast:       opts.NoFast,
-		NoFetch:      opts.NoFetch,
-		NoUpdate:     opts.NoUpdate,
-		Platform:     "kraftcloud",
-		Rootfs:       opts.Rootfs,
-		SaveBuildLog: opts.SaveBuildLog,
-		Workdir:      opts.Workdir,
+		Architecture:   "x86_64",
+		DotConfig:      opts.DotConfig,
+		ForcePull:      opts.ForcePull,
+		Jobs:           opts.Jobs,
+		KeepFileOwners: opts.KeepFileOwners,
+		KernelDbg:      opts.KernelDbg,
+		NoCache:        opts.NoCache,
+		NoConfigure:    opts.NoConfigure,
+		NoFast:         opts.NoFast,
+		NoFetch:        opts.NoFetch,
+		NoUpdate:       opts.NoUpdate,
+		Platform:       "kraftcloud",
+		Rootfs:         opts.Rootfs,
+		RootfsType:     opts.RootfsType,
+		SaveBuildLog:   opts.SaveBuildLog,
+		Workdir:        opts.Workdir,
 	}); err != nil {
 		return nil, nil, fmt.Errorf("could not complete build: %w", err)
 	}

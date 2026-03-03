@@ -114,7 +114,7 @@ func WithDefaultLogger() CliOption {
 		}
 
 		if copts.IOStreams != nil {
-			logger.SetOutput(copts.IOStreams.Out)
+			logger.SetOutput(copts.IOStreams.ErrOut)
 		}
 
 		// Save the logger

@@ -25,14 +25,15 @@ import (
 )
 
 type PsOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	EnvFile     string                `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Output      string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
-	Project     *compose.Project      `noattribute:"true"`
-	Token       string                `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile   string                `noattribute:"true"`
+	EnvFile       string                `noattribute:"true"`
+	Metro         string                `noattribute:"true"`
+	Output        string                `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
+	Project       *compose.Project      `noattribute:"true"`
+	Token         string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -56,7 +57,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *PsOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -76,6 +77,7 @@ func (opts *PsOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}

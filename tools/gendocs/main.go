@@ -86,7 +86,7 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			pname := parent.CommandPath()
-			link := "/docs/cli/reference/" + strings.ReplaceAll(pname, " ", "/")
+			link := "/docs/cli/" + strings.ReplaceAll(pname, " ", "/")
 			buf.WriteString(fmt.Sprintf("* [`%s`](%s): %s\n", pname, link, parent.Short))
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
@@ -104,7 +104,7 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 			}
 
 			cname := name + " " + child.Name()
-			link := "/docs/cli/reference/" + cname
+			link := "/docs/cli/" + cname
 			link = strings.ReplaceAll(link, " ", "/")
 			buf.WriteString(fmt.Sprintf("* [`%s`](%s): %s\n", cname, link, child.Short))
 		}
@@ -113,9 +113,6 @@ func generateMarkdown(cmd *cobra.Command, dir string) error {
 	}
 
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "/")
-	if cmd.HasSubCommands() {
-		basename += "/index"
-	}
 	basename += ".mdx"
 	filename := filepath.Join(dir, basename)
 

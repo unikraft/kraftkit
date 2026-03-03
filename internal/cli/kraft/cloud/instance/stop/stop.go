@@ -22,14 +22,15 @@ import (
 )
 
 type StopOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	Wait         time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout for the instance to stop (ms/s/m/h)"`
-	DrainTimeout time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
-	All          bool                  `long:"all" short:"a" usage:"Stop all instances"`
-	Force        bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
-	Metro        string                `noattribute:"true"`
-	Token        string                `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	DrainTimeout  time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
+	All           bool                  `long:"all" short:"a" usage:"Stop all instances"`
+	Force         bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
+	Metro         string                `noattribute:"true"`
+	Token         string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -70,7 +71,7 @@ func (opts *StopOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either specify an instance UUID or --all flag")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -108,6 +109,7 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -129,18 +131,12 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 			return nil
 		}
 
-		log.G(ctx).Infof("stopping %d instance(s)", len(instList))
-
 		uuids := make([]string, 0, len(instList))
 		for _, instItem := range instList {
 			uuids = append(uuids, instItem.UUID)
 		}
 
-		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, uuids...); err != nil {
-			return fmt.Errorf("stopping %d instance(s): %w", len(uuids), err)
-		}
-
-		return nil
+		args = uuids
 	}
 
 	log.G(ctx).Infof("stopping %d instance(s)", len(args))
@@ -149,8 +145,19 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 	if err != nil {
 		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 	}
-	if _, err = stopResp.AllOrErr(); err != nil {
-		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
+	stopResponses, err := stopResp.AllOrErr()
+
+	totalStopped := 0
+	for _, stopped := range stopResponses {
+		if stopped.Status == "success" {
+			totalStopped++
+		}
+	}
+
+	log.G(ctx).Infof("stopped %d instance(s)", totalStopped)
+
+	if err != nil {
+		return fmt.Errorf("stopped %d instance(s): %w", len(args), err)
 	}
 
 	return nil

@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/errdefs"
 	"github.com/google/go-containerregistry/pkg/name"
 	specs "github.com/opencontainers/image-spec/specs-go"
@@ -55,10 +55,11 @@ func NewIndexFromSpec(ctx context.Context, handle handler.Handler, spec *ocispec
 
 	index.index = spec
 
-	indexJson, err := json.Marshal(spec)
+	indexJson, err := json.MarshalIndent(spec, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
+	indexJson = append(indexJson, '\n')
 
 	indexDesc := content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageIndex,
@@ -82,7 +83,7 @@ func NewIndexFromSpec(ctx context.Context, handle handler.Handler, spec *ocispec
 // NewIndexFromRef instantiates a new index using the provided reference which
 // is used by the handle to look up any local existing indexes.
 func NewIndexFromRef(ctx context.Context, handle handler.Handler, ref string) (*Index, error) {
-	spec, err := handle.ResolveIndex(ctx, ref)
+	spec, _, err := handle.ResolveIndex(ctx, ref)
 	if err != nil {
 		return nil, fmt.Errorf("cannot instantiate index from unknown reference '%s'", ref)
 	}
@@ -118,10 +119,11 @@ func (index *Index) Descriptor() (*ocispec.Descriptor, error) {
 		return index.desc, nil
 	}
 
-	indexJson, err := json.Marshal(index.index)
+	indexJson, err := json.MarshalIndent(index.index, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
+	indexJson = append(indexJson, '\n')
 
 	desc := content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageIndex,
@@ -172,14 +174,14 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 	// pushes it to a content storage.
 	if index.annotations == nil {
 		index.annotations = make(map[string]string)
+
+		// General annotations
+		index.annotations[ocispec.AnnotationRefName] = ref.Context().String()
+		index.annotations[AnnotationKraftKitVersion] = version.Version()
+
+		// containerd compatibility annotations
+		index.annotations[images.AnnotationImageName] = ref.String()
 	}
-
-	// General annotations
-	index.annotations[ocispec.AnnotationRefName] = ref.Context().String()
-	index.annotations[AnnotationKraftKitVersion] = version.Version()
-
-	// containerd compatibility annotations
-	index.annotations[images.AnnotationImageName] = ref.String()
 
 	manifestDescs := make([]ocispec.Descriptor, len(index.manifests))
 	for i, manifest := range index.manifests {
@@ -210,10 +212,11 @@ func (index *Index) Save(ctx context.Context, fullref string, onProgress func(fl
 		index.desc = nil
 	}
 
-	indexJson, err := json.Marshal(index.index)
+	indexJson, err := json.MarshalIndent(index.index, "", "  ")
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
+	indexJson = append(indexJson, '\n')
 
 	// Generate a new descriptor
 	indexDesc := content.NewDescriptorFromBytes(

@@ -547,6 +547,105 @@ func PrintVolumesTemplates(ctx context.Context, format string, resp kcclient.Ser
 	return table.Render(iostreams.G(ctx).Out)
 }
 
+// PrintInstancesTemplates pretty-prints the provided set of instance templates
+// or returns an error if unable to send to stdout via the provided context.
+func PrintInstancesTemplates(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.TemplateGetResponseItem]) error {
+	if format == "raw" {
+		printRaw(ctx, resp)
+		return nil
+	}
+
+	templates, err := resp.AllOrErr()
+	if err != nil {
+		return err
+	}
+
+	if err = iostreams.G(ctx).StartPager(); err != nil {
+		log.G(ctx).Errorf("error starting pager: %v", err)
+	}
+
+	defer iostreams.G(ctx).StopPager()
+
+	cs := iostreams.G(ctx).ColorScheme()
+	table, err := tableprinter.NewTablePrinter(ctx,
+		tableprinter.WithMaxWidth(iostreams.G(ctx).TerminalWidth()),
+		tableprinter.WithOutputFormatFromString(format),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header row
+	if format != "table" {
+		table.AddField("UUID", cs.Bold)
+	}
+	table.AddField("NAME", cs.Bold)
+	table.AddField("IMAGE", cs.Bold)
+	table.AddField("ARGS", cs.Bold)
+	table.AddField("CREATED AT", cs.Bold)
+	if format != "table" {
+		table.AddField("MEMORY MB", cs.Bold)
+		table.AddField("VCPUS", cs.Bold)
+		table.AddField("ENV", cs.Bold)
+		table.AddField("RESTART POLICY", cs.Bold)
+		table.AddField("SNAPSHOT", cs.Bold)
+		table.AddField("VOLUMES", cs.Bold)
+	}
+	table.EndRow()
+
+	for _, template := range templates {
+		if format != "table" {
+			table.AddField(template.UUID, nil)
+		}
+
+		table.AddField(template.Name, nil)
+		table.AddField(template.Image, nil)
+		table.AddField(strings.Join(template.Args, " "), nil)
+
+		var createdAt string
+		if len(template.CreatedAt) > 0 {
+			createdTime, err := time.Parse(time.RFC3339, template.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("could not parse time for '%s': %w", template.UUID, err)
+			}
+			if format != "table" {
+				createdAt = template.CreatedAt
+			} else {
+				createdAt = humanize.Time(createdTime)
+			}
+		}
+
+		table.AddField(createdAt, nil)
+
+		if format != "table" {
+			table.AddField(humanize.IBytes(uint64(template.MemoryMB)*humanize.MiByte), nil)
+			table.AddField(strconv.FormatInt(int64(template.Vcpus), 10), nil)
+
+			envs := []string{}
+			for k, v := range template.Env {
+				envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+			}
+			table.AddField(strings.Join(envs, ", "), nil)
+
+			table.AddField(string(template.RestartPolicy), nil)
+			table.AddField(template.Snapshot.UUID, nil)
+
+			vols := make([]string, len(template.Volumes))
+			for i, vol := range template.Volumes {
+				vols[i] = fmt.Sprintf("%s:%s", vol.Name, vol.At)
+				if vol.ReadOnly {
+					vols[i] += ":ro"
+				}
+			}
+			table.AddField(strings.Join(vols, ", "), nil)
+		}
+
+		table.EndRow()
+	}
+
+	return table.Render(iostreams.G(ctx).Out)
+}
+
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
 func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
@@ -601,13 +700,13 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 		table.AddField("COOLDOWN (MS)", cs.Bold)
 		cooldownStr = strconv.Itoa(*aconf.CooldownTimeMs)
 	}
-	var masterStr string
-	if aconf.Master != nil {
-		table.AddField("MASTER", cs.Bold)
-		if aconf.Master.UUID != "" {
-			masterStr = aconf.Master.UUID
-		} else if aconf.Master.Name != "" {
-			masterStr = aconf.Master.Name
+	var templateStr string
+	if aconf.Template != nil {
+		table.AddField("TEMPLATE", cs.Bold)
+		if aconf.Template.UUID != "" {
+			templateStr = aconf.Template.UUID
+		} else if aconf.Template.Name != "" {
+			templateStr = aconf.Template.Name
 		}
 	}
 	table.AddField("POLICIES", cs.Bold)
@@ -631,21 +730,24 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 	if aconf.CooldownTimeMs != nil {
 		table.AddField(fmt.Sprint(cooldownStr), nil)
 	}
-	if aconf.Master != nil {
-		table.AddField(fmt.Sprint(masterStr), nil)
+	if aconf.Template != nil {
+		table.AddField(fmt.Sprint(templateStr), nil)
 	}
 
 	var policies []string
+
 	for _, policy := range aconf.Policies {
 		name := "<unknown>"
 		switch policy.Type() {
 		case kcautoscale.PolicyTypeStep:
-			name = policy.(*kcautoscale.StepPolicy).Name
+			name = policy.(kcautoscale.StepPolicy).Name
+		case kcautoscale.PolicyTypeOnDemand:
+			name = policy.(kcautoscale.OnDemandPolicy).Name
 		}
 		policies = append(policies, name)
 	}
 
-	table.AddField(strings.Join(policies, ";"), nil)
+	table.AddField(strings.Join(policies, ", "), nil)
 
 	table.EndRow()
 

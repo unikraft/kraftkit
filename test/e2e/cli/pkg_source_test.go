@@ -219,7 +219,7 @@ var _ = Describe("kraft pkg source", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Calculate config file hash
 				bytes, err := os.ReadFile(cfg.Path())
@@ -244,10 +244,10 @@ var _ = Describe("kraft pkg source", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
-				// Check warning message exists in stdout
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest already saved: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
+				// Check warning message exists in stderr
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest already saved: https://manifests\.kraftkit\.sh/index\.yaml"}\n$`))
 
 				// Check if the config file was not modified
 				newBytes, err := os.ReadFile(cfg.Path())
@@ -274,7 +274,7 @@ var _ = Describe("kraft pkg source", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -327,8 +327,8 @@ var _ = Describe("kraft pkg source", func() {
 				Expect(cfgMapUnikernelManifests[1]).To(Equal("https://example2.com"))
 				Expect(cfgMapUnikernelManifests[2]).To(Equal("https://example3.com"))
 
-				// Check if stdout is empty
-				Expect(stdout.String()).To(BeEmpty())
+				// Check if stderr is empty
+				Expect(stderr.String()).To(BeEmpty())
 			})
 		})
 
@@ -343,7 +343,7 @@ var _ = Describe("kraft pkg source", func() {
 					fmt.Print(cmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stderr.String()).To(BeEmpty())
+				Expect(stdout.String()).To(BeEmpty())
 
 				// Read the config file
 				osFile, err := os.Open(cfg.Path())
@@ -395,7 +395,7 @@ var _ = Describe("kraft pkg source", func() {
 				Expect(cfgMapUnikernelManifests[0]).To(Equal("https://example.com"))
 
 				// Check if stdout contains the warning message
-				Expect(stdout.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest already saved: https://example\.com"}\n$`))
+				Expect(stderr.String()).To(MatchRegexp(`^{"level":"warning","msg":"manifest already saved: https://example\.com"}\n$`))
 			})
 		})
 	})

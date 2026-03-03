@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/v2/core/content"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"kraftkit.sh/config"
@@ -27,13 +27,18 @@ func (handle *ContainerdHandler) PullDigest(ctx context.Context, mediaType, full
 	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.PullDigest")
 }
 
+// ReadDigest implements DigestReader.
+func (handle *ContainerdHandler) ReadDigest(ctx context.Context, dgst digest.Digest) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("not implemented: oci.handler.ContainerdHandler.ReadDigest")
+}
+
 // ListDigest implements DigestResolver.
 func (handle *ContainerdHandler) ListDigests(ctx context.Context) ([]digest.Digest, error) {
 	return nil, fmt.Errorf("not implemented: oci.handler.ContainerdHandler.ListDigests")
 }
 
 // PushDescriptor implements DescriptorPusher.
-func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor) error {
+func (handle *ContainerdHandler) PushDescriptor(ctx context.Context, ref string, target *ocispec.Descriptor, onProgress func(float64)) error {
 	return fmt.Errorf("not implemented: oci.handler.ContainerdHandler.PushDescriptor")
 }
 
@@ -52,8 +57,8 @@ func (handle *ContainerdHandler) DeleteIndex(ctx context.Context, fullref string
 }
 
 // ResolveIndex implements IndexResolver.
-func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, error) {
-	return nil, fmt.Errorf("not implemented: oci.handler.ContainerdHandler.ResolveIndex")
+func (handle *ContainerdHandler) ResolveIndex(ctx context.Context, fullref string) (*ocispec.Index, digest.Digest, error) {
+	return nil, "", fmt.Errorf("not implemented: oci.handler.ContainerdHandler.ResolveIndex")
 }
 
 // SaveDescriptor implements DescriptorSaver.

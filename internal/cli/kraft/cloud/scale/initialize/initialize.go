@@ -25,15 +25,16 @@ import (
 )
 
 type InitOptions struct {
-	Auth         *config.AuthConfig    `noattribute:"true"`
-	Client       kraftcloud.KraftCloud `noattribute:"true"`
-	CooldownTime time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)" default:"1000000000"`
-	Master       string                `long:"master" short:"i" usage:"The UUID or Name of the master instance"`
-	MaxSize      int                   `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
-	Metro        string                `noattribute:"true"`
-	MinSize      string                `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
-	Token        string                `noattribute:"true"`
-	WarmupTime   time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)" default:"1000000000"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	CooldownTime  time.Duration         `long:"cooldown-time" short:"c" usage:"The cooldown time of the config (ms/s/m/h)"`
+	MaxSize       int                   `long:"max-size" short:"M" usage:"The maximum size of the configuration" default:"10"`
+	Metro         string                `noattribute:"true"`
+	MinSize       string                `long:"min-size" short:"m" usage:"The minimum size of the configuration"`
+	Template      string                `long:"template" short:"t" usage:"The UUID or Name of the instance template"`
+	Token         string                `noattribute:"true"`
+	WarmupTime    time.Duration         `long:"warmup-time" short:"w" usage:"The warmup time of the config (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -67,7 +68,7 @@ func (opts *InitOptions) Pre(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("specify a service name or UUID")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -87,6 +88,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -107,35 +109,35 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 		id = conf.UUID
 	}
 
-	if opts.WarmupTime < 10*time.Millisecond {
+	if opts.WarmupTime > 0 && opts.WarmupTime < 10*time.Millisecond {
 		return fmt.Errorf("warmup time must be at least 10ms")
 	}
 
-	if opts.CooldownTime < 10*time.Millisecond {
+	if opts.CooldownTime > 0 && opts.CooldownTime < 10*time.Millisecond {
 		return fmt.Errorf("cooldown time must be at least 10ms")
 	}
 
-	var master kcautoscale.CreateRequestMaster
+	var template kcautoscale.CreateRequestTemplate
 
-	if opts.Master == "" {
+	if opts.Template == "" {
 		if config.G[config.KraftKit](ctx).NoPrompt {
-			return fmt.Errorf("specify an instance master UUID or name via --master")
+			return fmt.Errorf("specify an instance template UUID or name via --template")
 		}
 
-		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
+		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).ListTemplate(ctx)
 		if err != nil {
-			return fmt.Errorf("could not list instances: %w", err)
+			return fmt.Errorf("could not list instance templates: %w", err)
 		}
 		instList, err := instListResp.AllOrErr()
 		if err != nil {
-			return fmt.Errorf("could not list instances: %w", err)
+			return fmt.Errorf("could not list instance templates: %w", err)
 		}
 		if len(instList) == 0 {
-			return fmt.Errorf("no instance found in service")
+			return fmt.Errorf("no instance template found in service")
 		}
 
 		if len(instList) == 1 {
-			master.UUID = &instList[0].UUID
+			template.UUID = &instList[0].UUID
 		} else {
 			var possible []stringerInstance
 
@@ -154,37 +156,32 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 			}
 
 			for _, inst := range instances {
-				if inst.ServiceGroup == nil {
-					continue
-				}
-				if inst.ServiceGroup.UUID != id {
-					continue
-				}
-
 				possible = append(possible, stringerInstance{&inst})
 			}
 
 			result, err := selection.Select(
-				"select master instance",
+				"select instance template",
 				possible...,
 			)
 			if err != nil {
-				return fmt.Errorf("could not select master instance: %w", err)
+				return fmt.Errorf("could not select instance template: %w", err)
 			}
 
-			master.UUID = &result.UUID
+			template.UUID = &result.UUID
 		}
 	} else {
-		if utils.IsUUID(opts.Master) {
-			master.UUID = &opts.Master
+		if utils.IsUUID(opts.Template) {
+			template.UUID = &opts.Template
 		} else {
-			master.Name = &opts.Master
+			template.Name = &opts.Template
 		}
 	}
 
 	req := kcautoscale.CreateRequest{
-		UUID:   &id,
-		Master: master,
+		UUID: &id,
+		CreateArgs: kcautoscale.CreateRequestCreateArgs{
+			Template: &template,
+		},
 	}
 
 	if opts.MinSize != "" {

@@ -49,6 +49,12 @@ type Package interface {
 	// Save the state of package.
 	Save(context.Context) error
 
+	// Export the package to a specified location.  It's up to the implementing
+	// package to decide what "export" means, but it should be a
+	// representation of the package that can be used by other tools or
+	// processes.
+	Export(context.Context, string) error
+
 	// Deletes package available locally.
 	Delete(context.Context) error
 

@@ -64,6 +64,16 @@ type Application interface {
 	// as the root filesystem.  This can either be an initramdisk or a volume.
 	Rootfs() string
 
+	// Auxiliary read-only memory blobs.  Used for arbitrary data which are
+	// mounted at runtime.
+	Roms() []string
+
+	// InitrdFsType returns the type of root filesystem to be used during runtime.
+	InitrdFsType() initrd.FsType
+
+	// SetInitrdFsType sets the type of root filesystem to be used during runtime.
+	SetInitrdFsType(initrd.FsType)
+
 	// SetRootfs sets the root filesystem path for the application to the given
 	// value path.
 	SetRootfs(string)
@@ -116,10 +126,10 @@ type Application interface {
 	Fetch(context.Context, target.Target, ...make.MakeOption) error
 
 	// Set a configuration option for a specific target
-	Set(context.Context, target.Target, ...make.MakeOption) error
+	Set(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
 
 	// Unset a configuration option for a specific target
-	Unset(context.Context, target.Target, ...make.MakeOption) error
+	Unset(context.Context, target.Target, kconfig.KeyValueMap, ...make.MakeOption) error
 
 	// Build offers an invocation of the Unikraft build system with the contextual
 	// information of the application
@@ -166,6 +176,7 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
+	fsType        initrd.FsType
 	template      *template.TemplateConfig
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
@@ -176,6 +187,7 @@ type application struct {
 	env           target.Env
 	command       []string
 	rootfs        string
+	roms          []string
 	kraftfile     *Kraftfile
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
@@ -231,7 +243,10 @@ func (app *application) Libraries(ctx context.Context) (map[string]*lib.LibraryC
 		return nil, err
 	}
 
-	libs := app.libraries
+	libs := map[string]*lib.LibraryConfig{}
+	for key, lib := range app.libraries {
+		libs[key] = lib
+	}
 
 	for _, uklib := range uklibs {
 		libs[uklib.Name()] = uklib
@@ -252,8 +267,20 @@ func (app *application) Rootfs() string {
 	return app.rootfs
 }
 
+func (app *application) Roms() []string {
+	return app.roms
+}
+
 func (app *application) SetRootfs(rootfs string) {
 	app.rootfs = rootfs
+}
+
+func (app *application) SetInitrdFsType(fsType initrd.FsType) {
+	app.fsType = fsType
+}
+
+func (app *application) InitrdFsType() initrd.FsType {
+	return app.fsType
 }
 
 func (app *application) Command() []string {
@@ -520,6 +547,10 @@ func (app *application) MakeArgs(ctx context.Context, tc target.Target) (*core.M
 }
 
 func (app *application) Make(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
+	if app.unikraft == nil {
+		return fmt.Errorf("application has no unikraft configuration")
+	}
+
 	mopts = append(mopts,
 		make.WithDirectory(app.unikraft.Path()),
 		make.WithNoPrintDirectory(true),
@@ -578,6 +609,19 @@ func (app *application) Configure(ctx context.Context, tc target.Target, extra k
 		values.OverrideBy(extra)
 	}
 
+	if values.AnyYes("CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_BUILTIN_EINITRD",
+		"CONFIG_LIBPOSIX_VFS_FSTAB_FALLBACK_EINITRD") &&
+		values.AllNoOrUnset("CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD_PATH") {
+		values.Set(
+			"CONFIG_LIBPOSIX_VFS_FSTAB_EINITRD_PATH",
+			filepath.Join(
+				app.outDir,
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String(), app.InitrdFsType()),
+			),
+		)
+	}
+
 	// Are we embedding an initramfs file into the kernel?
 	if values.AnyYes(
 		"CONFIG_LIBVFSCORE_FSTAB", // Deprecated
@@ -590,7 +634,7 @@ func (app *application) Configure(ctx context.Context, tc target.Target, extra k
 			values.Set("CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH",
 				filepath.Join(
 					app.outDir,
-					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String()),
+					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, tc.Architecture().String(), initrd.FsTypeCpio.String()),
 				),
 			)
 		}
@@ -697,54 +741,15 @@ func (app *application) Fetch(ctx context.Context, tc target.Target, mopts ...ma
 	)
 }
 
-func (app *application) Set(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
-	// Write the configuration to a temporary file
-	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer tmpfile.Close()
-	// defer os.Remove(tmpfile.Name())
-
-	// // Save and sync the config file
-	// tmpfile.WriteString(app.Configuration.String())
-	// tmpfile.Sync()
-
-	// // Give the file to the make command to import
-	// mopts = append(mopts,
-	// 	make.WithExecOptions(
-	// 		exec.WithEnvKey(unikraft.UK_DEFCONFIG, tmpfile.Name()),
-	// 	),
-	// )
-
-	// return app.Configure(mopts...)
-
-	return nil
+func (app *application) Set(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+	// Pass the extra config values (from CLI) as 'extra' so they override component defaults
+	// AND override any project-level defaults (like UK_NAME set by WithName).
+	return app.Configure(ctx, tc, extra, mopts...)
 }
 
-func (app *application) Unset(ctx context.Context, tc target.Target, mopts ...make.MakeOption) error {
-	// // Write the configuration to a temporary file
-	// tmpfile, err := ioutil.TempFile("", app.Name()+"-config*")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer tmpfile.Close()
-	// defer os.Remove(tmpfile.Name())
-
-	// // Save and sync the config file
-	// tmpfile.WriteString(app.Configuration.String())
-	// tmpfile.Sync()
-
-	// // Give the file to the make command to import
-	// mopts = append(mopts,
-	// 	make.WithExecOptions(
-	// 		exec.WithEnvKey(unikraft.UK_DEFCONFIG, tmpfile.Name()),
-	// 	),
-	// )
-
-	// return app.Configure(mopts...)
-
-	return nil
+func (app *application) Unset(ctx context.Context, tc target.Target, extra kconfig.KeyValueMap, mopts ...make.MakeOption) error {
+	// Pass the extra config values (from CLI) as 'extra' so they override defaults.
+	return app.Configure(ctx, tc, extra, mopts...)
 }
 
 // Build offers an invocation of the Unikraft build system with the contextual

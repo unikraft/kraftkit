@@ -132,6 +132,7 @@ func HumanizeDuration(dur time.Duration) string {
 	// Get only the excess amt of each component
 	ms %= 1000
 	sec %= 60
+	min %= 60
 	hr %= 60
 
 	// Express ms to 1 significant digit

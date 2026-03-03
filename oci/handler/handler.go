@@ -8,7 +8,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/containerd/containerd/content"
+	"github.com/containerd/containerd/v2/core/content"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -24,6 +24,12 @@ type DigestPuller interface {
 	PullDigest(ctx context.Context, mediaType, fullref string, dgst digest.Digest, plat *ocispec.Platform, onProgress func(float64)) error
 }
 
+type DigestReader interface {
+	// ReadDigest retrieves the provided digest and returns an io.ReadCloser
+	// which can be used to read the contents of the digest.
+	ReadDigest(context.Context, digest.Digest) (io.ReadCloser, error)
+}
+
 type DescriptorSaver interface {
 	// SaveDescriptor accepts an optional name reference which represents
 	// descriptor (but this is not always necessary and can be left blank if the
@@ -37,8 +43,9 @@ type DescriptorSaver interface {
 type DescriptorPusher interface {
 	// PushDescriptor accepts an input descriptor and an optional canonical name
 	// for the descriptor (such as a tag) and uses the handler to push this to a
-	// remote registry.
-	PushDescriptor(context.Context, string, *ocispec.Descriptor) error
+	// remote registry. An optional progress method callback can be provided which
+	// is used to deliver the progress of pushing the descriptor.
+	PushDescriptor(context.Context, string, *ocispec.Descriptor, func(float64)) error
 }
 
 type ManifestLister interface {
@@ -66,7 +73,7 @@ type IndexLister interface {
 }
 
 type IndexResolver interface {
-	ResolveIndex(context.Context, string) (*ocispec.Index, error)
+	ResolveIndex(context.Context, string) (*ocispec.Index, digest.Digest, error)
 }
 
 type IndexDeleter interface {
@@ -82,6 +89,7 @@ type Handler interface {
 	DigestPuller
 	DigestLister
 	DigestDeleter
+	DigestReader
 	DescriptorSaver
 	DescriptorPusher
 	ManifestLister

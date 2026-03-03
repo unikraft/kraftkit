@@ -30,7 +30,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qemu-oci-image
           path: /tmp/qemu-${{ matrix.QEMU_VERSION }}.tar
@@ -110,7 +110,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -156,7 +156,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: xen-oci-image
           path: /tmp/xen-${{ matrix.XEN_VERSION }}.tar
@@ -179,7 +179,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -199,13 +199,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Fetch all tags
@@ -231,14 +231,14 @@ jobs:
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: xen-oci-image
           path: /tmp
@@ -268,7 +268,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: myself-oci-image
           path: /tmp/myself.tar
@@ -292,7 +292,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -308,13 +308,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Set up QEMU
@@ -335,21 +335,21 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: xen-oci-image
           path: /tmp
@@ -376,7 +376,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: base-oci-image
           path: /tmp/base.tar
@@ -399,7 +399,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -433,21 +433,21 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: qemu-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/xen' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: base-oci-image
           path: /tmp
@@ -474,7 +474,7 @@ jobs:
 
       - name: Upload Docker image artifact
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: base-golang-oci-image
           path: /tmp/base-golang.tar
@@ -498,7 +498,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Check should run
         id: check-run
@@ -515,13 +515,13 @@ jobs:
         run: |
           echo "run=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
         with:
           ref: stable
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
 
       - name: Fetch all tags
@@ -541,14 +541,14 @@ jobs:
 
       - name: Download 'kraftkit.sh/myself' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: myself-oci-image
           path: /tmp
 
       - name: Download 'kraftkit.sh/qemu' artifacts
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: qemu-oci-image
           path: /tmp
@@ -582,7 +582,7 @@ jobs:
 
       - name: Fetch helloworld
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name != 'push' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: unikraft/app-helloworld
           fetch-depth: 1

@@ -43,8 +43,8 @@ var _ = Describe("kraft net up", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"accepts 1 arg\(s\), received 0"}\n`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`^{"level":"error","msg":"accepts 1 arg\(s\), received 0"}\n`))
 		})
 	})
 
@@ -59,8 +59,8 @@ var _ = Describe("kraft net up", func() {
 			err := cmd.Run()
 			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge t-up-0 failed: Link not found"}\n$`))
+			Expect(stdout.String()).To(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`^{"level":"error","msg":"getting bridge t-up-0 failed: Link not found"}\n$`))
 		})
 	})
 

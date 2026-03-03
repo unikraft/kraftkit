@@ -39,6 +39,8 @@ var (
 	SchemaV_06 string
 )
 
+var ErrInvalidSpecVersion = fmt.Errorf("invalid specification version")
+
 // Validate uses the jsonschema to validate the configuration
 func Validate(ctx context.Context, config map[string]interface{}) error {
 	var spec string
@@ -59,13 +61,19 @@ func Validate(ctx context.Context, config map[string]interface{}) error {
 		return fmt.Errorf("could not parse specification version: %w", err)
 	}
 
-	latestVer := semver.MustParse(string(SchemaVersionLatest))
-
-	if specVer.LessThan(latestVer) {
+	var schemaLoader gojsonschema.JSONLoader
+	if specVer.LessThan(SchemaVersionLatest) {
 		log.G(ctx).Warnf("specification in Kraftfile (v%s) version is not latest (v%s)", spec, SchemaVersionLatest)
+	} else if specVer.GreaterThan(SchemaVersionLatest) {
+		log.G(ctx).Warnf("specification version in Kraftfile (v%s) is greater than parsable (v%s)", spec, SchemaVersionLatest)
 	}
 
-	schemaLoader := gojsonschema.NewStringLoader(SchemaV_06)
+	if specVer.Equal(SchemaVersionV0_5) {
+		schemaLoader = gojsonschema.NewStringLoader(SchemaV_05)
+	} else {
+		schemaLoader = gojsonschema.NewStringLoader(SchemaV_06)
+	}
+
 	dataLoader := gojsonschema.NewGoLoader(config)
 
 	result, err := gojsonschema.Validate(schemaLoader, dataLoader)
@@ -174,10 +182,8 @@ func specificity(err gojsonschema.ResultError) int {
 	return len(strings.Split(err.Field(), "."))
 }
 
-type SchemaVersion string
-
-const (
-	SchemaVersionV0_5   = SchemaVersion("0.5")
-	SchemaVersionV0_6   = SchemaVersion("0.6")
+var (
+	SchemaVersionV0_5   = semver.MustParse("v0.5")
+	SchemaVersionV0_6   = semver.MustParse("v0.6")
 	SchemaVersionLatest = SchemaVersionV0_6
 )

@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -61,7 +61,7 @@ jobs:
           VERSION=pr-${{ github.event.number }} XEN=${{ matrix.XEN }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make kraft
 
       - name: Upload build artifacts to GitHub
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kraft-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
           path: ./dist/kraft

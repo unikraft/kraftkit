@@ -5,25 +5,23 @@
 package initrd
 
 import (
-	"archive/tar"
 	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"math/rand/v2"
-	"net"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"kraftkit.sh/buildkit"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/cpio"
+	"kraftkit.sh/fs/cpio"
+	"kraftkit.sh/fs/erofs"
 	"kraftkit.sh/log"
 
 	sfile "github.com/anchore/stereoscope/pkg/file"
@@ -36,8 +34,6 @@ import (
 	"github.com/moby/buildkit/session/secrets/secretsprovider"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"
 	_ "github.com/moby/buildkit/client/connhelper/kubepod"
@@ -92,74 +88,6 @@ func init() {
 	}
 }
 
-var testcontainersLoggingHook = func(logger testcontainers.Logging) testcontainers.ContainerLifecycleHooks {
-	shortContainerID := func(c testcontainers.Container) string {
-		return c.GetContainerID()[:12]
-	}
-
-	return testcontainers.ContainerLifecycleHooks{
-		PreCreates: []testcontainers.ContainerRequestHook{
-			func(ctx context.Context, req testcontainers.ContainerRequest) error {
-				logger.Printf("creating container for image %s", req.Image)
-				return nil
-			},
-		},
-		PostCreates: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("container created: %s", shortContainerID(c))
-				return nil
-			},
-		},
-		PreStarts: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("starting container: %s", shortContainerID(c))
-				return nil
-			},
-		},
-		PostStarts: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("container started: %s", shortContainerID(c))
-
-				return nil
-			},
-		},
-		PreStops: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("stopping container: %s", shortContainerID(c))
-				return nil
-			},
-		},
-		PostStops: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("container stopped: %s", shortContainerID(c))
-				return nil
-			},
-		},
-		PreTerminates: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("terminating container: %s", shortContainerID(c))
-				return nil
-			},
-		},
-		PostTerminates: []testcontainers.ContainerHook{
-			func(ctx context.Context, c testcontainers.Container) error {
-				logger.Printf("container terminated: %s", shortContainerID(c))
-				return nil
-			},
-		},
-	}
-}
-
-type testcontainersPrintf struct {
-	ctx context.Context
-}
-
-func (t *testcontainersPrintf) Printf(format string, v ...interface{}) {
-	if config.G[config.KraftKit](t.ctx).Log.Level == "trace" {
-		log.G(t.ctx).Tracef(format, v...)
-	}
-}
-
 type dockerfile struct {
 	opts       InitrdOptions
 	args       []string
@@ -181,7 +109,9 @@ func NewFromDockerfile(ctx context.Context, path string, opts ...InitrdOption) (
 	}
 
 	initrd := dockerfile{
-		opts:       InitrdOptions{},
+		opts: InitrdOptions{
+			fsType: FsTypeCpio,
+		},
 		dockerfile: path,
 	}
 
@@ -215,43 +145,6 @@ func (initrd *dockerfile) Name() string {
 	return "Dockerfile"
 }
 
-func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf *testcontainersPrintf) (testcontainers.Container, error) {
-	// Trap any panics that occur when instantiating BuildKit through the
-	// testcontainers library. This is known happen if Docker is not installed.
-	// For more information see:
-	//
-	// https://github.com/unikraft/kraftkit/issues/2001
-	defer func() {
-		if r := recover(); r != nil {
-			log.G(ctx).Warn("recovered from BuildKit instantiation panic!")
-			log.G(ctx).Warn("this can be caused by Docker missing from the system, or from being inaccesible")
-			log.G(ctx).Warn("")
-			log.G(ctx).Warn("if you think this was caused by something else, please open an issue at:")
-			log.G(ctx).Warn("https://github.com/unikraft/kraftkit/issues")
-		}
-	}()
-	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		Started: true,
-		Logger:  printf,
-		ContainerRequest: testcontainers.ContainerRequest{
-			AlwaysPullImage: true,
-			Image:           "moby/buildkit:" + buildkitVersion,
-			WaitingFor:      wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
-			Privileged:      true,
-			ExposedPorts:    []string{fmt.Sprintf("%d:%d/tcp", port, port)},
-			Cmd:             []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
-			Mounts: testcontainers.ContainerMounts{
-				{
-					Source: testcontainers.GenericVolumeMountSource{
-						Name: "kraftkit-buildkit-cache",
-					},
-					Target: "/var/lib/buildkit",
-				},
-			},
-		},
-	})
-}
-
 // Build implements Initrd.
 func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	if initrd.opts.output == "" {
@@ -262,12 +155,6 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 
 		initrd.opts.output = fi.Name()
 	}
-
-	outputDir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return "", fmt.Errorf("could not make temporary directory: %w", err)
-	}
-	defer os.RemoveAll(outputDir)
 
 	tarOutput, err := os.CreateTemp("", "")
 	if err != nil {
@@ -283,86 +170,13 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	defer ociOutput.Close()
 	defer os.RemoveAll(ociOutput.Name())
 
-	buildkitAddr := config.G[config.KraftKit](ctx).BuildKitHost
-	c, _ := client.New(ctx, buildkitAddr)
-	buildKitInfo, connerr := c.Info(ctx)
-	if connerr != nil {
-		log.G(ctx).Info("creating ephemeral buildkit container")
-
-		buildkitVersion := "latest"
-		if bi, ok := debug.ReadBuildInfo(); ok {
-			for _, dep := range bi.Deps {
-				if dep.Path == "github.com/moby/buildkit" {
-					buildkitVersion = dep.Version
-					break
-				}
-			}
-			log.G(ctx).Debug("could not determine BuildKit version from module list")
-		}
-
-		testcontainers.DefaultLoggingHook = testcontainersLoggingHook
-		printf := &testcontainersPrintf{ctx}
-		testcontainers.Logger = printf
-
-		// Trap any errors with a helpful message for how to use buildkit
-		defer func() {
-			if connerr == nil {
-				return
-			}
-
-			log.G(ctx).Warnf("could not connect to BuildKit client '%s' is BuildKit running?", buildkitAddr)
-			log.G(ctx).Warn("")
-			log.G(ctx).Warn("By default, KraftKit will look for a native install which")
-			log.G(ctx).Warn("is located at /run/buildkit/buildkit.sock.  Alternatively, you")
-			log.G(ctx).Warn("can run BuildKit in a container (recommended for macOS users)")
-			log.G(ctx).Warn("which you can do by running:")
-			log.G(ctx).Warn("")
-			log.G(ctx).Warn("  docker run --rm -d --name buildkit --privileged moby/buildkit:" + buildkitVersion)
-			log.G(ctx).Warn("  export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkit")
-			log.G(ctx).Warn("")
-			log.G(ctx).Warn("For more usage instructions visit: https://unikraft.org/buildkit")
-			log.G(ctx).Warn("")
-		}()
-
-		// Port 0 means "give me any free port"
-		addr, err := net.ResolveTCPAddr("tcp", ":0")
-		if err != nil {
-			return "", err
-		}
-		l, err := net.ListenTCP("tcp", addr)
-		if err != nil {
-			return "", err
-		}
-
-		port := l.Addr().(*net.TCPAddr).Port
-		_ = l.Close()
-
-		buildkitd, err := startBuildkit(ctx, buildkitVersion, port, printf)
-		if err != nil {
-			return "", fmt.Errorf("creating buildkit container: %w", err)
-		}
-
-		defer func() {
-			if err := buildkitd.Terminate(ctx); err != nil && !strings.Contains(err.Error(), "context cancelled") {
-				log.G(ctx).
-					WithError(err).
-					Debug("terminating buildkit container")
-			}
-		}()
-
-		buildkitAddr = fmt.Sprintf("tcp://localhost:%d", port)
-
-		c, _ = client.New(ctx, buildkitAddr)
-		buildKitInfo, connerr = c.Info(ctx)
-		if err != nil {
-			return "", fmt.Errorf("connecting to container buildkit client: %w", err)
-		}
+	c, cleanup, err := buildkit.ConnectToBuildkit(ctx)
+	if err != nil {
+		return "", fmt.Errorf("could not connect to buildkit: %w", err)
 	}
-
-	log.G(ctx).
-		WithField("addr", buildkitAddr).
-		WithField("version", buildKitInfo.BuildkitVersion.Version).
-		Debug("using buildkit")
+	if cleanup != nil {
+		defer cleanup()
+	}
 
 	var cacheExports []client.CacheOptionsEntry
 	if len(initrd.opts.cacheDir) > 0 {
@@ -381,10 +195,32 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		"filename": filepath.Base(initrd.dockerfile),
 	}
 
+	// Add the build target if specified (override from command line)
 	if len(buildTarget) > 0 {
 		attrs["target"] = buildTarget
+	} else if initrd.opts.buildTarget != "" {
+		attrs["target"] = initrd.opts.buildTarget
 	}
 
+	// Add build args from the build config
+	if initrd.opts.buildArgs != nil {
+		for k, v := range initrd.opts.buildArgs {
+			if v == nil {
+				v, ok := os.LookupEnv(k)
+				if !ok {
+					log.G(ctx).
+						WithField("arg", k).
+						Warn("could not find build-arg in environment")
+					continue
+				}
+				attrs["build-arg:"+k] = v
+			} else {
+				attrs["build-arg:"+k] = *v
+			}
+		}
+	}
+
+	// Override build args from the command line
 	for _, arg := range buildArgs {
 		k, v, ok := strings.Cut(arg, "=")
 		if !ok {
@@ -406,13 +242,31 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		},
 	}
 
-	fs := make([]secretsprovider.Source, 0, len(buildSecrets))
+	// Add build secrets from the build config
+	secretsMap := make(map[string]secretsprovider.Source)
+	if initrd.opts.buildSecrets != nil {
+		for _, v := range initrd.opts.buildSecrets {
+			secretsMap[v.Name] = secretsprovider.Source{
+				ID:       v.Name,
+				FilePath: v.File,
+				Env:      v.Env,
+			}
+		}
+	}
+
+	// Override build secrets from the command line
 	for _, v := range buildSecrets {
 		s, err := parseSecret(v)
 		if err != nil {
 			return "", err
 		}
-		fs = append(fs, *s)
+		secretsMap[s.ID] = *s
+	}
+
+	// Convert map to slice
+	fs := make([]secretsprovider.Source, 0, len(secretsMap))
+	for _, secret := range secretsMap {
+		fs = append(fs, secret)
 	}
 
 	secretStore, err := secretsprovider.NewStore(fs)
@@ -514,6 +368,9 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not wait for err group: %w", err)
 	}
 
+	// Set the per-file read limit to 4GB to handle large image layers
+	sfile.SetPerFileReadLimit(4 * 1024 * 1024 * 1024)
+
 	// parse the output directory with stereoscope
 	tempgen := sfile.NewTempDirGenerator("kraftkit")
 	if tempgen == nil {
@@ -559,201 +416,33 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not create output directory: %w", err)
 	}
 
-	cpioFile, err := os.OpenFile(initrd.opts.output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		return "", fmt.Errorf("could not open initramfs file: %w", err)
-	}
-
-	defer cpioFile.Close()
-
-	cpioWriter := cpio.NewWriter(cpioFile)
-
-	defer cpioWriter.Close()
-
-	tarArchive, err := os.Open(tarOutput.Name())
-	if err != nil {
-		return "", fmt.Errorf("could not open output tarball: %w", err)
-	}
-
-	defer tarArchive.Close()
-
-	tarReader := tar.NewReader(tarArchive)
-
-	type inodeCount struct {
-		Count int
-		Inode int32
-	}
-	fileCount := map[string]inodeCount{}
-
-	// Pass once to count links
-	for {
-		tarHeader, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
+	switch initrd.opts.fsType {
+	case FsTypeErofs:
+		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, tarOutput.Name(),
+			erofs.WithAllRoot(!initrd.opts.keepOwners),
+		)
+	case FsTypeCpio:
+		err := cpio.CreateFS(ctx, initrd.opts.output, tarOutput.Name(),
+			cpio.WithAllRoot(!initrd.opts.keepOwners),
+		)
 		if err != nil {
-			return "", fmt.Errorf("could not read tar header: %w", err)
+			return "", fmt.Errorf("could not create CPIO archive: %w", err)
+		}
+		if initrd.opts.compress {
+			if err := compressFiles(initrd.opts.output, initrd.opts.output); err != nil {
+				return "", fmt.Errorf("could not compress files: %w", err)
+			}
 		}
 
-		if tarHeader.Typeflag == tar.TypeLink {
-			if _, ok := fileCount[tarHeader.Linkname]; !ok {
-				fileCount[tarHeader.Linkname] = inodeCount{
-					Count: 1,
-					Inode: rand.Int32(),
-				}
-			} else {
-				fileCount[tarHeader.Linkname] = inodeCount{
-					Count: fileCount[tarHeader.Linkname].Count + 1,
-					Inode: fileCount[tarHeader.Linkname].Inode,
-				}
-			}
-		} else if tarHeader.Typeflag == tar.TypeReg {
-			if _, ok := fileCount[tarHeader.Name]; !ok {
-				fileCount[tarHeader.Name] = inodeCount{
-					Count: 1,
-					Inode: rand.Int32(),
-				}
-			} else {
-				fileCount[tarHeader.Name] = inodeCount{
-					Count: fileCount[tarHeader.Name].Count + 1,
-					Inode: fileCount[tarHeader.Linkname].Inode,
-				}
-			}
-		}
+		return initrd.opts.output, nil
+	default:
+		return "", fmt.Errorf("unknown filesystem type %s", initrd.opts.fsType)
 	}
+}
 
-	_, err = tarArchive.Seek(0, io.SeekStart)
-	if err != nil {
-		return "", fmt.Errorf("could not seek to start of tarball: %w", err)
-	}
-
-	tarReader = tar.NewReader(tarArchive)
-
-	for {
-		tarHeader, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return "", fmt.Errorf("could not read tar header: %w", err)
-		}
-
-		internal := fmt.Sprintf("./%s", filepath.Clean(tarHeader.Name))
-
-		cpioHeader := &cpio.Header{
-			Name:    internal,
-			Mode:    cpio.FileMode(tarHeader.FileInfo().Mode().Perm()),
-			ModTime: tarHeader.FileInfo().ModTime(),
-			Size:    tarHeader.FileInfo().Size(),
-		}
-
-		switch tarHeader.Typeflag {
-		case tar.TypeBlock:
-			log.G(ctx).
-				WithField("file", tarHeader.Name).
-				Warn("ignoring block devices")
-			continue
-
-		case tar.TypeChar:
-			log.G(ctx).
-				WithField("file", tarHeader.Name).
-				Warn("ignoring char devices")
-			continue
-
-		case tar.TypeFifo:
-			log.G(ctx).
-				WithField("file", tarHeader.Name).
-				Warn("ignoring fifo files")
-			continue
-
-		case tar.TypeSymlink:
-			log.G(ctx).
-				WithField("src", tarHeader.Name).
-				WithField("link", tarHeader.Linkname).
-				Trace("symlinking")
-
-			cpioHeader.Mode |= cpio.TypeSymlink
-			cpioHeader.Linkname = tarHeader.Linkname
-			cpioHeader.Size = int64(len(tarHeader.Linkname))
-
-			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
-				return "", fmt.Errorf("could not write CPIO header: %w", err)
-			}
-
-			if _, err := cpioWriter.Write([]byte(tarHeader.Linkname)); err != nil {
-				return "", fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
-			}
-
-		case tar.TypeLink:
-			log.G(ctx).
-				WithField("src", tarHeader.Name).
-				WithField("link", tarHeader.Linkname).
-				Trace("hardlinking")
-
-			cpioHeader.Mode |= cpio.TypeReg
-			cpioHeader.Linkname = tarHeader.Linkname
-			cpioHeader.Size = 0
-			if _, ok := fileCount[tarHeader.Linkname]; ok {
-				cpioHeader.Links = fileCount[tarHeader.Linkname].Count
-				cpioHeader.Inode = int64(fileCount[tarHeader.Linkname].Inode)
-			}
-			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
-				return "", fmt.Errorf("could not write CPIO header: %w", err)
-			}
-
-		case tar.TypeReg:
-			log.G(ctx).
-				WithField("src", tarHeader.Name).
-				WithField("dst", internal).
-				Trace("copying")
-
-			cpioHeader.Mode |= cpio.TypeReg
-			cpioHeader.Linkname = tarHeader.Linkname
-			cpioHeader.Size = tarHeader.FileInfo().Size()
-			if _, ok := fileCount[tarHeader.Name]; ok {
-				cpioHeader.Links = fileCount[tarHeader.Name].Count
-				cpioHeader.Inode = int64(fileCount[tarHeader.Name].Inode)
-			}
-
-			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
-				return "", fmt.Errorf("could not write CPIO header: %w", err)
-			}
-
-			data, err := io.ReadAll(tarReader)
-			if err != nil {
-				return "", fmt.Errorf("could not read file: %w", err)
-			}
-
-			if _, err := cpioWriter.Write(data); err != nil {
-				return "", fmt.Errorf("could not write CPIO data for %s: %w", internal, err)
-			}
-
-		case tar.TypeDir:
-			log.G(ctx).
-				WithField("dst", internal).
-				Trace("mkdir")
-
-			cpioHeader.Mode |= cpio.TypeDir
-
-			if err := cpioWriter.WriteHeader(cpioHeader); err != nil {
-				return "", fmt.Errorf("could not write CPIO header: %w", err)
-			}
-
-		default:
-			log.G(ctx).
-				WithField("file", tarHeader.Name).
-				WithField("type", tarHeader.Typeflag).
-				Warn("unsupported file type")
-		}
-	}
-
-	if initrd.opts.compress {
-		if err := compressFiles(initrd.opts.output, cpioWriter, cpioFile); err != nil {
-			return "", fmt.Errorf("could not compress files: %w", err)
-		}
-	}
-
-	return initrd.opts.output, nil
+// Options implements Initrd.
+func (initrd *dockerfile) Options() InitrdOptions {
+	return initrd.opts
 }
 
 // Env implements Initrd.

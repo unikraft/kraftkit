@@ -26,14 +26,15 @@ import (
 )
 
 type StartOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	EnvFile     string                `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Project     *compose.Project      `noattribute:"true"`
-	Token       string                `noattribute:"true"`
-	Wait        time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile   string                `noattribute:"true"`
+	EnvFile       string                `noattribute:"true"`
+	Metro         string                `noattribute:"true"`
+	Project       *compose.Project      `noattribute:"true"`
+	Token         string                `noattribute:"true"`
+	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
 }
 
 func NewCmd() *cobra.Command {
@@ -61,7 +62,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *StartOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -89,6 +90,7 @@ func (opts *StartOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}

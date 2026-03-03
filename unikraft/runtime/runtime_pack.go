@@ -165,6 +165,15 @@ func (runtime *Runtime) Save(ctx context.Context) error {
 	return runtime.pack.Save(ctx)
 }
 
+// Export implements kraftkit.sh/pack.Package
+func (runtime *Runtime) Export(ctx context.Context, path string) error {
+	if runtime.pack == nil {
+		return fmt.Errorf("cannot export an empty package")
+	}
+
+	return runtime.pack.Export(ctx, path)
+}
+
 // Format implements kraftkit.sh/unikraft.component.Component
 func (runtime *Runtime) Format() pack.PackageFormat {
 	return runtime.pack.Format()

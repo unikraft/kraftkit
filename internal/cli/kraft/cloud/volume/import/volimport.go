@@ -16,6 +16,10 @@ import (
 	kcvolumes "sdk.kraft.cloud/volumes"
 )
 
+const (
+	volimportPort uint16 = 42069
+)
+
 // volumeSanityCheck verifies that the given volume is suitable for import.
 func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID string, dataSize int64) (volUUID string, volSize int64, err error) {
 	getvolResp, err := cli.Get(ctx, volID)
@@ -35,7 +39,7 @@ func volumeSanityCheck(ctx context.Context, cli kcvolumes.VolumesService, volID 
 }
 
 // runVolimport spawns a volume data import instance with the given volume attached.
-func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64) (instID, fqdn string, err error) {
+func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, volUUID, authStr string, timeoutS uint64, servicePort int) (instID, fqdn string, err error) {
 	args := []string{
 		"volimport",
 		"-p", strconv.FormatUint(uint64(volimportPort), 10),
@@ -44,12 +48,12 @@ func runVolimport(ctx context.Context, cli kcinstances.InstancesService, image, 
 	}
 
 	crinstResp, err := cli.Create(ctx, kcinstances.CreateRequest{
-		Image:    image,
+		Image:    &image,
 		MemoryMB: ptr(128),
 		Args:     args,
 		ServiceGroup: &kcinstances.CreateRequestServiceGroup{
 			Services: []kcservices.CreateRequestService{{
-				Port:            int(volimportPort),
+				Port:            servicePort,
 				DestinationPort: ptr(int(volimportPort)),
 				Handlers:        []kcservices.Handler{kcservices.HandlerTLS},
 			}},

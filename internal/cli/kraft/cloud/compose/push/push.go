@@ -29,13 +29,14 @@ import (
 )
 
 type PushOptions struct {
-	Auth        *config.AuthConfig           `noattribute:"true"`
-	Client      kcinstances.InstancesService `noattribute:"true"`
-	Composefile string                       `noattribute:"true"`
-	EnvFile     string                       `noattribute:"true"`
-	Metro       string                       `noattribute:"true"`
-	Project     *compose.Project             `noattribute:"true"`
-	Token       string                       `noattribute:"true"`
+	AllowInsecure bool                         `noattribute:"true"`
+	Auth          *config.AuthConfig           `noattribute:"true"`
+	Client        kcinstances.InstancesService `noattribute:"true"`
+	Composefile   string                       `noattribute:"true"`
+	EnvFile       string                       `noattribute:"true"`
+	Metro         string                       `noattribute:"true"`
+	Project       *compose.Project             `noattribute:"true"`
+	Token         string                       `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -71,6 +72,7 @@ func Push(ctx context.Context, opts *PushOptions, args ...string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewInstancesClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -139,6 +141,10 @@ func Push(ctx context.Context, opts *PushOptions, args ...string) error {
 			)
 		}
 
+		if !strings.Contains(pkgName, ":") {
+			pkgName = fmt.Sprintf("%s:latest", pkgName)
+		}
+
 		packages, err := packmanager.G(ctx).Catalog(ctx,
 			packmanager.WithRemote(false),
 			packmanager.WithName(pkgName),
@@ -183,7 +189,7 @@ func Push(ctx context.Context, opts *PushOptions, args ...string) error {
 }
 
 func (opts *PushOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}

@@ -3,7 +3,10 @@ version: 2
 updates:
 
   - package-ecosystem: gomod
-    directory: /
+    directories:
+      - /
+      - /tools/protoc-gen-go-netconn
+      - /tools/go-generate-qemu-devices
     target-branch: staging
     schedule:
       interval: weekly
@@ -12,41 +15,19 @@ updates:
     commit-message:
       prefix: gomod # Prefix messages with
       include: scope # List all updated dependencies
-    reviewers:
-      - nderjung
-      - craciunoiuc
-    assignees:
-      - nderjung
-  - package-ecosystem: gomod
-    directory: /tools/go-generate-qemu-devices
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: sunday
-      time: '09:00'
-    commit-message:
-      prefix: gomod # Prefix messages with
-      include: scope # List all updated dependencies
-    reviewers:
-      - nderjung
-      - craciunoiuc
-    assignees:
-      - nderjung
-  - package-ecosystem: gomod
-    directory: /tools/protoc-gen-go-netconn
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: sunday
-      time: '09:00'
-    commit-message:
-      prefix: gomod # Prefix messages with
-      include: scope # List all updated dependencies
-    reviewers:
-      - nderjung
-      - craciunoiuc
-    assignees:
-      - nderjung
+    ignore:
+      # We've not been taking these, and they require a lot of code changes to resolve.
+      - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "k8s.io/apiserver"
+      - dependency-name: "k8s.io/api"
+      # HACK: pending resolution of https://github.com/containerd/containerd/issues/12493
+      - dependency-name: "github.com/opencontainers/runc"
+      - dependency-name: "github.com/opencontainers/runtime-spec"
+    groups:
+      go-deps:
+        applies-to: version-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /

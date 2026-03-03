@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -82,27 +81,6 @@ type Cmd struct {
 	*exec.Cmd
 }
 
-// Run runs the command, and automatically injects the output to stderr in the
-// returned ExitError, in case such an error occurs.
-// It is similar to (*exec.Cmd).Output, but allows the command to have stdout
-// explicitly set.
-func (c *Cmd) Run() error {
-	if err := c.Cmd.Run(); err != nil {
-		if ee := (&exec.ExitError{}); errors.As(err, &ee) {
-			if r, ok := c.Cmd.Stderr.(io.Reader); ok {
-				b, re := io.ReadAll(r)
-				if re != nil {
-					return fmt.Errorf("%w. Additionally, while reading stderr: %w", err, re)
-				}
-				ee.Stderr = b
-				return &ExitError{ExitError: ee}
-			}
-		}
-	}
-
-	return nil
-}
-
 // DumpError is a common method used across command executions which is
 // used to standardize the output display of the command which was invoked
 // along with the stdout and stderr.
@@ -132,6 +110,9 @@ func (c *Cmd) DumpError(stdoutio, stderrio *IOStream, err error) string {
 			builder.WriteString("\n")
 		}
 	}
+
+	builder.WriteString("\nerr: ")
+	builder.WriteString(err.Error())
 
 	return builder.String()
 }
@@ -169,6 +150,10 @@ func (s *IOStream) String() string {
 
 func (s *IOStream) GomegaString() string {
 	return s.String()
+}
+
+func (s *IOStream) Reset() {
+	s.b.Reset()
 }
 
 // ExitError is a wrapper around exec.ExitError that can be pretty-printed

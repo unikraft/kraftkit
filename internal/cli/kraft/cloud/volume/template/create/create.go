@@ -22,10 +22,11 @@ import (
 )
 
 type CreateOptions struct {
-	Auth   *config.AuthConfig       `noattribute:"true"`
-	Client kcvolumes.VolumesService `noattribute:"true"`
-	Metro  string                   `noattribute:"true"`
-	Token  string                   `noattribute:"true"`
+	AllowInsecure bool                     `noattribute:"true"`
+	Auth          *config.AuthConfig       `noattribute:"true"`
+	Client        kcvolumes.VolumesService `noattribute:"true"`
+	Metro         string                   `noattribute:"true"`
+	Token         string                   `noattribute:"true"`
 }
 
 // Create a KraftCloud persistent volume.
@@ -45,6 +46,7 @@ func Create(ctx context.Context, opts *CreateOptions, args []string) ([]kcvolume
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewVolumesClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -89,7 +91,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}

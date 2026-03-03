@@ -19,9 +19,10 @@ import (
 )
 
 type CreateOptions struct {
-	Metro       string `noattribute:"true"`
-	Composefile string `noattribute:"true"`
-	Token       string `noattribute:"true"`
+	AllowInsecure bool   `noattribute:"true"`
+	Metro         string `noattribute:"true"`
+	Composefile   string `noattribute:"true"`
+	Token         string `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -46,7 +47,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -67,9 +68,10 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, args []string) error {
 
 func (opts *CreateOptions) Run(ctx context.Context, args []string) error {
 	return up.Up(ctx, &up.UpOptions{
-		Detach:  true,
-		Metro:   opts.Metro,
-		NoStart: true,
-		Token:   opts.Token,
+		AllowInsecure: opts.AllowInsecure,
+		Detach:        true,
+		Metro:         opts.Metro,
+		NoStart:       true,
+		Token:         opts.Token,
 	}, args...)
 }

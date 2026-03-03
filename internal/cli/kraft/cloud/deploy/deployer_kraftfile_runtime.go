@@ -62,6 +62,8 @@ func (deployer *deployerKraftfileRuntime) Deployable(ctx context.Context, opts *
 		opts.Project.Runtime().SetName("index.unikraft.io/official/" + opts.Project.Runtime().Name())
 	}
 
+	updateOptsFromProject(opts)
+
 	deployer.args = args
 
 	return true, nil
@@ -97,19 +99,30 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 		)
 	}
 
+	if opts.Project != nil && opts.Project.Env() != nil {
+		var projectEnv []string
+		for k, v := range opts.Project.Env() {
+			projectEnv = append(projectEnv, fmt.Sprintf("%s=%s", k, v))
+		}
+		opts.Env = append(projectEnv, opts.Env...)
+	}
+
 	packs, err := pkg.Pkg(ctx, &pkg.PkgOptions{
-		Architecture: "x86_64",
-		Compress:     opts.Compress,
-		Format:       "oci",
-		Kraftfile:    opts.Kraftfile,
-		Name:         pkgName,
-		Platform:     "kraftcloud",
-		Project:      opts.Project,
-		Push:         true,
-		Rootfs:       opts.Rootfs,
-		Runtime:      opts.Runtime,
-		Strategy:     opts.Strategy,
-		Workdir:      opts.Workdir,
+		Architecture:   "x86_64",
+		Compress:       opts.Compress,
+		Format:         "oci",
+		KeepFileOwners: opts.KeepFileOwners,
+		Kraftfile:      opts.Kraftfile,
+		Name:           pkgName,
+		NoPull:         false,
+		Platform:       "kraftcloud",
+		Project:        opts.Project,
+		Push:           true,
+		Rootfs:         opts.Rootfs,
+		RootfsType:     opts.RootfsType,
+		Runtime:        opts.Runtime,
+		Strategy:       opts.Strategy,
+		Workdir:        opts.Workdir,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "DENIED") && strings.Contains(err.Error(), "exceed") {
@@ -121,6 +134,7 @@ func (deployer *deployerKraftfileRuntime) Deploy(ctx context.Context, opts *Depl
 	}
 
 	return create.Create(ctx, &create.CreateOptions{
+		AllowInsecure:       opts.AllowInsecure,
 		Certificate:         opts.Certificate,
 		Env:                 opts.Env,
 		Domain:              opts.Domain,

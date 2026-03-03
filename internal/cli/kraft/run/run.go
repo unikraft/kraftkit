@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/sirupsen/logrus"
@@ -19,6 +21,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/iostreams"
@@ -30,30 +33,32 @@ import (
 )
 
 type RunOptions struct {
-	Architecture  string   `long:"arch" short:"m" usage:"Set the architecture"`
-	Detach        bool     `long:"detach" short:"d" usage:"Run unikernel in background"`
-	DisableAccel  bool     `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
-	Env           []string `long:"env" short:"e" usage:"Set environment variables, int the format key[=value]" split:"false"`
-	InitRd        string   `long:"initrd" usage:"Use the specified initrd (readonly)" hidden:"true"`
-	IP            string   `long:"ip" usage:"Assign the provided IP address"`
-	KernelArgs    []string `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
-	Kraftfile     string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	MacAddress    string   `long:"mac" usage:"Assign the provided MAC address"`
-	Memory        string   `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
-	Name          string   `long:"name" short:"n" usage:"Name of the instance"`
-	Networks      []string `long:"network" usage:"Attach instance to the provided network, in the format <network>[:ip[/mask][:gw[:dns0[:dns1[:hostname[:domain]]]]]], e.g. kraft0:172.100.0.2"`
-	NoStart       bool     `long:"no-start" usage:"Do not start the machine"`
-	Platform      string   `noattribute:"true"`
-	Ports         []string `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
-	Prefix        string   `long:"prefix" usage:"Prefix each log line with the given string"`
-	PrefixName    bool     `long:"prefix-name" usage:"Prefix each log line with the machine name"`
-	Remove        bool     `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
-	Rootfs        string   `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	RunAs         string   `long:"as" usage:"Force a specific runner"`
-	Runtime       string   `long:"runtime" short:"r" usage:"Set an alternative unikernel runtime"`
-	Target        string   `long:"target" short:"t" usage:"Explicitly use the defined project target"`
-	Volumes       []string `long:"volume" short:"v" usage:"Bind a volume to the instance"`
-	WithKernelDbg bool     `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
+	Architecture   string        `long:"arch" short:"m" usage:"Set the architecture"`
+	Detach         bool          `long:"detach" short:"d" usage:"Run unikernel in background"`
+	DisableAccel   bool          `long:"disable-acceleration" short:"W" usage:"Disable acceleration of CPU (usually enables TCG)"`
+	Env            []string      `long:"env" short:"e" usage:"Set environment variables, int the format key[=value]" split:"false"`
+	InitRd         string        `long:"initrd" usage:"Use the specified initrd (readonly)" hidden:"true"`
+	IP             string        `long:"ip" usage:"Assign the provided IP address"`
+	KeepFileOwners bool          `noattribute:"true"`
+	KernelArgs     []string      `long:"kernel-arg" short:"a" usage:"Set additional kernel arguments"`
+	Kraftfile      string        `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	MacAddress     string        `long:"mac" usage:"Assign the provided MAC address"`
+	Memory         string        `long:"memory" short:"M" usage:"Assign memory to the unikernel (K/Ki, M/Mi, G/Gi)" default:"64Mi"`
+	Name           string        `long:"name" short:"n" usage:"Name of the instance"`
+	Networks       []string      `long:"network" usage:"Attach instance to the provided network, in the format <network>[:ip[/mask][:gw[:dns0[:dns1[:hostname[:domain]]]]]], e.g. kraft0:172.100.0.2"`
+	NoStart        bool          `long:"no-start" usage:"Do not start the machine"`
+	Platform       string        `noattribute:"true"`
+	Ports          []string      `long:"port" short:"p" usage:"Publish a machine's port(s) to the host" split:"false"`
+	Prefix         string        `long:"prefix" usage:"Prefix each log line with the given string"`
+	PrefixName     bool          `long:"prefix-name" usage:"Prefix each log line with the machine name"`
+	Remove         bool          `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Rootfs         string        `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
+	RootfsType     initrd.FsType `noattribute:"true"`
+	RunAs          string        `long:"as" usage:"Force a specific runner"`
+	Runtime        string        `long:"runtime" short:"r" usage:"Set an alternative unikernel runtime"`
+	Target         string        `long:"target" short:"t" usage:"Explicitly use the defined project target"`
+	Volumes        []string      `long:"volume" short:"v" usage:"Bind a volume to the instance"`
+	WithKernelDbg  bool          `long:"symbolic" usage:"Use the debuggable (symbolic) unikernel"`
 
 	workdir           string
 	platform          mplatform.Platform
@@ -139,6 +144,15 @@ func NewCmd() *cobra.Command {
 		"Set the platform virtual machine monitor driver.",
 	)
 
+	cmd.Flags().Var(
+		cmdfactory.NewEnumFlag[initrd.FsType](
+			initrd.FsTypes(),
+			initrd.FsTypeCpio,
+		),
+		"rootfs-type",
+		"Set the type of the format of the rootfs (cpio/erofs)",
+	)
+
 	return cmd
 }
 
@@ -149,6 +163,9 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Platform = cmd.Flag("plat").Value.String()
 	opts.hostPlatform = mplatform.PlatformUnknown
 	opts.hostMode = mplatform.SystemUnknown
+	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
+		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+	}
 
 	if opts.RunAs == "" || !set.NewStringSet("kernel", "project").Contains(opts.RunAs) {
 		// Set use of the global package manager.
@@ -187,6 +204,14 @@ func (opts *RunOptions) Pre(cmd *cobra.Command, _ []string) error {
 			log.G(ctx).Warn("for backwards-compatibility reasons the value of --initrd is set to --rootfs")
 			opts.Rootfs = opts.InitRd
 		}
+	}
+
+	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {
+		abs, err := filepath.Abs(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of rootfs: %w", err)
+		}
+		opts.Rootfs = abs
 	}
 
 	if opts.Memory != "" {

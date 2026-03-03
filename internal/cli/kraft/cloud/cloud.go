@@ -28,8 +28,9 @@ import (
 )
 
 type CloudOptions struct {
-	Metro string `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location"`
-	Token string `long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token"`
+	Metro         string `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location"`
+	Token         string `long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token"`
+	AllowInsecure bool   `long:"allow-insecure" usage:"Allow insecure connections to the Unikraft Cloud API"`
 }
 
 func NewCmd() *cobra.Command {
@@ -94,6 +95,8 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "INSTANCE COMMANDS"})
 	cmd.AddCommand(instance.NewCmd())
+
+	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance-template", Title: "INSTANCE TEMPLATE COMMANDS"})
 
 	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-volume", Title: "VOLUME COMMANDS"})
 	cmd.AddCommand(volume.NewCmd())

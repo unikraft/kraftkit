@@ -29,12 +29,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"syscall"
 )
 
 const (
 	KRAFTKIT_CONFIG_DIR = "KRAFTKIT_CONFIG_DIR"
+	KRAFTKIT_STATE_DIR  = "KRAFTKIT_STATE_DIR"
+	KRAFTKIT_DATA_DIR   = "KRAFTKIT_DATA_DIR"
 	XDG_CONFIG_HOME     = "XDG_CONFIG_HOME"
 	XDG_STATE_HOME      = "XDG_STATE_HOME"
 	XDG_DATA_HOME       = "XDG_DATA_HOME"
@@ -53,11 +54,10 @@ func ConfigDir() string {
 		path = a
 	} else if b := os.Getenv(XDG_CONFIG_HOME); b != "" {
 		path = filepath.Join(b, "kraftkit")
-	} else if c := os.Getenv(APP_DATA); runtime.GOOS == "windows" && c != "" {
+	} else if c := os.Getenv(APP_DATA); c != "" {
 		path = filepath.Join(c, "KraftKit")
 	} else {
-		d, _ := os.UserHomeDir()
-		path = filepath.Join(d, ".config", "kraftkit")
+		path = filepath.Join(getHomeDir(), ".config", "kraftkit")
 	}
 
 	// If the path does not exist and the KRAFTKIT_CONFIG_DIR flag is not set try
@@ -70,22 +70,25 @@ func ConfigDir() string {
 }
 
 // State path precedence
-// 1. XDG_STATE_HOME
-// 2. LocalAppData (windows only)
-// 3. HOME
+// 1. KRAFTKIT_STATE_DIR
+// 2. XDG_STATE_HOME
+// 3. LocalAppData (windows only)
+// 4. HOME
 func StateDir() string {
 	var path string
-	if a := os.Getenv(XDG_STATE_HOME); a != "" {
-		path = filepath.Join(a, "kraftkit")
-	} else if b := os.Getenv(LOCAL_APP_DATA); runtime.GOOS == "windows" && b != "" {
-		path = filepath.Join(b, "KraftKit")
+	if a := os.Getenv(KRAFTKIT_STATE_DIR); a != "" {
+		path = a
+	} else if b := os.Getenv(XDG_STATE_HOME); b != "" {
+		path = filepath.Join(b, "kraftkit")
+	} else if c := os.Getenv(LOCAL_APP_DATA); c != "" {
+		path = filepath.Join(c, "KraftKit")
 	} else {
-		c, _ := os.UserHomeDir()
-		path = filepath.Join(c, ".local", "state", "kraftkit")
+		path = filepath.Join(getHomeDir(), ".local", "state", "kraftkit")
 	}
 
-	// If the path does not exist try migrating state from default paths
-	if !dirExists(path) {
+	// If the path does not exist and the KRAFTKIT_STATE_DIR flag is not set try
+	// migrating state from default paths.
+	if !dirExists(path) && os.Getenv(KRAFTKIT_STATE_DIR) == "" {
 		_ = autoMigrateStateDir(path)
 	}
 
@@ -93,18 +96,20 @@ func StateDir() string {
 }
 
 // Data path precedence
-// 1. XDG_DATA_HOME
-// 2. LocalAppData (windows only)
-// 3. HOME
+// 1. KRAFTKIT_DATA_DIR
+// 2. XDG_DATA_HOME
+// 3. LocalAppData (windows only)
+// 4. HOME
 func DataDir() string {
 	var path string
-	if a := os.Getenv(XDG_DATA_HOME); a != "" {
-		path = filepath.Join(a, "kraftkit")
-	} else if b := os.Getenv(LOCAL_APP_DATA); runtime.GOOS == "windows" && b != "" {
-		path = filepath.Join(b, "KraftKit")
+	if a := os.Getenv(KRAFTKIT_DATA_DIR); a != "" {
+		path = a
+	} else if b := os.Getenv(XDG_DATA_HOME); b != "" {
+		path = filepath.Join(b, "kraftkit")
+	} else if c := os.Getenv(LOCAL_APP_DATA); c != "" {
+		path = filepath.Join(c, "KraftKit")
 	} else {
-		c, _ := os.UserHomeDir()
-		path = filepath.Join(c, ".local", "share", "kraftkit")
+		path = filepath.Join(getHomeDir(), ".local", "share", "kraftkit")
 	}
 
 	return path

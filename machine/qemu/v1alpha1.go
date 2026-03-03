@@ -20,7 +20,7 @@ import (
 
 	zip "api.zip"
 	"github.com/acorn-io/baaah/pkg/merr"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	goprocess "github.com/shirou/gopsutil/v3/process"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -156,6 +156,11 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	if err := os.MkdirAll(machine.Status.StateDir, fs.ModeSetgid|0o775); err != nil {
+		return machine, err
+	}
+
+	// Ensure the directory and its contents are owned by the original user when running under sudo
+	if err := config.ChownToUserRecursive(machine.Status.StateDir); err != nil {
 		return machine, err
 	}
 

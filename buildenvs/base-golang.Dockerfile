@@ -3,9 +3,9 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 ARG REGISTRY=kraftkit.sh
-ARG GO_VERSION=1.24.0
+ARG GO_VERSION=1.25.7
 
-FROM golang:${GO_VERSION}-bookworm AS golang
+FROM golang:${GO_VERSION}-trixie AS golang
 FROM ${REGISTRY}/base:latest
 
 COPY --from=golang /usr/local/go /usr/local/go

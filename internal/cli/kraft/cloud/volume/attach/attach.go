@@ -28,8 +28,9 @@ type AttachOptions struct {
 	ReadOnly bool                     `long:"read-only" short:"r" usage:"Mount the volume read-only"`
 	To       string                   `long:"to" usage:"The instance the volume should be attached to"`
 
-	metro string
-	token string
+	metro         string
+	token         string
+	allowInsecure bool
 }
 
 // Attach a KraftCloud persistent volume to an instance.
@@ -57,6 +58,7 @@ func Attach(ctx context.Context, opts *AttachOptions, args ...string) (*kcvolume
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewVolumesClient(
+			kraftcloud.WithAllowInsecure(opts.allowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -98,7 +100,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *AttachOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}

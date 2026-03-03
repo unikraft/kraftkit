@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	plainexec "os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/exec"
+	"kraftkit.sh/internal/spellcheck"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
@@ -53,8 +55,12 @@ func (build *builderKraftfileUnikraft) Buildable(ctx context.Context, opts *Buil
 		return false, fmt.Errorf("cannot build without unikraft core specification")
 	}
 
-	if opts.Rootfs == "" {
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = opts.Project.Rootfs()
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
 	}
 
 	return true, nil
@@ -433,6 +439,11 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
 	}
 
+	// Inject global toolchain variables into the make invocation
+	if toolchain := config.G[config.KraftKit](ctx).Toolchain; len(toolchain) > 0 {
+		mopts = append(mopts, make.WithVars(toolchain))
+	}
+
 	allEnvs := map[string]string{}
 	for k, v := range opts.Project.Env() {
 		allEnvs[k] = v
@@ -477,7 +488,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		var err error
 		configure := true
 
-		if opts.Project.IsConfigured(*opts.Target) {
+		if opts.Project.IsConfigured(*opts.Target) && !config.G[config.KraftKit](ctx).NoPrompt {
 			configure, err = confirm.NewConfirm("project already configured, are you sure you want to rerun the configure step:")
 			if err != nil {
 				return err
@@ -506,6 +517,26 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 			log.G(ctx).Info("skipping configure step")
 			log.G(ctx).Info("to omit this prompt, use the '--no-configure' flag")
 		}
+	}
+
+	// Validate user KConfig options against known symbols from .config
+	var spellcheckResults []spellcheck.Result
+	if opts.Validate {
+		processes = append(processes, paraprogress.NewProcess(
+			fmt.Sprintf("validating %s (%s)", (*opts.Target).Name(), target.TargetPlatArchName(*opts.Target)),
+			func(ctx context.Context, w func(progress float64)) error {
+				configPath := filepath.Join(opts.Project.WorkingDir(), (*opts.Target).ConfigFilename())
+				knownConfigs, err := spellcheck.AllKConfigSymbols(configPath)
+				if err != nil {
+					return nil
+				}
+
+				userOptions := userKConfigOptions(ctx, opts.Project, *opts.Target)
+				spellcheckResults = spellcheck.Validate(userOptions, knownConfigs)
+
+				return nil
+			},
+		))
 	}
 
 	processes = append(processes, paraprogress.NewProcess(
@@ -549,7 +580,16 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 		return err
 	}
 
-	return paramodel.Start()
+	if err := paramodel.Start(); err != nil {
+		return err
+	}
+
+	// Log spellcheck warnings if any found during validation
+	for _, r := range spellcheckResults {
+		log.G(ctx).Warn(FormatSpellCheckWarning(r))
+	}
+
+	return nil
 }
 
 func (build *builderKraftfileUnikraft) Statistics(ctx context.Context, opts *BuildOptions, args ...string) error {
@@ -579,4 +619,69 @@ func (build *builderKraftfileUnikraft) Statistics(ctx context.Context, opts *Bui
 	}
 
 	return paramodel.Start()
+}
+
+// userKConfigOptions collects user-specified KConfig options from all
+// Kraftfile component sources: unikraft core, libraries, and target.
+func userKConfigOptions(ctx context.Context, project app.Application, targ target.Target) []string {
+	var options []string
+
+	if uk := project.Unikraft(ctx); uk != nil {
+		for _, kv := range uk.KConfig() {
+			if kv != nil && kv.Key != "" {
+				options = append(options, kv.String())
+			}
+		}
+	}
+
+	if libs, err := project.Libraries(ctx); err == nil {
+		for _, lib := range libs {
+			// Calculate the auto-generated enable flag for this library.
+			// project.Libraries() returns all available libraries, and lib.KConfig()
+			// auto-generates an enable flag (e.g. CONFIG_LIBUKDEBUG=y).
+			// If a library is not valid for the current target (e.g. xenplat on firecracker),
+			// this auto-generated flag won't be in .config, causing a false positive warning.
+			// We calculate the name here to filter it out.
+			var enableFlag string
+			if strings.HasPrefix(strings.ToUpper(lib.Name()), "LIB") {
+				enableFlag = kconfig.Prefix + strings.ToUpper(lib.Name())
+			} else {
+				enableFlag = kconfig.Prefix + "LIB" + strings.ToUpper(lib.Name())
+			}
+
+			for _, kv := range lib.KConfig() {
+				if kv != nil && kv.Key != "" {
+					// Skip the auto-generated enable flag
+					if kv.Key == enableFlag {
+						continue
+					}
+					options = append(options, kv.String())
+				}
+			}
+		}
+	}
+
+	if targ != nil {
+		for _, kv := range targ.KConfig() {
+			if kv != nil && kv.Key != "" {
+				options = append(options, kv.String())
+			}
+		}
+	}
+
+	return options
+}
+
+func FormatSpellCheckWarning(r spellcheck.Result) string {
+	if r.Suggestion != "" {
+		return fmt.Sprintf(
+			"unknown KConfig option %s: did you mean %s?",
+			r.Option, r.Suggestion,
+		)
+	}
+
+	return fmt.Sprintf(
+		"unknown KConfig option %s",
+		r.Option,
+	)
 }

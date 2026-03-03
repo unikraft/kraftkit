@@ -211,6 +211,11 @@ func (mp mpack) Save(ctx context.Context) error {
 	return nil
 }
 
+// Format implements pack.Package
+func (mp mpack) Export(_ context.Context, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
 func (mp mpack) Format() pack.PackageFormat {
 	return ManifestFormat
 }

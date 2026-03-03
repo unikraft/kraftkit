@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
+	"kraftkit.sh/config"
 	"kraftkit.sh/internal/retrytimeout"
 )
 
@@ -114,6 +115,12 @@ func (store *embedded[_, _]) open() error {
 
 	store.db = db
 
+	// When running under sudo, ensure the store directory is owned by the
+	// original user so non-sudo commands can access it
+	if err := config.ChownToUserRecursive(store.path); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -138,7 +145,10 @@ func (store *embedded[_, _]) Create(ctx context.Context, key string, _, out runt
 		return err
 	}
 
-	defer store.close()
+	defer func() {
+		store.close()
+		config.ChownToUserRecursive(store.path)
+	}()
 
 	b := bytes.Buffer{}
 	if err := gob.NewEncoder(&b).Encode(out); err != nil {
@@ -159,7 +169,10 @@ func (store *embedded[_, _]) Delete(ctx context.Context, key string, out runtime
 		return err
 	}
 
-	defer store.close()
+	defer func() {
+		store.close()
+		config.ChownToUserRecursive(store.path)
+	}()
 
 	txn := store.db.NewTransaction(true)
 
@@ -268,4 +281,24 @@ func (store *embedded[_, _]) Count(key string) (int64, error) {
 // ReadinessCheck implements storage.Interface
 func (store *embedded[_, _]) ReadinessCheck() error {
 	panic("not implemented: kraftkit.sh/machine/store.embedded.ReadinessCheck")
+}
+
+// CompactRevision implements storage.Interface
+func (store *embedded[_, _]) CompactRevision() int64 {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.CompactRevision")
+}
+
+// EnableResourceSizeEstimation implements storage.Interface
+func (store *embedded[_, _]) EnableResourceSizeEstimation(_ storage.KeysFunc) error {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.EnableResourceSizeEstimation")
+}
+
+// GetCurrentResourceVersion implements storage.Interface
+func (store *embedded[_, _]) GetCurrentResourceVersion(_ context.Context) (uint64, error) {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.GetCurrentResourceVersion")
+}
+
+// Stats implements storage.Interface
+func (store *embedded[_, _]) Stats(_ context.Context) (storage.Stats, error) {
+	panic("not implemented: kraftkit.sh/machine/store.embedded.Stats")
 }

@@ -7,8 +7,18 @@ package deploy
 
 import (
 	"context"
+	"path/filepath"
+	"strconv"
+	"time"
 
 	"kraftkit.sh/unikraft/app"
+	kcinstances "sdk.kraft.cloud/instances"
+)
+
+const (
+	LabelScaleToZeroPolicy   = "cloud.unikraft.v1.instances/scale_to_zero.policy"
+	LabelScaleToZeroStateful = "cloud.unikraft.v1.instances/scale_to_zero.stateful"
+	LabelScaleToZeroCooldown = "cloud.unikraft.v1.instances/scale_to_zero.cooldown_time_ms"
 )
 
 // initProject sets up the project based on the provided context and
@@ -32,5 +42,45 @@ func (opts *DeployOptions) initProject(ctx context.Context) error {
 		return err
 	}
 
+	for k, v := range opts.Project.Labels() {
+		switch k {
+		case LabelScaleToZeroPolicy:
+			if opts.ScaleToZero == nil {
+				policy := kcinstances.ScaleToZeroPolicy(v)
+				opts.ScaleToZero = &policy
+			}
+		case LabelScaleToZeroStateful:
+			if opts.ScaleToZeroStateful == nil {
+				stateful, err := strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+				opts.ScaleToZeroStateful = &stateful
+			}
+		case LabelScaleToZeroCooldown:
+			if opts.ScaleToZeroCooldown == 0 {
+				cooldown, err := strconv.ParseInt(v, 10, 32)
+				if err != nil {
+					return err
+				}
+				opts.ScaleToZeroCooldown = time.Duration(cooldown) * time.Millisecond
+			}
+		}
+	}
+
 	return nil
+}
+
+func updateOptsFromProject(opts *DeployOptions) {
+	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
+		if filepath.IsAbs(opts.Project.Rootfs()) {
+			opts.Rootfs = opts.Project.Rootfs()
+		} else {
+			opts.Rootfs = filepath.Join(opts.Workdir, opts.Project.Rootfs())
+		}
+	}
+
+	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = opts.Project.InitrdFsType()
+	}
 }

@@ -26,8 +26,9 @@ type DetachOptions struct {
 	Client kcvolumes.VolumesService `noattribute:"true"`
 	From   string                   `long:"from" usage:"The instance the volume should be detached from"`
 
-	metro string
-	token string
+	metro         string
+	token         string
+	allowInsecure bool
 }
 
 func NewCmd() *cobra.Command {
@@ -55,7 +56,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *DetachOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -75,6 +76,7 @@ func (opts *DetachOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewVolumesClient(
+			kraftcloud.WithAllowInsecure(opts.allowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}

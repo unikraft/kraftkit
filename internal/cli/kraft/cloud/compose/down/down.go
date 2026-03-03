@@ -26,13 +26,14 @@ import (
 )
 
 type DownOptions struct {
-	Auth        *config.AuthConfig    `noattribute:"true"`
-	Client      kraftcloud.KraftCloud `noattribute:"true"`
-	Composefile string                `noattribute:"true"`
-	EnvFile     string                `noattribute:"true"`
-	Metro       string                `noattribute:"true"`
-	Project     *compose.Project      `noattribute:"true"`
-	Token       string                `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	Composefile   string                `noattribute:"true"`
+	EnvFile       string                `noattribute:"true"`
+	Metro         string                `noattribute:"true"`
+	Project       *compose.Project      `noattribute:"true"`
+	Token         string                `noattribute:"true"`
 }
 
 func NewCmd() *cobra.Command {
@@ -60,7 +61,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *DownOptions) Pre(cmd *cobra.Command, args []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -80,6 +81,7 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -157,7 +159,7 @@ func (opts *DownOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(instances) > 0 {
-		log.G(ctx).Infof("stopping %d instance(s)", len(instances))
+		log.G(ctx).Infof("removing %d instance(s)", len(instances))
 
 		if _, err := opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, instances...); err != nil {
 			errGroup = append(errGroup, fmt.Errorf("removing instances: %w", err))

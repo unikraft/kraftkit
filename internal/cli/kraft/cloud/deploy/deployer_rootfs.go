@@ -11,6 +11,7 @@ import (
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
+	"kraftkit.sh/log"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
@@ -34,12 +35,12 @@ func (deployer *deployerRootfs) Deployable(ctx context.Context, opts *DeployOpti
 	if opts.Project == nil {
 		// Do not capture the the project is not initialized, as we can still build
 		// the unikernel using the Dockerfile provided with the `--rootfs`.
-		_ = opts.initProject(ctx)
+		if err := opts.initProject(ctx); err != nil {
+			log.G(ctx).WithError(err).Debug("could not initialize project")
+		}
 	}
 
-	if opts.Project != nil && opts.Project.Rootfs() != "" && opts.Rootfs == "" {
-		opts.Rootfs = opts.Project.Rootfs()
-	}
+	updateOptsFromProject(opts)
 
 	// Maybe no `--rootfs` flag was provided, but there may be a local Dockerfile
 	// in the working directory.  If so, we can use that as the rootfs.

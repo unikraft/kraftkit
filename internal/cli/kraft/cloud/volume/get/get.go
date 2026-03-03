@@ -22,8 +22,9 @@ import (
 type GetOptions struct {
 	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"list"`
 
-	metro string
-	token string
+	metro         string
+	token         string
+	allowInsecure bool
 }
 
 // Status of a KraftCloud instance.
@@ -60,7 +61,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token)
+	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -79,6 +80,7 @@ func (opts *GetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	client := kraftcloud.NewVolumesClient(
+		kraftcloud.WithAllowInsecure(opts.allowInsecure),
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
 	)
 

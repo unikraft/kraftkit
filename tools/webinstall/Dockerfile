@@ -3,7 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file expect in compliance with the License.
 
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.25
 
 FROM golang:${GO_VERSION}-bullseye AS base
 

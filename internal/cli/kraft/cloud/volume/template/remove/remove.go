@@ -21,11 +21,12 @@ import (
 )
 
 type RemoveOptions struct {
-	Auth   *config.AuthConfig    `noattribute:"true"`
-	Client kraftcloud.KraftCloud `noattribute:"true"`
-	All    bool                  `long:"all" short:"a" usage:"Remove all templates"`
-	Metro  string                `noattribute:"true"`
-	Token  string                `noattribute:"true"`
+	AllowInsecure bool                  `noattribute:"true"`
+	Auth          *config.AuthConfig    `noattribute:"true"`
+	Client        kraftcloud.KraftCloud `noattribute:"true"`
+	All           bool                  `long:"all" short:"a" usage:"Remove all templates"`
+	Metro         string                `noattribute:"true"`
+	Token         string                `noattribute:"true"`
 }
 
 // Remove a KraftCloud persistent volume.
@@ -68,7 +69,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -92,6 +93,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -117,13 +119,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			uuids = append(uuids, vol.UUID)
 		}
 
-		log.G(ctx).Infof("removing %d volume template(s)", len(uuids))
-
-		if _, err := opts.Client.Volumes().WithMetro(opts.Metro).DeleteTemplate(ctx, uuids...); err != nil {
-			return fmt.Errorf("removing %d volume template(s): %w", len(uuids), err)
-		}
-
-		return nil
+		args = uuids
 	}
 
 	log.G(ctx).Infof("removing %d volume template(s)", len(args))
@@ -132,8 +128,19 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("deleting %d volume template(s): %w", len(args), err)
 	}
-	if _, err = delResp.AllOrErr(); err != nil {
-		return fmt.Errorf("deleting %d volume template(s): %w", len(args), err)
+	deleteResponses, err := delResp.AllOrErr()
+
+	totalDeleted := 0
+	for _, deleted := range deleteResponses {
+		if deleted.Status == "success" {
+			totalDeleted++
+		}
+	}
+
+	log.G(ctx).Infof("removed %d volume template(s)", totalDeleted)
+
+	if err != nil {
+		return fmt.Errorf("removing %d template(s): %w", len(args), err)
 	}
 
 	return nil

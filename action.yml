@@ -43,6 +43,10 @@ inputs:
   manifests:
     description: List of Unikraft source manifests
     required: false
+  buildkit:
+    description: Setup BuildKit before running the action
+    required: false
+    default: "true"
 
   #
   # Project flags
@@ -111,6 +115,10 @@ inputs:
   rootfs:
     description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
     required: false
+  rootfs-type:
+    description: Type of rootfs to build (cpio/erofs)
+    required: false
+    default: cpio
   strategy:
     description: Merge strategy to use when packaging.
     required: false
@@ -137,15 +145,17 @@ runs:
     id: suffix
     run: echo "suffix=$(date +%s)" >> "$GITHUB_OUTPUT"
   - name: Set up BuildKit
+    if: ${{ inputs.buildkit == 'true' }}
     shell: bash
     run: |
       docker run \
         --rm \
         -itd \
         --privileged \
+        --security-opt label=disable \
         --name buildkitd_${GITHUB_RUN_ID}_${SUFFIX} \
         -v /run/buildkit:/run/buildkit:rw \
-        moby/buildkit:v0.20.0;
+        moby/buildkit:v0.27.1;
       timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done'
       sudo chmod 666 /run/buildkit/buildkitd.sock;
     env:
@@ -162,6 +172,7 @@ runs:
       sudo find /home/runner -exec chmod g+rwx {} +
       sudo find /github/workspace -exec chmod g+rwx {} +
       sudo chmod g+rwx . || true;
+      mkdir -p "${{ inputs.runtimedir }}";
       sudo chmod g+rwx "${{ inputs.runtimedir }}" || true;
       if [ -n "${{ inputs.workdir }}" ]; then
           sudo chmod g+rwx "${{ inputs.workdir }}" || true;
@@ -215,6 +226,7 @@ runs:
         $([ "${{ inputs.privileged }}" = "true" ] && echo -n "--privileged") \
         --workdir /github/workspace \
         --rm \
+        --security-opt label=disable \
         --env-file <(env) \
         -e "CI=true" \
         -e "GITHUB_WORKSPACE=/github/workspace" \
@@ -226,6 +238,7 @@ runs:
         -e "INPUT_EXECUTE=${{ inputs.execute }}" \
         -e "INPUT_FORCE_GIT=${{ inputs.force_git }}" \
         -e "INPUT_ROOTFS=${{ inputs.rootfs }}" \
+        -e "INPUT_ROOTFS_TYPE=${{ inputs.rootfs_type }}" \
         -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
         -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
         -e "INPUT_MEMORY=${{ inputs.memory }}" \
@@ -240,7 +253,7 @@ runs:
         -e "INPUT_TARGET=${{ inputs.target }}" \
         -e "INPUT_TIMEOUT=${{ inputs.timeout }}" \
         -e "INPUT_WORKDIR=${{ inputs.workdir }}" \
-        -v "${HOME}/.docker/config.json":"${HOME}/.docker/config.json" \
+        -v "${HOME}/.docker":"/home/runner/.docker" \
         -v "/run/buildkit/buildkitd.sock":"/run/buildkit/buildkitd.sock" \
         -v "${ACTION_WORKSPACE}/_temp/_github_home":"/github/home" \
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \

@@ -17,13 +17,13 @@ jobs:
     env:
       RUNGOGENERATE: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set Go variables
@@ -36,7 +36,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -57,19 +57,30 @@ jobs:
             fi
             git diff --exit-code -- go.sum go.mod
 
-      - name: gofumpt
+      - name: Format
         if: success() || failure()  # run this step even if the previous one failed
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v1.64.5
-          args: --timeout=30m --no-config --disable-all --enable=gofumpt --out-format=colored-line-number --build-tags "containers_image_storage_stub,containers_image_openpgp"
+          version: v2.4.0
+          args: |
+            --default none \
+            --timeout=30m \
+            --output.text.path \
+            --output.text.print-linter-name \
+            --output.text.print-issued-lines \
+            --output.text.colors
           skip-cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v1.64.5
-          args: --timeout=30m --out-format=colored-line-number --build-tags "containers_image_storage_stub,containers_image_openpgp"
+          version: v2.4.0
+          args: |
+            --timeout=30m \
+            --output.text.path \
+            --output.text.print-linter-name \
+            --output.text.print-issued-lines \
+            --output.text.colors
           skip-cache: true
 
       - name: go generate

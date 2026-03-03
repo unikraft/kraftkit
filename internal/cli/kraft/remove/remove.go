@@ -58,13 +58,13 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		cmdfactory.NewEnumFlag[mplatform.Platform](
+		cmdfactory.NewEnumFlag(
 			mplatform.Platforms(),
-			mplatform.Platform("auto"),
+			mplatform.Platform("all"),
 		),
 		"plat",
 		"p",
-		"Set the platform virtual machine monitor driver.  Set to 'auto' to detect the guest's platform and 'host' to use the host platform.",
+		"Set the platform virtual machine monitor driver. Set to 'all' to match all platforms (default).",
 	)
 
 	return cmd
@@ -82,23 +82,20 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("no machine(s) specified")
 	}
 
+	if len(args) > 0 && opts.All {
+		return fmt.Errorf("cannot specify machines and --all at the same time")
+	}
+
 	platform := mplatform.PlatformUnknown
 	var controller machineapi.MachineService
 
-	if opts.All || opts.Platform == "auto" {
+	if opts.All || opts.Platform == "all" {
 		controller, err = mplatform.NewMachineV1alpha1ServiceIterator(ctx)
 	} else {
-		if opts.Platform == "host" {
-			platform, _, err = mplatform.Detect(ctx)
-			if err != nil {
-				return err
-			}
-		} else {
-			var ok bool
-			platform, ok = mplatform.PlatformsByName()[opts.Platform]
-			if !ok {
-				return fmt.Errorf("unknown platform driver: %s", opts.Platform)
-			}
+		var ok bool
+		platform, ok = mplatform.PlatformsByName()[opts.Platform]
+		if !ok {
+			return fmt.Errorf("unknown platform driver: %s", opts.Platform)
 		}
 
 		strategy, ok := mplatform.Strategies()[platform]
@@ -119,14 +116,15 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 
 	var remove []machineapi.Machine
 
-	for _, machine := range machines.Items {
-		if len(args) == 0 && opts.All {
-			remove = append(remove, machine)
-			continue
-		}
-
-		if args[0] == machine.Name || args[0] == string(machine.UID) {
-			remove = append(remove, machine)
+	if len(args) == 0 && opts.All {
+		remove = machines.Items
+	} else {
+		for _, arg := range args {
+			for _, machine := range machines.Items {
+				if arg == machine.Name || arg == string(machine.UID) {
+					remove = append(remove, machine)
+				}
+			}
 		}
 	}
 

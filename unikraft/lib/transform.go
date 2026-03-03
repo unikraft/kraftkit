@@ -39,7 +39,10 @@ func TransformFromSchema(ctx context.Context, name string, props interface{}) (L
 	}
 
 	if source, ok := c["source"]; ok {
-		lib.source = source.(string)
+		lib.source, ok = source.(string)
+		if !ok {
+			return lib, fmt.Errorf("library 'source' must be a string, got %T", source)
+		}
 
 		// If the provided source is a directory on the host, set the "path" to this
 		// value.  The "path" is the location on disk where the microlibrary will
@@ -56,11 +59,17 @@ func TransformFromSchema(ctx context.Context, name string, props interface{}) (L
 	}
 
 	if version, ok := c["version"]; ok {
-		lib.version = version.(string)
+		lib.version, ok = version.(string)
+		if !ok {
+			return lib, fmt.Errorf("library 'version' must be a string, got %T", version)
+		}
 	}
 
 	if kconf, ok := c["kconfig"]; ok {
-		lib.kconfig = kconf.(kconfig.KeyValueMap)
+		lib.kconfig, ok = kconf.(kconfig.KeyValueMap)
+		if !ok {
+			return lib, fmt.Errorf("library 'kconfig' must be a mapping, got %T", kconf)
+		}
 	}
 
 	return lib, nil

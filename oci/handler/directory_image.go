@@ -7,8 +7,6 @@ package handler
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -160,30 +158,7 @@ func (dm DirectoryManifest) ConfigFile() (*v1.ConfigFile, error) {
 // RawConfigFile returns the config file of the image in bytes
 // It reads the config file from the filesystem
 func (dm DirectoryManifest) RawConfigFile() ([]byte, error) {
-	bytes, err := json.Marshal(dm.image)
-	if err != nil {
-		return nil, err
-	}
-
-	h := sha256.New()
-	_, err = h.Write(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	configPath := filepath.Join(
-		dm.handle.path,
-		DirectoryHandlerDigestsDir,
-		algorithm,
-		hex.EncodeToString(h.Sum(nil)),
-	)
-
-	// Check if the config file exists
-	if _, err := os.Stat(configPath); err != nil {
-		return nil, err
-	}
-
-	return os.ReadFile(configPath)
+	return json.Marshal(dm.image)
 }
 
 // Digest returns the hash of the image manifest
@@ -330,14 +305,14 @@ func (di *DirectoryIndex) Image(manifestDigest v1.Hash) (v1.Image, error) {
 		return nil, fmt.Errorf("resolving manifest: %w", err)
 	}
 
-	indexJson, err := json.Marshal(manifest)
+	manifestJson, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
 	desc := content.NewDescriptorFromBytes(
 		ocispec.MediaTypeImageIndex,
-		indexJson,
+		manifestJson,
 	)
 
 	return &DirectoryManifest{

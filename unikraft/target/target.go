@@ -41,6 +41,9 @@ type Target interface {
 	// Initrd contains the initramfs configuration for this target.
 	Initrd() initrd.Initrd
 
+	// Auxiliary read-only memory blobs for this target.
+	Roms() []string
+
 	// Command is the command-line arguments set for this target.
 	Command() []string
 
@@ -48,6 +51,9 @@ type Target interface {
 	// all the porclained KConfig key values which is formatted
 	// `.config.<TARGET-NAME>`
 	ConfigFilename() string
+
+	// SetKernelPath updates the path to the kernel for this target.
+	SetKernelPath(string)
 }
 
 type TargetConfig struct {
@@ -71,6 +77,9 @@ type TargetConfig struct {
 
 	// initrd is the configuration for the initrd.
 	initrd initrd.Initrd
+
+	// auxiliary read-only memory blobs for this target.
+	roms []string
 
 	// command is the command-line arguments set for this target.
 	command []string
@@ -115,12 +124,20 @@ func (tc *TargetConfig) Kernel() string {
 	return tc.kernel
 }
 
+func (tc *TargetConfig) SetKernelPath(path string) {
+	tc.kernel = path
+}
+
 func (tc *TargetConfig) KernelDbg() string {
 	return tc.kernelDbg
 }
 
 func (tc *TargetConfig) Initrd() initrd.Initrd {
 	return tc.initrd
+}
+
+func (tc *TargetConfig) Roms() []string {
+	return tc.roms
 }
 
 func (tc *TargetConfig) Type() unikraft.ComponentType {
@@ -217,6 +234,9 @@ func (tc TargetConfig) MarshalYAML() (interface{}, error) {
 	}
 	if len(tc.kconfig) > 0 {
 		ret["kconfig"] = tc.kconfig
+	}
+	if len(tc.kernel) > 0 {
+		ret["output"] = tc.kernel
 	}
 
 	return ret, nil

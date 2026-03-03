@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -34,11 +35,13 @@ import (
 )
 
 type ImportOptions struct {
-	Auth  *config.AuthConfig `noattribute:"true"`
-	Token string             `noattribute:"true"`
-	Metro string             `noattribute:"true"`
+	AllowInsecure bool               `noattribute:"true"`
+	Auth          *config.AuthConfig `noattribute:"true"`
+	Token         string             `noattribute:"true"`
+	Metro         string             `noattribute:"true"`
 
 	VolimportImage string `local:"true" long:"image" usage:"Volume import image to use" default:"official/utils/volimport:1.0"`
+	Port           int    `local:"true" long:"port" short:"p" usage:"Custom port to connect to the volume import service instance on" default:"42069"`
 	Force          bool   `local:"true" long:"force" short:"f" usage:"Force import, even if it might fail"`
 	Source         string `local:"true" long:"source" short:"s" usage:"Path to the data source (directory, Dockerfile, Docker link, cpio file)" default:"."`
 	Timeout        uint64 `local:"true" long:"timeout" short:"t" usage:"Timeout for the import process in seconds when unresponsive" default:"10"`
@@ -48,7 +51,6 @@ type ImportOptions struct {
 
 const (
 	volimportImageOld string = "official/utils/volimport:latest"
-	volimportPort     uint16 = 42069
 )
 
 func NewCmd() *cobra.Command {
@@ -68,6 +70,9 @@ func NewCmd() *cobra.Command {
 
 			# Import data from a local cpio file "path/to/file" to a volume named "my-volume"
 			$ kraft cloud volume import --source path/to/file --volume my-volume
+
+			# Import data from a local cpio file "path/to/file" to a volume named "my-volume" on the port 10000
+			$ kraft cloud volume import --source path/to/file --volume my-volume --port 10000
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "kraftcloud-volume",
@@ -89,13 +94,29 @@ func (opts *ImportOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("the image %q is deprecated, please use the default and update KraftKit to the latest version", volimportImageOld)
 	}
 
-	if finfo, err := os.Stat(opts.Source); err == nil && (!finfo.IsDir() && !strings.HasSuffix(opts.Source, "Dockerfile")) {
-		return fmt.Errorf("local source path must be a directory or a Dockerfile")
+	if opts.Port < 1024 || opts.Port > 65535 {
+		return fmt.Errorf("port must be between 1024 and 65535")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
+	}
+
+	if opts.Source != "" && !filepath.IsAbs(opts.Source) {
+		abs, err := filepath.Abs(opts.Source)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of source: %w", err)
+		}
+		opts.Source = abs
+	}
+
+	if opts.Workdir != "" && !filepath.IsAbs(opts.Workdir) {
+		abs, err := filepath.Abs(opts.Workdir)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of workdir: %w", err)
+		}
+		opts.Workdir = abs
 	}
 
 	return nil
@@ -122,6 +143,7 @@ func (opts *ImportOptions) Run(ctx context.Context, _ []string) error {
 // importVolumeData imports local data to a volume.
 func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	cli := kraftcloud.NewClient(
+		kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 	)
 	icli := cli.Instances().WithMetro(opts.Metro)
@@ -169,7 +191,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			if authStr, err = utils.GenRandAuth(); err != nil {
 				return fmt.Errorf("generating random authentication string: %w", err)
 			}
-			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout)
+			instID, instFQDN, err = runVolimport(ctx, icli, opts.VolimportImage, volUUID, authStr, opts.Timeout, opts.Port)
 			return err
 		},
 	)
@@ -190,7 +212,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 		paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
 			func(ctx context.Context, callback func(float64)) (retErr error) {
-				instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+				instAddr := instFQDN + ":" + strconv.FormatUint(uint64(opts.Port), 10)
 				conn, err := tls.Dial("tcp4", instAddr, nil)
 				if err != nil {
 					return fmt.Errorf("connecting to volume data import instance send port: %w", err)
@@ -211,7 +233,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 			return err
 		}
 	} else {
-		instAddr := instFQDN + ":" + strconv.FormatUint(uint64(volimportPort), 10)
+		instAddr := instFQDN + ":" + strconv.FormatUint(uint64(opts.Port), 10)
 		conn, err := tls.Dial("tcp4", instAddr, nil)
 		if err != nil {
 			return fmt.Errorf("connecting to volume data import instance send port: %w", err)

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containerd/nerdctl/pkg/portutil"
+	"github.com/containerd/nerdctl/v2/pkg/portutil"
 
 	corev1 "k8s.io/api/core/v1"
 )

@@ -20,17 +20,18 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-	"kraftkit.sh/iostreams"
 )
 
 type CreateOptions struct {
-	Auth   *config.AuthConfig       `noattribute:"true"`
-	Client kcvolumes.VolumesService `noattribute:"true"`
-	Metro  string                   `noattribute:"true"`
-	Name   string                   `local:"true" long:"name" short:"n" usage:"Name of the volume"`
-	Size   string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments or suffixes like Mi, Gi, etc.)"`
-	From   string                   `local:"true" long:"from" short:"f" usage:"Name or UUID of the template to create from"`
-	Token  string                   `noattribute:"true"`
+	AllowInsecure bool                     `noattribute:"true"`
+	Auth          *config.AuthConfig       `noattribute:"true"`
+	Client        kcvolumes.VolumesService `noattribute:"true"`
+	Metro         string                   `noattribute:"true"`
+	Name          string                   `local:"true" long:"name" short:"n" usage:"Name of the volume"`
+	Size          string                   `local:"true" long:"size" short:"s" usage:"Size (MiB increments or suffixes like Mi, Gi, etc.)"`
+	From          string                   `local:"true" long:"from" short:"f" usage:"Name or UUID of the template to create from"`
+	Output        string                   `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
+	Token         string                   `noattribute:"true"`
 }
 
 // Create a KraftCloud persistent volume.
@@ -50,6 +51,7 @@ func Create(ctx context.Context, opts *CreateOptions) (*kcvolumes.CreateResponse
 
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewVolumesClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -138,7 +140,7 @@ func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot specify both 'size' and template 'from'")
 	}
 
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
@@ -152,6 +154,10 @@ func (opts *CreateOptions) Run(ctx context.Context, _ []string) error {
 		return fmt.Errorf("could not create volume: %w", err)
 	}
 
-	_, err = fmt.Fprintln(iostreams.G(ctx).Out, volume.UUID)
-	return err
+	resp, err := opts.Client.WithMetro(opts.Metro).Get(ctx, volume.UUID)
+	if err != nil {
+		return fmt.Errorf("could not get volume %s: %w", volume.UUID, err)
+	}
+
+	return utils.PrintVolumes(ctx, opts.Output, *resp)
 }

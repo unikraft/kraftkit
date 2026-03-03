@@ -24,17 +24,18 @@ import (
 )
 
 type CreateOptions struct {
-	Auth        *config.AuthConfig         `noattribute:"true"`
-	Client      kcservices.ServicesService `noattribute:"true"`
-	Certificate []string                   `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
-	Domain      []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
-	SubDomain   []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
-	SoftLimit   uint                       `local:"true" long:"soft-limit" short:"l" usage:"Set the soft limit for the service"`
-	HardLimit   uint                       `local:"true" long:"hard-limit" short:"L" usage:"Set the hard limit for the service"`
-	Metro       string                     `noattribute:"true"`
-	Name        string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
-	Output      string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
-	Token       string                     `noattribute:"true"`
+	AllowInsecure bool                       `noattribute:"true"`
+	Auth          *config.AuthConfig         `noattribute:"true"`
+	Client        kcservices.ServicesService `noattribute:"true"`
+	Certificate   []string                   `local:"true" long:"certificate" short:"c" usage:"Set the certificates to use for the service"`
+	Domain        []string                   `local:"true" long:"domain" short:"d" usage:"Specify the domain names of the service"`
+	SubDomain     []string                   `local:"true" long:"subdomain" short:"s" usage:"Set the subdomains to use when creating the service"`
+	SoftLimit     uint                       `local:"true" long:"soft-limit" short:"l" usage:"Set the soft limit for the service"`
+	HardLimit     uint                       `local:"true" long:"hard-limit" short:"L" usage:"Set the hard limit for the service"`
+	Metro         string                     `noattribute:"true"`
+	Name          string                     `local:"true" long:"name" short:"n" usage:"Specify the name of the service"`
+	Output        string                     `local:"true" long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
+	Token         string                     `noattribute:"true"`
 }
 
 // Create a KraftCloud instance.
@@ -61,6 +62,7 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcservic
 	}
 	if opts.Client == nil {
 		opts.Client = kraftcloud.NewServicesClient(
+			kraftcloud.WithAllowInsecure(opts.AllowInsecure),
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
@@ -235,7 +237,7 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token)
+	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
 	if err != nil {
 		return fmt.Errorf("could not populate metro and token: %w", err)
 	}

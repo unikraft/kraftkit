@@ -211,8 +211,6 @@ func TarDirWriter(ctx context.Context, root, prefix string, tw *tar.Writer, opts
 			return err
 		}
 
-		dst = filepath.ToSlash(filepath.Join(prefix, dst))
-
-		return TarFileWriter(ctx, filepath.Join(root, path), dst, tw, opts...)
+		return TarFileWriter(ctx, path, filepath.ToSlash(filepath.Join(prefix, dst)), tw, opts...)
 	})
 }

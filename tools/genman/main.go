@@ -26,8 +26,20 @@ import (
 )
 
 func main() {
+	var uncompressed bool
+
+	// Parse flags
+	for i, arg := range os.Args[1:] {
+		if arg == "--uncompressed" {
+			uncompressed = true
+			// Remove the flag from args
+			os.Args = append(os.Args[:i+1], os.Args[i+2:]...)
+			break
+		}
+	}
+
 	if len(os.Args[1:]) < 2 || len(os.Args[1:]) > 3 {
-		fmt.Printf("usage: %s generate | (install src) dest\n", os.Args[0])
+		fmt.Printf("usage: %s [--uncompressed] generate | (install src) dest\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -47,7 +59,7 @@ func main() {
 		}
 
 		fmt.Println("Generating man pages in directory ", destDir)
-		if err := GenManTree(cmd, header, destDir); err != nil {
+		if err := GenManTree(cmd, header, destDir, uncompressed); err != nil {
 			fmt.Println("error generating man pages: ", err)
 			os.Exit(1)
 		}
@@ -66,11 +78,12 @@ func main() {
 	}
 }
 
-func GenManTree(cmd *cobra.Command, header *GenManHeader, dir string) error {
+func GenManTree(cmd *cobra.Command, header *GenManHeader, dir string, uncompressed bool) error {
 	return GenManTreeFromOpts(cmd, GenManTreeOptions{
 		Header:           header,
 		Path:             dir,
 		CommandSeparator: "-",
+		Uncompressed:     uncompressed,
 	})
 }
 
@@ -97,27 +110,44 @@ func GenManTreeFromOpts(cmd *cobra.Command, opts GenManTreeOptions) error {
 		separator = opts.CommandSeparator
 	}
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", separator)
-	filename := filepath.Join(opts.Path, basename+"."+section+".gz")
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
 
-	gzf, err := gzip.NewWriterLevel(f, gzip.BestCompression)
-	if err != nil {
-		return err
+	var filename string
+	var writer io.WriteCloser
+
+	if opts.Uncompressed {
+		// No compression, no .gz extension
+		filename = filepath.Join(opts.Path, basename+"."+section)
+		f, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		writer = f
+	} else {
+		// Use gzip compression
+		filename = filepath.Join(opts.Path, basename+"."+section+".gz")
+		f, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		gzf, err := gzip.NewWriterLevel(f, gzip.BestCompression)
+		if err != nil {
+			return err
+		}
+		writer = gzf
 	}
-	defer gzf.Close()
+	defer writer.Close()
 
 	headerCopy := *header
-	return GenMan(cmd, &headerCopy, gzf)
+	return GenMan(cmd, &headerCopy, writer)
 }
 
 type GenManTreeOptions struct {
 	Header           *GenManHeader
 	Path             string
 	CommandSeparator string
+	Uncompressed     bool
 }
 
 type GenManHeader struct {

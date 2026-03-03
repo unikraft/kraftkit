@@ -5,13 +5,7 @@
 package oci
 
 const (
-	MediaTypeLayer       = "application/vnd.unikraft.rootfs.diff"
-	MediaTypeImageKernel = "application/vnd.unikraft.image.v1"
-	MediaTypeInitrdCpio  = "application/vnd.unikraft.initrd.v1"
-	MediaTypeConfig      = "application/vnd.unikraft.config.v1"
-
-	MediaTypeLayerGzip       = MediaTypeLayer + "+gzip"
-	MediaTypeImageKernelGzip = MediaTypeImageKernel + "+gzip"
-	MediaTypeInitrdCpioGzip  = MediaTypeInitrdCpio + "+gzip"
-	MediaTypeConfigGzip      = MediaTypeConfig + "+gzip"
+	MediaTypeKernel = "application/vnd.unikraft.kernel.v1"
+	MediaTypeInitrd = "application/vnd.unikraft.initrd.v1"
+	MediaTypeRom    = "application/vnd.unikraft.rom.v1"
 )

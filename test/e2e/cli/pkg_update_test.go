@@ -53,9 +53,9 @@ var _ = Describe("kraft pkg", func() {
 				}
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(stderr.String()).To(BeEmpty())
-				Expect(stdout.String()).To(MatchRegexp(`{"level":"info","msg":"updating manifest index"}`))
-				Expect(stdout.String()).To(MatchRegexp(`{"level":"info","msg":"updating oci index"}`))
+				Expect(stdout.String()).To(BeEmpty())
+				Expect(stderr.String()).To(MatchRegexp(`{"level":"info","msg":"updating manifest index"}`))
+				Expect(stderr.String()).To(MatchRegexp(`{"level":"info","msg":"updating oci index"}`))
 
 				Expect(manifestsPath).To(ContainFiles("index.yaml", "unikraft.yaml"))
 				Expect(manifestsPath).To(ContainDirectories("libs"))

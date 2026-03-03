@@ -2,8 +2,6 @@ version: 2
 #! .goreleaser.yaml
 #@ binaries = {
 #@   "kraft": {
-#@     "netbsd": ["amd64", "arm64"],
-#@     "openbsd": ["amd64", "arm64"],
 #@     "darwin": ["amd64", "arm64"],
 #@     "freebsd": ["amd64", "arm64"],
 #@     "linux": ["amd64", "arm64"],
@@ -55,7 +53,7 @@ release:
     This is a stable release of kraftkit.
   name_template: 'v{{ .Version }}'
   extra_files:
-    - name_template: public.key
+    - glob: public.key
 
 signs:
   - id: cosign
@@ -66,6 +64,8 @@ signs:
       - "--key=cosign.key"
       - "--output-signature=${signature}"
       - "${artifact}"
+      - "--use-signing-config=false"
+      - "--bundle=${signature}.bundle"
       - "--yes"
     artifacts: all
 
@@ -241,8 +241,6 @@ builds:
       - -X {{ .Env.GOMOD }}/internal/cli/kraft.sentryDsn={{ .Env.SENTRY_DSN }}
       #@ end
     tags:
-      - containers_image_storage_stub
-      - containers_image_openpgp
       - netgo
       - osusergo
       #@ if bin == "kraft" and os == "linux" and arch == "amd64":

@@ -8,14 +8,16 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/utils"
+	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
+	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
@@ -63,17 +65,34 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 	)
 
 	var cmds []string
-	var envs []string
-	if opts.Rootfs, cmds, envs, err = utils.BuildRootfs(ctx, opts.Workdir, opts.Rootfs, opts.Compress, targ.Architecture().String()); err != nil {
+	var penvs []string
+	var rootfs initrd.Initrd
+	if rootfs, cmds, penvs, err = initrd.BuildRootfs(
+		ctx,
+		append(opts.InitrdOptions,
+			initrd.WithRootfsPath(opts.Rootfs),
+			initrd.WithWorkdir(opts.Workdir),
+			initrd.WithKeepOwners(opts.KeepFileOwners),
+			initrd.WithOutput(filepath.Join(
+				opts.Workdir,
+				unikraft.BuildDir,
+				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, targ.Architecture(), opts.RootfsType),
+			)),
+			initrd.WithOutputType(opts.RootfsType),
+			initrd.WithCacheDir(filepath.Join(
+				opts.Workdir,
+				unikraft.VendorDir,
+				"rootfs-cache",
+			)),
+			initrd.WithArchitecture(targ.Architecture().String()),
+			initrd.WithCompression(opts.Compress),
+		)...,
+	); err != nil {
 		return nil, fmt.Errorf("could not build rootfs: %w", err)
 	}
 
 	if len(opts.Args) == 0 && cmds != nil {
 		opts.Args = cmds
-	}
-
-	if envs != nil {
-		opts.Env = append(opts.Env, envs...)
 	}
 
 	labels := make(map[string]string)
@@ -103,19 +122,22 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 			opts.Platform+"/"+opts.Architecture,
 			func(ctx context.Context) error {
 				popts := append(opts.packopts,
+					packmanager.PackArchitecture(targ.Architecture()),
+					packmanager.PackPlatform(targ.Platform()),
 					packmanager.PackArgs(opts.Args...),
-					packmanager.PackInitrd(opts.Rootfs),
-					packmanager.PackKConfig(!opts.NoKConfig),
+					packmanager.PackInitrd(rootfs),
 					packmanager.PackName(opts.Name),
 					packmanager.PackOutput(opts.Output),
 					packmanager.PackLabels(labels),
 				)
 
-				envs := opts.aggregateEnvs()
+				if !opts.NoKConfig {
+					popts = append(popts, packmanager.PackKConfig(targ.KConfig()))
+				}
+
+				envs := opts.aggregateEnvs(penvs)
 				if len(envs) > 0 {
 					popts = append(popts, packmanager.PackWithEnvs(envs))
-				} else if len(opts.Env) > 0 {
-					popts = append(popts, packmanager.PackWithEnvs(opts.Env))
 				}
 
 				more, err := opts.pm.Pack(ctx, targ, popts...)

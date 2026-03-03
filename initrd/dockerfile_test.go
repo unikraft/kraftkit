@@ -10,16 +10,21 @@ import (
 	"os"
 	"testing"
 
-	"kraftkit.sh/cpio"
+	"github.com/unikraft/go-cpio"
 	"kraftkit.sh/initrd"
 )
 
-func TestNewFromDockerfile(t *testing.T) {
+func TestNewFromDockerfileToCPIO(t *testing.T) {
 	const rootfsDockerfile = "testdata/rootfs.Dockerfile"
 
 	ctx := context.Background()
 
-	ird, err := initrd.NewFromDockerfile(ctx, rootfsDockerfile)
+	ird, err := initrd.NewFromDockerfile(
+		ctx,
+		rootfsDockerfile,
+		initrd.WithArchitecture("x86_64"),
+		initrd.WithOutputType(initrd.FsTypeCpio),
+	)
 	if err != nil {
 		t.Fatal("NewFromDockerfile:", err)
 	}
@@ -39,7 +44,7 @@ func TestNewFromDockerfile(t *testing.T) {
 	var gotFiles []string
 
 	for {
-		hdr, _, err := r.Next()
+		hdr, err := r.Next()
 		if err == io.EOF {
 			break
 		}

@@ -18,11 +18,11 @@ jobs:
     outputs:
       modhash: ${{ steps.gomod.outputs.hash }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set go.mod variable
@@ -42,13 +42,13 @@ jobs:
     env:
       RUNGOGENERATE: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: 1.24.0
+          go-version: 1.25.7
           cache: false
 
       - name: Set Go variables
@@ -61,7 +61,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -70,12 +70,17 @@ jobs:
           restore-keys: |
             ${{ github.job }}-${{ runner.os }}-go-
 
+      - name: Go env
+        run: |
+          unset GOROOT
+          go env
+
       - name: Build go-generate-qemu-devices
         run: |
           set -x
           git config --global --add safe.directory /__w/kraftkit/kraftkit
-          export PATH="${GOROOT}/bin:$PATH"
           cd tools/go-generate-qemu-devices
+          unset GOROOT
           go build -o ../../dist/
 
       - name: Run Help Message

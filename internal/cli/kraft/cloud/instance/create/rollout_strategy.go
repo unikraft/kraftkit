@@ -20,9 +20,13 @@ const (
 	// same service and starts the new instance(s).
 	RolloutStrategyStop = RolloutStrategy("stop")
 
-	// The 'stop' strategy stops the qualified existing instance(s) within the
-	// same service and starts the new instance(s).
+	// The 'remove' strategy removes the qualified existing instance(s) within
+	// the same service and starts the new instance(s).
 	RolloutStrategyRemove = RolloutStrategy("remove")
+
+	// The 'sequential' strategy removes the existing qualified instance(s)
+	// within the same service and starts the new instance(s) one by one.
+	RolloutStrategyRemoveSequential = RolloutStrategy("remove_sequential")
 
 	// The 'keep' strategy keeps the existing qualified instance(s) within the
 	// same service and starts the new instance(s).
@@ -48,6 +52,7 @@ func RolloutStrategies() []RolloutStrategy {
 		RolloutStrategyAbort,
 		RolloutStrategyStop,
 		RolloutStrategyRemove,
+		RolloutStrategyRemoveSequential,
 		RolloutStrategyKeep,
 	}
 }
