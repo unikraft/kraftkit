@@ -126,6 +126,16 @@ func IsCpioFile(path string) bool {
 	return string(magic) == "070701" || string(magic) == "070702"
 }
 
+// IsRegularFile checks if the given path is a regular file.
+func IsRegularFile(path string) bool {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return fi.Mode().IsRegular()
+}
+
 type FileInfo struct {
 	Uid  int
 	Gid  int
