@@ -74,7 +74,15 @@ func CreateFS(ctx context.Context, output string, source string, opts ...CpioCre
 			return fmt.Errorf("could not create CPIO archive from OCI image: %w", err)
 		}
 	case fsutils.IsCpioFile(source):
-		if err := c.CreateFSFromCpio(ctx, writer, source); err != nil {
+		// If the source is already a CPIO file, we can simply copy its contents to the output.
+		// This means we close the writer and re-open is as a simple byte writer.
+		writer.Close()
+		_, err := f.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("could not seek to start of CPIO archive: %w", err)
+		}
+
+		if err := c.CreateFSFromCpio(ctx, io.Writer(f), source); err != nil {
 			return fmt.Errorf("could not create CPIO archive from CPIO file: %w", err)
 		}
 	case fsutils.IsErofsFile(source):
@@ -555,7 +563,7 @@ func (c *createOptions) CreateFSFromDirectory(ctx context.Context, writer *cpio.
 }
 
 // CreateFSFromCpio creates a CPIO filesystem from an existing CPIO file.
-func (c *createOptions) CreateFSFromCpio(ctx context.Context, writer *cpio.Writer, source string) error {
+func (c *createOptions) CreateFSFromCpio(ctx context.Context, writer io.Writer, source string) error {
 	// Open and copy all contents from 'source' to the writer
 	f, err := os.Open(source)
 	if err != nil {
