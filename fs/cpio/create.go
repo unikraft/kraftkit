@@ -77,6 +77,8 @@ func CreateFS(ctx context.Context, output string, source string, opts ...CpioCre
 		if err := c.CreateFSFromCpio(ctx, writer, source); err != nil {
 			return fmt.Errorf("could not create CPIO archive from CPIO file: %w", err)
 		}
+	case fsutils.IsErofsFile(source):
+		return fmt.Errorf("creating CPIO from EroFS files is not currently supported")
 	case fsutils.IsTarFile(source),
 		fsutils.IsTarGzFile(source):
 		if err := c.CreateFSFromTar(ctx, writer, source); err != nil {
