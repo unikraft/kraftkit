@@ -417,6 +417,8 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	}
 
 	switch initrd.opts.fsType {
+	case FsTypeFile:
+		return "", fmt.Errorf("cannot build initrd from dockerfile with file output type")
 	case FsTypeErofs:
 		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, tarOutput.Name(),
 			erofs.WithAllRoot(!initrd.opts.keepOwners),

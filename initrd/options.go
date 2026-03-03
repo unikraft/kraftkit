@@ -207,6 +207,7 @@ func FsTypes() []FsType {
 	return []FsType{
 		FsTypeCpio,
 		FsTypeErofs,
+		FsTypeFile,
 	}
 }
 

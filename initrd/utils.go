@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 func compressFiles(output string, path string) error {
@@ -44,6 +45,30 @@ func compressFiles(output string, path string) error {
 
 	if err := os.Rename(output+".gz", output); err != nil {
 		return fmt.Errorf("could not rename compressed initramfs: %w", err)
+	}
+
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	input, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("opening source file: %w", err)
+	}
+	defer input.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("creating destination directory: %w", err)
+	}
+
+	output, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("creating destination file: %w", err)
+	}
+	defer output.Close()
+
+	if _, err := io.Copy(output, input); err != nil {
+		return fmt.Errorf("copying file contents: %w", err)
 	}
 
 	return nil

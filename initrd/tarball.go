@@ -70,6 +70,8 @@ func (initrd *tarball) Build(ctx context.Context) (string, error) {
 	}
 
 	switch initrd.opts.fsType {
+	case FsTypeFile:
+		return initrd.opts.output, copyFile(initrd.path, initrd.opts.output)
 	case FsTypeErofs:
 		return initrd.opts.output, erofs.CreateFS(ctx, initrd.opts.output, initrd.path,
 			erofs.WithAllRoot(!initrd.opts.keepOwners),
