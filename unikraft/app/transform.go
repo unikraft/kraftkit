@@ -97,6 +97,8 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
 		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 		reflect.TypeOf(target.Env{}):                    transformEnv,
+		reflect.TypeOf(target.Toolchain{}): 			 transformToolchain,  
+
 	}
 
 	for _, transformer := range additionalTransformers {
@@ -215,4 +217,24 @@ var transformEnv TransformerFunc = func(_ context.Context, data interface{}) (in
 	}
 
 	return env, nil
+}
+
+var transformToolchain TransformerFunc = func(_ context.Context, data interface{}) (interface{}, error) {
+	config, err := transformMappingOrList(data, "=", false)
+	if err != nil {
+		return nil, err
+	}
+
+	toolchain := make(map[string]string)
+
+	for k, v := range config.(map[string]interface{}) {
+		if v, ok := v.(string); ok {
+			toolchain[k] = v
+			continue
+		}
+
+		return nil, errors.Errorf("expected string for toolchain variable %s, got %T", k, v)
+	}
+
+	return toolchain, nil
 }

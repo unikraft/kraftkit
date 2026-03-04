@@ -169,6 +169,10 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		return nil, err
 	}
 
+	if err := Transform(ctx, getSection(iface, "toolchain"), &app.toolchain); err != nil {
+		return nil, err
+	}
+
 	extensions := getSectionMap(iface, "extensions")
 	if len(extensions) > 0 {
 		app.extensions = extensions

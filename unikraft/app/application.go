@@ -160,6 +160,9 @@ type Application interface {
 
 	// Env variables to be used during building and runtime of application.
 	Env() map[string]string
+	
+	// Toolchain returns toolchain variables to be passed to the build system.
+	Toolchain() map[string]string 
 
 	// Removes library from the project directory
 	RemoveLibrary(ctx context.Context, libraryName string) error
@@ -185,6 +188,7 @@ type application struct {
 	targets       []*target.TargetConfig
 	volumes       []*volume.VolumeConfig
 	env           target.Env
+	toolchain     target.Toolchain
 	command       []string
 	rootfs        string
 	roms          []string
@@ -1124,6 +1128,10 @@ func (app *application) Volumes() []*volume.VolumeConfig {
 // Env implements Application
 func (app *application) Env() map[string]string {
 	return app.env
+}
+
+func (app *application) Toolchain() map[string]string {
+	return app.toolchain
 }
 
 func (app *application) RemoveLibrary(ctx context.Context, libraryName string) error {

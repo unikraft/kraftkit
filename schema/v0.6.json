@@ -69,6 +69,11 @@
       "$ref": "#/definitions/list_or_dict"
     },
 
+    "/^toolchain$/": {
+      "id": "#/properties/toolchain",
+      "$ref": "#/definitions/list_or_dict"
+    },
+
     "/^unikraft$/": {
       "id": "#/properties/unikraft",
       "$ref": "#/definitions/unikraft",
