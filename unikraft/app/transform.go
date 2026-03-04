@@ -97,8 +97,7 @@ func createTransformHook(ctx context.Context, additionalTransformers ...Transfor
 		reflect.TypeOf(template.TemplateConfig{}):       template.TransformFromSchema,
 		reflect.TypeOf(volume.VolumeConfig{}):           volume.TransformFromSchema,
 		reflect.TypeOf(target.Env{}):                    transformEnv,
-		reflect.TypeOf(target.Toolchain{}): 			 transformToolchain,  
-
+		reflect.TypeOf(target.Toolchain{}):              transformToolchain,
 	}
 
 	for _, transformer := range additionalTransformers {

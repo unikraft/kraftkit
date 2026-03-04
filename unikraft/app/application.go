@@ -160,9 +160,9 @@ type Application interface {
 
 	// Env variables to be used during building and runtime of application.
 	Env() map[string]string
-	
+
 	// Toolchain returns toolchain variables to be passed to the build system.
-	Toolchain() map[string]string 
+	Toolchain() map[string]string
 
 	// Removes library from the project directory
 	RemoveLibrary(ctx context.Context, libraryName string) error

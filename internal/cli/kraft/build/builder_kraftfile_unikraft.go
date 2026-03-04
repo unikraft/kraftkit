@@ -448,7 +448,7 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 	if toolchain := opts.Project.Toolchain(); len(toolchain) > 0 {
 		mopts = append(mopts, make.WithVars(toolchain))
 	}
-	
+
 	allEnvs := map[string]string{}
 	for k, v := range opts.Project.Env() {
 		allEnvs[k] = v
