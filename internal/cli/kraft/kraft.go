@@ -51,6 +51,7 @@ import (
 	"kraftkit.sh/internal/cli/kraft/start"
 	"kraftkit.sh/internal/cli/kraft/stop"
 	"kraftkit.sh/internal/cli/kraft/system"
+	"kraftkit.sh/internal/cli/kraft/toolchain"
 	"kraftkit.sh/internal/cli/kraft/unset"
 	"kraftkit.sh/internal/cli/kraft/version"
 	"kraftkit.sh/internal/cli/kraft/volume"
@@ -134,6 +135,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(version.NewCmd())
 	cmd.AddCommand(system.NewCmd())
 	cmd.AddCommand(x.NewCmd())
+	cmd.AddCommand(toolchain.NewCmd())
 
 	return cmd
 }
