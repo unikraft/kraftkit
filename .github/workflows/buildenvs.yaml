@@ -69,7 +69,7 @@ jobs:
 
       - name: Build OCI image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           file: ./buildenvs/qemu.Dockerfile
@@ -90,7 +90,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/qemu:${{ matrix.QEMU_VERSION }}
@@ -142,7 +142,7 @@ jobs:
 
       - name: Build OCI image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           file: ./buildenvs/xen.Dockerfile
@@ -163,7 +163,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/xen:${{ matrix.XEN_VERSION }}
@@ -250,7 +250,7 @@ jobs:
 
       - name: Build OCI image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           load: true
@@ -275,7 +275,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/myself:latest
@@ -361,7 +361,7 @@ jobs:
 
       - name: Build OCI image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           load: true
@@ -383,7 +383,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/base:latest
@@ -459,7 +459,7 @@ jobs:
 
       - name: Build OCI image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           load: true
@@ -481,7 +481,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/base-golang:latest
@@ -568,7 +568,7 @@ jobs:
 
       - name: Build OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: false
           tags: kraftkit.sh/github-action:v0
@@ -601,7 +601,7 @@ jobs:
 
       - name: Push OCI Image
         if: ${{ steps.check-run.outputs.run == 'true' && github.event_name == 'push' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: index.unikraft.io/kraftkit.sh/github-action:v0

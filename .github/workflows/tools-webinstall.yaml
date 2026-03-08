@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 1
 
       - name: Build & Push OCI Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           push: true
           tags: ghcr.io/unikraft/kraftkit/webinstall:latest
