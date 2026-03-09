@@ -20,8 +20,8 @@ import (
 
 func TestArchitectureName_String(t *testing.T) {
 	tests := []struct {
-		name  ArchitectureName
-		want  string
+		name ArchitectureName
+		want string
 	}{
 		{ArchitectureX86_64, "x86_64"},
 		{ArchitectureArm64, "arm64"},
@@ -130,9 +130,9 @@ func TestArchitectureAliases(t *testing.T) {
 
 func TestNewArchitectureFromSchema(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		wantErr bool
+		name     string
+		input    string
+		wantErr  bool
 		wantName string
 	}{
 		{
@@ -238,8 +238,8 @@ func TestArchitectureConfig_IsUnpacked(t *testing.T) {
 
 func TestArchitectureConfig_KConfig(t *testing.T) {
 	tests := []struct {
-		archName  string
-		wantKey   string
+		archName string
+		wantKey  string
 	}{
 		{"x86_64", "CONFIG_ARCH_X86_64"},
 		{"arm64", "CONFIG_ARCH_ARM_64"},
