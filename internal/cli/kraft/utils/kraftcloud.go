@@ -7,7 +7,7 @@ import (
 // RewrapAsKraftCloudPackage returns the equivalent package name as a
 // KraftCloud package.
 func RewrapAsKraftCloudPackage(name string) string {
-	name = strings.Replace(name, "unikarft.org/", "index.unikraft.io/", 1)
+	name = strings.Replace(name, "unikraft.org/", "index.unikraft.io/", 1)
 
 	if strings.HasPrefix(name, "unikraft.io") {
 		name = "index." + name
