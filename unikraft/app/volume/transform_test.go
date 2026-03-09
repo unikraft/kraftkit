@@ -13,13 +13,13 @@ func Test_TransformFromSchema(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
-		input       interface{}
-		wantSource  string
-		wantDest    string
-		wantDriver  string
+		name         string
+		input        interface{}
+		wantSource   string
+		wantDest     string
+		wantDriver   string
 		wantReadOnly bool
-		wantErr     bool
+		wantErr      bool
 	}{
 		{
 			name:       "string with colon sets source and destination",
@@ -39,7 +39,7 @@ func Test_TransformFromSchema(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:       "map with all fields",
+			name: "map with all fields",
 			input: map[string]interface{}{
 				"driver":      "9pfs",
 				"source":      "/host/path",
@@ -52,14 +52,14 @@ func Test_TransformFromSchema(t *testing.T) {
 			wantReadOnly: true,
 		},
 		{
-			name:  "map with only source",
+			name: "map with only source",
 			input: map[string]interface{}{
 				"source": "/host/path",
 			},
 			wantSource: "/host/path",
 		},
 		{
-			name:  "map with readonly false",
+			name: "map with readonly false",
 			input: map[string]interface{}{
 				"source":   "/host/path",
 				"readonly": false,
