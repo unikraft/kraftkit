@@ -56,10 +56,10 @@ func TestVolumeConfig_Accessors_ZeroValues(t *testing.T) {
 
 func TestVolumeConfig_MarshalYAML(t *testing.T) {
 	tests := []struct {
-		name      string
-		vol       *VolumeConfig
-		wantNil   bool
-		wantKeys  map[string]interface{}
+		name     string
+		vol      *VolumeConfig
+		wantNil  bool
+		wantKeys map[string]interface{}
 	}{
 		{
 			name:    "fully empty config returns nil",
