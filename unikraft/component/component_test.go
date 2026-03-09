@@ -23,16 +23,16 @@ type mockComponent struct {
 	version string
 }
 
-func (m *mockComponent) Name() string                    { return m.name }
-func (m *mockComponent) Version() string                 { return m.version }
-func (m *mockComponent) String() string                  { return m.name }
-func (m *mockComponent) Type() unikraft.ComponentType    { return unikraft.ComponentTypeApp }
-func (m *mockComponent) Source() string                  { return "" }
-func (m *mockComponent) Path() string                    { return "" }
-func (m *mockComponent) IsUnpacked() bool                { return false }
-func (m *mockComponent) KConfig() kconfig.KeyValueMap    { return kconfig.KeyValueMap{} }
+func (m *mockComponent) Name() string                       { return m.name }
+func (m *mockComponent) Version() string                    { return m.version }
+func (m *mockComponent) String() string                     { return m.name }
+func (m *mockComponent) Type() unikraft.ComponentType       { return unikraft.ComponentTypeApp }
+func (m *mockComponent) Source() string                     { return "" }
+func (m *mockComponent) Path() string                       { return "" }
+func (m *mockComponent) IsUnpacked() bool                   { return false }
+func (m *mockComponent) KConfig() kconfig.KeyValueMap       { return kconfig.KeyValueMap{} }
 func (m *mockComponent) PrintInfo(_ context.Context) string { return "" }
-func (m *mockComponent) MarshalYAML() (interface{}, error) { return nil, nil }
+func (m *mockComponent) MarshalYAML() (interface{}, error)  { return nil, nil }
 func (m *mockComponent) KConfigTree(_ context.Context, _ ...*kconfig.KeyValue) (*kconfig.KConfigFile, error) {
 	return nil, nil
 }
@@ -68,9 +68,9 @@ func TestNameAndVersion(t *testing.T) {
 
 func TestUrlHasVersion(t *testing.T) {
 	tests := []struct {
-		name  string
+		name   string
 		rawURL string
-		want  string
+		want   string
 	}{
 		{
 			name:   "branch query param",
@@ -136,11 +136,11 @@ func TestParseStringProp(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	tests := []struct {
-		name       string
-		entry      string
-		wantSource string
+		name        string
+		entry       string
+		wantSource  string
 		wantVersion string
-		wantName   string
+		wantName    string
 	}{
 		{
 			name:       "existing file sets source",
