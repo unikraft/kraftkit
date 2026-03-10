@@ -411,6 +411,10 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		return nil, nil
 	}
 
+	if isGitSource(query.Source()) {
+		return nil, nil
+	}
+
 	var qglob glob.Glob
 	var err error
 	packs := make(map[string]pack.Package)
@@ -909,6 +913,13 @@ func (manager *OCIManager) RemoveSource(ctx context.Context, source string) erro
 	return nil
 }
 
+func isGitSource(source string) bool {
+	return strings.HasSuffix(source, ".git") ||
+		strings.HasPrefix(source, "git@") ||
+		strings.HasPrefix(source, "github.com/") ||
+		strings.Contains(source, "://github.com/")
+}
+
 // IsCompatible implements packmanager.PackageManager
 func (manager *OCIManager) IsCompatible(ctx context.Context, source string, qopts ...packmanager.QueryOption) (packmanager.PackageManager, bool, error) {
 	ctx, handle, err := manager.handle(ctx)
@@ -958,6 +969,10 @@ func (manager *OCIManager) IsCompatible(ctx context.Context, source string, qopt
 			WithField("source", source).
 			Tracef("checking if source is registry")
 
+		if isGitSource(source) {
+			return false
+		}
+
 		regName, err := name.NewRegistry(source)
 		if err != nil {
 			return false
@@ -975,6 +990,10 @@ func (manager *OCIManager) IsCompatible(ctx context.Context, source string, qopt
 		log.G(ctx).
 			WithField("source", source).
 			Tracef("checking if source is remote image")
+
+		if isGitSource(source) {
+			return false
+		}
 
 		ref, err := name.ParseReference(source,
 			name.WithDefaultRegistry(DefaultRegistry),
