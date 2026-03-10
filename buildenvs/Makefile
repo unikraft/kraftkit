@@ -19,7 +19,17 @@ BUILDENVS    ?= gcc \
 
 DOCKER       ?= docker
 
+# Auto-detect platform based on host architecture
+UNAME_M      := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
 PLATFORM     ?= linux/x86_64
+else ifeq ($(UNAME_M),aarch64)
+PLATFORM     ?= linux/aarch64
+else ifeq ($(UNAME_M),arm64)
+PLATFORM     ?= linux/aarch64
+else
+PLATFORM     ?= linux/$(UNAME_M)
+endif
 
 WITH_CACHE   ?= y
 

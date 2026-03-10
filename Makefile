@@ -85,7 +85,17 @@ COMMA       := ,
 UNAME_OS    ?= $(shell uname -s)
 UNAME_ARCH  ?= $(shell uname -m)
 GOOS        ?= linux
+
+# Auto-detect GOARCH based on host architecture
+ifeq ($(UNAME_ARCH),x86_64)
 GOARCH      ?= amd64
+else ifeq ($(UNAME_ARCH),aarch64)
+GOARCH      ?= arm64
+else ifeq ($(UNAME_ARCH),arm64)
+GOARCH      ?= arm64
+else
+GOARCH      ?= $(UNAME_ARCH)
+endif
 
 # Flags
 XEN_LDFLAGS :=
@@ -123,17 +133,10 @@ ifeq ($(UNAME_OS),Darwin)
 	MAKE_COMMAND = make
 endif
 
-# If on Darwin, we want to build a runnable binary.
-# Check the OS and set GOOS/GOARCH flags accordingly.
-# Note that we are still running a linux/amd64 container.
-# TODO: For better performance, build an image for darwin/arm64 and darwin/amd64
+# If on Darwin, we want to build a runnable binary for the host.
+# Override GOOS to darwin (GOARCH is already auto-detected above).
 ifeq ($(UNAME_OS),Darwin)
 	GOOS = darwin
-ifeq ($(UNAME_ARCH),arm64)
-	GOARCH = arm64
-else ifeq ($(UNAME_ARCH),x86_64)
-	GOARCH = amd64
-endif
 endif
 
 # If run with DOCKER= or within a container, unset DOCKER_RUN so all commands

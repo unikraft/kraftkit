@@ -33,37 +33,37 @@ RUN set -xe; \
     apt-get clean;
 
 ARG GO_VERSION=1.25.7
+ARG TARGETARCH
 
 # Install Go
 RUN set -xe; \
-    curl -Lo /tmp/go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz; \
+    case "$(dpkg-architecture -q DEB_HOST_GNU_CPU)" in \
+        x86_64)   GOARCH=amd64 ;; \
+        aarch64)  GOARCH=arm64 ;; \
+        *)        GOARCH=$(dpkg-architecture -q DEB_HOST_GNU_CPU) ;; \
+    esac; \
+    curl -Lo /tmp/go.tar.gz https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz; \
     rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz
 
 ENV PATH="${PATH}:/usr/local/go/bin"
 
 # Install YTT and Cosign
 RUN set -xe; \
-    curl -s -L https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.48.0/ytt-linux-amd64 > /tmp/ytt; \
-    echo "090dc914c87e5ba5861e37f885f12bac3b15559c183c30d4af2e63ccab03d5f9  /tmp/ytt" | sha256sum -c -; \
+    case "$(dpkg-architecture -q DEB_HOST_GNU_CPU)" in \
+        x86_64)  DARCH=amd64 ;; \
+        aarch64) DARCH=arm64 ;; \
+        *)       DARCH=$(dpkg-architecture -q DEB_HOST_GNU_CPU) ;; \
+    esac; \
+    curl -s -L "https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.48.0/ytt-linux-${DARCH}" > /tmp/ytt; \
     mv /tmp/ytt /usr/local/bin/ytt; \
     chmod +x /usr/local/bin/ytt; \
-    curl -s -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"; \
-    mv cosign-linux-amd64 /usr/local/bin/cosign; \
+    curl -s -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-${DARCH}"; \
+    mv cosign-linux-${DARCH} /usr/local/bin/cosign; \
     chmod +x /usr/local/bin/cosign;
 
 COPY --from=xen /usr/local/lib/libxen*.a /usr/local/lib/libxen*.so* /usr/local/lib/
 COPY --from=xen /usr/local/include/* /usr/local/include/
-COPY --from=xen /usr/lib/x86_64-linux-gnu/liblzma.a \
-                /usr/lib/x86_64-linux-gnu/libbz2.a \
-                /usr/lib/x86_64-linux-gnu/libzstd.a \
-                /usr/lib/x86_64-linux-gnu/liblzo2.a \
-                /usr/lib/x86_64-linux-gnu/libyajl.a \
-                /usr/lib/x86_64-linux-gnu/libz.a \
-                /usr/lib/x86_64-linux-gnu/libnl-route-3.a \
-                /usr/lib/x86_64-linux-gnu/libnl-3.a \
-                /usr/lib/x86_64-linux-gnu/libuuid.a \
-                /usr/lib/x86_64-linux-gnu/libutil.a \
-                /usr/lib/x86_64-linux-gnu/
+COPY --from=xen /usr/lib/ /usr/lib/
 
 WORKDIR /go/src/kraftkit.sh
 
@@ -83,8 +83,13 @@ COPY . .
 # Build the binary
 RUN set -xe; \
     git config --global --add safe.directory /go/src/kraftkit.sh; \
-    make kraft; \
-    kraft -h;
+    case "$(dpkg-architecture -q DEB_HOST_GNU_CPU)" in \
+        x86_64)   GOARCH=amd64 ;; \
+        aarch64)  GOARCH=arm64 ;; \
+        *)        GOARCH=$(dpkg-architecture -q DEB_HOST_GNU_CPU) ;; \
+    esac; \
+    GOARCH=${GOARCH} make kraft; \
+    dist/kraft -h;
 
 FROM scratch AS kraftkit
 

@@ -25,6 +25,7 @@ RUN set -xe; \
         git \
         iasl \
         libbz2-dev \
+        libfdt-dev \
         libglib2.0-dev \
         liblz-dev \
         liblzma-dev \
@@ -59,21 +60,24 @@ RUN set -xe; \
     ; \
     make -j ${MAKE_NPROC} build-tools; \
     make -j ${MAKE_NPROC} install-tools; \
-    cp  /usr/lib/x86_64-linux-gnu/libyajl_s.a /usr/lib/x86_64-linux-gnu/libyajl.a
+    ARCH_TRIPLET=$(dpkg-architecture -q DEB_HOST_MULTIARCH); \
+    cp /usr/lib/${ARCH_TRIPLET}/libyajl_s.a /usr/lib/${ARCH_TRIPLET}/libyajl.a; \
+    mkdir -p /out/libs/${ARCH_TRIPLET}; \
+    cp /usr/lib/${ARCH_TRIPLET}/liblzma.a \
+       /usr/lib/${ARCH_TRIPLET}/libbz2.a \
+       /usr/lib/${ARCH_TRIPLET}/libzstd.a \
+       /usr/lib/${ARCH_TRIPLET}/liblzo2.a \
+       /usr/lib/${ARCH_TRIPLET}/libyajl.a \
+       /usr/lib/${ARCH_TRIPLET}/libz.a \
+       /usr/lib/${ARCH_TRIPLET}/libnl-route-3.a \
+       /usr/lib/${ARCH_TRIPLET}/libnl-3.a \
+       /usr/lib/${ARCH_TRIPLET}/libuuid.a \
+       /usr/lib/${ARCH_TRIPLET}/libutil.a \
+       /out/libs/${ARCH_TRIPLET}/
 
 FROM scratch AS xen
 
-COPY --from=xenbuild /usr/lib/x86_64-linux-gnu/liblzma.a \
-                     /usr/lib/x86_64-linux-gnu/libbz2.a \
-                     /usr/lib/x86_64-linux-gnu/libzstd.a \
-                     /usr/lib/x86_64-linux-gnu/liblzo2.a \
-                     /usr/lib/x86_64-linux-gnu/libyajl.a \
-                     /usr/lib/x86_64-linux-gnu/libz.a \
-                     /usr/lib/x86_64-linux-gnu/libnl-route-3.a \
-                     /usr/lib/x86_64-linux-gnu/libnl-3.a \
-                     /usr/lib/x86_64-linux-gnu/libuuid.a \
-                     /usr/lib/x86_64-linux-gnu/libutil.a \
-                     /usr/lib/x86_64-linux-gnu/
+COPY --from=xenbuild /out/libs/ /usr/lib/
 COPY --from=xenbuild /usr/local/lib/libxen*.a /usr/local/lib/
 COPY --from=xenbuild /usr/local/lib/libxen*.so* /usr/local/lib/
 COPY --from=xenbuild /usr/local/include/*.h /usr/local/include/

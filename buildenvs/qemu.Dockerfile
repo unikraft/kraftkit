@@ -197,9 +197,22 @@ RUN set -ex; \
         --disable-xkbcommon \
         --disable-zstd \
         --enable-virtfs \
+        --enable-fdt=internal \
         ; \
         make -j${MAKE_NPROC}; \
-        make install;
+        make install; \
+    ARCH_TRIPLET=$(dpkg-architecture -q DEB_HOST_MULTIARCH); \
+    mkdir -p /out/libs/${ARCH_TRIPLET}; \
+    cp /lib/${ARCH_TRIPLET}/libglib-2.0.so.0 \
+       /lib/${ARCH_TRIPLET}/libm.so.6 \
+       /lib/${ARCH_TRIPLET}/libz.so.1 \
+       /lib/${ARCH_TRIPLET}/libc.so.6 \
+       /lib/${ARCH_TRIPLET}/libpcre2-8.so.0 \
+       /lib/${ARCH_TRIPLET}/libcap-ng.so.0 \
+       /lib/${ARCH_TRIPLET}/liblzo2.so.2 \
+       /lib/${ARCH_TRIPLET}/libslirp.so.0 \
+       /lib/${ARCH_TRIPLET}/libgmodule-2.0.so.0 \
+       /out/libs/${ARCH_TRIPLET}/
 
 FROM scratch AS qemu
 COPY --from=qemu-build /bin/qemu-img \
@@ -213,15 +226,4 @@ COPY --from=qemu-build /bin/qemu-img \
                        /bin/
 
 COPY --from=qemu-build /share/qemu/ /share/qemu/
-COPY --from=qemu-build /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu/
-
-COPY --from=qemu-build /lib/x86_64-linux-gnu/libglib-2.0.so.0 \
-                    /lib/x86_64-linux-gnu/libm.so.6 \
-                    /lib/x86_64-linux-gnu/libz.so.1 \
-                    /lib/x86_64-linux-gnu/libc.so.6 \
-                    /lib/x86_64-linux-gnu/libpcre2-8.so.0 \
-                    /lib/x86_64-linux-gnu/libcap-ng.so.0 \
-                    /lib/x86_64-linux-gnu/liblzo2.so.2 \
-                    /lib/x86_64-linux-gnu/libslirp.so.0 \
-                    /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 \
-                    /lib/x86_64-linux-gnu/
+COPY --from=qemu-build /out/libs/ /lib/
