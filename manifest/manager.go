@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 	"unicode"
 
@@ -514,6 +515,13 @@ func (m *ManifestManager) IsCompatible(ctx context.Context, source string, qopts
 	}
 
 	if t, _, _, err := unikraft.GuessTypeNameVersion(source); err == nil && t != unikraft.ComponentTypeUnknown {
+		return m, true, nil
+	}
+
+	if strings.HasSuffix(source, ".git") ||
+		strings.HasPrefix(source, "git@") ||
+		strings.HasPrefix(source, "github.com/") ||
+		strings.Contains(source, "://github.com/") {
 		return m, true, nil
 	}
 
