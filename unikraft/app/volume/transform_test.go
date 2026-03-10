@@ -1,4 +1,3 @@
-
 package volume
 
 import (
@@ -10,13 +9,13 @@ func Test_TransformFromSchema(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
-		input       interface{}
-		wantSource  string
-		wantDest    string
-		wantDriver  string
-		wantRO      bool
-		wantErr     bool
+		name       string
+		input      interface{}
+		wantSource string
+		wantDest   string
+		wantDriver string
+		wantRO     bool
+		wantErr    bool
 	}{
 		{
 			name:       "string with source:destination",
@@ -48,16 +47,16 @@ func Test_TransformFromSchema(t *testing.T) {
 			wantDriver: "9pfs",
 		},
 		{
-			name:    "map with readonly true",
-			input:   map[string]interface{}{"source": "/src", "readonly": true},
+			name:       "map with readonly true",
+			input:      map[string]interface{}{"source": "/src", "readonly": true},
 			wantSource: "/src",
-			wantRO:  true,
+			wantRO:     true,
 		},
 		{
-			name:    "map with readonly false",
-			input:   map[string]interface{}{"source": "/src", "readonly": false},
+			name:       "map with readonly false",
+			input:      map[string]interface{}{"source": "/src", "readonly": false},
 			wantSource: "/src",
-			wantRO:  false,
+			wantRO:     false,
 		},
 		{
 			name:    "map with non-string driver returns error",
