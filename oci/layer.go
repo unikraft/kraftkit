@@ -46,7 +46,7 @@ func NewLayerFromFile(ctx context.Context, mediaType, src, dst string, opts ...L
 		src = tmp.Name()
 
 		if err := tmp.Close(); err != nil {
-			if os.Remove(tmp.Name()); err != nil {
+			if err = os.Remove(tmp.Name()); err != nil {
 				return nil, err
 			}
 

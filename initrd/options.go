@@ -128,8 +128,16 @@ func WithOutput(output string) InitrdOption {
 // WithOutputType sets the output type of the resulting root filesystem.
 func WithOutputType(fsType FsType) InitrdOption {
 	return func(opts *InitrdOptions) error {
-		opts.fsType = fsType
-		return nil
+		if fsType == "" {
+			return nil
+		}
+		for _, validType := range FsTypes() {
+			if fsType == validType {
+				opts.fsType = fsType
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid output type '%s', valid types are: %v", fsType, FsTypeNames())
 	}
 }
 
@@ -207,6 +215,8 @@ func FsTypes() []FsType {
 	return []FsType{
 		FsTypeCpio,
 		FsTypeErofs,
+		FsTypeFile,
+		FsTypeUnknown,
 	}
 }
 

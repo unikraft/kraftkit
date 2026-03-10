@@ -32,6 +32,9 @@ func NewCmd() *cobra.Command {
 
 			# Enable anonymous telemetry
 			$ kraft system set collect_anonymous_telemetry=true
+
+			# Set a toolchain variable
+			$ kraft system set toolchain.CC=clang
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "misc",

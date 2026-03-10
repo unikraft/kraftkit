@@ -869,6 +869,10 @@ func printBar(cs *iostreams.ColorScheme, progress, max int) string {
 	var ret strings.Builder
 
 	percent := math.Floor(float64(progress) / float64(max) * float64(width))
+	// Clamp percent to width to avoid negative repeat count
+	if percent > float64(width) {
+		percent = float64(width)
+	}
 
 	color := "green"
 	if percent > 30 { // ~83%

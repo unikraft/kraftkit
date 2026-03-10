@@ -21,10 +21,8 @@ var _ = Describe("kraft pkg info", func() {
 	var stdout *fcmd.IOStream
 	var stderr *fcmd.IOStream
 	var cfg *fcfg.Config
-	var pkg string
 
 	BeforeEach(func() {
-		pkg = "unikraft.org/helloworld:latest"
 		stdout = fcmd.NewIOStream()
 		stderr = fcmd.NewIOStream()
 		cfg = fcfg.NewTempConfig()
@@ -41,23 +39,24 @@ var _ = Describe("kraft pkg info", func() {
 
 	Context("lookup package", func() {
 		When("it exists", func() {
+			var pkg string
 			BeforeEach(func() {
-				pullCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
-				pullCmd.Env = cmd.Env
-				pullCmd.Dir = cmd.Dir
-				pullCmd.Args = append(
-					pullCmd.Args,
+				pkg = "unikraft.org/helloworld"
+
+				updateCmd := fcmd.NewKraft(stdout, stderr, cfg.Path())
+				updateCmd.Env = cmd.Env
+				updateCmd.Dir = cmd.Dir
+				updateCmd.Args = append(
+					updateCmd.Args,
 					"pkg",
-					"pull",
+					"update",
 					"--log-level",
 					"error",
-					"-u",
-					pkg,
 				)
 
-				err := pullCmd.Run()
+				err := updateCmd.Run()
 				if err != nil {
-					fmt.Print(pullCmd.DumpError(stdout, stderr, err))
+					fmt.Print(updateCmd.DumpError(stdout, stderr, err))
 				}
 				Expect(err).ToNot(HaveOccurred())
 
@@ -77,10 +76,10 @@ var _ = Describe("kraft pkg info", func() {
 				// Assert logs
 				Expect(
 					stderr.String(),
-				).To(MatchRegexp(`{"level":"info","msg":"finding unikraft.org/helloworld:latest"}`))
+				).To(MatchRegexp(fmt.Sprintf(`{"level":"info","msg":"finding %s"}`, pkg)))
 
 				// Assert table content in stdout
-				Expect(stdout.String()).To(ContainSubstring(`"name":"unikraft.org/helloworld"`))
+				Expect(stdout.String()).To(ContainSubstring(fmt.Sprintf(`"name":"%s"`, pkg)))
 				Expect(stdout.String()).To(ContainSubstring(`"version":"latest"`))
 			})
 		})

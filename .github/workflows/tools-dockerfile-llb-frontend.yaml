@@ -18,18 +18,18 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Registry
         if: ${{ github.event_name == 'push' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: index.unikraft.io
           username: ${{ secrets.REG_USERNAME }}
           password: ${{ secrets.REG_TOKEN }}
 
       - name: Build OCI image for the LLB plugin
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./tools/dockerfile-llb-frontend
           file: ./tools/dockerfile-llb-frontend/Dockerfile

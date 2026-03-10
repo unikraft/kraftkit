@@ -218,6 +218,34 @@ func (cm *ConfigManager[C]) Set(key string, val any) error {
 			return nil
 		}
 
+		// Handle map[string]string fields: the next key is the map key.
+		if field.Kind() == reflect.Map &&
+			field.Type().Key().Kind() == reflect.String &&
+			field.Type().Elem().Kind() == reflect.String {
+
+			if i+1 != len(keys)-1 {
+				// ensure we are exactly one level deep into the map.
+				// for a map[string]string, we can't traverse past the immediate key.
+				// e.g.keys = ["toolchain", "CC"] , len is 2 ,At i = 0 the next key is the final one.
+				// e.g.keys = ["toolchain", "CC", "extra"]  len is 3 , We have leftover keys, so we error out.
+
+				return errors.New("cannot traverse further into map: " + k)
+			}
+			mapKey := keys[i+1]
+			if field.IsNil() {
+				field.Set(reflect.MakeMap(field.Type()))
+			}
+			strVal, ok := val.(string)
+			if !ok {
+				strVal = fmt.Sprintf("%v", val)
+			}
+			field.SetMapIndex(
+				reflect.ValueOf(mapKey),
+				reflect.ValueOf(strVal),
+			)
+			return nil
+		}
+
 		if field.Kind() == reflect.Ptr {
 			if field.IsNil() {
 				field.Set(reflect.New(field.Type().Elem()))

@@ -28,10 +28,10 @@ jobs:
           submodules: recursive
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Generate Suffix
         shell: bash
@@ -49,7 +49,7 @@ jobs:
             --privileged \
             --name "buildkitd_${GITHUB_RUN_ID}_${SUFFIX}" \
             -v /run/buildkit:/run/buildkit:rw \
-            moby/buildkit:v0.25.2;
+            moby/buildkit:latest;
           timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done';
           sudo chmod 666 /run/buildkit/buildkitd.sock;
 
