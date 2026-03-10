@@ -104,10 +104,12 @@ func NewProvider(ctx context.Context, path string, mopts ...ManifestOption) (Pro
 			return ghProvider, nil
 		}
 
-		log.G(ctx).WithFields(logrus.Fields{
-			"path": path,
-		}).Trace("using git provider")
-		return provider, nil
+		if provider != nil {
+			log.G(ctx).WithFields(logrus.Fields{
+				"path": path,
+			}).Trace("using git provider")
+			return provider, nil
+		}
 	}
 
 	return nil, fmt.Errorf("could not determine provider for: %s", path)
