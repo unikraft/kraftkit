@@ -35,14 +35,21 @@ type GitProvider struct {
 func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	isSSH := false
 	fullpath := path
-	if isSSHURL(path) {
+
+	if strings.HasPrefix(path, "github.com/") {
+		fullpath = "https://" + path
+	} else if isSSHURL(path) {
 		isSSH = true
 
 		// This is a quirk of go-git, if we have determined it was an SSH path and
 		// it does not contain the prefix, we should include it so it can be
 		// recognised internally by the module.
 		if strings.HasPrefix(path, "git@") {
-			fullpath = "ssh://" + path
+			// Convert SCP-style git@HOST:path to ssh://git@HOST/path so that
+			// URL parsers (giturl, go-git) handle it correctly.
+			scp := strings.TrimPrefix(path, "git@")
+			scp = strings.Replace(scp, ":", "/", 1)
+			fullpath = "ssh://git@" + scp
 		}
 	}
 
