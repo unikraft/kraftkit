@@ -49,6 +49,16 @@ func New(owner, repo string) Interface {
 
 // NewFromURL parses a given GitHub url and returns the populated Interface
 func NewFromURL(path string) (Interface, error) {
+	// Normalize SCP-style SSH URLs (git@github.com:owner/repo.git) to
+	// https:// so url.Parse handles them correctly.
+	if strings.HasPrefix(path, "git@") {
+		path = strings.Replace(path, ":", "/", 1)
+		path = strings.TrimPrefix(path, "git@")
+		path = "https://" + path
+	} else if strings.HasPrefix(path, "github.com/") {
+		path = "https://" + path
+	}
+
 	u, err := url.Parse(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse url: %s", err)
