@@ -43,6 +43,31 @@ type MachinePort struct {
 // MachinePorts is a slice of MachinePort
 type MachinePorts []MachinePort
 
+// MachineNetwork represents a parsed network configuration from a CLI string.
+// The format is: name[:cidr[:gateway[:dns0[:dns1[:hostname[:domain]]]]]]
+type MachineNetwork struct {
+	// Name of the network.
+	Name string
+
+	// IPv4 address in CIDR notation, which includes the subnet.
+	CIDR string
+
+	// Gateway IPv4 address.
+	Gateway string
+
+	// IPv4 address of the primary DNS server.
+	DNS0 string
+
+	// IPv4 address of the secondary DNS server.
+	DNS1 string
+
+	// Hostname of the IPv4 address.
+	Hostname string
+
+	// Domain/search suffix for IPv4 address.
+	Domain string
+}
+
 type (
 	// Machine is the mutable API object that represents a machine instance.
 	Machine = zip.Object[MachineSpec, MachineStatus]
