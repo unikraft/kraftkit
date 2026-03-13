@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"gopkg.in/yaml.v2"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/schema"
@@ -83,6 +84,23 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		outdir = popts.RelativePath(unikraft.BuildDir)
 	} else {
 		outdir = popts.outDir
+	}
+
+	if popts.kraftfile.content != nil {
+		var header struct {
+			Spec          string `yaml:"spec"`
+			Specification string `yaml:"specification"`
+		}
+		// if unmarshal fails we fall through to legacy logic
+		if err := yaml.Unmarshal(popts.kraftfile.content, &header); err == nil {
+			spec := header.Spec
+			if spec == "" {
+				spec = header.Specification
+			}
+			if spec == "v0.7" {
+				return newApplicationV07(ctx, popts)
+			}
+		}
 	}
 
 	iface := popts.kraftfile.config
