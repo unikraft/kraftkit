@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright (c) 2026, Unikraft GmbH and The KraftKit Authors.
 // Licensed under the BSD-3-Clause License.
+
 package name
 
 import (
 	"regexp"
 	"strings"
 	"testing"
+)
+
+var (
+	machineNameDigitRE  = regexp.MustCompile(`_[a-z]+[0-9]$`)
+	machineNameLetterRE = regexp.MustCompile(`_[a-z]+$`)
+	machineIDHexRE      = regexp.MustCompile(`^[a-f0-9]{64}$`)
 )
 
 func TestNewRandomMachineName(t *testing.T) {
@@ -32,9 +39,9 @@ func TestNewRandomMachineName(t *testing.T) {
 		if !strings.Contains(name, "_") {
 			t.Errorf("retry %d: expected underscore in name, got %q", i, name)
 		}
-		// Should end with a digit or letter
-		if !regexp.MustCompile(`_[a-z]+[0-9]$`).MatchString(name) && !regexp.MustCompile(`_[a-z]+$`).MatchString(name) {
-			t.Errorf("retry %d: expected name to end with a digit or letter, got %q", i, name)
+		// Should end with a digit
+		if !machineNameDigitRE.MatchString(name) {
+			t.Errorf("retry %d: expected name to end with a digit, got %q", i, name)
 		}
 	}
 }
@@ -45,16 +52,19 @@ func TestNewRandomMachineID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("iteration %d: unexpected error: %v", i, err)
 		}
-		if len(id) != 64 {
-			t.Errorf("iteration %d: expected 64 character id, got %d", i, len(id))
+		if len(id) != MachineIDLen {
+			t.Errorf("iteration %d: expected %d character id, got %d", i, MachineIDLen, len(id))
 		}
-		matched := regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(string(id))
+		matched := machineIDHexRE.MatchString(string(id))
 		if !matched {
 			t.Errorf("iteration %d: expected lowercase hex string, got %q", i, id)
 		}
 
-		// Validate truncated ID (12 chars)
+		// Validate truncated ID (MachineIDShortLen chars)
 		shortID := TruncateMachineID(id)
+		if len(shortID) != MachineIDShortLen {
+			t.Errorf("iteration %d: expected truncated ID length %d, got %d", i, MachineIDShortLen, len(shortID))
+		}
 		if err := ValidateMachineID(shortID.String()); err != nil {
 			t.Errorf("iteration %d: ValidateMachineID failed on truncated ID %q: %v", i, shortID, err)
 		}
