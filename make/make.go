@@ -29,11 +29,14 @@ type export struct {
 }
 
 func parseExport(tag reflect.StructTag) (*export, error) {
-	parts := strings.Split(tag.Get("export"), ",")
-	if len(parts) == 0 {
-		return nil, fmt.Errorf("could not identify export tag")
+	if _, ok := tag.Lookup("export"); !ok {
+		return &export{}, nil
 	}
 
+	parts := strings.Split(tag.Get("export"), ",")
+	if parts[0] == "" {
+		return nil, fmt.Errorf("export tag cannot be empty")
+	}
 	e := &export{
 		export: parts[0],
 	}
