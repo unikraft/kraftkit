@@ -151,11 +151,11 @@ func (m *KConfigMenu) DependsOn() map[string]bool {
 
 type kconfigParser struct {
 	*parser
-	includes  []*parser
-	stack     []*KConfigMenu
-	cur       *KConfigMenu
-	baseDir   string
-	helpIdent int
+	includes   []*parser
+	stack      []*KConfigMenu
+	cur        *KConfigMenu
+	baseDir    string
+	helpIndent int
 }
 
 func Parse(file string, env ...*KeyValue) (*KConfigFile, error) {
@@ -225,12 +225,12 @@ func (kp *kconfigParser) parseLine() {
 		return
 	}
 
-	if kp.helpIdent != 0 {
-		if kp.identLevel() >= kp.helpIdent {
+	if kp.helpIndent != 0 {
+		if kp.indentLevel() >= kp.helpIndent {
 			_ = kp.ConsumeLine()
 			return
 		}
-		kp.helpIdent = 0
+		kp.helpIndent = 0
 	}
 
 	if kp.TryConsume("#") {
@@ -521,19 +521,19 @@ func (kp *kconfigParser) parseDefaultValue() {
 
 func (kp *kconfigParser) tryParseHelp() {
 	var help []string
-	baseHelpIdent := -1
+	baseHelpIndent := -1
 	for kp.nextLine() {
 		if kp.eol() {
 			continue
 		}
-		if len(help) > 0 && kp.identLevel() < baseHelpIdent {
+		if len(help) > 0 && kp.indentLevel() < baseHelpIndent {
 			break
 		}
-		if baseHelpIdent == -1 {
-			baseHelpIdent = kp.identLevel()
+		if baseHelpIndent == -1 {
+			baseHelpIndent = kp.indentLevel()
 		}
 		help = append(help, kp.ConsumeLine())
-		kp.helpIdent = kp.identLevel()
+		kp.helpIndent = kp.indentLevel()
 	}
 
 	kp.current().Help = strings.Join(help, " ")

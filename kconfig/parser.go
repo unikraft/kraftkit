@@ -75,7 +75,7 @@ func (p *parser) skipSpaces() {
 	}
 }
 
-func (p *parser) identLevel() int {
+func (p *parser) indentLevel() int {
 	level := 0
 	for i := 0; i < p.col; i++ {
 		level++
