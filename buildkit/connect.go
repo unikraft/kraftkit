@@ -152,11 +152,11 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 
 		c, connerr = client.New(ctx, buildkitAddr)
 		if connerr != nil {
-			return nil, nil, fmt.Errorf("creating container buildkit client: %w", connerr)
+			return nil, cleanup, fmt.Errorf("creating container buildkit client: %w", connerr)
 		}
 		buildkitInfo, connerr = c.Info(ctx)
 		if connerr != nil {
-			return nil, nil, fmt.Errorf("connecting to buildkit client: %w", connerr)
+			return nil, cleanup, fmt.Errorf("connecting to buildkit client: %w", connerr)
 		}
 	}
 
