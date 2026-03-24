@@ -87,8 +87,8 @@ jobs:
           DISTROS+=("jammy")
           DISTROS+=("lunar")
           DISTROS+=("noble")
-          DISTROS+=("puffin")
-          DISTROS+=("quokka")
+          DISTROS+=("plucky")
+          DISTROS+=("questing")
 
           for DISTRO in "${DISTROS[@]}"; do
             for DEB in dist/*.deb; do
