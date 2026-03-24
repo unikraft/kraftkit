@@ -321,12 +321,12 @@ func FetchConfigDirFromArgs(args []string) (path string) {
 }
 
 func Default[C any](key string) string {
-	found, _, def, _, err := findConfigDefault[C](key, "", "", reflect.ValueOf(new([0]C)))
+	_, found, def, _, err := findConfigDefault[C](key, "", "", reflect.ValueOf(new(C)))
 	if err != nil || found != key {
-		return def
+		return ""
 	}
 
-	return ""
+	return def
 }
 
 func findConfigDefault[C any](needle, offset, def string, v reflect.Value) (string, string, string, reflect.Value, error) {
@@ -342,7 +342,7 @@ func findConfigDefault[C any](needle, offset, def string, v reflect.Value) (stri
 	switch v.Kind() {
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			name := v.Type().Field(i).Tag.Get("json")
+			name := getYAMLTag(v.Type().Field(i), true)
 			if len(name) == 0 {
 				continue
 			}
