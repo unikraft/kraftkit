@@ -72,6 +72,10 @@ func NewFromInterface(args interface{}, mopts ...MakeOption) (*Make, error) {
 		return nil, fmt.Errorf("cannot derive interface arguments from pointer: passed by reference")
 	}
 
+	if v.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expected struct type, got non-struct type: %s", v.Kind())
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		e, err := parseExport(t.Field(i).Tag)
 		if err != nil {

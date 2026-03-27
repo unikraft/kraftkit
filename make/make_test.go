@@ -154,6 +154,13 @@ func TestNewFromInterface_Errors(t *testing.T) {
 		err      error
 	}{
 		{
+			name:     "Non-struct type passed",
+			input:    24,
+			mopts:    []MakeOption{},
+			expected: nil,
+			err:      fmt.Errorf("expected struct type, got non-struct type: int"),
+		},
+		{
 			name: "Args passed by reference",
 			input: &struct {
 				name string `export:"-"`
