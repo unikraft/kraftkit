@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+
+# prerm executed BEFORE package removal
+#
+# Some kraftkit runtimes keep sockets/mounts/artifacts alive.
+# If not cleaned, dpkg removal may fail or leave broken state.
+#
+# We attempt best-effort cleanup but NEVER block uninstall.
+
+CLEANUP="/usr/libexec/kraftkit/cleanup-artifacts"
+
+case "$1" in
+  remove|purge)
+    if [ -x "$CLEANUP" ]; then
+      "$CLEANUP" || true
+    fi
+    ;;
+esac
+
+exit 0

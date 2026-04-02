@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+
+# postrm — executed by dpkg AFTER package removal
+#
+# Debian policy:
+#   remove --> keep user data
+#   purge  --> remove user data
+#
+# Therefore we only delete configuration on "purge".
+# This allows reinstalling kraftkit without losing settings.
+#
+# Script MUST NOT fail, dpkg would leave the package in a broken state.
+# Always ignore deletion errors.
+
+case "$1" in
+  purge)
+      # User-scoped config directory
+    rm -rf "$HOME/.config/kraftkit" || true
+    ;;
+esac
+
+exit 0
