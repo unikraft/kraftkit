@@ -68,7 +68,7 @@ func sniffKraftfileSpecVersion(content []byte) (string, error) {
 	spec := firstNonEmpty(header.Spec, header.Specification)
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
-		return "", fmt.Errorf("missing 'spec' version attribute")
+		return "", nil
 	}
 
 	if !strings.HasPrefix(spec, "v") {

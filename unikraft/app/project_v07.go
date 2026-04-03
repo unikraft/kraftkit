@@ -17,7 +17,6 @@ import (
 
 	kraftfilev07 "unikraft.com/x/kraftfile"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/unikraft"
@@ -35,13 +34,36 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		return nil, err
 	}
 
-	popts.kraftfile.config = map[string]interface{}{
-		"spec": doc.Spec,
-	}
-
 	name, _ := popts.GetProjectName()
 	if doc.Name != "" {
 		name = doc.Name
+	}
+
+	ukContext := &unikraft.Context{
+		UK_NAME: name,
+		UK_BASE: popts.workdir,
+	}
+	ctx = unikraft.WithContext(ctx, ukContext)
+
+	if doc.Template != nil {
+		opts := []TemplateResolutionOption{}
+		if popts.workdir != "" {
+			opts = append(opts, WithTemplateResolutionWorkdir(popts.workdir))
+		}
+		doc, err = ResolveTemplate(ctx, doc, opts...)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update name if the template resolution changed it or populated it.
+		if doc.Name != "" {
+			name = doc.Name
+			ukContext.UK_NAME = doc.Name
+		}
+	}
+
+	popts.kraftfile.config = map[string]any{
+		"spec": doc.Spec,
 	}
 
 	outdir, err := v07OutDirFromProjectOptions(popts)
@@ -49,14 +71,8 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		return nil, err
 	}
 
-	ukContext := &unikraft.Context{
-		UK_NAME:   name,
-		UK_BASE:   popts.workdir,
-		BUILD_DIR: outdir,
-	}
+	ukContext.BUILD_DIR = outdir
 
-	// Phase 1 keeps a KraftKit-managed build directory to avoid destabilizing the
-	// current build/run/pkg flows while v0.7 support lands.
 	if _, err := os.Stat(ukContext.BUILD_DIR); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(ukContext.BUILD_DIR, 0o755); err != nil {
 			return nil, fmt.Errorf("creating build directory: %w", err)
@@ -66,11 +82,6 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 	ctx = unikraft.WithContext(ctx, ukContext)
 
 	unikraftConfig, err := v07CoreFromDocument(ctx, doc.Unikraft)
-	if err != nil {
-		return nil, err
-	}
-
-	templateConfig, err := v07TemplateFromDocument(ctx, doc.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +126,6 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		WithRootfs(rootfs),
 		WithFsType(fsType),
 		WithRoms(roms...),
-		WithTemplate(templateConfig),
 		WithCommand(doc.Cmd...),
 		WithLabels(maps.Clone(doc.Labels)),
 		WithLibraries(libraries),
@@ -157,7 +167,7 @@ func v07CoreFromDocument(ctx context.Context, doc *kraftfilev07.Unikraft) (*core
 		return nil, nil
 	}
 
-	value := map[string]interface{}{}
+	value := map[string]any{}
 	if doc.Source != "" {
 		value["source"] = doc.Source
 	}
@@ -182,7 +192,7 @@ func v07TemplateFromDocument(ctx context.Context, doc *kraftfilev07.Template) (*
 		return nil, nil
 	}
 
-	value := map[string]interface{}{}
+	value := map[string]any{}
 	if name := guessNameFromSource(doc.Source); name != "" {
 		value["name"] = name
 	}
@@ -230,7 +240,7 @@ func v07LibrariesFromDocument(ctx context.Context, docs map[string]kraftfilev07.
 
 	libraries := make(map[string]*lib.LibraryConfig, len(docs))
 	for name, doc := range docs {
-		value := map[string]interface{}{}
+		value := map[string]any{}
 		if doc.Source != "" {
 			value["source"] = doc.Source
 		}
@@ -260,7 +270,7 @@ func v07TargetsFromDocument(ctx context.Context, docs []kraftfilev07.Target) ([]
 
 	targets := make([]*target.TargetConfig, 0, len(docs))
 	for _, doc := range docs {
-		value := map[string]interface{}{}
+		value := map[string]any{}
 		if doc.Arch != "" {
 			value["arch"] = doc.Arch
 		}
@@ -290,7 +300,7 @@ func v07VolumesFromDocument(ctx context.Context, docs kraftfilev07.Volumes) ([]*
 
 	volumes := make([]*volume.VolumeConfig, 0, len(docs))
 	for _, doc := range docs {
-		value := map[string]interface{}{}
+		value := map[string]any{}
 		if doc.Driver != "" {
 			value["driver"] = doc.Driver
 		}
@@ -319,25 +329,25 @@ func v07VolumesFromDocument(ctx context.Context, docs kraftfilev07.Volumes) ([]*
 	return volumes, nil
 }
 
-func v07RootfsAndRomsFromDocument(rootfs *kraftfilev07.FS, roms []kraftfilev07.FS) (string, initrd.FsType, []string) {
+func v07RootfsAndRomsFromDocument(rootfs *kraftfilev07.FS, roms []kraftfilev07.FS) (string, kraftfilev07.FsType, []kraftfilev07.FS) {
 	var (
 		rootfsPath string
-		fsType     initrd.FsType
-		rawRoms    []string
+		fsType     kraftfilev07.FsType
+		rawRoms    []kraftfilev07.FS
 	)
 
 	if rootfs != nil {
 		rootfsPath = rootfs.Source
 		if rootfs.Format != "" {
-			fsType = initrd.FsType(rootfs.Format.String())
+			fsType = kraftfilev07.FsType(rootfs.Format.String())
 		}
 	}
 
 	for _, rom := range roms {
-		rawRoms = append(rawRoms, rom.Source)
-		if fsType == "" && rom.Format != "" {
-			fsType = initrd.FsType(rom.Format.String())
-		}
+		rawRoms = append(rawRoms, kraftfilev07.FS{
+			Source: rom.Source,
+			Format: kraftfilev07.FsType(rom.Format.String()),
+		})
 	}
 
 	return rootfsPath, fsType, rawRoms

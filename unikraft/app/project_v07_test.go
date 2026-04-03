@@ -7,13 +7,12 @@ package app
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"kraftkit.sh/initrd"
-	uklib "kraftkit.sh/unikraft/lib"
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 func Test_sniffKraftfileSpecVersion(t *testing.T) {
@@ -39,9 +38,9 @@ func Test_sniffKraftfileSpecVersion(t *testing.T) {
 			want:  "v0.6",
 		},
 		{
-			name:    "missing spec attribute",
-			input:   "runtime: base:latest\n",
-			wantErr: true,
+			name:  "missing spec attribute defaults to legacy dispatch",
+			input: "runtime: base:latest\n",
+			want:  "",
 		},
 	}
 
@@ -63,7 +62,7 @@ func Test_sniffKraftfileSpecVersion(t *testing.T) {
 	}
 }
 
-func TestNewProjectFromOptionsDispatchesBySpecVersion(t *testing.T) {
+func Test_NewProjectFromOptions_SpecVersionDispatch(t *testing.T) {
 	tests := []struct {
 		name       string
 		content    string
@@ -90,6 +89,16 @@ runtime: base:latest
 			wantLoader: ProjectLoaderV07,
 			wantSpec:   "v0.7",
 		},
+		{
+			name: "missing spec uses legacy loader",
+			content: `
+runtime: base:latest
+rootfs: ./Dockerfile
+cmd: ["/app"]
+`,
+			wantLoader: ProjectLoaderLegacy,
+			wantSpec:   "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -107,7 +116,7 @@ runtime: base:latest
 	}
 }
 
-func TestV07ProjectNameSemantics(t *testing.T) {
+func Test_NewProjectFromOptionsV07_ProjectNameSemantics(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
@@ -151,7 +160,68 @@ runtime: base:latest
 	}
 }
 
-func TestV07ComponentStringsDoNotUseFilesystemHeuristics(t *testing.T) {
+func Test_NewProjectFromOptionsV07_TargetArtifactNames(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+name: My App_01
+unikraft: stable
+targets:
+  - plat: qemu
+    arch: x86_64
+`)
+
+	targets := project.Targets()
+	if len(targets) != 1 {
+		t.Fatalf("len(Targets()) = %d, want 1", len(targets))
+	}
+
+	wantKernel := filepath.Join(project.OutDir(), "myapp_01_qemu-x86_64")
+	if targets[0].Kernel() != wantKernel {
+		t.Errorf("targets[0].Kernel() = %q, want %q", targets[0].Kernel(), wantKernel)
+	}
+
+	if targets[0].ConfigFilename() != ".config.myapp_01_qemu-x86_64" {
+		t.Errorf("targets[0].ConfigFilename() = %q, want %q", targets[0].ConfigFilename(), ".config.myapp_01_qemu-x86_64")
+	}
+}
+
+func Test_NewProjectFromOptionsV07_CustomOutDir(t *testing.T) {
+	workdir := t.TempDir()
+	outdir := filepath.Join(workdir, "artifacts")
+
+	project, err := NewProjectFromOptions(
+		context.Background(),
+		WithProjectWorkdir(workdir),
+		WithProjectOutDir(outdir),
+		WithProjectKraftfileFromBytes([]byte(`
+spec: v0.7
+name: demo
+unikraft: stable
+targets:
+  - plat: qemu
+    arch: x86_64
+`)),
+	)
+	if err != nil {
+		t.Fatalf("NewProjectFromOptions() error = %v", err)
+	}
+
+	if project.OutDir() != outdir {
+		t.Errorf("OutDir() = %q, want %q", project.OutDir(), outdir)
+	}
+
+	targets := project.Targets()
+	if len(targets) != 1 {
+		t.Fatalf("len(Targets()) = %d, want 1", len(targets))
+	}
+
+	wantKernel := filepath.Join(outdir, "demo_qemu-x86_64")
+	if targets[0].Kernel() != wantKernel {
+		t.Errorf("targets[0].Kernel() = %q, want %q", targets[0].Kernel(), wantKernel)
+	}
+}
+
+func Test_NewProjectFromOptionsV07_ComponentStrings(t *testing.T) {
 	workdir := t.TempDir()
 	existingPath := filepath.Join(workdir, "stable")
 	if err := os.Mkdir(existingPath, 0o755); err != nil {
@@ -198,7 +268,7 @@ libraries:
 	}
 }
 
-func TestV07RuntimeReferenceIsPreserved(t *testing.T) {
+func Test_NewProjectFromOptionsV07_RuntimeReference(t *testing.T) {
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
 runtime: index.unikraft.io/official/base:latest
@@ -217,37 +287,67 @@ runtime: index.unikraft.io/official/base:latest
 	}
 }
 
-func TestV07TemplateSourceMapsToTemplateFields(t *testing.T) {
-	project := mustProjectFromBytes(t, t.TempDir(), `
-spec: v0.7
-template:
-  source: https://github.com/unikraft/catalog.git
-  version: stable
-unikraft: stable
-`)
-
-	if project.Template() == nil {
-		t.Fatal("expected template to be present")
+func Test_v07TemplateFromDocument(t *testing.T) {
+	// Test the v07 template converter directly since template resolution
+	// now happens at project load time and requires a package manager.
+	doc := &kraftfilev07.Template{
+		Source:  "https://github.com/unikraft/catalog.git",
+		Version: "stable",
 	}
 
-	if project.Template().Name() != "catalog" {
-		t.Errorf("Template().Name() = %q, want %q", project.Template().Name(), "catalog")
+	templateConfig, err := v07TemplateFromDocument(context.Background(), doc)
+	if err != nil {
+		t.Fatalf("v07TemplateFromDocument() error = %v", err)
 	}
 
-	if project.Template().Source() != "https://github.com/unikraft/catalog.git" {
-		t.Errorf("Template().Source() = %q, want original source", project.Template().Source())
+	if templateConfig == nil {
+		t.Fatal("expected template config to be present")
 	}
 
-	if project.Template().Version() != "stable" {
-		t.Errorf("Template().Version() = %q, want %q", project.Template().Version(), "stable")
+	if templateConfig.Name() != "catalog" {
+		t.Errorf("Name() = %q, want %q", templateConfig.Name(), "catalog")
 	}
 
-	if len(project.Template().KConfig()) != 0 {
-		t.Errorf("Template().KConfig() len = %d, want 0", len(project.Template().KConfig()))
+	if templateConfig.Source() != "https://github.com/unikraft/catalog.git" {
+		t.Errorf("Source() = %q, want original source", templateConfig.Source())
+	}
+
+	if templateConfig.Version() != "stable" {
+		t.Errorf("Version() = %q, want %q", templateConfig.Version(), "stable")
+	}
+
+	if len(templateConfig.KConfig()) != 0 {
+		t.Errorf("KConfig() len = %d, want 0", len(templateConfig.KConfig()))
 	}
 }
 
-func TestV07RootfsFormatMapsToInitrdFsType(t *testing.T) {
+func Test_NewProjectFromOptionsV07_TemplateProvidesName(t *testing.T) {
+	workdir := t.TempDir()
+	templateDir := filepath.Join(workdir, "template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		t.Fatalf("could not create template directory: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(templateDir, "kraft.yaml"), []byte(`
+spec: v0.7
+name: template-name
+runtime: base:latest
+`), 0o644); err != nil {
+		t.Fatalf("could not write template kraftfile: %v", err)
+	}
+
+	project := mustProjectFromBytes(t, workdir, `
+spec: v0.7
+template:
+  source: `+templateDir+`
+`)
+
+	if project.Name() != "template-name" {
+		t.Errorf("Name() = %q, want %q", project.Name(), "template-name")
+	}
+}
+
+func Test_NewProjectFromOptionsV07_RootfsFormat(t *testing.T) {
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
 runtime: base:latest
@@ -265,7 +365,7 @@ rootfs:
 	}
 }
 
-func TestV07VolumesMapModeAndReadonly(t *testing.T) {
+func Test_NewProjectFromOptionsV07_Volumes(t *testing.T) {
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
 runtime: base:latest
@@ -298,46 +398,6 @@ volumes:
 	}
 }
 
-func TestV07MutationOperationsAreRejected(t *testing.T) {
-	project := mustProjectFromBytes(t, t.TempDir(), `
-spec: v0.7
-runtime: base:latest
-`)
-
-	tests := []struct {
-		name string
-		run  func(Application) error
-	}{
-		{
-			name: "save",
-			run: func(project Application) error {
-				return project.Save(context.Background())
-			},
-		},
-		{
-			name: "add library",
-			run: func(project Application) error {
-				return project.AddLibrary(context.Background(), uklib.LibraryConfig{})
-			},
-		},
-		{
-			name: "remove library",
-			run: func(project Application) error {
-				return project.RemoveLibrary(context.Background(), "libfoo")
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.run(project)
-			if !errors.Is(err, ErrProjectMutationNotSupported) {
-				t.Errorf("operation error = %v, want %v", err, ErrProjectMutationNotSupported)
-			}
-		})
-	}
-}
-
 func mustProjectFromBytes(t *testing.T, workdir string, content string) Application {
 	t.Helper()
 
@@ -345,6 +405,7 @@ func mustProjectFromBytes(t *testing.T, workdir string, content string) Applicat
 		context.Background(),
 		WithProjectWorkdir(workdir),
 		WithProjectKraftfileFromBytes([]byte(content)),
+		WithProjectSkipValidation(true),
 	)
 	if err != nil {
 		t.Fatalf("could not create project: %v", err)

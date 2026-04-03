@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app/volume"
@@ -19,6 +18,7 @@ import (
 	"kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 // ApplicationOption is a function that manipulates the instantiation of an
@@ -130,15 +130,15 @@ func WithRootfs(rootfs string) ApplicationOption {
 }
 
 // WithFsType sets the application's rootfs filesystem type
-func WithFsType(fsType initrd.FsType) ApplicationOption {
+func WithFsType(fsType kraftfilev07.FsType) ApplicationOption {
 	return func(ac *application) error {
 		ac.fsType = fsType
 		return nil
 	}
 }
 
-// WithRoms sets the application's auxiliary read-only memory blobs.
-func WithRoms(roms ...string) ApplicationOption {
+// WithRomFilesystems sets the application's ROM filesystem descriptors.
+func WithRoms(roms ...kraftfilev07.FS) ApplicationOption {
 	return func(ac *application) error {
 		ac.roms = roms
 		return nil

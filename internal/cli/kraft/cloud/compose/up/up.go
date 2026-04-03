@@ -36,6 +36,8 @@ import (
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/packmanager"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type UpOptions struct {
@@ -53,7 +55,7 @@ type UpOptions struct {
 	RolloutQualifier *create.RolloutQualifier `noattribute:"true"`
 	RolloutWait      time.Duration            `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	Runtimes         []string                 `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	RootfsType       initrd.FsType            `noattribute:"true"`
+	RootfsType       kraftfilev07.FsType      `noattribute:"true"`
 	KeepFileOwners   bool                     `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	Token            string                   `noattribute:"true"`
 	Wait             time.Duration            `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
@@ -94,9 +96,9 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
-			initrd.FsTypeCpio,
+			kraftfilev07.FsTypeCpio,
 		),
 		"rootfs-type",
 		"Set the type of the format of the rootfs (cpio/erofs)",
@@ -127,7 +129,7 @@ func (opts *UpOptions) Pre(cmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
-		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
 	return nil

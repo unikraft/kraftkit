@@ -28,6 +28,8 @@ import (
 	"gopkg.in/yaml.v2"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/unikraft"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 const (
@@ -79,9 +81,9 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 				if !ok {
 					return nil, errors.New("rootfs type must be a string")
 				}
-				app.fsType = initrd.FsType(strings.ToLower(fsTypeStr))
+				app.fsType = kraftfilev07.FsType(strings.ToLower(fsTypeStr))
 			} else {
-				app.fsType = initrd.FsTypeCpio
+				app.fsType = kraftfilev07.FsTypeCpio
 			}
 
 			if s, ok := rootfsMap["source"]; ok {
@@ -98,13 +100,23 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 		}
 	}
 
-	romsSectionList := getSectionList(iface, "roms")
-	for _, rom := range romsSectionList {
-		romStr, ok := rom.(string)
-		if !ok {
-			return nil, errors.New("rom must be a string")
+	if romsSectionList := getSectionList(iface, "roms"); romsSectionList != nil {
+		for _, rom := range romsSectionList {
+			switch v := rom.(type) {
+			case string:
+				app.roms = append(app.roms, kraftfilev07.FS{
+					Source: v,
+				})
+			case map[string]any, map[any]any:
+				var fs kraftfilev07.FS
+				if err := Transform(ctx, v, &fs); err != nil {
+					return nil, err
+				}
+				app.roms = append(app.roms, fs)
+			default:
+				return nil, errors.Errorf("invalid type for rom: %T", v)
+			}
 		}
-		app.roms = append(app.roms, romStr)
 	}
 
 	if n, ok := iface["cmd"]; ok {

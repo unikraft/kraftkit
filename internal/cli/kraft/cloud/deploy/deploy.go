@@ -33,6 +33,8 @@ import (
 
 	kraftcloud "sdk.kraft.cloud"
 	kcinstances "sdk.kraft.cloud/instances"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type DeployOptions struct {
@@ -72,7 +74,7 @@ type DeployOptions struct {
 	RolloutQualifier    create.RolloutQualifier        `noattribute:"true"`
 	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
 	Rootfs              string                         `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
-	RootfsType          initrd.FsType                  `noattribute:"true"`
+	RootfsType          kraftfilev07.FsType            `noattribute:"true"`
 	Runtime             string                         `local:"true" long:"runtime" usage:"Set an alternative project runtime"`
 	SaveBuildLog        string                         `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
@@ -171,7 +173,7 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
 			initrd.FsTypeCpio,
 		),
@@ -194,7 +196,7 @@ func (opts *DeployOptions) Pre(cmd *cobra.Command, _ []string) error {
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
-		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
 	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {

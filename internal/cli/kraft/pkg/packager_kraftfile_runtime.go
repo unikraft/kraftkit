@@ -25,6 +25,8 @@ import (
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type packagerKraftfileRuntime struct {
@@ -37,7 +39,7 @@ type packagerKraftfileRuntime struct {
 	kconfig      kconfig.KeyValueMap
 	args         []string
 	env          []string
-	roms         []string
+	roms         []kraftfilev07.FS
 	rootfs       initrd.Initrd
 	architecture arch.Architecture
 	platform     plat.Platform
@@ -415,11 +417,15 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	var rawRoms []string
+	var rawRoms []kraftfilev07.FS
 	if opts.Project != nil {
 		rawRoms = opts.Project.Roms()
 	} else if len(opts.Roms) > 0 {
-		rawRoms = opts.Roms
+		for _, rom := range opts.Roms {
+			rawRoms = append(rawRoms, kraftfilev07.FS{
+				Source: rom,
+			})
+		}
 	} else if p.target != nil && len(p.target.Roms()) > 0 {
 		rawRoms = p.target.Roms()
 	}

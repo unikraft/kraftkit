@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/tui/selection"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/export/v0/ukrandom"
+	ukruntime "kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -98,19 +99,22 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 	var targ target.Target
 
 	targets := runner.project.Targets()
-	var qopts []packmanager.QueryOption
-	var runtimeName string
+
+	queryRuntime := runner.project.Runtime()
 	if len(opts.Runtime) > 0 {
-		runtimeName = opts.Runtime
-		qopts = []packmanager.QueryOption{
-			packmanager.WithName(opts.Runtime),
-		}
-	} else {
-		runtimeName = fmt.Sprintf("%s:%s", runner.project.Runtime().Name(), runner.project.Runtime().Version())
-		qopts = []packmanager.QueryOption{
-			packmanager.WithName(runner.project.Runtime().Name()),
-			packmanager.WithVersion(runner.project.Runtime().Version()),
-		}
+		queryRuntime = &ukruntime.Runtime{}
+		queryRuntime.SetName(opts.Runtime)
+	}
+
+	runtimeName := queryRuntime.Reference()
+	queryName := queryRuntime.QueryName()
+	queryVersion := queryRuntime.QueryVersion()
+
+	qopts := []packmanager.QueryOption{
+		packmanager.WithName(queryName),
+	}
+	if queryVersion != "" {
+		qopts = append(qopts, packmanager.WithVersion(queryVersion))
 	}
 
 	if len(targets) == 1 {

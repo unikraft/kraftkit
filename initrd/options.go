@@ -7,6 +7,8 @@ package initrd
 import (
 	"fmt"
 
+	kraftfilev07 "unikraft.com/x/kraftfile"
+
 	"kraftkit.sh/config"
 )
 
@@ -24,7 +26,7 @@ type InitrdOptions struct {
 	buildSecrets map[string]InitrdBuildSecret
 	cacheDir     string
 	compress     bool
-	fsType       FsType
+	fsType       kraftfilev07.FsType
 	keepOwners   bool
 	output       string
 	rootfsPath   string
@@ -126,7 +128,7 @@ func WithOutput(output string) InitrdOption {
 }
 
 // WithOutputType sets the output type of the resulting root filesystem.
-func WithOutputType(fsType FsType) InitrdOption {
+func WithOutputType(fsType kraftfilev07.FsType) InitrdOption {
 	return func(opts *InitrdOptions) error {
 		if fsType == "" {
 			return nil
@@ -194,25 +196,18 @@ func WithAuths(auths map[string]config.AuthConfig) InitrdOption {
 	}
 }
 
-type FsType string
-
+// extended types on the top of kraftfilev07 defined FsTypes
 const (
-	FsTypeCpio    = FsType("cpio")
-	FsTypeErofs   = FsType("erofs")
-	FsTypeFile    = FsType("file")
-	FsTypeUnknown = FsType("unknown")
+	FsTypeFile    = kraftfilev07.FsType("file")
+	FsTypeUnknown = kraftfilev07.FsType("unknown")
+
+	FsTypeCpio  = kraftfilev07.FsTypeCpio
+	FsTypeErofs = kraftfilev07.FsTypeErofs
 )
 
-var _ fmt.Stringer = (*FsType)(nil)
-
-// String implements fmt.Stringer
-func (fsType FsType) String() string {
-	return string(fsType)
-}
-
 // FsTypes returns the list of possible fsTypes.
-func FsTypes() []FsType {
-	return []FsType{
+func FsTypes() []kraftfilev07.FsType {
+	return []kraftfilev07.FsType{
 		FsTypeCpio,
 		FsTypeErofs,
 		FsTypeFile,

@@ -13,6 +13,8 @@ import (
 	"kraftkit.sh/fs/cpio"
 	"kraftkit.sh/fs/erofs"
 	"kraftkit.sh/fsutils"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type file struct {
@@ -96,7 +98,7 @@ reevaluateFsType:
 
 // detectFsType attempts to convert from the 'unknown' filesystem type to one
 // of the known types like 'cpio'/'erofs'/'file'.
-func detectFsType(source string) FsType {
+func detectFsType(source string) kraftfilev07.FsType {
 	switch {
 	case fsutils.IsErofsFile(source):
 		return FsTypeErofs
