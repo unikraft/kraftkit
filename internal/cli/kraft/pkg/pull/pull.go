@@ -15,6 +15,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/gitutil"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
@@ -344,10 +345,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 				packmanager.WithPlatform(opts.Platform),
 				packmanager.WithKConfig(opts.KConfig),
 			}
-			if strings.HasSuffix(arg, ".git") ||
-				strings.HasPrefix(arg, "git@") ||
-				strings.HasPrefix(arg, "github.com/") ||
-				strings.Contains(arg, "://github.com/") {
+			if gitutil.IsGitSource(arg) {
 				qopts = append(qopts, packmanager.WithSource(arg))
 			} else {
 				qopts = append(qopts, packmanager.WithName(arg))
