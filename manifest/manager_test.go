@@ -36,6 +36,16 @@ func TestManifestManager_IsCompatible_gitSources(t *testing.T) {
 			wantCompat: true,
 		},
 		{
+			name:       "ssh:// URL without .git",
+			source:     "ssh://git@github.com/owner/repo",
+			wantCompat: true,
+		},
+		{
+			name:       "git+ssh:// URL",
+			source:     "git+ssh://github.com/owner/repo.git",
+			wantCompat: true,
+		},
+		{
 			name:       "empty source",
 			source:     "",
 			wantCompat: false,

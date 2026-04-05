@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 	"unicode"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/gitutil"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -518,10 +518,7 @@ func (m *ManifestManager) IsCompatible(ctx context.Context, source string, qopts
 		return m, true, nil
 	}
 
-	if strings.HasSuffix(source, ".git") ||
-		strings.HasPrefix(source, "git@") ||
-		strings.HasPrefix(source, "github.com/") ||
-		strings.Contains(source, "://github.com/") {
+	if gitutil.IsGitSource(source) {
 		return m, true, nil
 	}
 
