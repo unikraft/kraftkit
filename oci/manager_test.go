@@ -6,50 +6,30 @@ package oci
 
 import "testing"
 
-func Test_isGitSource(t *testing.T) {
+func Test_isGitSource_Wrapper(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
 		want   bool
 	}{
 		{
-			name:   "github.com path prefix",
+			name:   "github.com path",
 			source: "github.com/unikraft/lib-nginx.git",
 			want:   true,
 		},
 		{
-			name:   "https github URL",
-			source: "https://github.com/unikraft/lib-nginx.git",
+			name:   "ssh URL without .git",
+			source: "ssh://git@github.com/owner/repo",
 			want:   true,
 		},
 		{
-			name:   "git@ SSH URL",
-			source: "git@github.com:unikraft/lib-nginx.git",
-			want:   true,
-		},
-		{
-			name:   ".git suffix without github host",
-			source: "gitlab.com/foo/bar.git",
-			want:   true,
-		},
-		{
-			name:   "plain OCI image ref",
+			name:   "OCI image",
 			source: "unikraft.org/helloworld:latest",
 			want:   false,
 		},
 		{
-			name:   "docker.io image",
-			source: "docker.io/library/nginx:latest",
-			want:   false,
-		},
-		{
-			name:   "registry hostname only",
-			source: "index.unikraft.io",
-			want:   false,
-		},
-		{
-			name:   "image with digest",
-			source: "unikraft.org/helloworld@sha256:abc123",
+			name:   "OCI with .git in name",
+			source: "ghcr.io/org/repo.git:latest",
 			want:   false,
 		},
 	}

@@ -28,6 +28,7 @@ import (
 	"oras.land/oras-go/v2/content"
 
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/gitutil"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/internal/version"
 	"kraftkit.sh/log"
@@ -914,10 +915,7 @@ func (manager *OCIManager) RemoveSource(ctx context.Context, source string) erro
 }
 
 func isGitSource(source string) bool {
-	return strings.HasSuffix(source, ".git") ||
-		strings.HasPrefix(source, "git@") ||
-		strings.HasPrefix(source, "github.com/") ||
-		strings.Contains(source, "://github.com/")
+	return gitutil.IsGitSource(source)
 }
 
 // IsCompatible implements packmanager.PackageManager
