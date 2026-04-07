@@ -7,6 +7,7 @@ package initialize
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -22,6 +23,14 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/tui/selection"
+)
+
+var (
+	ErrServiceIdentifierRequired = errors.New("specify a service name or UUID")
+	ErrWarmupTimeTooLow          = errors.New("warmup time must be at least 10ms")
+	ErrCooldownTimeTooLow        = errors.New("cooldown time must be at least 10ms")
+	ErrTemplateRequiredNoPrompt  = errors.New("specify an instance template UUID or name via --template")
+	ErrNoInstanceTemplateFound   = errors.New("no instance template found in service")
 )
 
 type InitOptions struct {
@@ -65,7 +74,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *InitOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a service name or UUID")
+		return ErrServiceIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
@@ -110,18 +119,18 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.WarmupTime > 0 && opts.WarmupTime < 10*time.Millisecond {
-		return fmt.Errorf("warmup time must be at least 10ms")
+		return fmt.Errorf("%w: got %s", ErrWarmupTimeTooLow, opts.WarmupTime)
 	}
 
 	if opts.CooldownTime > 0 && opts.CooldownTime < 10*time.Millisecond {
-		return fmt.Errorf("cooldown time must be at least 10ms")
+		return fmt.Errorf("%w: got %s", ErrCooldownTimeTooLow, opts.CooldownTime)
 	}
 
 	var template kcautoscale.CreateRequestTemplate
 
 	if opts.Template == "" {
 		if config.G[config.KraftKit](ctx).NoPrompt {
-			return fmt.Errorf("specify an instance template UUID or name via --template")
+			return ErrTemplateRequiredNoPrompt
 		}
 
 		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).ListTemplate(ctx)
@@ -133,7 +142,7 @@ func (opts *InitOptions) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("could not list instance templates: %w", err)
 		}
 		if len(instList) == 0 {
-			return fmt.Errorf("no instance template found in service")
+			return ErrNoInstanceTemplateFound
 		}
 
 		if len(instList) == 1 {
