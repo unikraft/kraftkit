@@ -7,6 +7,7 @@ package add
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -19,6 +20,18 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+)
+
+var (
+	ErrConfigIdentifierRequired = errors.New("specify a configuration UUID or NAME")
+	ErrPolicyNameRequired       = errors.New("specify a policy name")
+	ErrInvalidStepCount         = errors.New("specify between 1 and 4 steps")
+	ErrInvalidStepFormat        = errors.New("could not parse step")
+	ErrInvalidStepBounds        = errors.New("lower bound cannot be greater or equal than upper bound")
+	ErrInvalidEmptyLowerBound   = errors.New("lower bound cannot be empty in a step after the first step")
+	ErrInvalidEmptyUpperBound   = errors.New("upper bound cannot be empty in a step before the last step")
+	ErrNonContiguousSteps       = errors.New("steps are not contiguous")
+	ErrInvalidPolicyType        = errors.New("invalid policy type")
 )
 
 type AddOptions struct {
@@ -70,7 +83,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *AddOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a configuration UUID or NAME")
+		return ErrConfigIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
@@ -85,11 +98,11 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if opts.Name == "" {
-		return fmt.Errorf("specify a policy name")
+		return ErrPolicyNameRequired
 	}
 
 	if kcautoscale.PolicyType(opts.Type) == kcautoscale.PolicyTypeStep && len(opts.Step) < 1 || len(opts.Step) > 4 {
-		return fmt.Errorf("specify between 1 and 4 steps")
+		return fmt.Errorf("%w: got %d", ErrInvalidStepCount, len(opts.Step))
 	}
 
 	if opts.Auth == nil {
@@ -140,17 +153,16 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 			if _, err := fmt.Sscanf(step, "%d:%d/%d", &policyStep.LowerBound, &policyStep.UpperBound, &policyStep.Adjustment); err != nil {
 				if _, err := fmt.Sscanf(step, ":%d/%d", &policyStep.UpperBound, &policyStep.Adjustment); err != nil {
 					if _, err := fmt.Sscanf(step, "%d:/%d", &policyStep.LowerBound, &policyStep.Adjustment); err != nil {
-						return fmt.Errorf("could not parse step '%s': expected format 'LOWER_BOUND:UPPER_BOUND/ADJUSTMENT'", step)
-					} else {
-						policyStep.UpperEmpty = true
+						return fmt.Errorf("%w: %q", ErrInvalidStepFormat, step)
 					}
+					policyStep.UpperEmpty = true
 				} else {
 					policyStep.LowerEmpty = true
 				}
 			}
 
 			if policyStep.LowerBound >= policyStep.UpperBound && !policyStep.LowerEmpty && !policyStep.UpperEmpty {
-				return fmt.Errorf("lower bound cannot be greater or equal than upper bound")
+				return fmt.Errorf("%w: %d >= %d", ErrInvalidStepBounds, policyStep.LowerBound, policyStep.UpperBound)
 			}
 
 			steps = append(steps, policyStep)
@@ -172,15 +184,15 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 			}
 
 			if step.LowerEmpty {
-				return fmt.Errorf("lower bound cannot be empty in a step after the first step")
+				return ErrInvalidEmptyLowerBound
 			}
 
 			if step.UpperEmpty && idx != len(opts.Step)-1 {
-				return fmt.Errorf("upper bound cannot be empty in a step before the last step")
+				return ErrInvalidEmptyUpperBound
 			}
 
 			if steps[idx-1].UpperBound != step.LowerBound {
-				return fmt.Errorf("steps are not contiguous, gap found between %d and %d", steps[idx-1].UpperBound, step.LowerBound)
+				return fmt.Errorf("%w: gap found between %d and %d", ErrNonContiguousSteps, steps[idx-1].UpperBound, step.LowerBound)
 			}
 		}
 
@@ -201,7 +213,7 @@ func (opts *AddOptions) Run(ctx context.Context, args []string) error {
 			Name: opts.Name,
 		}
 	default:
-		return fmt.Errorf("invalid policy type '%s'", opts.Type)
+		return fmt.Errorf("%w: %q", ErrInvalidPolicyType, opts.Type)
 	}
 
 	addPolicyResp, err := opts.Client.Autoscale().WithMetro(opts.Metro).AddPolicy(ctx, id, policy)
