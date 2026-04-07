@@ -19,6 +19,11 @@ func TestIsGitSource(t *testing.T) {
 			want:   true,
 		},
 		{
+			name:   "ssh:// URL with colon path",
+			source: "ssh://git@github.com:owner/repo.git",
+			want:   true,
+		},
+		{
 			name:   "ssh:// URL with .git",
 			source: "ssh://git@github.com/owner/repo.git",
 			want:   true,
@@ -26,6 +31,11 @@ func TestIsGitSource(t *testing.T) {
 		{
 			name:   "ssh+git:// URL",
 			source: "ssh+git://github.com/owner/repo",
+			want:   true,
+		},
+		{
+			name:   "ssh+git@ SCP-like URL",
+			source: "ssh+git@github.com:unikraft/app-nginx.git",
 			want:   true,
 		},
 		{

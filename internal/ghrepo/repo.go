@@ -55,6 +55,14 @@ func NewFromURL(path string) (Interface, error) {
 		path = strings.Replace(path, ":", "/", 1)
 		path = strings.TrimPrefix(path, "git@")
 		path = "https://" + path
+	} else if strings.HasPrefix(path, "ssh+git@") {
+		path = strings.Replace(path, ":", "/", 1)
+		path = strings.TrimPrefix(path, "ssh+git@")
+		path = "https://" + path
+	} else if strings.HasPrefix(path, "ssh://git@") {
+		path = strings.TrimPrefix(path, "ssh://git@")
+		path = strings.Replace(path, ":", "/", 1)
+		path = "https://" + path
 	} else if strings.HasPrefix(path, "github.com/") {
 		path = "https://" + path
 	}

@@ -44,10 +44,11 @@ func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (P
 		// This is a quirk of go-git, if we have determined it was an SSH path and
 		// it does not contain the prefix, we should include it so it can be
 		// recognised internally by the module.
-		if strings.HasPrefix(path, "git@") {
+		if strings.HasPrefix(path, "git@") || strings.HasPrefix(path, "ssh+git@") {
 			// Convert SCP-style git@HOST:path to ssh://git@HOST/path so that
 			// URL parsers (giturl, go-git) handle it correctly.
-			scp := strings.TrimPrefix(path, "git@")
+			scp := strings.TrimPrefix(path, "ssh+git@")
+			scp = strings.TrimPrefix(scp, "git@")
 			scp = strings.Replace(scp, ":", "/", 1)
 			fullpath = "ssh://git@" + scp
 		}
@@ -240,6 +241,7 @@ func isSSHURL(path string) bool {
 	for _, prefix := range []string{
 		"ssh://",
 		"ssh+git://",
+		"ssh+git@",
 		"git+ssh://",
 		"git@",
 	} {

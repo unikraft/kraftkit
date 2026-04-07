@@ -41,6 +41,24 @@ func TestNewFromURL(t *testing.T) {
 			wantRepo:  "lib-nginx",
 		},
 		{
+			name:      "ssh+git@ URL with .git",
+			input:     "ssh+git@github.com:unikraft/lib-nginx.git",
+			wantOwner: "unikraft",
+			wantRepo:  "lib-nginx",
+		},
+		{
+			name:      "ssh://git@ URL with slash path",
+			input:     "ssh://git@github.com/unikraft/lib-nginx.git",
+			wantOwner: "unikraft",
+			wantRepo:  "lib-nginx",
+		},
+		{
+			name:      "ssh://git@ URL with colon path",
+			input:     "ssh://git@github.com:unikraft/lib-nginx.git",
+			wantOwner: "unikraft",
+			wantRepo:  "lib-nginx",
+		},
+		{
 			name:    "non-github host",
 			input:   "https://gitlab.com/unikraft/lib-nginx",
 			wantErr: true,

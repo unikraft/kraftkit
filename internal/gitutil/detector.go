@@ -26,6 +26,10 @@ func IsGitSource(source string) bool {
 		}
 	}
 
+	if strings.HasPrefix(source, "ssh+git@") {
+		return true
+	}
+
 	// Check for SCP-style SSH: git@host:path
 	if strings.HasPrefix(source, "git@") {
 		return true
