@@ -8,6 +8,7 @@ package get
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -23,6 +24,8 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
+
+var ErrServiceIdentifierRequired = errors.New("specify a service NAME or UUID")
 
 type GetOptions struct {
 	AllowInsecure bool                  `noattributes:"true"`
@@ -67,7 +70,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *GetOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a service NAME or UUID")
+		return ErrServiceIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
