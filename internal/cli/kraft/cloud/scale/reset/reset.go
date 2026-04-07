@@ -7,6 +7,7 @@ package reset
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -19,6 +20,8 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 )
+
+var ErrServiceIdentifierRequired = errors.New("specify a service name or UUID")
 
 type ResetOptions struct {
 	AllowInsecure bool                         `noattribute:"true"`
@@ -54,7 +57,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *ResetOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("specify a service name or UUID")
+		return ErrServiceIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
