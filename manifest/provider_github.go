@@ -109,9 +109,13 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 		return ghp.manifestsFromWildcard()
 	}
 
-	// Ultimately, since this is Git, we can use the GitProvider, and update the
-	// path to the resource with a known location
-	repo := ghp.path
+	// Probe the repository via HTTPS so public GitHub repositories work even when
+	// the input was an SSH-style URL and no SSH agent is available.
+	repo := fmt.Sprintf("https://%s/%s/%s.git",
+		ghp.repo.RepoHost(),
+		ghp.repo.RepoOwner(),
+		ghp.repo.RepoName(),
+	)
 	if len(ghp.branch) > 0 {
 		repo += "@" + ghp.branch
 	}
@@ -125,6 +129,7 @@ func (ghp GitHubProvider) Manifests() ([]*Manifest, error) {
 	}
 
 	manifest.Provider = ghp
+	manifest.Origin = ghp.path
 
 	return []*Manifest{manifest}, nil
 }
