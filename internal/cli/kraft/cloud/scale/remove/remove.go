@@ -7,6 +7,7 @@ package remove
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -18,6 +19,11 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+)
+
+var (
+	ErrServiceAndPolicyRequired = errors.New("specify service UUID and policy name")
+	ErrInvalidServiceUUID       = errors.New("specify a valid service UUID")
 )
 
 type RemoveOptions struct {
@@ -54,7 +60,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 || len(args) == 1 {
-		return fmt.Errorf("specify service UUID and policy name")
+		return ErrServiceAndPolicyRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure)
@@ -69,7 +75,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	var err error
 
 	if !utils.IsUUID(args[0]) {
-		return fmt.Errorf("specify a valid service UUID")
+		return fmt.Errorf("%w: %q", ErrInvalidServiceUUID, args[0])
 	}
 
 	if opts.Auth == nil {
