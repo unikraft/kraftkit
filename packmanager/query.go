@@ -245,6 +245,8 @@ func (cq Query) String() string {
 
 	if len(cq.name) > 0 {
 		s += cq.name
+	} else if len(cq.source) > 0 {
+		s += cq.source
 	} else {
 		s += "*"
 	}
