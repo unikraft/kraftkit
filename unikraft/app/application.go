@@ -230,6 +230,10 @@ func (app *application) OutDir() string {
 }
 
 func (app *application) Template() *template.TemplateConfig {
+	if app.LoaderKind() == ProjectLoaderV07 {
+		return nil
+	}
+
 	return app.template
 }
 

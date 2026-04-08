@@ -208,20 +208,25 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		}
 
 		if _, err = project.Components(ctx); err != nil {
+			template := project.Template()
+			if template == nil {
+				return err
+			}
+
 			var pullPack pack.Package
 			var packages []pack.Package
 
 			// Pull the template from the package manager
-			if project.Template() != nil {
+			if template != nil {
 				search := processtree.NewProcessTreeItem(
 					fmt.Sprintf("finding %s",
-						unikraft.TypeNameVersion(project.Template()),
+						unikraft.TypeNameVersion(template),
 					), "",
 					func(ctx context.Context) error {
 						qopts := []packmanager.QueryOption{
-							packmanager.WithName(project.Template().Name()),
+							packmanager.WithName(template.Name()),
 							packmanager.WithTypes(unikraft.ComponentTypeApp),
-							packmanager.WithVersion(project.Template().Version()),
+							packmanager.WithVersion(template.Version()),
 							packmanager.WithRemote(opts.Update),
 							packmanager.WithPlatform(opts.Platform),
 							packmanager.WithArchitecture(opts.Architecture),
@@ -233,7 +238,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 						}
 
 						if len(packages) == 0 {
-							return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(project.Template()), packmanager.NewQuery(qopts...).String())
+							return fmt.Errorf("could not find: %s based on %s", unikraft.TypeNameVersion(template), packmanager.NewQuery(qopts...).String())
 						}
 
 						return nil
@@ -268,7 +273,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 						}
 
 						return fmt.Errorf("too many options for %s and prompting has been disabled",
-							project.Template().String(),
+							template.String(),
 						)
 					}
 
@@ -313,7 +318,7 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 				}
 			}
 
-			templateWorkdir, err := unikraft.PlaceComponent(opts.Output, project.Template().Type(), project.Template().Name())
+			templateWorkdir, err := unikraft.PlaceComponent(opts.Output, template.Type(), template.Name())
 			if err != nil {
 				return err
 			}

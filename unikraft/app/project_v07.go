@@ -35,13 +35,35 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		return nil, err
 	}
 
-	popts.kraftfile.config = map[string]interface{}{
-		"spec": doc.Spec,
-	}
-
 	name, _ := popts.GetProjectName()
 	if doc.Name != "" {
 		name = doc.Name
+	}
+
+	ukContext := &unikraft.Context{
+		UK_NAME: name,
+		UK_BASE: popts.workdir,
+	}
+	ctx = unikraft.WithContext(ctx, ukContext)
+
+	if doc.Template != nil {
+		opts := []TemplateResolutionOption{}
+		if popts.workdir != "" {
+			opts = append(opts, WithTemplateResolutionWorkdir(popts.workdir))
+		}
+		doc, err = ResolveTemplate(ctx, doc, opts...)
+		if err != nil {
+			return nil, err
+		}
+
+		if doc.Name != "" {
+			name = doc.Name
+			ukContext.UK_NAME = doc.Name
+		}
+	}
+
+	popts.kraftfile.config = map[string]interface{}{
+		"spec": doc.Spec,
 	}
 
 	outdir, err := v07OutDirFromProjectOptions(popts)
@@ -49,14 +71,8 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		return nil, err
 	}
 
-	ukContext := &unikraft.Context{
-		UK_NAME:   name,
-		UK_BASE:   popts.workdir,
-		BUILD_DIR: outdir,
-	}
+	ukContext.BUILD_DIR = outdir
 
-	// Phase 1 keeps a KraftKit-managed build directory to avoid destabilizing the
-	// current build/run/pkg flows while v0.7 support lands.
 	if _, err := os.Stat(ukContext.BUILD_DIR); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(ukContext.BUILD_DIR, 0o755); err != nil {
 			return nil, fmt.Errorf("creating build directory: %w", err)
@@ -66,11 +82,6 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 	ctx = unikraft.WithContext(ctx, ukContext)
 
 	unikraftConfig, err := v07CoreFromDocument(ctx, doc.Unikraft)
-	if err != nil {
-		return nil, err
-	}
-
-	templateConfig, err := v07TemplateFromDocument(ctx, doc.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +126,6 @@ func newProjectFromOptionsV07(ctx context.Context, popts *ProjectOptions) (Appli
 		WithRootfs(rootfs),
 		WithFsType(fsType),
 		WithRoms(roms...),
-		WithTemplate(templateConfig),
 		WithCommand(doc.Cmd...),
 		WithLabels(maps.Clone(doc.Labels)),
 		WithLibraries(libraries),

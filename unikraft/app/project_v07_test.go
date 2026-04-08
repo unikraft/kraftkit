@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"kraftkit.sh/initrd"
+	kraftfilev07 "unikraft.com/x/kraftfile"
 	uklib "kraftkit.sh/unikraft/lib"
 )
 
@@ -224,6 +225,64 @@ runtime: index.unikraft.io/official/base:latest
 
 	if project.Runtime().Version() != "" {
 		t.Errorf("Runtime().Version() = %q, want empty", project.Runtime().Version())
+	}
+}
+
+func Test_v07TemplateFromDocument(t *testing.T) {
+	doc := &kraftfilev07.Template{
+		Source:  "https://github.com/unikraft/catalog.git",
+		Version: "stable",
+	}
+
+	templateConfig, err := v07TemplateFromDocument(context.Background(), doc)
+	if err != nil {
+		t.Fatalf("v07TemplateFromDocument() error = %v", err)
+	}
+
+	if templateConfig == nil {
+		t.Fatal("expected template config to be present")
+	}
+
+	if templateConfig.Name() != "catalog" {
+		t.Errorf("Name() = %q, want %q", templateConfig.Name(), "catalog")
+	}
+
+	if templateConfig.Source() != "https://github.com/unikraft/catalog.git" {
+		t.Errorf("Source() = %q, want original source", templateConfig.Source())
+	}
+
+	if templateConfig.Version() != "stable" {
+		t.Errorf("Version() = %q, want %q", templateConfig.Version(), "stable")
+	}
+
+	if len(templateConfig.KConfig()) != 0 {
+		t.Errorf("KConfig() len = %d, want 0", len(templateConfig.KConfig()))
+	}
+}
+
+func Test_NewProjectFromOptionsV07_TemplateProvidesName(t *testing.T) {
+	workdir := t.TempDir()
+	templateDir := filepath.Join(workdir, "template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		t.Fatalf("could not create template directory: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(templateDir, "kraft.yaml"), []byte(`
+spec: v0.7
+name: template-name
+runtime: base:latest
+`), 0o644); err != nil {
+		t.Fatalf("could not write template kraftfile: %v", err)
+	}
+
+	project := mustProjectFromBytes(t, workdir, `
+spec: v0.7
+template:
+  source: `+templateDir+`
+`)
+
+	if project.Name() != "template-name" {
+		t.Errorf("Name() = %q, want %q", project.Name(), "template-name")
 	}
 }
 
