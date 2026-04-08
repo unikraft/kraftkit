@@ -127,3 +127,11 @@ func TypeNameVersion(entity Nameable) string {
 
 	return ret.String()
 }
+
+// NormalizeProjectName returns a filesystem- and identifier-safe project name.
+func NormalizeProjectName(name string) string {
+	r := regexp.MustCompile("[a-z0-9_-]")
+	name = strings.ToLower(name)
+	name = strings.Join(r.FindAllString(name, -1), "")
+	return strings.TrimLeft(name, "_-")
+}

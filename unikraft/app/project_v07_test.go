@@ -162,6 +162,67 @@ runtime: base:latest
 	}
 }
 
+func Test_NewProjectFromOptionsV07_TargetArtifactNames(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+name: My App_01
+unikraft: stable
+targets:
+  - plat: qemu
+    arch: x86_64
+`)
+
+	targets := project.Targets()
+	if len(targets) != 1 {
+		t.Fatalf("len(Targets()) = %d, want 1", len(targets))
+	}
+
+	wantKernel := filepath.Join(project.OutDir(), "myapp_01_qemu-x86_64")
+	if targets[0].Kernel() != wantKernel {
+		t.Errorf("targets[0].Kernel() = %q, want %q", targets[0].Kernel(), wantKernel)
+	}
+
+	if targets[0].ConfigFilename() != ".config.myapp_01_qemu-x86_64" {
+		t.Errorf("targets[0].ConfigFilename() = %q, want %q", targets[0].ConfigFilename(), ".config.myapp_01_qemu-x86_64")
+	}
+}
+
+func Test_NewProjectFromOptionsV07_CustomOutDir(t *testing.T) {
+	workdir := t.TempDir()
+	outdir := filepath.Join(workdir, "artifacts")
+
+	project, err := NewProjectFromOptions(
+		context.Background(),
+		WithProjectWorkdir(workdir),
+		WithProjectOutDir(outdir),
+		WithProjectKraftfileFromBytes([]byte(`
+spec: v0.7
+name: demo
+unikraft: stable
+targets:
+  - plat: qemu
+    arch: x86_64
+`)),
+	)
+	if err != nil {
+		t.Fatalf("NewProjectFromOptions() error = %v", err)
+	}
+
+	if project.OutDir() != outdir {
+		t.Errorf("OutDir() = %q, want %q", project.OutDir(), outdir)
+	}
+
+	targets := project.Targets()
+	if len(targets) != 1 {
+		t.Fatalf("len(Targets()) = %d, want 1", len(targets))
+	}
+
+	wantKernel := filepath.Join(outdir, "demo_qemu-x86_64")
+	if targets[0].Kernel() != wantKernel {
+		t.Errorf("targets[0].Kernel() = %q, want %q", targets[0].Kernel(), wantKernel)
+	}
+}
+
 func Test_NewProjectFromOptionsV07_ComponentStrings(t *testing.T) {
 	workdir := t.TempDir()
 	existingPath := filepath.Join(workdir, "stable")

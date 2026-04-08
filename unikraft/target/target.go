@@ -170,7 +170,7 @@ func (tc *TargetConfig) KConfig() kconfig.KeyValueMap {
 func (tc *TargetConfig) ConfigFilename() string {
 	var name string
 	if tc.kernel == "" {
-		name = fmt.Sprintf("%s_%s-%s", tc.Name(), tc.platform.Name(), tc.architecture.Name())
+		name = fmt.Sprintf("%s_%s-%s", normalizedTargetName(tc.Name()), tc.platform.Name(), tc.architecture.Name())
 	} else {
 		name = filepath.Base(tc.kernel)
 	}
@@ -195,7 +195,7 @@ func KernelName(target TargetConfig) (string, error) {
 
 	return fmt.Sprintf(
 		"%s_%s-%s",
-		target.Name(),
+		normalizedTargetName(target.Name()),
 		target.platform.Name(),
 		target.architecture.Name(),
 	), nil
@@ -240,4 +240,12 @@ func (tc TargetConfig) MarshalYAML() (interface{}, error) {
 	}
 
 	return ret, nil
+}
+
+func normalizedTargetName(name string) string {
+	if normalized := unikraft.NormalizeProjectName(name); normalized != "" {
+		return normalized
+	}
+
+	return name
 }

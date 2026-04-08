@@ -128,8 +128,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			initrd.WithWorkdir(opts.Workdir),
 			initrd.WithKeepOwners(opts.KeepFileOwners),
 			initrd.WithOutput(filepath.Join(
-				opts.Workdir,
-				unikraft.BuildDir,
+				buildOutputDir(opts.Project, opts.Workdir),
 				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
 			)),
 			initrd.WithOutputType(opts.RootfsType),
@@ -263,7 +262,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		if ok {
 			standardName, err := target.KernelName(*tc)
 			if err == nil {
-				standardPath := filepath.Join(opts.Workdir, unikraft.BuildDir, standardName)
+				standardPath := filepath.Join(buildOutputDir(opts.Project, opts.Workdir), standardName)
 				desiredPath := t.Kernel()
 
 				// If they are different, it means either --kernel was used or 'output'
@@ -358,6 +357,14 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
 
 	return nil
+}
+
+func buildOutputDir(project app.Application, workdir string) string {
+	if project != nil && project.OutDir() != "" {
+		return project.OutDir()
+	}
+
+	return filepath.Join(workdir, unikraft.BuildDir)
 }
 
 func moveFile(src, dst string) error {
