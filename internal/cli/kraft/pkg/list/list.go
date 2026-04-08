@@ -30,21 +30,24 @@ import (
 )
 
 type ListOptions struct {
-	All       bool   `long:"all" usage:"Show everything"`
-	Arch      string `long:"arch" usage:"Set a specific arhitecture to list for"`
-	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Limit     int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
-	Local     bool   `long:"local" usage:"Show local packages only"`
-	NoLimit   bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
-	Output    string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
-	Plat      string `long:"plat" usage:"Set a specific platform to list for"`
-	Remote    bool   `long:"remote" short:"u" usage:"Show remote packages only"`
-	ShowApps  bool   `long:"apps" short:"" usage:"Show applications"`
-	ShowArchs bool   `long:"archs" short:"M" usage:"Show architectures"`
-	ShowCore  bool   `long:"core" short:"C" usage:"Show Unikraft core versions"`
-	ShowLibs  bool   `long:"libs" short:"L" usage:"Show libraries"`
-	ShowPlats bool   `long:"plats" short:"P" usage:"Show platforms"`
-	Update    bool   `long:"update" short:"U" usage:"Update package indexes before listing"`
+	All           bool   `long:"all" usage:"Show everything"`
+	AllowInsecure bool   `local:"true" long:"allow-insecure" usage:"Allow insecure connections to the registry" hidden:"true"`
+	Arch          string `long:"arch" usage:"Set a specific arhitecture to list for"`
+	Kraftfile     string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Limit         int    `long:"limit" short:"l" usage:"Set the maximum number of results" default:"50"`
+	Local         bool   `long:"local" usage:"Show local packages only"`
+	Metro         string `local:"true" long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location" hidden:"true"`
+	NoLimit       bool   `long:"no-limit" usage:"Do not limit the number of items to print"`
+	Output        string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list" default:"table"`
+	Plat          string `long:"plat" usage:"Set a specific platform to list for"`
+	Remote        bool   `long:"remote" short:"u" usage:"Show remote packages only"`
+	ShowApps      bool   `long:"apps" short:"" usage:"Show applications"`
+	ShowArchs     bool   `long:"archs" short:"M" usage:"Show architectures"`
+	ShowCore      bool   `long:"core" short:"C" usage:"Show Unikraft core versions"`
+	ShowLibs      bool   `long:"libs" short:"L" usage:"Show libraries"`
+	ShowPlats     bool   `long:"plats" short:"P" usage:"Show platforms"`
+	Token         string `local:"true" long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token" hidden:"true"`
+	Update        bool   `long:"update" short:"U" usage:"Update package indexes before listing"`
 }
 
 func NewCmd() *cobra.Command {
@@ -75,6 +78,24 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
+	// Suppress interactive metro prompting: pkg commands do not require a
+	// metro; token population proceeds silently via flags/env vars only.
+	origNoPrompt := config.G[config.KraftKit](cmd.Context()).NoPrompt
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = true
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
+		log.G(cmd.Context()).WithError(err).Debug("could not populate metro/token for pkg list")
+	}
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = origNoPrompt
+
+	if opts.Token != "" {
+		if _, err := config.GetKraftCloudAuthConfig(cmd.Context(), opts.Token); err != nil {
+			log.G(cmd.Context()).WithError(err).Debug("could not hydrate kraft cloud auth from token")
+		}
+		if opts.Metro != "" {
+			cmd.SetContext(config.ContextWithIndexAuth(cmd.Context(), opts.Metro, opts.Token))
+		}
+	}
+
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
