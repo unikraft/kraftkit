@@ -31,6 +31,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 	var err error
 	ac := &application{
 		configuration: kconfig.KeyValueMap{},
+		loaderKind:    ProjectLoaderLegacy,
 	}
 
 	for _, o := range aopts {
@@ -196,6 +197,22 @@ func WithExtensions(extensions component.Extensions) ApplicationOption {
 func WithKraftfile(kraftfile *Kraftfile) ApplicationOption {
 	return func(ac *application) error {
 		ac.kraftfile = kraftfile
+		return nil
+	}
+}
+
+// WithLoaderKind records which loader produced the application.
+func WithLoaderKind(loaderKind ProjectLoader) ApplicationOption {
+	return func(ac *application) error {
+		ac.loaderKind = loaderKind
+		return nil
+	}
+}
+
+// WithSpecVersion records the parsed spec version of the underlying Kraftfile.
+func WithSpecVersion(specVersion string) ApplicationOption {
+	return func(ac *application) error {
+		ac.specVersion = specVersion
 		return nil
 	}
 }
