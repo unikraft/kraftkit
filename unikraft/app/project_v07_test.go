@@ -208,6 +208,25 @@ libraries:
 	}
 }
 
+func Test_NewProjectFromOptionsV07_RuntimeReference(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+runtime: index.unikraft.io/official/base:latest
+`)
+
+	if project.Runtime() == nil {
+		t.Fatal("expected runtime to be present")
+	}
+
+	if project.Runtime().Name() != "index.unikraft.io/official/base:latest" {
+		t.Errorf("Runtime().Name() = %q, want full OCI ref", project.Runtime().Name())
+	}
+
+	if project.Runtime().Version() != "" {
+		t.Errorf("Runtime().Version() = %q, want empty", project.Runtime().Version())
+	}
+}
+
 func Test_NewProjectFromOptionsV07_RootfsFormat(t *testing.T) {
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
