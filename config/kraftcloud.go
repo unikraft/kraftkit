@@ -76,6 +76,49 @@ func GetKraftCloudTokenAuthConfig(auth AuthConfig) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth.User + ":" + auth.Token))
 }
 
+// ContextWithIndexAuth saturates the context with an additional
+// KraftCloud-specific information for connecting to a node.
+func ContextWithIndexAuth(ctx context.Context, metro, token string) context.Context {
+	var metroIndex string
+
+	metro = strings.TrimSuffix(metro, "/v1")
+	metro = strings.TrimPrefix(metro, "https://")
+	if strings.Contains(metro, "index.") {
+		metroIndex = metro
+	} else if strings.Contains(metro, "api.") {
+		metroIndex = strings.Replace(metro, "api.", "index.", 1)
+	} else {
+		return ctx
+	}
+
+	data, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return ctx
+	}
+
+	split := strings.Split(string(data), ":")
+	if len(split) != 2 {
+		return ctx
+	}
+
+	auth := AuthConfig{
+		Endpoint:  metroIndex,
+		Token:     token,
+		User:      split[0],
+		VerifySSL: true,
+	}
+
+	if G[KraftKit](ctx).Auth == nil {
+		authMap := map[string]AuthConfig{}
+		authMap[metroIndex] = auth
+		(*G[KraftKit](ctx)).Auth = authMap
+	} else {
+		G[KraftKit](ctx).Auth[metroIndex] = auth
+	}
+
+	return ctx
+}
+
 // HydrateKraftCloudAuthInContext saturates the context with an additional
 // KraftCloud-specific information.
 func HydrateKraftCloudAuthInContext(ctx context.Context) (context.Context, error) {
