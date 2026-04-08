@@ -7,7 +7,6 @@ package add
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 
@@ -20,18 +19,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-)
-
-var (
-	ErrConfigIdentifierRequired = errors.New("specify a configuration UUID or NAME")
-	ErrPolicyNameRequired       = errors.New("specify a policy name")
-	ErrInvalidStepCount         = errors.New("specify between 1 and 4 steps")
-	ErrInvalidStepFormat        = errors.New("could not parse step")
-	ErrInvalidStepBounds        = errors.New("lower bound cannot be greater or equal than upper bound")
-	ErrInvalidEmptyLowerBound   = errors.New("lower bound cannot be empty in a step after the first step")
-	ErrInvalidEmptyUpperBound   = errors.New("upper bound cannot be empty in a step before the last step")
-	ErrNonContiguousSteps       = errors.New("steps are not contiguous")
-	ErrInvalidPolicyType        = errors.New("invalid policy type")
 )
 
 type AddOptions struct {

@@ -7,7 +7,6 @@ package remove
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -19,11 +18,6 @@ import (
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
-)
-
-var (
-	ErrServiceAndPolicyRequired = errors.New("specify service UUID and policy name")
-	ErrInvalidServiceUUID       = errors.New("specify a valid service UUID")
 )
 
 type RemoveOptions struct {

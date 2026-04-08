@@ -7,7 +7,6 @@ package initialize
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -23,14 +22,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/tui/selection"
-)
-
-var (
-	ErrServiceIdentifierRequired = errors.New("specify a service name or UUID")
-	ErrWarmupTimeTooLow          = errors.New("warmup time must be at least 10ms")
-	ErrCooldownTimeTooLow        = errors.New("cooldown time must be at least 10ms")
-	ErrTemplateRequiredNoPrompt  = errors.New("specify an instance template UUID or name via --template")
-	ErrNoInstanceTemplateFound   = errors.New("no instance template found in service")
 )
 
 type InitOptions struct {

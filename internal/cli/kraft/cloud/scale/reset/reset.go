@@ -7,7 +7,6 @@ package reset
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,8 +19,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 )
-
-var ErrServiceIdentifierRequired = errors.New("specify a service name or UUID")
 
 type ResetOptions struct {
 	AllowInsecure bool                         `noattribute:"true"`

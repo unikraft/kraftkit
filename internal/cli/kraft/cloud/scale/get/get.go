@@ -8,7 +8,6 @@ package get
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -24,8 +23,6 @@ import (
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 )
-
-var ErrServiceIdentifierRequired = errors.New("specify a service NAME or UUID")
 
 type GetOptions struct {
 	AllowInsecure bool                  `noattributes:"true"`
