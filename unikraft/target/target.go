@@ -15,6 +15,8 @@ import (
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/component"
 	"kraftkit.sh/unikraft/plat"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 // DefaultKraftCloudTarget is the default target for KraftCloud.
@@ -42,7 +44,7 @@ type Target interface {
 	Initrd() initrd.Initrd
 
 	// Auxiliary read-only memory blobs for this target.
-	Roms() []string
+	Roms() []kraftfilev07.FS
 
 	// Command is the command-line arguments set for this target.
 	Command() []string
@@ -79,7 +81,7 @@ type TargetConfig struct {
 	initrd initrd.Initrd
 
 	// auxiliary read-only memory blobs for this target.
-	roms []string
+	roms []kraftfilev07.FS
 
 	// command is the command-line arguments set for this target.
 	command []string
@@ -136,7 +138,7 @@ func (tc *TargetConfig) Initrd() initrd.Initrd {
 	return tc.initrd
 }
 
-func (tc *TargetConfig) Roms() []string {
+func (tc *TargetConfig) Roms() []kraftfilev07.FS {
 	return tc.roms
 }
 

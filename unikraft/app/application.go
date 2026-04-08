@@ -19,6 +19,8 @@ import (
 	"github.com/xlab/treeprint"
 	"gopkg.in/yaml.v3"
 
+	kraftfilev07 "unikraft.com/x/kraftfile"
+
 	"kraftkit.sh/exec"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/yamlmerger"
@@ -66,13 +68,13 @@ type Application interface {
 
 	// Auxiliary read-only memory blobs.  Used for arbitrary data which are
 	// mounted at runtime.
-	Roms() []string
+	Roms() []kraftfilev07.FS
 
 	// InitrdFsType returns the type of root filesystem to be used during runtime.
-	InitrdFsType() initrd.FsType
+	InitrdFsType() kraftfilev07.FsType
 
 	// SetInitrdFsType sets the type of root filesystem to be used during runtime.
-	SetInitrdFsType(initrd.FsType)
+	SetInitrdFsType(kraftfilev07.FsType)
 
 	// SetRootfs sets the root filesystem path for the application to the given
 	// value path.
@@ -182,7 +184,7 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
-	fsType        initrd.FsType
+	fsType        kraftfilev07.FsType
 	template      *template.TemplateConfig
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
@@ -193,7 +195,7 @@ type application struct {
 	env           target.Env
 	command       []string
 	rootfs        string
-	roms          []string
+	roms          []kraftfilev07.FS
 	kraftfile     *Kraftfile
 	loaderKind    ProjectLoader
 	specVersion   string
@@ -230,10 +232,10 @@ func (app *application) OutDir() string {
 }
 
 func (app *application) Template() *template.TemplateConfig {
+	// if the loader kind is v07, then template is already merged on project initialization, so returning nil to avoid triggering the legacy template merger
 	if app.LoaderKind() == ProjectLoaderV07 {
 		return nil
 	}
-
 	return app.template
 }
 
@@ -283,7 +285,7 @@ func (app *application) Rootfs() string {
 	return app.rootfs
 }
 
-func (app *application) Roms() []string {
+func (app *application) Roms() []kraftfilev07.FS {
 	return app.roms
 }
 
@@ -291,11 +293,11 @@ func (app *application) SetRootfs(rootfs string) {
 	app.rootfs = rootfs
 }
 
-func (app *application) SetInitrdFsType(fsType initrd.FsType) {
+func (app *application) SetInitrdFsType(fsType kraftfilev07.FsType) {
 	app.fsType = fsType
 }
 
-func (app *application) InitrdFsType() initrd.FsType {
+func (app *application) InitrdFsType() kraftfilev07.FsType {
 	return app.fsType
 }
 

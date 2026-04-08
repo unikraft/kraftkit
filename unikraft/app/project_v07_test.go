@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/unikraft/lib"
 	kraftfilev07 "unikraft.com/x/kraftfile"
-	uklib "kraftkit.sh/unikraft/lib"
 )
 
 func Test_parseKraftfileSpecVersion(t *testing.T) {
@@ -289,7 +289,36 @@ runtime: index.unikraft.io/official/base:latest
 	}
 }
 
+func Test_NewProjectFromOptionsV07_RuntimeShorthandTag(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+runtime: base:latest
+`)
+
+	if project.Runtime() == nil {
+		t.Fatal("expected runtime to be present")
+	}
+
+	if project.Runtime().Name() != "base" {
+		t.Errorf("Runtime().Name() = %q, want %q", project.Runtime().Name(), "base")
+	}
+
+	if project.Runtime().Version() != "latest" {
+		t.Errorf("Runtime().Version() = %q, want %q", project.Runtime().Version(), "latest")
+	}
+
+	if project.Runtime().Source() != "base:latest" {
+		t.Errorf("Runtime().Source() = %q, want %q", project.Runtime().Source(), "base:latest")
+	}
+
+	if project.Runtime().Reference() != "base:latest" {
+		t.Errorf("Runtime().Reference() = %q, want %q", project.Runtime().Reference(), "base:latest")
+	}
+}
+
 func Test_v07TemplateFromDocument(t *testing.T) {
+	// Test the v07 template converter directly since template resolution
+	// now happens at project load time and requires a package manager.
 	doc := &kraftfilev07.Template{
 		Source:  "https://github.com/unikraft/catalog.git",
 		Version: "stable",
@@ -347,6 +376,46 @@ template:
 	}
 }
 
+func Test_NewProjectFromOptionsV07_TemplateProjectFieldsOverride(t *testing.T) {
+	workdir := t.TempDir()
+	templateDir := filepath.Join(workdir, "template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		t.Fatalf("could not create template directory: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(templateDir, "kraft.yaml"), []byte(`
+spec: v0.7
+name: template-name
+runtime: template-runtime:1.0
+`), 0o644); err != nil {
+		t.Fatalf("could not write template kraftfile: %v", err)
+	}
+
+	project := mustProjectFromBytes(t, workdir, `
+spec: v0.7
+name: project-name
+template:
+  source: `+templateDir+`
+runtime: project-runtime:2.0
+`)
+
+	if project.Name() != "project-name" {
+		t.Errorf("Name() = %q, want %q", project.Name(), "project-name")
+	}
+
+	if project.Runtime() == nil {
+		t.Fatal("expected runtime to be present")
+	}
+
+	if project.Runtime().Name() != "project-runtime" {
+		t.Errorf("Runtime().Name() = %q, want %q", project.Runtime().Name(), "project-runtime")
+	}
+
+	if project.Runtime().Version() != "2.0" {
+		t.Errorf("Runtime().Version() = %q, want %q", project.Runtime().Version(), "2.0")
+	}
+}
+
 func Test_NewProjectFromOptionsV07_RootfsFormat(t *testing.T) {
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
@@ -362,6 +431,38 @@ rootfs:
 
 	if project.InitrdFsType() != initrd.FsTypeErofs {
 		t.Errorf("InitrdFsType() = %q, want %q", project.InitrdFsType(), initrd.FsTypeErofs)
+	}
+}
+
+func Test_NewProjectFromOptionsV07_RomsMetadata(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+runtime: base:latest
+roms:
+  - source: ./assets
+    format: erofs
+  - source: ./blob.bin
+`)
+
+	roms := project.Roms()
+	if len(roms) != 2 {
+		t.Fatalf("len(Roms()) = %d, want 2", len(roms))
+	}
+
+	if roms[0].Source != "./assets" {
+		t.Errorf("roms[0].Source = %q, want %q", roms[0].Source, "./assets")
+	}
+
+	if roms[0].Format != kraftfilev07.FsTypeErofs {
+		t.Errorf("roms[0].Format = %q, want %q", roms[0].Format, kraftfilev07.FsTypeErofs)
+	}
+
+	if roms[1].Source != "./blob.bin" {
+		t.Errorf("roms[1].Source = %q, want %q", roms[1].Source, "./blob.bin")
+	}
+
+	if roms[1].Format != kraftfilev07.FsTypeCpio {
+		t.Errorf("roms[1].Format = %q, want %q", roms[1].Format, kraftfilev07.FsTypeCpio)
 	}
 }
 
@@ -398,43 +499,23 @@ volumes:
 	}
 }
 
-func Test_NewProjectFromOptionsV07_MutationOperationsAreRejected(t *testing.T) {
+func Test_NewProjectFromOptionsV07_MutationsRejected(t *testing.T) {
+	ctx := context.Background()
 	project := mustProjectFromBytes(t, t.TempDir(), `
 spec: v0.7
 runtime: base:latest
 `)
 
-	tests := []struct {
-		name string
-		run  func(Application) error
-	}{
-		{
-			name: "save",
-			run: func(project Application) error {
-				return project.Save(context.Background())
-			},
-		},
-		{
-			name: "add library",
-			run: func(project Application) error {
-				return project.AddLibrary(context.Background(), uklib.LibraryConfig{})
-			},
-		},
-		{
-			name: "remove library",
-			run: func(project Application) error {
-				return project.RemoveLibrary(context.Background(), "libfoo")
-			},
-		},
+	if err := project.Save(ctx); !errors.Is(err, ErrProjectMutationNotSupported) {
+		t.Fatalf("Save() error = %v, want ErrProjectMutationNotSupported", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.run(project)
-			if !errors.Is(err, ErrProjectMutationNotSupported) {
-				t.Errorf("operation error = %v, want %v", err, ErrProjectMutationNotSupported)
-			}
-		})
+	if err := project.AddLibrary(ctx, lib.LibraryConfig{}); !errors.Is(err, ErrProjectMutationNotSupported) {
+		t.Fatalf("AddLibrary() error = %v, want ErrProjectMutationNotSupported", err)
+	}
+
+	if err := project.RemoveLibrary(ctx, "libfoo"); !errors.Is(err, ErrProjectMutationNotSupported) {
+		t.Fatalf("RemoveLibrary() error = %v, want ErrProjectMutationNotSupported", err)
 	}
 }
 

@@ -53,6 +53,8 @@ import (
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
 	"kraftkit.sh/unikraft/target"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 const ConfigFilename = "config.json"
@@ -75,7 +77,7 @@ type ociPackage struct {
 	kernel    string
 	kernelDbg string
 	initrd    initrd.Initrd
-	roms      []string
+	roms      []kraftfilev07.FS
 	command   []string
 	env       []string
 	labels    map[string]string
@@ -406,10 +408,10 @@ func (ocipack *ociPackage) build(ctx context.Context) (*ociPackage, error) {
 
 	for _, rom := range ocipack.Roms() {
 		log.G(ctx).
-			WithField("rom", rom).
+			WithField("rom", rom.Source).
 			Trace("layer")
-		if err := ocipack.manifest.AddRom(ctx, rom); err != nil {
-			return nil, fmt.Errorf("could not add ROM '%s' to manifest: %w", rom, err)
+		if err := ocipack.manifest.AddRom(ctx, rom.Source); err != nil {
+			return nil, fmt.Errorf("could not add ROM '%s' to manifest: %w", rom.Source, err)
 		}
 	}
 
@@ -1455,7 +1457,7 @@ func (ocipack *ociPackage) Initrd() initrd.Initrd {
 }
 
 // Roms implements unikraft.target.Target
-func (ocipack *ociPackage) Roms() []string {
+func (ocipack *ociPackage) Roms() []kraftfilev07.FS {
 	return ocipack.roms
 }
 

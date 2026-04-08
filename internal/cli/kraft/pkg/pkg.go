@@ -37,6 +37,8 @@ import (
 	"kraftkit.sh/internal/cli/kraft/pkg/source"
 	"kraftkit.sh/internal/cli/kraft/pkg/unsource"
 	"kraftkit.sh/internal/cli/kraft/pkg/update"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type PkgOptions struct {
@@ -65,8 +67,8 @@ type PkgOptions struct {
 	Project        app.Application           `noattribute:"true"`
 	Push           bool                      `local:"true" long:"push" short:"P" usage:"Push the package on if successfully packaged"`
 	Rootfs         string                    `local:"true" long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	RootfsType     initrd.FsType             `noattribute:"true"`
-	RomType        initrd.FsType             `noattribute:"true"`
+	RootfsType     kraftfilev07.FsType       `noattribute:"true"`
+	RomType        kraftfilev07.FsType       `noattribute:"true"`
 	Roms           []string                  `local:"true" long:"rom" short:"R" usage:"Specify a path to an auxiliary ROM to include in the package"`
 	Runtime        string                    `local:"true" long:"runtime" short:"r" usage:"Set the runtime to use for the package"`
 	Strategy       packmanager.MergeStrategy `noattribute:"true"`
@@ -313,16 +315,16 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag(
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
-			initrd.FsTypeCpio,
+			kraftfilev07.FsTypeCpio,
 		),
 		"rootfs-type",
 		"Set the type of the format of the rootfs (cpio/erofs)",
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag(
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
 			initrd.FsTypeCpio,
 		),
@@ -361,10 +363,10 @@ func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	opts.Strategy = packmanager.MergeStrategy(cmd.Flag("strategy").Value.String())
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
-		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 	if cmd.Flag("rom-type").Changed && cmd.Flag("rom-type").Value.String() != "" {
-		opts.RomType = initrd.FsType(cmd.Flag("rom-type").Value.String())
+		opts.RomType = kraftfilev07.FsType(cmd.Flag("rom-type").Value.String())
 	}
 
 	return nil
