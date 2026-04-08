@@ -49,34 +49,12 @@ func IsWorkdirInitialized(dir string) bool {
 	return len(findFiles(DefaultFileNames, dir)) > 0
 }
 
-// NewProjectFromOptions load a kraft project based on command line options
-func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Application, error) {
-	popts, err := NewProjectOptions(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("could not apply project options: %v", err)
-	}
-
-	workdir, err := popts.Workdir()
-	if err != nil {
-		return nil, err
-	}
-
-	absWorkdir, err := filepath.Abs(workdir)
-	if err != nil {
-		return nil, err
-	}
-
-	if popts.name != "" {
-		popts.SetProjectName(popts.name, false)
-	} else {
-		popts.SetProjectName(filepath.Base(absWorkdir), true)
-	}
-
-	if popts.kraftfile == nil {
-		return nil, ErrNoKraftfile
-	}
-
+func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Application, error) {
 	name, _ := popts.GetProjectName()
+	specVersion, err := parseKraftfileSpecVersion(popts.kraftfile.content)
+	if err != nil {
+		return nil, err
+	}
 
 	var outdir string
 	if popts.outDir == "" {
@@ -123,7 +101,7 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 
 	uk := &unikraft.Context{
 		UK_NAME:   name,
-		UK_BASE:   popts.RelativePath(workdir),
+		UK_BASE:   popts.workdir,
 		BUILD_DIR: outdir,
 	}
 
@@ -192,6 +170,8 @@ func NewProjectFromOptions(ctx context.Context, opts ...ProjectOption) (Applicat
 		WithKraftfile(popts.kraftfile),
 		WithVolumes(app.volumes...),
 		WithEnv(app.env),
+		WithLoaderKind(ProjectLoaderLegacy),
+		WithSpecVersion(specVersion),
 	)
 	if err != nil {
 		return nil, err
