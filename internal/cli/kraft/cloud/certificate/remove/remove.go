@@ -70,7 +70,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if !opts.All && len(args) == 0 {
-		return fmt.Errorf("either specify a certificate name or UUID, or use the --all flag")
+		return ErrCertificateIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
@@ -79,7 +79,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("invalid output format: %s", opts.Output)
+		return fmt.Errorf("%w: %s", ErrInvalidOutputFormat, opts.Output)
 	}
 
 	return nil
