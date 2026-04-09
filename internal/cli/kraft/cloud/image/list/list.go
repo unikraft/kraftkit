@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -17,9 +16,7 @@ import (
 	gcrname "github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 
-	kraftcloud "sdk.kraft.cloud"
-	kcclient "sdk.kraft.cloud/client"
-	kcimages "sdk.kraft.cloud/images"
+	"unikraft.com/cloud/sdk/controlplane"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -33,14 +30,13 @@ type ListOptions struct {
 	All    bool   `long:"all" usage:"Also show available official images"`
 	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
 
-	metro         string
 	token         string
 	allowInsecure bool
 }
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&ListOptions{}, cobra.Command{
-		Short:   "List all images at a metro for your account",
+		Short:   "List all images for your account",
 		Use:     "list",
 		Args:    cobra.NoArgs,
 		Aliases: []string{"ls"},
@@ -66,9 +62,9 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
+	err := utils.PopulateMetroToken(cmd, nil, &opts.token, &opts.allowInsecure)
 	if err != nil {
-		return fmt.Errorf("could not populate metro and token: %w", err)
+		return fmt.Errorf("could not populate token: %w", err)
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
@@ -79,32 +75,119 @@ func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
 }
 
 func (opts *ListOptions) Run(ctx context.Context, args []string) error {
-	auth, err := config.GetKraftCloudAuthConfig(ctx, opts.token)
+	return opts.runControlPlane(ctx)
+}
+
+func (opts *ListOptions) runControlPlane(ctx context.Context) error {
+	auth, err := config.GetKraftCloudAuthConfig(ctx, strings.TrimSpace(opts.token))
 	if err != nil {
 		return fmt.Errorf("could not retrieve credentials: %w", err)
 	}
 
-	client := kraftcloud.NewImagesClient(
-		kraftcloud.WithAllowInsecure(opts.allowInsecure),
-		kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
-	)
+	clientOpts := []controlplane.ClientOption{
+		controlplane.WithAllowInsecure(opts.allowInsecure),
+		controlplane.WithToken(config.GetKraftCloudTokenAuthConfig(*auth)),
+	}
 
-	resp, err := client.WithMetro(opts.metro).List(ctx)
+	client := controlplane.NewClient(clientOpts...)
+
+	details := true
+	resp, err := client.ListImages(ctx, controlplane.ListImagesOpts{Details: &details})
 	if err != nil {
 		return fmt.Errorf("could not list images: %w", err)
 	}
 
 	if opts.Output == "raw" {
-		printRaw(ctx, resp)
+		fmt.Fprintln(iostreams.G(ctx).Out, string(resp.RawBody()))
 		return nil
 	}
 
-	images, err := resp.AllOrErr()
-	if err != nil {
-		return fmt.Errorf("could not list images: %w", err)
+	images := collectImageItems(resp)
+	if opts.All {
+		respOfficial, err := client.ListImages(ctx, controlplane.ListImagesOpts{Details: &details, Namespace: []string{"official"}})
+		if err != nil {
+			return fmt.Errorf("could not list official images: %w", err)
+		}
+		images = append(images, collectImageItems(respOfficial)...)
 	}
 
-	err = iostreams.G(ctx).StartPager()
+	return opts.renderImages(ctx, images)
+}
+
+type imageRow struct {
+	Digest      string
+	Tags        []string
+	SizeInBytes int64
+}
+
+func collectImageItems(resp *controlplane.Response[controlplane.ListImagesResponseData]) []imageRow {
+	if resp == nil || resp.Data == nil {
+		return nil
+	}
+
+	imagesByKey := make(map[string]*imageRow, len(resp.Data.Images))
+	for _, image := range resp.Data.Images {
+		name := ""
+		if image.Name != nil {
+			name = strings.TrimSpace(*image.Name)
+		}
+		if name == "" {
+			continue
+		}
+
+		for _, tag := range image.Tags {
+			tagName := ""
+			if tag.Name != nil {
+				tagName = strings.TrimSpace(*tag.Name)
+			}
+			if tagName == "" {
+				continue
+			}
+
+			ref := fmt.Sprintf("%s:%s", name, tagName)
+			digest := strings.TrimSpace(derefString(tag.Digest))
+			key := name + "|" + digest
+			if digest == "" {
+				key = name + "|" + tagName + "|nodigest"
+			}
+
+			item, ok := imagesByKey[key]
+			if !ok {
+				item = &imageRow{Digest: digest}
+				imagesByKey[key] = item
+			}
+
+			sizeInBytes := int64(0)
+			if tag.Size != nil {
+				sizeInBytes = int64(*tag.Size)
+			}
+			if sizeInBytes > item.SizeInBytes {
+				item.SizeInBytes = sizeInBytes
+			}
+			item.Tags = append(item.Tags, ref)
+		}
+	}
+
+	images := make([]imageRow, 0, len(imagesByKey))
+	for _, item := range imagesByKey {
+		if len(item.Tags) == 0 {
+			continue
+		}
+		images = append(images, *item)
+	}
+
+	return images
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func (opts *ListOptions) renderImages(ctx context.Context, images []imageRow) error {
+	err := iostreams.G(ctx).StartPager()
 	if err != nil {
 		log.G(ctx).Errorf("error starting pager: %v", err)
 	}
@@ -120,19 +203,31 @@ func (opts *ListOptions) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Sort the features lexically.  This ensures that comparisons between
-	// versions are symmetric.
-	sort.Slice(images, func(i, j int) bool {
-		return images[i].Digest < images[j].Digest
+	// Sort by namespace (official last), then repo, then tag.
+	slices.SortFunc(images, func(left, right imageRow) int {
+		leftRepo, leftTag := repoAndTag(left)
+		rightRepo, rightTag := repoAndTag(right)
+
+		leftOfficial := opts.All && isOfficialNamespace(leftRepo)
+		rightOfficial := opts.All && isOfficialNamespace(rightRepo)
+		if leftOfficial != rightOfficial {
+			if leftOfficial {
+				return 1
+			}
+			return -1
+		}
+
+		if leftRepo != rightRepo {
+			return strings.Compare(leftRepo, rightRepo)
+		}
+		return strings.Compare(leftTag, rightTag)
 	})
 
 	// Header row
 	table.AddField("NAME", cs.Bold)
 	table.AddField("VERSION", cs.Bold)
 	if opts.Output != "table" {
-		table.AddField("APP ARGS", cs.Bold)
-		table.AddField("KERNEL ARGS", cs.Bold)
-		table.AddField("LABELS", cs.Bold)
+		table.AddField("DIGEST", cs.Bold)
 	}
 	table.AddField("SIZE", cs.Bold)
 	table.EndRow()
@@ -153,11 +248,25 @@ imgloop:
 				continue
 			}
 
-			if name = tag.RepositoryStr(); isOfficial(name) && !opts.All {
+			repo := tag.RepositoryStr()
+			if isOfficial(repo) && !opts.All {
 				continue imgloop
+			}
+			if name == "" {
+				name = repo
+				if isOfficialNamespace(name) {
+					name = strings.TrimPrefix(name, "official/")
+					if name == "official" {
+						name = ""
+					}
+				}
 			}
 
 			versions = append(versions, tag.TagStr())
+		}
+
+		if len(versions) == 0 || name == "" {
+			continue
 		}
 
 		slices.Sort(versions)
@@ -166,17 +275,7 @@ imgloop:
 		table.AddField(strings.Join(versions, ", "), nil)
 
 		if opts.Output != "table" {
-			table.AddField(image.Args, nil)
-			table.AddField(image.KernelArgs, nil)
-			if len(image.Labels) != 0 {
-				var labels []string
-				for k, v := range image.Labels {
-					labels = append(labels, fmt.Sprintf("%s=%s", k, v))
-				}
-				table.AddField(strings.Join(labels, ","), nil)
-			} else {
-				table.AddField("", nil)
-			}
+			table.AddField(image.Digest, nil)
 		}
 
 		table.AddField(humanize.Bytes(uint64(image.SizeInBytes)), nil)
@@ -228,6 +327,36 @@ func isNamespacedRepository(repo string) bool {
 	return strings.ContainsRune(repo, regNsDelimiter)
 }
 
-func printRaw(ctx context.Context, resp *kcclient.ServiceResponse[kcimages.GetResponseItem]) {
-	fmt.Fprintln(iostreams.G(ctx).Out, string(resp.RawBody()))
+func isOfficialNamespace(repo string) bool {
+	return repo == "official" || strings.HasPrefix(repo, "official/")
+}
+
+func repoAndTag(image imageRow) (string, string) {
+	var (
+		bestRepo string
+		bestTag  string
+		found    bool
+	)
+
+	for _, ref := range image.Tags {
+		parsed, err := parseTagReference(ref)
+		if err != nil {
+			continue
+		}
+
+		repo := parsed.RepositoryStr()
+		tag := parsed.TagStr()
+
+		if !found || repo < bestRepo || (repo == bestRepo && tag < bestTag) {
+			bestRepo = repo
+			bestTag = tag
+			found = true
+		}
+	}
+
+	if !found {
+		return "", ""
+	}
+
+	return bestRepo, bestTag
 }
