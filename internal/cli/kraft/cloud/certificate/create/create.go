@@ -20,6 +20,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/certificate/certerr"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
@@ -42,7 +43,7 @@ func isValidChain(chain []byte) error {
 		block, rest := pem.Decode(chain)
 		if block == nil {
 			if len(rest) > 0 {
-				return ErrCouldNotParsePEM
+				return certerr.ErrCouldNotParsePEM
 			}
 			break
 		}
@@ -57,7 +58,7 @@ func isValidChain(chain []byte) error {
 func isValidPrivateKey(pkey []byte) error {
 	block, _ := pem.Decode(pkey)
 	if block == nil {
-		return ErrCouldNotParsePEM
+		return certerr.ErrCouldNotParsePEM
 	}
 
 	if _, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
@@ -68,7 +69,7 @@ func isValidPrivateKey(pkey []byte) error {
 		return nil
 	}
 
-	return ErrInvalidPrivateKeyFormat
+	return certerr.ErrInvalidPrivateKeyFormat
 }
 
 // Create a KraftCloud certificate.
@@ -172,15 +173,15 @@ func NewCmd() *cobra.Command {
 
 func (opts *CreateOptions) Pre(cmd *cobra.Command, _ []string) error {
 	if opts.CN == "" {
-		return ErrCommonNameRequired
+		return certerr.ErrCommonNameRequired
 	}
 
 	if opts.PKey == "" {
-		return ErrPrivateKeyRequired
+		return certerr.ErrPrivateKeyRequired
 	}
 
 	if opts.Chain == "" {
-		return ErrChainRequired
+		return certerr.ErrChainRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.allowInsecure)
