@@ -171,6 +171,28 @@ func Main(args []string) int {
 		}()
 	}
 
+	// Use a generic logger until we have the context set up
+	cmd.SetContext(log.WithLogger(ctx, log.L))
+
+	// Populate type/style until we do it properly to be used early
+	if logLevelStr := config.FetchLogLevelFromArgs(os.Args[1:]); logLevelStr != "" {
+		if level, ok := log.Levels()[logLevelStr]; ok {
+			log.L.SetLevel(level)
+		}
+	}
+
+	switch log.LoggerTypeFromString(config.FetchLogTypeFromArgs(os.Args[1:])) {
+	case log.QUIET:
+		log.L.SetFormatter(new(logrus.TextFormatter))
+	case log.JSON:
+		log.L.SetFormatter(new(logrus.JSONFormatter))
+	default: // BASIC, FANCY, or unset — use kraftkit's TextFormatter
+		formatter := new(log.TextFormatter)
+		formatter.FullTimestamp = true
+		formatter.DisableTimestamp = true
+		log.L.SetFormatter(formatter)
+	}
+
 	for _, o := range []cli.CliOption{
 		cli.WithDefaultConfigManager(cmd),
 		cli.WithDefaultIOStreams(),

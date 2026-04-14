@@ -128,7 +128,7 @@ func WithDefaultLogger() CliOption {
 // default options.
 func WithDefaultConfigManager(cmd *cobra.Command) CliOption {
 	return func(copts *CliOptions) error {
-		cfg, err := config.NewDefaultKraftKitConfig()
+		cfg, err := config.NewDefaultKraftKitConfig(cmd.Context())
 		if err != nil {
 			return err
 		}

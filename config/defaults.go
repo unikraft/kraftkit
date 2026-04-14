@@ -21,7 +21,7 @@ const (
 	DefaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
-func NewDefaultKraftKitConfig() (*KraftKit, error) {
+func NewDefaultKraftKitConfig(ctx context.Context) (*KraftKit, error) {
 	var err error
 	c := &KraftKit{}
 
@@ -29,7 +29,7 @@ func NewDefaultKraftKitConfig() (*KraftKit, error) {
 		return nil, fmt.Errorf("could not set defaults for config: %s", err)
 	}
 
-	c.Auth, err = defaultAuths()
+	c.Auth, err = defaultAuths(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get default auths: %s", err)
 	}
@@ -125,7 +125,7 @@ func setDefaultValue(v reflect.Value, def string) error {
 
 // defaultAuths uses the provided context to locate possible authentication
 // values which can be used when speaking with remote registries.
-func defaultAuths() (map[string]AuthConfig, error) {
+func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 	auths := make(map[string]AuthConfig)
 
 	// Podman users may have their container registry auth configured in a

@@ -352,6 +352,60 @@ func AllowedValues(key string) []string {
 	return []string{}
 }
 
+// FetchLogLevelFromArgs returns the log level set via the --log-level flag or
+// the KRAFTKIT_LOG_LEVEL environment variable. This must be called before
+// flags are populated via AttributeFlags so that log messages emitted during
+// early config loading respect the user's chosen level.
+func FetchLogLevelFromArgs(args []string) (level string) {
+	if v := os.Getenv("KRAFTKIT_LOG_LEVEL"); v != "" {
+		level = v
+	}
+
+	for idx, arg := range args {
+		if !strings.HasPrefix(arg, "--log-level") {
+			continue
+		}
+		if strings.Contains(arg, "=") {
+			if split := strings.Split(arg, "="); len(split) == 2 {
+				level = split[1]
+			}
+		} else {
+			if idx+1 < len(args) && !strings.HasPrefix(args[idx+1], "-") {
+				level = args[idx+1]
+			}
+		}
+		break
+	}
+	return
+}
+
+// FetchLogTypeFromArgs returns the log type set via the --log-type flag or
+// the KRAFTKIT_LOG_TYPE environment variable. This must be called before
+// flags are populated via AttributeFlags so that log messages emitted during
+// early config loading use the user's chosen formatter.
+func FetchLogTypeFromArgs(args []string) (logType string) {
+	if v := os.Getenv("KRAFTKIT_LOG_TYPE"); v != "" {
+		logType = v
+	}
+
+	for idx, arg := range args {
+		if !strings.HasPrefix(arg, "--log-type") {
+			continue
+		}
+		if strings.Contains(arg, "=") {
+			if split := strings.Split(arg, "="); len(split) == 2 {
+				logType = split[1]
+			}
+		} else {
+			if idx+1 < len(args) && !strings.HasPrefix(args[idx+1], "-") {
+				logType = args[idx+1]
+			}
+		}
+		break
+	}
+	return
+}
+
 // FetchConfigDirFromArgs returns the path to the alternate config directory
 // that can be set via the --config-dir flag. This needs to be fetched before flags
 // are populated with AttributeFlags to ensure that the function is called only once.
