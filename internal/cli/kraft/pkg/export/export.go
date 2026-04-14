@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -21,11 +22,14 @@ import (
 )
 
 type ExportOptions struct {
-	Architecture string `long:"arch" short:"m" usage:"Specify the desired architecture"`
-	Format       string `long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
-	Output       string `long:"output" short:"o" usage:"Set the location to export the package to"`
-	Platform     string `long:"plat" short:"p" usage:"Specify the desired platform"`
-	Update       bool   `long:"update" short:"u" usage:"Fetch the latest information about components and pull if not present"`
+	AllowInsecure bool   `local:"true" long:"allow-insecure" usage:"Allow insecure connections to the registry" hidden:"true"`
+	Architecture  string `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	Format        string `long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Metro         string `local:"true" long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location" hidden:"true"`
+	Output        string `long:"output" short:"o" usage:"Set the location to export the package to"`
+	Platform      string `long:"plat" short:"p" usage:"Specify the desired platform"`
+	Token         string `local:"true" long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token" hidden:"true"`
+	Update        bool   `long:"update" short:"u" usage:"Fetch the latest information about components and pull if not present"`
 }
 
 // Export the package to a specified location.
@@ -61,6 +65,28 @@ func New() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func (opts *ExportOptions) Pre(cmd *cobra.Command, _ []string) error {
+	// Suppress interactive metro prompting: pkg commands do not require a
+	// metro; token population proceeds silently via flags/env vars only.
+	origNoPrompt := config.G[config.KraftKit](cmd.Context()).NoPrompt
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = true
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
+		log.G(cmd.Context()).WithError(err).Debug("could not populate metro/token for pkg export")
+	}
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = origNoPrompt
+
+	if opts.Token != "" {
+		if _, err := config.GetKraftCloudAuthConfig(cmd.Context(), opts.Token); err != nil {
+			log.G(cmd.Context()).WithError(err).Debug("could not hydrate kraft cloud auth from token")
+		}
+		if opts.Metro != "" {
+			cmd.SetContext(config.ContextWithIndexAuth(cmd.Context(), opts.Metro, opts.Token))
+		}
+	}
+
+	return nil
 }
 
 func (opts *ExportOptions) Run(ctx context.Context, args []string) error {

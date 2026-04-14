@@ -15,6 +15,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
@@ -29,16 +30,19 @@ import (
 )
 
 type PullOptions struct {
-	All          bool     `long:"all" short:"A" usage:"Pull all versions"`
-	Architecture string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
-	Format       string   `long:"as" short:"f" usage:"Set the package format" default:"auto"`
-	KConfig      []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
-	Kraftfile    string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	NoChecksum   bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
-	Output       string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
-	Platform     string   `long:"plat" short:"p" usage:"Specify the desired platform"`
-	Update       bool     `long:"update" short:"u" usage:"Perform an update which gathers remote sources"`
-	Workdir      string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
+	All           bool     `long:"all" short:"A" usage:"Pull all versions"`
+	AllowInsecure bool     `local:"true" long:"allow-insecure" usage:"Allow insecure connections to the registry" hidden:"true"`
+	Architecture  string   `long:"arch" short:"m" usage:"Specify the desired architecture"`
+	Format        string   `long:"as" short:"f" usage:"Set the package format" default:"auto"`
+	KConfig       []string `long:"kconfig" short:"k" usage:"Request a package with specific KConfig options."`
+	Kraftfile     string   `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
+	Metro         string   `local:"true" long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location" hidden:"true"`
+	NoChecksum    bool     `long:"no-checksum" short:"C" usage:"Do not verify package checksum (if available)"`
+	Output        string   `long:"output" short:"o" usage:"Save the package contents to the provided directory"`
+	Platform      string   `long:"plat" short:"p" usage:"Specify the desired platform"`
+	Token         string   `local:"true" long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token" hidden:"true"`
+	Update        bool     `long:"update" short:"u" usage:"Perform an update which gathers remote sources"`
+	Workdir       string   `long:"workdir" short:"w" usage:"Set a path to working directory to pull components to"`
 }
 
 // Pull a Unikraft component.
@@ -86,6 +90,26 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
+	// Suppress interactive metro prompting: pkg commands do not require a
+	// metro; token population proceeds silently via flags/env vars only.
+	origNoPrompt := config.G[config.KraftKit](cmd.Context()).NoPrompt
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = true
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
+		log.G(cmd.Context()).WithError(err).Debug("could not populate metro/token for pkg pull")
+	}
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = origNoPrompt
+
+	// If a token was resolved, hydrate it into the context's auth config so the
+	// OCI package manager uses it when pulling from index.unikraft.io.
+	if opts.Token != "" {
+		if _, err := config.GetKraftCloudAuthConfig(cmd.Context(), opts.Token); err != nil {
+			log.G(cmd.Context()).WithError(err).Debug("could not hydrate kraft cloud auth from token")
+		}
+		if opts.Metro != "" {
+			cmd.SetContext(config.ContextWithIndexAuth(cmd.Context(), opts.Metro, opts.Token))
+		}
+	}
+
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err

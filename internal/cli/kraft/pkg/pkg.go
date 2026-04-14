@@ -16,6 +16,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/platform"
 	"kraftkit.sh/pack"
@@ -39,6 +40,7 @@ import (
 )
 
 type PkgOptions struct {
+	AllowInsecure  bool                      `long:"allow-insecure" usage:"Allow insecure connections to the registry" hidden:"true"`
 	Architecture   string                    `local:"true" long:"arch" short:"m" usage:"Filter the creation of the package by architecture of known targets (x86_64/arm64/arm)"`
 	Args           []string                  `local:"true" long:"args" short:"a" usage:"Pass arguments that will be part of the running kernel's command line"`
 	Compress       bool                      `local:"true" long:"compress" short:"c" usage:"Compress the initrd package (experimental)"`
@@ -51,6 +53,7 @@ type PkgOptions struct {
 	Kernel         string                    `local:"true" long:"kernel" short:"k" usage:"Override the path to the unikernel image"`
 	Kraftfile      string                    `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Labels         []string                  `local:"true" long:"label" short:"l" usage:"Set labels to be packed into the package (k=v)"`
+	Metro          string                    `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location (used when pushing to index.unikraft.io)" hidden:"true"`
 	Name           string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	NoKConfig      bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
 	NoKernel       bool                      `local:"true" long:"no-kernel" usage:"Allow packaging without a kernel image"`
@@ -65,6 +68,7 @@ type PkgOptions struct {
 	Runtime        string                    `local:"true" long:"runtime" short:"r" usage:"Set the runtime to use for the package"`
 	Strategy       packmanager.MergeStrategy `noattribute:"true"`
 	Target         string                    `local:"true" long:"target" short:"t" usage:"Package a particular known target"`
+	Token          string                    `long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token (used when pushing to index.unikraft.io)" hidden:"true"`
 	Workdir        string                    `local:"true" long:"workdir" short:"w" usage:"Set an alternative working directory (default is cwd)"`
 
 	packopts []packmanager.PackOption
@@ -232,7 +236,10 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 					humanize.Bytes(uint64(p.Size())),
 				),
 				func(ctx context.Context, w func(progress float64)) error {
-					return p.Push(ctx, pack.WithPushProgressFunc(w))
+					return p.Push(ctx,
+						pack.WithPushProgressFunc(w),
+						pack.WithPushAuthConfig(config.G[config.KraftKit](ctx).Auth),
+					)
 				},
 			))
 		}
@@ -315,6 +322,24 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *PkgOptions) Pre(cmd *cobra.Command, args []string) error {
+	// Suppress interactive metro prompting: pkg commands do not require a
+	// metro; token population proceeds silently via flags/env vars only.
+	origNoPrompt := config.G[config.KraftKit](cmd.Context()).NoPrompt
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = true
+	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
+		log.G(cmd.Context()).WithError(err).Debug("could not populate metro/token for pkg")
+	}
+	config.G[config.KraftKit](cmd.Context()).NoPrompt = origNoPrompt
+
+	if opts.Token != "" {
+		if _, err := config.GetKraftCloudAuthConfig(cmd.Context(), opts.Token); err != nil {
+			log.G(cmd.Context()).WithError(err).Debug("could not hydrate kraft cloud auth from token")
+		}
+		if opts.Metro != "" {
+			cmd.SetContext(config.ContextWithIndexAuth(cmd.Context(), opts.Metro, opts.Token))
+		}
+	}
+
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err
