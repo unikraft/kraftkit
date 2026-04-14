@@ -5,23 +5,28 @@
 package config
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	cliconfig "github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
-	"github.com/mitchellh/go-homedir"
+	"github.com/docker/cli/cli/config/credentials"
+	"github.com/docker/cli/cli/config/types"
+	"kraftkit.sh/log"
 )
 
 const (
 	DefaultManifestIndex = "https://manifests.kraftkit.sh/index.yaml"
 )
 
-func NewDefaultKraftKitConfig() (*KraftKit, error) {
+func NewDefaultKraftKitConfig(ctx context.Context) (*KraftKit, error) {
 	var err error
 	c := &KraftKit{}
 
@@ -29,7 +34,7 @@ func NewDefaultKraftKitConfig() (*KraftKit, error) {
 		return nil, fmt.Errorf("could not set defaults for config: %s", err)
 	}
 
-	c.Auth, err = defaultAuths()
+	c.Auth, err = defaultAuths(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get default auths: %s", err)
 	}
@@ -125,99 +130,117 @@ func setDefaultValue(v reflect.Value, def string) error {
 
 // defaultAuths uses the provided context to locate possible authentication
 // values which can be used when speaking with remote registries.
-func defaultAuths() (map[string]AuthConfig, error) {
+func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 	auths := make(map[string]AuthConfig)
 
-	// Podman users may have their container registry auth configured in a
-	// different location, that Docker packages aren't aware of.
-	// If the Docker config file isn't found, we'll fallback to look where
-	// Podman configures it, and parse that as a Docker auth config instead.
-
-	// First, check $HOME/.docker/
-	var home string
-	var err error
-	var configPath string
-	foundDockerConfig := false
-
-	// If this is run in the context of GitHub actions, use an alternative path
-	// for the $HOME.
-	if os.Getenv("GITUB_ACTION") == "yes" {
-		home = "/github/home"
-	} else {
-		home, err = homedir.Dir()
+	cf := cliconfig.LoadDefaultConfigFile(os.Stderr)
+	if cf == nil {
+		return nil, fmt.Errorf("could not load default config file")
 	}
-	if err == nil {
-		foundDockerConfig = fileExists(filepath.Join(home, ".docker", "config.json"))
 
-		if foundDockerConfig {
-			configPath = filepath.Join(home, ".docker")
+	a, err := credentials.NewFileStore(cf).GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	if cf.CredentialsStore != "" {
+		storeOutput, storeErr := captureStderr(func() error {
+			globalAuths, innerErr := cf.GetCredentialsStore("").GetAll()
+			if innerErr != nil {
+				return innerErr
+			}
+			for k, v := range globalAuths {
+				if _, already := a[k]; !already {
+					a[k] = v
+				}
+			}
+			return nil
+		})
+		if len(storeOutput) > 0 {
+			log.G(ctx).Debugf("global credential store output (%s): %s", cf.CredentialsStore, storeOutput)
+		}
+		if storeErr != nil {
+			log.G(ctx).Debugf("external credential store %q failed: %v", cf.CredentialsStore, storeErr)
 		}
 	}
 
-	// If $HOME/.docker/config.json isn't found, check $DOCKER_CONFIG (if set)
-	if !foundDockerConfig && os.Getenv("DOCKER_CONFIG") != "" {
-		foundDockerConfig = fileExists(filepath.Join(os.Getenv("DOCKER_CONFIG"), "config.json"))
+	for registryHostname := range cf.CredentialHelpers {
+		var newAuth types.AuthConfig
 
-		if foundDockerConfig {
-			configPath = os.Getenv("DOCKER_CONFIG")
+		helperOutput, helperErr := captureStderr(func() error {
+			var innerErr error
+			newAuth, innerErr = cf.GetAuthConfig(registryHostname)
+			return innerErr
+		})
+
+		if len(helperOutput) > 0 {
+			log.G(ctx).Debugf("credential helper output (%s): %s", registryHostname, helperOutput)
 		}
+		if helperErr != nil {
+			log.G(ctx).Debugf("failed to get credentials for registry %q: %v", registryHostname, helperErr)
+			continue
+		}
+
+		a[registryHostname] = newAuth
 	}
 
-	// If either of those locations are found, load it using Docker's
-	// config.Load, which may fail if the config can't be parsed.
-	//
-	// If neither was found, look for Podman's auth at
-	// $XDG_RUNTIME_DIR/containers/auth.json and attempt to load it as a
-	// Docker config.
-	var cf *configfile.ConfigFile
-	if foundDockerConfig {
-		cf, err = cliconfig.Load(configPath)
-		if err != nil {
-			return nil, fmt.Errorf("could not load config from Docker daemon: %s", err)
+	for domain, cfg := range a {
+		if cfg.Username == "" && cfg.Password == "" {
+			continue
 		}
-	} else if f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers", "auth.json")); err == nil {
-		defer f.Close()
 
-		cf, err = cliconfig.LoadFromReader(f)
-		if err != nil {
-			return nil, fmt.Errorf("could not load config from Docker daemon: %s", err)
-		}
-	}
-
-	if cf != nil {
-		a, err := cf.GetAllCredentials()
+		purl, err := url.Parse(domain)
 		if err != nil {
 			return nil, err
 		}
 
-		for domain, cfg := range a {
-			if cfg.Username == "" && cfg.Password == "" {
-				continue
-			}
+		u := purl.Host
+		if u == "" {
+			domain = purl.Path // Sometimes occurs with ghcr.io
+		}
+		if u == "" {
+			u = cfg.ServerAddress
+		}
+		if u == "" {
+			u = domain
+		}
 
-			purl, err := url.Parse(domain)
-			if err != nil {
-				return nil, err
-			}
-
-			u := purl.Host
-			if u == "" {
-				domain = purl.Path // Sometimes occurs with ghcr.io
-			}
-			if u == "" {
-				u = cfg.ServerAddress
-			}
-			if u == "" {
-				u = domain
-			}
-
-			auths[u] = AuthConfig{
-				Endpoint: u,
-				User:     cfg.Username,
-				Token:    cfg.Password,
-			}
+		auths[u] = AuthConfig{
+			Endpoint: u,
+			User:     cfg.Username,
+			Token:    cfg.Password,
 		}
 	}
 
 	return auths, nil
+}
+
+// captureStderr temporarily redirects os.Stderr to an internal pipe, runs fn,
+// then returns any text the helper wrote to stderr (trimmed). os.Stderr is
+// restored before this function returns.
+// NOTE(craciunoiuc): Workaround for subprocesses that write to stderr
+func captureStderr(fn func() error) (output string, err error) {
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fn()
+	}
+
+	orig := os.Stderr
+	os.Stderr = w
+
+	var buf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		io.Copy(&buf, r) //nolint:errcheck
+	}()
+
+	err = fn()
+
+	os.Stderr = orig
+	w.Close()
+	<-done
+	r.Close()
+
+	return strings.TrimSpace(buf.String()), err
 }

@@ -52,7 +52,6 @@ require (
 	github.com/mattn/go-isatty v0.0.21
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.29.0
 	github.com/moby/moby/client v0.4.0
 	github.com/muesli/reflow v0.3.0
@@ -213,6 +212,7 @@ require (
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.21 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
