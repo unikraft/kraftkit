@@ -5,13 +5,16 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/credentials"
@@ -130,14 +133,6 @@ func setDefaultValue(v reflect.Value, def string) error {
 func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 	auths := make(map[string]AuthConfig)
 
-	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	if err != nil {
-		log.G(ctx).Debugf("could not open %s to suppress stderr output from credential helpers: %s", os.DevNull, err)
-		devNull = nil
-	} else {
-		defer devNull.Close()
-	}
-
 	cf := cliconfig.LoadDefaultConfigFile(os.Stderr)
 	if cf == nil {
 		return nil, fmt.Errorf("could not load default config file")
@@ -150,24 +145,21 @@ func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 
 	for registryHostname := range cf.CredentialHelpers {
 		var newAuth types.AuthConfig
-		savedStderr := os.Stderr
 
-		// NOTE(craciunoiuc): Credential helpers might log to stderr directly
-		// and the underlying library does not catch the output to log it properly.
-		// If the error is not caught by the library, suppress it.
-		// We need to do this because configs are fetched for every command.
-		if devNull != nil {
-			os.Stderr = devNull
+		helperOutput, helperErr := captureStderr(func() error {
+			var innerErr error
+			newAuth, innerErr = cf.GetAuthConfig(registryHostname)
+			return innerErr
+		})
+
+		if len(helperOutput) > 0 {
+			log.G(ctx).Debugf("credential helper output for %s: %s", registryHostname, helperOutput)
 		}
-		newAuth, err = cf.GetAuthConfig(registryHostname)
-		if devNull != nil {
-			os.Stderr = savedStderr
-		}
-		if err != nil {
-			log.G(ctx).Debugf("failed to fetch auth for registry: %s", registryHostname)
-			log.G(ctx).Tracef("failed to get credentials for registry %q: %v", registryHostname, err)
+		if helperErr != nil {
+			log.G(ctx).Debugf("failed to get credentials for registry %q: %v", registryHostname, helperErr)
 			continue
 		}
+
 		a[registryHostname] = newAuth
 	}
 
@@ -200,4 +192,34 @@ func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 	}
 
 	return auths, nil
+}
+
+// captureStderr temporarily redirects os.Stderr to an internal pipe, runs fn,
+// then returns any text the helper wrote to stderr (trimmed). os.Stderr is
+// restored before this function returns.
+// NOTE(craciunoiuc): Workaround for subprocesses that write to stderr
+func captureStderr(fn func() error) (output string, err error) {
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return "", fn()
+	}
+
+	orig := os.Stderr
+	os.Stderr = w
+
+	var buf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		io.Copy(&buf, r) //nolint:errcheck
+	}()
+
+	err = fn()
+
+	os.Stderr = orig
+	w.Close()
+	<-done
+	r.Close()
+
+	return strings.TrimSpace(buf.String()), err
 }
