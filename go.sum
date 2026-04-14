@@ -1812,5 +1812,7 @@ sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 sigs.k8s.io/yaml v1.6.0 h1:G8fkbMSAFqgEFgh4b1wmtzDnioxFCUgTZhlbj5P9QYs=
 sigs.k8s.io/yaml v1.6.0/go.mod h1:796bPqUfzR/0jLAl6XjHl3Ck7MiyVv8dbTdyT3/pMf4=
+unikraft.com/cloud/sdk v0.0.0-20260409121557-1159639ea4e0 h1:ubn0DJHMIEStyubwa1Pi5r6kgQ8lSCtSPyU7kom2bEY=
+unikraft.com/cloud/sdk v0.0.0-20260409121557-1159639ea4e0/go.mod h1:k4SxfgQFvFmUrBPVIMlU1eYPId9lCkO9/6J9o1sL08s=
 xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240729172045-026c9fa29716 h1:y52AcO4BZop/FrR523z47VCLFViGmMJqY21uL+FxXXI=
 xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240729172045-026c9fa29716/go.mod h1:tbZ4iMnk8RWkXPxTiCGdAw3hCOa3feShlf3sBh50uIc=
