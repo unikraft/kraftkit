@@ -5,6 +5,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,7 +15,10 @@ import (
 
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	"github.com/docker/cli/cli/config/credentials"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/mitchellh/go-homedir"
+	"kraftkit.sh/log"
 )
 
 const (
@@ -185,9 +189,38 @@ func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 	}
 
 	if cf != nil {
-		a, err := cf.GetAllCredentials()
+		a, err := credentials.NewFileStore(cf).GetAll()
 		if err != nil {
 			return nil, err
+		}
+
+		devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+		if err != nil {
+			return nil, fmt.Errorf("could not open %s to suppress stderr output from credential helpers: %s", os.DevNull, err)
+		}
+		defer devNull.Close()
+
+		for registryHostname := range cf.CredentialHelpers {
+			var newAuth types.AuthConfig
+			savedStderr := os.Stderr
+
+			// NOTE(craciunoiuc): Credential helpers might log to stderr directly
+			// and the underlying library does not catch the output to log it properly.
+			// If the error is not caught by the library, suppress it.
+			// We need to do this because configs are fetched for every command.
+			if devNull != nil {
+				os.Stderr = devNull
+			}
+			newAuth, err = cf.GetAuthConfig(registryHostname)
+			if devNull != nil {
+				os.Stderr = savedStderr
+			}
+			if err != nil {
+				log.G(ctx).Debugf("failed to fetch auth for registry: %s", registryHostname)
+				log.G(ctx).Tracef("failed to get credentials for registry %q: %v", registryHostname, err)
+				continue
+			}
+			a[registryHostname] = newAuth
 		}
 
 		for domain, cfg := range a {
