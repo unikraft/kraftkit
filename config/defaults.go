@@ -143,6 +143,27 @@ func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 		return nil, err
 	}
 
+	if cf.CredentialsStore != "" {
+		storeOutput, storeErr := captureStderr(func() error {
+			globalAuths, innerErr := cf.GetCredentialsStore("").GetAll()
+			if innerErr != nil {
+				return innerErr
+			}
+			for k, v := range globalAuths {
+				if _, already := a[k]; !already {
+					a[k] = v
+				}
+			}
+			return nil
+		})
+		if len(storeOutput) > 0 {
+			log.G(ctx).Debugf("global credential store output (%s): %s", cf.CredentialsStore, storeOutput)
+		}
+		if storeErr != nil {
+			log.G(ctx).Debugf("external credential store %q failed: %v", cf.CredentialsStore, storeErr)
+		}
+	}
+
 	for registryHostname := range cf.CredentialHelpers {
 		var newAuth types.AuthConfig
 
@@ -153,7 +174,7 @@ func defaultAuths(ctx context.Context) (map[string]AuthConfig, error) {
 		})
 
 		if len(helperOutput) > 0 {
-			log.G(ctx).Debugf("credential helper output for %s: %s", registryHostname, helperOutput)
+			log.G(ctx).Debugf("credential helper output (%s): %s", registryHostname, helperOutput)
 		}
 		if helperErr != nil {
 			log.G(ctx).Debugf("failed to get credentials for registry %q: %v", registryHostname, helperErr)
