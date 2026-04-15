@@ -35,6 +35,7 @@ type packager interface {
 func packagers() []packager {
 	return []packager{
 		&packagerCliKernel{},
+		&packagerCliRom{},
 		&packagerKraftfileUnikraft{},
 		&packagerKraftfileRuntime{},
 		&packagerDockerfile{},
