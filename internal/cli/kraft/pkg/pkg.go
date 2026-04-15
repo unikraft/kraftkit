@@ -155,7 +155,7 @@ func Pkg(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package,
 
 	if err == nil && len(exists) > 0 {
 		if opts.Strategy == packmanager.StrategyPrompt {
-			strategy, err := selection.Select[packmanager.MergeStrategy](
+			strategy, err := selection.Select(
 				fmt.Sprintf("package '%s' already exists: how would you like to proceed?", opts.Name),
 				packmanager.MergeStrategies()...,
 			)
@@ -302,7 +302,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(update.NewCmd())
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[packmanager.MergeStrategy](
+		cmdfactory.NewEnumFlag(
 			append(packmanager.MergeStrategies(), packmanager.StrategyPrompt),
 			packmanager.StrategyOverwrite,
 		),
@@ -311,7 +311,7 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag(
 			initrd.FsTypes(),
 			initrd.FsTypeCpio,
 		),
@@ -320,7 +320,7 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag(
 			initrd.FsTypes(),
 			initrd.FsTypeCpio,
 		),
