@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/log"
@@ -102,7 +103,7 @@ func BuildRoms(ctx context.Context, workdir string, roms []string, compress, kee
 		}
 
 		// If it's a regular file, don't try to build it as a filesystem
-		if !info.IsDir() {
+		if !info.IsDir() && !strings.Contains(strings.ToLower(info.Name()), "dockerfile") {
 			// File ROMs must be aligned to page size
 			const pageSize = 4096
 			if info.Size()%pageSize != 0 {
