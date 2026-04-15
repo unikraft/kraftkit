@@ -425,7 +425,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	}
 
 	// Build ROMs with the specified filesystem type (if provided)
-	if p.roms, err = initrd.BuildRoms(ctx, opts.Workdir, rawRoms, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RootfsType); err != nil {
+	if p.roms, err = initrd.BuildRoms(ctx, opts.Workdir, rawRoms, opts.Compress, opts.KeepFileOwners, p.architecture.String(), opts.RomType); err != nil {
 		return nil, fmt.Errorf("could not build ROMs: %w", err)
 	}
 
