@@ -35,6 +35,13 @@ func WithPlatform(platform plat.Platform) TargetOption {
 	}
 }
 
+// WithRoms sets the roms of the target.
+func WithRoms(roms []string) TargetOption {
+	return func(tc *TargetConfig) {
+		tc.roms = roms
+	}
+}
+
 // WithKConfig sets the kconfig of the target.
 func WithKConfig(kconfig kconfig.KeyValueMap) TargetOption {
 	return func(tc *TargetConfig) {
