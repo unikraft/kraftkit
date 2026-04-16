@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
@@ -54,6 +55,26 @@ func TransformFromSchema(ctx context.Context, name string, props interface{}) (L
 				lib.source = lib.path
 			} else {
 				lib.path = lib.source
+			}
+		}
+	}
+
+	// If the library path doesn't exist but the library name starts with "app-",
+	// check if it was pulled as an application (e.g., app-elfloader is pulled to
+	// .unikraft/apps/elfloader). This handles the case where a component that is
+	// structurally a library is hosted in an "app-*" repository.
+	if uk != nil && uk.UK_BASE != "" {
+		if _, err := os.Stat(lib.path); os.IsNotExist(err) {
+			if strings.HasPrefix(lib.name, "app-") {
+				// Try finding it in apps directory without the "app-" prefix
+				altPath, _ := unikraft.PlaceComponent(
+					uk.UK_BASE,
+					unikraft.ComponentTypeApp,
+					strings.TrimPrefix(lib.name, "app-"),
+				)
+				if f, err := os.Stat(altPath); err == nil && f.IsDir() {
+					lib.path = altPath
+				}
 			}
 		}
 	}
