@@ -30,14 +30,14 @@ import (
 )
 
 const (
-	// DefaultMemory is the default memory allocation for Hyperlight VMs.
-	// Chosen as the median of the memory sizes used by the hyperlight-unikraft
-	// example workloads (helloworld-c/rust/go/shell/dotnet comfortably fit in
-	// 16Mi; heavier interpreters like Python, Node, PowerShell require an
-	// explicit override upward).
+	// DefaultMemory is the default memory allocation for Hyperlight VMs when
+	// --memory is not supplied. Small guests fit comfortably; heavier
+	// interpreters need an explicit override upward.
 	DefaultMemory = "16Mi"
 
-	// DefaultStack is the default stack size for Hyperlight VMs.
+	// DefaultStack is the default guest stack size. Not yet surfaced through
+	// the kraft CLI or Kraftfile; adjust via the WithStack functional option.
+	// TODO: wire through Kraftfile platform config.
 	DefaultStack = "8Mi"
 
 	// HostBinary is the external command that runs a Unikraft unikernel on
