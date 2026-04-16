@@ -200,6 +200,10 @@ func (lc LibraryConfig) Path() string {
 	return lc.path
 }
 
+func (lc *LibraryConfig) SetPath(path string) {
+	lc.path = path
+}
+
 func (lc LibraryConfig) Compiler() string {
 	return lc.compiler
 }

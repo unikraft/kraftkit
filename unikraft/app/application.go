@@ -512,6 +512,24 @@ func (app *application) MakeArgs(ctx context.Context, tc target.Target) (*core.M
 	orderedLibraries := []string{}
 	for _, library := range unformattedLibraries {
 		if !library.IsUnpacked() {
+			// If the library name starts with "app-", it may have been pulled as an
+			// application (e.g., app-elfloader is pulled to .unikraft/apps/elfloader).
+			// Try finding it there instead.
+			if strings.HasPrefix(library.Name(), "app-") {
+				altPath, err := unikraft.PlaceComponent(
+					app.workingDir,
+					unikraft.ComponentTypeApp,
+					strings.TrimPrefix(library.Name(), "app-"),
+				)
+				if err == nil {
+					if f, err := os.Stat(altPath); err == nil && f.IsDir() {
+						library.SetPath(altPath)
+					}
+				}
+			}
+		}
+
+		if !library.IsUnpacked() {
 			return nil, fmt.Errorf("cannot determine library \"%s\" path without component source", library.Name())
 		}
 
