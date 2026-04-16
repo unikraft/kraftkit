@@ -40,10 +40,8 @@ kraft run   --plat hl ...
 
 ### Defaults
 
-- `DefaultMemory`: `16Mi` — median of the hyperlight-unikraft example
-  workloads. Heavier guests (Python, Node.js, .NET, PowerShell) require
-  `--memory` overrides.
-- `DefaultStack`: `8Mi`.
+- `DefaultMemory`: `16Mi`. Override with `--memory` for heavier guests.
+- `DefaultStack`: `8Mi`. Not yet exposed through the CLI or Kraftfile.
 
 ### Limitations
 
