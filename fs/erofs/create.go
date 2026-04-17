@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/unikraft/go-archivefs/erofs"
 
@@ -21,6 +22,10 @@ type createOptions struct{}
 
 func CreateFS(ctx context.Context, output string, source string, opts ...ErofsCreateOption) error {
 	c := &createOptions{}
+
+	if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
+		return fmt.Errorf("could not create output directory: %w", err)
+	}
 
 	// Open writer for the output file
 	writer, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
