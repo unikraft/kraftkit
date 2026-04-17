@@ -13,6 +13,7 @@ import (
 
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
+	"kraftkit.sh/kconfig"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -132,6 +133,23 @@ func (p *packagerCliKernel) Pack(ctx context.Context, opts *PkgOptions, args ...
 				)
 
 				if !opts.NoKConfig {
+					if len(opts.KConfigFile) > 0 {
+						kv, err := kconfig.NewKeyValueMapFromFile(opts.KConfigFile)
+						if err != nil {
+							return fmt.Errorf("could not read KConfig file: %w", err)
+						}
+
+						targ.KConfig().OverrideBy(kv)
+					}
+
+					if len(opts.SetKConfig) > 0 {
+						kv, err := kconfig.NewKeyValueMapFromSlice(opts.SetKConfig)
+						if err != nil {
+							return fmt.Errorf("could not read SetKConfig: %w", err)
+						}
+						targ.KConfig().OverrideBy(kv)
+					}
+
 					popts = append(popts, packmanager.PackKConfig(targ.KConfig()))
 				}
 
