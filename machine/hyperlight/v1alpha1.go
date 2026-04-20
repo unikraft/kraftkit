@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	zip "api.zip"
@@ -24,6 +23,7 @@ import (
 
 	machinev1alpha1 "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/config"
+	kraftexec "kraftkit.sh/exec"
 	"kraftkit.sh/internal/logtail"
 	"kraftkit.sh/log"
 	"kraftkit.sh/machine/name"
@@ -190,7 +190,9 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 
 // Start implements kraftkit.sh/api/machine/v1alpha1.MachineService. It spawns
 // the hyperlight-unikraft subprocess, redirects its stdout/stderr to the log
-// file, and records the child PID in machine.Status.
+// file, and records the child PID in machine.Status. The process is detached
+// (own process group) so the VMM continues running after kraft exits, matching
+// the firecracker driver's lifecycle.
 func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	hlcfg, err := getHyperlightConfigFromPlatformConfig(machine.Status.PlatformConfig)
 	if err != nil {
@@ -215,30 +217,49 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		machine.Status.State = machinev1alpha1.MachineStateFailed
 		return machine, fmt.Errorf("could not open log file: %w", err)
 	}
+	// We duplicate this fd into the child via stdout; safe to close our
+	// own copy once the child is running.
 	defer logFile.Close()
 
-	cmd := exec.Command(HostBinary, args...)
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
+	// Use kraftkit's exec wrapper with WithDetach so the child gets its
+	// own process group and survives kraft exiting — same pattern the
+	// firecracker driver uses.
+	proc, err := kraftexec.NewProcess(HostBinary, args,
+		kraftexec.WithStdout(logFile),
+		kraftexec.WithDetach(true),
+	)
+	if err != nil {
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not prepare %s process: %w", HostBinary, err)
+	}
 
-	if err := cmd.Start(); err != nil {
+	if err := proc.Start(ctx); err != nil {
 		machine.Status.State = machinev1alpha1.MachineStateFailed
 		return machine, fmt.Errorf("could not spawn %s: %w", HostBinary, err)
 	}
 
-	machine.Status.Pid = int32(cmd.Process.Pid)
+	pid, err := proc.Pid()
+	if err != nil {
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("could not read pid of spawned %s: %w", HostBinary, err)
+	}
+
+	// Release the Go-side handle so the child doesn't need a Wait()
+	// and isn't kept alive through kraft's address space. Matches the
+	// "fire and forget PID-tracked lifecycle" the firecracker driver
+	// relies on.
+	if err := proc.Release(); err != nil {
+		log.G(ctx).WithError(err).Debug("releasing hyperlight process handle")
+	}
+
+	machine.Status.Pid = int32(pid)
 	machine.Status.State = machinev1alpha1.MachineStateRunning
 	machine.Status.StartedAt = time.Now()
 
-	// Reap the child in the background so it doesn't sit as a zombie. If kraft
-	// itself exits, the VMM process continues and eventually finishes on its
-	// own — just like the firecracker driver.
-	go func() { _ = cmd.Wait() }()
-
 	log.G(ctx).
 		WithField("uid", machine.ObjectMeta.UID).
-		WithField("pid", cmd.Process.Pid).
-		WithField("cmd", strings.Join(append([]string{HostBinary}, args...), " ")).
+		WithField("pid", pid).
+		WithField("cmd", proc.Cmdline()).
 		Debug("hyperlight instance started")
 
 	return machine, nil
