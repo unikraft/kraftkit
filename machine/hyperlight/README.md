@@ -2,27 +2,29 @@
 
 A kraftkit machine driver that runs Unikraft unikernels on
 [Hyperlight](https://github.com/hyperlight-dev/hyperlight) micro-VMs. Each
-machine created through this driver is a child `hyperlight-unikraft` process,
-so `kraft ps`, `kraft stop`, `kraft rm`, and `kraft logs` all work across
-separate kraft invocations via standard PID tracking.
+machine created through this driver is a detached `hyperlight-unikraft` child
+process, so `kraft ps`, `kraft stop`, `kraft rm`, and `kraft logs` all work
+across separate kraft invocations via standard PID tracking.
 
 ### Requirements
 
-- Linux host with `/dev/kvm` read/write access.
+- Linux host with `/dev/kvm` read/write access, or Windows host with the
+  Windows Hypervisor Platform (WHP) enabled.
 - The `hyperlight-unikraft` binary (from
-  [hyperlight-unikraft](https://github.com/hyperlight-dev/hyperlight-unikraft))
+  [danbugs/hyperlight-unikraft](https://github.com/danbugs/hyperlight-unikraft))
   installed on `$PATH`:
 
   ```bash
-  cd hyperlight-unikraft/host
-  cargo build --release
-  sudo cp target/release/hyperlight-unikraft /usr/local/bin/
+  cargo install --git https://github.com/danbugs/hyperlight-unikraft \
+      --branch main hyperlight-unikraft-host --bin hyperlight-unikraft
   ```
 
 - Unikraft kernels built for the `hyperlight` platform target.
 
 No cgo, no linker flags, no shared libraries — kraftkit just needs to find
-`hyperlight-unikraft` in `$PATH` at runtime.
+`hyperlight-unikraft` on `$PATH` at runtime. A future iteration may link the
+Hyperlight host library in-process via cgo for tighter lifecycle control and
+lower per-call overhead; the subprocess model is a deliberate first step.
 
 ### Platform selection
 
