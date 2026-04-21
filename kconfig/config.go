@@ -27,6 +27,12 @@ func NewKeyValueMapFromSlice(values ...interface{}) (KeyValueMap, error) {
 	for _, value := range values {
 		var str string
 		switch t := value.(type) {
+		case []string:
+			if len(t) == 1 {
+				str = t[0]
+			} else {
+				return nil, fmt.Errorf("kconfig option must be a single key-value pair(key=value), found: %v", t)
+			}
 		case string:
 			str = t
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:

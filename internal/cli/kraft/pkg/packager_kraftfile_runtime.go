@@ -486,6 +486,23 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				}
 
 				if !opts.NoKConfig && p.kconfig != nil {
+					if len(opts.KConfigFile) > 0 {
+						kv, err := kconfig.NewKeyValueMapFromFile(opts.KConfigFile)
+						if err != nil {
+							return fmt.Errorf("could not read KConfig file: %w", err)
+						}
+
+						p.kconfig.OverrideBy(kv)
+					}
+
+					if len(opts.SetKConfig) > 0 {
+						kv, err := kconfig.NewKeyValueMapFromSlice(opts.SetKConfig)
+						if err != nil {
+							return fmt.Errorf("could not read SetKConfig: %w", err)
+						}
+						p.kconfig.OverrideBy(kv)
+					}
+
 					popts = append(popts,
 						packmanager.PackKConfig(p.kconfig),
 					)

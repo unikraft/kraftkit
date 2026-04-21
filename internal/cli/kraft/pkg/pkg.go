@@ -56,6 +56,8 @@ type PkgOptions struct {
 	Metro          string                    `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location (used when pushing to index.unikraft.io)" hidden:"true"`
 	Name           string                    `local:"true" long:"name" short:"n" usage:"Specify the name of the package"`
 	NoKConfig      bool                      `local:"true" long:"no-kconfig" usage:"Do not include target .config as metadata"`
+	SetKConfig     []string                  `local:"true" long:"set-kconfig" usage:"Set KConfig values to be packed into the package (k=v)"`
+	KConfigFile    string                    `local:"true" long:"kconfig-file" usage:"Set a path to an extra KConfig file to be included as metadata"`
 	NoKernel       bool                      `local:"true" long:"no-kernel" usage:"Allow packaging without a kernel image"`
 	NoPull         bool                      `local:"true" long:"no-pull" usage:"Do not pull package dependencies before packaging"`
 	Output         string                    `local:"true" long:"output" short:"o" usage:"Save the package at the following output"`
