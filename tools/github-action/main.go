@@ -21,7 +21,6 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/log"
-	"kraftkit.sh/make"
 	"kraftkit.sh/manifest"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -373,7 +372,7 @@ func main() {
 
 	ctx := signals.SetupSignalContext()
 
-	cfg, err := config.NewDefaultKraftKitConfig()
+	cfg, err := config.NewDefaultKraftKitConfig(ctx)
 	if err != nil {
 		fmt.Printf("could not prepare internal configuration: %s", err)
 		os.Exit(1)
