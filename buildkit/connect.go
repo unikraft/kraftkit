@@ -192,21 +192,20 @@ func dockerBuildkit(ctx context.Context) (*client.Client, *client.Info, error) {
 		return nil, nil, fmt.Errorf("creating docker buildkit client: %w", err)
 	}
 
-	// we need features that are *only* supported when the containerd
-	// snapshotter is enabled :(
-	var hasCtrdSnapshotter bool
-	workers, err := c.ListWorkers(ctx)
-	if err != nil {
-		return nil, nil, c.Close()
-	}
-	for _, w := range workers {
-		if _, ok := w.Labels["org.mobyproject.buildkit.worker.snapshotter"]; ok {
-			hasCtrdSnapshotter = true
-		}
-	}
-	if !hasCtrdSnapshotter {
-		return nil, nil, c.Close()
-	}
+	// NOTE: logic for detecting if the containerd snapshotter is enabled
+	// var hasCtrdSnapshotter bool
+	// workers, err := c.ListWorkers(ctx)
+	// if err != nil {
+	// 	return nil, nil, c.Close()
+	// }
+	// for _, w := range workers {
+	// 	if _, ok := w.Labels["org.mobyproject.buildkit.worker.snapshotter"]; ok {
+	// 		hasCtrdSnapshotter = true
+	// 	}
+	// }
+	// if !hasCtrdSnapshotter {
+	// 	return nil, nil, c.Close()
+	// }
 
 	info, err := c.Info(ctx)
 	if err != nil {
