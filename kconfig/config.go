@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,19 +25,28 @@ type KeyValueMap map[string]*KeyValue
 func NewKeyValueMapFromSlice(values ...interface{}) (KeyValueMap, error) {
 	mapping := KeyValueMap{}
 
+	// Flatten any slices passed as arguments into individual elements.
+	var flat []interface{}
 	for _, value := range values {
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+			for i := 0; i < rv.Len(); i++ {
+				flat = append(flat, rv.Index(i).Interface())
+			}
+		} else {
+			flat = append(flat, value)
+		}
+	}
+
+	for _, value := range flat {
 		var str string
 		switch t := value.(type) {
-		case []string:
-			if len(t) == 1 {
-				str = t[0]
-			} else {
-				return nil, fmt.Errorf("kconfig option must be a single key-value pair(key=value), found: %v", t)
-			}
 		case string:
 			str = t
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 			str = fmt.Sprintf("%d", t)
+		default:
+			return nil, fmt.Errorf("kconfig option must be a key-value pair(key=value), found: %v", value)
 		}
 		tokens := strings.SplitN(str, "=", 2)
 		if len(tokens) > 1 && tokens[1] != "" {
