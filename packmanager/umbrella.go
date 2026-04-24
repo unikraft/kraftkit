@@ -179,18 +179,26 @@ func (u UmbrellaManager) Unpack(ctx context.Context, source pack.Package, opts .
 
 func (u UmbrellaManager) Catalog(ctx context.Context, qopts ...QueryOption) ([]pack.Package, error) {
 	var packages []pack.Package
+	var errs []error
 	for _, manager := range u.packageManagers {
 		pack, err := manager.Catalog(ctx, qopts...)
 		if err != nil {
-			log.G(ctx).
-				WithField("format", manager.Format()).
-				Debugf("could not query catalog: %v", err)
+			errs = append(errs, fmt.Errorf("%s: %w", manager.Format(), err))
 			continue
 		}
 
 		packages = append(packages, pack...)
 	}
 
+	if len(errs) > 0 {
+		if len(packages) == 0 {
+			log.G(ctx).
+				Warnf("could not query catalog: %v", errors.Join(errs...))
+		} else {
+			log.G(ctx).
+				Debugf("could not query catalog: %v", errors.Join(errs...))
+		}
+	}
 	return packages, nil
 }
 
