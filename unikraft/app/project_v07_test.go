@@ -79,7 +79,7 @@ runtime: base:latest
 rootfs: ./Dockerfile
 cmd: ["/app"]
 `,
-			wantLoader: ProjectLoaderLegacy,
+			wantLoader: ProjectLoaderV06,
 			wantSpec:   "v0.6",
 		},
 		{
@@ -98,7 +98,7 @@ runtime: base:latest
 rootfs: ./Dockerfile
 cmd: ["/app"]
 `,
-			wantLoader: ProjectLoaderLegacy,
+			wantLoader: ProjectLoaderV06,
 			wantSpec:   "",
 		},
 	}

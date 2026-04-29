@@ -170,7 +170,7 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 		WithKraftfile(popts.kraftfile),
 		WithVolumes(app.volumes...),
 		WithEnv(app.env),
-		WithLoaderKind(ProjectLoaderLegacy),
+		WithLoaderKind(ProjectLoaderV06),
 		WithSpecVersion(specVersion),
 	)
 	if err != nil {

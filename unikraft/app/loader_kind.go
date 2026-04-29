@@ -11,8 +11,8 @@ import "fmt"
 type ProjectLoader string
 
 const (
-	ProjectLoaderLegacy ProjectLoader = "legacy"
-	ProjectLoaderV07    ProjectLoader = "v0.7"
+	ProjectLoaderV06 ProjectLoader = "v0.6"
+	ProjectLoaderV07 ProjectLoader = "v0.7"
 )
 
 var ErrProjectMutationNotSupported = fmt.Errorf("project mutation is not supported for this Kraftfile loader")

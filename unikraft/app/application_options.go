@@ -31,7 +31,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 	var err error
 	ac := &application{
 		configuration: kconfig.KeyValueMap{},
-		loaderKind:    ProjectLoaderLegacy,
+		loaderKind:    ProjectLoaderV06,
 	}
 
 	for _, o := range aopts {
@@ -137,7 +137,7 @@ func WithFsType(fsType kraftfilev07.FsType) ApplicationOption {
 	}
 }
 
-// WithRomFilesystems sets the application's ROM filesystem descriptors.
+// WithRoms sets the application's ROM filesystem descriptors.
 func WithRoms(roms ...kraftfilev07.FS) ApplicationOption {
 	return func(ac *application) error {
 		ac.roms = roms

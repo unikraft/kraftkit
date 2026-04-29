@@ -1128,7 +1128,7 @@ func saveNewKraftfile(ctx context.Context, app Application) error {
 }
 
 func (app *application) Save(ctx context.Context) error {
-	if app.LoaderKind() != ProjectLoaderLegacy {
+	if app.LoaderKind() != ProjectLoaderV06 {
 		return fmt.Errorf("%w: save requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
 	}
 
@@ -1157,7 +1157,7 @@ func (app *application) Env() map[string]string {
 }
 
 func (app *application) RemoveLibrary(ctx context.Context, libraryName string) error {
-	if app.LoaderKind() != ProjectLoaderLegacy {
+	if app.LoaderKind() != ProjectLoaderV06 {
 		return fmt.Errorf("%w: removing libraries requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
 	}
 
@@ -1201,7 +1201,7 @@ func (app *application) RemoveLibrary(ctx context.Context, libraryName string) e
 }
 
 func (app *application) AddLibrary(ctx context.Context, library lib.LibraryConfig) error {
-	if app.LoaderKind() != ProjectLoaderLegacy {
+	if app.LoaderKind() != ProjectLoaderV06 {
 		return fmt.Errorf("%w: adding libraries requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
 	}
 
