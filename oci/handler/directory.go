@@ -103,11 +103,14 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 	ropts := []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
-		remote.WithPlatform(v1.Platform{
+	}
+
+	if plat != nil && (plat.Architecture != "" || plat.OS != "") {
+		ropts = append(ropts, remote.WithPlatform(v1.Platform{
 			Architecture: plat.Architecture,
 			OS:           plat.OS,
 			OSFeatures:   plat.OSFeatures,
-		}),
+		}))
 	}
 
 	// Annoyingly convert between regtypes and authn.
@@ -212,22 +215,24 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 	checkManifest:
 		for _, manifest := range index.Manifests {
-			if plat.OS != "" && plat.OS != manifest.Platform.OS {
-				continue
-			}
+			if plat != nil {
+				if plat.OS != "" && plat.OS != manifest.Platform.OS {
+					continue
+				}
 
-			if plat.Architecture != "" && plat.Architecture != manifest.Platform.Architecture {
-				continue
-			}
+				if plat.Architecture != "" && plat.Architecture != manifest.Platform.Architecture {
+					continue
+				}
 
-			if len(plat.OSFeatures) > 0 {
-				available := set.NewStringSet(manifest.Platform.OSFeatures...)
+				if len(plat.OSFeatures) > 0 {
+					available := set.NewStringSet(manifest.Platform.OSFeatures...)
 
-				// Iterate through the platform selector's requested set of features and
-				// skip only if the descriptor does not contain the requested feature.
-				for _, a := range plat.OSFeatures {
-					if !available.Contains(a) {
-						continue checkManifest
+					// Iterate through the platform selector's requested set of features and
+					// skip only if the descriptor does not contain the requested feature.
+					for _, a := range plat.OSFeatures {
+						if !available.Contains(a) {
+							continue checkManifest
+						}
 					}
 				}
 			}
@@ -363,7 +368,11 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 	case ocispec.MediaTypeImageManifest:
-		v1Image, err := cache.RemoteImage(ref, ropts...)
+		// Use the exact manifest digest as the reference to avoid platform-based
+		// resolution through the index (which would default to linux/amd64 when no
+		// platform option is set and fail for non-standard platforms like kraftcloud).
+		manifestRef := ref.Context().Digest(dgst.String())
+		v1Image, err := cache.RemoteImage(manifestRef, ropts...)
 		if err != nil {
 			return fmt.Errorf("could not retrieve remote manifest: %w", err)
 		}
@@ -433,7 +442,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 					WithField("digest", manifest.Config.Digest.String()).
 					Debugf("pulling config")
 
-				image, err := remote.Image(ref, ropts...)
+				image, err := remote.Image(manifestRef, ropts...)
 				if err != nil {
 					return fmt.Errorf("could not retrieve remote manifest: %w", err)
 				}
@@ -471,14 +480,26 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			}
 		}
 
-		// First calculate the total size of all layers.  This is done so that the
-		// onProgress callback correctly reports
-		var totalSize int64
+		// First calculate the total size of layers that need to be pulled.
+		// Cached (already-present) layers are excluded so that onProgress
+		// can reach 1.0 when all remaining layers finish downloading.
+		var layersToPull []ocispec.Descriptor
 		for _, layer := range manifest.Layers {
+			if info, _ := handle.DigestInfo(ctx, layer.Digest); info != nil {
+				log.G(ctx).
+					WithField("digest", layer.Digest.String()).
+					Debug("layer already exists locally, skipping pull")
+				continue
+			}
+			layersToPull = append(layersToPull, layer)
+		}
+
+		var totalSize int64
+		for _, layer := range layersToPull {
 			totalSize += layer.Size
 		}
 
-		for _, layer := range manifest.Layers {
+		for _, layer := range layersToPull {
 			if err := handle.PullDigest(ctx,
 				ocispec.MediaTypeImageLayer,
 				fullref,
@@ -493,6 +514,14 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 	case ocispec.MediaTypeImageLayer, ocispec.MediaTypeImageLayerGzip:
+		// Skip layers that already exist locally.
+		if info, _ := handle.DigestInfo(ctx, dgst); info != nil {
+			log.G(ctx).
+				WithField("digest", dgst.String()).
+				Debug("layer already exists locally, skipping pull")
+			return nil
+		}
+
 		log.G(ctx).
 			WithField("digest", dgst.String()).
 			Debugf("pulling layer")
@@ -881,6 +910,10 @@ func (handle *DirectoryHandler) ResolveManifest(ctx context.Context, fullref str
 		return nil, nil, err
 	}
 
+	if manifest.Config.Digest == "" {
+		return nil, nil, fmt.Errorf("file at digest '%s' is not an image manifest (missing config digest)", dgst.String())
+	}
+
 	imagePath := filepath.Join(
 		handle.path,
 		DirectoryHandlerDigestsDir,
@@ -955,6 +988,12 @@ func (handle *DirectoryHandler) ListManifests(ctx context.Context) (map[string]*
 
 		manifest := ocispec.Manifest{}
 		if err = json.Unmarshal(rawManifest, &manifest); err != nil {
+			return nil
+		}
+
+		// Skip files that are not image manifests (e.g. config blobs, index
+		// files, or layer blobs that happen to be valid JSON).
+		if manifest.Config.Digest == "" {
 			return nil
 		}
 

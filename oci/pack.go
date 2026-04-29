@@ -520,21 +520,28 @@ func newIndexAndManifestFromRemoteDigest(ctx context.Context, handle handler.Han
 					if err == nil {
 						manifest.manifest = manifestSpec
 						manifest.config = imageSpec
-						manifest.config.Architecture = descriptor.Platform.Architecture
-						manifest.config.Platform = *descriptor.Platform
+						if descriptor.Platform != nil {
+							manifest.config.Architecture = descriptor.Platform.Architecture
+							manifest.config.Platform = *descriptor.Platform
+						}
 					} else {
-						manifest.v1Image, err = cache.RemoteImage(
-							ref,
-							remote.WithPlatform(v1.Platform{
-								Architecture: descriptor.Platform.Architecture,
-								OS:           descriptor.Platform.OS,
-								OSFeatures:   descriptor.Platform.OSFeatures,
-							}),
+						remoteOpts := []remote.Option{
 							remote.WithContext(egCtx),
 							remote.WithAuth(&simpleauth.SimpleAuthenticator{
 								Auth: authConfig,
 							}),
 							remote.WithTransport(transport),
+						}
+						if descriptor.Platform != nil {
+							remoteOpts = append(remoteOpts, remote.WithPlatform(v1.Platform{
+								Architecture: descriptor.Platform.Architecture,
+								OS:           descriptor.Platform.OS,
+								OSFeatures:   descriptor.Platform.OSFeatures,
+							}))
+						}
+						manifest.v1Image, err = cache.RemoteImage(
+							ref,
+							remoteOpts...,
 						)
 						if err != nil {
 							return fmt.Errorf("getting image: %w", err)
@@ -780,18 +787,57 @@ func NewPackageFromOCIManifestDigest(ctx context.Context, handle handler.Handler
 		}
 	}
 
-	architecture, err := arch.TransformFromSchema(ctx,
-		ocipack.manifest.manifest.Config.Platform.Architecture,
-	)
+	if ocipack.manifest == nil {
+		return nil, fmt.Errorf("manifest is nil for digest '%s' in '%s'", dgst.String(), ref)
+	}
+	if ocipack.manifest.manifest == nil {
+		return nil, fmt.Errorf("manifest spec is nil for digest '%s' in '%s'", dgst.String(), ref)
+	}
+
+	archStr := ocipack.manifest.config.Architecture
+	osStr := ocipack.manifest.config.OS
+	if archStr == "" || osStr == "" {
+		if ocipack.manifest.manifest.Config.Platform != nil {
+			if archStr == "" {
+				archStr = ocipack.manifest.manifest.Config.Platform.Architecture
+			}
+			if osStr == "" {
+				osStr = ocipack.manifest.manifest.Config.Platform.OS
+			}
+		}
+	}
+	if archStr == "" || osStr == "" {
+		if ocipack.manifest.desc != nil && ocipack.manifest.desc.Platform != nil {
+			if archStr == "" {
+				archStr = ocipack.manifest.desc.Platform.Architecture
+			}
+			if osStr == "" {
+				osStr = ocipack.manifest.desc.Platform.OS
+			}
+		}
+	}
+
+	log.G(ctx).
+		WithField("arch", archStr).
+		WithField("os", osStr).
+		WithField("digest", dgst.String()).
+		Debug("resolved platform for manifest")
+
+	if archStr == "" {
+		return nil, fmt.Errorf("could not determine architecture for digest '%s' in '%s'", dgst.String(), ref)
+	}
+	if osStr == "" {
+		return nil, fmt.Errorf("could not determine OS for digest '%s' in '%s'", dgst.String(), ref)
+	}
+
+	architecture, err := arch.TransformFromSchema(ctx, archStr)
 	if err != nil {
 		return nil, err
 	}
 
 	ocipack.arch = architecture.(arch.Architecture)
 
-	platform, err := plat.TransformFromSchema(ctx,
-		ocipack.manifest.manifest.Config.Platform.OS,
-	)
+	platform, err := plat.TransformFromSchema(ctx, osStr)
 	if err != nil {
 		return nil, err
 	}
@@ -1007,6 +1053,10 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 		return err
 	}
 
+	if ocipack.manifest == nil || ocipack.manifest.desc == nil {
+		return fmt.Errorf("package has no manifest descriptor")
+	}
+
 	ref, err := name.ParseReference(ocipack.imageRef())
 	if err != nil {
 		return err
@@ -1017,11 +1067,14 @@ func (ocipack *ociPackage) Pull(ctx context.Context, opts ...pack.PullOption) er
 	ropts := []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithUserAgent(version.UserAgent()),
-		remote.WithPlatform(v1.Platform{
+	}
+
+	if ocipack.manifest.desc != nil && ocipack.manifest.desc.Platform != nil {
+		ropts = append(ropts, remote.WithPlatform(v1.Platform{
 			Architecture: ocipack.manifest.desc.Platform.Architecture,
 			OS:           ocipack.manifest.desc.Platform.OS,
 			OSFeatures:   ocipack.manifest.desc.Platform.OSFeatures,
-		}),
+		}))
 	}
 
 	// Annoyingly convert between regtypes and authn.

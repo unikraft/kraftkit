@@ -319,27 +319,41 @@ func processV1IndexManifests(ctx context.Context, handle handler.Handler, fullre
 				return
 			}
 
-			if query != nil && query.Platform() != "" && query.Platform() != descriptor.Platform.OS {
-				log.G(ctx).
-					WithField("ref", fullref).
-					WithField("digest", descriptor.Digest.String()).
-					WithField("want", query.Platform()).
-					WithField("got", descriptor.Platform.OS).
-					Trace("skipping manifest: platform does not match query")
-				return
+			if query != nil && query.Platform() != "" {
+				if descriptor.Platform == nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						WithField("digest", descriptor.Digest.String()).
+						Trace("descriptor has no platform info, skipping platform filter")
+				} else if query.Platform() != descriptor.Platform.OS {
+					log.G(ctx).
+						WithField("ref", fullref).
+						WithField("digest", descriptor.Digest.String()).
+						WithField("want", query.Platform()).
+						WithField("got", descriptor.Platform.OS).
+						Trace("skipping manifest: platform does not match query")
+					return
+				}
 			}
 
-			if query != nil && query.Architecture() != "" && query.Architecture() != descriptor.Platform.Architecture {
-				log.G(ctx).
-					WithField("ref", fullref).
-					WithField("digest", descriptor.Digest.String()).
-					WithField("want", query.Architecture()).
-					WithField("got", descriptor.Platform.Architecture).
-					Trace("skipping manifest: architecture does not match query")
-				return
+			if query != nil && query.Architecture() != "" {
+				if descriptor.Platform == nil {
+					log.G(ctx).
+						WithField("ref", fullref).
+						WithField("digest", descriptor.Digest.String()).
+						Trace("descriptor has no platform info, skipping architecture filter")
+				} else if query.Architecture() != descriptor.Platform.Architecture {
+					log.G(ctx).
+						WithField("ref", fullref).
+						WithField("digest", descriptor.Digest.String()).
+						WithField("want", query.Architecture()).
+						WithField("got", descriptor.Platform.Architecture).
+						Trace("skipping manifest: architecture does not match query")
+					return
+				}
 			}
 
-			if query != nil && len(query.KConfig()) > 0 {
+			if query != nil && len(query.KConfig()) > 0 && descriptor.Platform != nil {
 				// If the list of requested features is greater than the list of
 				// available features, there will be no way for the two to match.  We
 				// are searching for a subset of query.KConfig() from
