@@ -356,7 +356,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 			// Remove any existing tag path if it already exists, as we are now
 			// pointing it to a new index.
-			if _, err := os.Stat(indexTagPath); err == nil {
+			if _, err := os.Lstat(indexTagPath); err == nil {
 				if err := os.RemoveAll(indexTagPath); err != nil {
 					return fmt.Errorf("could not remove existing index tag path: %w", err)
 				}
@@ -486,10 +486,23 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		var layersToPull []ocispec.Descriptor
 		for _, layer := range manifest.Layers {
 			if info, _ := handle.DigestInfo(ctx, layer.Digest); info != nil {
-				log.G(ctx).
-					WithField("digest", layer.Digest.String()).
-					Debug("layer already exists locally, skipping pull")
-				continue
+				// Verify the on-disk blob's content digest matches the
+				// expected digest.  A previously interrupted pull may
+				// have left a truncated or corrupted blob on disk.
+				reader, rerr := handle.ReadDigest(ctx, layer.Digest)
+				if rerr == nil {
+					computedDigest, derr := layer.Digest.Algorithm().FromReader(reader)
+					reader.Close()
+					if derr == nil && computedDigest == layer.Digest {
+						log.G(ctx).
+							WithField("digest", layer.Digest.String()).
+							Debug("layer already exists locally, skipping pull")
+						continue
+					}
+					log.G(ctx).
+						WithField("digest", layer.Digest.String()).
+						Debug("local layer has mismatched digest, re-pulling")
+				}
 			}
 			layersToPull = append(layersToPull, layer)
 		}
@@ -514,12 +527,24 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 		}
 
 	case ocispec.MediaTypeImageLayer, ocispec.MediaTypeImageLayerGzip:
-		// Skip layers that already exist locally.
+		// Skip layers that already exist locally and whose content digest
+		// matches the expected value.  This catches truncated or corrupted
+		// blobs left behind by a previously interrupted pull.
 		if info, _ := handle.DigestInfo(ctx, dgst); info != nil {
-			log.G(ctx).
-				WithField("digest", dgst.String()).
-				Debug("layer already exists locally, skipping pull")
-			return nil
+			reader, rerr := handle.ReadDigest(ctx, dgst)
+			if rerr == nil {
+				computedDigest, derr := dgst.Algorithm().FromReader(reader)
+				reader.Close()
+				if derr == nil && computedDigest == dgst {
+					log.G(ctx).
+						WithField("digest", dgst.String()).
+						Debug("layer already exists locally, skipping pull")
+					return nil
+				}
+				log.G(ctx).
+					WithField("digest", dgst.String()).
+					Debug("local layer has mismatched digest, re-pulling")
+			}
 		}
 
 		log.G(ctx).

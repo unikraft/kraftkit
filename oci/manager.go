@@ -495,8 +495,21 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 
 	descriptors := make(map[string][]ocispec.Descriptor)
 
+	// Tags are mutable and may point to different content over time.  When a
+	// tag-based reference is used, always query the remote registry to ensure
+	// we have up-to-date manifest digests.  Only digest-based references are
+	// safe to resolve from local cache alone.
+	isTagRef := refErr == nil && !strings.Contains(qversion, ":")
+	queryRemote := query.Remote() || isTagRef
+
+	if isTagRef {
+		log.G(ctx).
+			WithField("ref", ref.Name()).
+			Debug("tag reference detected, querying remote for fresh manifests")
+	}
+
 	// If a direct reference can be made, attempt to generate a package from it.
-	if query.Remote() && refErr == nil && !unsetRegistry {
+	if queryRemote && refErr == nil && !unsetRegistry {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
