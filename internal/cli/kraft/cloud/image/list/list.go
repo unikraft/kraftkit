@@ -7,9 +7,13 @@ package list
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/dustin/go-humanize"
@@ -30,6 +34,7 @@ type ListOptions struct {
 	All    bool   `long:"all" usage:"Also show available official images"`
 	Output string `long:"output" short:"o" usage:"Set output format. Options: table,yaml,json,list,raw" default:"table"`
 
+	metro         string
 	token         string
 	allowInsecure bool
 }
@@ -62,10 +67,14 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *ListOptions) Pre(cmd *cobra.Command, _ []string) error {
-	err := utils.PopulateMetroToken(cmd, nil, &opts.token, &opts.allowInsecure)
+	metro, token, allowInsecure, err := utils.GetMetroToken(cmd)
 	if err != nil {
-		return fmt.Errorf("could not populate token: %w", err)
+		return fmt.Errorf("could not populate metro and token: %w", err)
 	}
+
+	opts.metro = metro
+	opts.token = token
+	opts.allowInsecure = allowInsecure
 
 	if !utils.IsValidOutputFormat(opts.Output) {
 		return fmt.Errorf("invalid output format: %s", opts.Output)
@@ -109,6 +118,15 @@ func (opts *ListOptions) runControlPlane(ctx context.Context) error {
 			return fmt.Errorf("could not list official images: %w", err)
 		}
 		images = append(images, collectImageItems(respOfficial)...)
+	}
+
+	// Also query the platform /v1/image-store endpoint to find images that may
+	// not yet be visible via the controlplane.
+	platformImages, err := opts.listPlatformImages(ctx, auth)
+	if err != nil {
+		log.G(ctx).Debugf("could not list platform images: %v", err)
+	} else {
+		images = mergeImageRows(images, platformImages)
 	}
 
 	return opts.renderImages(ctx, images)
@@ -186,6 +204,155 @@ func derefString(value *string) string {
 	return *value
 }
 
+// listPlatformImages queries the platform GET /v1/image-store endpoint for the
+// configured metro and returns the results.
+func (opts *ListOptions) listPlatformImages(ctx context.Context, auth *config.AuthConfig) ([]imageRow, error) {
+	if opts.metro == "" {
+		return nil, fmt.Errorf("no metro configured")
+	}
+
+	endpoint := opts.metro
+	if !strings.Contains(endpoint, "://") {
+		// If the metro value looks like a hostname (contains a dot), use it
+		// directly as the API host. Otherwise treat it as a short metro code.
+		if strings.Contains(endpoint, ".") {
+			endpoint = "https://" + endpoint
+		} else {
+			endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
+		}
+	}
+	endpoint = strings.TrimRight(endpoint, "/")
+
+	// Strip any trailing /v1 path since we add it ourselves.
+	endpoint = strings.TrimSuffix(endpoint, "/v1")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/v1/image-store", nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+config.GetKraftCloudTokenAuthConfig(*auth))
+
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	if opts.allowInsecure {
+		httpClient.Transport = &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+		}
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("performing request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d (%s) from %s", resp.StatusCode, resp.Status, req.URL.String())
+	}
+
+	var result struct {
+		Data struct {
+			Images []platformImage `json:"images"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decoding response: %w", err)
+	}
+
+	var images []imageRow
+	for _, image := range result.Data.Images {
+		row := platformImageToRow(image)
+		if row != nil {
+			images = append(images, *row)
+		}
+	}
+
+	return images, nil
+}
+
+type platformImage struct {
+	URL         *string  `json:"url"`
+	Tags        []string `json:"tags"`
+	SizeInBytes *int64   `json:"size_in_bytes"`
+}
+
+func platformImageToRow(image platformImage) *imageRow {
+	row := &imageRow{}
+
+	if image.SizeInBytes != nil {
+		row.SizeInBytes = *image.SizeInBytes
+	}
+
+	var host, repo string
+	if image.URL != nil {
+		urlStr := *image.URL
+		// URL format: "host/namespace/image@sha256:..."
+		// Extract digest.
+		if idx := strings.LastIndex(urlStr, "@"); idx != -1 {
+			row.Digest = urlStr[idx+1:]
+			urlStr = urlStr[:idx]
+		}
+		// Extract host and repo.
+		if idx := strings.Index(urlStr, "/"); idx != -1 {
+			host = urlStr[:idx]
+			repo = urlStr[idx+1:]
+		}
+	}
+
+	// Derive the index host from the image host.
+	indexHost := host
+
+	for _, tag := range image.Tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" || strings.HasPrefix(tag, "sha256:") {
+			continue
+		}
+		if repo != "" {
+			row.Tags = append(row.Tags, indexHost+"/"+repo+":"+tag)
+		}
+	}
+
+	// Skip images without tags (dangling images).
+	if len(row.Tags) == 0 {
+		return nil
+	}
+
+	return row
+}
+
+// mergeImageRows merges platform images into the existing image list,
+// deduplicating by tag reference. Controlplane results take precedence.
+// If a platform image has some tags already in controlplane and some that
+// are new, only the new tags are kept.
+func mergeImageRows(existing, platform []imageRow) []imageRow {
+	seen := make(map[string]bool, len(existing))
+	for _, img := range existing {
+		for _, tag := range img.Tags {
+			seen[tag] = true
+		}
+	}
+
+	for _, img := range platform {
+		// Filter out tags already known from controlplane.
+		var newTags []string
+		for _, tag := range img.Tags {
+			if !seen[tag] {
+				newTags = append(newTags, tag)
+			}
+		}
+		if len(newTags) == 0 {
+			continue
+		}
+		for _, tag := range newTags {
+			seen[tag] = true
+		}
+		img.Tags = newTags
+		existing = append(existing, img)
+	}
+
+	return existing
+}
+
 func (opts *ListOptions) renderImages(ctx context.Context, images []imageRow) error {
 	err := iostreams.G(ctx).StartPager()
 	if err != nil {
@@ -203,7 +370,8 @@ func (opts *ListOptions) renderImages(ctx context.Context, images []imageRow) er
 		return err
 	}
 
-	// Sort by namespace (official last), then repo, then tag.
+	// Sort: controlplane first (by repo, then tag), then platform (by repo,
+	// then tag), then official last.
 	slices.SortFunc(images, func(left, right imageRow) int {
 		leftRepo, leftTag := repoAndTag(left)
 		rightRepo, rightTag := repoAndTag(right)
@@ -212,6 +380,16 @@ func (opts *ListOptions) renderImages(ctx context.Context, images []imageRow) er
 		rightOfficial := opts.All && isOfficialNamespace(rightRepo)
 		if leftOfficial != rightOfficial {
 			if leftOfficial {
+				return 1
+			}
+			return -1
+		}
+
+		// Platform images (with host prefix) sort after controlplane images.
+		leftPlatform := isPlatformRepo(leftRepo)
+		rightPlatform := isPlatformRepo(rightRepo)
+		if leftPlatform != rightPlatform {
+			if leftPlatform {
 				return 1
 			}
 			return -1
@@ -234,10 +412,6 @@ func (opts *ListOptions) renderImages(ctx context.Context, images []imageRow) er
 
 imgloop:
 	for _, image := range images {
-		if len(image.Tags) == 0 {
-			continue
-		}
-
 		var name string
 		versions := make([]string, 0, len(image.Tags))
 
@@ -265,11 +439,15 @@ imgloop:
 			versions = append(versions, tag.TagStr())
 		}
 
-		if len(versions) == 0 || name == "" {
+		// Images without usable tags are skipped because no display name can be derived.
+		if name == "" {
 			continue
 		}
 
 		slices.Sort(versions)
+		if len(versions) == 0 {
+			continue
+		}
 
 		table.AddField(name, nil)
 		table.AddField(strings.Join(versions, ", "), nil)
@@ -329,6 +507,17 @@ func isNamespacedRepository(repo string) bool {
 
 func isOfficialNamespace(repo string) bool {
 	return repo == "official" || strings.HasPrefix(repo, "official/")
+}
+
+// isPlatformRepo returns true if the repo has a platform index host prefix
+// in its first path component (e.g. "index.fra.unikraft.cloud/user/image").
+func isPlatformRepo(repo string) bool {
+	host := repo
+	if i := strings.IndexRune(repo, '/'); i >= 0 {
+		host = repo[:i]
+	}
+
+	return strings.HasPrefix(host, "index.") || strings.HasSuffix(host, ".unikraft.cloud")
 }
 
 func repoAndTag(image imageRow) (string, string) {
