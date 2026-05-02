@@ -102,6 +102,22 @@ func linesOfCode(ctx context.Context, opts *BuildOptions) (int64, error) {
 	return int64(len(uniqueLines)), nil
 }
 
+func makeOptionsForBuild(ctx context.Context, opts *BuildOptions) []make.MakeOption {
+	var mopts []make.MakeOption
+
+	if opts.Jobs > 0 {
+		mopts = append(mopts, make.WithJobs(opts.Jobs))
+	} else {
+		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
+	}
+
+	if toolchain := mergeToolchain(config.G[config.KraftKit](ctx).Toolchain, opts.Toolchain); len(toolchain) > 0 {
+		mopts = append(mopts, make.WithVars(toolchain))
+	}
+
+	return mopts
+}
+
 func (build *builderKraftfileUnikraft) pull(ctx context.Context, opts *BuildOptions, norender bool, nameWidth int) error {
 	var missingPacks []pack.Package
 	var processes []*paraprogress.Process
@@ -439,16 +455,7 @@ func (build *builderKraftfileUnikraft) Prepare(ctx context.Context, opts *BuildO
 
 func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	var processes []*paraprogress.Process
-	var mopts []make.MakeOption
-	if opts.Jobs > 0 {
-		mopts = append(mopts, make.WithJobs(opts.Jobs))
-	} else {
-		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
-	}
-
-	if toolchain := mergeToolchain(config.G[config.KraftKit](ctx).Toolchain, opts.Toolchain); len(toolchain) > 0 {
-		mopts = append(mopts, make.WithVars(toolchain))
-	}
+	mopts := makeOptionsForBuild(ctx, opts)
 
 	allEnvs := map[string]string{}
 	for k, v := range opts.Project.Env() {
@@ -509,13 +516,15 @@ func (build *builderKraftfileUnikraft) Build(ctx context.Context, opts *BuildOpt
 						ctx,
 						*opts.Target, // Target-specific options
 						envKconfig,   // Extra Kconfigs for compiled in environment variables
-						make.WithProgressFunc(w),
-						make.WithSilent(true),
-						make.WithExecOptions(
-							exec.WithStdin(iostreams.G(ctx).In),
-							exec.WithStdout(log.G(ctx).Writer()),
-							exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
-						),
+						append(mopts,
+							make.WithProgressFunc(w),
+							make.WithSilent(true),
+							make.WithExecOptions(
+								exec.WithStdin(iostreams.G(ctx).In),
+								exec.WithStdout(log.G(ctx).Writer()),
+								exec.WithStderr(log.G(ctx).WriterLevel(logrus.WarnLevel)),
+							),
+						)...,
 					)
 				},
 			))
