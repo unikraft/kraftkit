@@ -16,7 +16,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/certificate/certerr"
+	"kraftkit.sh/internal/cli/kraft/cloud/certificate/errortypes"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 )
@@ -71,7 +71,7 @@ func NewCmd() *cobra.Command {
 
 func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	if !opts.All && len(args) == 0 {
-		return certerr.ErrCertificateIdentifierRequired
+		return errortypes.CertificateIdentifierRequired
 	}
 
 	err := utils.PopulateMetroToken(cmd, &opts.metro, &opts.token, &opts.allowInsecure)
@@ -80,7 +80,7 @@ func (opts *RemoveOptions) Pre(cmd *cobra.Command, args []string) error {
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("%w: %s", certerr.ErrInvalidOutputFormat, opts.Output)
+		return fmt.Errorf("%w: %s", errortypes.InvalidOutputFormat, opts.Output)
 	}
 
 	return nil
