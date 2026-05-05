@@ -556,19 +556,54 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 				goto resolveLocalIndex
 			}
 
-			manifest, _ := v1ImageManifest.Manifest()
-			dgst, _ := v1ImageManifest.Digest()
+			manifest, err := v1ImageManifest.Manifest()
+			if err != nil || manifest == nil {
+				log.G(ctx).
+					WithField("ref", ref).
+					Debugf("could not retrieve image manifest object: %v", err)
+				goto resolveLocalIndex
+			}
+
+			dgst, err := v1ImageManifest.Digest()
+			if err != nil {
+				log.G(ctx).
+					WithField("ref", ref).
+					Debugf("could not retrieve image digest: %v", err)
+				goto resolveLocalIndex
+			}
+
+			var plat *ocispec.Platform
+			if manifest.Config.Platform != nil {
+				plat = &ocispec.Platform{
+					Architecture: manifest.Config.Platform.Architecture,
+					OS:           manifest.Config.Platform.OS,
+					OSVersion:    manifest.Config.Platform.OSVersion,
+					OSFeatures:   manifest.Config.Platform.OSFeatures,
+				}
+			}
+
+			// Fall back to the image config for platform fields that are
+			// still missing (mirrors the pull-time resolution chain).
+			if configFile, err := v1ImageManifest.ConfigFile(); err == nil && configFile != nil {
+				if plat == nil {
+					plat = &ocispec.Platform{}
+				}
+				if plat.Architecture == "" {
+					plat.Architecture = configFile.Architecture
+				}
+				if plat.OS == "" {
+					plat.OS = configFile.OS
+				}
+				if plat.OSVersion == "" {
+					plat.OSVersion = configFile.OSVersion
+				}
+			}
 
 			descriptors[ref.String()] = append(descriptors[ref.String()], []ocispec.Descriptor{
 				{
-					MediaType: string(manifest.MediaType),
-					Digest:    digest.Digest(dgst.String()),
-					Platform: &ocispec.Platform{
-						Architecture: manifest.Config.Platform.Architecture,
-						OS:           manifest.Config.Platform.OS,
-						OSVersion:    manifest.Config.Platform.OSVersion,
-						OSFeatures:   manifest.Config.Platform.OSFeatures,
-					},
+					MediaType:   string(manifest.MediaType),
+					Digest:      digest.Digest(dgst.String()),
+					Platform:    plat,
 					Annotations: manifest.Annotations,
 				},
 			}...)
