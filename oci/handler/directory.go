@@ -373,14 +373,16 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 		// When pulling by digest, the filtered index may have a different
 		// digest than the original remote one.  Store the filtered index
-		// under the original digest as well so that ResolveIndex can find
-		// it when looked up by the original digest reference.
-		if newIndexDigest != dgst {
+		// under the original remote index digest as well so that
+		// ResolveIndex can find it when looked up by that digest reference.
+		// Only do this for digest-based references (indexTagPath is empty).
+		origIndexDigest := digest.Digest(indexDgst.String())
+		if len(indexTagPath) == 0 && newIndexDigest != origIndexDigest {
 			origDigestPath := filepath.Join(
 				handle.path,
 				DirectoryHandlerDigestsDir,
-				dgst.Algorithm().String(),
-				dgst.Encoded(),
+				indexDgst.Algorithm,
+				indexDgst.Hex,
 			)
 
 			if err := os.MkdirAll(filepath.Dir(origDigestPath), 0o775); err != nil {
