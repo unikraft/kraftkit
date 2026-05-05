@@ -348,6 +348,10 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			return fmt.Errorf("could not write manifest: %w", err)
 		}
 
+		if err = indexWriter.Truncate(int64(len(indexRaw))); err != nil {
+			return fmt.Errorf("could not truncate manifest file: %w", err)
+		}
+
 		if len(indexTagPath) > 0 {
 			// Create the parent directory if it does not exist
 			if err := os.MkdirAll(filepath.Dir(indexTagPath), 0o774); err != nil {
@@ -364,6 +368,37 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 
 			if err := os.Symlink(newIndexDigestPath, indexTagPath); err != nil {
 				return err
+			}
+		}
+
+		// When pulling by digest, the filtered index may have a different
+		// digest than the original remote one.  Store the filtered index
+		// under the original digest as well so that ResolveIndex can find
+		// it when looked up by the original digest reference.
+		if newIndexDigest != dgst {
+			origDigestPath := filepath.Join(
+				handle.path,
+				DirectoryHandlerDigestsDir,
+				dgst.Algorithm().String(),
+				dgst.Encoded(),
+			)
+
+			if err := os.MkdirAll(filepath.Dir(origDigestPath), 0o775); err != nil {
+				return fmt.Errorf("could not make original digest parent directories: %w", err)
+			}
+
+			origWriter, err := lockedfile.Edit(origDigestPath)
+			if err != nil {
+				return fmt.Errorf("could not get original digest file descriptor: %w", err)
+			}
+			defer origWriter.Close()
+
+			if _, err = origWriter.Write(indexRaw); err != nil {
+				return fmt.Errorf("could not write index at original digest: %w", err)
+			}
+
+			if err = origWriter.Truncate(int64(len(indexRaw))); err != nil {
+				return fmt.Errorf("could not truncate original digest file: %w", err)
 			}
 		}
 
