@@ -7,11 +7,9 @@ package manifest
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -52,13 +50,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, resource string, check
 		return err
 	}
 
-	cache := manifest.Name + string(filepath.Separator) + filepath.Base(resource)
-
-	if manifest.Type != unikraft.ComponentTypeCore {
-		cache = manifest.Type.Plural() + string(filepath.Separator) + cache
-	}
-
-	cache = filepath.Join(manifest.mopts.cacheDir, cache)
+	cache := archiveCachePath(manifest, resource)
 
 	pp := &pullProgressArchive{
 		onProgress: popts.OnProgress,
@@ -67,29 +59,9 @@ func pullArchive(ctx context.Context, manifest *Manifest, resource string, check
 	}
 
 	if f, err := os.Stat(cache); !popts.UseCache() || err != nil || f.Size() == 0 {
-		u, err := url.Parse(resource)
-		if err != nil {
-			return err
-		}
-
-		authHeader := ""
-		authenticated := false
-
 		auths := popts.Auths()
 		if auths == nil {
 			auths = manifest.mopts.auths
-		}
-		if auths != nil {
-			if auth, ok := auths[u.Host]; ok {
-				if len(auth.User) > 0 {
-					authenticated = true
-					authHeader = "Basic " + base64.StdEncoding.
-						EncodeToString([]byte(auth.User+":"+auth.Token))
-				} else if len(auth.Token) > 0 {
-					authenticated = true
-					authHeader = "Bearer " + auth.Token
-				}
-			}
 		}
 
 		client := &http.Client{}
@@ -100,9 +72,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, resource string, check
 		}
 
 		head.Header.Set("User-Agent", version.UserAgent())
-		if authenticated {
-			head.Header.Set("Authorization", authHeader)
-		}
+		authenticated := setRequestAuth(head, auths)
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"url":           resource,
@@ -141,9 +111,7 @@ func pullArchive(ctx context.Context, manifest *Manifest, resource string, check
 		}
 
 		get.Header.Set("User-Agent", version.UserAgent())
-		if authenticated {
-			get.Header.Set("Authorization", authHeader)
-		}
+		setRequestAuth(get, auths)
 
 		log.G(ctx).WithFields(logrus.Fields{
 			"url":           resource,

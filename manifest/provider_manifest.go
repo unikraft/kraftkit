@@ -73,7 +73,23 @@ func (mp *ManifestProvider) PullChannel(ctx context.Context, manifest *Manifest,
 		return pullGit(ctx, manifest, opts...)
 	}
 
-	return pullArchive(ctx, manifest, channel.Resource, channel.Sha256, opts...)
+	// Check if the cached archive for this branch is stale by comparing
+	// the remote ETag (obtained via HEAD request) against a locally stored
+	// ETag sidecar file.
+	etag, err := invalidateStaleArchiveCache(ctx, manifest, channel.Resource)
+	if err != nil {
+		return err
+	}
+
+	if err := pullArchive(ctx, manifest, channel.Resource, channel.Sha256, opts...); err != nil {
+		return err
+	}
+
+	if err := writeArchiveCacheETag(ctx, manifest, channel.Resource, etag); err != nil {
+		log.G(ctx).WithError(err).Debug("could not persist archive cache ETag")
+	}
+
+	return nil
 }
 
 func (mp *ManifestProvider) PullVersion(ctx context.Context, manifest *Manifest, version *ManifestVersion, opts ...pack.PullOption) error {
