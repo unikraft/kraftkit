@@ -16,6 +16,7 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
+	"kraftkit.sh/internal/cli/kraft/cloud/certificate/errortypes"
 	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 )
 
@@ -70,7 +71,7 @@ func (opts *GetOptions) Pre(cmd *cobra.Command, _ []string) error {
 	}
 
 	if !utils.IsValidOutputFormat(opts.Output) {
-		return fmt.Errorf("invalid output format: %s", opts.Output)
+		return fmt.Errorf("%w: %s", errortypes.InvalidOutputFormat, opts.Output)
 	}
 
 	return nil
