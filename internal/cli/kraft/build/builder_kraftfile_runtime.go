@@ -15,6 +15,7 @@ import (
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/tui/processtree"
 	"kraftkit.sh/tui/selection"
+	ukruntime "kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 )
 
@@ -60,14 +61,23 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 		err      error
 	)
 
-	name := opts.Project.Runtime().Name()
+	queryRuntime := opts.Project.Runtime()
+	runtimeRef := queryRuntime.Reference()
+	queryName := queryRuntime.QueryName()
+	queryVersion := queryRuntime.QueryVersion()
 	if opts.Platform == "kraftcloud" || (opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
-		name = utils.RewrapAsKraftCloudPackage(name)
+		queryRuntime = &ukruntime.Runtime{}
+		queryRuntime.SetName(utils.RewrapAsKraftCloudPackage(runtimeRef))
+		runtimeRef = queryRuntime.Reference()
+		queryName = queryRuntime.QueryName()
+		queryVersion = queryRuntime.QueryVersion()
 	}
 
 	qopts := []packmanager.QueryOption{
-		packmanager.WithName(name),
-		packmanager.WithVersion(opts.Project.Runtime().Version()),
+		packmanager.WithName(queryName),
+	}
+	if queryVersion != "" {
+		qopts = append(qopts, packmanager.WithVersion(queryVersion))
 	}
 
 	treemodel, err := processtree.NewProcessTree(
@@ -81,11 +91,7 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 			processtree.WithHideOnSuccess(true),
 		},
 		processtree.NewProcessTreeItem(
-			fmt.Sprintf(
-				"searching for %s:%s",
-				name,
-				opts.Project.Runtime().Version(),
-			),
+			fmt.Sprintf("searching for %s", runtimeRef),
 			"",
 			func(ctx context.Context) error {
 				qopts = append(qopts,
@@ -121,31 +127,27 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 	if len(packs) == 0 {
 		if len(opts.Platform) > 0 && len(opts.Architecture) > 0 {
 			return fmt.Errorf(
-				"could not find runtime '%s:%s' (%s/%s)",
-				opts.Project.Runtime().Name(),
-				opts.Project.Runtime().Version(),
+				"could not find runtime '%s' (%s/%s)",
+				runtimeRef,
 				opts.Platform,
 				opts.Architecture,
 			)
 		} else if len(opts.Architecture) > 0 {
 			return fmt.Errorf(
-				"could not find runtime '%s:%s' with '%s' architecture",
-				opts.Project.Runtime().Name(),
-				opts.Project.Runtime().Version(),
+				"could not find runtime '%s' with '%s' architecture",
+				runtimeRef,
 				opts.Architecture,
 			)
 		} else if len(opts.Platform) > 0 {
 			return fmt.Errorf(
-				"could not find runtime '%s:%s' with '%s' platform",
-				opts.Project.Runtime().Name(),
-				opts.Project.Runtime().Version(),
+				"could not find runtime '%s' with '%s' platform",
+				runtimeRef,
 				opts.Platform,
 			)
 		} else {
 			return fmt.Errorf(
-				"could not find runtime %s:%s",
-				opts.Project.Runtime().Name(),
-				opts.Project.Runtime().Version(),
+				"could not find runtime %s",
+				runtimeRef,
 			)
 		}
 	} else if len(packs) == 1 {

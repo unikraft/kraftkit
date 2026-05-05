@@ -9,6 +9,8 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 // PackOptions contains the list of options which can be set when packaging a
@@ -20,7 +22,7 @@ type PackOptions struct {
 	args           []string
 	env            []string
 	initrd         initrd.Initrd
-	roms           []string
+	roms           []kraftfilev07.FS
 	kconfig        kconfig.KeyValueMap
 	kernel         string
 	kernelDbg      string
@@ -76,7 +78,7 @@ func (popts *PackOptions) Initrd() initrd.Initrd {
 }
 
 // Auxiliary read-only memory blobs.
-func (popts *PackOptions) Roms() []string {
+func (popts *PackOptions) Roms() []kraftfilev07.FS {
 	return popts.roms
 }
 
@@ -168,7 +170,7 @@ func PackInitrd(rootfs initrd.Initrd) PackOption {
 }
 
 // PackRoms includes auxiliary read-only memory blobs in the package.
-func PackRoms(roms ...string) PackOption {
+func PackRoms(roms ...kraftfilev07.FS) PackOption {
 	return func(popts *PackOptions) {
 		popts.roms = roms
 	}

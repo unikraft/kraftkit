@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"kraftkit.sh/initrd"
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app/volume"
@@ -19,6 +18,7 @@ import (
 	"kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 	"kraftkit.sh/unikraft/template"
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 // ApplicationOption is a function that manipulates the instantiation of an
@@ -31,6 +31,7 @@ func NewApplicationFromOptions(aopts ...ApplicationOption) (Application, error) 
 	var err error
 	ac := &application{
 		configuration: kconfig.KeyValueMap{},
+		loaderKind:    ProjectLoaderV06,
 	}
 
 	for _, o := range aopts {
@@ -129,15 +130,15 @@ func WithRootfs(rootfs string) ApplicationOption {
 }
 
 // WithFsType sets the application's rootfs filesystem type
-func WithFsType(fsType initrd.FsType) ApplicationOption {
+func WithFsType(fsType kraftfilev07.FsType) ApplicationOption {
 	return func(ac *application) error {
 		ac.fsType = fsType
 		return nil
 	}
 }
 
-// WithRoms sets the application's auxiliary read-only memory blobs.
-func WithRoms(roms ...string) ApplicationOption {
+// WithRoms sets the application's ROM filesystem descriptors.
+func WithRoms(roms ...kraftfilev07.FS) ApplicationOption {
 	return func(ac *application) error {
 		ac.roms = roms
 		return nil
@@ -196,6 +197,22 @@ func WithExtensions(extensions component.Extensions) ApplicationOption {
 func WithKraftfile(kraftfile *Kraftfile) ApplicationOption {
 	return func(ac *application) error {
 		ac.kraftfile = kraftfile
+		return nil
+	}
+}
+
+// WithLoaderKind records which loader produced the application.
+func WithLoaderKind(loaderKind ProjectLoader) ApplicationOption {
+	return func(ac *application) error {
+		ac.loaderKind = loaderKind
+		return nil
+	}
+}
+
+// WithSpecVersion records the parsed spec version of the underlying Kraftfile.
+func WithSpecVersion(specVersion string) ApplicationOption {
+	return func(ac *application) error {
+		ac.specVersion = specVersion
 		return nil
 	}
 }

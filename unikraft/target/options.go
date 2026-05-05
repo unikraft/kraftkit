@@ -9,6 +9,7 @@ import (
 	"kraftkit.sh/kconfig"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
+	"unikraft.com/x/kraftfile"
 )
 
 // TargetOption is a function that modifies a TargetConfig.
@@ -38,7 +39,11 @@ func WithPlatform(platform plat.Platform) TargetOption {
 // WithRoms sets the roms of the target.
 func WithRoms(roms []string) TargetOption {
 	return func(tc *TargetConfig) {
-		tc.roms = roms
+		for _, rom := range roms {
+			tc.roms = append(tc.roms, kraftfile.FS{
+				Source: rom,
+			})
+		}
 	}
 }
 

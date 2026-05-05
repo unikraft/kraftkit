@@ -31,6 +31,8 @@ import (
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 type BuildOptions struct {
@@ -43,7 +45,7 @@ type BuildOptions struct {
 	Project        *compose.Project      `noattribute:"true"`
 	Push           bool                  `long:"push" usage:"Push the built service images"`
 	Runtimes       []string              `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
-	RootfsType     initrd.FsType         `noattribute:"true"`
+	RootfsType     kraftfilev07.FsType   `noattribute:"true"`
 	KeepFileOwners bool                  `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	Token          string                `noattribute:"true"`
 }
@@ -76,9 +78,9 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
-			initrd.FsTypeCpio,
+			kraftfilev07.FsTypeCpio,
 		),
 		"rootfs-type",
 		"Set the type of the format of the rootfs (cpio/erofs)",
@@ -397,7 +399,7 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
-		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
 	return nil

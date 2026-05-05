@@ -30,6 +30,8 @@ import (
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
+
+	kraftfilev07 "unikraft.com/x/kraftfile"
 )
 
 var ErrContextNotBuildable = fmt.Errorf("could not determine what or how to build from the given context")
@@ -57,7 +59,7 @@ type BuildOptions struct {
 	PrintStats     bool                  `long:"print-stats" usage:"Print build statistics"`
 	Project        app.Application       `noattribute:"true"`
 	Rootfs         string                `long:"rootfs" usage:"Specify a path to use as root file system (can be volume or initramfs)"`
-	RootfsType     initrd.FsType         `noattribute:"true"`
+	RootfsType     kraftfilev07.FsType   `noattribute:"true"`
 	KeepFileOwners bool                  `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
 	SaveBuildLog   string                `long:"build-log" usage:"Use the specified file to save the output from the build"`
 	Target         *target.Target        `noattribute:"true"`
@@ -128,8 +130,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			initrd.WithWorkdir(opts.Workdir),
 			initrd.WithKeepOwners(opts.KeepFileOwners),
 			initrd.WithOutput(filepath.Join(
-				opts.Workdir,
-				unikraft.BuildDir,
+				buildOutputDir(opts.Project, opts.Workdir),
 				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
 			)),
 			initrd.WithOutputType(opts.RootfsType),
@@ -205,7 +206,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
-		cmdfactory.NewEnumFlag[initrd.FsType](
+		cmdfactory.NewEnumFlag[kraftfilev07.FsType](
 			initrd.FsTypes(),
 			initrd.FsTypeCpio,
 		),
@@ -225,7 +226,7 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 	cmd.SetContext(ctx)
 
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
-		opts.RootfsType = initrd.FsType(cmd.Flag("rootfs-type").Value.String())
+		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
 
 	if opts.Rootfs != "" && !filepath.IsAbs(opts.Rootfs) && !strings.Contains(opts.Rootfs, "://") {
@@ -263,7 +264,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		if ok {
 			standardName, err := target.KernelName(*tc)
 			if err == nil {
-				standardPath := filepath.Join(opts.Workdir, unikraft.BuildDir, standardName)
+				standardPath := filepath.Join(buildOutputDir(opts.Project, opts.Workdir), standardName)
 				desiredPath := t.Kernel()
 
 				// If they are different, it means either --kernel was used or 'output'
@@ -358,6 +359,14 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	fmt.Fprint(iostreams.G(ctx).Out, "Learn how to package your unikernel with: kraft pkg --help\n")
 
 	return nil
+}
+
+func buildOutputDir(project app.Application, workdir string) string {
+	if project != nil && project.OutDir() != "" {
+		return project.OutDir()
+	}
+
+	return filepath.Join(workdir, unikraft.BuildDir)
 }
 
 func moveFile(src, dst string) error {

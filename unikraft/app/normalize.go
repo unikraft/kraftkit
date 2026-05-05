@@ -33,8 +33,8 @@ package app
 
 import (
 	"path/filepath"
-	"regexp"
-	"strings"
+
+	"kraftkit.sh/unikraft"
 )
 
 // normalize a kraft project by moving deprecated attributes to their canonical
@@ -71,8 +71,5 @@ func absKraftfile(kraftFile *Kraftfile) (*Kraftfile, error) {
 }
 
 func normalizeProjectName(s string) string {
-	r := regexp.MustCompile("[a-z0-9_-]")
-	s = strings.ToLower(s)
-	s = strings.Join(r.FindAllString(s, -1), "")
-	return strings.TrimLeft(s, "_-")
+	return unikraft.NormalizeProjectName(s)
 }

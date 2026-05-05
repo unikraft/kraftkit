@@ -19,6 +19,8 @@ import (
 	"github.com/xlab/treeprint"
 	"gopkg.in/yaml.v3"
 
+	kraftfilev07 "unikraft.com/x/kraftfile"
+
 	"kraftkit.sh/exec"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/internal/yamlmerger"
@@ -66,13 +68,13 @@ type Application interface {
 
 	// Auxiliary read-only memory blobs.  Used for arbitrary data which are
 	// mounted at runtime.
-	Roms() []string
+	Roms() []kraftfilev07.FS
 
 	// InitrdFsType returns the type of root filesystem to be used during runtime.
-	InitrdFsType() initrd.FsType
+	InitrdFsType() kraftfilev07.FsType
 
 	// SetInitrdFsType sets the type of root filesystem to be used during runtime.
-	SetInitrdFsType(initrd.FsType)
+	SetInitrdFsType(kraftfilev07.FsType)
 
 	// SetRootfs sets the root filesystem path for the application to the given
 	// value path.
@@ -86,6 +88,12 @@ type Application interface {
 
 	// Kraftfile returns the application's kraft configuration file
 	Kraftfile() *Kraftfile
+
+	// LoaderKind returns which project loader produced this application.
+	LoaderKind() ProjectLoader
+
+	// SpecVersion returns the parsed Kraftfile specification version.
+	SpecVersion() string
 
 	// MergeTemplate merges the application's configuration with the given
 	// configuration
@@ -176,7 +184,7 @@ type application struct {
 	workingDir    string
 	filename      string
 	outDir        string
-	fsType        initrd.FsType
+	fsType        kraftfilev07.FsType
 	template      *template.TemplateConfig
 	runtime       *runtime.Runtime
 	unikraft      *core.UnikraftConfig
@@ -187,8 +195,10 @@ type application struct {
 	env           target.Env
 	command       []string
 	rootfs        string
-	roms          []string
+	roms          []kraftfilev07.FS
 	kraftfile     *Kraftfile
+	loaderKind    ProjectLoader
+	specVersion   string
 	configuration kconfig.KeyValueMap
 	extensions    component.Extensions
 }
@@ -222,6 +232,10 @@ func (app *application) OutDir() string {
 }
 
 func (app *application) Template() *template.TemplateConfig {
+	// if the loader kind is v07, then template is already merged on project initialization, so returning nil to avoid triggering the legacy template merger
+	if app.LoaderKind() == ProjectLoaderV07 {
+		return nil
+	}
 	return app.template
 }
 
@@ -238,14 +252,18 @@ func (app *application) Labels() map[string]string {
 }
 
 func (app *application) Libraries(ctx context.Context) (map[string]*lib.LibraryConfig, error) {
-	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	libs := map[string]*lib.LibraryConfig{}
 	for key, lib := range app.libraries {
 		libs[key] = lib
+	}
+
+	if app.Unikraft(ctx) == nil {
+		return libs, nil
+	}
+
+	uklibs, err := app.Unikraft(ctx).Libraries(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, uklib := range uklibs {
@@ -267,7 +285,7 @@ func (app *application) Rootfs() string {
 	return app.rootfs
 }
 
-func (app *application) Roms() []string {
+func (app *application) Roms() []kraftfilev07.FS {
 	return app.roms
 }
 
@@ -275,11 +293,11 @@ func (app *application) SetRootfs(rootfs string) {
 	app.rootfs = rootfs
 }
 
-func (app *application) SetInitrdFsType(fsType initrd.FsType) {
+func (app *application) SetInitrdFsType(fsType kraftfilev07.FsType) {
 	app.fsType = fsType
 }
 
-func (app *application) InitrdFsType() initrd.FsType {
+func (app *application) InitrdFsType() kraftfilev07.FsType {
 	return app.fsType
 }
 
@@ -293,6 +311,14 @@ func (app *application) Extensions() component.Extensions {
 
 func (app *application) Kraftfile() *Kraftfile {
 	return app.kraftfile
+}
+
+func (app *application) LoaderKind() ProjectLoader {
+	return app.loaderKind
+}
+
+func (app *application) SpecVersion() string {
+	return app.specVersion
 }
 
 func (app *application) MergeTemplate(ctx context.Context, merge Application) (Application, error) {
@@ -1102,6 +1128,10 @@ func saveNewKraftfile(ctx context.Context, app Application) error {
 }
 
 func (app *application) Save(ctx context.Context) error {
+	if app.LoaderKind() != ProjectLoaderV06 {
+		return fmt.Errorf("%w: save requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
+	}
+
 	// Open the kratfile for reading
 	kraftfile, err := os.ReadFile(app.kraftfile.path)
 
@@ -1127,6 +1157,10 @@ func (app *application) Env() map[string]string {
 }
 
 func (app *application) RemoveLibrary(ctx context.Context, libraryName string) error {
+	if app.LoaderKind() != ProjectLoaderV06 {
+		return fmt.Errorf("%w: removing libraries requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
+	}
+
 	isLibraryExistInProject := false
 	for libKey, lib := range app.libraries {
 		if lib.Name() == libraryName {
@@ -1167,6 +1201,10 @@ func (app *application) RemoveLibrary(ctx context.Context, libraryName string) e
 }
 
 func (app *application) AddLibrary(ctx context.Context, library lib.LibraryConfig) error {
+	if app.LoaderKind() != ProjectLoaderV06 {
+		return fmt.Errorf("%w: adding libraries requires the legacy Kraftfile loader", ErrProjectMutationNotSupported)
+	}
+
 	if app.libraries == nil {
 		app.libraries = map[string]*lib.LibraryConfig{}
 	}

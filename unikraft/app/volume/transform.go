@@ -58,6 +58,13 @@ func TransformFromSchema(ctx context.Context, data interface{}) (interface{}, er
 				}
 				volume.destination = destStr
 
+			case "mode":
+				modeStr, ok := prop.(string)
+				if !ok {
+					return nil, fmt.Errorf("malformed Kraftfile: 'volumes.mode' must be a string, got %T", prop)
+				}
+				volume.mode = modeStr
+
 			case "readonly":
 				readOnlyBool, ok := prop.(bool)
 				if !ok {

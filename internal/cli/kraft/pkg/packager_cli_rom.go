@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	kraftfilev07 "unikraft.com/x/kraftfile"
+
 	"kraftkit.sh/config"
 	"kraftkit.sh/initrd"
 	"kraftkit.sh/log"
@@ -23,7 +25,7 @@ import (
 
 type packagerCliRom struct {
 	// Packaging options
-	roms         []string
+	roms         []kraftfilev07.FS
 	architecture arch.Architecture
 	platform     plat.Platform
 }
@@ -46,8 +48,8 @@ func (p *packagerCliRom) Packagable(ctx context.Context, opts *PkgOptions, args 
 			opts.Platform, opts.Architecture, _ = strings.Cut(opts.Platform, "/")
 		}
 
-		if opts.RomType == initrd.FsType("") {
-			opts.RomType = initrd.FsTypeCpio
+		if opts.RomType == kraftfilev07.FsType("") {
+			opts.RomType = kraftfilev07.FsTypeCpio
 		}
 
 		return true, nil

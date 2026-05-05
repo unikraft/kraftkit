@@ -20,30 +20,18 @@ func TransformFromSchema(ctx context.Context, props interface{}) (interface{}, e
 
 	switch entry := props.(type) {
 	case string:
-		var split []string
 		// Is there a schema specifier?
 		if strings.Contains(entry, "://") {
-			split = strings.Split(entry, "://")
+			split := strings.SplitN(entry, "://", 2)
 			switch split[0] {
 			case "oci":
-				split = strings.Split(split[1], ":")
-				runtime.source = split[0]
-				if len(split) > 1 {
-					runtime.version = split[1]
-				}
+				runtime.name, runtime.version = splitRuntimeNameVersion(split[1])
+				runtime.source = runtime.QueryName()
 			case "kernel":
 				runtime.kernel = split[1]
 			}
 		} else {
-			// The following sequence parses the format:
-			split = strings.Split(entry, ":")
-			if len(split) > 2 {
-				return nil, fmt.Errorf("expected format template value to be <oci>:<tag>")
-			}
-			runtime.name = split[0]
-			if len(split) > 1 {
-				runtime.version = split[1]
-			}
+			runtime.name, runtime.version = splitRuntimeNameVersion(entry)
 		}
 
 	case map[string]interface{}:

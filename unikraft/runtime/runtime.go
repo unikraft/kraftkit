@@ -59,13 +59,7 @@ func (elfloader *Runtime) Name() string {
 
 // SetName overwrites the name of the runtime.
 func (elfloader *Runtime) SetName(name string) {
-	if runtime := strings.Split(name, ":"); len(runtime) == 2 {
-		elfloader.name = runtime[0]
-		elfloader.version = runtime[1]
-		return
-	}
-
-	elfloader.name = name
+	elfloader.name, elfloader.version = splitRuntimeNameVersion(name)
 }
 
 // String implements fmt.Stringer
@@ -78,9 +72,62 @@ func (elfloader *Runtime) Version() string {
 	return elfloader.version
 }
 
+// QueryName is the catalog key used to resolve the runtime package.
+func (elfloader *Runtime) QueryName() string {
+	if elfloader.name != "" {
+		return elfloader.name
+	}
+
+	return elfloader.source
+}
+
+// QueryVersion is the catalog tag used to resolve the runtime package.
+func (elfloader *Runtime) QueryVersion() string {
+	return elfloader.version
+}
+
+// Reference returns the full runtime reference as supplied by the user or
+// reconstructed from split name/version fields.
+func (elfloader *Runtime) Reference() string {
+	name := elfloader.QueryName()
+	if name == "" {
+		return ""
+	}
+
+	if elfloader.version != "" {
+		return name + ":" + elfloader.version
+	}
+
+	return name
+}
+
 // Source of the ELF Loader runtime.
 func (elfloader *Runtime) Source() string {
 	return elfloader.source
+}
+
+func splitRuntimeNameVersion(name string) (string, string) {
+	if name == "" {
+		return "", ""
+	}
+
+	if strings.Contains(name, "@") {
+		return name, ""
+	}
+
+	slash := strings.LastIndex(name, "/")
+	colon := strings.LastIndex(name, ":")
+	if colon <= slash {
+		return name, ""
+	}
+
+	if firstSegment, _, ok := strings.Cut(name, "/"); ok {
+		if strings.Contains(firstSegment, ".") || strings.Contains(firstSegment, ":") || firstSegment == "localhost" {
+			return name, ""
+		}
+	}
+
+	return name[:colon], name[colon+1:]
 }
 
 func (elfloader *Runtime) MarshalYAML() (interface{}, error) {

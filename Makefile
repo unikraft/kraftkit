@@ -250,7 +250,7 @@ tidy: ## Tidy import Go modules.
 
 .PHONY: fmt
 fmt: ## Format all files according to linting preferences.
-	$(GOCILINT) format
+	$(GOCILINT) fmt
 
 .PHONY: lint
 lint: ## Lint all files according to linting preferences.
