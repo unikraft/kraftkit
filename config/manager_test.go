@@ -5,7 +5,10 @@
 
 package config
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestConfigManagerUnset_MapField(t *testing.T) {
 	unset := func(t *testing.T, cfg *KraftKit, key string) {
@@ -55,16 +58,24 @@ func TestConfigManagerUnset_MapField(t *testing.T) {
 	t.Run("Error on unknown key", func(t *testing.T) {
 		cfg := &KraftKit{}
 		cm := &ConfigManager[KraftKit]{Config: cfg}
-		if err := cm.Unset("nonexistent"); err == nil {
-			t.Error("expected error for unknown key, got nil")
+		err := cm.Unset("nonexistent")
+		if err == nil {
+			t.Fatal("expected error for unknown key, got nil")
+		}
+		if !errors.Is(err, InvalidKey) {
+			t.Fatalf("expected InvalidKey, got %v", err)
 		}
 	})
 
 	t.Run("Error on too deep map traversal", func(t *testing.T) {
 		cfg := &KraftKit{}
 		cm := &ConfigManager[KraftKit]{Config: cfg}
-		if err := cm.Unset("toolchain.CC.extra"); err == nil {
-			t.Error("expected error for toolchain.CC.extra, got nil")
+		err := cm.Unset("toolchain.CC.extra")
+		if err == nil {
+			t.Fatal("expected error for toolchain.CC.extra, got nil")
+		}
+		if !errors.Is(err, CannotTraverseFurtherInMap) {
+			t.Fatalf("expected CannotTraverseFurtherInMap, got %v", err)
 		}
 	})
 }
@@ -132,16 +143,24 @@ func TestConfigManagerSet_MapField(t *testing.T) {
 	t.Run("Error on too deep map traversal", func(t *testing.T) {
 		cfg := &KraftKit{}
 		cm := &ConfigManager[KraftKit]{Config: cfg}
-		if err := cm.Set("toolchain.CC.extra", "value"); err == nil {
-			t.Error("expected error for toolchain.CC.extra, got nil")
+		err := cm.Set("toolchain.CC.extra", "value")
+		if err == nil {
+			t.Fatal("expected error for toolchain.CC.extra, got nil")
+		}
+		if !errors.Is(err, CannotTraverseFurtherInMap) {
+			t.Fatalf("expected CannotTraverseFurtherInMap, got %v", err)
 		}
 	})
 
 	t.Run("Error on unknown key", func(t *testing.T) {
 		cfg := &KraftKit{}
 		cm := &ConfigManager[KraftKit]{Config: cfg}
-		if err := cm.Set("nonexistent", "value"); err == nil {
-			t.Error("expected error for unknown key, got nil")
+		err := cm.Set("nonexistent", "value")
+		if err == nil {
+			t.Fatal("expected error for unknown key, got nil")
+		}
+		if !errors.Is(err, InvalidKey) {
+			t.Fatalf("expected InvalidKey, got %v", err)
 		}
 	})
 }

@@ -5,7 +5,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -67,7 +66,7 @@ func WithDefaultConfigFile[C any]() ConfigManagerOption[C] {
 
 func NewConfigManager[C any](c *C, opts ...ConfigManagerOption[C]) (*ConfigManager[C], error) {
 	if c == nil {
-		return nil, fmt.Errorf("cannot instantiate ConfigManager without Config")
+		return nil, ConfigNil
 	}
 
 	cm := &ConfigManager[C]{
@@ -172,7 +171,7 @@ func convertType(value any, targetType reflect.Type) (reflect.Value, error) {
 		}
 	}
 
-	return reflect.Value{}, errors.New("unsupported type conversion")
+	return reflect.Value{}, UnsupportedTypeConversion
 }
 
 // getYAMLTag extracts the YAML tag from a struct field.
@@ -191,7 +190,7 @@ func getYAMLTag(field reflect.StructField, ok bool) string {
 func (cm *ConfigManager[C]) Set(key string, val any) error {
 	v := reflect.ValueOf(cm.Config)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return errors.New("cfg must be a pointer to a struct")
+		return ConfigMustBeStructPointer
 	}
 
 	v = v.Elem() // Dereference the pointer
@@ -203,12 +202,12 @@ func (cm *ConfigManager[C]) Set(key string, val any) error {
 		})
 
 		if !field.IsValid() {
-			return errors.New("invalid key: " + k)
+			return fmt.Errorf("%w: %s", InvalidKey, k)
 		}
 
 		if i == len(keys)-1 {
 			if !field.CanSet() {
-				return errors.New("cannot set field: " + k)
+				return fmt.Errorf("%w: %s", CannotSetField, k)
 			}
 			convertedVal, err := convertType(val, field.Type())
 			if err != nil {
@@ -229,7 +228,7 @@ func (cm *ConfigManager[C]) Set(key string, val any) error {
 				// e.g.keys = ["toolchain", "CC"] , len is 2 ,At i = 0 the next key is the final one.
 				// e.g.keys = ["toolchain", "CC", "extra"]  len is 3 , We have leftover keys, so we error out.
 
-				return errors.New("cannot traverse further into map: " + k)
+				return fmt.Errorf("%w: %s", CannotTraverseFurtherInMap, k)
 			}
 			mapKey := keys[i+1]
 			if field.IsNil() {
@@ -264,7 +263,7 @@ func (cm *ConfigManager[C]) Set(key string, val any) error {
 func (cm *ConfigManager[C]) Unset(key string) error {
 	v := reflect.ValueOf(cm.Config)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return errors.New("cfg must be a pointer to a struct")
+		return ConfigMustBeStructPointer
 	}
 
 	v = v.Elem()
@@ -276,7 +275,7 @@ func (cm *ConfigManager[C]) Unset(key string) error {
 		})
 
 		if !field.IsValid() {
-			return errors.New("invalid key: " + k)
+			return fmt.Errorf("%w: %s", InvalidKey, k)
 		}
 
 		if field.Kind() == reflect.Map &&
@@ -284,7 +283,7 @@ func (cm *ConfigManager[C]) Unset(key string) error {
 			field.Type().Elem().Kind() == reflect.String {
 
 			if i+1 != len(keys)-1 {
-				return errors.New("cannot traverse further into map: " + k)
+				return fmt.Errorf("%w: %s", CannotTraverseFurtherInMap, k)
 			}
 			if !field.IsNil() {
 				field.SetMapIndex(reflect.ValueOf(keys[i+1]), reflect.Value{})
@@ -294,7 +293,7 @@ func (cm *ConfigManager[C]) Unset(key string) error {
 
 		if i == len(keys)-1 {
 			if !field.CanSet() {
-				return errors.New("cannot unset field: " + k)
+				return fmt.Errorf("%w: %s", CannotUnsetField, k)
 			}
 			field.Set(reflect.Zero(field.Type()))
 			return nil

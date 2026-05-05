@@ -115,11 +115,6 @@ func DataDir() string {
 	return path
 }
 
-var (
-	errSamePath = errors.New("same path")
-	errNotExist = errors.New("not exist")
-)
-
 // Check default path, os.UserHomeDir, for existing configs
 // If configs exist then move them to newPath
 func autoMigrateConfigDir(newPath string) error {
@@ -128,7 +123,7 @@ func autoMigrateConfigDir(newPath string) error {
 		return migrateDir(oldPath, newPath)
 	}
 
-	return errNotExist
+	return NotExist
 }
 
 // Check default path, os.UserHomeDir, for existing state file (state.yml)
@@ -139,19 +134,19 @@ func autoMigrateStateDir(newPath string) error {
 		return migrateFile(oldPath, newPath, "state.yml")
 	}
 
-	return errNotExist
+	return NotExist
 }
 
 func migrateFile(oldPath, newPath, file string) error {
 	if oldPath == newPath {
-		return errSamePath
+		return SamePath
 	}
 
 	oldFile := filepath.Join(oldPath, file)
 	newFile := filepath.Join(newPath, file)
 
 	if !fileExists(oldFile) {
-		return errNotExist
+		return NotExist
 	}
 
 	_ = os.MkdirAll(filepath.Dir(newFile), 0o755)
@@ -160,11 +155,11 @@ func migrateFile(oldPath, newPath, file string) error {
 
 func migrateDir(oldPath, newPath string) error {
 	if oldPath == newPath {
-		return errSamePath
+		return SamePath
 	}
 
 	if !dirExists(oldPath) {
-		return errNotExist
+		return NotExist
 	}
 
 	_ = os.MkdirAll(filepath.Dir(newPath), 0o755)
