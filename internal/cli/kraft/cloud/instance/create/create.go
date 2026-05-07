@@ -366,13 +366,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 					}
 				}
 
-			case RolloutQualifierInstanceName:
-				for _, instance := range instances {
-					if instance.Name == opts.Name {
-						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
-					}
-				}
-
 			case RolloutQualifierAll:
 				qualifiedInstancesToRolloutOver = instances
 
