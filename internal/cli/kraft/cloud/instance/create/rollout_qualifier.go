@@ -16,9 +16,6 @@ const (
 	// image (ignoring digest).
 	RolloutQualifierImageName = RolloutQualifier("image")
 
-	// The 'name' qualifier is used to capture instances which have the same name.
-	RolloutQualifierInstanceName = RolloutQualifier("name")
-
 	// The 'all' qualifier matches all instances in the service.
 	RolloutQualifierAll = RolloutQualifier("all")
 
@@ -37,7 +34,6 @@ func (strategy RolloutQualifier) String() string {
 func RolloutQualifiers() []RolloutQualifier {
 	return []RolloutQualifier{
 		RolloutQualifierImageName,
-		RolloutQualifierInstanceName,
 		RolloutQualifierAll,
 		RolloutQualifierNone,
 	}

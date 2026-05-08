@@ -361,14 +361,17 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 						_, instImageBase, _ = strings.Cut(instImageBase, "://")
 					}
 
-					if instImageBase == imageBase {
-						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
+					// NOTE(craciunoiuc): Check should be removed after public nodes are updated
+					if isPublic, err := utils.IsPublicMetro(ctx, opts.Metro); err != nil {
+						return nil, nil, fmt.Errorf("could not determine if metro is public: %w", err)
+					} else if !isPublic {
+						// Remove the registry origin which is always present
+						// Also remove the 'official/' if possible
+						_, instImageBase, _ = strings.Cut(instImageBase, "/")
+						instImageBase = strings.TrimPrefix(instImageBase, "official/")
 					}
-				}
 
-			case RolloutQualifierInstanceName:
-				for _, instance := range instances {
-					if instance.Name == opts.Name {
+					if instImageBase == imageBase {
 						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
 					}
 				}
