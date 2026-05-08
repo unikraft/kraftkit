@@ -209,11 +209,15 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 	var freeSpace uint64
 	var totalSpace uint64
 
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: opts.AllowInsecure, //nolint:gosec
+	}
+
 	if log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) == log.FANCY {
 		paraprogress, err := paraProgress(ctx, fmt.Sprintf("Importing data (%s)", humanize.IBytes(uint64(cpioSize))),
 			func(ctx context.Context, callback func(float64)) (retErr error) {
 				instAddr := instFQDN + ":" + strconv.FormatUint(uint64(opts.Port), 10)
-				conn, err := tls.Dial("tcp4", instAddr, nil)
+				conn, err := tls.Dial("tcp4", instAddr, tlsConfig)
 				if err != nil {
 					return fmt.Errorf("connecting to volume data import instance send port: %w", err)
 				}
@@ -234,7 +238,7 @@ func importVolumeData(ctx context.Context, opts *ImportOptions) (retErr error) {
 		}
 	} else {
 		instAddr := instFQDN + ":" + strconv.FormatUint(uint64(opts.Port), 10)
-		conn, err := tls.Dial("tcp4", instAddr, nil)
+		conn, err := tls.Dial("tcp4", instAddr, tlsConfig)
 		if err != nil {
 			return fmt.Errorf("connecting to volume data import instance send port: %w", err)
 		}
