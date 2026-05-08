@@ -2,6 +2,16 @@ module kraftkit.sh
 
 go 1.26.0
 
+// Force the monolithic genproto to a version where googleapis/* packages
+// have been moved to submodules, eliminating ambiguous-import errors.
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20260128011058-8636f8732409
+
+replace (
+	kraftkit.sh/exec => ./exec
+	kraftkit.sh/log => ./log
+	kraftkit.sh/make => ./make
+)
+
 require (
 	api.zip v0.1.8
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -33,7 +43,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/erikgeiser/promptkit v0.11.0
 	github.com/erikh/ping v0.0.0-20141209185752-d731d249e12a
-	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
+	github.com/firecracker-microvm/firecracker-go-sdk v1.0.1-0.20251224190957-6fb280e993d4
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/getsentry/sentry-go v0.45.0
 	github.com/go-git/go-git/v5 v5.18.0
@@ -86,6 +96,9 @@ require (
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
 	k8s.io/apiserver v0.35.0
+	kraftkit.sh/exec v0.0.0-00010101000000-000000000000
+	kraftkit.sh/log v0.0.0-00010101000000-000000000000
+	kraftkit.sh/make v0.0.0-00010101000000-000000000000
 	oras.land/oras-go/v2 v2.6.0
 	sdk.kraft.cloud v0.6.1
 	sigs.k8s.io/kustomize/kyaml v0.21.1
@@ -196,7 +209,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/flatbuffers v23.1.21+incompatible // indirect
+	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
