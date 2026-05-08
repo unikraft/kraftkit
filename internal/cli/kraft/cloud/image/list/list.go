@@ -299,8 +299,11 @@ func platformImageToRow(image platformImage) *imageRow {
 		}
 	}
 
-	// Derive the index host from the image host.
+	// Derive the index host from the image host by prepending "index.".
 	indexHost := host
+	if host != "" && !strings.HasPrefix(host, "index.") {
+		indexHost = "index." + host
+	}
 
 	for _, tag := range image.Tags {
 		tag = strings.TrimSpace(tag)
