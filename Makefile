@@ -22,7 +22,7 @@ TOOLS       ?= github-action \
                webinstall
 GOMOD       ?= kraftkit.sh
 IMAGE_TAG   ?= latest
-GO_VERSION  ?= 1.25
+GO_VERSION  ?= 1.26
 TAGS        ?=
 STATIC      ?= y
 
@@ -68,13 +68,13 @@ CURL        ?= curl
 CMAKE       ?= cmake
 
 # Go tools
-GOCILINT_VERSION   ?= v2.11.4
+GOCILINT_VERSION   ?= v2.12.2
 GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 YTT_VERSION        ?= v0.51.0
 YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 GORELEASER_VERSION ?= v2.14.3
 GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
-GINKGO_VERSION     ?= v2.28.1
+GINKGO_VERSION     ?= v2.28.3
 GINKGO             ?= $(GO) run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
 # Misc

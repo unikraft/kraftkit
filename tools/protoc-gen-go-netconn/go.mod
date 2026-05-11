@@ -1,6 +1,6 @@
 module kraftkit.sh/tools/protoc-gen-go-netconn
 
-go 1.26.0
+go 1.26.2
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -12,7 +12,7 @@ require (
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect

@@ -32,7 +32,7 @@ RUN set -xe; \
     ; \
     apt-get clean;
 
-ARG GO_VERSION=1.26.0
+ARG GO_VERSION=1.26.2
 
 # Install Go
 RUN set -xe; \
@@ -67,7 +67,7 @@ COPY --from=xen /usr/lib/x86_64-linux-gnu/liblzma.a \
 
 WORKDIR /go/src/kraftkit.sh
 
-COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.26.0-vv2.14.3 /usr/bin/goreleaser /usr/bin/
+COPY --from=ghcr.io/goreleaser/goreleaser-cross:v1.26.2-3-v2.15.4 /usr/bin/goreleaser /usr/bin/
 
 ENV DOCKER=
 ENV GOROOT=/usr/local/go

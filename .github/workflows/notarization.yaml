@@ -5,7 +5,7 @@ on:
 
 jobs:
   notarization:
-    runs-on: mac-m2-14
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
