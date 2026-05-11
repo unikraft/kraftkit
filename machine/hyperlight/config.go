@@ -25,6 +25,26 @@ type HyperlightConfig struct {
 	LogPath string `json:"logPath,omitempty"`
 }
 
+func (hlcfg *HyperlightConfig) MarshalArgs(appArgs []string) []string {
+	args := []string{
+		"--memory", hlcfg.Memory,
+		"--stack", hlcfg.Stack,
+	}
+	if hlcfg.InitRd != "" {
+		args = append(args, "--initrd", hlcfg.InitRd)
+	}
+	for _, mount := range hlcfg.Mounts {
+		args = append(args, "--mount", mount)
+	}
+	args = append(args, hlcfg.KernelPath)
+	if len(appArgs) > 0 {
+		args = append(args, "--")
+		args = append(args, appArgs...)
+	}
+
+	return args
+}
+
 type HyperlightOption func(*HyperlightConfig) error
 
 func NewHyperlightConfig(opts ...HyperlightOption) (*HyperlightConfig, error) {
