@@ -53,7 +53,7 @@ type CreateOptions struct {
 	Replicas            uint                           `local:"true" long:"replicas" short:"R" usage:"Number of replicas of the instance" default:"0"`
 	Rollout             *RolloutStrategy               `noattribute:"true"`
 	RolloutQualifier    *RolloutQualifier              `noattribute:"true"`
-	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"5m"`
 	ServiceNameOrUUID   string                         `local:"true" long:"service" short:"g" usage:"Attach this instance to an existing service"`
 	Start               bool                           `local:"true" long:"start" short:"S" usage:"Immediately start the instance after creation"`
 	ScaleToZero         *kcinstances.ScaleToZeroPolicy `noattribute:"true"`
@@ -628,8 +628,24 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 				"waiting for new instance to start before performing rollout action",
 				"",
 				func(ctx context.Context) error {
-					_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
-					return err
+					deadline := time.Now().Add(opts.RolloutWait)
+					for {
+						_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(min(10*time.Second, time.Until(deadline)).Milliseconds()), newInstance.UUID)
+						if err == nil {
+							return nil
+						}
+						if time.Now().After(deadline) {
+							return err
+						}
+						getResp, getErr := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, newInstance.UUID)
+						if getErr == nil {
+							if inst, getErr := getResp.FirstOrErr(); getErr == nil {
+								if inst.State != kcinstances.InstanceStateStarting && inst.State != kcinstances.InstanceStateRunning {
+									return fmt.Errorf("instance %s transitioned to unexpected state %q while waiting to start", newInstance.UUID, inst.State)
+								}
+							}
+						}
+					}
 				},
 			),
 		)
@@ -698,9 +714,23 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 						break
 					}
 
-					_, err = opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(opts.RolloutWait.Milliseconds()), newInstance.UUID)
-					if err != nil {
-						return nil, nil, fmt.Errorf("could not wait for new instance to start: %w", err)
+					deadline := time.Now().Add(opts.RolloutWait)
+					for {
+						_, err := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(min(10*time.Second, time.Until(deadline)).Milliseconds()), newInstance.UUID)
+						if err == nil {
+							break
+						}
+						if time.Now().After(deadline) {
+							return nil, nil, fmt.Errorf("could not wait for new instance to start: %w", err)
+						}
+						getResp, getErr := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, newInstance.UUID)
+						if getErr == nil {
+							if inst, getErr := getResp.FirstOrErr(); getErr == nil {
+								if inst.State != kcinstances.InstanceStateStarting && inst.State != kcinstances.InstanceStateRunning {
+									return nil, nil, fmt.Errorf("instance %s transitioned to unexpected state %q while waiting to start", newInstance.UUID, inst.State)
+								}
+							}
+						}
 					}
 
 					if _, err = opts.Client.Instances().WithMetro(opts.Metro).Delete(ctx, qualifiedInstancesToRolloutOver[i].UUID); err != nil {

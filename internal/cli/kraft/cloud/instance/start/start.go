@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -28,7 +29,7 @@ type StartOptions struct {
 	Client        kraftcloud.KraftCloud `noattribute:"true"`
 	Metro         string                `noattribute:"true"`
 	Token         string                `noattribute:"true"`
-	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)"`
+	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout to wait for the instance to start (ms/s/m/h)" default:"5m"`
 }
 
 func NewCmd() *cobra.Command {
@@ -96,7 +97,12 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 		return fmt.Errorf("wait timeout must be greater than 1ms")
 	}
 
-	timeout := int(opts.Wait.Milliseconds())
+	waitMs := 0
+	if opts.Wait > 10*time.Second {
+		waitMs = int(10 * time.Second.Milliseconds())
+	} else if opts.Wait < 10*time.Second && opts.Wait != 0 {
+		waitMs = int(opts.Wait.Milliseconds())
+	}
 
 	if opts.All {
 		args = []string{}
@@ -122,11 +128,11 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 
 	log.G(ctx).Infof("starting %d instance(s)", len(args))
 
-	resp, err := opts.Client.Instances().WithMetro(opts.Metro).Start(ctx, timeout, args...)
+	resp, err := opts.Client.Instances().WithMetro(opts.Metro).Start(ctx, waitMs, args...)
 	if err != nil {
 		return fmt.Errorf("starting instance: %w", err)
 	}
-	startResponses, err := resp.AllOrErr()
+	startResponses, startErr := resp.AllOrErr()
 
 	totalStarted := 0
 	for _, started := range startResponses {
@@ -137,9 +143,64 @@ func Start(ctx context.Context, opts *StartOptions, args ...string) error {
 
 	log.G(ctx).Infof("started %d instance(s)", totalStarted)
 
-	if err != nil {
-		return fmt.Errorf("starting %d instance(s): %w", len(args), err)
+	if opts.Wait < 10*time.Second {
+		if startErr != nil {
+			return fmt.Errorf("starting %d instance(s): %w", len(args), startErr)
+		}
+		return nil
 	}
 
+	deadline := time.Now().Add(opts.Wait)
+
+	var pendingUUIDs []string
+	for _, started := range startResponses {
+		if started.UUID != "" && kcinstances.State(started.State) != kcinstances.StateRunning {
+			pendingUUIDs = append(pendingUUIDs, started.UUID)
+		}
+	}
+
+	if len(pendingUUIDs) == 0 {
+		if startErr != nil {
+			return fmt.Errorf("starting %d instance(s): %w", len(args), startErr)
+		}
+		return nil
+	}
+
+	for len(pendingUUIDs) > 0 {
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for %d instance(s) to start", len(pendingUUIDs))
+		}
+
+		_, waitErr := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateRunning, int(min(10*time.Second, time.Until(deadline)).Milliseconds()), pendingUUIDs...)
+		if waitErr == nil {
+			if startErr != nil {
+				return fmt.Errorf("starting %d instance(s): %w", len(args), startErr)
+			}
+			return nil
+		}
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for instance(s) to start: %w", waitErr)
+		}
+
+		getResp, getErr := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, pendingUUIDs...)
+		if getErr == nil {
+			getItems, _ := getResp.AllOrErr()
+			pendingUUIDs = pendingUUIDs[:0]
+			for _, item := range getItems {
+				switch item.State {
+				case kcinstances.InstanceStateRunning,
+					kcinstances.InstanceStateStarting:
+					pendingUUIDs = append(pendingUUIDs, item.UUID)
+				default:
+					return fmt.Errorf("instance %s transitioned to unexpected state %q while waiting to start", item.UUID, item.State)
+				}
+			}
+		}
+	}
+
+	if startErr != nil {
+		return fmt.Errorf("starting %d instance(s): %w", len(args), startErr)
+	}
 	return nil
 }

@@ -72,7 +72,7 @@ type DeployOptions struct {
 	RestartPolicy       kcinstances.RestartPolicy      `noattribute:"true"`
 	Rollout             create.RolloutStrategy         `noattribute:"true"`
 	RolloutQualifier    create.RolloutQualifier        `noattribute:"true"`
-	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	RolloutWait         time.Duration                  `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"5m"`
 	Rootfs              string                         `local:"true" long:"rootfs" usage:"Specify a path to use as root filesystem"`
 	RootfsType          kraftfilev07.FsType            `noattribute:"true"`
 	Runtime             string                         `local:"true" long:"runtime" usage:"Set an alternative project runtime"`

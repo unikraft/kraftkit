@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kraftcloud "sdk.kraft.cloud"
+	kcinstances "sdk.kraft.cloud/instances"
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
@@ -25,7 +26,7 @@ type StopOptions struct {
 	AllowInsecure bool                  `noattribute:"true"`
 	Auth          *config.AuthConfig    `noattribute:"true"`
 	Client        kraftcloud.KraftCloud `noattribute:"true"`
-	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout for the instance to stop (ms/s/m/h)"`
+	Wait          time.Duration         `local:"true" long:"wait" short:"w" usage:"Timeout for the instance to stop (ms/s/m/h)" default:"5m"`
 	DrainTimeout  time.Duration         `local:"true" long:"drain-timeout" short:"d" usage:"Time to wait for the instance to drain all connections before it is stopped (ms/s/m/h)"`
 	All           bool                  `long:"all" short:"a" usage:"Stop all instances"`
 	Force         bool                  `long:"force" short:"f" usage:"Force stop the instance(s)"`
@@ -87,17 +88,20 @@ func (opts *StopOptions) Run(ctx context.Context, args []string) error {
 func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 	var err error
 
-	if opts.DrainTimeout != 0 && opts.Wait != 0 {
-		return fmt.Errorf("drain-timeout and wait flags are mutually exclusive")
-	}
-
-	if opts.DrainTimeout != 0 && opts.Wait == 0 {
+	if opts.DrainTimeout != 0 {
 		opts.Wait = opts.DrainTimeout
 		log.G(ctx).Warnf("drain timeout is deprecated, use wait instead")
 	}
 
 	if opts.Wait < time.Millisecond && opts.Wait != 0 {
 		return fmt.Errorf("drain wait timeout must be at least 1ms")
+	}
+
+	waitMs := 0
+	if opts.Wait > 10*time.Second {
+		waitMs = int(10 * time.Second.Milliseconds())
+	} else if opts.Wait < 10*time.Second && opts.Wait != 0 {
+		waitMs = int(opts.Wait.Milliseconds())
 	}
 
 	if opts.Auth == nil {
@@ -113,8 +117,6 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 			kraftcloud.WithToken(config.GetKraftCloudTokenAuthConfig(*opts.Auth)),
 		)
 	}
-
-	timeout := int(opts.Wait.Milliseconds())
 
 	if opts.All {
 		instListResp, err := opts.Client.Instances().WithMetro(opts.Metro).List(ctx)
@@ -141,11 +143,11 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 
 	log.G(ctx).Infof("stopping %d instance(s)", len(args))
 
-	stopResp, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, timeout, opts.Force, args...)
+	stopResp, err := opts.Client.Instances().WithMetro(opts.Metro).Stop(ctx, waitMs, opts.Force, args...)
 	if err != nil {
 		return fmt.Errorf("stopping %d instance(s): %w", len(args), err)
 	}
-	stopResponses, err := stopResp.AllOrErr()
+	stopResponses, stopErr := stopResp.AllOrErr()
 
 	totalStopped := 0
 	for _, stopped := range stopResponses {
@@ -156,9 +158,65 @@ func Stop(ctx context.Context, opts *StopOptions, args ...string) error {
 
 	log.G(ctx).Infof("stopped %d instance(s)", totalStopped)
 
-	if err != nil {
-		return fmt.Errorf("stopped %d instance(s): %w", len(args), err)
+	if opts.Wait < 10*time.Second {
+		if stopErr != nil {
+			return fmt.Errorf("stopped %d instance(s): %w", len(args), stopErr)
+		}
+		return nil
 	}
 
+	deadline := time.Now().Add(opts.Wait)
+
+	var pendingUUIDs []string
+	for _, stopped := range stopResponses {
+		if stopped.UUID != "" && kcinstances.State(stopped.State) != kcinstances.StateStopped {
+			pendingUUIDs = append(pendingUUIDs, stopped.UUID)
+		}
+	}
+
+	if len(pendingUUIDs) == 0 {
+		if stopErr != nil {
+			return fmt.Errorf("stopped %d instance(s): %w", len(args), stopErr)
+		}
+		return nil
+	}
+
+	for len(pendingUUIDs) > 0 {
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for %d instance(s) to stop", len(pendingUUIDs))
+		}
+
+		_, waitErr := opts.Client.Instances().WithMetro(opts.Metro).Wait(ctx, kcinstances.StateStopped, int(min(10*time.Second, time.Until(deadline)).Milliseconds()), pendingUUIDs...)
+		if waitErr == nil {
+			if stopErr != nil {
+				return fmt.Errorf("stopped %d instance(s): %w", len(args), stopErr)
+			}
+			return nil
+		}
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timed out waiting for instance(s) to stop: %w", waitErr)
+		}
+
+		getResp, getErr := opts.Client.Instances().WithMetro(opts.Metro).Get(ctx, pendingUUIDs...)
+		if getErr == nil {
+			getItems, _ := getResp.AllOrErr()
+			pendingUUIDs = pendingUUIDs[:0]
+			for _, item := range getItems {
+				switch item.State {
+				case kcinstances.InstanceStateStopped,
+					kcinstances.InstanceStateStopping,
+					kcinstances.InstanceStateDraining:
+					pendingUUIDs = append(pendingUUIDs, item.UUID)
+				default:
+					return fmt.Errorf("instance %s transitioned to unexpected state %q while waiting to stop", item.UUID, item.State)
+				}
+			}
+		}
+	}
+
+	if stopErr != nil {
+		return fmt.Errorf("stopped %d instance(s): %w", len(args), stopErr)
+	}
 	return nil
 }

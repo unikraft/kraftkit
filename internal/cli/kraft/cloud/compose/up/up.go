@@ -53,7 +53,7 @@ type UpOptions struct {
 	Project          *compose.Project         `noattribute:"true"`
 	Rollout          *create.RolloutStrategy  `noattribute:"true"`
 	RolloutQualifier *create.RolloutQualifier `noattribute:"true"`
-	RolloutWait      time.Duration            `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"10s"`
+	RolloutWait      time.Duration            `local:"true" long:"rollout-wait" usage:"Time to wait before performing rolling out action (ms/s/m/h)" default:"5m"`
 	Runtimes         []string                 `long:"runtime" usage:"Alternative runtime to use when packaging a service"`
 	RootfsType       kraftfilev07.FsType      `noattribute:"true"`
 	KeepFileOwners   bool                     `local:"true" long:"keep-file-owners" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
