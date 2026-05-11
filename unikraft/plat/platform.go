@@ -103,6 +103,8 @@ func (pc PlatformConfig) KConfig() kconfig.KeyValueMap {
 		values.Set("CONFIG_KVM_VMM_QEMU", kconfig.Yes)
 	case "xen":
 		values.Set("CONFIG_PLAT_XEN", kconfig.Yes)
+	case "hyperlight", "hl":
+		values.Set("CONFIG_PLAT_HYPERLIGHT", kconfig.Yes)
 	case "linuxu":
 		values.Set("CONFIG_PLAT_LINUXU", kconfig.Yes)
 	}
