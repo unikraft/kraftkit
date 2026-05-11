@@ -26,8 +26,8 @@ type HyperlightOption func(*HyperlightConfig) error
 
 func NewHyperlightConfig(opts ...HyperlightOption) (*HyperlightConfig, error) {
 	cfg := &HyperlightConfig{
-		Memory: "16Mi",
-		Stack:  "8Mi",
+		Memory: DefaultMemory,
+		Stack:  DefaultStack,
 	}
 
 	for _, o := range opts {
