@@ -61,7 +61,7 @@ jobs:
         if: success() || failure()  # run this step even if the previous one failed
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.11.4
+          version: v2.12.2
           args: |
             --default none \
             --timeout=30m \
@@ -74,7 +74,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.11.4
+          version: v2.12.2
           args: |
             --timeout=30m \
             --output.text.path \
