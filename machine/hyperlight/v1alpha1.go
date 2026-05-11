@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"time"
 
@@ -44,6 +45,15 @@ const (
 	// Hyperlight. It must be installed in $PATH for this driver to work.
 	HostBinary = "hyperlight-unikraft"
 )
+
+var reservedGuestMountPaths = map[string]struct{}{
+	"/":     {},
+	"/bin":  {},
+	"/dev":  {},
+	"/proc": {},
+	"/sys":  {},
+	"/usr":  {},
+}
 
 // machineV1alpha1Service drives Hyperlight unikernels via the hyperlight-unikraft
 // binary. Each machine corresponds to a child process that owns the in-process
@@ -104,6 +114,11 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("%s not found in $PATH: %w", HostBinary, err)
 	}
 
+	mounts, err := hyperlightMountsFromMachine(machine)
+	if err != nil {
+		return machine, err
+	}
+
 	if machine.ObjectMeta.UID == "" {
 		machineID, err := name.NewRandomMachineID()
 		if err != nil {
@@ -158,6 +173,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		Memory:     machine.Spec.Resources.Requests.Memory().String(),
 		Stack:      DefaultStack,
 		InitRd:     machine.Status.InitrdPath,
+		Mounts:     mounts,
 		LogPath:    logFile,
 	}
 
@@ -234,6 +250,9 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 	}
 	if hlcfg.InitRd != "" {
 		args = append(args, "--initrd", hlcfg.InitRd)
+	}
+	for _, mount := range hlcfg.Mounts {
+		args = append(args, "--mount", mount)
 	}
 	args = append(args, hlcfg.KernelPath)
 	if len(machine.Spec.ApplicationArgs) > 0 {
@@ -471,4 +490,78 @@ func validateExistingFile(path, description string) error {
 	}
 
 	return nil
+}
+
+func hyperlightMountsFromMachine(machine *machinev1alpha1.Machine) ([]string, error) {
+	if len(machine.Spec.Volumes) == 0 {
+		return nil, nil
+	}
+
+	mounts := make([]string, 0, len(machine.Spec.Volumes))
+	guestPaths := map[string]struct{}{}
+
+	for _, volume := range machine.Spec.Volumes {
+		switch volume.Spec.Driver {
+		case "initrd":
+			if volume.Spec.Destination == "/" && machine.Status.InitrdPath != "" {
+				continue
+			}
+			if volume.Spec.Destination == "/" {
+				return nil, fmt.Errorf("hyperlight initrd volume requires an initrd path")
+			}
+			return nil, fmt.Errorf("hyperlight-unikraft does not support KraftKit initrd volumes mounted at %q", volume.Spec.Destination)
+
+		case "9pfs":
+		default:
+			return nil, fmt.Errorf("hyperlight-unikraft does not support KraftKit volume driver %q", volume.Spec.Driver)
+		}
+
+		if volume.Spec.ReadOnly {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support read-only KraftKit volumes")
+		}
+
+		if volume.Spec.Source == "" {
+			return nil, fmt.Errorf("hyperlight volume source cannot be empty")
+		}
+
+		hostPath, err := filepath.Abs(volume.Spec.Source)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve hyperlight volume source %q: %w", volume.Spec.Source, err)
+		}
+
+		info, err := os.Stat(hostPath)
+		if err != nil {
+			return nil, fmt.Errorf("hyperlight volume source %q is not accessible: %w", hostPath, err)
+		}
+
+		if !info.IsDir() {
+			return nil, fmt.Errorf("hyperlight volume source %q is not a directory", hostPath)
+		}
+
+		guestPath, err := normalizeHyperlightGuestMountPath(volume.Spec.Destination)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := guestPaths[guestPath]; exists {
+			return nil, fmt.Errorf("hyperlight volume guest mount %q is duplicated", guestPath)
+		}
+		guestPaths[guestPath] = struct{}{}
+
+		mounts = append(mounts, fmt.Sprintf("%s:%s", hostPath, guestPath))
+	}
+
+	return mounts, nil
+}
+
+func normalizeHyperlightGuestMountPath(guestPath string) (string, error) {
+	if guestPath == "" {
+		return "", fmt.Errorf("hyperlight volume destination cannot be empty")
+	}
+
+	if !pathpkg.IsAbs(guestPath) {
+		return "", fmt.Errorf("hyperlight volume destination %q must be absolute", guestPath)
+	}
+
+	return guestPath, nil
 }
