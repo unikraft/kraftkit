@@ -106,7 +106,7 @@ func (opts *ListOptions) runControlPlane(ctx context.Context) error {
 		return fmt.Errorf("could not list images: %w", err)
 	}
 
-	if opts.Output == "raw" {
+	if opts.Output == "raw" || opts.Output == "json" {
 		fmt.Fprintln(iostreams.G(ctx).Out, string(resp.RawBody()))
 		return nil
 	}

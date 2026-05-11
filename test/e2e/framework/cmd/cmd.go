@@ -22,7 +22,7 @@ func NewCurl(stdout, stderr *IOStream) *Cmd {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	cmd.Args = append(cmd.Args, "-s", "-S", "-L", "--fail-with-body")
+	cmd.Args = append(cmd.Args, "-s", "-S", "-L", "-k", "--fail-with-body")
 
 	return &Cmd{Cmd: cmd}
 }

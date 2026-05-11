@@ -85,7 +85,7 @@ func parseTime(dateTime, format, uuid string) (string, error) {
 // PrintInstances pretty-prints the provided set of instances or returns
 // an error if unable to send to stdout via the provided context.
 func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.GetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -368,7 +368,7 @@ func PrintInstances(ctx context.Context, format string, resp kcclient.ServiceRes
 // PrintVolumes pretty-prints the provided set of volumes or returns
 // an error if unable to send to stdout via the provided context.
 func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceResponse[kcvolumes.GetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -465,7 +465,7 @@ func PrintVolumes(ctx context.Context, format string, resp kcclient.ServiceRespo
 // PrintVolumesTemplates pretty-prints the provided set of volume templates
 // or returns an error if unable to send to stdout via the provided context.
 func PrintVolumesTemplates(ctx context.Context, format string, resp kcclient.ServiceResponse[kcvolumes.TemplateGetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -550,7 +550,7 @@ func PrintVolumesTemplates(ctx context.Context, format string, resp kcclient.Ser
 // PrintInstancesTemplates pretty-prints the provided set of instance templates
 // or returns an error if unable to send to stdout via the provided context.
 func PrintInstancesTemplates(ctx context.Context, format string, resp kcclient.ServiceResponse[kcinstances.TemplateGetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -649,7 +649,7 @@ func PrintInstancesTemplates(ctx context.Context, format string, resp kcclient.S
 // PrintAutoscaleConfiguration pretty-prints the provided autoscale configuration or returns
 // an error if unable to send to stdout via the provided context.
 func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclient.ServiceResponse[kcautoscale.GetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -757,7 +757,7 @@ func PrintAutoscaleConfiguration(ctx context.Context, format string, resp kcclie
 // PrintServices pretty-prints the provided set of service or returns
 // an error if unable to send to stdout via the provided context.
 func PrintServices(ctx context.Context, format string, resp kcclient.ServiceResponse[kcservices.GetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -890,7 +890,7 @@ func printBar(cs *iostreams.ColorScheme, progress, max int) string {
 // PrintQuotas pretty-prints the provided set of user quotas or returns
 // an error if unable to send to stdout via the provided context.
 func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, resp kcclient.ServiceResponse[kcusers.QuotasResponseItem], imageResp *kcimages.QuotasResponseItem) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
@@ -1149,7 +1149,7 @@ func PrintQuotas(ctx context.Context, auth config.AuthConfig, format string, res
 // PrintCertificates pretty-prints the provided set of certificates or returns
 // an error if unable to send to stdout via the provided context.
 func PrintCertificates(ctx context.Context, format string, resp kcclient.ServiceResponse[kccerts.GetResponseItem]) error {
-	if format == "raw" {
+	if format == "raw" || format == "json" {
 		printRaw(ctx, resp)
 		return nil
 	}
