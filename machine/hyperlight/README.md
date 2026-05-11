@@ -42,7 +42,8 @@ kraft run   --plat hl ...
 
 ### Defaults
 
-- `DefaultMemory`: `16Mi`. Override with `--memory` for heavier guests.
+- `DefaultMemory`: `32Mi`, matching the `hyperlight-unikraft` default.
+  Override with `--memory` for guests that need a different allocation.
 - `DefaultStack`: `8Mi`. Not yet exposed through the CLI or Kraftfile.
 
 ### Limitations
