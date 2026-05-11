@@ -31,9 +31,9 @@ import (
 
 const (
 	// DefaultMemory is the default memory allocation for Hyperlight VMs when
-	// --memory is not supplied. Small guests fit comfortably; heavier
-	// interpreters need an explicit override upward.
-	DefaultMemory = "16Mi"
+	// --memory is not supplied. This matches hyperlight-unikraft's host-side
+	// default.
+	DefaultMemory = "32Mi"
 
 	// DefaultStack is the default guest stack size. Not yet surfaced through
 	// the kraft CLI or Kraftfile; adjust via the WithStack functional option.
@@ -76,8 +76,28 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("cannot create hyperlight instance without kernel")
 	}
 
+	if err := validateHyperlightPaths(machine.Status.KernelPath, machine.Status.InitrdPath); err != nil {
+		return machine, err
+	}
+
 	if machine.Spec.Emulation {
-		return machine, fmt.Errorf("hyperlight does not support emulation mode")
+		return machine, fmt.Errorf("hyperlight-unikraft does not support emulation mode (--disable-acceleration)")
+	}
+
+	if len(machine.Spec.Ports) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support port publishing (--port)")
+	}
+
+	if len(machine.Spec.Networks) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support network attachments (--network, --ip, --mac)")
+	}
+
+	if len(machine.Spec.Env) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support environment injection (--env)")
+	}
+
+	if len(machine.Spec.KernelArgs) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support kernel arguments (--kernel-arg); pass application arguments after --")
 	}
 
 	if _, err := exec.LookPath(HostBinary); err != nil {
@@ -101,6 +121,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
 		return machine, fmt.Errorf("could not create state directory: %w", err)
+	}
+
+	if machine.Spec.Resources.Requests == nil {
+		machine.Spec.Resources.Requests = corev1.ResourceList{}
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
@@ -196,6 +220,11 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
 	hlcfg, err := getHyperlightConfigFromPlatformConfig(machine.Status.PlatformConfig)
 	if err != nil {
+		return machine, err
+	}
+
+	if err := validateHyperlightPaths(hlcfg.KernelPath, hlcfg.InitRd); err != nil {
+		machine.Status.State = machinev1alpha1.MachineStateFailed
 		return machine, err
 	}
 
@@ -314,6 +343,10 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		return machine, err
 	}
 
+	if machine.Spec.Resources.Requests == nil {
+		machine.Spec.Resources.Requests = corev1.ResourceList{}
+	}
+
 	if hlcfg.Memory != "" {
 		q, err := resource.ParseQuantity(hlcfg.Memory)
 		if err != nil {
@@ -407,4 +440,35 @@ func getHyperlightConfigFromPlatformConfig(platformConfig interface{}) (*Hyperli
 		return nil, err
 	}
 	return &hlcfg, nil
+}
+
+func validateHyperlightPaths(kernelPath, initrdPath string) error {
+	if kernelPath == "" {
+		return fmt.Errorf("cannot create hyperlight instance without kernel")
+	}
+
+	if err := validateExistingFile(kernelPath, "hyperlight kernel"); err != nil {
+		return err
+	}
+
+	if initrdPath != "" {
+		if err := validateExistingFile(initrdPath, "hyperlight initrd"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateExistingFile(path, description string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("%s path %q is not accessible: %w", description, path, err)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("%s path %q is a directory", description, path)
+	}
+
+	return nil
 }
