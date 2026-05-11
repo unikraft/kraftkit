@@ -7,11 +7,12 @@ package hyperlight
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	pathpkg "path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	zip "api.zip"
@@ -244,21 +245,7 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		return machine, err
 	}
 
-	args := []string{
-		"--memory", hlcfg.Memory,
-		"--stack", hlcfg.Stack,
-	}
-	if hlcfg.InitRd != "" {
-		args = append(args, "--initrd", hlcfg.InitRd)
-	}
-	for _, mount := range hlcfg.Mounts {
-		args = append(args, "--mount", mount)
-	}
-	args = append(args, hlcfg.KernelPath)
-	if len(machine.Spec.ApplicationArgs) > 0 {
-		args = append(args, "--")
-		args = append(args, machine.Spec.ApplicationArgs...)
-	}
+	args := hlcfg.MarshalArgs(machine.Spec.ApplicationArgs)
 
 	logFile, err := os.OpenFile(hlcfg.LogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -292,13 +279,11 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		return machine, fmt.Errorf("could not read pid of spawned %s: %w", HostBinary, err)
 	}
 
-	// Release the Go-side handle so the child doesn't need a Wait()
-	// and isn't kept alive through kraft's address space. Matches the
-	// "fire and forget PID-tracked lifecycle" the firecracker driver
-	// relies on.
-	if err := proc.Release(); err != nil {
-		log.G(ctx).WithError(err).Debug("releasing hyperlight process handle")
-	}
+	go func() {
+		if err := proc.Wait(); err != nil {
+			log.G(ctx).WithError(err).Debug("waiting for hyperlight process")
+		}
+	}()
 
 	machine.Status.Pid = int32(pid)
 	machine.Status.State = machinev1alpha1.MachineStateRunning
@@ -335,6 +320,15 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 		return machine, nil
 	}
 
+	active, err := isHyperlightProcessActive(proc)
+	if err != nil || !active {
+		machine.Status.State = machinev1alpha1.MachineStateExited
+		if machine.Status.ExitedAt.IsZero() {
+			machine.Status.ExitedAt = time.Now()
+		}
+		return machine, nil
+	}
+
 	if err := proc.Terminate(); err != nil {
 		return machine, fmt.Errorf("could not terminate hyperlight process %d: %w", machine.Status.Pid, err)
 	}
@@ -346,13 +340,14 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 
 // Delete implements kraftkit.sh/api/machine/v1alpha1.MachineService.
 func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
-	machine, _ = service.Stop(ctx, machine)
+	machine, stopErr := service.Stop(ctx, machine)
 
+	var removeErr error
 	if machine.Status.StateDir != "" {
-		os.RemoveAll(machine.Status.StateDir)
+		removeErr = os.RemoveAll(machine.Status.StateDir)
 	}
 
-	return machine, nil
+	return machine, errors.Join(stopErr, removeErr)
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1.MachineService.Get.
@@ -403,8 +398,8 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		return machine, nil
 	}
 
-	running, err := proc.IsRunning()
-	if err != nil || !running {
+	active, err := isHyperlightProcessActive(proc)
+	if err != nil || !active {
 		machine.Status.State = machinev1alpha1.MachineStateExited
 		if machine.Status.ExitedAt.IsZero() {
 			machine.Status.ExitedAt = time.Now()
@@ -459,6 +454,26 @@ func getHyperlightConfigFromPlatformConfig(platformConfig interface{}) (*Hyperli
 		return nil, err
 	}
 	return &hlcfg, nil
+}
+
+func isHyperlightProcessActive(proc *goprocess.Process) (bool, error) {
+	running, err := proc.IsRunning()
+	if err != nil || !running {
+		return false, err
+	}
+
+	statuses, err := proc.Status()
+	if err != nil {
+		return true, nil
+	}
+
+	for _, status := range statuses {
+		if status == goprocess.Zombie {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func validateHyperlightPaths(kernelPath, initrdPath string) error {
@@ -559,9 +574,23 @@ func normalizeHyperlightGuestMountPath(guestPath string) (string, error) {
 		return "", fmt.Errorf("hyperlight volume destination cannot be empty")
 	}
 
-	if !pathpkg.IsAbs(guestPath) {
+	if !filepath.IsAbs(guestPath) {
 		return "", fmt.Errorf("hyperlight volume destination %q must be absolute", guestPath)
 	}
 
-	return guestPath, nil
+	cleaned := filepath.Clean(guestPath)
+	if _, reserved := reservedGuestMountPaths[cleaned]; reserved {
+		return "", fmt.Errorf("hyperlight volume destination %q shadows a reserved guest directory", guestPath)
+	}
+
+	for reserved := range reservedGuestMountPaths {
+		if reserved == "/" {
+			continue
+		}
+		if strings.HasPrefix(cleaned, reserved+string(filepath.Separator)) {
+			return "", fmt.Errorf("hyperlight volume destination %q shadows a reserved guest directory", guestPath)
+		}
+	}
+
+	return cleaned, nil
 }
