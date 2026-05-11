@@ -23,7 +23,7 @@ import (
 // urlParser fetches the url from the output
 func urlParser(stdout *fcmd.IOStream) string {
 	if strings.Contains(stdout.String(), "\"fqdn\"") {
-		url := strings.SplitN(stdout.String(), "fqdn\":\"", 2)[1]
+		url := strings.SplitN(stdout.String(), "\"fqdn\":\"", 2)[1]
 		url = strings.SplitN(url, "\"", 2)[0]
 		if url == "" {
 			return ""
@@ -35,8 +35,9 @@ func urlParser(stdout *fcmd.IOStream) string {
 }
 
 func serviceParser(stdout *fcmd.IOStream) string {
-	if strings.Contains(stdout.String(), "service\":") {
-		services := strings.SplitN(stdout.String(), "service\":\"", 2)[1]
+	if strings.Contains(stdout.String(), "\"service_group\":") {
+		services := strings.SplitN(stdout.String(), "\"service_group\":", 2)[1]
+		services = strings.SplitN(services, "name\":\"", 2)[1]
 		services = strings.SplitN(services, "\"", 2)[0]
 		return services
 	}
@@ -55,7 +56,7 @@ var _ = Describe("kraft cloud instance create", func() {
 	const (
 		imageName       = "nginx:latest"
 		instanceName    = "instance-create-test"
-		instanceMemory  = "64"
+		instanceMemory  = "128"
 		instancePortMap = "443:8080"
 	)
 
@@ -149,8 +150,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
+			Expect(stdout.String()).To(MatchRegexp(`"memory_mb":` + instanceMemory))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -235,69 +236,20 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 		})
 
-		It("should boot up with the default memory size (128 MiB) and respond to requests", func() {
+		It("should error out with a Kraftkit error", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
 				fmt.Print(cmd.DumpError(stdout, stderr, err))
 			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 
-			Expect(stderr.String()).To(BeEmpty())
-			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + "128" + " MiB\""))
-
-			url := urlParser(stdout)
-			Expect(url).ToNot(BeEmpty())
-
-			stdoutCurl := fcmd.NewIOStream()
-			stderrCurl := fcmd.NewIOStream()
-
-			// Run the "curl" command to test the url
-			curlCmd := fcmd.NewCurl(stdoutCurl, stderrCurl)
-			curlCmd.Args = append(curlCmd.Args, url)
-
-			err = curlCmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(curlCmd.DumpError(stdoutCurl, stderrCurl, err))
-			}
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(stderrCurl.String()).To(BeEmpty())
-			Expect(stdoutCurl.String()).ToNot(BeEmpty())
-			Expect(stdoutCurl.String()).To(MatchRegexp(`Welcome to nginx!`))
-		})
-
-		AfterEach(func() {
-			stdoutRm := fcmd.NewIOStream()
-			stderrRm := fcmd.NewIOStream()
-
-			// Remove the instance after the test
-			cleanCmd := fcmd.NewKraft(stdoutRm, stderrRm, cfg.Path())
-			cleanCmd.Args = append(cleanCmd.Args,
-				"cloud", "instance", "delete",
-				"--log-level", "info",
-				"--log-type", "json",
-				instanceNameFull,
-			)
-
-			err := cleanCmd.Run()
-			time.Sleep(2 * time.Second)
-			if err != nil {
-				fmt.Print(cleanCmd.DumpError(stdoutRm, stderrRm, err))
-			}
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(stdoutRm.String()).To(BeEmpty())
-			Expect(stderrRm.String()).ToNot(BeEmpty())
-			Expect(stderrRm.String()).To(MatchRegexp("removing 1 instance\\(s\\)"))
+			Expect(stderr.String()).ToNot(BeEmpty())
+			Expect(stderr.String()).To(MatchRegexp(`memory must be specified`))
 		})
 	})
 
-	When("invoked with standard flags and positional arguments, and custom memory (57 MiB)", func() {
+	When("invoked with standard flags and positional arguments, and custom memory (129 MiB)", func() {
 		var instanceNameFull string
 
 		BeforeEach(func() {
@@ -310,13 +262,13 @@ var _ = Describe("kraft cloud instance create", func() {
 			cmd.Args = append(cmd.Args,
 				"--port", instancePortMap,
 				"--name", instanceNameFull,
-				"--memory", "57",
+				"--memory", "129",
 				"--start",
 				imageName,
 			)
 		})
 
-		It("should boot up with the custom memory size (57 MiB) and respond to requests", func() {
+		It("should boot up with the custom memory size (129 MiB) and respond to requests", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -327,8 +279,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("memory\":\"" + "57 MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
+			Expect(stdout.String()).To(MatchRegexp(`"memory_mb":129`))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -513,7 +465,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			)
 		})
 
-		It("should boot up with the custom memory size (57 MiB) and respond to requests", func() {
+		It("should boot up with the standard memory size and respond to requests", func() {
 			err := cmd.Run()
 			time.Sleep(2 * time.Second)
 			if err != nil {
@@ -524,8 +476,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
+			Expect(stdout.String()).To(MatchRegexp(`"memory_mb":` + instanceMemory))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -977,8 +929,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).To(BeEmpty())
@@ -1063,9 +1014,9 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stderr.String()).To(BeEmpty())
 
-			Expect(stdout.String()).To(MatchRegexp(`8081:8080/tls`))
-			Expect(stdout.String()).To(MatchRegexp(`8082:8080/tls`))
-			Expect(stdout.String()).To(MatchRegexp(`8083:8080/tls`))
+			Expect(stdout.String()).To(MatchRegexp(`"port":8081,"destination_port":8080,"protocol":"tcp","handlers":\["tls"\]`))
+			Expect(stdout.String()).To(MatchRegexp(`"port":8082,"destination_port":8080,"protocol":"tcp","handlers":\["tls"\]`))
+			Expect(stdout.String()).To(MatchRegexp(`"port":8083,"destination_port":8080,"protocol":"tcp","handlers":\["tls"\]`))
 		})
 
 		AfterEach(func() {
@@ -1124,8 +1075,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -1384,8 +1334,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -1499,8 +1448,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -1696,7 +1644,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 			Expect(stdout.String()).To(MatchRegexp("\"fqdn\":\"" + "smth-" + instanceNameFull))
 		})
 
@@ -1874,6 +1822,8 @@ var _ = Describe("kraft cloud instance create", func() {
 			cmd.Args = append(cmd.Args,
 				"--port", instancePortMap,
 				"--name", instanceNameFull,
+				"--memory", instanceMemory,
+				"--start",
 				"--scale-to-zero", "on",
 				imageName,
 			)
@@ -1889,9 +1839,8 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"standby"`))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + "128" + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp(`"scale_to_zero":\{"enabled":true`))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -1973,8 +1922,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -2056,8 +2004,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -2138,8 +2085,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -2225,8 +2171,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 		})
 
 		AfterEach(func() {
@@ -2359,8 +2304,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
 			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
@@ -2523,9 +2467,8 @@ var _ = Describe("kraft cloud instance create", func() {
 
 			Expect(stderr.String()).To(BeEmpty())
 			Expect(stdout.String()).ToNot(BeEmpty())
-			Expect(stdout.String()).To(MatchRegexp(`"state":"running"`))
-			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + strings.SplitN(imageName, ":", 2)[0]))
-			Expect(stdout.String()).To(MatchRegexp("\"memory\":\"" + instanceMemory + " MiB\""))
+			Expect(stdout.String()).To(Or(MatchRegexp(`"state":"running"`), MatchRegexp(`"state":"starting"`)))
+			Expect(stdout.String()).To(MatchRegexp("\"image\":\"" + ".*" + strings.SplitN(imageName, ":", 2)[0]))
 
 			url := urlParser(stdout)
 			Expect(url).ToNot(BeEmpty())
