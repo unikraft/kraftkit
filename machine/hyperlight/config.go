@@ -18,6 +18,9 @@ type HyperlightConfig struct {
 	// InitRd is the path to the initramfs/rootfs CPIO archive.
 	InitRd string `json:"initrd,omitempty"`
 
+	// Mounts are host directory preopens in HOST:GUEST form.
+	Mounts []string `json:"mounts,omitempty"`
+
 	// LogPath is the path to the log file.
 	LogPath string `json:"logPath,omitempty"`
 }
@@ -63,6 +66,13 @@ func WithInitRd(initrd string) HyperlightOption {
 func WithStack(stack string) HyperlightOption {
 	return func(c *HyperlightConfig) error {
 		c.Stack = stack
+		return nil
+	}
+}
+
+func WithMounts(mounts ...string) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.Mounts = mounts
 		return nil
 	}
 }
