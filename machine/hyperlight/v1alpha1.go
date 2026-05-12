@@ -377,7 +377,7 @@ func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *mach
 		removeErr = os.RemoveAll(machine.Status.StateDir)
 	}
 
-	return machine, errors.Join(stopErr, removeErr)
+	return nil, errors.Join(stopErr, removeErr)
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1.MachineService.Get.
