@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package hyperlight
 
+import "strconv"
+
 // HyperlightConfig represents configuration for a Hyperlight micro-VM.
 type HyperlightConfig struct {
 	// KernelPath is the path to the unikernel binary.
@@ -14,6 +16,18 @@ type HyperlightConfig struct {
 
 	// Stack is the stack size (e.g. "8Mi").
 	Stack string `json:"stack,omitempty"`
+
+	// Quiet suppresses hyperlight-unikraft host-side status messages.
+	Quiet bool `json:"quiet,omitempty"`
+
+	// EnableTools enables tool dispatch via the __dispatch host function.
+	EnableTools bool `json:"enableTools,omitempty"`
+
+	// Repeat runs the application N additional times.
+	Repeat int `json:"repeat,omitempty"`
+
+	// Exec is an inline code snippet for the guest interpreter.
+	Exec string `json:"exec,omitempty"`
 
 	// InitRd is the path to the initramfs/rootfs CPIO archive.
 	InitRd string `json:"initrd,omitempty"`
@@ -30,14 +44,27 @@ func (hlcfg *HyperlightConfig) MarshalArgs(appArgs []string) []string {
 		"--memory", hlcfg.Memory,
 		"--stack", hlcfg.Stack,
 	}
+	if hlcfg.Quiet {
+		args = append(args, "--quiet")
+	}
+	if hlcfg.EnableTools {
+		args = append(args, "--enable-tools")
+	}
+	if hlcfg.Repeat > 0 {
+		args = append(args, "--repeat", strconv.Itoa(hlcfg.Repeat))
+	}
 	if hlcfg.InitRd != "" {
 		args = append(args, "--initrd", hlcfg.InitRd)
 	}
 	for _, mount := range hlcfg.Mounts {
 		args = append(args, "--mount", mount)
 	}
+	if hlcfg.Exec != "" {
+		args = append(args, "--exec", hlcfg.Exec)
+	}
 	args = append(args, hlcfg.KernelPath)
-	if len(appArgs) > 0 {
+
+	if hlcfg.Exec == "" && len(appArgs) > 0 {
 		args = append(args, "--")
 		args = append(args, appArgs...)
 	}
@@ -93,6 +120,34 @@ func WithStack(stack string) HyperlightOption {
 func WithMounts(mounts ...string) HyperlightOption {
 	return func(c *HyperlightConfig) error {
 		c.Mounts = mounts
+		return nil
+	}
+}
+
+func WithQuiet(quiet bool) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.Quiet = quiet
+		return nil
+	}
+}
+
+func WithEnableTools(enableTools bool) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.EnableTools = enableTools
+		return nil
+	}
+}
+
+func WithRepeat(repeat int) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.Repeat = repeat
+		return nil
+	}
+}
+
+func WithExec(code string) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.Exec = code
 		return nil
 	}
 }
