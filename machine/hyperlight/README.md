@@ -11,11 +11,11 @@ across separate kraft invocations via standard PID tracking.
 - Linux host with `/dev/kvm` read/write access, or Windows host with the
   Windows Hypervisor Platform (WHP) enabled.
 - The `hyperlight-unikraft` binary (from
-  [danbugs/hyperlight-unikraft](https://github.com/danbugs/hyperlight-unikraft))
+  [hyperlight-dev/hyperlight-unikraft](https://github.com/hyperlight-dev/hyperlight-unikraft))
   installed on `$PATH`:
 
   ```bash
-  cargo install --git https://github.com/danbugs/hyperlight-unikraft \
+  cargo install --git https://github.com/hyperlight-dev/hyperlight-unikraft \
       --branch main hyperlight-unikraft-host --bin hyperlight-unikraft
   ```
 
@@ -67,18 +67,19 @@ Hyperlight-specific host options are exposed with a `--hyperlight-*` prefix on
 - `--hyperlight-mount`
 - `--hyperlight-exec`
 
-Dockerfile and OCI rootfs metadata can contain default environment variables.
 `hyperlight-unikraft` does not currently expose a runtime environment-injection
-interface. If the guest needs environment variables, compile them into the
-unikernel configuration or application.
+interface. Avoid runtime environment metadata for Hyperlight guests, including
+Dockerfile/OCI env metadata, `--env`, and Kraftfile `env:` entries; compile
+required values into the unikernel configuration or application.
 
 ### Limitations
 
 - `kraft pause` is not supported; Hyperlight has no pause semantics.
 - The child process is terminated on `kraft stop` via SIGTERM; there is no
   in-VM quiesce step.
-- Runtime environment injection is not supported. Explicit `kraft run --env`
-  and Kraftfile `env:` entries fail with a clear error.
+- Runtime environment injection is not supported. Explicit `kraft run --env`,
+  Kraftfile `env:` entries, and rootfs metadata environment entries fail with
+  a clear error.
 - Network attachments, port publishing, emulation mode, and kernel arguments
   are rejected because `hyperlight-unikraft` does not support those KraftKit
   interfaces.
