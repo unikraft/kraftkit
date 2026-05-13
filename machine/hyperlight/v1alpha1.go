@@ -225,6 +225,8 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 	errs := make(chan error)
 
 	go func() {
+		lastState := machine.Status.State
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -236,9 +238,9 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 					return
 				}
 
-				if updated.Status.State != machine.Status.State {
+				if updated.Status.State != lastState {
 					events <- updated
-					machine = updated
+					lastState = updated.Status.State
 				}
 
 				if updated.Status.State == machinev1alpha1.MachineStateExited ||
