@@ -203,7 +203,23 @@ func (gp *GitProvider) PullChannel(ctx context.Context, manifest *Manifest, chan
 		return pullGit(ctx, manifest, popts...)
 	}
 
-	return pullArchive(ctx, manifest, channel.Resource, channel.Sha256, popts...)
+	// Check if the cached archive for this branch is stale by comparing
+	// the remote ETag (obtained via HEAD request) against a locally stored
+	// ETag sidecar file.
+	etag, err := invalidateStaleArchiveCache(ctx, manifest, channel.Resource)
+	if err != nil {
+		return err
+	}
+
+	if err := pullArchive(ctx, manifest, channel.Resource, channel.Sha256, popts...); err != nil {
+		return err
+	}
+
+	if err := writeArchiveCacheETag(ctx, manifest, channel.Resource, etag); err != nil {
+		log.G(ctx).WithError(err).Debug("could not persist archive cache ETag")
+	}
+
+	return nil
 }
 
 func (gp *GitProvider) PullVersion(ctx context.Context, manifest *Manifest, version *ManifestVersion, popts ...pack.PullOption) error {
