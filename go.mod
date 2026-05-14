@@ -71,7 +71,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.41.0
-	github.com/unikraft/go-archivefs v0.0.0-20260512114142-c3614828de4c
+	github.com/unikraft/go-archivefs v0.0.0-20260513151619-de2950d0a646
 	github.com/unikraft/go-cpio v0.0.0-20260209140144-8e02f12b23e0
 	github.com/vishvananda/netlink v1.3.1
 	github.com/xeipuuv/gojsonschema v1.2.0
