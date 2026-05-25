@@ -342,8 +342,12 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 	// If the user has supplied an initram path, set this now, this overrides any
 	// preparation and is considered higher priority compared to what has been set
 	// prior to this point.
-	if opts.Rootfs == "" || machine.Status.InitrdPath != "" || opts.RootfsType == "" {
+	if opts.Rootfs == "" || machine.Status.InitrdPath != "" {
 		return nil
+	}
+
+	if opts.RootfsType == "" {
+		opts.RootfsType = initrd.FsTypeCpio
 	}
 
 	machine.Status.InitrdPath = filepath.Join(
