@@ -420,9 +420,13 @@ func (opts *GithubAction) packRuntime(ctx context.Context, output string, format
 				}
 			}
 		} else {
-			selected, err = selection.Select[pack.Package]("multiple runtimes available", packs...)
-			if err != nil {
-				return err
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				selected, err = selection.Select("multiple runtimes available", packs...)
+				if err != nil {
+					return err
+				}
+			} else {
+				return fmt.Errorf("multiple runtimes available for '%s:%s' but prompting has been disabled", runtimeName, opts.project.Runtime().Version())
 			}
 		}
 	}

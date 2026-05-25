@@ -156,9 +156,13 @@ func (*builderKraftfileRuntime) Prepare(ctx context.Context, opts *BuildOptions,
 		// If a target has been previously selected, we can use this to filter the
 		// returned list of packages based on its platform and architecture.
 
-		selected, err = selection.Select("multiple runtimes available", packs...)
-		if err != nil {
-			return err
+		if !config.G[config.KraftKit](ctx).NoPrompt {
+			selected, err = selection.Select("multiple runtimes available", packs...)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("multiple runtimes available for '%s' but prompting has been disabled", runtimeRef)
 		}
 	}
 

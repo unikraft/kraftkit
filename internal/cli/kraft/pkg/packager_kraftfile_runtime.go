@@ -283,9 +283,13 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 				}
 			}
 		} else {
-			selected, err = selection.Select("multiple runtimes available", packs...)
-			if err != nil {
-				return nil, err
+			if !config.G[config.KraftKit](ctx).NoPrompt {
+				selected, err = selection.Select("multiple runtimes available", packs...)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, fmt.Errorf("multiple runtimes available for '%s:%s' but prompting has been disabled", p.name, p.version)
 			}
 		}
 	}
