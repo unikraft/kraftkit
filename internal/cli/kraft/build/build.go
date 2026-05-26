@@ -123,35 +123,37 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if _, _, _, err = initrd.BuildRootfs(
-		ctx,
-		append(opts.InitrdOptions,
-			initrd.WithRootfsPath(opts.Rootfs),
-			initrd.WithWorkdir(opts.Workdir),
-			initrd.WithKeepOwners(opts.KeepFileOwners),
-			initrd.WithOutput(filepath.Join(
-				buildOutputDir(opts.Project, opts.Workdir),
-				fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
-			)),
-			initrd.WithOutputType(opts.RootfsType),
-			initrd.WithCacheDir(filepath.Join(
-				opts.Workdir,
-				unikraft.VendorDir,
-				"rootfs-cache",
-			)),
-			initrd.WithArchitecture((*opts.Target).Architecture().String()),
-			initrd.WithCompression(false),
-		)...,
-	); err != nil {
-		return err
-	}
+	if !opts.NoRootfs {
+		if _, _, _, err = initrd.BuildRootfs(
+			ctx,
+			append(opts.InitrdOptions,
+				initrd.WithRootfsPath(opts.Rootfs),
+				initrd.WithWorkdir(opts.Workdir),
+				initrd.WithKeepOwners(opts.KeepFileOwners),
+				initrd.WithOutput(filepath.Join(
+					buildOutputDir(opts.Project, opts.Workdir),
+					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
+				)),
+				initrd.WithOutputType(opts.RootfsType),
+				initrd.WithCacheDir(filepath.Join(
+					opts.Workdir,
+					unikraft.VendorDir,
+					"rootfs-cache",
+				)),
+				initrd.WithArchitecture((*opts.Target).Architecture().String()),
+				initrd.WithCompression(false),
+			)...,
+		); err != nil {
+			return err
+		}
 
-	// Set the root file system for the project, since typically a packaging step
-	// may occur after a build, and the root file system is required for packaging
-	// and the packaging step may perform a build of the rootfs again.  Ultimately
-	// this prevents re-builds.
-	opts.Project.SetRootfs(opts.Rootfs)
-	opts.Project.SetInitrdFsType(opts.RootfsType)
+		// Set the root file system for the project, since typically a packaging step
+		// may occur after a build, and the root file system is required for packaging
+		// and the packaging step may perform a build of the rootfs again.  Ultimately
+		// this prevents re-builds.
+		opts.Project.SetRootfs(opts.Rootfs)
+		opts.Project.SetInitrdFsType(opts.RootfsType)
+	}
 
 	err = build.Build(ctx, opts, args...)
 	if err != nil {
@@ -302,7 +304,7 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 		})
 	}
 
-	if opts.Rootfs != "" {
+	if opts.Rootfs != "" && !opts.NoRootfs {
 		if !filepath.IsAbs(opts.Rootfs) {
 			opts.Rootfs = filepath.Join(opts.Workdir, opts.Rootfs)
 		}
