@@ -25,44 +25,46 @@ var (
 // digest.  Since v1.WithPlatform is not respected, a valid lookup will have had
 // any additional options, such as WithTransport and WithAuth, fully satisfied.
 func RemoteIndex(ref name.Reference, options ...remote.Option) (v1.ImageIndex, error) {
-	key := ref.String()
-	cacheable := true
+	tagKey := ref.String()
+	digestKey := ""
 
 	// For tag-based references (mutable), resolve to the current digest via
 	// a lightweight HEAD request so we can cache by the immutable digest.
 	// If the HEAD request fails we cannot trust any previously cached entry
 	// keyed by the mutable tag, so bypass the cache entirely for this call.
 	if _, isDigest := ref.(name.Digest); !isDigest {
-		desc, err := remote.Head(ref, options...)
-		if err != nil {
-			cacheable = false
-		} else {
-			key = ref.Context().Digest(desc.Digest.String()).String()
+		if desc, err := remote.Head(ref, options...); err == nil {
+			digestKey = ref.Context().Digest(desc.Digest.String()).String()
 		}
 	}
 
-	if cacheable {
-		indexCacheMu.Lock()
-		if indexCache == nil {
-			indexCache = make(map[string]v1.ImageIndex)
-		}
-		if index, ok := indexCache[key]; ok {
+	indexCacheMu.Lock()
+	if indexCache == nil {
+		indexCache = make(map[string]v1.ImageIndex)
+	}
+	if digestKey != "" {
+		if index, ok := indexCache[digestKey]; ok {
 			indexCacheMu.Unlock()
 			return index, nil
 		}
-		indexCacheMu.Unlock()
 	}
+	if index, ok := indexCache[tagKey]; ok {
+		indexCacheMu.Unlock()
+		return index, nil
+	}
+	indexCacheMu.Unlock()
 
 	v1ImageIndex, err := remote.Index(ref, options...)
 	if err != nil {
 		return nil, err
 	}
 
-	if cacheable {
-		indexCacheMu.Lock()
-		indexCache[key] = v1ImageIndex
-		indexCacheMu.Unlock()
+	indexCacheMu.Lock()
+	indexCache[tagKey] = v1ImageIndex
+	if digestKey != "" {
+		indexCache[digestKey] = v1ImageIndex
 	}
+	indexCacheMu.Unlock()
 
 	return v1ImageIndex, nil
 }
