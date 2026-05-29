@@ -56,6 +56,12 @@ The driver maps the common KraftKit run surface that Hyperlight can execute:
 - Application arguments after `--` are passed after the kernel path.
 - Writable `9pfs` directory volumes are passed as repeatable
   `hyperlight-unikraft --mount HOST:GUEST` entries.
+- Same-port guest listen permissions from `--port GUEST_PORT:GUEST_PORT` are
+  passed as `hyperlight-unikraft --net --port GUEST_PORT`. Hyperlight ports are
+  sandbox bind permissions, not Docker-style host forwarding.
+- Hyperlight sandbox networking policy is configured with
+  `--hyperlight-net-allow` and `--hyperlight-net-block`; allow/block entries
+  imply networking in `hyperlight-unikraft`.
 
 Hyperlight-specific host options are exposed with a `--hyperlight-*` prefix on
 `kraft run` and are ignored by other platform drivers:
@@ -63,6 +69,8 @@ Hyperlight-specific host options are exposed with a `--hyperlight-*` prefix on
 - `--hyperlight-stack`
 - `--hyperlight-quiet`
 - `--hyperlight-enable-tools`
+- `--hyperlight-net-allow`
+- `--hyperlight-net-block`
 - `--hyperlight-repeat`
 - `--hyperlight-mount`
 - `--hyperlight-exec`
@@ -80,8 +88,10 @@ required values into the unikernel configuration or application.
 - Runtime environment injection is not supported. Explicit `kraft run --env`,
   Kraftfile `env:` entries, and rootfs metadata environment entries fail with
   a clear error.
-- Network attachments, port publishing, emulation mode, and kernel arguments
-  are rejected because `hyperlight-unikraft` does not support those KraftKit
-  interfaces.
+- Network attachments (`--network`, `--ip`, `--mac`), host port forwarding,
+  emulation mode, and kernel arguments are rejected because
+  `hyperlight-unikraft` does not support those KraftKit interfaces.
+- `--hyperlight-net-allow` and `--hyperlight-net-block` are mutually exclusive
+  sandbox policies.
 - Read-only volumes and non-`9pfs` volume drivers are rejected. Rootfs/initrd
   volumes are supported only when they represent the main initrd at `/`.
