@@ -53,17 +53,17 @@ func NewCmd() *cobra.Command {
 			# List all images in your account
 			$ kraft cloud image list
 
-			# List all instances in Frankfurt
-			$ kraft cloud --metro fra0 instance list
+			# List all instances
+			$ kraft cloud instance list
 
-			# Create a new NGINX instance in Frankfurt and start it immediately
-			$ kraft cloud --metro fra0 instance create -S \
+			# Create a new NGINX instance and start it immediately
+			$ kraft cloud instance create -S \
 				-p 80:443/http+redirect \
 				-p 443:8080/http+tls \
 				nginx:latest
 
 			# Get the status of an instance based on its UUID and output as JSON
-			$ kraft cloud --metro fra0 instance status -o json UUID
+			$ kraft cloud instance status -o json UUID
 
 			# Stop an instance based on its UUID
 			$ kraft cloud instance stop UUID

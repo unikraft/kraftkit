@@ -784,9 +784,9 @@ func NewCmd() *cobra.Command {
 		Args:    cobra.MinimumNArgs(1),
 		Aliases: []string{"new"},
 		Example: heredoc.Doc(`
-			# Create a new NGINX instance in Frankfurt and start it immediately. Map the external
+			# Create a new NGINX instance and start it immediately. Map the external
 			# port 443 to the internal port 8080 which the application listens on.
-			$ kraft cloud --metro fra0 instance create \
+			$ kraft cloud instance create \
 				--start \
 				--port 443:8080 \
 				nginx:latest
@@ -795,7 +795,7 @@ func NewCmd() *cobra.Command {
 			# This is because in fact we need need to accept TLS and HTTP connections and redirect
 			# port 8080 to port 443.  The above example exists only as a shortcut for what is written
 			# below:
-			$ kraft cloud --metro fra0 instance create \
+			$ kraft cloud instance create \
 				--start \
 				--port 443:8080/http+tls \
 				--port 80:443/http+redirect \
@@ -803,7 +803,7 @@ func NewCmd() *cobra.Command {
 
 			# Attach two existing volumes to the vm, one read-write at /data
 			# and another read-only at /config:
-			$ kraft cloud --metro fra0 instance create \
+			$ kraft cloud instance create \
 				--start \
 				--volume my-data-vol:/data \
 				--volume my-config-vol:/config:ro \
