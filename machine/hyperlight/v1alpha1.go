@@ -38,7 +38,7 @@ const (
 	DefaultMemory = "32Mi"
 
 	// DefaultStack is the default guest stack size. Not yet surfaced through
-	// the kraft CLI or Kraftfile; adjust via the WithStack functional option.
+	// the Kraftfile; adjust via --hyperlight-stack or the WithStack option.
 	// TODO: wire through Kraftfile platform config.
 	DefaultStack = "8Mi"
 
@@ -95,10 +95,6 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("hyperlight-unikraft does not support emulation mode (--disable-acceleration)")
 	}
 
-	if len(machine.Spec.Ports) > 0 {
-		return machine, fmt.Errorf("hyperlight-unikraft does not support port publishing (--port)")
-	}
-
 	if len(machine.Spec.Networks) > 0 {
 		return machine, fmt.Errorf("hyperlight-unikraft does not support network attachments (--network, --ip, --mac)")
 	}
@@ -121,6 +117,13 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 	}
 
 	applyRegisteredRunConfig(hlcfg)
+
+	ports, err := hyperlightPortsFromMachine(machine)
+	if err != nil {
+		return machine, err
+	}
+	hlcfg.Ports = append(hlcfg.Ports, ports...)
+
 	if err := validateHyperlightRuntimeConfig(hlcfg); err != nil {
 		return machine, err
 	}
@@ -199,6 +202,9 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		LogPath:     logFile,
 		Quiet:       hlcfg.Quiet,
 		EnableTools: hlcfg.EnableTools,
+		NetAllow:    hlcfg.NetAllow,
+		NetBlock:    hlcfg.NetBlock,
+		Ports:       hlcfg.Ports,
 		Repeat:      hlcfg.Repeat,
 		Exec:        hlcfg.Exec,
 	}
@@ -549,7 +555,68 @@ func validateHyperlightRuntimeConfig(hlcfg *HyperlightConfig) error {
 		return fmt.Errorf("hyperlight repeat must be non-negative")
 	}
 
+	if len(hlcfg.NetAllow) > 0 && len(hlcfg.NetBlock) > 0 {
+		return fmt.Errorf("hyperlight net allowlist and blocklist cannot both be set")
+	}
+
+	var err error
+	hlcfg.NetAllow, err = normalizeHyperlightNetworkList(hlcfg.NetAllow, "allow")
+	if err != nil {
+		return err
+	}
+	hlcfg.NetBlock, err = normalizeHyperlightNetworkList(hlcfg.NetBlock, "block")
+	if err != nil {
+		return err
+	}
+	hlcfg.Ports, err = normalizeHyperlightPorts(hlcfg.Ports)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func normalizeHyperlightNetworkList(entries []string, mode string) ([]string, error) {
+	if len(entries) == 0 {
+		return nil, nil
+	}
+
+	seen := map[string]struct{}{}
+	normalized := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			return nil, fmt.Errorf("hyperlight net %s entry cannot be empty", mode)
+		}
+		if _, exists := seen[entry]; exists {
+			continue
+		}
+		seen[entry] = struct{}{}
+		normalized = append(normalized, entry)
+	}
+
+	return normalized, nil
+}
+
+func normalizeHyperlightPorts(ports []int32) ([]int32, error) {
+	if len(ports) == 0 {
+		return nil, nil
+	}
+
+	seen := map[int32]struct{}{}
+	normalized := make([]int32, 0, len(ports))
+	for _, port := range ports {
+		if port <= 0 || port > 65535 {
+			return nil, fmt.Errorf("hyperlight port %d is outside the valid range 1-65535", port)
+		}
+		if _, exists := seen[port]; exists {
+			return nil, fmt.Errorf("hyperlight port %d is duplicated", port)
+		}
+		seen[port] = struct{}{}
+		normalized = append(normalized, port)
+	}
+
+	return normalized, nil
 }
 
 func validateExistingFile(path, description string) error {
@@ -563,6 +630,31 @@ func validateExistingFile(path, description string) error {
 	}
 
 	return nil
+}
+
+func hyperlightPortsFromMachine(machine *machinev1alpha1.Machine) ([]int32, error) {
+	if len(machine.Spec.Ports) == 0 {
+		return nil, nil
+	}
+
+	ports := make([]int32, 0, len(machine.Spec.Ports))
+	for _, port := range machine.Spec.Ports {
+		if port.HostIP != "" && port.HostIP != "0.0.0.0" {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support host IP binding for --port; use HOST_PORT:GUEST_PORT without an IP address")
+		}
+
+		if port.HostPort != port.MachinePort {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support host port forwarding; use a same-port mapping like --port %d:%d", port.MachinePort, port.MachinePort)
+		}
+
+		if port.Protocol != "" && !strings.EqualFold(string(port.Protocol), string(corev1.ProtocolTCP)) {
+			return nil, fmt.Errorf("hyperlight-unikraft only supports TCP guest listen permissions, got %s", port.Protocol)
+		}
+
+		ports = append(ports, port.MachinePort)
+	}
+
+	return ports, nil
 }
 
 func hyperlightMountsFromMachine(machine *machinev1alpha1.Machine, guestPaths map[string]struct{}) ([]string, error) {

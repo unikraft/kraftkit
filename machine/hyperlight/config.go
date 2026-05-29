@@ -23,6 +23,15 @@ type HyperlightConfig struct {
 	// EnableTools enables tool dispatch via the __dispatch host function.
 	EnableTools bool `json:"enableTools,omitempty"`
 
+	// NetAllow restricts guest networking to the listed hosts/IPs.
+	NetAllow []string `json:"netAllow,omitempty"`
+
+	// NetBlock blocks guest networking to the listed hosts/IPs.
+	NetBlock []string `json:"netBlock,omitempty"`
+
+	// Ports are guest ports the sandbox may bind/listen on.
+	Ports []int32 `json:"ports,omitempty"`
+
 	// Repeat runs the application N additional times.
 	Repeat int `json:"repeat,omitempty"`
 
@@ -49,6 +58,18 @@ func (hlcfg *HyperlightConfig) MarshalArgs(appArgs []string) []string {
 	}
 	if hlcfg.EnableTools {
 		args = append(args, "--enable-tools")
+	}
+	if len(hlcfg.Ports) > 0 {
+		args = append(args, "--net")
+	}
+	for _, allow := range hlcfg.NetAllow {
+		args = append(args, "--net-allow", allow)
+	}
+	for _, block := range hlcfg.NetBlock {
+		args = append(args, "--net-block", block)
+	}
+	for _, port := range hlcfg.Ports {
+		args = append(args, "--port", strconv.Itoa(int(port)))
 	}
 	if hlcfg.Repeat > 0 {
 		args = append(args, "--repeat", strconv.Itoa(hlcfg.Repeat))
@@ -134,6 +155,27 @@ func WithQuiet(quiet bool) HyperlightOption {
 func WithEnableTools(enableTools bool) HyperlightOption {
 	return func(c *HyperlightConfig) error {
 		c.EnableTools = enableTools
+		return nil
+	}
+}
+
+func WithNetAllow(allow ...string) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.NetAllow = allow
+		return nil
+	}
+}
+
+func WithNetBlock(block ...string) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.NetBlock = block
+		return nil
+	}
+}
+
+func WithPorts(ports ...int32) HyperlightOption {
+	return func(c *HyperlightConfig) error {
+		c.Ports = ports
 		return nil
 	}
 }
