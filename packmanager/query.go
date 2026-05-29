@@ -28,6 +28,10 @@ type Query struct {
 	// remote informs the package manager to update values from remote manifests.
 	remote bool
 
+	// remoteExplicit tracks whether WithRemote was explicitly called, allowing
+	// callers to distinguish an explicit WithRemote(false) from the default.
+	remoteExplicit bool
+
 	// local informs the package manager to update values from local manifests.
 	local bool
 
@@ -87,6 +91,13 @@ func (query *Query) KConfig() []string {
 // when making its query.
 func (query *Query) Remote() bool {
 	return query.remote
+}
+
+// RemoteExplicit reports whether WithRemote was explicitly called on this
+// query, allowing callers to distinguish an explicit WithRemote(false) from
+// the default zero value.
+func (query *Query) RemoteExplicit() bool {
+	return query.remoteExplicit
 }
 
 // Local indicates whether the package manager should use local manifests
@@ -207,6 +218,7 @@ func WithVersion(version string) QueryOption {
 func WithRemote(remote bool) QueryOption {
 	return func(query *Query) {
 		query.remote = remote
+		query.remoteExplicit = true
 	}
 }
 

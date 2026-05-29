@@ -109,6 +109,10 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
+	if p.version == "" {
+		p.version = "latest"
+	}
+
 	qopts := []packmanager.QueryOption{
 		packmanager.WithName(p.name),
 		packmanager.WithVersion(p.version),

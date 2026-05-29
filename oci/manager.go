@@ -500,9 +500,9 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	// we have up-to-date manifest digests.  Only digest-based references are
 	// safe to resolve from local cache alone.
 	isTagRef := refErr == nil && !strings.Contains(qversion, ":")
-	queryRemote := query.Remote() || isTagRef
+	queryRemote := query.Remote() || (isTagRef && !query.RemoteExplicit())
 
-	if isTagRef {
+	if isTagRef && !query.RemoteExplicit() {
 		log.G(ctx).
 			WithField("ref", ref.Name()).
 			Debug("tag reference detected, querying remote for fresh manifests")
