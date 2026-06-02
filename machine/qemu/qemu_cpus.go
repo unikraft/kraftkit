@@ -58,6 +58,12 @@ func (arm QemuCPUArm) String() string {
 	return string(arm)
 }
 
+type QemuCPURISCV string
+
+func (riscv QemuCPURISCV) String() string {
+	return string(riscv)
+}
+
 const (
 	QemuCPUX86486                    = QemuCPUX86("486")
 	QemuCPUX86486V1                  = QemuCPUX86("486-v1")
@@ -220,6 +226,10 @@ const (
 	QemuCPUArmSa1100    = QemuCPUArm("sa1100")
 	QemuCPUArmSa1110    = QemuCPUArm("sa1110")
 	QemuCPUArmTi925t    = QemuCPUArm("ti925t")
+)
+
+const (
+	QemuCPURISCVMax = QemuCPURISCV("max")
 )
 
 const (

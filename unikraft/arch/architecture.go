@@ -22,6 +22,7 @@ const (
 	ArchitectureX86_64  = ArchitectureName("x86_64")
 	ArchitectureArm64   = ArchitectureName("arm64")
 	ArchitectureArm     = ArchitectureName("arm")
+	ArchitectureRISCV64 = ArchitectureName("riscv64")
 )
 
 // String implements fmt.Stringer
@@ -42,9 +43,10 @@ func ArchitectureByName(name string) ArchitectureName {
 // ArchitecturesByName returns the list of known architectures and their name alises.
 func ArchitecturesByName() map[string]ArchitectureName {
 	return map[string]ArchitectureName{
-		"x86_64": ArchitectureX86_64,
-		"arm64":  ArchitectureArm64,
-		"arm":    ArchitectureArm,
+		"x86_64":  ArchitectureX86_64,
+		"arm64":   ArchitectureArm64,
+		"arm":     ArchitectureArm,
+		"riscv64": ArchitectureRISCV64,
 	}
 }
 
@@ -54,6 +56,7 @@ func Architectures() []ArchitectureName {
 		ArchitectureX86_64,
 		ArchitectureArm64,
 		ArchitectureArm,
+		ArchitectureRISCV64,
 	}
 }
 
@@ -172,6 +175,8 @@ func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 		arch.WriteString("ARCH_ARM_32")
 	case ArchitectureArm64:
 		arch.WriteString("ARCH_ARM_64")
+	case ArchitectureRISCV64:
+		arch.WriteString("ARCH_RISCV_64")
 	}
 
 	values.Set(arch.String(), kconfig.Yes)
