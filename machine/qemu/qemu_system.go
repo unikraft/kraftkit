@@ -8,4 +8,5 @@ const (
 	QemuSystemX86     = "qemu-system-x86_64"
 	QemuSystemArm     = "qemu-system-arm"
 	QemuSystemAarch64 = "qemu-system-aarch64"
+	QemuSystemRiscv64 = "qemu-system-riscv64"
 )

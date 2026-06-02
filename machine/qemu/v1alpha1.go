@@ -89,6 +89,8 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		bin = QemuSystemArm
 	case "arm64":
 		bin = QemuSystemAarch64
+	case "riscv64":
+		bin = QemuSystemRiscv64
 	default:
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
@@ -350,6 +352,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		case "9pfs":
 			hvirtioid := fmt.Sprintf("hvirtio%d", i+1)
 			mounttag := fmt.Sprintf("fs%d", i+1)
+
 			qopts = append(qopts,
 				WithFsDevice(QemuFsDevLocal{
 					SecurityModel: QemuFsDevLocalSecurityModelMappedXattr,
@@ -473,7 +476,15 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				CPU: QemuCPUArmMax,
 			}),
 		)
-
+	case "riscv64":
+		qopts = append(qopts,
+			WithMachine(QemuMachine{
+				Type: QemuMachineTypeVirt,
+			}),
+			WithCPU(QemuCPU{
+				CPU: QemuCPURISCVMax,
+			}),
+		)
 	default:
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}

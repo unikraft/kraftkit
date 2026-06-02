@@ -16,7 +16,7 @@ func HostArchitecture() (string, error) {
 	switch arch {
 	case "amd64":
 		return "x86_64", nil
-	case "arm", "arm64":
+	case "arm", "arm64", "riscv64":
 		return arch, nil
 	default:
 		return "", fmt.Errorf("unsupported architecture: %v", arch)

@@ -76,6 +76,8 @@ func (runner *runnerKernel) Prepare(ctx context.Context, opts *RunOptions, machi
 			opts.Architecture = arch.ArchitectureArm.String()
 		case elf.EM_AARCH64:
 			opts.Architecture = arch.ArchitectureArm64.String()
+		case elf.EM_RISCV:
+			opts.Architecture = arch.ArchitectureRISCV64.String()
 		default:
 			return fmt.Errorf("unsupported kernel architecture: %v", fe.Machine.String())
 		}
