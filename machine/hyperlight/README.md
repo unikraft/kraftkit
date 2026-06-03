@@ -11,11 +11,11 @@ across separate kraft invocations via standard PID tracking.
 - Linux host with `/dev/kvm` read/write access, or Windows host with the
   Windows Hypervisor Platform (WHP) enabled.
 - The `hyperlight-unikraft` binary (from
-  [danbugs/hyperlight-unikraft](https://github.com/danbugs/hyperlight-unikraft))
+  [hyperlight-dev/hyperlight-unikraft](https://github.com/hyperlight-dev/hyperlight-unikraft))
   installed on `$PATH`:
 
   ```bash
-  cargo install --git https://github.com/danbugs/hyperlight-unikraft \
+  cargo install --git https://github.com/hyperlight-dev/hyperlight-unikraft \
       --branch main hyperlight-unikraft-host --bin hyperlight-unikraft
   ```
 
@@ -42,11 +42,56 @@ kraft run   --plat hl ...
 
 ### Defaults
 
-- `DefaultMemory`: `16Mi`. Override with `--memory` for heavier guests.
-- `DefaultStack`: `8Mi`. Not yet exposed through the CLI or Kraftfile.
+- `DefaultMemory`: `32Mi`, matching the `hyperlight-unikraft` default.
+  Override with `--memory` for guests that need a different allocation.
+- `DefaultStack`: `8Mi`. Override with `--hyperlight-stack`.
+
+### Supported run options
+
+The driver maps the common KraftKit run surface that Hyperlight can execute:
+
+- `--memory` is passed to `hyperlight-unikraft --memory`.
+- `--rootfs`/`--initrd` CPIO archives are passed as
+  `hyperlight-unikraft --initrd`.
+- Application arguments after `--` are passed after the kernel path.
+- Writable `9pfs` directory volumes are passed as repeatable
+  `hyperlight-unikraft --mount HOST:GUEST` entries.
+- Same-port guest listen permissions from `--port GUEST_PORT:GUEST_PORT` are
+  passed as `hyperlight-unikraft --net --port GUEST_PORT`. Hyperlight ports are
+  sandbox bind permissions, not Docker-style host forwarding.
+- Hyperlight sandbox networking policy is configured with
+  `--hyperlight-net-allow` and `--hyperlight-net-block`; allow/block entries
+  imply networking in `hyperlight-unikraft`.
+
+Hyperlight-specific host options are exposed with a `--hyperlight-*` prefix on
+`kraft run` and are ignored by other platform drivers:
+
+- `--hyperlight-stack`
+- `--hyperlight-quiet`
+- `--hyperlight-enable-tools`
+- `--hyperlight-net-allow`
+- `--hyperlight-net-block`
+- `--hyperlight-repeat`
+- `--hyperlight-mount`
+- `--hyperlight-exec`
+
+`hyperlight-unikraft` does not currently expose a runtime environment-injection
+interface. Avoid runtime environment metadata for Hyperlight guests, including
+Dockerfile/OCI env metadata, `--env`, and Kraftfile `env:` entries; compile
+required values into the unikernel configuration or application.
 
 ### Limitations
 
 - `kraft pause` is not supported; Hyperlight has no pause semantics.
 - The child process is terminated on `kraft stop` via SIGTERM; there is no
   in-VM quiesce step.
+- Runtime environment injection is not supported. Explicit `kraft run --env`,
+  Kraftfile `env:` entries, and rootfs metadata environment entries fail with
+  a clear error.
+- Network attachments (`--network`, `--ip`, `--mac`), host port forwarding,
+  emulation mode, and kernel arguments are rejected because
+  `hyperlight-unikraft` does not support those KraftKit interfaces.
+- `--hyperlight-net-allow` and `--hyperlight-net-block` are mutually exclusive
+  sandbox policies.
+- Read-only volumes and non-`9pfs` volume drivers are rejected. Rootfs/initrd
+  volumes are supported only when they represent the main initrd at `/`.

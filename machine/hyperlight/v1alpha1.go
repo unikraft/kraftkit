@@ -7,10 +7,12 @@ package hyperlight
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	zip "api.zip"
@@ -31,12 +33,12 @@ import (
 
 const (
 	// DefaultMemory is the default memory allocation for Hyperlight VMs when
-	// --memory is not supplied. Small guests fit comfortably; heavier
-	// interpreters need an explicit override upward.
-	DefaultMemory = "16Mi"
+	// --memory is not supplied. This matches hyperlight-unikraft's host-side
+	// default.
+	DefaultMemory = "32Mi"
 
 	// DefaultStack is the default guest stack size. Not yet surfaced through
-	// the kraft CLI or Kraftfile; adjust via the WithStack functional option.
+	// the Kraftfile; adjust via --hyperlight-stack or the WithStack option.
 	// TODO: wire through Kraftfile platform config.
 	DefaultStack = "8Mi"
 
@@ -44,6 +46,15 @@ const (
 	// Hyperlight. It must be installed in $PATH for this driver to work.
 	HostBinary = "hyperlight-unikraft"
 )
+
+var reservedGuestMountPaths = map[string]struct{}{
+	"/":     {},
+	"/bin":  {},
+	"/dev":  {},
+	"/proc": {},
+	"/sys":  {},
+	"/usr":  {},
+}
 
 // machineV1alpha1Service drives Hyperlight unikernels via the hyperlight-unikraft
 // binary. Each machine corresponds to a child process that owns the in-process
@@ -76,13 +87,57 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		return machine, fmt.Errorf("cannot create hyperlight instance without kernel")
 	}
 
+	if err := validateHyperlightPaths(machine.Status.KernelPath, machine.Status.InitrdPath); err != nil {
+		return machine, err
+	}
+
 	if machine.Spec.Emulation {
-		return machine, fmt.Errorf("hyperlight does not support emulation mode")
+		return machine, fmt.Errorf("hyperlight-unikraft does not support emulation mode (--disable-acceleration)")
+	}
+
+	if len(machine.Spec.Networks) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support network attachments (--network, --ip, --mac)")
+	}
+
+	if len(machine.Spec.Env) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support environment injection (--env)")
+	}
+
+	if len(machine.Spec.KernelArgs) > 0 {
+		return machine, fmt.Errorf("hyperlight-unikraft does not support kernel arguments (--kernel-arg); pass application arguments after --")
 	}
 
 	if _, err := exec.LookPath(HostBinary); err != nil {
 		return machine, fmt.Errorf("%s not found in $PATH: %w", HostBinary, err)
 	}
+
+	hlcfg, err := getHyperlightConfigFromPlatformConfig(machine.Status.PlatformConfig)
+	if err != nil {
+		return machine, err
+	}
+
+	applyRegisteredRunConfig(hlcfg)
+
+	ports, err := hyperlightPortsFromMachine(machine)
+	if err != nil {
+		return machine, err
+	}
+	hlcfg.Ports = append(hlcfg.Ports, ports...)
+
+	if err := validateHyperlightRuntimeConfig(hlcfg); err != nil {
+		return machine, err
+	}
+
+	guestPaths := map[string]struct{}{}
+	mounts, err := hyperlightMountsFromMachine(machine, guestPaths)
+	if err != nil {
+		return machine, err
+	}
+	extraMounts, err := hyperlightMountsFromSpecs(hlcfg.Mounts, guestPaths)
+	if err != nil {
+		return machine, err
+	}
+	mounts = append(mounts, extraMounts...)
 
 	if machine.ObjectMeta.UID == "" {
 		machineID, err := name.NewRandomMachineID()
@@ -101,6 +156,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	if err := os.MkdirAll(machine.Status.StateDir, 0o755); err != nil {
 		return machine, fmt.Errorf("could not create state directory: %w", err)
+	}
+
+	if machine.Spec.Resources.Requests == nil {
+		machine.Spec.Resources.Requests = corev1.ResourceList{}
 	}
 
 	if machine.Spec.Resources.Requests.Memory().Value() == 0 {
@@ -129,12 +188,25 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		f.Close()
 	}
 
+	stack := DefaultStack
+	if hlcfg.Stack != "" {
+		stack = hlcfg.Stack
+	}
+
 	machine.Status.PlatformConfig = HyperlightConfig{
-		KernelPath: machine.Status.KernelPath,
-		Memory:     machine.Spec.Resources.Requests.Memory().String(),
-		Stack:      DefaultStack,
-		InitRd:     machine.Status.InitrdPath,
-		LogPath:    logFile,
+		KernelPath:  machine.Status.KernelPath,
+		Memory:      machine.Spec.Resources.Requests.Memory().String(),
+		Stack:       stack,
+		InitRd:      machine.Status.InitrdPath,
+		Mounts:      mounts,
+		LogPath:     logFile,
+		Quiet:       hlcfg.Quiet,
+		EnableTools: hlcfg.EnableTools,
+		NetAllow:    hlcfg.NetAllow,
+		NetBlock:    hlcfg.NetBlock,
+		Ports:       hlcfg.Ports,
+		Repeat:      hlcfg.Repeat,
+		Exec:        hlcfg.Exec,
 	}
 
 	machine.CreationTimestamp = metav1.Now()
@@ -159,6 +231,8 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 	errs := make(chan error)
 
 	go func() {
+		lastState := machine.Status.State
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -170,9 +244,9 @@ func (service *machineV1alpha1Service) Watch(ctx context.Context, machine *machi
 					return
 				}
 
-				if updated.Status.State != machine.Status.State {
+				if updated.Status.State != lastState {
 					events <- updated
-					machine = updated
+					lastState = updated.Status.State
 				}
 
 				if updated.Status.State == machinev1alpha1.MachineStateExited ||
@@ -199,18 +273,17 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		return machine, err
 	}
 
-	args := []string{
-		"--memory", hlcfg.Memory,
-		"--stack", hlcfg.Stack,
+	if err := validateHyperlightPaths(hlcfg.KernelPath, hlcfg.InitRd); err != nil {
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, err
 	}
-	if hlcfg.InitRd != "" {
-		args = append(args, "--initrd", hlcfg.InitRd)
+
+	if hlcfg.Exec != "" && len(machine.Spec.ApplicationArgs) > 0 {
+		machine.Status.State = machinev1alpha1.MachineStateFailed
+		return machine, fmt.Errorf("hyperlight-unikraft --exec conflicts with application arguments (passed after -- ). You can't set both at the same time")
 	}
-	args = append(args, hlcfg.KernelPath)
-	if len(machine.Spec.ApplicationArgs) > 0 {
-		args = append(args, "--")
-		args = append(args, machine.Spec.ApplicationArgs...)
-	}
+
+	args := hlcfg.MarshalArgs(machine.Spec.ApplicationArgs)
 
 	logFile, err := os.OpenFile(hlcfg.LogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -244,13 +317,11 @@ func (service *machineV1alpha1Service) Start(ctx context.Context, machine *machi
 		return machine, fmt.Errorf("could not read pid of spawned %s: %w", HostBinary, err)
 	}
 
-	// Release the Go-side handle so the child doesn't need a Wait()
-	// and isn't kept alive through kraft's address space. Matches the
-	// "fire and forget PID-tracked lifecycle" the firecracker driver
-	// relies on.
-	if err := proc.Release(); err != nil {
-		log.G(ctx).WithError(err).Debug("releasing hyperlight process handle")
-	}
+	go func() {
+		if err := proc.Wait(); err != nil {
+			log.G(ctx).WithError(err).Debug("waiting for hyperlight process")
+		}
+	}()
 
 	machine.Status.Pid = int32(pid)
 	machine.Status.State = machinev1alpha1.MachineStateRunning
@@ -287,6 +358,15 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 		return machine, nil
 	}
 
+	active, err := isHyperlightProcessActive(proc)
+	if err != nil || !active {
+		machine.Status.State = machinev1alpha1.MachineStateExited
+		if machine.Status.ExitedAt.IsZero() {
+			machine.Status.ExitedAt = time.Now()
+		}
+		return machine, nil
+	}
+
 	if err := proc.Terminate(); err != nil {
 		return machine, fmt.Errorf("could not terminate hyperlight process %d: %w", machine.Status.Pid, err)
 	}
@@ -298,13 +378,14 @@ func (service *machineV1alpha1Service) Stop(ctx context.Context, machine *machin
 
 // Delete implements kraftkit.sh/api/machine/v1alpha1.MachineService.
 func (service *machineV1alpha1Service) Delete(ctx context.Context, machine *machinev1alpha1.Machine) (*machinev1alpha1.Machine, error) {
-	machine, _ = service.Stop(ctx, machine)
+	machine, stopErr := service.Stop(ctx, machine)
 
+	var removeErr error
 	if machine.Status.StateDir != "" {
-		os.RemoveAll(machine.Status.StateDir)
+		removeErr = os.RemoveAll(machine.Status.StateDir)
 	}
 
-	return machine, nil
+	return nil, errors.Join(stopErr, removeErr)
 }
 
 // Get implements kraftkit.sh/api/machine/v1alpha1.MachineService.Get.
@@ -312,6 +393,10 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 	hlcfg, err := getHyperlightConfigFromPlatformConfig(machine.Status.PlatformConfig)
 	if err != nil {
 		return machine, err
+	}
+
+	if machine.Spec.Resources.Requests == nil {
+		machine.Spec.Resources.Requests = corev1.ResourceList{}
 	}
 
 	if hlcfg.Memory != "" {
@@ -351,8 +436,8 @@ func (service *machineV1alpha1Service) Get(ctx context.Context, machine *machine
 		return machine, nil
 	}
 
-	running, err := proc.IsRunning()
-	if err != nil || !running {
+	active, err := isHyperlightProcessActive(proc)
+	if err != nil || !active {
 		machine.Status.State = machinev1alpha1.MachineStateExited
 		if machine.Status.ExitedAt.IsZero() {
 			machine.Status.ExitedAt = time.Now()
@@ -391,6 +476,10 @@ func (service *machineV1alpha1Service) Logs(ctx context.Context, machine *machin
 }
 
 func getHyperlightConfigFromPlatformConfig(platformConfig interface{}) (*HyperlightConfig, error) {
+	if platformConfig == nil {
+		return &HyperlightConfig{}, nil
+	}
+
 	if p, ok := platformConfig.(*HyperlightConfig); ok {
 		return p, nil
 	}
@@ -407,4 +496,310 @@ func getHyperlightConfigFromPlatformConfig(platformConfig interface{}) (*Hyperli
 		return nil, err
 	}
 	return &hlcfg, nil
+}
+
+func isHyperlightProcessActive(proc *goprocess.Process) (bool, error) {
+	running, err := proc.IsRunning()
+	if err != nil || !running {
+		return false, err
+	}
+
+	statuses, err := proc.Status()
+	if err != nil {
+		return true, nil
+	}
+
+	for _, status := range statuses {
+		if status == goprocess.Zombie {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func validateHyperlightPaths(kernelPath, initrdPath string) error {
+	if kernelPath == "" {
+		return fmt.Errorf("cannot create hyperlight instance without kernel")
+	}
+
+	if err := validateExistingFile(kernelPath, "hyperlight kernel"); err != nil {
+		return err
+	}
+
+	if initrdPath != "" {
+		if err := validateExistingFile(initrdPath, "hyperlight initrd"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateHyperlightRuntimeConfig(hlcfg *HyperlightConfig) error {
+	if hlcfg == nil {
+		return nil
+	}
+
+	if hlcfg.Stack != "" {
+		qty, err := resource.ParseQuantity(hlcfg.Stack)
+		if err != nil {
+			return fmt.Errorf("could not parse hyperlight stack quantity: %w", err)
+		}
+		if qty.Value() <= 0 {
+			return fmt.Errorf("hyperlight stack must be greater than 0")
+		}
+	}
+
+	if hlcfg.Repeat < 0 {
+		return fmt.Errorf("hyperlight repeat must be non-negative")
+	}
+
+	if len(hlcfg.NetAllow) > 0 && len(hlcfg.NetBlock) > 0 {
+		return fmt.Errorf("hyperlight net allowlist and blocklist cannot both be set")
+	}
+
+	var err error
+	hlcfg.NetAllow, err = normalizeHyperlightNetworkList(hlcfg.NetAllow, "allow")
+	if err != nil {
+		return err
+	}
+	hlcfg.NetBlock, err = normalizeHyperlightNetworkList(hlcfg.NetBlock, "block")
+	if err != nil {
+		return err
+	}
+	hlcfg.Ports, err = normalizeHyperlightPorts(hlcfg.Ports)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func normalizeHyperlightNetworkList(entries []string, mode string) ([]string, error) {
+	if len(entries) == 0 {
+		return nil, nil
+	}
+
+	seen := map[string]struct{}{}
+	normalized := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			return nil, fmt.Errorf("hyperlight net %s entry cannot be empty", mode)
+		}
+		if _, exists := seen[entry]; exists {
+			continue
+		}
+		seen[entry] = struct{}{}
+		normalized = append(normalized, entry)
+	}
+
+	return normalized, nil
+}
+
+func normalizeHyperlightPorts(ports []int32) ([]int32, error) {
+	if len(ports) == 0 {
+		return nil, nil
+	}
+
+	seen := map[int32]struct{}{}
+	normalized := make([]int32, 0, len(ports))
+	for _, port := range ports {
+		if port <= 0 || port > 65535 {
+			return nil, fmt.Errorf("hyperlight port %d is outside the valid range 1-65535", port)
+		}
+		if _, exists := seen[port]; exists {
+			return nil, fmt.Errorf("hyperlight port %d is duplicated", port)
+		}
+		seen[port] = struct{}{}
+		normalized = append(normalized, port)
+	}
+
+	return normalized, nil
+}
+
+func validateExistingFile(path, description string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("%s path %q is not accessible: %w", description, path, err)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("%s path %q is a directory", description, path)
+	}
+
+	return nil
+}
+
+func hyperlightPortsFromMachine(machine *machinev1alpha1.Machine) ([]int32, error) {
+	if len(machine.Spec.Ports) == 0 {
+		return nil, nil
+	}
+
+	ports := make([]int32, 0, len(machine.Spec.Ports))
+	for _, port := range machine.Spec.Ports {
+		if port.HostIP != "" && port.HostIP != "0.0.0.0" {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support host IP binding for --port; use HOST_PORT:GUEST_PORT without an IP address")
+		}
+
+		if port.HostPort != port.MachinePort {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support host port forwarding; use a same-port mapping like --port %d:%d", port.MachinePort, port.MachinePort)
+		}
+
+		if port.Protocol != "" && !strings.EqualFold(string(port.Protocol), string(corev1.ProtocolTCP)) {
+			return nil, fmt.Errorf("hyperlight-unikraft only supports TCP guest listen permissions, got %s", port.Protocol)
+		}
+
+		ports = append(ports, port.MachinePort)
+	}
+
+	return ports, nil
+}
+
+func hyperlightMountsFromMachine(machine *machinev1alpha1.Machine, guestPaths map[string]struct{}) ([]string, error) {
+	if len(machine.Spec.Volumes) == 0 {
+		return nil, nil
+	}
+
+	mounts := make([]string, 0, len(machine.Spec.Volumes))
+
+	for _, volume := range machine.Spec.Volumes {
+		switch volume.Spec.Driver {
+		case "initrd":
+			if volume.Spec.Destination == "/" && machine.Status.InitrdPath != "" {
+				continue
+			}
+			if volume.Spec.Destination == "/" {
+				return nil, fmt.Errorf("hyperlight initrd volume requires an initrd path")
+			}
+			return nil, fmt.Errorf("hyperlight-unikraft does not support KraftKit initrd volumes mounted at %q", volume.Spec.Destination)
+
+		case "9pfs":
+		default:
+			return nil, fmt.Errorf("hyperlight-unikraft does not support KraftKit volume driver %q", volume.Spec.Driver)
+		}
+
+		if volume.Spec.ReadOnly {
+			return nil, fmt.Errorf("hyperlight-unikraft does not support read-only KraftKit volumes")
+		}
+
+		if volume.Spec.Source == "" {
+			return nil, fmt.Errorf("hyperlight volume source cannot be empty")
+		}
+
+		hostPath, err := filepath.Abs(volume.Spec.Source)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve hyperlight volume source %q: %w", volume.Spec.Source, err)
+		}
+
+		info, err := os.Stat(hostPath)
+		if err != nil {
+			return nil, fmt.Errorf("hyperlight volume source %q is not accessible: %w", hostPath, err)
+		}
+
+		if !info.IsDir() {
+			return nil, fmt.Errorf("hyperlight volume source %q is not a directory", hostPath)
+		}
+
+		guestPath, err := normalizeHyperlightGuestMountPath(volume.Spec.Destination)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := guestPaths[guestPath]; exists {
+			return nil, fmt.Errorf("hyperlight volume guest mount %q is duplicated", guestPath)
+		}
+		guestPaths[guestPath] = struct{}{}
+
+		mounts = append(mounts, fmt.Sprintf("%s:%s", hostPath, guestPath))
+	}
+
+	return mounts, nil
+}
+
+func hyperlightMountsFromSpecs(specs []string, guestPaths map[string]struct{}) ([]string, error) {
+	if len(specs) == 0 {
+		return nil, nil
+	}
+
+	mounts := make([]string, 0, len(specs))
+	for _, spec := range specs {
+		mount, guestPath, err := normalizeHyperlightMountSpec(spec)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := guestPaths[guestPath]; exists {
+			return nil, fmt.Errorf("hyperlight mount guest path %q is duplicated", guestPath)
+		}
+		guestPaths[guestPath] = struct{}{}
+
+		mounts = append(mounts, mount)
+	}
+
+	return mounts, nil
+}
+
+func normalizeHyperlightMountSpec(spec string) (string, string, error) {
+	if spec == "" {
+		return "", "", fmt.Errorf("hyperlight mount cannot be empty")
+	}
+
+	hostPath, guestPath, hasGuestPath := strings.Cut(spec, ":")
+	if hostPath == "" {
+		return "", "", fmt.Errorf("hyperlight mount source cannot be empty")
+	}
+	if !hasGuestPath {
+		guestPath = "/host"
+	} else if guestPath == "" {
+		return "", "", fmt.Errorf("hyperlight mount destination cannot be empty")
+	}
+
+	hostPath, err := filepath.Abs(hostPath)
+	if err != nil {
+		return "", "", fmt.Errorf("could not resolve hyperlight mount source %q: %w", hostPath, err)
+	}
+
+	info, err := os.Stat(hostPath)
+	if err != nil {
+		return "", "", fmt.Errorf("hyperlight mount source %q is not accessible: %w", hostPath, err)
+	}
+
+	if !info.IsDir() {
+		return "", "", fmt.Errorf("hyperlight mount source %q is not a directory", hostPath)
+	}
+
+	guestPath, err = normalizeHyperlightGuestMountPath(guestPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	return fmt.Sprintf("%s:%s", hostPath, guestPath), guestPath, nil
+}
+
+func normalizeHyperlightGuestMountPath(guestPath string) (string, error) {
+	if guestPath == "" {
+		return "", fmt.Errorf("hyperlight volume destination cannot be empty")
+	}
+
+	if !filepath.IsAbs(guestPath) {
+		return "", fmt.Errorf("hyperlight volume destination %q must be absolute", guestPath)
+	}
+
+	cleaned := filepath.Clean(guestPath)
+	if _, reserved := reservedGuestMountPaths[cleaned]; reserved {
+		return "", fmt.Errorf("hyperlight volume destination %q shadows a reserved guest directory", guestPath)
+	}
+
+	for reserved := range reservedGuestMountPaths {
+		if reserved == "/" {
+			continue
+		}
+		if strings.HasPrefix(cleaned, reserved+string(filepath.Separator)) {
+			return "", fmt.Errorf("hyperlight volume destination %q shadows a reserved guest directory", guestPath)
+		}
+	}
+
+	return cleaned, nil
 }
