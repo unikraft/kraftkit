@@ -4,7 +4,9 @@
 // You may not use this file except in compliance with the License.
 package hyperlight
 
-import "strconv"
+import (
+	"strconv"
+)
 
 // HyperlightConfig represents configuration for a Hyperlight micro-VM.
 type HyperlightConfig struct {
@@ -46,6 +48,9 @@ type HyperlightConfig struct {
 
 	// LogPath is the path to the log file.
 	LogPath string `json:"logPath,omitempty"`
+
+	// Enables networking
+	Net bool `json:"net,omitempty"`
 }
 
 func (hlcfg *HyperlightConfig) MarshalArgs(appArgs []string) []string {
@@ -59,7 +64,7 @@ func (hlcfg *HyperlightConfig) MarshalArgs(appArgs []string) []string {
 	if hlcfg.EnableTools {
 		args = append(args, "--enable-tools")
 	}
-	if len(hlcfg.Ports) > 0 {
+	if hlcfg.Net {
 		args = append(args, "--net")
 	}
 	for _, allow := range hlcfg.NetAllow {
