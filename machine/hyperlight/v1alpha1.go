@@ -207,6 +207,7 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		Ports:       hlcfg.Ports,
 		Repeat:      hlcfg.Repeat,
 		Exec:        hlcfg.Exec,
+		Net:         hlcfg.Net,
 	}
 
 	machine.CreationTimestamp = metav1.Now()

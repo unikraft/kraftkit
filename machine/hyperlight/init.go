@@ -19,6 +19,7 @@ const (
 	FlagRepeat      = "hyperlight-repeat"
 	FlagExec        = "hyperlight-exec"
 	FlagMount       = "hyperlight-mount"
+	FlagNet         = "hyperlight-net"
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 	hyperlightRepeat      int
 	hyperlightExec        string
 	hyperlightMounts      []string
+	hyperlightNet         bool
 )
 
 func init() {
@@ -116,6 +118,16 @@ func RegisterFlags() {
 			"Preopen a host directory for the Hyperlight guest filesystem",
 		),
 	)
+
+	cmdfactory.RegisterFlag(
+		"kraft run",
+		cmdfactory.BoolVar(
+			&hyperlightNet,
+			FlagNet,
+			false,
+			"Enable guest networking for hyperlight machine. Without this flag, the guest has no network access",
+		),
+	)
 }
 
 func applyRegisteredRunConfig(cfg *HyperlightConfig) {
@@ -131,6 +143,9 @@ func applyRegisteredRunConfig(cfg *HyperlightConfig) {
 	}
 	if hyperlightEnableTools {
 		cfg.EnableTools = true
+	}
+	if hyperlightNet {
+		cfg.Net = true
 	}
 	if len(hyperlightNetAllow) > 0 {
 		cfg.NetAllow = append(cfg.NetAllow, hyperlightNetAllow...)
