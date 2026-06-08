@@ -1557,7 +1557,7 @@ install_dependencies_gnu() {
 
         need_cmd "$PACMAN"
 
-        do_cmd "pacman -Syu --noconfirm $_idd_list"
+        do_cmd "pacman -Syu --noconfirm --needed $_idd_list"
     else
         _idd_msg=$(printf "%s%s%s"                                      \
             "Unsupported distribution. "                                \
