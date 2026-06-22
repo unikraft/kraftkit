@@ -189,82 +189,121 @@ func getYAMLTag(field reflect.StructField, ok bool) string {
 
 // Set updates any field in the config struct using a dot-separated key.
 func (cm *ConfigManager[C]) Set(key string, val any) error {
-	v := reflect.ValueOf(cm.Config)
-	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return errors.New("cfg must be a pointer to a struct")
+	field, keys, i, err := cm.traverse(key, true)
+	if err != nil || !field.IsValid() {
+		return err
 	}
 
-	v = v.Elem() // Dereference the pointer
-	keys := strings.Split(key, ".")
+	// Handle map[string]map[string]string fields.
+	if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Map {
+		if i+2 != len(keys)-1 {
+			return errors.New("invalid nested map key path length: " + keys[i])
+		}
+		outerKey := keys[i+1]
+		innerKey := keys[i+2]
 
-	for i, k := range keys {
-		field := v.FieldByNameFunc(func(f string) bool {
-			return getYAMLTag(v.Type().FieldByName(f)) == k
-		})
-
-		if !field.IsValid() {
-			return errors.New("invalid key: " + k)
+		if field.IsNil() {
+			field.Set(reflect.MakeMap(field.Type()))
 		}
 
-		if i == len(keys)-1 {
-			if !field.CanSet() {
-				return errors.New("cannot set field: " + k)
-			}
-			convertedVal, err := convertType(val, field.Type())
-			if err != nil {
-				return err
-			}
-			field.Set(convertedVal)
-			return nil
+		innerMap := field.MapIndex(reflect.ValueOf(outerKey))
+		if !innerMap.IsValid() || innerMap.IsNil() {
+			innerMap = reflect.MakeMap(field.Type().Elem())
 		}
 
-		// Handle map[string]string fields: the next key is the map key.
-		if field.Kind() == reflect.Map &&
-			field.Type().Key().Kind() == reflect.String &&
-			field.Type().Elem().Kind() == reflect.String {
-
-			if i+1 != len(keys)-1 {
-				// ensure we are exactly one level deep into the map.
-				// for a map[string]string, we can't traverse past the immediate key.
-				// e.g.keys = ["toolchain", "CC"] , len is 2 ,At i = 0 the next key is the final one.
-				// e.g.keys = ["toolchain", "CC", "extra"]  len is 3 , We have leftover keys, so we error out.
-
-				return errors.New("cannot traverse further into map: " + k)
-			}
-			mapKey := keys[i+1]
-			if field.IsNil() {
-				field.Set(reflect.MakeMap(field.Type()))
-			}
-			strVal, ok := val.(string)
-			if !ok {
-				strVal = fmt.Sprintf("%v", val)
-			}
-			field.SetMapIndex(
-				reflect.ValueOf(mapKey),
-				reflect.ValueOf(strVal),
-			)
-			return nil
+		strVal, ok := val.(string)
+		if !ok {
+			strVal = fmt.Sprintf("%v", val)
 		}
-
-		if field.Kind() == reflect.Ptr {
-			if field.IsNil() {
-				field.Set(reflect.New(field.Type().Elem()))
-			}
-			v = field.Elem()
-		} else {
-			v = field
-		}
+		innerMap.SetMapIndex(reflect.ValueOf(innerKey), reflect.ValueOf(strVal))
+		field.SetMapIndex(reflect.ValueOf(outerKey), innerMap)
+		return nil
 	}
 
+	// Handle map[string]string fields: the next key is the map key.
+	if field.Kind() == reflect.Map {
+		if i+1 != len(keys)-1 {
+			return errors.New("cannot traverse further into map: " + keys[i])
+		}
+		mapKey := keys[i+1]
+		if field.IsNil() {
+			field.Set(reflect.MakeMap(field.Type()))
+		}
+		strVal, ok := val.(string)
+		if !ok {
+			strVal = fmt.Sprintf("%v", val)
+		}
+		field.SetMapIndex(
+			reflect.ValueOf(mapKey),
+			reflect.ValueOf(strVal),
+		)
+		return nil
+	}
+
+	if !field.CanSet() {
+		return errors.New("cannot set field: " + keys[i])
+	}
+	convertedVal, err := convertType(val, field.Type())
+	if err != nil {
+		return err
+	}
+	field.Set(convertedVal)
 	return nil
 }
 
 // Unset removes a key from the config. For map fields (e.g. toolchain.CC) it
 // deletes the map entry. For scalar fields it resets them to the zero value.
 func (cm *ConfigManager[C]) Unset(key string) error {
+	field, keys, i, err := cm.traverse(key, false)
+	if err != nil || !field.IsValid() {
+		return err
+	}
+
+	// Handle map[string]map[string]string fields.
+	if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Map {
+		if i+2 != len(keys)-1 {
+			return errors.New("invalid nested map key path length: " + keys[i])
+		}
+		outerKey := keys[i+1]
+		innerKey := keys[i+2]
+
+		if !field.IsNil() {
+			innerMap := field.MapIndex(reflect.ValueOf(outerKey))
+			if innerMap.IsValid() && !innerMap.IsNil() {
+				innerMap.SetMapIndex(reflect.ValueOf(innerKey), reflect.Value{})
+				if innerMap.Len() == 0 {
+					field.SetMapIndex(reflect.ValueOf(outerKey), reflect.Value{})
+				}
+			}
+		}
+		return nil
+	}
+
+	// Handle map[string]string fields.
+	if field.Kind() == reflect.Map {
+		if i+1 != len(keys)-1 {
+			return errors.New("cannot traverse further into map: " + keys[i])
+		}
+		if !field.IsNil() {
+			field.SetMapIndex(reflect.ValueOf(keys[i+1]), reflect.Value{})
+		}
+		return nil
+	}
+
+	if !field.CanSet() {
+		return errors.New("cannot unset field: " + keys[i])
+	}
+	field.Set(reflect.Zero(field.Type()))
+	return nil
+}
+
+// traverse walks the config struct to find the target field and leaf key(s).
+// It returns the reflect.Value of the parent structure/map containing the target,
+// the remaining key slice, and the current index inside the keys.
+func (cm *ConfigManager[C]) traverse(key string, createIfNil bool) (reflect.Value, []string, int, error) {
 	v := reflect.ValueOf(cm.Config)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return errors.New("cfg must be a pointer to a struct")
+		return reflect.Value{}, nil, 0, errors.New("cfg must be a pointer to a struct")
 	}
 
 	v = v.Elem()
@@ -276,33 +315,33 @@ func (cm *ConfigManager[C]) Unset(key string) error {
 		})
 
 		if !field.IsValid() {
-			return errors.New("invalid key: " + k)
+			return reflect.Value{}, nil, 0, errors.New("invalid key: " + k)
 		}
 
-		if field.Kind() == reflect.Map &&
+		// Handle nested map or map fields at the parent level
+		isNestedMap := field.Kind() == reflect.Map &&
 			field.Type().Key().Kind() == reflect.String &&
-			field.Type().Elem().Kind() == reflect.String {
+			field.Type().Elem().Kind() == reflect.Map
+		isSimpleMap := field.Kind() == reflect.Map &&
+			field.Type().Key().Kind() == reflect.String &&
+			field.Type().Elem().Kind() == reflect.String
 
-			if i+1 != len(keys)-1 {
-				return errors.New("cannot traverse further into map: " + k)
-			}
-			if !field.IsNil() {
-				field.SetMapIndex(reflect.ValueOf(keys[i+1]), reflect.Value{})
-			}
-			return nil
+		if isNestedMap || isSimpleMap {
+			return field, keys, i, nil
 		}
 
+		// Handle leaf node
 		if i == len(keys)-1 {
-			if !field.CanSet() {
-				return errors.New("cannot unset field: " + k)
-			}
-			field.Set(reflect.Zero(field.Type()))
-			return nil
+			return field, keys, i, nil
 		}
 
+		// Traverse pointer
 		if field.Kind() == reflect.Ptr {
 			if field.IsNil() {
-				return nil
+				if !createIfNil {
+					return reflect.Value{}, nil, 0, nil
+				}
+				field.Set(reflect.New(field.Type().Elem()))
 			}
 			v = field.Elem()
 		} else {
@@ -310,7 +349,7 @@ func (cm *ConfigManager[C]) Unset(key string) error {
 		}
 	}
 
-	return nil
+	return v, keys, len(keys) - 1, nil
 }
 
 // SetupListener adds an OS signal listener to the Config instance. The listener
