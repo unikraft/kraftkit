@@ -67,6 +67,46 @@ func TestConfigManagerUnset_MapField(t *testing.T) {
 			t.Error("expected error for toolchain.CC.extra, got nil")
 		}
 	})
+
+	t.Run("Remove nested map key", func(t *testing.T) {
+		cfg := &KraftKit{
+			ToolchainProfiles: map[string]map[string]string{
+				"clang-debug": {
+					"CC":        "clang",
+					"UK_CFLAGS": "-O2",
+				},
+			},
+		}
+		unset(t, cfg, "toolchain_profiles.clang-debug.CC")
+		if _, ok := cfg.ToolchainProfiles["clang-debug"]["CC"]; ok {
+			t.Error("expected toolchain_profiles.clang-debug.CC to be removed")
+		}
+		if got := cfg.ToolchainProfiles["clang-debug"]["UK_CFLAGS"]; got != "-O2" {
+			t.Errorf("expected UK_CFLAGS to be '-O2', got %q", got)
+		}
+	})
+
+	t.Run("Remove nested map key cleans up profile", func(t *testing.T) {
+		cfg := &KraftKit{
+			ToolchainProfiles: map[string]map[string]string{
+				"clang-debug": {
+					"CC": "clang",
+				},
+			},
+		}
+		unset(t, cfg, "toolchain_profiles.clang-debug.CC")
+		if _, ok := cfg.ToolchainProfiles["clang-debug"]; ok {
+			t.Error("expected toolchain_profiles.clang-debug to be removed entirely when empty")
+		}
+	})
+
+	t.Run("Unset on nested map error on invalid key path length", func(t *testing.T) {
+		cfg := &KraftKit{}
+		cm := &ConfigManager[KraftKit]{Config: cfg}
+		if err := cm.Unset("toolchain_profiles.clang-debug.CC.extra"); err == nil {
+			t.Error("expected error for too deep key path, got nil")
+		}
+	})
 }
 
 func TestConfigManagerSet_MapField(t *testing.T) {
@@ -142,6 +182,43 @@ func TestConfigManagerSet_MapField(t *testing.T) {
 		cm := &ConfigManager[KraftKit]{Config: cfg}
 		if err := cm.Set("nonexistent", "value"); err == nil {
 			t.Error("expected error for unknown key, got nil")
+		}
+	})
+
+	t.Run("Nested map field set on nil map", func(t *testing.T) {
+		cfg := &KraftKit{}
+		set(t, cfg, "toolchain_profiles.clang-debug.CC", "clang")
+		if cfg.ToolchainProfiles == nil {
+			t.Fatal("expected ToolchainProfiles to be initialized")
+		}
+		if expect, got := "clang", cfg.ToolchainProfiles["clang-debug"]["CC"]; expect != got {
+			t.Errorf("expected CC to be %q, got %q", expect, got)
+		}
+	})
+
+	t.Run("Nested map field overwrite/addition", func(t *testing.T) {
+		cfg := &KraftKit{
+			ToolchainProfiles: map[string]map[string]string{
+				"clang-debug": {
+					"CC": "gcc",
+				},
+			},
+		}
+		set(t, cfg, "toolchain_profiles.clang-debug.CC", "clang")
+		set(t, cfg, "toolchain_profiles.clang-debug.UK_CFLAGS", "-O2")
+		if expect, got := "clang", cfg.ToolchainProfiles["clang-debug"]["CC"]; expect != got {
+			t.Errorf("expected CC to be %q, got %q", expect, got)
+		}
+		if expect, got := "-O2", cfg.ToolchainProfiles["clang-debug"]["UK_CFLAGS"]; expect != got {
+			t.Errorf("expected UK_CFLAGS to be %q, got %q", expect, got)
+		}
+	})
+
+	t.Run("Set on nested map error on invalid key path length", func(t *testing.T) {
+		cfg := &KraftKit{}
+		cm := &ConfigManager[KraftKit]{Config: cfg}
+		if err := cm.Set("toolchain_profiles.clang-debug.CC.extra", "val"); err == nil {
+			t.Error("expected error for too deep key path, got nil")
 		}
 	})
 }
