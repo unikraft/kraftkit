@@ -89,7 +89,14 @@ func flattenConfig(v reflect.Value, prefix string) []string {
 		case reflect.Map:
 			for _, mapKey := range fieldVal.MapKeys() {
 				mapVal := fieldVal.MapIndex(mapKey)
-				pairs = append(pairs, fmt.Sprintf("%s.%s=%v", key, mapKey, mapVal))
+				if mapVal.Kind() == reflect.Map {
+					for _, innerKey := range mapVal.MapKeys() {
+						innerVal := mapVal.MapIndex(innerKey)
+						pairs = append(pairs, fmt.Sprintf("%s.%s.%s=%v", key, mapKey, innerKey, innerVal))
+					}
+				} else {
+					pairs = append(pairs, fmt.Sprintf("%s.%s=%v", key, mapKey, mapVal))
+				}
 			}
 
 		default:
