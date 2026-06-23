@@ -39,19 +39,10 @@ const (
 func NewApplicationFromInterface(ctx context.Context, iface map[string]interface{}, popts *ProjectOptions) (Application, error) {
 	app := application{}
 
-	name := ""
-	if n, ok := iface["name"]; ok {
-		name, ok = n.(string)
-		if !ok {
-			return nil, errors.New("project name must be a string")
-		}
-	}
-
 	if err := Transform(ctx, getSection(iface, "labels"), &app.labels); err != nil {
 		return nil, err
 	}
 
-	app.name = name
 	app.path = popts.workdir
 
 	outdir := unikraft.BuildDir
