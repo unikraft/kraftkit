@@ -339,7 +339,7 @@ func (cm *ConfigManager[C]) traverse(key string, createIfNil bool) (reflect.Valu
 		if field.Kind() == reflect.Ptr {
 			if field.IsNil() {
 				if !createIfNil {
-					return reflect.Value{}, nil, 0, nil
+					return reflect.Value{}, nil, 0, errors.New("cannot traverse nil pointer: " + k)
 				}
 				field.Set(reflect.New(field.Type().Elem()))
 			}
