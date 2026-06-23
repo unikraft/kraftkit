@@ -53,7 +53,6 @@ type ProjectOptions struct {
 	skipValidation    bool
 	skipInterpolation bool
 	skipNormalization bool
-	resolvePaths      bool
 	interpolate       *interp.Options
 
 	// Indicates when the projectName was imperatively set or guessed from path
@@ -259,14 +258,6 @@ func WithProjectNormalization(normalization bool) ProjectOption {
 func WithProjectOutDir(outDir string) ProjectOption {
 	return func(popts *ProjectOptions) error {
 		popts.outDir = outDir
-		return nil
-	}
-}
-
-// WithProjectResolvedPaths set ProjectOptions to enable paths resolution
-func WithProjectResolvedPaths(resolve bool) ProjectOption {
-	return func(popts *ProjectOptions) error {
-		popts.resolvePaths = resolve
 		return nil
 	}
 }

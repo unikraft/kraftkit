@@ -49,17 +49,29 @@ func IsWorkdirInitialized(dir string) bool {
 	return len(findFiles(DefaultFileNames, dir)) > 0
 }
 
+func outDirFromProject(iface map[string]interface{}, popts *ProjectOptions) (string, error) {
+	if popts.outDir != "" {
+		return filepath.Abs(popts.outDir)
+	}
+
+	outdir := unikraft.BuildDir
+	if n, ok := iface["outdir"]; ok {
+		outdirStr, ok := n.(string)
+		if !ok {
+			return "", fmt.Errorf("malformed Kraftfile: 'outdir' field must be a string, got %T", n)
+		}
+		if outdirStr != "" {
+			outdir = outdirStr
+		}
+	}
+
+	return popts.RelativePath(outdir), nil
+}
+
 func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Application, error) {
 	specVersion, err := parseKraftfileSpecVersion(popts.kraftfile.content)
 	if err != nil {
 		return nil, err
-	}
-
-	var outdir string
-	if popts.outDir == "" {
-		outdir = popts.RelativePath(unikraft.BuildDir)
-	} else {
-		outdir = popts.outDir
 	}
 
 	iface := popts.kraftfile.config
@@ -82,6 +94,11 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 	iface = groupXFieldsIntoExtensions(iface)
 	popts.kraftfile.config = iface
 
+	outdir, err := outDirFromProject(iface, popts)
+	if err != nil {
+		return nil, err
+	}
+
 	projectName, _ := popts.GetProjectName()
 	if n, ok := iface["name"]; ok {
 		nameStr, ok := n.(string)
@@ -89,14 +106,6 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 			return nil, fmt.Errorf("malformed Kraftfile: 'name' field must be a string, got %T", n)
 		}
 		projectName = nameStr
-	}
-
-	if n, ok := iface["outdir"]; ok {
-		outdirStr, ok := n.(string)
-		if !ok {
-			return nil, fmt.Errorf("malformed Kraftfile: 'outdir' field must be a string, got %T", n)
-		}
-		outdir = outdirStr
 	}
 
 	if !popts.skipNormalization {
@@ -149,7 +158,7 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 		WithName(projectName),
 		WithWorkingDir(popts.workdir),
 		WithFilename(app.filename),
-		WithOutDir(app.outDir),
+		WithOutDir(outdir),
 		WithUnikraft(app.unikraft),
 		WithRuntime(app.runtime),
 		WithRootfs(app.rootfs),
