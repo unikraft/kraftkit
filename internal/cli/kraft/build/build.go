@@ -89,10 +89,6 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		}
 	}
 
-	if opts.Project != nil && opts.Project.InitrdFsType().String() != "" && opts.RootfsType == "" {
-		opts.RootfsType = opts.Project.InitrdFsType()
-	}
-
 	opts.statistics = map[string]string{}
 
 	var build builder
@@ -123,7 +119,11 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
-	if !opts.NoRootfs {
+	if opts.RootfsType == "" {
+		opts.RootfsType = initrd.FsTypeCpio
+	}
+
+	if !opts.NoRootfs && opts.Rootfs != "" {
 		output := filepath.Join(
 			buildOutputDir(opts.Project, opts.Workdir),
 			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
