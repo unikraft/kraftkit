@@ -124,16 +124,17 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 	}
 
 	if !opts.NoRootfs {
+		output := filepath.Join(
+			buildOutputDir(opts.Project, opts.Workdir),
+			fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
+		)
 		if _, _, _, err = initrd.BuildRootfs(
 			ctx,
 			append(opts.InitrdOptions,
 				initrd.WithRootfsPath(opts.Rootfs),
 				initrd.WithWorkdir(opts.Workdir),
 				initrd.WithKeepOwners(opts.KeepFileOwners),
-				initrd.WithOutput(filepath.Join(
-					buildOutputDir(opts.Project, opts.Workdir),
-					fmt.Sprintf(initrd.DefaultInitramfsArchFileName, (*opts.Target).Architecture(), opts.RootfsType),
-				)),
+				initrd.WithOutput(output),
 				initrd.WithOutputType(opts.RootfsType),
 				initrd.WithCacheDir(filepath.Join(
 					opts.Workdir,
@@ -147,6 +148,7 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 			return err
 		}
 
+		opts.Rootfs = output
 		// Set the root file system for the project, since typically a packaging step
 		// may occur after a build, and the root file system is required for packaging
 		// and the packaging step may perform a build of the rootfs again.  Ultimately
@@ -305,10 +307,6 @@ func (opts *BuildOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if opts.Rootfs != "" && !opts.NoRootfs {
-		if !filepath.IsAbs(opts.Rootfs) {
-			opts.Rootfs = filepath.Join(opts.Workdir, opts.Rootfs)
-		}
-
 		initrdStat, err := os.Stat(opts.Rootfs)
 		if err != nil {
 			return fmt.Errorf("getting initramfs size: %w", err)
