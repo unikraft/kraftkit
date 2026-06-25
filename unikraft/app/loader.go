@@ -20,14 +20,12 @@ package app
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	interp "github.com/compose-spec/compose-go/interpolation"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"kraftkit.sh/initrd"
-	"kraftkit.sh/unikraft"
 
 	kraftfilev07 "unikraft.com/x/kraftfile"
 )
@@ -39,31 +37,11 @@ const (
 func NewApplicationFromInterface(ctx context.Context, iface map[string]interface{}, popts *ProjectOptions) (Application, error) {
 	app := application{}
 
-	name := ""
-	if n, ok := iface["name"]; ok {
-		name, ok = n.(string)
-		if !ok {
-			return nil, errors.New("project name must be a string")
-		}
-	}
-
 	if err := Transform(ctx, getSection(iface, "labels"), &app.labels); err != nil {
 		return nil, err
 	}
 
-	app.name = name
 	app.path = popts.workdir
-
-	outdir := unikraft.BuildDir
-	if n, ok := iface["outdir"]; ok {
-		outdir, ok = n.(string)
-		if !ok {
-			return nil, errors.New("output directory must be a string")
-		}
-	}
-	if popts.outDir != "" {
-		outdir = popts.outDir
-	}
 
 	if n, ok := iface["rootfs"]; ok {
 		switch n.(type) {
@@ -132,17 +110,6 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 				app.command = append(app.command, cmdString)
 			}
 		}
-	}
-
-	if popts.resolvePaths && popts.outDir == "" {
-		app.outDir = popts.RelativePath(outdir)
-	} else if popts.outDir != "" {
-		abs, err := filepath.Abs(outdir)
-		if err != nil {
-			return nil, err
-		}
-
-		app.outDir = abs
 	}
 
 	if err := Transform(ctx, getSection(iface, "unikraft"), &app.unikraft); err != nil {

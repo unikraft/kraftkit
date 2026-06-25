@@ -49,18 +49,29 @@ func IsWorkdirInitialized(dir string) bool {
 	return len(findFiles(DefaultFileNames, dir)) > 0
 }
 
+func outDirFromProject(iface map[string]interface{}, popts *ProjectOptions) (string, error) {
+	if popts.outDir != "" {
+		return filepath.Abs(popts.outDir)
+	}
+
+	outdir := unikraft.BuildDir
+	if n, ok := iface["outdir"]; ok {
+		outdirStr, ok := n.(string)
+		if !ok {
+			return "", fmt.Errorf("malformed Kraftfile: 'outdir' field must be a string, got %T", n)
+		}
+		if outdirStr != "" {
+			outdir = outdirStr
+		}
+	}
+
+	return popts.RelativePath(outdir), nil
+}
+
 func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Application, error) {
-	name, _ := popts.GetProjectName()
 	specVersion, err := parseKraftfileSpecVersion(popts.kraftfile.content)
 	if err != nil {
 		return nil, err
-	}
-
-	var outdir string
-	if popts.outDir == "" {
-		outdir = popts.RelativePath(unikraft.BuildDir)
-	} else {
-		outdir = popts.outDir
 	}
 
 	iface := popts.kraftfile.config
@@ -81,26 +92,28 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 	}
 
 	iface = groupXFieldsIntoExtensions(iface)
+	popts.kraftfile.config = iface
+
+	outdir, err := outDirFromProject(iface, popts)
+	if err != nil {
+		return nil, err
+	}
+
+	projectName, _ := popts.GetProjectName()
 	if n, ok := iface["name"]; ok {
 		nameStr, ok := n.(string)
 		if !ok {
 			return nil, fmt.Errorf("malformed Kraftfile: 'name' field must be a string, got %T", n)
 		}
-		name = nameStr
+		projectName = nameStr
 	}
 
-	if n, ok := iface["outdir"]; ok {
-		outdirStr, ok := n.(string)
-		if !ok {
-			return nil, fmt.Errorf("malformed Kraftfile: 'outdir' field must be a string, got %T", n)
-		}
-		outdir = outdirStr
+	if !popts.skipNormalization {
+		projectName = normalizeProjectName(projectName)
 	}
-
-	popts.kraftfile.config = iface
 
 	uk := &unikraft.Context{
-		UK_NAME:   name,
+		UK_NAME:   projectName,
 		UK_BASE:   popts.workdir,
 		BUILD_DIR: outdir,
 	}
@@ -113,21 +126,12 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 
 	ctx = unikraft.WithContext(ctx, uk)
 
-	appl, err := NewApplicationFromInterface(ctx, popts.kraftfile.config, popts)
+	appl, err := NewApplicationFromInterface(ctx, iface, popts)
 	if err != nil {
 		return nil, err
 	}
 
 	app := appl.(*application)
-
-	projectName, _ := popts.GetProjectName()
-	if app.name != "" {
-		projectName = app.name
-	}
-
-	if !popts.skipNormalization {
-		projectName = normalizeProjectName(projectName)
-	}
 
 	if app.unikraft != nil {
 		popts.kconfig.OverrideBy(app.unikraft.KConfig())
@@ -154,7 +158,7 @@ func newLegacyProjectFromOptions(ctx context.Context, popts *ProjectOptions) (Ap
 		WithName(projectName),
 		WithWorkingDir(popts.workdir),
 		WithFilename(app.filename),
-		WithOutDir(app.outDir),
+		WithOutDir(outdir),
 		WithUnikraft(app.unikraft),
 		WithRuntime(app.runtime),
 		WithRootfs(app.rootfs),
