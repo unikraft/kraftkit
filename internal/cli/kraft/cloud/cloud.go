@@ -12,6 +12,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"kraftkit.sh/config"
+	"kraftkit.sh/log"
+
 	"kraftkit.sh/internal/cli/kraft/cloud/certificate"
 	"kraftkit.sh/internal/cli/kraft/cloud/compose"
 	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
@@ -119,6 +122,20 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(compose.NewCmd())
 
 	return cmd
+}
+
+func (opts *CloudOptions) PersistentPre(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	if !config.G[config.KraftKit](ctx).NoWarnCloudDeprecation {
+		log.G(ctx).Warn("the `kraft cloud` subcommand is being deprecated! Please migrate to the new `unikraft` CLI.")
+		log.G(ctx).Warn("end-of-life support for the `kraft cloud` subcommand will end November 26th 2026.")
+		log.G(ctx).Warn("learn more at https://unikraft.com/docs/tutorials/kraft-to-unikraft")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("to hide and ignore this warning message, set the environmental variable:")
+		log.G(ctx).Warn("")
+		log.G(ctx).Warn("\texport KRAFTKIT_NO_WARN_CLOUD_DEPRECATION=1")
+	}
+	return nil
 }
 
 func (opts *CloudOptions) Run(_ context.Context, args []string) error {
