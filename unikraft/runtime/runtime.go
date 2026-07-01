@@ -106,12 +106,30 @@ func (elfloader *Runtime) Source() string {
 	return elfloader.source
 }
 
+func HasExplicitTag(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	if strings.Contains(name, "@") {
+		return true
+	}
+
+	slash := strings.LastIndex(name, "/")
+	colon := strings.LastIndex(name, ":")
+	return colon > slash
+}
+
 func splitRuntimeNameVersion(name string) (string, string) {
 	if name == "" {
 		return "", ""
 	}
 
 	if strings.Contains(name, "@") {
+		return name, ""
+	}
+
+	if !HasExplicitTag(name) {
 		return name, ""
 	}
 

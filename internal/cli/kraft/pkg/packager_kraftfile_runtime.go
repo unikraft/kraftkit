@@ -24,6 +24,7 @@ import (
 	"kraftkit.sh/unikraft"
 	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/plat"
+	ukruntime "kraftkit.sh/unikraft/runtime"
 	"kraftkit.sh/unikraft/target"
 
 	kraftfilev07 "unikraft.com/x/kraftfile"
@@ -48,6 +49,18 @@ type packagerKraftfileRuntime struct {
 // String implements fmt.Stringer.
 func (p *packagerKraftfileRuntime) String() string {
 	return "kraftfile-runtime"
+}
+
+func formatRuntimeReference(name, version string) string {
+	if version == "" {
+		return name
+	}
+
+	if ukruntime.HasExplicitTag(name) {
+		return name
+	}
+
+	return fmt.Sprintf("%s:%s", name, version)
 }
 
 // Packagable implements packager.
@@ -109,7 +122,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	if p.version == "" {
+	if p.version == "" && !ukruntime.HasExplicitTag(p.name) {
 		p.version = "latest"
 	}
 
@@ -176,9 +189,8 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		},
 		processtree.NewProcessTreeItem(
 			fmt.Sprintf(
-				"searching for %s:%s",
-				p.name,
-				p.version,
+				"searching for %s",
+				formatRuntimeReference(p.name, p.version),
 			),
 			"",
 			func(ctx context.Context) error {
@@ -215,31 +227,27 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	if len(packs) == 0 && !opts.NoKernel {
 		if len(opts.Platform) > 0 && len(opts.Architecture) > 0 {
 			return nil, fmt.Errorf(
-				"could not find runtime '%s:%s' (%s/%s)",
-				p.name,
-				p.version,
+				"could not find runtime '%s' (%s/%s)",
+				formatRuntimeReference(p.name, p.version),
 				opts.Platform,
 				opts.Architecture,
 			)
 		} else if len(opts.Architecture) > 0 {
 			return nil, fmt.Errorf(
-				"could not find runtime '%s:%s' with '%s' architecture",
-				p.name,
-				p.version,
+				"could not find runtime '%s' with '%s' architecture",
+				formatRuntimeReference(p.name, p.version),
 				opts.Architecture,
 			)
 		} else if len(opts.Platform) > 0 {
 			return nil, fmt.Errorf(
-				"could not find runtime '%s:%s' with '%s' platform",
-				p.name,
-				p.version,
+				"could not find runtime '%s' with '%s' platform",
+				formatRuntimeReference(p.name, p.version),
 				opts.Platform,
 			)
 		} else {
 			return nil, fmt.Errorf(
-				"could not find runtime %s:%s",
-				p.name,
-				p.version,
+				"could not find runtime %s",
+				formatRuntimeReference(p.name, p.version),
 			)
 		}
 	} else if len(packs) == 1 {
