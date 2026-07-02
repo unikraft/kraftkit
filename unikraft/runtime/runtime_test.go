@@ -104,3 +104,28 @@ func TestTransformFromSchema_OCIReference(t *testing.T) {
 		t.Errorf("Source() = %q, want full OCI ref", rt.Source())
 	}
 }
+
+func TestHasExplicitTag(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "plain name", input: "base", want: false},
+		{name: "shorthand tag", input: "base:latest", want: true},
+		{name: "namespaced tag", input: "team/base:stable", want: true},
+		{name: "registry ref without tag", input: "index.unikraft.io/official/base", want: false},
+		{name: "registry ref with tag", input: "index.unikraft.io/official/base:latest", want: true},
+		{name: "registry ref with path tag", input: "index.unikraft.io/acme/base-compat:acme", want: true},
+		{name: "registry ref with port and tag", input: "localhost:5000/acme/base:latest", want: true},
+		{name: "digest ref", input: "ghcr.io/acme/base@sha256:deadbeef", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasExplicitTag(tt.input); got != tt.want {
+				t.Fatalf("HasExplicitTag(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
