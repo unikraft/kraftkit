@@ -32,9 +32,11 @@ jobs:
             fury-cli \
             nix-bin \
             openssh-client;
-          curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"
+          curl -O -L "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
           mv cosign-linux-amd64 /usr/local/bin/cosign
           chmod +x /usr/local/bin/cosign
+        env:
+          COSIGN_VERSION: v3.0.6
 
       - name: Generate GoReleaser configuration
         run: |
