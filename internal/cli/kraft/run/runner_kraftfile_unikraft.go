@@ -64,10 +64,14 @@ func (runner *runnerKraftfileUnikraft) Runnable(ctx context.Context, opts *RunOp
 		runner.workdir = cwd
 		runner.args = args
 		if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
-			runner.workdir = args[0]
+			runner.workdir, err = filepath.Abs(args[0])
+			if err != nil {
+				return false, fmt.Errorf("getting absolute path of workdir: %w", err)
+			}
 			runner.args = args[1:]
 		}
 	}
+	opts.workdir = runner.workdir
 
 	popts := []app.ProjectOption{
 		app.WithProjectWorkdir(runner.workdir),

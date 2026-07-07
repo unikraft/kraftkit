@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/klauspost/cpuid/v2"
@@ -58,7 +59,10 @@ func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *RunOpt
 		opts.workdir = cwd
 		runner.args = args
 		if f, err := os.Stat(args[0]); err == nil && f.IsDir() {
-			opts.workdir = args[0]
+			opts.workdir, err = filepath.Abs(args[0])
+			if err != nil {
+				return false, fmt.Errorf("getting absolute path of workdir: %w", err)
+			}
 			runner.args = args[1:]
 		}
 	}

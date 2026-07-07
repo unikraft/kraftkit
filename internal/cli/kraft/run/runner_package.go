@@ -97,6 +97,12 @@ func (runner *runnerPackage) Runnable(ctx context.Context, opts *RunOptions, arg
 
 // Prepare implements Runner.
 func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
+	var err error
+	opts.workdir, err = os.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not get working directory: %w", err)
+	}
+
 	parallel := !config.G[config.KraftKit](ctx).NoParallel
 	norender := log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY
 
