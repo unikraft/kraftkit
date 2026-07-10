@@ -63,6 +63,34 @@ func formatRuntimeReference(name, version string) string {
 	return fmt.Sprintf("%s:%s", name, version)
 }
 
+func normalizeRuntimeNameVersion(name, version string) (string, string) {
+	if version == "" && !ukruntime.HasExplicitTag(name) {
+		version = "latest"
+	}
+
+	return name, version
+}
+
+func resolveRuntimeNameVersion(runtimeFlag string, projectRuntime *ukruntime.Runtime, nameFlag string) (string, string, error) {
+	switch {
+	case len(runtimeFlag) > 0:
+		runtime := &ukruntime.Runtime{}
+		runtime.SetName(runtimeFlag)
+		name, version := normalizeRuntimeNameVersion(runtime.Name(), runtime.Version())
+		return name, version, nil
+	case projectRuntime != nil:
+		name, version := normalizeRuntimeNameVersion(projectRuntime.Name(), projectRuntime.Version())
+		return name, version, nil
+	case nameFlag != "":
+		runtime := &ukruntime.Runtime{}
+		runtime.SetName(nameFlag)
+		name, version := normalizeRuntimeNameVersion(runtime.Name(), runtime.Version())
+		return name, version, nil
+	default:
+		return "", "", fmt.Errorf("no runtime name specified")
+	}
+}
+
 // Packagable implements packager.
 func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOptions, args ...string) (bool, error) {
 	if opts.Project == nil {
@@ -89,23 +117,14 @@ func (p *packagerKraftfileRuntime) Packagable(ctx context.Context, opts *PkgOpti
 // Pack implements packager.
 func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, args ...string) ([]pack.Package, error) {
 	var err error
+	var projectRuntime *ukruntime.Runtime
+	if opts.Project != nil {
+		projectRuntime = opts.Project.Runtime()
+	}
 
-	if len(opts.Runtime) > 0 {
-		var ok bool
-		p.name, p.version, ok = strings.Cut(opts.Runtime, ":")
-		if !ok {
-			p.version = "latest"
-		}
-	} else if opts.Project != nil && opts.Project.Runtime() != nil {
-		p.name = opts.Project.Runtime().Name()
-	} else if opts.Name != "" {
-		var ok bool
-		p.name, p.version, ok = strings.Cut(opts.Name, ":")
-		if !ok {
-			p.version = "latest"
-		}
-	} else {
-		return nil, fmt.Errorf("no name specified: ")
+	p.name, p.version, err = resolveRuntimeNameVersion(opts.Runtime, projectRuntime, opts.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	if opts.Platform == "kraftcloud" || (opts.Project != nil && opts.Project.Runtime() != nil && opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
@@ -116,14 +135,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	if opts.Project != nil {
 		targets = opts.Project.Targets()
-
-		if opts.Project.Runtime() != nil {
-			p.version = opts.Project.Runtime().Version()
-		}
-	}
-
-	if p.version == "" && !ukruntime.HasExplicitTag(p.name) {
-		p.version = "latest"
 	}
 
 	qopts := []packmanager.QueryOption{
@@ -269,7 +280,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 			// platform, prompt with available set of packages.
 			if len(found) == 0 {
 				if !config.G[config.KraftKit](ctx).NoPrompt {
-					log.G(ctx).Warnf("could not find package '%s:%s' based on %s/%s", p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+					log.G(ctx).Warnf("could not find package '%s' based on %s/%s", formatRuntimeReference(p.name, p.version), opts.Platform, opts.Architecture)
 					p, err := selection.Select("select alternative package with same name to continue", packs...)
 					if err != nil {
 						return nil, fmt.Errorf("could not select package: %w", err)
@@ -277,13 +288,13 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 					selected = p
 				} else {
-					return nil, fmt.Errorf("could not find package '%s:%s' based on %s/%s but %d others found but prompting has been disabled", p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture, len(packs))
+					return nil, fmt.Errorf("could not find package '%s' based on %s/%s but %d others found but prompting has been disabled", formatRuntimeReference(p.name, p.version), opts.Platform, opts.Architecture, len(packs))
 				}
 			} else if len(found) == 1 {
 				selected = &found[0]
 			} else { // > 1
 				if !config.G[config.KraftKit](ctx).NoPrompt {
-					log.G(ctx).Infof("found %d packages named '%s:%s' based on %s/%s", len(found), p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+					log.G(ctx).Infof("found %d packages named '%s' based on %s/%s", len(found), formatRuntimeReference(p.name, p.version), opts.Platform, opts.Architecture)
 					p, err := selection.Select("select package to continue", found...)
 					if err != nil {
 						return nil, fmt.Errorf("could not select package: %w", err)
@@ -291,7 +302,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 					selected = p
 				} else {
-					return nil, fmt.Errorf("found %d packages named '%s:%s' based on %s/%s but prompting has been disabled", len(found), p.name, opts.Project.Runtime().Version(), opts.Platform, opts.Architecture)
+					return nil, fmt.Errorf("found %d packages named '%s' based on %s/%s but prompting has been disabled", len(found), formatRuntimeReference(p.name, p.version), opts.Platform, opts.Architecture)
 				}
 			}
 		} else {
@@ -301,7 +312,7 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("multiple runtimes available for '%s:%s' but prompting has been disabled", p.name, p.version)
+				return nil, fmt.Errorf("multiple runtimes available for '%s' but prompting has been disabled", formatRuntimeReference(p.name, p.version))
 			}
 		}
 	}
