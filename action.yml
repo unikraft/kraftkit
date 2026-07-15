@@ -75,6 +75,14 @@ inputs:
   force_git:
     description: Use git protocol for fetching sources.
     required: false
+  keep_file_owners:
+    description: Keep file owners (user:group) in the rootfs, otherwise 'root:root' is used.
+    required: false
+    default: "false"
+  no_rootfs:
+    description: Do not build the root filesystem (initramfs), even if one is declared in the Kraftfile.
+    required: false
+    default: "false"
   plat:
     description: Platform to build for.
     required: false
@@ -105,23 +113,65 @@ inputs:
   args:
     description: Arguments to pass to the unikernel.
     required: false
+  compress:
+    description: Compress the root filesystem and ROMs (experimental).
+    required: false
+    default: "false"
+  env:
+    description: |
+      Environment variables to pack into the package, one `KEY=value` pair per
+      line.  A bare `KEY` takes its value from the runner's environment.
+    required: false
+  kconfig_file:
+    description: Path to an extra KConfig file to include as package metadata.
+    required: false
+  labels:
+    description: Labels to pack into the package, one `key=value` pair per line.
+    required: false
   name:
-    description: Set the name of the output.
+    description: |
+      The reference of the resulting package, e.g.
+      `index.unikraft.io/unikraft.org/nginx:latest`.  Used when no `output` is
+      supplied.
     required: true
+  no_kconfig:
+    description: Do not include the target's .config as package metadata.
+    required: false
+    default: "false"
   output:
-    description: Set the output path.
+    description: |
+      Set the output path.  May be prefixed with a packaging format, e.g.
+      `oci://`.  When set, it takes precedence over `name` as the package
+      reference.
     required: false
   push:
     description: Push the output to a registry.
     required: false
     default: "false"
+  rom_type:
+    description: Type of ROM to build (cpio/erofs), used for ROMs which do not declare their own format.
+    required: false
+  roms:
+    description: Paths to auxiliary ROMs to include in the package, one per line.
+    required: false
   rootfs:
     description: Set the root filesystem.  This can be an existing CPIO archive or a directory.
     required: false
-  rootfs-type:
-    description: Type of rootfs to build (cpio/erofs)
+  rootfs_type:
+    description: |
+      Type of rootfs to build (cpio/erofs).  When unset, the format declared in
+      the Kraftfile is used.
     required: false
-    default: cpio
+  rootfs-type:
+    description: Deprecated alias for `rootfs_type`.
+    required: false
+    deprecationMessage: Use `rootfs_type` instead.
+  runtime:
+    description: Set the runtime to package against, overriding the one declared in the Kraftfile.
+    required: false
+  set_kconfig:
+    description: KConfig values to pack into the package, one `CONFIG_X=y` pair per line.
+    required: false
   strategy:
     description: Merge strategy to use when packaging.
     required: false
@@ -237,11 +287,22 @@ runs:
         -e "INPUT_ARGS=${{ inputs.args }}" \
         -e "INPUT_AUTHS=${{ inputs.auths }}" \
         -e "INPUT_BUILD=${{ inputs.build }}" \
+        -e "INPUT_COMPRESS=${{ inputs.compress }}" \
+        -e "INPUT_ENV=${{ inputs.env }}" \
         -e "INPUT_GIT_CLONE_DEPTH=${{ inputs.git_clone_depth }}" \
         -e "INPUT_EXECUTE=${{ inputs.execute }}" \
         -e "INPUT_FORCE_GIT=${{ inputs.force_git }}" \
+        -e "INPUT_KCONFIG_FILE=${{ inputs.kconfig_file }}" \
+        -e "INPUT_KEEP_FILE_OWNERS=${{ inputs.keep_file_owners }}" \
+        -e "INPUT_LABELS=${{ inputs.labels }}" \
+        -e "INPUT_NO_KCONFIG=${{ inputs.no_kconfig }}" \
+        -e "INPUT_NO_ROOTFS=${{ inputs.no_rootfs }}" \
+        -e "INPUT_ROMS=${{ inputs.roms }}" \
+        -e "INPUT_ROM_TYPE=${{ inputs.rom_type }}" \
         -e "INPUT_ROOTFS=${{ inputs.rootfs }}" \
-        -e "INPUT_ROOTFS_TYPE=${{ inputs.rootfs_type }}" \
+        -e "INPUT_ROOTFS_TYPE=${{ inputs.rootfs_type || inputs['rootfs-type'] }}" \
+        -e "INPUT_RUNTIME=${{ inputs.runtime }}" \
+        -e "INPUT_SET_KCONFIG=${{ inputs.set_kconfig }}" \
         -e "INPUT_KRAFTFILE=${{ inputs.kraftfile }}" \
         -e "INPUT_LOGLEVEL=${{ inputs.loglevel }}" \
         -e "INPUT_MEMORY=${{ inputs.memory }}" \
