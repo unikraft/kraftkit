@@ -8,6 +8,7 @@ import (
 	"context"
 	"debug/elf"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
@@ -53,6 +54,12 @@ func (runner *runnerKernel) Runnable(ctx context.Context, opts *RunOptions, args
 
 // Prepare implements Runner.
 func (runner *runnerKernel) Prepare(ctx context.Context, opts *RunOptions, machine *machineapi.Machine, args ...string) error {
+	var err error
+	opts.workdir, err = os.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not get working directory: %w", err)
+	}
+
 	filename := filepath.Base(runner.kernelPath)
 	machine.Spec.Kernel = "kernel://" + filename
 	machine.Status.KernelPath = runner.kernelPath

@@ -356,6 +356,18 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture, opts.RootfsType),
 	)
 
+	if machine.Status.InitrdPath == opts.Rootfs {
+		stat, err := os.Stat(opts.Rootfs)
+		if err != nil {
+			return fmt.Errorf("using existing rootfs: %w", err)
+		}
+
+		if !stat.Mode().IsRegular() {
+			return fmt.Errorf("using existing rootfs: %s is not a regular file", opts.Rootfs)
+		}
+		return nil
+	}
+
 	ramfs, err := initrd.New(ctx,
 		opts.Rootfs,
 		initrd.WithOutput(machine.Status.InitrdPath),
