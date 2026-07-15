@@ -50,17 +50,26 @@ func (opts *GithubAction) initProject(ctx context.Context) error {
 // RewrapAsKraftCloudPackage returns the equivalent package name as a
 // KraftCloud package.
 func (opts *GithubAction) rewrapAsKraftCloudPackage(name string) string {
+	if _, reference, ok := strings.Cut(name, "://"); ok {
+		name = reference
+	}
+
 	name = strings.Replace(name, "unikraft.org/", "index.unikraft.io/", 1)
 
 	if strings.HasPrefix(name, "unikraft.io") {
-		name = "index." + name
-	} else if strings.Contains(name, "/") && !strings.Contains(name, "unikraft.io") {
-		name = "index.unikraft.io/" + name
-	} else if !strings.HasPrefix(name, "index.unikraft.io") {
-		name = "index.unikraft.io/official/" + name
+		return "index." + name
 	}
 
-	return name
+	registry, _, hasPath := strings.Cut(name, "/")
+	if hasPath && (strings.Contains(registry, ".") || strings.Contains(registry, ":") || registry == "localhost") {
+		return name
+	}
+
+	if hasPath {
+		return "index.unikraft.io/" + name
+	}
+
+	return "index.unikraft.io/official/" + name
 }
 
 // aggregateEnvs aggregates the environment variables from the project and
