@@ -53,7 +53,7 @@ jobs:
           timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done';
           sudo chmod 666 /run/buildkit/buildkitd.sock;
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: 1.26.2
           cache: false
@@ -101,7 +101,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.26.2
           cache: false
@@ -157,7 +157,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.26.2
           cache: false
