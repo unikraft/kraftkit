@@ -71,23 +71,18 @@ func normalizeRuntimeNameVersion(name, version string) (string, string) {
 	return name, version
 }
 
-func resolveRuntimeNameVersion(runtimeFlag string, projectRuntime *ukruntime.Runtime, nameFlag string) (string, string, error) {
+func resolveRuntimeNameVersion(runtimeFlag string, projectRuntime *ukruntime.Runtime) (string, string) {
 	switch {
 	case len(runtimeFlag) > 0:
 		runtime := &ukruntime.Runtime{}
 		runtime.SetName(runtimeFlag)
 		name, version := normalizeRuntimeNameVersion(runtime.Name(), runtime.Version())
-		return name, version, nil
+		return name, version
 	case projectRuntime != nil:
 		name, version := normalizeRuntimeNameVersion(projectRuntime.Name(), projectRuntime.Version())
-		return name, version, nil
-	case nameFlag != "":
-		runtime := &ukruntime.Runtime{}
-		runtime.SetName(nameFlag)
-		name, version := normalizeRuntimeNameVersion(runtime.Name(), runtime.Version())
-		return name, version, nil
+		return name, version
 	default:
-		return "", "", fmt.Errorf("no runtime name specified")
+		return "", ""
 	}
 }
 
@@ -122,12 +117,9 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		projectRuntime = opts.Project.Runtime()
 	}
 
-	p.name, p.version, err = resolveRuntimeNameVersion(opts.Runtime, projectRuntime, opts.Name)
-	if err != nil {
-		return nil, err
-	}
+	p.name, p.version = resolveRuntimeNameVersion(opts.Runtime, projectRuntime)
 
-	if opts.Platform == "kraftcloud" || (opts.Project != nil && opts.Project.Runtime() != nil && opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud") {
+	if p.name != "" && (opts.Platform == "kraftcloud" || (opts.Project != nil && opts.Project.Runtime() != nil && opts.Project.Runtime().Platform() != nil && opts.Project.Runtime().Platform().Name() == "kraftcloud")) {
 		p.name = utils.RewrapAsKraftCloudPackage(p.name)
 	}
 
@@ -135,11 +127,6 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 
 	if opts.Project != nil {
 		targets = opts.Project.Targets()
-	}
-
-	qopts := []packmanager.QueryOption{
-		packmanager.WithName(p.name),
-		packmanager.WithVersion(p.version),
 	}
 
 	if len(targets) == 1 {
@@ -188,54 +175,50 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 		}
 	}
 
-	treemodel, err := processtree.NewProcessTree(
-		ctx,
-		[]processtree.ProcessTreeOption{
-			processtree.IsParallel(false),
-			processtree.WithRenderer(
-				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-			),
-			processtree.WithFailFast(true),
-			processtree.WithHideOnSuccess(true),
-		},
-		processtree.NewProcessTreeItem(
-			fmt.Sprintf(
-				"searching for %s",
-				formatRuntimeReference(p.name, p.version),
-			),
-			"",
-			func(ctx context.Context) error {
-				qopts = append(qopts,
-					packmanager.WithArchitecture(opts.Architecture),
-					packmanager.WithPlatform(opts.Platform),
-					packmanager.WithKConfig(kconfigs),
-				)
-
-				packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
-				if err != nil {
-					return fmt.Errorf("could not query catalog: %w", err)
-				} else if len(packs) == 0 && !opts.NoPull {
-					// Try again with a remote update request.  Save this to qopts in case we
-					// need to call `Catalog` again.
-					packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(true))...)
+	if p.name != "" {
+		qopts := []packmanager.QueryOption{
+			packmanager.WithName(p.name),
+			packmanager.WithVersion(p.version),
+			packmanager.WithArchitecture(opts.Architecture),
+			packmanager.WithPlatform(opts.Platform),
+			packmanager.WithKConfig(kconfigs),
+		}
+		treemodel, err := processtree.NewProcessTree(
+			ctx,
+			[]processtree.ProcessTreeOption{
+				processtree.IsParallel(false),
+				processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+				processtree.WithFailFast(true),
+				processtree.WithHideOnSuccess(true),
+			},
+			processtree.NewProcessTreeItem(
+				fmt.Sprintf("searching for %s", formatRuntimeReference(p.name, p.version)),
+				"",
+				func(ctx context.Context) error {
+					packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(false))...)
 					if err != nil {
 						return fmt.Errorf("could not query catalog: %w", err)
+					} else if len(packs) == 0 && !opts.NoPull {
+						packs, err = opts.pm.Catalog(ctx, append(qopts, packmanager.WithRemote(true))...)
+						if err != nil {
+							return fmt.Errorf("could not query catalog: %w", err)
+						}
 					}
-				}
 
-				return nil
-			},
-		),
-	)
-	if err != nil {
-		return nil, err
+					return nil
+				},
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := treemodel.Start(); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := treemodel.Start(); err != nil {
-		return nil, err
-	}
-
-	if len(packs) == 0 && !opts.NoKernel {
+	if p.name != "" && len(packs) == 0 && !opts.NoKernel {
 		if len(opts.Platform) > 0 && len(opts.Architecture) > 0 {
 			return nil, fmt.Errorf(
 				"could not find runtime '%s' (%s/%s)",
