@@ -44,10 +44,8 @@ func TestResolveRuntimeNameVersion(t *testing.T) {
 		name           string
 		runtimeFlag    string
 		projectRuntime *ukruntime.Runtime
-		nameFlag       string
 		wantName       string
 		wantVersion    string
-		wantErr        string
 	}{
 		{
 			name:           "runtime tag overrides Kraftfile version",
@@ -88,30 +86,13 @@ func TestResolveRuntimeNameVersion(t *testing.T) {
 			wantVersion:    "v1",
 		},
 		{
-			name:        "name flag defaults to latest",
-			nameFlag:    "base",
-			wantName:    "base",
-			wantVersion: "latest",
-		},
-		{
-			name:    "missing runtime name",
-			wantErr: "no runtime name specified",
+			name: "missing runtime does not infer one from output package name",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			name, version, err := resolveRuntimeNameVersion(tt.runtimeFlag, tt.projectRuntime, tt.nameFlag)
-			if tt.wantErr != "" {
-				if err == nil || err.Error() != tt.wantErr {
-					t.Fatalf("resolveRuntimeNameVersion() error = %v, want %q", err, tt.wantErr)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("resolveRuntimeNameVersion() error = %v", err)
-			}
+			name, version := resolveRuntimeNameVersion(tt.runtimeFlag, tt.projectRuntime)
 			if name != tt.wantName || version != tt.wantVersion {
 				t.Fatalf("resolveRuntimeNameVersion() = (%q, %q), want (%q, %q)", name, version, tt.wantName, tt.wantVersion)
 			}
