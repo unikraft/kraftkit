@@ -86,14 +86,6 @@ func (runner *runnerKraftfileRuntime) Runnable(ctx context.Context, opts *RunOpt
 		return false, fmt.Errorf("cannot run project without runtime directive")
 	}
 
-	if runner.project != nil && runner.project.Rootfs() != "" && opts.Rootfs == "" {
-		opts.Rootfs = runner.project.Rootfs()
-	}
-
-	if runner.project != nil && runner.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
-		opts.RootfsType = runner.project.InitrdFsType()
-	}
-
 	return true, nil
 }
 
@@ -308,6 +300,9 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 
 	if runner.project.Rootfs() != "" && opts.Rootfs == "" {
 		opts.Rootfs = runner.project.Rootfs()
+	}
+	if runner.project.InitrdFsType().String() != "" && opts.RootfsType == "" {
+		opts.RootfsType = runner.project.InitrdFsType()
 	}
 
 	// Create a temporary directory where the image can be stored

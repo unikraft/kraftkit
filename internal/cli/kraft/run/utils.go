@@ -350,27 +350,8 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 		opts.RootfsType = initrd.FsTypeCpio
 	}
 
-	machine.Status.InitrdPath = filepath.Join(
-		opts.workdir,
-		unikraft.BuildDir,
-		fmt.Sprintf(initrd.DefaultInitramfsArchFileName, machine.Spec.Architecture, opts.RootfsType),
-	)
-
-	if machine.Status.InitrdPath == opts.Rootfs {
-		stat, err := os.Stat(opts.Rootfs)
-		if err != nil {
-			return fmt.Errorf("using existing rootfs: %w", err)
-		}
-
-		if !stat.Mode().IsRegular() {
-			return fmt.Errorf("using existing rootfs: %s is not a regular file", opts.Rootfs)
-		}
-		return nil
-	}
-
 	ramfs, err := initrd.New(ctx,
 		opts.Rootfs,
-		initrd.WithOutput(machine.Status.InitrdPath),
 		initrd.WithCacheDir(filepath.Join(
 			opts.workdir,
 			unikraft.BuildDir,
@@ -400,7 +381,7 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 			fmt.Sprintf("building rootfs via %s", ramfs.Name()),
 			machine.Spec.Architecture,
 			func(ctx context.Context) error {
-				if _, err = ramfs.Build(ctx); err != nil {
+				if machine.Status.InitrdPath, err = ramfs.Build(ctx); err != nil {
 					return err
 				}
 
