@@ -376,6 +376,7 @@ func (opts *RunOptions) prepareRootfs(ctx context.Context, machine *machineapi.M
 				log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
 			),
 			processtree.WithFailFast(true),
+			processtree.WithHideError(true),
 		},
 		processtree.NewProcessTreeItem(
 			fmt.Sprintf("building rootfs via %s", ramfs.Name()),
