@@ -378,6 +378,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	cfg.Log.Type = "basic"
+
 	cfgm, err := config.NewConfigManager(
 		cfg,
 		config.WithFile[config.KraftKit](config.DefaultConfigFile(), true),
@@ -411,7 +413,7 @@ func main() {
 
 	formatter := new(log.TextFormatter)
 	formatter.ForceColors = true
-	formatter.ForceFormatting = true
+	formatter.ForceFormatting = false
 	formatter.FullTimestamp = true
 	formatter.DisableTimestamp = true
 	logger.Formatter = formatter
