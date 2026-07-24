@@ -57,8 +57,8 @@ The driver maps the common KraftKit run surface that Hyperlight can execute:
 - Writable `9pfs` directory volumes are passed as repeatable
   `hyperlight-unikraft --mount HOST:GUEST` entries.
 - Same-port guest listen permissions from `--port GUEST_PORT:GUEST_PORT` are
-  passed as `hyperlight-unikraft --net --port GUEST_PORT`. Hyperlight ports are
-  sandbox bind permissions, not Docker-style host forwarding.
+  passed as `hyperlight-unikraft --port GUEST_PORT`. Enable guest networking with
+   `--hyperlight-net` (and optionally restrict it via `--hyperlight-net-allow` / `--hyperlight-net-block`).
 - Hyperlight sandbox networking policy is configured with
   `--hyperlight-net-allow` and `--hyperlight-net-block`; allow/block entries
   imply networking in `hyperlight-unikraft`.
