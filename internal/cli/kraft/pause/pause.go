@@ -6,6 +6,7 @@ package pause
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
@@ -14,7 +15,6 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/iostreams"
-	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
 )
 
@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(
-			mplatform.Platforms(),
+			mplatform.PlatformNames(mplatform.Platform("all")),
 			mplatform.Platform("all"),
 		),
 		"plat",
@@ -127,15 +127,17 @@ func (opts *PauseOptions) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("machine(s) not found")
 	}
 
+	var pauseErrs []error
+
 	for _, machine := range pause {
 		if machine.Status.State != machineapi.MachineStateRunning {
 			continue
 		} else if _, err := controller.Pause(ctx, &machine); err != nil {
-			log.G(ctx).Errorf("could not pause machine %s: %v", machine.Name, err)
+			pauseErrs = append(pauseErrs, fmt.Errorf("could not pause machine %s: %w", machine.Name, err))
 		} else {
 			fmt.Fprintln(iostreams.G(ctx).Out, machine.Name)
 		}
 	}
 
-	return nil
+	return errors.Join(pauseErrs...)
 }

@@ -4,6 +4,7 @@
 # You may not use this file except in compliance with the License.
 ARG GO_VERSION=1.26.2
 ARG DEBIAN_VERSION=trixie
+ARG HYPERLIGHT_UNIKRAFT_VERSION=0.12.1
 ARG KRAFTKIT_VERSION=latest
 ARG QEMU_VERSION=9.2.1
 ARG REGISTRY=kraftkit.sh
@@ -22,6 +23,16 @@ RUN set -xe; \
         --add safe.directory /go/src/kraftkit.sh; \
     DOCKER= DISTDIR=/ XEN=n CGO_ENABLED=0 make github-action;
 
+FROM rust:1.89.0-slim-trixie AS hyperlight-unikraft
+
+ARG HYPERLIGHT_UNIKRAFT_VERSION
+
+RUN cargo install \
+      --locked \
+      --version "${HYPERLIGHT_UNIKRAFT_VERSION}" \
+      --bin hyperlight-unikraft \
+      hyperlight-unikraft
+
 FROM ${REGISTRY}/qemu:${QEMU_VERSION} AS qemu
 FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS kraftkit
 FROM debian:${DEBIAN_VERSION}         AS base
@@ -30,6 +41,9 @@ COPY --from=qemu  /bin/          /usr/local/bin
 COPY --from=qemu  /share/qemu/   /share/qemu
 COPY --from=qemu  /lib/x86_64-linux-gnu/ /lib/x86_64-linux-gnu
 COPY --from=build /github-action /usr/local/bin/github-action
+COPY --from=hyperlight-unikraft \
+  /usr/local/cargo/bin/hyperlight-unikraft \
+  /usr/local/bin/hyperlight-unikraft
 COPY --from=kraftkit /kraft       /usr/local/bin/kraft
 COPY --from=hairyhenderson/gomplate:stable /gomplate /bin/gomplate
 

@@ -10,6 +10,7 @@ import (
 	"context"
 
 	"kraftkit.sh/api"
+	"kraftkit.sh/machine/hyperlight"
 	"kraftkit.sh/machine/qemu"
 	"kraftkit.sh/manifest"
 	"kraftkit.sh/oci"
@@ -31,6 +32,7 @@ func InitKraftkit(ctx context.Context) error {
 
 func registerAdditionalFlags() {
 	manifest.RegisterFlags()
+	hyperlight.RegisterFlags()
 	qemu.RegisterFlags()
 }
 

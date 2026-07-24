@@ -13,6 +13,7 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/set"
 	"kraftkit.sh/machine/firecracker"
+	"kraftkit.sh/machine/hyperlight"
 	"kraftkit.sh/machine/xen"
 	"kraftkit.sh/store"
 )
@@ -68,6 +69,30 @@ var xenV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.
 	)
 }
 
+var hyperlightV1alpha1Driver = func(ctx context.Context, opts ...any) (machinev1alpha1.MachineService, error) {
+	service, err := hyperlight.NewMachineV1alpha1Service(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	embeddedStore, err := store.NewEmbeddedStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](
+		filepath.Join(
+			config.G[config.KraftKit](ctx).RuntimeDir,
+			"machinev1alpha1",
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return machinev1alpha1.NewMachineServiceHandler(
+		ctx,
+		service,
+		zip.WithStore[machinev1alpha1.MachineSpec, machinev1alpha1.MachineStatus](embeddedStore, zip.StoreRehydrationSpecNil),
+		zip.WithBefore(storePlatformFilter(PlatformHyperlight)),
+	)
+}
+
 func unixVariantStrategies() map[Platform]*Strategy {
 	// TODO(jake-ciolek): The firecracker driver has a dependency on github.com/containernetworking/plugins/pkg/ns via
 	// github.com/firecracker-microvm/firecracker-go-sdk
@@ -75,6 +100,9 @@ func unixVariantStrategies() map[Platform]*Strategy {
 	unixMap := map[Platform]*Strategy{
 		PlatformFirecracker: {
 			NewMachineV1alpha1: firecrackerV1alpha1Driver,
+		},
+		PlatformHyperlight: {
+			NewMachineV1alpha1: hyperlightV1alpha1Driver,
 		},
 	}
 

@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(
-			mplatform.Platforms(),
+			mplatform.PlatformNames(mplatform.Platform("all")),
 			mplatform.Platform("all"),
 		),
 		"plat",

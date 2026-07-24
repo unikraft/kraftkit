@@ -4,6 +4,8 @@
 // You may not use this file except in compliance with the License.
 package platform
 
+import "sort"
+
 type Platform string
 
 const (
@@ -12,6 +14,7 @@ const (
 	PlatformQEMU        = Platform("qemu")
 	PlatformKVM         = PlatformQEMU
 	PlatformXen         = Platform("xen")
+	PlatformHyperlight  = Platform("hyperlight")
 )
 
 // String implements fmt.Stringer
@@ -37,6 +40,8 @@ func PlatformsByName() map[string]Platform {
 		"kvm":         PlatformQEMU,
 		"qemu":        PlatformQEMU,
 		"xen":         PlatformXen,
+		"hyperlight":  PlatformHyperlight,
+		"hl":          PlatformHyperlight,
 	}
 }
 
@@ -46,7 +51,39 @@ func Platforms() []Platform {
 		PlatformFirecracker,
 		PlatformQEMU,
 		PlatformXen,
+		PlatformHyperlight,
 	}
+}
+
+// PlatformNames returns all platform names and aliases suitable for user input.
+func PlatformNames(extra ...Platform) []Platform {
+	seen := map[Platform]struct{}{}
+	ret := make([]Platform, 0, len(PlatformsByName())+len(extra))
+
+	names := make([]string, 0, len(PlatformsByName()))
+	for name := range PlatformsByName() {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		platform := Platform(name)
+		if _, ok := seen[platform]; ok {
+			continue
+		}
+		seen[platform] = struct{}{}
+		ret = append(ret, platform)
+	}
+
+	for _, platform := range extra {
+		if _, ok := seen[platform]; ok {
+			continue
+		}
+		seen[platform] = struct{}{}
+		ret = append(ret, platform)
+	}
+
+	return ret
 }
 
 // PlatformAliases returns all the name alises for a given platform.

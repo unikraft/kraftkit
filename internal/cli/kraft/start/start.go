@@ -54,7 +54,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.Flags().VarP(
 		cmdfactory.NewEnumFlag(
-			mplatform.Platforms(),
+			mplatform.PlatformNames(mplatform.Platform("all")),
 			mplatform.Platform("all"),
 		),
 		"plat",
@@ -137,7 +137,7 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 		return fmt.Errorf("instantiating volume service controller iterator: %w", err)
 	}
 
-	for _, machine := range machines {
+	for i, machine := range machines {
 		machine := machine // Go closures
 
 		// Check if the machine's requested ports are not already in use by an
@@ -150,8 +150,13 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 			WithField("machine", machine.Name).
 			Trace("starting")
 
-		if _, err := machineController.Start(ctx, &machine); err != nil {
+		started, err := machineController.Start(ctx, &machine)
+		if err != nil {
 			return err
+		}
+		if started != nil {
+			machine = *started
+			machines[i] = machine
 		}
 
 		for _, vol := range machine.Spec.Volumes {
