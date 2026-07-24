@@ -50,37 +50,58 @@ func NewFromFile(_ context.Context, path string, opts ...InitrdOption) (Initrd, 
 		return nil, fmt.Errorf("path %s is a directory, not a file", initrd.path)
 	}
 
-	absDest, err := filepath.Abs(filepath.Clean(initrd.opts.output))
-	if err != nil {
-		return nil, fmt.Errorf("getting absolute path of destination: %w", err)
-	}
-
-	if absDest == stat.Name() {
-		return nil, fmt.Errorf("CPIO archive path is the same as the source path, this is not allowed as it creates corrupted archives")
-	}
-
 	return &initrd, nil
 }
 
-// Build implements Initrd.
+// Name implements Initrd.
 func (initrd *file) Name() string {
 	return "file"
 }
 
 // Build implements Initrd.
 func (initrd *file) Build(ctx context.Context) (string, error) {
-	if initrd.opts.output == initrd.path {
-		return "", fmt.Errorf("CPIO archive path is the same as the source path, this is not allowed as it creates corrupted archives")
-	}
-
-reevaluateFsType:
-	switch initrd.opts.fsType {
-	case FsTypeUnknown:
+	if initrd.opts.fsType == FsTypeUnknown {
 		initrd.opts.fsType = detectFsType(initrd.path)
 		if initrd.opts.fsType == FsTypeUnknown {
 			return "", fmt.Errorf("could not detect filesystem type of input file, please specify it explicitly via the --fs-type flag")
 		}
-		goto reevaluateFsType
+	}
+
+	absSrc, err := filepath.Abs(filepath.Clean(initrd.path))
+	if err != nil {
+		return "", fmt.Errorf("getting absolute path of source: %w", err)
+	}
+
+	if initrd.opts.output != "" {
+		absDest, err := filepath.Abs(filepath.Clean(initrd.opts.output))
+		if err != nil {
+			return "", fmt.Errorf("getting absolute path of destination: %w", err)
+		}
+
+		if absDest == absSrc {
+			if isMatchingFsType(absSrc, initrd.opts.fsType) {
+				return initrd.path, nil
+			}
+			return "", fmt.Errorf("output path %q is the same as the source path %q; refusing to overwrite in-place (would corrupt the input)", absDest, absSrc)
+		}
+	}
+
+	if initrd.opts.output == "" {
+		if isMatchingFsType(absSrc, initrd.opts.fsType) {
+			return initrd.path, nil
+		}
+
+		fi, err := os.CreateTemp("", "")
+		if err != nil {
+			return "", fmt.Errorf("could not make temporary file: %w", err)
+		}
+		initrd.opts.output = fi.Name()
+		if err := fi.Close(); err != nil {
+			return "", fmt.Errorf("could not close temporary file: %w", err)
+		}
+	}
+
+	switch initrd.opts.fsType {
 	case FsTypeFile:
 		return initrd.opts.output, copyFile(initrd.path, initrd.opts.output)
 	case FsTypeErofs:
@@ -93,6 +114,17 @@ reevaluateFsType:
 		)
 	default:
 		return "", fmt.Errorf("unknown filesystem type %s", initrd.opts.fsType)
+	}
+}
+
+func isMatchingFsType(source string, target kraftfilev07.FsType) bool {
+	switch target {
+	case FsTypeCpio:
+		return fsutils.IsCpioFile(source)
+	case FsTypeErofs:
+		return fsutils.IsErofsFile(source)
+	default:
+		return false
 	}
 }
 

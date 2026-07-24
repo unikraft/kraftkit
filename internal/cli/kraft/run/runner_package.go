@@ -332,10 +332,10 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 	machine.Spec.ApplicationArgs = runner.args
 
 	// Set the path to the initramfs if present.
+	// Prefer an explicit CLI/project --rootfs override; otherwise use the
+	// package-embedded initrd from Unpack.
 	var ramfs initrd.Initrd
-	if opts.Rootfs == "" && targ.Initrd() != nil {
-		ramfs = targ.Initrd()
-	} else if len(opts.Rootfs) > 0 {
+	if len(opts.Rootfs) > 0 {
 		if opts.RootfsType == "" {
 			opts.RootfsType = initrd.FsTypeCpio
 		}
@@ -346,6 +346,8 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		if err != nil {
 			return err
 		}
+	} else if targ.Initrd() != nil {
+		ramfs = targ.Initrd()
 	}
 	if ramfs != nil {
 		machine.Status.InitrdPath, err = ramfs.Build(ctx)

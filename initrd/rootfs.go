@@ -70,6 +70,7 @@ func BuildRootfs(ctx context.Context, opts ...InitrdOption) (Initrd, []string, [
 		[]processtree.ProcessTreeOption{
 			processtree.IsParallel(false),
 			processtree.WithRenderer(log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY),
+			processtree.WithHideError(true),
 		},
 		processes...,
 	)
