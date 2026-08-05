@@ -117,8 +117,15 @@ jobs:
         if: >
           github.event_name == 'pull_request' &&
           (
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/qemu.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/base-golang.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/myself.Dockerfile') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/github-action.Dockerfile') ||
             contains(steps.changed-files.outputs.all_changed_files, 'buildenvs/xen.Dockerfile') ||
-            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml')
+            contains(steps.changed-files.outputs.all_changed_files, '.github/workflows/buildenvs.yaml') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'tools/github-action/') ||
+            contains(steps.changed-files.outputs.all_changed_files, 'action.yml')
           ) ||
           github.event_name == 'push'
         run: |
