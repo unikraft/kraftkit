@@ -177,6 +177,8 @@ func (ac ArchitectureConfig) KConfig() kconfig.KeyValueMap {
 		arch.WriteString("ARCH_ARM_64")
 	case ArchitectureRISCV64:
 		arch.WriteString("ARCH_RISCV_64")
+	default:
+		return values
 	}
 
 	values.Set(arch.String(), kconfig.Yes)
