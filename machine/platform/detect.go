@@ -200,12 +200,7 @@ func Detect(ctx context.Context) (Platform, SystemMode, error) {
 		customBin = config.G[config.KraftKit](ctx).Qemu
 	}
 
-	for _, bin := range []string{
-		qemu.QemuSystemX86,
-		qemu.QemuSystemArm,
-		qemu.QemuSystemAarch64,
-		customBin,
-	} {
+	for _, bin := range qemu.GetAllQemuSystemBinaries([]string{customBin}) {
 		if _, err := exec.LookPath(bin); err != nil {
 			continue
 		}
