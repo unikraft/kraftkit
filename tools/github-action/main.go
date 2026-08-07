@@ -21,8 +21,8 @@ import (
 	"kraftkit.sh/config"
 	"kraftkit.sh/internal/bootstrap"
 	"kraftkit.sh/log"
+	mplatform "kraftkit.sh/machine/platform"
 	"kraftkit.sh/manifest"
-	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
@@ -44,34 +44,49 @@ type GithubAction struct {
 	Kraftfile string `long:"kraftfile" env:"INPUT_KRAFTFILE" usage:"Path to Kraftfile or contents of Kraftfile"`
 
 	// Build flags
-	Arch          string `long:"arch" env:"INPUT_ARCH" usage:"Architecture to build for"`
-	Build         bool   `long:"build" env:"INPUT_BUILD" usage:"Toggle building the unikernel"`
-	GitCloneDepth int    `long:"git_clone_depth" env:"INPUT_GIT_CLONE_DEPTH" usage:"Depth of the Git clone"`
-	ForceGit      bool   `long:"force_git" env:"INPUT_FORCE_GIT" usage:"Use Git when pulling sources"`
-	Plat          string `long:"plat" env:"INPUT_PLAT" usage:"Platform to build for"`
-	Target        string `long:"target" env:"INPUT_TARGET" usage:"Name of the target to build for"`
-	Toolchain     string `long:"toolchain" env:"INPUT_TOOLCHAIN" usage:"Override toolchain variables for this build (e.g. CC=clang LD=ld.lld)"`
+	Arch           string `long:"arch" env:"INPUT_ARCH" usage:"Architecture to build for"`
+	Build          bool   `long:"build" env:"INPUT_BUILD" usage:"Toggle building the unikernel"`
+	GitCloneDepth  int    `long:"git_clone_depth" env:"INPUT_GIT_CLONE_DEPTH" usage:"Depth of the Git clone"`
+	ForceGit       bool   `long:"force_git" env:"INPUT_FORCE_GIT" usage:"Use Git when pulling sources"`
+	KeepFileOwners bool   `long:"keep_file_owners" env:"INPUT_KEEP_FILE_OWNERS" usage:"Keep file owners (user:group) in the rootfs (false sets 'root:root')"`
+	NoRootfs       bool   `long:"no_rootfs" env:"INPUT_NO_ROOTFS" usage:"Do not build the root file system (initramfs)"`
+	Plat           string `long:"plat" env:"INPUT_PLAT" usage:"Platform to build for"`
+	Target         string `long:"target" env:"INPUT_TARGET" usage:"Name of the target to build for"`
+	Toolchain      string `long:"toolchain" env:"INPUT_TOOLCHAIN" usage:"Override toolchain variables for this build (e.g. CC=clang LD=ld.lld)"`
 
 	// Running flags
 	Execute bool   `long:"execute" env:"INPUT_EXECUTE" usage:"If to run the unikernel"`
+	Memory  string `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
 	Timeout uint64 `long:"timeout" env:"INPUT_TIMEOUT" usage:"Timeout for the unikernel"`
 
 	// Packaging flags
-	Args       string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
-	Rootfs     string `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
-	RootfsType string `long:"rootfs_type" env:"INPUT_ROOTFS_TYPE" usage:"Type of rootfs to build (cpio/erofs)" default:"cpio"`
-	Memory     string `long:"memory" env:"INPUT_MEMORY" usage:"Set the memory size"`
-	Name       string `long:"name" env:"INPUT_NAME" usage:"Set the name of the output"`
-	Output     string `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
-	Push       bool   `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
-	Strategy   string `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
-	Dbg        bool   `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
+	Args        string `long:"args" env:"INPUT_ARGS" usage:"Arguments to pass to the unikernel"`
+	Compress    bool   `long:"compress" env:"INPUT_COMPRESS" usage:"Compress the rootfs and ROMs (experimental)"`
+	Dbg         bool   `long:"dbg" env:"INPUT_DBG" usage:"Use the debug kernel"`
+	Env         string `long:"env" env:"INPUT_ENV" usage:"Environment variables to be packed into the package (k=v)"`
+	KConfigFile string `long:"kconfig_file" env:"INPUT_KCONFIG_FILE" usage:"Path to an extra KConfig file to be included as metadata"`
+	Labels      string `long:"labels" env:"INPUT_LABELS" usage:"Labels to be packed into the package (k=v)"`
+	Name        string `long:"name" env:"INPUT_NAME" usage:"Reference of the resulting package"`
+	NoKConfig   bool   `long:"no_kconfig" env:"INPUT_NO_KCONFIG" usage:"Do not include the target .config as metadata"`
+	Output      string `long:"output" env:"INPUT_OUTPUT" usage:"Set the output path"`
+	Push        bool   `long:"push" env:"INPUT_PUSH" usage:"Push the output"`
+	RomType     string `long:"rom_type" env:"INPUT_ROM_TYPE" usage:"Type of ROM to build (cpio/erofs)"`
+	Roms        string `long:"roms" env:"INPUT_ROMS" usage:"Paths to auxiliary ROMs to include in the package"`
+	Rootfs      string `long:"rootfs" env:"INPUT_ROOTFS" usage:"Include a rootfs at path"`
+	RootfsType  string `long:"rootfs_type" env:"INPUT_ROOTFS_TYPE" usage:"Type of rootfs to build (cpio/erofs)"`
+	Runtime     string `long:"runtime" env:"INPUT_RUNTIME" usage:"Set the runtime to use for the package"`
+	SetKConfig  string `long:"set_kconfig" env:"INPUT_SET_KCONFIG" usage:"KConfig values to be packed into the package (k=v)"`
+	Strategy    string `long:"strategy" env:"INPUT_STRATEGY" usage:"Merge strategy to use when packaging"`
 
 	// Internal attributes
 	project    app.Application
 	target     target.Target
 	initrdPath string
 	toolchain  map[string]string
+	envs       []string
+	labels     []string
+	roms       []string
+	setKConfig []string
 }
 
 func (opts *GithubAction) execScript(ctx context.Context, path string) error {
@@ -86,6 +101,29 @@ func (opts *GithubAction) execScript(ctx context.Context, path string) error {
 	cmd.Env = os.Environ()
 
 	return cmd.Run()
+}
+
+// parseList interprets a multi-value action input either as an inline YAML list
+// (e.g. `["a", "b"]` or a block sequence) or as a newline-separated list of
+// values, which is the more idiomatic form for GitHub Action inputs.
+func parseList(input string) []string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil
+	}
+
+	var list []string
+	if err := yaml.Unmarshal([]byte(input), &list); err == nil {
+		return list
+	}
+
+	for _, line := range strings.Split(input, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			list = append(list, line)
+		}
+	}
+
+	return list
 }
 
 func (opts *GithubAction) mergeToolchain(global map[string]string, flags string) map[string]string {
@@ -141,8 +179,19 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		opts.toolchain = toolchain
 	}
 
+	opts.envs = parseList(opts.Env)
+	opts.labels = parseList(opts.Labels)
+	opts.roms = parseList(opts.Roms)
+	opts.setKConfig = parseList(opts.SetKConfig)
+
 	if (len(opts.Arch) > 0 || len(opts.Plat) > 0) && len(opts.Target) > 0 {
 		return fmt.Errorf("target and platform/architecture are mutually exclusive")
+	}
+
+	// Normalize any platform alias (e.g. `kvm` -> `qemu`, `hl` -> `hyperlight`)
+	// so that target filtering and machine drivers agree on the same name.
+	if len(opts.Plat) > 0 {
+		opts.Plat = mplatform.PlatformByName(opts.Plat).String()
 	}
 
 	workspace := os.Getenv("GITHUB_WORKSPACE")
@@ -209,6 +258,11 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 				return fmt.Errorf("could not write entire Kraftfile to %s", fi.Name())
 			}
 
+			// Point the input at the materialized file so that any subsequent
+			// re-initialization of the project (e.g. during packaging) does not
+			// attempt to interpret the inline contents as a path.
+			opts.Kraftfile = fi.Name()
+
 			popts = append(popts, app.WithProjectKraftfile(fi.Name()))
 		}
 	} else {
@@ -237,54 +291,15 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		manifest.GitCloneDepth = opts.GitCloneDepth
 	}
 
-	if opts.project.Template() != nil {
-		// All the components of a Unikraft unikernel build begin as remote packages
-		// which need fetch.  The first package which we need to fetch is the template
-		// which will be later merged into the current project.  The `Catalog` method
-		// will search for the package in the package manager.
-		packages, err := packmanager.G(ctx).Catalog(ctx,
-			packmanager.WithName(opts.project.Template().Name()),
-			packmanager.WithTypes(opts.project.Template().Type()),
-			packmanager.WithVersion(opts.project.Template().Version()),
-			packmanager.WithSource(opts.project.Template().Source()),
-			packmanager.WithRemote(true),
-		)
-		if err != nil {
-			return fmt.Errorf("could not fetch project template: %w", err)
-		}
-		if len(packages) == 0 {
-			return fmt.Errorf("could not find template '%s'", opts.project.Template().Name())
-		}
+	// The action runs headless in CI; never prompt for input.
+	config.G[config.KraftKit](ctx).NoPrompt = true
 
-		// Pull all the template's packages into the project's working directory's
-		// build directory.
-		for _, p := range packages {
-			log.G(ctx).WithField("name", p.Name()).Info("pulling package")
-			if err := p.Pull(ctx,
-				pack.WithPullWorkdir(opts.Workdir),
-			); err != nil {
-				return fmt.Errorf("could not pull package %s: %w", p.Name(), err)
-			}
-		}
-
-		// Now that the template has bes been fetched, we must merge it with the
-		// current project.  Start by instating a new project from the template.
-		templateProject, err := app.NewProjectFromOptions(ctx,
-			app.WithProjectWorkdir(opts.project.Template().Path()),
-			app.WithProjectDefaultKraftfiles(),
-		)
-		if err != nil {
-			return fmt.Errorf("could not initialize template project: %w", err)
-		}
-
-		// Now merge the template project with the current project.
-		opts.project, err = opts.project.MergeTemplate(ctx, templateProject)
-		if err != nil {
-			return fmt.Errorf("could not merge template project: %w", err)
-		}
+	if err := opts.pull(ctx); err != nil {
+		return fmt.Errorf("could not pull project components: %w", err)
 	}
 
-	// Filter project targets by any provided input arguments
+	// Filter project targets by any provided input arguments.  This is done
+	// after pulling so that template-provided targets are available.
 	targets := target.Filter(
 		opts.project.Targets(),
 		opts.Arch,
@@ -333,10 +348,6 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		opts.Strategy = packmanager.StrategyMerge.String()
 	}
 
-	if err := opts.pull(ctx); err != nil {
-		return fmt.Errorf("could not pull project components: %w", err)
-	}
-
 	if opts.Build {
 		if err := opts.build(ctx); err != nil {
 			return fmt.Errorf("could not build unikernel: %w", err)
@@ -349,15 +360,10 @@ func (opts *GithubAction) Run(ctx context.Context, args []string) (err error) {
 		}
 	}
 
-	if opts.Output != "" {
+	if opts.Output != "" || opts.Name != "" {
 		if err := opts.packAndPush(ctx); err != nil {
 			return fmt.Errorf("could not package unikernel: %w", err)
 		}
-	}
-
-	workspace = os.Getenv("GITHUB_WORKSPACE")
-	if workspace == "" {
-		workspace = "/github/workspace"
 	}
 
 	return nil
