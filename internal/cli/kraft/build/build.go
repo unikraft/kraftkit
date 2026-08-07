@@ -229,6 +229,10 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 
 	cmd.SetContext(ctx)
 
+	if err := validateToolchainProfile(ctx, opts.ToolchainProfile); err != nil {
+		return err
+	}
+
 	if cmd.Flag("rootfs-type").Changed && cmd.Flag("rootfs-type").Value.String() != "" {
 		opts.RootfsType = kraftfilev07.FsType(cmd.Flag("rootfs-type").Value.String())
 	}
@@ -433,4 +437,16 @@ func mergeToolchain(ctx context.Context, global map[string]string, profileName s
 		}
 	}
 	return result
+}
+
+func validateToolchainProfile(ctx context.Context, profileName string) error {
+	if profileName == "" {
+		return nil
+	}
+
+	if _, ok := config.G[config.KraftKit](ctx).ToolchainProfiles[profileName]; !ok {
+		return fmt.Errorf("toolchain profile %q does not exist", profileName)
+	}
+
+	return nil
 }

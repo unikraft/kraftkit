@@ -83,15 +83,6 @@ func TestMergeToolchain(t *testing.T) {
 			flags:       []string{"UK_CFLAGS=-O0"},
 			expect:      map[string]string{"CC": "clang", "LD": "ld.bfd", "UK_CFLAGS": "-O0"},
 		},
-		{
-			name: "profile name does not exist",
-			profiles: map[string]map[string]string{
-				"other": {"CC": "clang"},
-			},
-			profileName: "nonexistent",
-			global:      map[string]string{"CC": "gcc"},
-			expect:      map[string]string{"CC": "gcc"},
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := config.WithConfigManager(context.Background(), &config.ConfigManager[config.KraftKit]{
@@ -103,6 +94,48 @@ func TestMergeToolchain(t *testing.T) {
 			got := mergeToolchain(ctx, tc.global, tc.profileName, tc.flags)
 			if !reflect.DeepEqual(got, tc.expect) {
 				t.Errorf("mergeToolchain() = %v, want %v", got, tc.expect)
+			}
+		})
+	}
+}
+
+func TestValidateToolchainProfile(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		profiles    map[string]map[string]string
+		profileName string
+		wantErr     string
+	}{
+		{
+			name: "no profile selected",
+		},
+		{
+			name: "configured profile",
+			profiles: map[string]map[string]string{
+				"clang": {"CC": "clang"},
+			},
+			profileName: "clang",
+		},
+		{
+			name:        "unknown profile",
+			profileName: "clang",
+			wantErr:     `toolchain profile "clang" does not exist`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := config.WithConfigManager(context.Background(), &config.ConfigManager[config.KraftKit]{
+				Config: &config.KraftKit{ToolchainProfiles: tc.profiles},
+			})
+
+			err := validateToolchainProfile(ctx, tc.profileName)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("validateToolchainProfile() returned unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tc.wantErr {
+				t.Fatalf("validateToolchainProfile() error = %v, want %q", err, tc.wantErr)
 			}
 		})
 	}
