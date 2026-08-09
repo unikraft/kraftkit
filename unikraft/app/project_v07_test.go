@@ -187,6 +187,31 @@ targets:
 	}
 }
 
+func Test_NewProjectFromOptionsV07_Riscv64TargetArtifactNames(t *testing.T) {
+	project := mustProjectFromBytes(t, t.TempDir(), `
+spec: v0.7
+name: Demo
+unikraft: stable
+targets:
+  - plat: qemu
+    arch: riscv64
+`)
+
+	targets := project.Targets()
+	if len(targets) != 1 {
+		t.Fatalf("len(Targets()) = %d, want 1", len(targets))
+	}
+
+	wantKernel := filepath.Join(project.OutDir(), "demo_qemu-riscv64")
+	if targets[0].Kernel() != wantKernel {
+		t.Errorf("targets[0].Kernel() = %q, want %q", targets[0].Kernel(), wantKernel)
+	}
+
+	if targets[0].ConfigFilename() != ".config.demo_qemu-riscv64" {
+		t.Errorf("targets[0].ConfigFilename() = %q, want %q", targets[0].ConfigFilename(), ".config.demo_qemu-riscv64")
+	}
+}
+
 func Test_NewProjectFromOptionsV07_CustomOutDir(t *testing.T) {
 	workdir := t.TempDir()
 	outdir := filepath.Join(workdir, "artifacts")

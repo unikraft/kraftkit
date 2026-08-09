@@ -36,6 +36,7 @@ import (
 	"kraftkit.sh/machine/network/macaddr"
 	"kraftkit.sh/machine/qemu/qmp"
 	qmpapi "kraftkit.sh/machine/qemu/qmp/v7alpha2"
+	"kraftkit.sh/unikraft/arch"
 	"kraftkit.sh/unikraft/export/v0/posixenviron"
 	"kraftkit.sh/unikraft/export/v0/ukargparse"
 	"kraftkit.sh/unikraft/export/v0/uknetdev"
@@ -89,6 +90,8 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 		bin = QemuSystemArm
 	case "arm64":
 		bin = QemuSystemAarch64
+	case "riscv64":
+		bin = QemuSystemRiscv64
 	default:
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}
@@ -106,6 +109,10 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 
 	if qemuVersion.LessThan(QemuVersion4_2_0) {
 		return machine, fmt.Errorf("unsupported QEMU version: %s: please upgrade to a newer version", qemuVersion.String())
+	}
+
+	if machine.Spec.Architecture == arch.ArchitectureRISCV64.String() && qemuVersion.LessThan(QemuVersion8_2_0) {
+		return machine, fmt.Errorf("unsupported QEMU version for %s: %s: please upgrade to version 8.2.0 or newer", machine.Spec.Architecture, qemuVersion.String())
 	}
 
 	// Determine the QEMU machine type to use
@@ -473,7 +480,15 @@ func (service *machineV1alpha1Service) Create(ctx context.Context, machine *mach
 				CPU: QemuCPUArmMax,
 			}),
 		)
-
+	case "riscv64":
+		qopts = append(qopts,
+			WithMachine(QemuMachine{
+				Type: QemuMachineTypeVirt,
+			}),
+			WithCPU(QemuCPU{
+				CPU: QemuCPURISCVMax,
+			}),
+		)
 	default:
 		return nil, fmt.Errorf("unsupported architecture: %s", machine.Spec.Architecture)
 	}

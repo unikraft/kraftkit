@@ -23,6 +23,7 @@ var (
 	QemuVersion7_2_0 = semver.New(7, 2, 0, "", "")
 	QemuVersion7_2_4 = semver.New(7, 2, 4, "", "")
 	QemuVersion8_0_0 = semver.New(8, 0, 0, "", "")
+	QemuVersion8_2_0 = semver.New(8, 2, 0, "", "")
 )
 
 // GetQemuVersionFromBin is direct method of accessing the version of the

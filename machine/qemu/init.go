@@ -446,6 +446,7 @@ func init() {
 	gob.Register(QemuCPU{})
 	gob.Register(QemuCPUX86(""))
 	gob.Register(QemuCPUArm(""))
+	gob.Register(QemuCPURISCV(""))
 
 	// Displays
 	// gob.Register(QemuDisplaySpiceApp{})
