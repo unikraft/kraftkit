@@ -16,10 +16,12 @@ import (
 
 func TestMergeToolchain(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		global map[string]string
-		flags  []string
-		expect map[string]string
+		name        string
+		global      map[string]string
+		profiles    map[string]map[string]string
+		profileName string
+		flags       []string
+		expect      map[string]string
 	}{
 		{
 			name:   "flags only",
@@ -63,9 +65,33 @@ func TestMergeToolchain(t *testing.T) {
 			flags:  []string{"UK_CFLAGS=-O2 -DFOO=1"},
 			expect: map[string]string{"UK_CFLAGS": "-O2 -DFOO=1"},
 		},
+		{
+			name: "profile only",
+			profiles: map[string]map[string]string{
+				"myprofile": {"CC": "clang", "UK_CFLAGS": "-O3"},
+			},
+			profileName: "myprofile",
+			expect:      map[string]string{"CC": "clang", "UK_CFLAGS": "-O3"},
+		},
+		{
+			name:   "profile overrides global but flag overrides profile",
+			global: map[string]string{"CC": "gcc", "LD": "ld.bfd"},
+			profiles: map[string]map[string]string{
+				"myprofile": {"CC": "clang", "UK_CFLAGS": "-O3"},
+			},
+			profileName: "myprofile",
+			flags:       []string{"UK_CFLAGS=-O0"},
+			expect:      map[string]string{"CC": "clang", "LD": "ld.bfd", "UK_CFLAGS": "-O0"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := mergeToolchain(tc.global, tc.flags)
+			ctx := config.WithConfigManager(context.Background(), &config.ConfigManager[config.KraftKit]{
+				Config: &config.KraftKit{
+					Toolchain:         tc.global,
+					ToolchainProfiles: tc.profiles,
+				},
+			})
+			got := mergeToolchain(ctx, tc.global, tc.profileName, tc.flags)
 			if !reflect.DeepEqual(got, tc.expect) {
 				t.Errorf("mergeToolchain() = %v, want %v", got, tc.expect)
 			}
@@ -73,12 +99,56 @@ func TestMergeToolchain(t *testing.T) {
 	}
 }
 
+func TestValidateToolchainProfile(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		profiles    map[string]map[string]string
+		profileName string
+		wantErr     string
+	}{
+		{
+			name: "no profile selected",
+		},
+		{
+			name: "configured profile",
+			profiles: map[string]map[string]string{
+				"clang": {"CC": "clang"},
+			},
+			profileName: "clang",
+		},
+		{
+			name:        "unknown profile",
+			profileName: "clang",
+			wantErr:     `toolchain profile "clang" does not exist`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := config.WithConfigManager(context.Background(), &config.ConfigManager[config.KraftKit]{
+				Config: &config.KraftKit{ToolchainProfiles: tc.profiles},
+			})
+
+			err := validateToolchainProfile(ctx, tc.profileName)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("validateToolchainProfile() returned unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tc.wantErr {
+				t.Fatalf("validateToolchainProfile() error = %v, want %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestMakeOptionsForBuildIncludesResolvedToolchain(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		global map[string]string
-		flags  []string
-		expect []string
+		name        string
+		global      map[string]string
+		profiles    map[string]map[string]string
+		profileName string
+		flags       []string
+		expect      []string
 	}{
 		{
 			name:   "global values are forwarded to make",
@@ -90,6 +160,16 @@ func TestMakeOptionsForBuildIncludesResolvedToolchain(t *testing.T) {
 			global: map[string]string{"CC": "gcc", "LD": "ld"},
 			flags:  []string{"CC=clang", "UK_CFLAGS=-O0 -g"},
 			expect: []string{"CC=clang", "LD=ld", "UK_CFLAGS=-O0 -g"},
+		},
+		{
+			name:        "profile overrides win over global, and cli overrides win over profile",
+			global:      map[string]string{"CC": "gcc", "LD": "ld"},
+			profileName: "myprofile",
+			profiles: map[string]map[string]string{
+				"myprofile": {"CC": "clang", "EXTRA_CFLAGS": "-O3"},
+			},
+			flags:  []string{"CC=gcc-12"},
+			expect: []string{"CC=gcc-12", "LD=ld", "EXTRA_CFLAGS=-O3"},
 		},
 		{
 			name:   "malformed flags are ignored",
@@ -104,11 +184,15 @@ func TestMakeOptionsForBuildIncludesResolvedToolchain(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := config.WithConfigManager(context.Background(), &config.ConfigManager[config.KraftKit]{
-				Config: &config.KraftKit{Toolchain: tc.global},
+				Config: &config.KraftKit{
+					Toolchain:         tc.global,
+					ToolchainProfiles: tc.profiles,
+				},
 			})
 
 			mo, err := make.NewMakeOptions(makeOptionsForBuild(ctx, &BuildOptions{
-				Toolchain: tc.flags,
+				Toolchain:        tc.flags,
+				ToolchainProfile: tc.profileName,
 			})...)
 			if err != nil {
 				t.Fatalf("NewMakeOptions() returned unexpected error: %v", err)

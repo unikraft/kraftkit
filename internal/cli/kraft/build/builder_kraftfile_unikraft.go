@@ -111,7 +111,7 @@ func makeOptionsForBuild(ctx context.Context, opts *BuildOptions) []make.MakeOpt
 		mopts = append(mopts, make.WithMaxJobs(!opts.NoFast && !config.G[config.KraftKit](ctx).NoParallel))
 	}
 
-	if toolchain := mergeToolchain(config.G[config.KraftKit](ctx).Toolchain, opts.Toolchain); len(toolchain) > 0 {
+	if toolchain := mergeToolchain(ctx, config.G[config.KraftKit](ctx).Toolchain, opts.ToolchainProfile, opts.Toolchain); len(toolchain) > 0 {
 		mopts = append(mopts, make.WithVars(toolchain))
 	}
 
