@@ -83,6 +83,8 @@ jobs:
         run: docker stop "buildkitd_${GITHUB_RUN_ID}_${{ steps.suffix.outputs.suffix }}" || true
 
   e2e-cli:
+    env:
+      HYPERLIGHT_UNIKRAFT_VERSION: 0.12.1
     strategy:
       fail-fast: false
       matrix:
@@ -102,6 +104,28 @@ jobs:
         with:
           go-version: 1.26.2
           cache: false
+          
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up KVM permissions
+        run: sudo chmod 666 /dev/kvm || true
+
+      - name: Cache hyperlight-unikraft binary
+        id: cache-hyperlight
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/hyperlight-unikraft
+          key: hyperlight-unikraft-${{ env.HYPERLIGHT_UNIKRAFT_VERSION }}
+
+      - name: Set up Hyperlight
+        if: steps.cache-hyperlight.outputs.cache-hit != 'true'
+        run: |
+          cargo install \
+            --locked \
+            --version "${HYPERLIGHT_UNIKRAFT_VERSION}" \
+            --bin hyperlight-unikraft \
+            hyperlight-unikraft
 
       - name: Set Go variables
         id: goenv
