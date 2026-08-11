@@ -83,6 +83,8 @@ jobs:
         run: docker stop "buildkitd_${GITHUB_RUN_ID}_${{ steps.suffix.outputs.suffix }}" || true
 
   e2e-cli:
+    env:
+      HYPERLIGHT_UNIKRAFT_VERSION: 0.12.1
     strategy:
       fail-fast: false
       matrix:
@@ -109,9 +111,15 @@ jobs:
       - name: Set up KVM permissions
         run: sudo chmod 666 /dev/kvm || true
 
+      - name: Cache hyperlight-unikraft binary
+        id: cache-hyperlight
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/hyperlight-unikraft
+          key: hyperlight-unikraft-${{ env.HYPERLIGHT_UNIKRAFT_VERSION }}
+
       - name: Set up Hyperlight
-        env:
-          HYPERLIGHT_UNIKRAFT_VERSION: 0.12.1
+        if: steps.cache-hyperlight.outputs.cache-hit != 'true'
         run: |
           cargo install \
             --locked \
