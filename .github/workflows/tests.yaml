@@ -102,6 +102,19 @@ jobs:
         with:
           go-version: 1.26.2
           cache: false
+          
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Hyperlight
+        env:
+          HYPERLIGHT_UNIKRAFT_VERSION: 0.12.1
+        run: |
+          cargo install \
+            --locked \
+            --version "${HYPERLIGHT_UNIKRAFT_VERSION}" \
+            --bin hyperlight-unikraft \
+            hyperlight-unikraft
 
       - name: Set Go variables
         id: goenv
