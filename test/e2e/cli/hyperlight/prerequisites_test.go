@@ -22,9 +22,11 @@ func skipUnlessLinux() {
 func SkipUnlessEnvReady() {
 	skipUnlessLinux()
 
-	if _, err := os.Stat("/dev/kvm"); err != nil {
-		Skip("hyperlight e2e tests require /dev/kvm: " + err.Error())
+	f, err := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
+	if err != nil {
+		Skip("hyperlight e2e tests require read/write access to /dev/kvm: " + err.Error())
 	}
+	_ = f.Close()
 
 	if _, err := exec.LookPath("hyperlight-unikraft"); err != nil {
 		Skip("hyperlight e2e tests require hyperlight-unikraft on $PATH")

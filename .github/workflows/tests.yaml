@@ -106,6 +106,9 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up KVM permissions
+        run: sudo chmod 666 /dev/kvm || true
+
       - name: Set up Hyperlight
         env:
           HYPERLIGHT_UNIKRAFT_VERSION: 0.12.1
