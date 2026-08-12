@@ -2,7 +2,7 @@
 # Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
-ARG GO_VERSION=1.26.2
+ARG GO_VERSION=1.26.5
 ARG DEBIAN_VERSION=trixie
 ARG HYPERLIGHT_UNIKRAFT_VERSION=0.12.1
 ARG KRAFTKIT_VERSION=latest
