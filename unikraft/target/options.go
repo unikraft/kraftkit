@@ -41,7 +41,9 @@ func WithRoms(roms []string) TargetOption {
 	return func(tc *TargetConfig) {
 		for _, rom := range roms {
 			tc.roms = append(tc.roms, kraftfile.FS{
-				Source: rom,
+				Source: &kraftfile.FSSource{
+					Path: rom,
+				},
 			})
 		}
 	}

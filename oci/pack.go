@@ -407,11 +407,19 @@ func (ocipack *ociPackage) build(ctx context.Context) (*ociPackage, error) {
 	}
 
 	for _, rom := range ocipack.Roms() {
+		romSourceStr := ""
+		if rom.Source != nil {
+			if rom.Source.Path != "" {
+				romSourceStr = rom.Source.Path
+			} else if rom.Source.Dockerfile != "" {
+				romSourceStr = rom.Source.Dockerfile
+			}
+		}
 		log.G(ctx).
-			WithField("rom", rom.Source).
+			WithField("rom", romSourceStr).
 			Trace("layer")
-		if err := ocipack.manifest.AddRom(ctx, rom.Source); err != nil {
-			return nil, fmt.Errorf("could not add ROM '%s' to manifest: %w", rom.Source, err)
+		if err := ocipack.manifest.AddRom(ctx, romSourceStr); err != nil {
+			return nil, fmt.Errorf("could not add ROM '%s' to manifest: %w", romSourceStr, err)
 		}
 	}
 

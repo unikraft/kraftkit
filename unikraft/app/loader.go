@@ -83,12 +83,18 @@ func NewApplicationFromInterface(ctx context.Context, iface map[string]interface
 			switch v := rom.(type) {
 			case string:
 				app.roms = append(app.roms, kraftfilev07.FS{
-					Source: v,
+					Source: &kraftfilev07.FSSource{
+						Path: v,
+					},
+					Format: kraftfilev07.FsTypeCpio,
 				})
 			case map[string]any, map[any]any:
 				var fs kraftfilev07.FS
 				if err := Transform(ctx, v, &fs); err != nil {
 					return nil, err
+				}
+				if fs.Format == "" {
+					fs.Format = kraftfilev07.FsTypeCpio
 				}
 				app.roms = append(app.roms, fs)
 			default:

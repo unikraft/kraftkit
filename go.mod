@@ -91,7 +91,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.21.1
 	sigs.k8s.io/yaml v1.6.0
 	unikraft.com/cloud/sdk v0.3.0
-	unikraft.com/x/kraftfile v0.0.0-20260427093726-3fccc9bca88d
+	unikraft.com/x/kraftfile v0.0.0-20260813011014-92d613cc773b
 	xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240729172045-026c9fa29716
 )
 

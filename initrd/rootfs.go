@@ -104,15 +104,24 @@ func BuildRoms(ctx context.Context, workdir string, roms []kraftfilev07.FS, comp
 			continue
 		}
 
+		romSourceStr := ""
+		if rom.Source != nil {
+			if rom.Source.Path != "" {
+				romSourceStr = rom.Source.Path
+			} else if rom.Source.Dockerfile != "" {
+				romSourceStr = rom.Source.Dockerfile
+			}
+		}
+
 		// Check if the ROM is a directory; if it's a file, skip building and use as-is
-		romPath := rom.Source
-		if !filepath.IsAbs(rom.Source) {
-			romPath = filepath.Join(workdir, rom.Source)
+		romPath := romSourceStr
+		if !filepath.IsAbs(romSourceStr) {
+			romPath = filepath.Join(workdir, romSourceStr)
 		}
 
 		info, err := os.Stat(romPath)
 		if err != nil {
-			return nil, fmt.Errorf("could not stat ROM path '%s': %w", rom.Source, err)
+			return nil, fmt.Errorf("could not stat ROM path '%s': %w", romSourceStr, err)
 		}
 
 		// If it's a regular file, don't try to build it as a filesystem
@@ -120,14 +129,14 @@ func BuildRoms(ctx context.Context, workdir string, roms []kraftfilev07.FS, comp
 			// File ROMs must be aligned to page size
 			const pageSize = 4096
 			if info.Size()%pageSize != 0 {
-				return nil, fmt.Errorf("ROM file '%s' size (%d bytes) is not aligned to page size (%d bytes)", rom.Source, info.Size(), pageSize)
+				return nil, fmt.Errorf("ROM file '%s' size (%d bytes) is not aligned to page size (%d bytes)", romSourceStr, info.Size(), pageSize)
 			}
 			builtRoms[i] = rom
 			continue
 		}
 
 		ramfs, err := New(ctx,
-			rom.Source,
+			romSourceStr,
 			WithWorkdir(workdir),
 			WithOutput(filepath.Join(
 				workdir,
@@ -145,7 +154,7 @@ func BuildRoms(ctx context.Context, workdir string, roms []kraftfilev07.FS, comp
 			WithOutputType(fsType),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not initialize ROM builder for '%s': %w", rom.Source, err)
+			return nil, fmt.Errorf("could not initialize ROM builder for '%s': %w", romSourceStr, err)
 		}
 
 		processes = append(processes,
@@ -159,7 +168,9 @@ func BuildRoms(ctx context.Context, workdir string, roms []kraftfilev07.FS, comp
 					}
 
 					builtRoms[i] = kraftfilev07.FS{
-						Source: builtRom,
+						Source: &kraftfilev07.FSSource{
+							Path: builtRom,
+						},
 						Format: fsType,
 					}
 					return nil

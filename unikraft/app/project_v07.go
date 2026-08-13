@@ -334,17 +334,25 @@ func v07RootfsAndRomsFromDocument(rootfs *kraftfilev07.FS, roms []kraftfilev07.F
 		rawRoms    []kraftfilev07.FS
 	)
 
-	if rootfs != nil {
-		rootfsPath = rootfs.Source
+	if rootfs != nil && rootfs.Source != nil {
+		if rootfs.Source.Path != "" {
+			rootfsPath = rootfs.Source.Path
+		} else if rootfs.Source.Dockerfile != "" {
+			rootfsPath = rootfs.Source.Dockerfile
+		}
 		if rootfs.Format != "" {
 			fsType = kraftfilev07.FsType(rootfs.Format.String())
 		}
 	}
 
 	for _, rom := range roms {
+		fmt := rom.Format
+		if fmt == "" {
+			fmt = kraftfilev07.FsTypeCpio
+		}
 		rawRoms = append(rawRoms, kraftfilev07.FS{
 			Source: rom.Source,
-			Format: kraftfilev07.FsType(rom.Format.String()),
+			Format: fmt,
 		})
 	}
 

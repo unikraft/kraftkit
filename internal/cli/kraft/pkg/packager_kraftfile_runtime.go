@@ -433,7 +433,9 @@ func (p *packagerKraftfileRuntime) Pack(ctx context.Context, opts *PkgOptions, a
 	} else if len(opts.Roms) > 0 {
 		for _, rom := range opts.Roms {
 			rawRoms = append(rawRoms, kraftfilev07.FS{
-				Source: rom,
+				Source: &kraftfilev07.FSSource{
+					Path: rom,
+				},
 			})
 		}
 	} else if p.target != nil && len(p.target.Roms()) > 0 {
