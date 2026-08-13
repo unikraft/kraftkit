@@ -34,6 +34,7 @@ import (
 	"github.com/moby/buildkit/session/secrets/secretsprovider"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/tonistiigi/fsutil"
 
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"
 	_ "github.com/moby/buildkit/client/connhelper/kubepod"
@@ -313,6 +314,16 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		}
 	}
 
+	contextMount, err := fsutil.NewFS(initrd.opts.workdir)
+	if err != nil {
+		return "", fmt.Errorf("could not create context local mount: %w", err)
+	}
+
+	dockerfileMount, err := fsutil.NewFS(initrd.opts.workdir)
+	if err != nil {
+		return "", fmt.Errorf("could not create dockerfile local mount: %w", err)
+	}
+
 	solveOpt := &client.SolveOpt{
 		Ref:     identity.NewID(),
 		Session: session,
@@ -327,9 +338,9 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			},
 		},
 		CacheExports: cacheExports,
-		LocalDirs: map[string]string{
-			"context":    initrd.opts.workdir,
-			"dockerfile": initrd.opts.workdir,
+		LocalMounts: map[string]fsutil.FS{
+			"context":    contextMount,
+			"dockerfile": dockerfileMount,
 		},
 		Frontend:      "dockerfile.v0",
 		FrontendAttrs: attrs,
