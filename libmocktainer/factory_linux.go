@@ -8,10 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-
-	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"kraftkit.sh/libmocktainer/configs"
 	"kraftkit.sh/libmocktainer/configs/validate"
@@ -165,7 +164,7 @@ func validateID(id string) error {
 
 	}
 
-	if string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
+	if string(os.PathSeparator)+id != filepath.Clean(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
 

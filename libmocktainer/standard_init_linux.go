@@ -188,5 +188,5 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	return system.Exec(name, l.config.Args[0:], os.Environ())
+	return unix.Exec(name, l.config.Args[0:], os.Environ())
 }
