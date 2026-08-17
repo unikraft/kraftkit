@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"runtime/debug"
 	"strings"
 
@@ -16,6 +17,8 @@ import (
 
 	"github.com/moby/buildkit/client"
 	bkappdefaults "github.com/moby/buildkit/util/appdefaults"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	dockerclient "github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	tlog "github.com/testcontainers/testcontainers-go/log"
@@ -237,9 +240,21 @@ func startBuildkit(ctx context.Context, buildkitVersion string, port int, printf
 			AlwaysPullImage: true,
 			Image:           "moby/buildkit:" + buildkitVersion,
 			WaitingFor:      wait.ForLog(fmt.Sprintf("running server on [::]:%d", port)),
-			Privileged:      true,
-			ExposedPorts:    []string{fmt.Sprintf("%d:%d/tcp", port, port)},
-			Cmd:             []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
+			ExposedPorts:    []string{fmt.Sprintf("%d/tcp", port)},
+			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.Privileged = true
+				hc.SecurityOpt = []string{"apparmor=unconfined"}
+				if hc.PortBindings == nil {
+					hc.PortBindings = network.PortMap{}
+				}
+				hc.PortBindings[network.MustParsePort(fmt.Sprintf("%d/tcp", port))] = []network.PortBinding{
+					{
+						HostIP:   netip.IPv4Unspecified(),
+						HostPort: fmt.Sprintf("%d", port),
+					},
+				}
+			},
+			Cmd: []string{"--addr", fmt.Sprintf("tcp://0.0.0.0:%d", port)},
 			Mounts: testcontainers.ContainerMounts{
 				{
 					Source: testcontainers.GenericVolumeMountSource{

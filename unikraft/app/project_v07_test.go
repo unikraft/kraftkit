@@ -474,16 +474,16 @@ roms:
 		t.Fatalf("len(Roms()) = %d, want 2", len(roms))
 	}
 
-	if roms[0].Source != "./assets" {
-		t.Errorf("roms[0].Source = %q, want %q", roms[0].Source, "./assets")
+	if roms[0].Source == nil || roms[0].Source.Path != "./assets" {
+		t.Errorf("roms[0].Source = %v, want %q", roms[0].Source, "./assets")
 	}
 
 	if roms[0].Format != kraftfilev07.FsTypeErofs {
 		t.Errorf("roms[0].Format = %q, want %q", roms[0].Format, kraftfilev07.FsTypeErofs)
 	}
 
-	if roms[1].Source != "./blob.bin" {
-		t.Errorf("roms[1].Source = %q, want %q", roms[1].Source, "./blob.bin")
+	if roms[1].Source == nil || roms[1].Source.Path != "./blob.bin" {
+		t.Errorf("roms[1].Source = %v, want %q", roms[1].Source, "./blob.bin")
 	}
 
 	if roms[1].Format != kraftfilev07.FsTypeCpio {
