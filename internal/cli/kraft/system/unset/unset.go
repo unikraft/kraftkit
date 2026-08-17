@@ -53,5 +53,5 @@ func (opts *Unset) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	return config.M[config.KraftKit](ctx).Write(true)
+	return config.M[config.KraftKit](ctx).Write(false)
 }
