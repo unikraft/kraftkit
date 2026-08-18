@@ -96,8 +96,8 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 		return fmt.Errorf("could not read file: %v", err)
 	}
 
-	from := yaml.Node{}
-	if err := yaml.Unmarshal(data, &from); err != nil {
+	into := yaml.Node{}
+	if err := yaml.Unmarshal(data, &into); err != nil {
 		return fmt.Errorf("could not unmarshal YAML: %s", err)
 	}
 
@@ -106,16 +106,18 @@ func (yf YamlFeeder) Write(structure interface{}, merge bool) error {
 		return err
 	}
 
-	into := yaml.Node{}
-	if err := yaml.Unmarshal(yml, &into); err != nil {
+	from := yaml.Node{}
+	if err := yaml.Unmarshal(yml, &from); err != nil {
 		return err
 	}
 
 	// When kind is 0, it is an uninitialized YAML structure (aka empty file)
-	if from.Kind != 0 && merge {
+	if into.Kind != 0 && merge {
 		if err := yamlmerger.RecursiveMerge(&from, &into); err != nil {
 			return fmt.Errorf("could not update config: %v", err)
 		}
+	} else {
+		into = from
 	}
 
 	if err := f.Truncate(0); err != nil {
