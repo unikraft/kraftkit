@@ -24,7 +24,7 @@ require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl/v2 v2.3.5
-	github.com/containerd/platforms v1.0.0-rc.4
+	github.com/containerd/platforms v1.0.0-rc.5
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/cyphar/filepath-securejoin v0.7.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
@@ -47,7 +47,7 @@ require (
 	github.com/hbollon/go-edlib v1.7.0
 	github.com/henvic/httpretty v0.2.0
 	github.com/klauspost/cpuid/v2 v2.4.0
-	github.com/kubescape/go-git-url v0.0.32
+	github.com/kubescape/go-git-url v0.0.33
 	github.com/mattn/go-colorable v0.1.15
 	github.com/mattn/go-isatty v0.0.24
 	github.com/mattn/go-shellwords v1.0.14
@@ -67,10 +67,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/wrangler v1.1.2
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/tonistiigi/fsutil v0.0.0-20260717003753-6d9dc2ebad62
 	github.com/unikraft/go-archivefs v0.0.0-20260729154444-97f274f42287
@@ -82,7 +82,7 @@ require (
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
-	google.golang.org/grpc v1.83.0
+	google.golang.org/grpc v1.83.1
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.36.3
@@ -244,7 +244,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.28 // indirect
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260805114148-88456608a4f6 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
