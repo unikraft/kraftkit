@@ -161,7 +161,9 @@ func (opts *GithubAction) buildRoms(ctx context.Context, targ target.Target, arc
 		raw = opts.project.Roms()
 	case len(opts.roms) > 0:
 		for _, rom := range opts.roms {
-			raw = append(raw, kraftfilev07.FS{Source: rom})
+			raw = append(raw, kraftfilev07.FS{
+				Source: &kraftfilev07.FSSource{Path: rom},
+			})
 		}
 	case targ != nil && len(targ.Roms()) > 0:
 		raw = targ.Roms()
