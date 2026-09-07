@@ -22,7 +22,6 @@ import (
 
 	kraftcloud "sdk.kraft.cloud"
 	kcclient "sdk.kraft.cloud/client"
-	kcimages "sdk.kraft.cloud/images"
 	kcinstances "sdk.kraft.cloud/instances"
 	kcservices "sdk.kraft.cloud/services"
 
@@ -128,59 +127,6 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 
 	// Replace all slashes in the name with dashes.
 	opts.Name = strings.ReplaceAll(opts.Name, "/", "-")
-
-	// NOTE(craciunoiuc): Code should be removed after public nodes are updated
-	if isPublic, err := utils.IsPublicMetro(ctx, opts.Metro); err != nil {
-		return nil, nil, fmt.Errorf("could not determine if metro is public: %w", err)
-	} else if isPublic {
-		// Keep a reference of the image that we are going to use for the instance.
-		var image *kcimages.GetResponseItem
-
-		// Check if the image exists before creating the instance
-		paramodel, err := processtree.NewProcessTree(
-			ctx,
-			[]processtree.ProcessTreeOption{
-				processtree.IsParallel(false),
-				processtree.WithRenderer(
-					log.LoggerTypeFromString(config.G[config.KraftKit](ctx).Log.Type) != log.FANCY,
-				),
-				processtree.WithFailFast(true),
-				processtree.WithHideOnSuccess(true),
-				processtree.WithTimeout(60 * time.Second),
-			},
-			processtree.NewProcessTreeItem(
-				"propagating",
-				"",
-				func(ctx context.Context) error {
-					for {
-						imageResp, err := opts.Client.Images().WithMetro(opts.Metro).Get(ctx, opts.Image)
-						if err != nil {
-							return fmt.Errorf("could not get image: %w", err)
-						}
-
-						image, err = imageResp.FirstOrErr()
-						if err != nil {
-							return fmt.Errorf("could not get image: %w", err)
-						}
-
-						if image == nil {
-							continue
-						}
-
-						return nil
-					}
-				},
-			),
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not start the process tree: %w", err)
-		}
-
-		err = paramodel.Start()
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not wait for image to be available: %w", err)
-		}
-	}
 
 	var features []kcinstances.Feature
 
@@ -361,15 +307,10 @@ func Create(ctx context.Context, opts *CreateOptions, args ...string) (*kcclient
 						_, instImageBase, _ = strings.Cut(instImageBase, "://")
 					}
 
-					// NOTE(craciunoiuc): Check should be removed after public nodes are updated
-					if isPublic, err := utils.IsPublicMetro(ctx, opts.Metro); err != nil {
-						return nil, nil, fmt.Errorf("could not determine if metro is public: %w", err)
-					} else if !isPublic {
-						// Remove the registry origin which is always present
-						// Also remove the 'official/' if possible
-						_, instImageBase, _ = strings.Cut(instImageBase, "/")
-						instImageBase = strings.TrimPrefix(instImageBase, "official/")
-					}
+					// Remove the registry origin which is always present
+					// Also remove the 'official/' if possible
+					_, instImageBase, _ = strings.Cut(instImageBase, "/")
+					instImageBase = strings.TrimPrefix(instImageBase, "official/")
 
 					if instImageBase == imageBase {
 						qualifiedInstancesToRolloutOver = append(qualifiedInstancesToRolloutOver, instance)
