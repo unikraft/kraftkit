@@ -374,12 +374,9 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		tap.Name = iface.Spec.IfName
 
 		if existing, err := netlink.LinkByName(tap.Name); err == nil {
-			if existing.Attrs().Flags&net.FlagRunning != 0 {
-				if err = netlink.LinkSetDown(tap); err != nil {
-					return network, fmt.Errorf("could not bring %s link down: %v", iface.Spec.IfName, err)
-				}
-				if err := netlink.LinkModify(tap); err != nil {
-					return network, fmt.Errorf("could not update %s link: %v", iface.Spec.IfName, err)
+			if existing.Attrs().MasterIndex != bridge.Attrs().Index {
+				if err := netlink.LinkSetMaster(existing, bridge); err != nil {
+					return network, fmt.Errorf("could not attach %s to bridge: %v", iface.Spec.IfName, err)
 				}
 			}
 		} else {
