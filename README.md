@@ -6,7 +6,12 @@
 [![Go Report Card](https://goreportcard.com/badge/kraftkit.sh)](https://goreportcard.com/report/kraftkit.sh)
 ![Latest release](https://img.shields.io/github/v/release/unikraft/kraftkit)
 
-KraftKit provides a suite of tools and Go-based framework for building custom, minimal, immutable lightweight unikernel virtual machines based on [Unikraft](https://unikraft.org): a fast, secure and open-source library operating system.
+KraftKit provides a suite of tools and Go-based framework for building custom, minimal, immutable lightweight unikernel virtual machines based on [unikraft.org](https://unikraft.org): a fast, secure and open-source library operating system.
+
+> [!NOTE]
+> This repository is specific to the Unikraft unikernel, it is not Unikraft Cloud's CLI.
+> Unikraft Cloud is a separate platform that runs microVMs, with its own CLI and commands.
+> For the [Unikraft Cloud][unikraft-cloud] CLI, see the [`unikraft` CLI documentation][unikraft-cloud-docs].
 
 ![](docs/demo.gif)
 
@@ -182,3 +187,5 @@ KraftKit is part of the [Unikraft OSS Project][unikraft-website] and licensed un
 [unikraft-discord]: https://bit.ly/UnikraftDiscord
 [unikraft-calendar]: https://unikraft.org/community/events/
 [kraftkit-getting-started]: https://unikraft.org/docs/getting-started/
+[unikraft-cloud]: https://unikraft.com
+[unikraft-cloud-docs]: https://unikraft.com/docs/cli
