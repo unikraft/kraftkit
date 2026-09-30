@@ -41,9 +41,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.22.0
 	github.com/google/go-github/v32 v32.1.0
-	github.com/google/go-github/v39 v39.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.6.0
 	github.com/hbollon/go-edlib v1.7.0
 	github.com/henvic/httpretty v0.2.0
 	github.com/klauspost/cpuid/v2 v2.4.0
@@ -89,10 +87,8 @@ require (
 	k8s.io/apimachinery v0.36.3
 	k8s.io/apiserver v0.36.3
 	oras.land/oras-go/v2 v2.6.2
-	sdk.kraft.cloud v0.6.1
 	sigs.k8s.io/kustomize/kyaml v0.21.1
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.3.0
 	unikraft.com/x/kraftfile v0.0.0-20260813011014-92d613cc773b
 	xenbits.xenproject.org/git-http/xen.git/tools/golang/xenlight v0.0.0-20240729172045-026c9fa29716
 )
@@ -195,7 +191,6 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/goharbor/go-client v0.213.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
@@ -204,6 +199,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

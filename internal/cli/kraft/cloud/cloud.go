@@ -7,81 +7,29 @@ package cloud
 
 import (
 	"context"
+	"errors"
 
-	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
-	"kraftkit.sh/config"
-	"kraftkit.sh/log"
-
-	"kraftkit.sh/internal/cli/kraft/cloud/certificate"
-	"kraftkit.sh/internal/cli/kraft/cloud/compose"
-	"kraftkit.sh/internal/cli/kraft/cloud/deploy"
-	"kraftkit.sh/internal/cli/kraft/cloud/image"
-	"kraftkit.sh/internal/cli/kraft/cloud/instance"
-	"kraftkit.sh/internal/cli/kraft/cloud/metro"
-	"kraftkit.sh/internal/cli/kraft/cloud/quota"
-	"kraftkit.sh/internal/cli/kraft/cloud/scale"
-	"kraftkit.sh/internal/cli/kraft/cloud/service"
-	"kraftkit.sh/internal/cli/kraft/cloud/tunnel"
-	"kraftkit.sh/internal/cli/kraft/cloud/volume"
 
 	"kraftkit.sh/cmdfactory"
 )
 
-type CloudOptions struct {
-	Metro         string `long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location"`
-	Token         string `long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token"`
-	AllowInsecure bool   `long:"allow-insecure" usage:"Allow insecure connections to the Unikraft Cloud API"`
-}
+// removedMsg tells users where the cloud commands are now.
+const removedMsg = "`kraft cloud` has been removed, switch to the unikraft CLI: https://unikraft.com/docs/cli"
+
+type CloudOptions struct{}
 
 func NewCmd() *cobra.Command {
 	cmd, err := cmdfactory.New(&CloudOptions{}, cobra.Command{
-		Short:   "Manage resources on Unikraft Cloud",
-		Use:     "cloud [FLAGS] [SUBCOMMAND|DIR]",
+		Short:   "Removed, use the unikraft CLI instead",
+		Use:     "cloud",
 		Aliases: []string{"cl"},
-		Long: heredoc.Docf(`
-			Manage resources on Unikraft Cloud.
-
-			Learn more & sign up at https://unikraft.cloud
-
-			Quickly switch between metros using the %[1]s--metro%[1]s flag or use the
-			%[1]sUKC_METRO%[1]s environmental variable.
-
-			Set authentication by using %[1]skraft login%[1]s or set
-			%[1]sUKC_TOKEN%[1]s environmental variable.
-		`, "`"),
-		Example: heredoc.Doc(`
-			# List all images in your account
-			$ kraft cloud image list
-
-			# List all instances
-			$ kraft cloud instance list
-
-			# Create a new NGINX instance and start it immediately
-			$ kraft cloud instance create -S \
-				-p 80:443/http+redirect \
-				-p 443:8080/http+tls \
-				nginx:latest
-
-			# Get the status of an instance based on its UUID and output as JSON
-			$ kraft cloud instance status -o json UUID
-
-			# Stop an instance based on its UUID
-			$ kraft cloud instance stop UUID
-
-			# Start an instance based on its UUID
-			$ kraft cloud instance start UUID
-
-			# Get logs of an instance based on its UUID
-			$ kraft cloud instance logs UUID
-
-			# Delete an instance based on its UUID
-			$ kraft cloud instance remove UUID
-		`),
+		Long:    removedMsg,
+		Hidden:  true,
+		// Accept all arguments and flags, so that all old calls show the message.
+		Args:               cobra.ArbitraryArgs,
+		DisableFlagParsing: true,
 		Annotations: map[string]string{
-			cmdfactory.AnnotationHelpGroup:  "kraftcloud",
 			cmdfactory.AnnotationHelpHidden: "true",
 		},
 	})
@@ -89,55 +37,9 @@ func NewCmd() *cobra.Command {
 		panic(err)
 	}
 
-	cmd.AddCommand(deploy.NewCmd())
-	cmd.AddCommand(quota.NewCmd())
-	cmd.AddCommand(tunnel.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-image", Title: "IMAGE COMMANDS"})
-	cmd.AddCommand(image.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "INSTANCE COMMANDS"})
-	cmd.AddCommand(instance.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance-template", Title: "INSTANCE TEMPLATE COMMANDS"})
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-volume", Title: "VOLUME COMMANDS"})
-	cmd.AddCommand(volume.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-volume-template", Title: "VOLUME TEMPLATE COMMANDS"})
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "SCALE COMMANDS"})
-	cmd.AddCommand(scale.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-service", Title: "SERVICE COMMANDS"})
-	cmd.AddCommand(service.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "CERTIFICATE COMMANDS"})
-	cmd.AddCommand(certificate.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-metro", Title: "METRO COMMANDS"})
-	cmd.AddCommand(metro.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "COMPOSE COMMANDS"})
-	cmd.AddCommand(compose.NewCmd())
-
 	return cmd
 }
 
-func (opts *CloudOptions) PersistentPre(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	if !config.G[config.KraftKit](ctx).NoWarnCloudDeprecation {
-		log.G(ctx).Warn("the `kraft cloud` subcommand is being deprecated! Please migrate to the new `unikraft` CLI.")
-		log.G(ctx).Warn("end-of-life support for the `kraft cloud` subcommand will end November 26th 2026.")
-		log.G(ctx).Warn("learn more at https://unikraft.com/docs/tutorials/kraft-to-unikraft")
-		log.G(ctx).Warn("")
-		log.G(ctx).Warn("to hide and ignore this warning message, set the environmental variable:")
-		log.G(ctx).Warn("")
-		log.G(ctx).Warn("\texport KRAFTKIT_NO_WARN_CLOUD_DEPRECATION=1")
-	}
-	return nil
-}
-
-func (opts *CloudOptions) Run(_ context.Context, args []string) error {
-	return pflag.ErrHelp
+func (opts *CloudOptions) Run(_ context.Context, _ []string) error {
+	return errors.New(removedMsg)
 }
