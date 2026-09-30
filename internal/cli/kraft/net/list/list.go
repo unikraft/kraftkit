@@ -14,7 +14,7 @@ import (
 
 	networkapi "kraftkit.sh/api/network/v1alpha1"
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"

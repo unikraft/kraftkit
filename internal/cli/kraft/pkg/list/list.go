@@ -18,8 +18,8 @@ import (
 	"kraftkit.sh/unikraft/app"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	pkgutils "kraftkit.sh/internal/cli/kraft/pkg/utils"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"
 	mplatform "kraftkit.sh/machine/platform"
