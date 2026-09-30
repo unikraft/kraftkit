@@ -31,7 +31,6 @@ There are many benefits in running your application as a unikernel: for more inf
 - 📚 Fetch and run pre-built unikernel from the [app catalog](https://github.com/unikraft/catalog);
 - 🔥 Run unikernel VMs using QEMU, Xen and [Firecracker MicroVM](https://firecracker-microvm.github.io/);
 - 🤹‍♀️ Daemonless unikernel local VM instance manager;
-- ⛅️ Deploy unikernel VMs to the [cloud](https://unikraft.cloud);
 - 🍎 Native Linux, macOS and Windows support;
 - 📦 Package and push unikernels in OCI format for easy distribution;
 - 🚜 ELF binary / POSIX-compatibility support;
