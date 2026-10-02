@@ -1,0 +1,11 @@
+specification: '0.7'
+name: helloworld
+
+# the index resolves channels and listed gitshas only, not release tags
+unikraft:
+  source: https://github.com/unikraft/unikraft.git
+  version: ba13cc8
+
+targets:
+  - architecture: x86_64
+    platform: qemu
