@@ -51,6 +51,19 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 		return fmt.Errorf("the --ip flag only works when providing exactly one network")
 	}
 
+	if opts.MacAddress != "" {
+		if len(opts.Networks) != 1 {
+			return fmt.Errorf("the --mac flag only works when providing exactly one network")
+		}
+
+		parsed, err := net.ParseMAC(opts.MacAddress)
+		if err != nil {
+			return fmt.Errorf("could not parse MAC address: %w", err)
+		}
+
+		opts.MacAddress = parsed.String()
+	}
+
 	if len(opts.Networks) == 0 {
 		return nil
 	}
@@ -87,6 +100,7 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 		interfaceSpec.DNS1 = parsed.DNS1
 		interfaceSpec.Hostname = parsed.Hostname
 		interfaceSpec.Domain = parsed.Domain
+		interfaceSpec.MacAddress = opts.MacAddress
 
 		// Handle CIDR default netmask if not provided.
 		if interfaceSpec.CIDR != "" {
