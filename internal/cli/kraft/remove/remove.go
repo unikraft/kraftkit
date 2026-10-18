@@ -154,8 +154,14 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 				netcontrollers[net.Driver] = netcontroller
 			}
 
+			unlock, err := network.Lock(ctx, net.IfName)
+			if err != nil {
+				return err
+			}
+
 			networks, err := netcontroller.List(ctx, &networkapi.NetworkList{})
 			if err != nil {
+				unlock()
 				return err
 			}
 			var found *networkapi.Network
@@ -168,6 +174,7 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 			}
 			if found == nil {
 				log.G(ctx).Warnf("could not get network information for %s", net.IfName)
+				unlock()
 				continue
 			}
 
@@ -187,6 +194,8 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 					continue
 				}
 			}
+
+			unlock()
 		}
 
 		// Update volume information.
