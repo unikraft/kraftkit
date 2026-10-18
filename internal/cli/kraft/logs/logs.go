@@ -26,9 +26,24 @@ import (
 )
 
 type LogOptions struct {
-	Follow   bool   `long:"follow" short:"f" usage:"Follow log output"`
-	Platform string `noattribute:"true"`
-	NoPrefix bool   `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
+	Follow     bool   `long:"follow" short:"f" usage:"Follow log output"`
+	Platform   string `noattribute:"true"`
+	NoPrefix   bool   `long:"no-prefix" usage:"When logging multiple machines, do not prefix each log line with the name"`
+	Prefix     string `noattribute:"true"`
+	PrefixName bool   `noattribute:"true"`
+}
+
+// prefixFor returns the string prepended to each of the machine's log lines.
+// An explicit prefix always wins; otherwise the machine name is used when
+// PrefixName is set or when logging multiple machines without NoPrefix.
+func (opts *LogOptions) prefixFor(name string, longestName int) string {
+	if opts.Prefix != "" {
+		return opts.Prefix
+	}
+	if opts.PrefixName || !opts.NoPrefix {
+		return name + strings.Repeat(" ", longestName-len(name))
+	}
+	return ""
 }
 
 func NewCmd() *cobra.Command {
@@ -138,7 +153,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 
 	longestName := 0
 
-	if len(loggedMachines) > 1 && !opts.NoPrefix {
+	if opts.PrefixName || (len(loggedMachines) > 1 && !opts.NoPrefix) {
 		for _, machine := range loggedMachines {
 			if len(machine.Name) > longestName {
 				longestName = len(machine.Name)
@@ -152,10 +167,7 @@ func (opts *LogOptions) Run(ctx context.Context, args []string) error {
 	observations := waitgroup.WaitGroup[*machineapi.Machine]{}
 
 	for _, machine := range loggedMachines {
-		prefix := ""
-		if !opts.NoPrefix {
-			prefix = machine.Name + strings.Repeat(" ", longestName-len(machine.Name))
-		}
+		prefix := opts.prefixFor(machine.Name, longestName)
 		consumer, err := NewColorfulConsumer(iostreams.G(ctx), !config.G[config.KraftKit](ctx).NoColor, prefix)
 		if err != nil {
 			errGroup = append(errGroup, err)

@@ -417,9 +417,17 @@ func (opts *RunOptions) Run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return start.Start(ctx, &start.StartOptions{
-		Detach:   opts.Detach,
-		Platform: opts.platform.String(),
-		Remove:   opts.Remove,
-	}, machine.Name)
+	return start.Start(ctx, opts.startOptions(), machine.Name)
+}
+
+// startOptions returns the options used to start and tail the machine,
+// carrying run's log prefix preferences through to `kraft start`.
+func (opts *RunOptions) startOptions() *start.StartOptions {
+	return &start.StartOptions{
+		Detach:     opts.Detach,
+		Platform:   opts.platform.String(),
+		Remove:     opts.Remove,
+		Prefix:     opts.Prefix,
+		PrefixName: opts.PrefixName,
+	}
 }
