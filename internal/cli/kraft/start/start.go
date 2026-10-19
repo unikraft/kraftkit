@@ -227,20 +227,26 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 				}
 			}
 
-			for _, network := range machine.Spec.Networks {
+			for _, net := range machine.Spec.Networks {
+				unlock, err := network.Lock(ctx, net.IfName)
+				if err != nil {
+					return err
+				}
+
 				// Get the latest version of the network.
 				found, err := networkController.Get(ctx, &networkapi.Network{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: network.IfName,
+						Name: net.IfName,
 					},
 				})
 				if err != nil {
-					return fmt.Errorf("could not get network information for %s: %v", network.IfName, err)
+					unlock()
+					return fmt.Errorf("could not get network information for %s: %v", net.IfName, err)
 				}
 
 				// Remove the new network interface
 				for i, iface := range found.Spec.Interfaces {
-					if iface.UID == network.Interfaces[0].UID {
+					if iface.UID == net.Interfaces[0].UID {
 						ret := make([]networkapi.NetworkInterfaceTemplateSpec, 0)
 						ret = append(ret, found.Spec.Interfaces[:i]...)
 						found.Spec.Interfaces = append(ret, found.Spec.Interfaces[i+1:]...)
@@ -249,8 +255,11 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 				}
 
 				if _, err = networkController.Update(ctx, found); err != nil {
-					return fmt.Errorf("could not update network %s: %v", network.IfName, err)
+					unlock()
+					return fmt.Errorf("could not update network %s: %v", net.IfName, err)
 				}
+
+				unlock()
 			}
 		}
 

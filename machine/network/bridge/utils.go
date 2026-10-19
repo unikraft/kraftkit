@@ -34,8 +34,9 @@ func BridgeIPs(bridge *netlink.Bridge) ([]string, error) {
 }
 
 // For a given IP network, bridge (and its interface), allocate a free IP
-// address.
-func AllocateIP(ctx context.Context, ipnet *net.IPNet, iface *net.Interface, bridge *netlink.Bridge) (net.IP, error) {
+// address.  IPs in reserved are skipped, as they are already assigned to
+// interfaces whose guests may not be up yet to answer ARP or ICMP.
+func AllocateIP(ctx context.Context, ipnet *net.IPNet, iface *net.Interface, bridge *netlink.Bridge, reserved map[string]bool) (net.IP, error) {
 	bridgeAddrs, err := iface.Addrs()
 	if err != nil {
 		return nil, err
@@ -83,6 +84,10 @@ search:
 
 		// Skip allocated IP addresses.
 		case allocatedSet.Contains(ip.String()):
+			continue
+
+		// Skip IP addresses reserved by interfaces on this network.
+		case reserved[ip.String()]:
 			continue
 
 		// Use ICMP to check if the IP is in use as a final sanity check.

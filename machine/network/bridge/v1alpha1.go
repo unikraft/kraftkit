@@ -303,6 +303,15 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 	// on when we're clearing up unused interfaces.
 	inuse := make(map[string]bool)
 
+	// Collect the IPs already assigned to interfaces on this network such that
+	// they are not handed out again before their guests come up.
+	reserved := make(map[string]bool)
+	for _, iface := range network.Spec.Interfaces {
+		if ip, _, err := net.ParseCIDR(iface.Spec.CIDR); err == nil {
+			reserved[ip.String()] = true
+		}
+	}
+
 	// Add any defined interfaces.
 	for i, iface := range network.Spec.Interfaces {
 		if iface.ObjectMeta.UID == "" {
@@ -356,10 +365,12 @@ func (service *v1alpha1Network) Update(ctx context.Context, network *networkv1al
 		}
 
 		if iface.Spec.CIDR == "" {
-			ip, err := AllocateIP(ctx, ipnet, bridgeface, bridge)
+			ip, err := AllocateIP(ctx, ipnet, bridgeface, bridge, reserved)
 			if err != nil {
 				return network, fmt.Errorf("could not allocate interface IP for %s: %v", iface.Spec.IfName, err)
 			}
+
+			reserved[ip.String()] = true
 
 			sz, _ := net.IPMask(net.ParseIP(network.Spec.Netmask).To4()).Size()
 			iface.Spec.CIDR = fmt.Sprintf("%s/%d", ip.String(), sz)

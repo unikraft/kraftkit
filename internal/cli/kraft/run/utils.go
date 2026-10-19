@@ -82,6 +82,11 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 			return err
 		}
 
+		unlock, err := network.Lock(ctx, parsed.Name)
+		if err != nil {
+			return err
+		}
+
 		// Try to discover the user-provided network.
 		found, err := networkServiceIterator.Get(ctx, &networkapi.Network{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,6 +94,7 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 			},
 		})
 		if err != nil {
+			unlock()
 			return err
 		}
 
@@ -138,8 +144,10 @@ func (opts *RunOptions) parseNetworks(ctx context.Context, machine *machineapi.M
 		// Update the network with the new interface.
 		found, err = networkServiceIterator.Update(ctx, found)
 		if err != nil {
+			unlock()
 			return err
 		}
+		unlock()
 
 		// Only use the single new interface.
 		for _, iface := range found.Spec.Interfaces {
