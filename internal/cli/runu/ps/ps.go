@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"kraftkit.sh/cmdfactory"
-	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	libcontainer "kraftkit.sh/libmocktainer"
 	"kraftkit.sh/log"
 )

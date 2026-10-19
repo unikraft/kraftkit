@@ -52,9 +52,6 @@ var (
 func init() {
 	for _, cmd := range []string{
 		"kraft build",
-		"kraft cloud compose build",
-		"kraft cloud compose up",
-		"kraft cloud deploy",
 		"kraft compose build",
 		"kraft compose up",
 		"kraft pkg",
