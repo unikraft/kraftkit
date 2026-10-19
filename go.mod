@@ -1,6 +1,6 @@
 module kraftkit.sh
 
-go 1.26.5
+go 1.26.8
 
 require (
 	api.zip v0.1.8
@@ -20,7 +20,7 @@ require (
 	github.com/cli/safeexec v1.0.1
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/compose-spec/compose-go/v2 v2.14.0
-	github.com/containerd/containerd/v2 v2.3.4
+	github.com/containerd/containerd/v2 v2.3.6
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl/v2 v2.3.5
