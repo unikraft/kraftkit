@@ -25,6 +25,11 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
+var (
+	ErrNoOptionsToSet = fmt.Errorf("no options to set")
+	ErrInvalidOption  = fmt.Errorf("invalid or malformed argument")
+)
+
 type SetOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter targets by architecture"`
 	Force        bool   `long:"force" short:"F" usage:"Skip KConfig validation"`
@@ -98,14 +103,14 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("no options to set")
+		return ErrNoOptionsToSet
 	}
 
 	confOpts := []string{}
 
 	for _, arg := range args {
 		if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
-			return fmt.Errorf("invalid or malformed argument: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidOption, arg)
 		}
 
 		confOpts = append(confOpts, arg)

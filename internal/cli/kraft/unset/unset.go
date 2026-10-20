@@ -22,6 +22,10 @@ import (
 	"kraftkit.sh/unikraft/target"
 )
 
+var (
+	ErrNoOptionsToUnset = fmt.Errorf("no options to unset")
+)
+
 type UnsetOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter targets by architecture"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
@@ -94,7 +98,7 @@ func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("no options to unset")
+		return ErrNoOptionsToUnset
 	}
 
 	confOpts := []string{}
