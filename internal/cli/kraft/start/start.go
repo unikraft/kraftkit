@@ -27,11 +27,25 @@ import (
 )
 
 type StartOptions struct {
-	All      bool   `long:"all" usage:"Start all machines"`
-	Detach   bool   `long:"detach" short:"d" usage:"Run in background"`
-	NoPrefix bool   `long:"no-prefix" usage:"When starting multiple machines, do not prefix each log line with the name"`
-	Platform string `noattribute:"true"`
-	Remove   bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	All        bool   `long:"all" usage:"Start all machines"`
+	Detach     bool   `long:"detach" short:"d" usage:"Run in background"`
+	NoPrefix   bool   `long:"no-prefix" usage:"When starting multiple machines, do not prefix each log line with the name"`
+	Platform   string `noattribute:"true"`
+	Remove     bool   `long:"rm" usage:"Automatically remove the unikernel when it shutsdown"`
+	Prefix     string `noattribute:"true"`
+	PrefixName bool   `noattribute:"true"`
+}
+
+// logOptions returns the options used to tail the started machines,
+// carrying the caller's log prefix preferences through to `kraft logs`.
+func (opts *StartOptions) logOptions() logs.LogOptions {
+	return logs.LogOptions{
+		Follow:     true,
+		NoPrefix:   opts.NoPrefix,
+		Platform:   opts.Platform,
+		Prefix:     opts.Prefix,
+		PrefixName: opts.PrefixName,
+	}
 }
 
 func NewCmd() *cobra.Command {
@@ -179,11 +193,7 @@ func Start(ctx context.Context, opts *StartOptions, machineNames ...string) erro
 		return nil
 	}
 
-	logOptions := logs.LogOptions{
-		Follow:   true,
-		NoPrefix: opts.NoPrefix,
-		Platform: opts.Platform,
-	}
+	logOptions := opts.logOptions()
 
 	if err := logOptions.Run(ctx, loggedMachines); err != nil {
 		return err
