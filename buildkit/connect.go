@@ -29,6 +29,7 @@ import (
 	_ "github.com/moby/buildkit/client/connhelper/nerdctlcontainer"
 	_ "github.com/moby/buildkit/client/connhelper/podmancontainer"
 	_ "github.com/moby/buildkit/client/connhelper/ssh"
+	_ "github.com/moby/buildkit/solver/errdefs"
 )
 
 func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), rerr error) {
