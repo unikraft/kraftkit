@@ -121,6 +121,10 @@ func Build(ctx context.Context, opts *BuildOptions, args ...string) error {
 		return fmt.Errorf("could not complete build: %w", err)
 	}
 
+	if opts.Target != nil && opts.Kernel != "" {
+		(*opts.Target).SetKernelPath(opts.Kernel)
+	}
+
 	if opts.RootfsType == "" {
 		opts.RootfsType = initrd.FsTypeCpio
 	}
@@ -245,6 +249,14 @@ func (opts *BuildOptions) Pre(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("getting absolute path of rootfs: %w", err)
 		}
 		opts.Rootfs = abs
+	}
+
+	if opts.Kernel != "" && !filepath.IsAbs(opts.Kernel) {
+		abs, err := filepath.Abs(opts.Kernel)
+		if err != nil {
+			return fmt.Errorf("getting absolute path of kernel: %w", err)
+		}
+		opts.Kernel = abs
 	}
 
 	return nil
