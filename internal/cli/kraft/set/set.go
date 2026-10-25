@@ -6,6 +6,7 @@ package set
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +24,13 @@ import (
 	"kraftkit.sh/tui/confirm"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
+)
+
+var (
+	ErrNoOptionsToSet          = errors.New("no options to set")
+	ErrInvalidOption           = errors.New("invalid or malformed argument")
+	ErrNoMatchingTargets       = errors.New("no targets match the specified criteria")
+	ErrKConfigValidationFailed = errors.New("kconfig validation failed")
 )
 
 type SetOptions struct {
@@ -98,14 +106,14 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("no options to set")
+		return ErrNoOptionsToSet
 	}
 
 	confOpts := []string{}
 
 	for _, arg := range args {
 		if !strings.ContainsRune(arg, '=') || strings.HasSuffix(arg, "=") {
-			return fmt.Errorf("invalid or malformed argument: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidOption, arg)
 		}
 
 		confOpts = append(confOpts, arg)
@@ -145,7 +153,7 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 	)
 
 	if len(selected) == 0 {
-		return fmt.Errorf("no targets match the specified criteria")
+		return ErrNoMatchingTargets
 	}
 
 	// If multiple targets and prompting is enabled, let user select
@@ -182,7 +190,7 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 					for _, r := range results {
 						log.G(ctx).Error(FormatSpellCheckWarning(r))
 					}
-					return fmt.Errorf("kconfig validation failed")
+					return ErrKConfigValidationFailed
 				}
 			}
 		}

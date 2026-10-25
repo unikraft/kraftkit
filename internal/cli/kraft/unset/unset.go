@@ -6,6 +6,7 @@ package unset
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,6 +21,11 @@ import (
 	"kraftkit.sh/tui/confirm"
 	"kraftkit.sh/unikraft/app"
 	"kraftkit.sh/unikraft/target"
+)
+
+var (
+	ErrNoOptionsToUnset  = errors.New("no options to unset")
+	ErrNoMatchingTargets = errors.New("no targets match the specified criteria")
 )
 
 type UnsetOptions struct {
@@ -94,7 +100,7 @@ func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("no options to unset")
+		return ErrNoOptionsToUnset
 	}
 
 	confOpts := []string{}
@@ -134,7 +140,7 @@ func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 	)
 
 	if len(selected) == 0 {
-		return fmt.Errorf("no targets match the specified criteria")
+		return ErrNoMatchingTargets
 	}
 
 	// If multiple targets and prompting is enabled, let user select
