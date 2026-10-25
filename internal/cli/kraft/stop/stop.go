@@ -19,7 +19,7 @@ import (
 )
 
 type StopOptions struct {
-	All      bool   `long:"all" usage:"Remove all machines"`
+	All      bool   `long:"all" usage:"Stop all machines"`
 	Platform string `noattribute:"true"`
 }
 
