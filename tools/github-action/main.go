@@ -398,11 +398,6 @@ func main() {
 	// Set up the config manager in the context if it is available
 	ctx = config.WithConfigManager(ctx, cfgm)
 
-	// Attempt to set Unikraft Cloud config if possible
-	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
-		ctx = newCtx
-	}
-
 	cmd, args, err := cmd.Find(os.Args[1:])
 	if err != nil {
 		fmt.Printf("could not find flag: %s", err)

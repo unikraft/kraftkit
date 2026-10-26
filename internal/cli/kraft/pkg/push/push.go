@@ -17,7 +17,6 @@ import (
 
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/utils"
 	"kraftkit.sh/log"
 	"kraftkit.sh/pack"
 	"kraftkit.sh/packmanager"
@@ -26,11 +25,8 @@ import (
 )
 
 type PushOptions struct {
-	AllowInsecure bool   `local:"true" long:"allow-insecure" usage:"Allow insecure connections to the registry" hidden:"true"`
-	Format        string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
-	Kraftfile     string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
-	Metro         string `local:"true" long:"metro" env:"UKC_METRO" usage:"Unikraft Cloud metro location" hidden:"true"`
-	Token         string `local:"true" long:"token" env:"UKC_TOKEN" usage:"Unikraft Cloud access token" hidden:"true"`
+	Format    string `local:"true" long:"as" short:"M" usage:"Force the packaging despite possible conflicts" default:"auto"`
+	Kraftfile string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 }
 
 // Push a Unikraft component.
@@ -72,24 +68,6 @@ func NewCmd() *cobra.Command {
 }
 
 func (opts *PushOptions) Pre(cmd *cobra.Command, _ []string) error {
-	// Suppress interactive metro prompting: pkg commands do not require a
-	// metro; token population proceeds silently via flags/env vars only.
-	origNoPrompt := config.G[config.KraftKit](cmd.Context()).NoPrompt
-	config.G[config.KraftKit](cmd.Context()).NoPrompt = true
-	if err := utils.PopulateMetroToken(cmd, &opts.Metro, &opts.Token, &opts.AllowInsecure); err != nil {
-		log.G(cmd.Context()).WithError(err).Debug("could not populate metro/token for pkg push")
-	}
-	config.G[config.KraftKit](cmd.Context()).NoPrompt = origNoPrompt
-
-	if opts.Token != "" {
-		if _, err := config.GetKraftCloudAuthConfig(cmd.Context(), opts.Token); err != nil {
-			log.G(cmd.Context()).WithError(err).Debug("could not hydrate kraft cloud auth from token")
-		}
-		if opts.Metro != "" {
-			cmd.SetContext(config.ContextWithIndexAuth(cmd.Context(), opts.Metro, opts.Token))
-		}
-	}
-
 	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
 	if err != nil {
 		return err

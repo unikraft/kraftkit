@@ -12,7 +12,7 @@ import (
 	machineapi "kraftkit.sh/api/machine/v1alpha1"
 	"kraftkit.sh/cmdfactory"
 	"kraftkit.sh/config"
-	"kraftkit.sh/internal/cli/kraft/cloud/utils"
+	"kraftkit.sh/internal/cli/kraft/utils"
 	"kraftkit.sh/internal/tableprinter"
 	"kraftkit.sh/iostreams"
 	"kraftkit.sh/log"

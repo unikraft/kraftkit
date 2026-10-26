@@ -260,7 +260,7 @@ lint: ## Lint all files according to linting preferences.
 cicheck: lint ## Run CI checks.
 
 .PHONY: test
-test: test-unit test-framework test-e2e test-cloud-e2e ## Run all tests.
+test: test-unit test-framework test-e2e ## Run all tests.
 
 .PHONY: test-unit
 test-unit: GOTEST_EXCLUDE := third_party/ test/ hack/ buildenvs/ dist/ docs/ tools/
@@ -275,10 +275,6 @@ test-e2e: kraft ## Run CLI end-to-end tests.
 .PHONY: test-framework
 test-framework: kraft ## Run framework tests.
 	$(GINKGO) -v -p -randomize-all ./test/e2e/framework/...
-
-.PHONY: test-cloud-e2e
-test-cloud-e2e: ## Run cloud end-to-end tests.
-	$(GINKGO) -v -randomize-all --flake-attempts 2 --nodes 8 ./test/e2e/cloud/...
 
 .PHONY: clean
 clean:
