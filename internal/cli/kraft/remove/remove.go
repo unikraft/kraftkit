@@ -129,6 +129,10 @@ func (opts *RemoveOptions) Run(ctx context.Context, args []string) error {
 	}
 
 	if len(remove) == 0 {
+		if opts.All {
+			log.G(ctx).Info("no machines to remove")
+			return nil
+		}
 		return fmt.Errorf("machine(s) not found")
 	}
 
