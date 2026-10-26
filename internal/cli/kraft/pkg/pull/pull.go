@@ -110,23 +110,26 @@ func (opts *PullOptions) Pre(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
-	if err != nil {
-		return err
-	}
-
-	cmd.SetContext(ctx)
-
-	if strings.ContainsRune(opts.Platform, '/') && opts.Architecture == "" {
+	if strings.ContainsRune(opts.Platform, '/') {
 		split := strings.SplitN(opts.Platform, "/", 2)
-		if len(split) != 2 {
+		if len(split) != 2 || split[0] == "" || split[1] == "" {
 			return fmt.Errorf("expected the flag in the form --plat=<plat>/<arch>")
+		}
+		if opts.Architecture != "" && opts.Architecture != split[1] {
+			return fmt.Errorf("conflicting architecture specified in --plat (%s) and --arch (%s)", split[1], opts.Architecture)
 		}
 		opts.Platform = split[0]
 		opts.Architecture = split[1]
 	}
 
 	opts.Platform = platform.PlatformByName(opts.Platform).String()
+
+	ctx, err := packmanager.WithDefaultUmbrellaManagerInContext(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	cmd.SetContext(ctx)
 
 	return nil
 }
