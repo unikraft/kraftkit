@@ -1,0 +1,2 @@
+$(eval $(call addlib,apphelloworld))
+APPHELLOWORLD_SRCS-y += $(APPHELLOWORLD_BASE)/helloworld.c
