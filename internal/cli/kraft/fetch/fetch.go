@@ -383,6 +383,10 @@ func (opts *FetchOptions) pull(ctx context.Context, project app.Application, wor
 func (opts *FetchOptions) Run(ctx context.Context, _ []string) error {
 	log.G(ctx).Warnf("This command is DEPRECATED and should not be used")
 
+	if opts.project == nil {
+		return fmt.Errorf("project not initialized")
+	}
+
 	// Filter project targets by any provided CLI options
 	selected := opts.project.Targets()
 
