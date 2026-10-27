@@ -44,6 +44,8 @@ func NewGitProvider(ctx context.Context, path string, opts ...ManifestOption) (P
 		if strings.HasPrefix(path, "git@") {
 			fullpath = "ssh://" + path
 		}
+	} else if !strings.Contains(path, "://") && (strings.HasPrefix(path, "github.com/") || strings.HasPrefix(path, "gitlab.com/")) {
+		fullpath = "https://" + path
 	}
 
 	gitURL, err := giturl.NewGitURL(fullpath) // initialize and parse the URL
