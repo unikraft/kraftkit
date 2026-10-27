@@ -42,6 +42,17 @@ type GitHubProvider struct {
 // format.
 func NewGitHubProvider(ctx context.Context, path string, opts ...ManifestOption) (Provider, error) {
 	var branch string
+	if strings.HasPrefix(path, "git@") {
+		if idx := strings.Index(path, ":"); idx != -1 {
+			if bIdx := strings.LastIndex(path[idx:], "@"); bIdx != -1 {
+				branch = path[idx+bIdx+1:]
+				path = path[:idx+bIdx]
+			}
+		}
+	} else if idx := strings.LastIndex(path, "@"); idx != -1 {
+		branch = path[idx+1:]
+		path = path[:idx]
+	}
 
 	repo, err := ghrepo.NewFromURL(path)
 	if err != nil {
