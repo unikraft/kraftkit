@@ -509,6 +509,12 @@ func newIndexAndManifestFromRemoteDigest(ctx context.Context, handle handler.Han
 		retIndex.annotations = ociIndex.Annotations
 		eg, egCtx := errgroup.WithContext(ctx)
 
+		// Preallocate the slice so each goroutine writes only its own
+		// slot; concurrent appends race on the slice header. Every
+		// goroutine that returns nil has filled its slot, so after
+		// eg.Wait no entry is nil.
+		retIndex.manifests = make([]*Manifest, len(ociIndex.Manifests))
+
 		for i := range ociIndex.Manifests {
 			eg.Go(func(i int) func() error {
 				return func() error {
@@ -591,11 +597,7 @@ func newIndexAndManifestFromRemoteDigest(ctx context.Context, handle handler.Han
 
 					manifest.desc = &descriptor
 					manifest.saved = false
-					retIndex.manifests = append(retIndex.manifests, manifest)
-
-					if manifest.desc.Digest.String() == dgst.String() {
-						retManifest = manifest
-					}
+					retIndex.manifests[i] = manifest
 
 					return nil
 				}
@@ -604,6 +606,15 @@ func newIndexAndManifestFromRemoteDigest(ctx context.Context, handle handler.Han
 
 		if err := eg.Wait(); err != nil {
 			return nil, nil, err
+		}
+
+		// Select the requested manifest only after every slot is
+		// filled; the first match in index order wins.
+		for _, manifest := range retIndex.manifests {
+			if manifest.desc.Digest.String() == dgst.String() {
+				retManifest = manifest
+				break
+			}
 		}
 
 		return retIndex, retManifest, nil
