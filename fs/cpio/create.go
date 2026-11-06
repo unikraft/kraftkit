@@ -20,7 +20,7 @@ import (
 	scfile "github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/filetree"
 	"github.com/anchore/stereoscope/pkg/filetree/filenode"
-	"github.com/unikraft/go-cpio"
+	"github.com/unikraft/go-archivefs/cpio"
 
 	"kraftkit.sh/fsutils"
 	"kraftkit.sh/log"
