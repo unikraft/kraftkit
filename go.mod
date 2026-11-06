@@ -73,8 +73,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/tonistiigi/fsutil v0.0.0-20260717003753-6d9dc2ebad62
-	github.com/unikraft/go-archivefs v0.0.0-20260729154444-97f274f42287
-	github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3
+	github.com/unikraft/go-archivefs v0.0.0-20261106123111-364b178a11ba
 	github.com/vishvananda/netlink v1.3.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.2.0

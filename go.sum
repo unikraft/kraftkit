@@ -1247,10 +1247,8 @@ github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGr
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/ulikunitz/xz v0.5.16 h1:ld6NyySjx5lowVKwJvMRLnW5nxKX/xnpSiFYZ/Lxur0=
 github.com/ulikunitz/xz v0.5.16/go.mod h1:H9Rt/W6/Qj27PGauhQc6nfCDy7vHpzsOThBSaYDoEhw=
-github.com/unikraft/go-archivefs v0.0.0-20260729154444-97f274f42287 h1:2WlwXwp+cvSToTX5+XX2GZx9JjBt0H4OKxN/KzuAbWQ=
-github.com/unikraft/go-archivefs v0.0.0-20260729154444-97f274f42287/go.mod h1:NLWtSTdsTRLGQN87zqm9+vN01Ei9JX+FWwuOme2wJXw=
-github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3 h1:C8GONmMNDK3spdZEHBIffmq1b1hjCm9nZrquv3+4H+U=
-github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3/go.mod h1:OFJWAQVOq1qppx75rzF7qDoE5TqGjM1oCXW5N06Lftg=
+github.com/unikraft/go-archivefs v0.0.0-20261106123111-364b178a11ba h1:v9Gc/bx6ifAQ0/XK33mwoMT5Ad4n3+qoqQ5FHnraACQ=
+github.com/unikraft/go-archivefs v0.0.0-20261106123111-364b178a11ba/go.mod h1:NLWtSTdsTRLGQN87zqm9+vN01Ei9JX+FWwuOme2wJXw=
 github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=

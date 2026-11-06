@@ -10,7 +10,7 @@ package cpio
 import (
 	"io/fs"
 
-	"github.com/unikraft/go-cpio"
+	"github.com/unikraft/go-archivefs/cpio"
 )
 
 func FileInfoToCPIOHeader(info fs.FileInfo, header *cpio.Header) {}

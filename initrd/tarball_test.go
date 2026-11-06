@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/unikraft/go-cpio"
+	"github.com/unikraft/go-archivefs/cpio"
 	"kraftkit.sh/initrd"
 )
 

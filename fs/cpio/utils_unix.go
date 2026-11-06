@@ -11,7 +11,7 @@ import (
 	"io/fs"
 	"syscall"
 
-	"github.com/unikraft/go-cpio"
+	"github.com/unikraft/go-archivefs/cpio"
 )
 
 func FileInfoToCPIOHeader(info fs.FileInfo, header *cpio.Header) {

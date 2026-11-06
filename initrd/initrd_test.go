@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/unikraft/go-cpio"
+	"github.com/unikraft/go-archivefs/cpio"
 )
 
 var expectHeaders = map[string]cpio.Header{
