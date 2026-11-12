@@ -1,6 +1,6 @@
 module kraftkit.sh/tools/github-action
 
-go 1.26.2
+go 1.27.4
 
 require (
 	github.com/klauspost/cpuid/v2 v2.3.0
