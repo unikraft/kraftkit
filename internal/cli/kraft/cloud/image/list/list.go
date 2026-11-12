@@ -145,25 +145,19 @@ func collectImageItems(resp *controlplane.Response[controlplane.ListImagesRespon
 
 	imagesByKey := make(map[string]*imageRow, len(resp.Data.Images))
 	for _, image := range resp.Data.Images {
-		name := ""
-		if image.Name != nil {
-			name = strings.TrimSpace(*image.Name)
-		}
+		name := strings.TrimSpace(image.Name)
 		if name == "" {
 			continue
 		}
 
 		for _, tag := range image.Tags {
-			tagName := ""
-			if tag.Name != nil {
-				tagName = strings.TrimSpace(*tag.Name)
-			}
+			tagName := strings.TrimSpace(tag.Name)
 			if tagName == "" {
 				continue
 			}
 
 			ref := fmt.Sprintf("%s:%s", name, tagName)
-			digest := strings.TrimSpace(derefString(tag.Digest))
+			digest := strings.TrimSpace(tag.Digest)
 			key := name + "|" + digest
 			if digest == "" {
 				key = name + "|" + tagName + "|nodigest"
@@ -175,10 +169,7 @@ func collectImageItems(resp *controlplane.Response[controlplane.ListImagesRespon
 				imagesByKey[key] = item
 			}
 
-			sizeInBytes := int64(0)
-			if tag.Size != nil {
-				sizeInBytes = int64(*tag.Size)
-			}
+			sizeInBytes := int64(tag.Size)
 			if sizeInBytes > item.SizeInBytes {
 				item.SizeInBytes = sizeInBytes
 			}
@@ -195,13 +186,6 @@ func collectImageItems(resp *controlplane.Response[controlplane.ListImagesRespon
 	}
 
 	return images
-}
-
-func derefString(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
 }
 
 // listPlatformImages queries the platform GET /v1/image-store endpoint for the

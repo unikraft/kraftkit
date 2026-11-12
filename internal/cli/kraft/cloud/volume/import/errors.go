@@ -24,7 +24,7 @@ func NotLoggable(err error) error {
 // IsLoggable returns whether err should be logged when handled.
 // All errors are considered loggable unless explicitly marked otherwise.
 func IsLoggable(err error) bool {
-	lerr := (Loggable)(nil)
+	lerr := Loggable(nil)
 	if impl := errors.As(err, &lerr); !impl {
 		return true
 	}

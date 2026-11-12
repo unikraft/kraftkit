@@ -32,7 +32,7 @@ RUN set -xe; \
     ; \
     apt-get clean;
 
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.27.4
 
 # Install Go
 RUN set -xe; \

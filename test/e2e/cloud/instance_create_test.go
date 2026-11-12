@@ -1548,7 +1548,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stdout.String()).To(BeEmpty())
 			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"-1\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`must be a non-negative integer`))
 		})
 	})
 
@@ -1578,7 +1578,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stdout.String()).To(BeEmpty())
 			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"one\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`must be a non-negative integer`))
 		})
 	})
 
@@ -1608,7 +1608,7 @@ var _ = Describe("kraft cloud instance create", func() {
 			Expect(stdout.String()).To(BeEmpty())
 			Expect(stderr.String()).ToNot(BeEmpty())
 
-			Expect(stderr.String()).To(MatchRegexp(`strconv.ParseUint: parsing \\"2.64\\": invalid syntax`))
+			Expect(stderr.String()).To(MatchRegexp(`must be a non-negative integer`))
 		})
 	})
 

@@ -367,7 +367,7 @@ func (m *ManifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 	}
 
 	var packages []pack.Package
-	var g glob.Glob
+	var g *glob.Pattern
 	types := query.Types()
 	name := query.Name()
 	version := query.Version()

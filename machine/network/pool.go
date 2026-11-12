@@ -72,7 +72,7 @@ func FindFreeNetwork(pool NetworkPool, existingNetworks *networkapi.NetworkList)
 			}
 
 			candidate := net.IPNet{
-				IP:   (net.IP)(candidateIp).To4(),
+				IP:   net.IP(candidateIp).To4(),
 				Mask: net.CIDRMask(poolEntry.Size, 32),
 			}
 

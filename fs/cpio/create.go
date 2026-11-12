@@ -143,7 +143,14 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *cpio.W
 		// Populate platform specific information
 		FileInfoToCPIOHeader(info, cpioHeader)
 
-		switch f.FileType {
+		// Stereoscope changes hardlinks to regular files.
+		// Use the tar header to keep them as hardlinks.
+		fileType, linkDest := f.FileType, info.LinkDestination
+		if hdr, ok := info.Sys().(*tar.Header); ok && hdr.Typeflag == tar.TypeLink {
+			fileType, linkDest = scfile.TypeHardLink, hdr.Linkname
+		}
+
+		switch fileType {
 		case scfile.TypeBlockDevice:
 			log.G(ctx).
 				WithField("file", path).
@@ -187,7 +194,7 @@ func (c *createOptions) CreateFSFromOCIImage(ctx context.Context, writer *cpio.W
 				Trace("hardlinking")
 
 			cpioHeader.Mode |= cpio.TypeRegular
-			cpioHeader.Linkname = info.LinkDestination
+			cpioHeader.Linkname = linkDest
 			cpioHeader.Size = 0
 
 			if err := writer.WriteHeader(cpioHeader); err != nil {

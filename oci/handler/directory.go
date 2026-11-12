@@ -640,7 +640,7 @@ func (handle *DirectoryHandler) PullDigest(ctx context.Context, mediaType, fullr
 			dgst.Encoded(),
 		)
 
-		if err = os.MkdirAll(filepath.Dir((layerPath)), 0o775); err != nil {
+		if err = os.MkdirAll(filepath.Dir(layerPath), 0o775); err != nil {
 			return fmt.Errorf("could not make directory: %w", err)
 		}
 

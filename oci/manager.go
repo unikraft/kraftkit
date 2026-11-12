@@ -425,7 +425,7 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 		return nil, nil
 	}
 
-	var qglob glob.Glob
+	var qglob *glob.Pattern
 	var err error
 	packs := make(map[string]pack.Package)
 	qname := query.Name()
