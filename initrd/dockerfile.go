@@ -351,10 +351,10 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 	}
 
 	ch := make(chan *client.SolveStatus)
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		_, err := c.Solve(ctx, nil, *solveOpt, ch)
+		_, err := c.Solve(egCtx, nil, *solveOpt, ch)
 		if err != nil {
 			return fmt.Errorf("could not solve: %w", err)
 		}
@@ -367,7 +367,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 			return fmt.Errorf("could not create progress display: %w", err)
 		}
 
-		_, err = d.UpdateFrom(ctx, ch)
+		_, err = d.UpdateFrom(egCtx, ch)
 		if err != nil {
 			return fmt.Errorf("could not display output progress: %w", err)
 		}
@@ -398,7 +398,7 @@ func (initrd *dockerfile) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not provide image: %w", err)
 	}
 
-	err = img.Read()
+	err = img.Read(ctx)
 	if err != nil {
 		return "", fmt.Errorf("could not read image: %w", err)
 	}
