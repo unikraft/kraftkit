@@ -74,7 +74,7 @@ func NewCmd() *cobra.Command {
       | = |    Version:          %s
      /|/=\|\   Documentation:    https://unikraft.org/docs/cli
     (_:| |:_)  Issues & support: https://github.com/unikraft/kraftkit/issues
-       v v     Platform:         https://unikraft.cloud
+       v v
        ' '`, kitversion.Version()),
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
@@ -117,19 +117,8 @@ func NewCmd() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "compose", Title: "COMPOSE COMMANDS"})
 	cmd.AddCommand(compose.NewCmd())
 
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud", Title: "UNIKRAFT CLOUD COMMANDS"})
-	cmd.AddCommand(cloud.NewCmd())
-
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-image", Title: "UNIKRAFT CLOUD IMAGE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-instance", Title: "UNIKRAFT CLOUD INSTANCE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-volume", Title: "UNIKRAFT CLOUD VOLUME COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-volume-template", Title: "UNIKRAFT CLOUD VOLUME TEMPLATE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-service", Title: "UNIKRAFT CLOUD SERVICE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-scale", Title: "UNIKRAFT CLOUD AUTOSCALE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-certificate", Title: "UNIKRAFT CLOUD CERTIFICATE COMMANDS"})
-	cmd.AddGroup(&cobra.Group{ID: "kraftcloud-compose", Title: "UNIKRAFT CLOUD COMPOSE COMMANDS"})
-
 	cmd.AddGroup(&cobra.Group{ID: "misc", Title: "MISCELLANEOUS COMMANDS"})
+	cmd.AddCommand(cloud.NewCmd())
 	cmd.AddCommand(login.NewCmd())
 	cmd.AddCommand(version.NewCmd())
 	cmd.AddCommand(system.NewCmd())
@@ -207,11 +196,6 @@ func Main(args []string) int {
 
 	// Set up the config manager in the context if it is available
 	ctx = config.WithConfigManager(ctx, copts.ConfigManager)
-
-	// Hydrate KraftCloud configuration
-	if newCtx, err := config.HydrateKraftCloudAuthInContext(ctx); err == nil {
-		ctx = newCtx
-	}
 
 	// Set up the logger in the context if it is available
 	ctx = log.WithLogger(ctx, copts.Logger)

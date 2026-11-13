@@ -67,24 +67,4 @@ func RegisterFlags() {
 			"Set the Git clone depth",
 		),
 	)
-
-	cmdfactory.RegisterFlag(
-		"kraft cloud deploy",
-		cmdfactory.BoolVar(
-			&ForceGit,
-			"git",
-			false,
-			"Use Git when pulling sources",
-		),
-	)
-
-	cmdfactory.RegisterFlag(
-		"kraft cloud deploy",
-		cmdfactory.IntVar(
-			&GitCloneDepth,
-			"git-depth",
-			-1,
-			"Set the Git clone depth",
-		),
-	)
 }
