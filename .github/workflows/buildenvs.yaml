@@ -578,7 +578,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           push: false
-          tags: kraftkit.sh/github-action:v0
+          tags: kraftkit.sh/github-action:v1
           platforms: linux/amd64
           file: ./buildenvs/github-action.Dockerfile
           secrets: |
@@ -611,7 +611,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: index.unikraft.io/kraftkit.sh/github-action:v0
+          tags: index.unikraft.io/kraftkit.sh/github-action:v1
           platforms: linux/amd64
           file: ./buildenvs/github-action.Dockerfile
           secrets: |
