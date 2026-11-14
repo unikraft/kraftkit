@@ -38,6 +38,7 @@ type SetOptions struct {
 	Force        bool   `long:"force" short:"F" usage:"Skip KConfig validation"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter targets by platform"`
+	Save         bool   `long:"save" short:"s" usage:"Save the updated configuration to the Kraftfile"`
 	Target       string `long:"target" short:"t" usage:"Set config for a specific target"`
 	Workdir      string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
@@ -68,6 +69,9 @@ func NewCmd() *cobra.Command {
 
 			# Set variables for a specific target
 			$ kraft set --plat=qemu --arch=x86_64 CONFIG_LIBUKDEBUG=y
+
+			# Set variables and save to Kraftfile
+			$ kraft set --save CONFIG_LIBUKDEBUG=y
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
@@ -199,7 +203,14 @@ func (opts *SetOptions) Run(ctx context.Context, args []string) error {
 		if err := project.Set(ctx, tc, extraConfig); err != nil {
 			return fmt.Errorf("setting config for target %s: %w", tc.Name(), err)
 		}
+		tc.KConfig().OverrideBy(extraConfig)
 		log.G(ctx).Infof("Config applied to target: %s", tc.Name())
+	}
+
+	if opts.Save {
+		if err := project.Save(ctx); err != nil {
+			return fmt.Errorf("saving Kraftfile: %w", err)
+		}
 	}
 
 	return nil
