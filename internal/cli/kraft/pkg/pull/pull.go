@@ -370,13 +370,22 @@ func (opts *PullOptions) Run(ctx context.Context, args []string) error {
 		// Is this a list (space delimetered) of packages to pull?
 	} else if len(args) > 0 {
 		for _, arg := range args {
-			queries = append(queries, []packmanager.QueryOption{
+			qopts := []packmanager.QueryOption{
 				packmanager.WithRemote(opts.Update),
 				packmanager.WithName(arg),
 				packmanager.WithArchitecture(opts.Architecture),
 				packmanager.WithPlatform(opts.Platform),
 				packmanager.WithKConfig(opts.KConfig),
-			})
+			}
+			if strings.HasPrefix(arg, "git://") ||
+				strings.HasPrefix(arg, "http://") ||
+				strings.HasPrefix(arg, "https://") ||
+				strings.HasPrefix(arg, "github.com/") ||
+				strings.HasPrefix(arg, "gitlab.com/") ||
+				strings.HasSuffix(arg, ".git") {
+				qopts = append(qopts, packmanager.WithSource(arg))
+			}
+			queries = append(queries, qopts)
 		}
 	}
 

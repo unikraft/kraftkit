@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 	"unicode"
 
@@ -330,8 +331,18 @@ func (m *ManifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 
 	log.G(ctx).WithFields(query.Fields()).Debug("querying manifest catalog")
 
-	if len(query.Source()) > 0 {
-		provider, err := NewProvider(ctx, query.Source(), mopts...)
+	source := query.Source()
+	if len(source) == 0 && (strings.HasPrefix(query.Name(), "http://") ||
+		strings.HasPrefix(query.Name(), "https://") ||
+		strings.HasPrefix(query.Name(), "git://") ||
+		strings.HasPrefix(query.Name(), "github.com/") ||
+		strings.HasPrefix(query.Name(), "gitlab.com/") ||
+		strings.HasSuffix(query.Name(), ".git")) {
+		source = query.Name()
+	}
+
+	if len(source) > 0 {
+		provider, err := NewProvider(ctx, source, mopts...)
 		if err != nil {
 			return nil, err
 		}
@@ -404,11 +415,11 @@ func (m *ManifestManager) Catalog(ctx context.Context, qopts ...packmanager.Quer
 			}
 		}
 
-		if len(query.Source()) > 0 && manifest.Origin != query.Source() {
+		if len(source) > 0 && manifest.Origin != source {
 			continue
 		}
 
-		if len(name) > 0 && !g.Match(manifest.Name) {
+		if len(name) > 0 && name != source && !g.Match(manifest.Name) && !g.Match(manifest.Origin) {
 			continue
 		}
 
