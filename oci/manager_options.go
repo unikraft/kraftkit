@@ -15,9 +15,9 @@ import (
 	"kraftkit.sh/log"
 	"kraftkit.sh/oci/handler"
 
-	regtypes "github.com/docker/docker/api/types/registry"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	regtypes "github.com/moby/moby/api/types/registry"
 )
 
 type OCIManagerOption func(context.Context, *OCIManager) error
