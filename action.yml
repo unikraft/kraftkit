@@ -324,7 +324,7 @@ runs:
         -v "${ACTION_WORKSPACE}/_temp/_github_workflow":"/github/workflow" \
         -v "${ACTION_WORKSPACE}/_temp/_runner_file_commands":"/home/runner/work/_temp/_runner_file_commands" \
         -v "${GITHUB_WORKSPACE}":"/github/workspace" \
-        kraftkit.sh/github-action:v0
+        kraftkit.sh/github-action:v1
 
   - name: Stop BuildKit
     if: always()
