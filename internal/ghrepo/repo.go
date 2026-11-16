@@ -49,7 +49,14 @@ func New(owner, repo string) Interface {
 
 // NewFromURL parses a given GitHub url and returns the populated Interface
 func NewFromURL(path string) (Interface, error) {
-	u, err := url.Parse(path)
+	parsedPath := path
+	if strings.HasPrefix(parsedPath, "git@github.com:") {
+		parsedPath = "ssh://git@github.com/" + strings.TrimPrefix(parsedPath, "git@github.com:")
+	} else if !strings.Contains(parsedPath, "://") {
+		parsedPath = "https://" + parsedPath
+	}
+
+	u, err := url.Parse(parsedPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse url: %s", err)
 	}
@@ -59,13 +66,13 @@ func NewFromURL(path string) (Interface, error) {
 		return nil, fmt.Errorf("host is not github.com")
 	}
 
-	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) != 2 {
 		return nil, fmt.Errorf(`expected the "[HOST/]OWNER/REPO" format, got %q`, path)
 	}
 
-	owner := parts[1]
-	repo := strings.TrimSuffix(parts[2], ".git")
+	owner := parts[0]
+	repo := strings.TrimSuffix(parts[1], ".git")
 
 	return NewWithHost(owner, repo, hostname), nil
 }
