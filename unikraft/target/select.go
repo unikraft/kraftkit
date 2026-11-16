@@ -16,6 +16,10 @@ import (
 // Select is a utility method used in a CLI context to prompt the user
 // for a specific application's
 func Select(targets []Target) (Target, error) {
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("no targets to select from")
+	}
+
 	if len(targets) == 1 {
 		return targets[0], nil
 	}

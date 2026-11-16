@@ -237,6 +237,10 @@ func (runner *runnerKraftfileRuntime) Prepare(ctx context.Context, opts *RunOpti
 		return err
 	}
 
+	if len(packs) == 0 {
+		return fmt.Errorf("could not find runtime '%s'", runtimeName)
+	}
+
 	var found pack.Package
 
 	if len(packs) == 1 {

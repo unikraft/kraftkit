@@ -16,6 +16,10 @@ import (
 // Select is a utility method used in a CLI context to prompt the user
 // given a slice of options based on the generic type.
 func Select[T fmt.Stringer](question string, options ...T) (*T, error) {
+	if len(options) == 0 {
+		return nil, fmt.Errorf("no options to select from")
+	}
+
 	if len(options) == 1 {
 		return &options[0], nil
 	}
