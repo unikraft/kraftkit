@@ -186,6 +186,10 @@ func (runner *runnerPackage) Prepare(ctx context.Context, opts *RunOptions, mach
 		}
 	}
 
+	if len(packs) == 0 {
+		return fmt.Errorf("could not find package '%s'", runner.packName)
+	}
+
 	var selected pack.Package
 
 	if len(packs) == 1 {
