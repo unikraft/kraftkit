@@ -35,3 +35,24 @@ updates:
       interval: weekly
       day: sunday
       time: '09:00'
+
+  # Each image lives in a Dockerfile of one FROM line, next to where it's used.
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /.github/workflows
+      - /.github/workflows/*
+      - /buildenvs
+      - /initrd/testdata
+      - /test/e2e/cli/hyperlight/fixtures
+      - /tools/dockerfile-llb-frontend
+      - /tools/webinstall
+    schedule:
+      interval: weekly
+      day: sunday
+      time: '09:00'
+    groups:
+      docker-deps:
+        applies-to: version-updates
+        patterns:
+          - "*"
