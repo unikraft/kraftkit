@@ -116,7 +116,6 @@ base:
 
 .PHONY: base-golang
 base-golang: ENVIRONMENT      ?= base-golang
-base-golang: GO_VERSION       ?= 1.27.4
 base-golang: IMAGE            ?= $(REGISTRY)/base-golang:$(IMAGE_TAG)
 base-golang: KRAFTKIT_VERSION ?= latest
 base-golang: QEMU_VERSION     ?= 9.2.1
@@ -129,7 +128,6 @@ endif
 base-golang:
 	$(DOCKER) build \
 		--platform $(PLATFORM) \
-		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--build-arg QEMU_VERSION=$(QEMU_VERSION) \
 		--build-arg XEN_VERSION=$(XEN_VERSION) \
@@ -141,7 +139,6 @@ base-golang:
 
 .PHONY: github-action
 github-action: ENVIRONMENT      ?= github-action
-github-action: GO_VERSION       ?= 1.27.4
 github-action: IMAGE            ?= $(REGISTRY)/github-action:$(IMAGE_TAG)
 github-action: KRAFTKIT_VERSION ?= latest
 ifeq ($(WITH_CACHE),y)
@@ -152,7 +149,6 @@ endif
 github-action:
 	$(DOCKER) build \
 		--platform $(PLATFORM) \
-		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg KRAFTKIT_VERSION=$(KRAFTKIT_VERSION) \
 		--tag $(IMAGE) \
 		$(_WITH_CACHE) \

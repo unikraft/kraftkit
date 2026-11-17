@@ -10,6 +10,7 @@ on:
       - '**'
       - '!.github/**'
       - '.github/workflows/tests.yaml'
+      - '.github/workflows/tests/**'
       - '!README.md'
 
 jobs:
@@ -23,12 +24,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
 
       - name: Generate Suffix
         shell: bash
@@ -46,11 +47,11 @@ jobs:
             --privileged \
             --name "buildkitd_${GITHUB_RUN_ID}_${SUFFIX}" \
             -v /run/buildkit:/run/buildkit:rw \
-            moby/buildkit:latest;
+            "$(docker build --quiet - <.github/workflows/tests/buildkit.Dockerfile)";
           timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done';
           sudo chmod 666 /run/buildkit/buildkitd.sock;
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 1.27.4
           cache: false
@@ -65,7 +66,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -94,26 +95,26 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 1.27.4
           cache: false
           
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
 
       - name: Set up KVM permissions
         run: sudo chmod 666 /dev/kvm || true
 
       - name: Cache hyperlight-unikraft binary
         id: cache-hyperlight
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cargo/bin/hyperlight-unikraft
           key: hyperlight-unikraft-${{ env.HYPERLIGHT_UNIKRAFT_VERSION }}
@@ -137,7 +138,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}

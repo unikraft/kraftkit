@@ -17,11 +17,11 @@ jobs:
     env:
       RUNGOGENERATE: false
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 1.27.4
           cache: false
@@ -36,7 +36,7 @@ jobs:
           } >>"$GITHUB_OUTPUT"
 
       - name: Go caches
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ${{ steps.goenv.outputs.cache }}
@@ -46,7 +46,7 @@ jobs:
             ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Check that go.mod is tidy
-        uses: protocol/multiple-go-modules@v1.4
+        uses: protocol/multiple-go-modules@ac694baecddc63fc5ba8fe8262d46659fbbf911d # v1.4
         with:
           run: |
             git config --global --add safe.directory '*'
@@ -59,7 +59,7 @@ jobs:
 
       - name: Format
         if: success() || failure()  # run this step even if the previous one failed
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
           args: |
@@ -72,7 +72,7 @@ jobs:
           skip-cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
           args: |
@@ -84,7 +84,7 @@ jobs:
           skip-cache: true
 
       - name: go generate
-        uses: protocol/multiple-go-modules@v1.4
+        uses: protocol/multiple-go-modules@ac694baecddc63fc5ba8fe8262d46659fbbf911d # v1.4
         if: (success() || failure()) && env.RUNGOGENERATE == 'true'
         with:
           run: |
