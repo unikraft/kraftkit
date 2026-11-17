@@ -3,9 +3,7 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=bookworm-20240513
-
-FROM debian:${DEBIAN_VERSION} AS xenbuild
+FROM debian:bookworm-20240513@sha256:fac2c0fd33e88dfd3bc88a872cfb78dcb167e74af6162d31724df69e482f886c AS xenbuild
 
 ARG XEN_VERSION=4.19
 ARG MAKE_NPROC=1

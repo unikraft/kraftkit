@@ -2,14 +2,12 @@
 # Copyright (c) 2022, Unikraft GmbH and The KraftKit Authors.
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
-ARG GO_VERSION=1.27.4
-ARG DEBIAN_VERSION=trixie
 ARG HYPERLIGHT_UNIKRAFT_VERSION=0.12.1
 ARG KRAFTKIT_VERSION=latest
 ARG QEMU_VERSION=9.2.1
 ARG REGISTRY=kraftkit.sh
 
-FROM golang:${GO_VERSION}-trixie AS build
+FROM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS build
 
 COPY . /go/src/kraftkit.sh
 
@@ -23,7 +21,7 @@ RUN set -xe; \
         --add safe.directory /go/src/kraftkit.sh; \
     DOCKER= DISTDIR=/ XEN=n CGO_ENABLED=0 make github-action;
 
-FROM rust:1.89.0-slim-trixie AS hyperlight-unikraft
+FROM rust:1.89.0-slim-trixie@sha256:8cffb8fe4e8a95cf0d6a2060375e5a28aff4c752155aa9f1f9193530769bdf66 AS hyperlight-unikraft
 
 ARG HYPERLIGHT_UNIKRAFT_VERSION
 
@@ -35,7 +33,7 @@ RUN cargo install \
 
 FROM ${REGISTRY}/qemu:${QEMU_VERSION} AS qemu
 FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS kraftkit
-FROM debian:${DEBIAN_VERSION}         AS base
+FROM debian:trixie-20261104@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6 AS base
 
 COPY --from=qemu  /bin/          /usr/local/bin
 COPY --from=qemu  /share/qemu/   /share/qemu

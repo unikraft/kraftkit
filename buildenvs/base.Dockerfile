@@ -2,7 +2,6 @@
 # Copyright (c) 2022, NEC Europe Ltd., Unikraft GmbH, and The KraftKit Authors.
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
-ARG DEBIAN_VERSION=trixie
 ARG KRAFTKIT_VERSION=latest
 ARG QEMU_VERSION=9.2.1
 ARG REGISTRY=kraftkit.sh
@@ -11,7 +10,7 @@ ARG XEN_VERSION=4.19
 FROM ${REGISTRY}/qemu:${QEMU_VERSION}       AS qemu
 FROM ${REGISTRY}/xen:${XEN_VERSION}         AS xen
 FROM ${REGISTRY}/myself:${KRAFTKIT_VERSION} AS myself
-FROM debian:${DEBIAN_VERSION}               AS base
+FROM debian:trixie-20261104@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6 AS base
 
 COPY --from=qemu   /bin/                         /usr/local/bin
 COPY --from=qemu   /share/qemu/                  /share/qemu

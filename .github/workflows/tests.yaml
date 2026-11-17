@@ -10,6 +10,7 @@ on:
       - '**'
       - '!.github/**'
       - '.github/workflows/tests.yaml'
+      - '.github/workflows/tests/**'
       - '!README.md'
 
 jobs:
@@ -46,7 +47,7 @@ jobs:
             --privileged \
             --name "buildkitd_${GITHUB_RUN_ID}_${SUFFIX}" \
             -v /run/buildkit:/run/buildkit:rw \
-            moby/buildkit:latest;
+            "$(docker build --quiet - <.github/workflows/tests/buildkit.Dockerfile)";
           timeout 60 bash -c 'while [ ! -S "/run/buildkit/buildkitd.sock" ]; do sleep 1; done';
           sudo chmod 666 /run/buildkit/buildkitd.sock;
 

@@ -3,12 +3,11 @@
 # Licensed under the BSD-3-Clause License (the "License").
 # You may not use this file except in compliance with the License.
 
-ARG DEBIAN_VERSION=trixie
 ARG XEN_VERSION=4.19
 ARG REGISTRY=kraftkit.sh
 
 FROM ${REGISTRY}/xen:${XEN_VERSION} AS xen
-FROM debian:${DEBIAN_VERSION}       AS kraftkit-full
+FROM debian:trixie-20261104@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6 AS kraftkit-full
 
 # Install build dependencies
 RUN set -xe; \
