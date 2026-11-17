@@ -9,14 +9,4 @@ on:
 
 jobs:
   actionlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install action linter
-        run: |
-          mkdir -p "$HOME"/.local/bin
-          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest "$HOME"/.local/bin
-
-      - name: Check that all workflows are valid
-        run: actionlint -verbose
+    uses: unikraft-cloud/x/.github/workflows/actionlint.yaml@prod-staging
