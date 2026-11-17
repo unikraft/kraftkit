@@ -21,7 +21,7 @@ RUN set -xe; \
         --add safe.directory /go/src/kraftkit.sh; \
     DOCKER= DISTDIR=/ XEN=n CGO_ENABLED=0 make github-action;
 
-FROM rust:1.89.0-slim-trixie@sha256:8cffb8fe4e8a95cf0d6a2060375e5a28aff4c752155aa9f1f9193530769bdf66 AS hyperlight-unikraft
+FROM rust:1.100.0-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS hyperlight-unikraft
 
 ARG HYPERLIGHT_UNIKRAFT_VERSION
 
