@@ -7,8 +7,31 @@ package set
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+func TestSetNewCmd(t *testing.T) {
+	cmd := NewCmd()
+	if cmd == nil {
+		t.Fatal("expected NewCmd to return non-nil command")
+	}
+
+	saveFlag := cmd.Flag("save")
+	if saveFlag == nil {
+		t.Fatal("expected --save flag to be registered")
+	}
+	if saveFlag.Shorthand != "s" {
+		t.Errorf("expected --save shorthand to be 's', got %q", saveFlag.Shorthand)
+	}
+
+	for _, flagName := range []string{"arch", "force", "kraftfile", "plat", "target", "workdir"} {
+		if cmd.Flag(flagName) == nil {
+			t.Errorf("expected --%s flag to be registered", flagName)
+		}
+	}
+}
 
 func TestSetValidation(t *testing.T) {
 	for _, tc := range []struct {
@@ -39,5 +62,31 @@ func TestSetValidation(t *testing.T) {
 				t.Fatalf("expected error wrapping %v, got: %v", tc.expectErr, err)
 			}
 		})
+	}
+}
+
+func TestSetNoMatchingTargets(t *testing.T) {
+	tmpDir := t.TempDir()
+	kraftfilePath := filepath.Join(tmpDir, "Kraftfile")
+	err := os.WriteFile(kraftfilePath, []byte(`spec: v0.6
+name: test-app
+targets:
+  - name: my-target
+    architecture: x86_64
+    platform: qemu
+`), 0o644)
+	if err != nil {
+		t.Fatalf("failed to write Kraftfile: %v", err)
+	}
+
+	opts := SetOptions{
+		Workdir: tmpDir,
+		Target:  "non-existent-target",
+		Save:    true,
+	}
+
+	err = opts.Run(context.Background(), []string{"CONFIG_LIBUKDEBUG=y"})
+	if !errors.Is(err, ErrNoMatchingTargets) {
+		t.Fatalf("expected ErrNoMatchingTargets, got: %v", err)
 	}
 }
