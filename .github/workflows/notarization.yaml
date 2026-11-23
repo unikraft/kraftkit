@@ -3,6 +3,9 @@ name: mac-notarization
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   notarization:
     runs-on: macos-latest

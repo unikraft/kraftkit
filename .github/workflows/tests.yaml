@@ -13,6 +13,9 @@ on:
       - '.github/workflows/tests/**'
       - '!README.md'
 
+permissions:
+  contents: read
+
 jobs:
   unit:
     strategy:

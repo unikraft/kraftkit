@@ -10,6 +10,9 @@ on:
       - 'tools/protoc-gen-go-netconn/**'
       - '.github/workflows/gobuild-protoc.yaml'
 
+permissions:
+  contents: read
+
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
   # by design, not inside the defined container (actions/runner#837).

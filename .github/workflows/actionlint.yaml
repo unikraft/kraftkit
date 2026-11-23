@@ -7,6 +7,9 @@ on:
     paths:
       - '.github/workflows/**'
 
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     uses: unikraft-cloud/x/.github/workflows/actionlint.yaml@prod-staging
