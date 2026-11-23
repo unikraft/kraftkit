@@ -7,7 +7,7 @@ FROM golang:1.27.4@sha256:205c7636d74e0ffbe3d007162df7d74f859f5a8c8322dfb9f90797
 
 WORKDIR /src
 COPY . ./
-RUN CGO_ENABLED=0 go build -o /kraft-llb-plugin -tags "containers_image_storage_stub,containers_image_openpgp" --ldflags "-s -w"
+RUN CGO_ENABLED=0 go build -o /kraft-llb-plugin -tags "containers_image_openpgp" --ldflags "-s -w"
 
 FROM scratch
 COPY --from=builder /kraft-llb-plugin /bin/kraft-llb-plugin
