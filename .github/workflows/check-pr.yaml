@@ -5,6 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited]
     branches: [staging]
 
+permissions:
+  contents: read
+
 jobs:
   check-pr:
     runs-on: ubuntu-latest

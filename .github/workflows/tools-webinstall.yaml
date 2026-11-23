@@ -4,6 +4,10 @@ on:
   release:
     types: [released]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   myself-push:
     runs-on: ubuntu-latest

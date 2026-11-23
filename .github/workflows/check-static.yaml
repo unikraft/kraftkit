@@ -11,6 +11,9 @@ on:
       - '!.github/**'
       - '.github/workflows/gochecks.yaml'
 
+permissions:
+  contents: read
+
 jobs:
   go:
     runs-on: ubuntu-latest

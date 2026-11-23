@@ -4,6 +4,9 @@ on:
   release:
     types: [released]
 
+permissions:
+  contents: read
+
 jobs:
   myself-full-push:
     runs-on: ubuntu-latest

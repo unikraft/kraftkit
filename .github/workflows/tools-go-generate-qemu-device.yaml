@@ -10,6 +10,9 @@ on:
       - 'tools/go-generate-qemu-devices/**'
       - '.github/workflows/gobuild-qemu-devices.yaml'
 
+permissions:
+  contents: read
+
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
   # by design, not inside the defined container (actions/runner#837).
