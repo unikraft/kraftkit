@@ -32,6 +32,7 @@ type UnsetOptions struct {
 	Architecture string `long:"arch" short:"m" usage:"Filter targets by architecture"`
 	Kraftfile    string `long:"kraftfile" short:"K" usage:"Set an alternative path of the Kraftfile"`
 	Platform     string `long:"plat" short:"p" usage:"Filter targets by platform"`
+	Save         bool   `long:"save" short:"s" usage:"Save the updated configuration to the Kraftfile"`
 	Target       string `long:"target" short:"t" usage:"Unset config for a specific target"`
 	Workdir      string `long:"workdir" short:"w" usage:"Work on a unikernel at a path"`
 }
@@ -62,6 +63,9 @@ func NewCmd() *cobra.Command {
 
 			# Unset variables for a specific target
 			$ kraft unset --plat=qemu --arch=x86_64 CONFIG_LIBUKDEBUG
+
+			# Unset variables and save to Kraftfile
+			$ kraft unset --save CONFIG_LIBUKDEBUG
 		`),
 		Annotations: map[string]string{
 			cmdfactory.AnnotationHelpGroup: "build",
@@ -171,7 +175,14 @@ func (opts *UnsetOptions) Run(ctx context.Context, args []string) error {
 		if err := project.Unset(ctx, tc, extraConfig); err != nil {
 			return fmt.Errorf("unsetting config for target %s: %w", tc.Name(), err)
 		}
+		tc.KConfig().OverrideBy(extraConfig)
 		log.G(ctx).Infof("Config applied to target: %s", tc.Name())
+	}
+
+	if opts.Save {
+		if err := project.Save(ctx); err != nil {
+			return fmt.Errorf("saving Kraftfile: %w", err)
+		}
 	}
 
 	return nil
