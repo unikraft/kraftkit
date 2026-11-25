@@ -509,7 +509,10 @@ func (manager *OCIManager) Catalog(ctx context.Context, qopts ...packmanager.Que
 	}
 
 	// If a direct reference can be made, attempt to generate a package from it.
-	if queryRemote && refErr == nil && !unsetRegistry {
+	// GitHub source repositories and .git endpoints do not implement the OCI
+	// Distribution Specification v2 API; skip remote registry lookups for them.
+	isNonOCISource := refErr == nil && (ref.Context().RegistryStr() == "github.com" || strings.HasSuffix(qname, ".git"))
+	if queryRemote && refErr == nil && !unsetRegistry && !isNonOCISource {
 		authConfig := &authn.AuthConfig{}
 
 		ropts := []remote.Option{
